@@ -1,85 +1,75 @@
 // src/services/admin.service.ts
 
-import type { User, CompletionRateDTO, MonthlyProgressItem } from '../types/dto/auth.types';
+import type { User } from '../types/dto/auth.types';
 import type { ProyectoDTO } from '../types/dto/proyecto.dto';
 import httpService from './httpService';
 
-/**
- * Servicio centralizado para todas las operaciones del panel de administración.
- * Cada método corresponde a una ruta del backend con permisos de administrador.
- */
-class AdminService {
-  // ══════════════════════════════════════════════════════════
-  // MÉTRICAS DEL DASHBOARD
-  // ══════════════════════════════════════════════════════════
+// ──────────────────────────────────────────────────────────
+// Interfaces auxiliares según las métricas del dashboard
+// ──────────────────────────────────────────────────────────
 
-  /**
-   * Obtiene la tasa de culminación de proyectos.
-   * Endpoint: GET /proyectos/metricas/culminacion
-   */
+export interface CompletionRateDTO {
+  tasa_culminacion: number;
+  total_iniciados: number;
+  total_finalizados: number;
+}
+
+export interface MonthlyProgressItem {
+  id: number;
+  nombre: string;
+  estado: string;
+  suscripciones_actuales: number;
+  meta_suscripciones: number;
+  porcentaje_avance: string;
+}
+
+// ──────────────────────────────────────────────────────────
+// Constantes de endpoints
+// ──────────────────────────────────────────────────────────
+
+const PROYECTOS_ENDPOINT = '/proyectos';
+const USUARIOS_ENDPOINT = '/usuarios';
+
+// ──────────────────────────────────────────────────────────
+// Servicio principal del Admin
+// ──────────────────────────────────────────────────────────
+
+class AdminService {
+  // --- Métricas del Dashboard ---
+
+  /** 🔹 GET /proyectos/metricas/culminacion */
   async getCompletionRate(): Promise<CompletionRateDTO> {
     const response = await httpService.get<CompletionRateDTO>(
-      '/proyectos/metricas/culminacion'
+      `${PROYECTOS_ENDPOINT}/metricas/culminacion`
     );
-    return response;
+    return response.data; // ✅ Accedemos a data
   }
 
-  /**
-   * Obtiene el progreso mensual de proyectos.
-   * Endpoint: GET /proyectos/metricas/avance-mensual
-   */
+  /** 🔹 GET /proyectos/metricas/avance-mensual */
   async getMonthlyProgress(): Promise<MonthlyProgressItem[]> {
     const response = await httpService.get<MonthlyProgressItem[]>(
-      '/proyectos/metricas/avance-mensual'
+      `${PROYECTOS_ENDPOINT}/metricas/avance-mensual`
     );
-    return response;
+    return response.data;
   }
 
-  // ══════════════════════════════════════════════════════════
-  // GESTIÓN DE USUARIOS
-  // ══════════════════════════════════════════════════════════
+  // --- Estadísticas (Contadores) ---
 
-  /**
-   * Obtiene la lista completa de usuarios.
-   * Endpoint: GET /usuarios
-   */
+  /** 🔹 GET /usuarios */
   async getAllUsers(): Promise<User[]> {
-    const response = await httpService.get<User[]>('/usuarios');
-    return response;
+    const response = await httpService.get<User[]>(USUARIOS_ENDPOINT);
+    return response.data;
   }
 
-  // ══════════════════════════════════════════════════════════
-  // GESTIÓN DE PROYECTOS
-  // ══════════════════════════════════════════════════════════
-
-  /**
-   * Obtiene todos los proyectos registrados en el sistema.
-   * Endpoint: GET /proyectos
-   */
+  /** 🔹 GET /proyectos */
   async getAllProjects(): Promise<ProyectoDTO[]> {
-    const response = await httpService.get<ProyectoDTO[]>('/proyectos');
-    return response;
+    const response = await httpService.get<ProyectoDTO[]>(PROYECTOS_ENDPOINT);
+    return response.data;
   }
 
-  // ══════════════════════════════════════════════════════════
-  // FUTURAS FUNCIONES ADMIN (ejemplos)
-  // ══════════════════════════════════════════════════════════
-
-  /**
-   * (Ejemplo) Resetea el 2FA de un usuario.
-   * Endpoint: POST /admin/usuarios/:id/reset-2fa
-   */
-  async resetUser2FA(userId: number): Promise<void> {
-    await httpService.post(`/admin/usuarios/${userId}/reset-2fa`);
-  }
-
-  /**
-   * (Ejemplo) Cambia el rol de un usuario.
-   * Endpoint: PATCH /admin/usuarios/:id/rol
-   */
-  async updateUserRole(userId: number, newRole: string): Promise<void> {
-    await httpService.patch(`/admin/usuarios/${userId}/rol`, { rol: newRole });
-  }
+  // 🔸 En el futuro podés agregar acá:
+  // async adminUpdateUser(...)
+  // async adminReset2FA(...)
 }
 
 export default new AdminService();

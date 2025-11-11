@@ -1,251 +1,131 @@
-// src/pages/Admin/AdminDashboard.tsx
-import React from "react";
+// src/pages/AdminDashboard.tsx
+import React from 'react';
+import { useQuery } from '@tanstack/react-query';
+import adminService from '../../Services/admin.service';
 import {
   Box,
-  Paper,
   Typography,
+  Paper,
+  CircularProgress,
+  Divider,
   Stack,
-  Button,
   Table,
-  TableBody,
-  TableCell,
-  TableContainer,
   TableHead,
   TableRow,
-  LinearProgress,
+  TableCell,
+  TableBody,
+  IconButton,
   Tooltip,
-  Chip,
-} from "@mui/material";
-import { useQuery } from "@tanstack/react-query";
-import { PageContainer, PageHeader, SectionTitle } from "../../components/common";
-import { QueryHandler } from "../../components/common/QueryHandler/QueryHandler";
-import FolderIcon from "@mui/icons-material/Folder";
-import PeopleIcon from "@mui/icons-material/People";
-import VerifiedUserIcon from "@mui/icons-material/VerifiedUser";
-import { useNavigate } from "react-router-dom";
-import adminService from "../../Services/admin.service";
+} from '@mui/material';
+import EditIcon from '@mui/icons-material/Edit';
 
-// ────────────────────────────────
-// Interfaces locales
-// ────────────────────────────────
-interface KpiCardProps {
-  title: string;
-  value: string | number;
-  subtitle: string;
-  color?: string;
-}
+// ──────────────────────────────────────────────────────────
+// COMPONENTE PRINCIPAL
+// ──────────────────────────────────────────────────────────
 
-interface LinearProgressWithLabelProps {
-  value: number;
-}
-
-interface MonthlyProgressItem {
-  id: number;
-  nombre: string;
-  estado: string;
-  suscripciones_actuales: number;
-  meta_suscripciones: number;
-  porcentaje_avance: string;
-}
-
-// ────────────────────────────────
-// Componente KPI Card (sin Grid)
-// ────────────────────────────────
-const KpiCard: React.FC<KpiCardProps> = ({ title, value, subtitle, color = "text.primary" }) => (
-  <Paper
-    elevation={3}
-    sx={{
-      p: 3,
-      borderRadius: 3,
-      height: "100%",
-      flex: "1 1 300px",
-      minWidth: 250,
-    }}
-  >
-    <Typography variant="overline" color="text.secondary">
-      {title}
-    </Typography>
-    <Typography variant="h3" fontWeight={700} color={color} gutterBottom>
-      {value}
-    </Typography>
-    <Typography variant="body2" color="text.secondary">
-      {subtitle}
-    </Typography>
-  </Paper>
-);
-
-// ────────────────────────────────
-// Componente Progreso con Label
-// ────────────────────────────────
-const LinearProgressWithLabel: React.FC<LinearProgressWithLabelProps> = ({ value }) => (
-  <Box sx={{ display: "flex", alignItems: "center" }}>
-    <Box sx={{ width: "100%", mr: 1 }}>
-      <LinearProgress variant="determinate" value={value} sx={{ height: 8, borderRadius: 5 }} />
-    </Box>
-    <Box sx={{ minWidth: 35 }}>
-      <Typography variant="body2" color="text.secondary">
-        {`${Math.round(value)}%`}
-      </Typography>
-    </Box>
-  </Box>
-);
-
-// ────────────────────────────────
-// Componente Principal
-// ────────────────────────────────
 const AdminDashboard: React.FC = () => {
-  const navigate = useNavigate();
-
-  const { data: usersData, isLoading: isLoadingUsers } = useQuery({
-    queryKey: ["adminAllUsers"],
+  const {
+    data: users,
+    isLoading: isLoadingUsers,
+    error: errorUsers,
+  } = useQuery({
+    queryKey: ['users'],
     queryFn: adminService.getAllUsers,
   });
 
-  const { data: projectsData, isLoading: isLoadingProjects } = useQuery({
-    queryKey: ["adminAllProjects"],
-    queryFn: adminService.getAllProjects,
-  });
+  if (isLoadingUsers) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
+        <CircularProgress />
+      </Box>
+    );
+  }
 
-  const { data: completionData, isLoading: isLoadingCompletion } = useQuery({
-    queryKey: ["adminCompletionRate"],
-    queryFn: adminService.getCompletionRate,
-  });
+  if (errorUsers) {
+    return (
+      <Box textAlign="center" mt={4}>
+        <Typography color="error">⚠️ Error al cargar los usuarios.</Typography>
+      </Box>
+    );
+  }
 
-  const { data: progressData, isLoading: isLoadingProgress, error } = useQuery<MonthlyProgressItem[]>({
-    queryKey: ["adminMonthlyProgress"],
-    queryFn: adminService.getMonthlyProgress,
-  });
+  // ── Cálculos agregados ──────────────────────────────
+  const totalUsers = users?.length ?? 0;
+  const confirmedUsers = users?.filter(u => u.email_confirmado).length ?? 0;
+  const unconfirmedUsers = totalUsers - confirmedUsers;
+  const twoFAEnabled = users?.filter(u => u.is_2fa_enabled).length ?? 0;
+  const twoFADisabled = totalUsers - twoFAEnabled;
 
-  const isLoading = isLoadingUsers || isLoadingProjects || isLoadingCompletion || isLoadingProgress;
-
+  // ──────────────────────────────────────────────────────────
   return (
-    <PageContainer maxWidth="lg">
-      <PageHeader
-        title="Dashboard de Administración"
-        subtitle="Resumen del estado y métricas clave de la plataforma."
-      />
+    <Box p={4}>
+      <Typography variant="h4" gutterBottom fontWeight="bold">
+        Panel de Administración
+      </Typography>
 
-      <QueryHandler isLoading={isLoading} error={error as Error | null} fullHeight>
-        <>
-          {/* SECCIÓN 1: KPIs */}
-          <SectionTitle>Métricas Clave</SectionTitle>
-          <Box
-            sx={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: 3,
-              mb: 4,
-              justifyContent: "space-between",
-            }}
-          >
-            <KpiCard
-              title="Usuarios Totales"
-              value={usersData?.length ?? 0}
-              subtitle={`${usersData?.filter((u) => u.activo).length ?? 0} usuarios activos`}
-            />
-            <KpiCard
-              title="Proyectos Totales"
-              value={projectsData?.length ?? 0}
-              subtitle={`${projectsData?.filter((p) => p.estado_proyecto === "En proceso").length ?? 0
-                } proyectos en proceso`}
-            />
-            <KpiCard
-              title="Tasa de Culminación"
-              value={`${completionData?.tasa_culminacion ?? 0}%`}
-              subtitle={`${completionData?.total_finalizados ?? 0} de ${completionData?.total_iniciados ?? 0
-                } proyectos iniciados`}
-              color="primary.main"
-            />
-          </Box>
+      <Divider sx={{ mb: 3 }} />
 
-          {/* SECCIÓN 2: Accesos Directos */}
-          <SectionTitle>Accesos Directos</SectionTitle>
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ mb: 4 }}>
-            <Button
-              variant="contained"
-              startIcon={<FolderIcon />}
-              onClick={() => navigate("/admin/proyectos")}
-              sx={{ py: 2 }}
-            >
-              Gestionar Proyectos
-            </Button>
-            <Button
-              variant="contained"
-              startIcon={<PeopleIcon />}
-              onClick={() => navigate("/admin/users")}
-              sx={{ py: 2 }}
-            >
-              Gestionar Usuarios
-            </Button>
-            <Button
-              variant="contained"
-              startIcon={<VerifiedUserIcon />}
-              onClick={() => navigate("/admin/kyc")}
-              sx={{ py: 2 }}
-            >
-              Gestionar KYC
-            </Button>
-          </Stack>
+      {/* ────── Estadísticas resumidas ────── */}
+      <Paper sx={{ p: 3, borderRadius: 2, boxShadow: 2, mb: 4 }}>
+        <Typography variant="h6" gutterBottom fontWeight="bold">
+          👥 Resumen de Usuarios
+        </Typography>
+        <Box display="flex" flexWrap="wrap" gap={2}>
+          <Typography>Total: {totalUsers}</Typography>
+          <Typography color="success.main">Confirmados: {confirmedUsers}</Typography>
+          <Typography color="warning.main">Sin confirmar: {unconfirmedUsers}</Typography>
+          <Typography color="info.main">2FA activo: {twoFAEnabled}</Typography>
+          <Typography color="text.secondary">2FA inactivo: {twoFADisabled}</Typography>
+        </Box>
+      </Paper>
 
-          {/* SECCIÓN 3: Progreso Mensual */}
-          <SectionTitle>Progreso de Proyectos (Ahorristas)</SectionTitle>
-          <Paper elevation={3} sx={{ p: 0, borderRadius: 3, overflow: "hidden" }}>
-            <TableContainer>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Proyecto</TableCell>
-                    <TableCell>Estado</TableCell>
-                    <TableCell align="right">Suscripciones</TableCell>
-                    <TableCell>Progreso</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {progressData && progressData.length > 0 ? (
-                    progressData.map((proyecto) => (
-                      <TableRow key={proyecto.id} hover>
-                        <TableCell>
-                          <Typography variant="body1" fontWeight={600}>
-                            {proyecto.nombre}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Chip
-                            label={proyecto.estado}
-                            color={proyecto.estado === "En proceso" ? "success" : "default"}
-                            size="small"
-                          />
-                        </TableCell>
-                        <TableCell align="right">
-                          <Tooltip title={`Meta: ${proyecto.meta_suscripciones}`}>
-                            <Typography variant="body2">
-                              {proyecto.suscripciones_actuales} / {proyecto.meta_suscripciones}
-                            </Typography>
-                          </Tooltip>
-                        </TableCell>
-                        <TableCell>
-                          <LinearProgressWithLabel
-                            value={parseFloat(proyecto.porcentaje_avance)}
-                          />
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={4} align="center">
-                        <Typography color="text.secondary" sx={{ py: 4 }}>
-                          No hay proyectos mensuales activos para mostrar.
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </Paper>
-        </>
-      </QueryHandler>
-    </PageContainer>
+      {/* ────── Tabla de Usuarios ────── */}
+      <Paper sx={{ p: 3, borderRadius: 2, boxShadow: 2 }}>
+        <Typography variant="h6" gutterBottom fontWeight="bold">
+          📋 Lista de Usuarios
+        </Typography>
+
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Nombre</TableCell>
+              <TableCell>Email</TableCell>
+              <TableCell>Usuario</TableCell>
+              <TableCell>Confirmado</TableCell>
+              <TableCell>2FA</TableCell>
+              <TableCell align="center">Acciones</TableCell>
+            </TableRow>
+          </TableHead>
+
+          <TableBody>
+            {users?.map(user => (
+              <TableRow key={user.id} hover>
+                <TableCell>{`${user.nombre} ${user.apellido}`}</TableCell>
+                <TableCell>{user.email}</TableCell>
+                <TableCell>{user.nombre_usuario}</TableCell>
+                <TableCell>
+                  {user.email_confirmado ? '✅' : '❌'}
+                </TableCell>
+                <TableCell>
+                  {user.is_2fa_enabled ? '🔒' : '🔓'}
+                </TableCell>
+                <TableCell align="center">
+                  <Tooltip title="Editar usuario">
+                    <IconButton
+                      size="small"
+                      color="primary"
+                      onClick={() => console.log('Editar', user.id)}
+                    >
+                      <EditIcon />
+                    </IconButton>
+                  </Tooltip>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </Paper>
+    </Box>
   );
 };
 

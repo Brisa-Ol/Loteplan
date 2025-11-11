@@ -1,4 +1,4 @@
-// src/App.tsx (CORREGIDO CON RUTAS SEPARADAS)
+// src/App.tsx
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@mui/material/styles";
@@ -22,29 +22,46 @@ import Login from "./pages/Auth/LoginPage";
 import Register from "./pages/Auth/Register";
 import Nosotros from "./pages/Nosotros/Nosotros";
 import RoleSelection from "./pages/Proyectos/RoleSelection";
+import Unauthorized from "./pages/Unauthorized";
+import ForgotPasswordPage from "./pages/Auth/components/ForgotPassword/ForgotPassword";
 
 // Providers
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { AuthProvider } from "./context/AuthContext";
 
 // Rutas Protegidas
 import { ProtectedRoute } from "./routes/ProtectedRoute/ProtectedRoute";
+
+// Mi Cuenta (cliente)
 import MiCuentaPerfil from "./pages/MiCuenta/Perfil";
 import MisPagos from "./pages/MiCuenta/MisPagos";
 import MisSuscripciones from "./pages/MiCuenta/Suscripciones";
-import Unauthorized from "./pages/Unauthorized";
-import ForgotPasswordPage from "./pages/Auth/components/ForgotPassword/ForgotPassword";
-// ❗ (Aquí deberás importar tus páginas de Admin cuando las crees)
-// import AdminDashboard from "./pages/Admin/Dashboard";
-// import AdminUsers from "./pages/Admin/Users";
 
-const queryClient = new QueryClient();
+// Admin
+import AdminDashboard from "./pages/Admin/AdminDashboard"; // ✅ ya enlazado
 
+// ──────────────────────────────────────────────────────────
+// REACT QUERY CLIENT
+// ──────────────────────────────────────────────────────────
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false, // evita refetch cada vez que cambiás de pestaña
+      retry: 1,
+      staleTime: 1000 * 60 * 2, // cache por 2 minutos
+    },
+  },
+});
+
+// ──────────────────────────────────────────────────────────
+// LAYOUT BASE
+// ──────────────────────────────────────────────────────────
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      <Navbar />
-      <Box component="main" sx={{ flexGrow: 1, width: '100%' }}>
+    <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
+      <Navbar /> {/* ✅ Usa tu NavbarBase internamente */}
+      <Box component="main" sx={{ flexGrow: 1, width: "100%" }}>
         {children}
       </Box>
       <Footer />
@@ -52,6 +69,9 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   );
 };
 
+// ──────────────────────────────────────────────────────────
+// APP PRINCIPAL
+// ──────────────────────────────────────────────────────────
 const App: React.FC = () => {
   return (
     <ThemeProvider theme={theme}>
@@ -61,7 +81,7 @@ const App: React.FC = () => {
           <AuthProvider>
             <Layout>
               <Routes>
-                {/* --- Rutas Públicas --- */}
+                {/* --- RUTAS PÚBLICAS --- */}
                 <Route path="/" element={<Home />} />
                 <Route path="/ahorrista" element={<Ahorrista />} />
                 <Route path="/inversionista" element={<Inversionista />} />
@@ -75,43 +95,30 @@ const App: React.FC = () => {
                 <Route path="/proyectos/:id" element={<ProyectoDetail />} />
                 <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
-                {/* // ==========================================================
-                // ❗ INICIO DE LA CORRECCIÓN DE RUTAS
-                // ==========================================================
-                */}
-
-                {/* --- 1. Rutas de CLIENTE (Solo Cliente) --- */}
-                <Route element={<ProtectedRoute requiredRoles={['cliente']} />}>
+                {/* --- RUTAS CLIENTE --- */}
+                <Route element={<ProtectedRoute requiredRoles={["cliente"]} />}>
                   <Route path="/mi-cuenta/pagos" element={<MisPagos />} />
                   <Route path="/mi-cuenta/suscripciones" element={<MisSuscripciones />} />
                 </Route>
 
-                {/* --- 2. Rutas de ADMIN (Solo Admin) --- */}
-                <Route element={<ProtectedRoute requiredRoles={['admin']} />}>
-                  {/* (Descomenta estas rutas cuando crees las páginas) */}
-                  {/* <Route path="/admin/dashboard" element={<AdminDashboard />} /> */}
-                  {/* <Route path="/admin/users" element={<AdminUsers />} /> */}
-                  {/* <Route path="/admin/proyectos" element={<AdminProyectos />} /> */}
-                  {/* <Route path="/admin/kyc" element={<AdminKYC />} /> */}
+                {/* --- RUTAS ADMIN --- */}
+                <Route element={<ProtectedRoute requiredRoles={["admin"]} />}>
+                  <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                  {/* Futuras rutas: <Route path="/admin/users" ... /> etc. */}
                 </Route>
 
-                {/* --- 3. Rutas COMPARTIDAS (Cliente Y Admin) --- */}
-                {/* Ambos roles pueden ver su propio perfil */}
-                <Route element={<ProtectedRoute requiredRoles={['cliente', 'admin']} />}>
+                {/* --- RUTAS COMPARTIDAS --- */}
+                <Route element={<ProtectedRoute requiredRoles={["cliente", "admin"]} />}>
                   <Route path="/mi-cuenta/perfil" element={<MiCuentaPerfil />} />
                 </Route>
 
-                {/* // ==========================================================
-                // ❗ FIN DE LA CORRECCIÓN DE RUTAS
-                // ==========================================================
-                */}
-
-                {/* --- Rutas de Fallback --- */}
+                {/* --- RUTAS FALLBACK --- */}
                 <Route path="/unauthorized" element={<Unauthorized />} />
                 <Route path="*" element={<Home />} />
               </Routes>
             </Layout>
           </AuthProvider>
+          <ReactQueryDevtools initialIsOpen={false} /> {/* ✅ para debug */}
         </QueryClientProvider>
       </Router>
     </ThemeProvider>
