@@ -1,28 +1,24 @@
-// src/types/dto/usuario.dto.ts
-
+// src/types/dto/usuario.dto.ts (CORREGIDO - FUENTE DE VERDAD)
 import type { BaseDTO } from './base.dto';
 
-/**
- * Define los roles de usuario para toda la aplicación.
- */
 export type UserRole = 'admin' | 'cliente';
 
 /**
- * DTO DE SALIDA
+ * ❗ DTO DE SALIDA (Completo)
+ * Esta es la definición principal de un Usuario, basada en models/Usuario.js
  */
 export interface UsuarioDTO extends BaseDTO {
-  // id y activo son heredados de BaseDTO
+  activo: boolean;
   nombre: string;
   apellido: string;
   email: string;
-  dni: string;
+  dni: string;                // 👈 Corregido: Es obligatorio
   nombre_usuario: string;
-  rol: UserRole; // Usa el tipo definido arriba
-  fecha_registro: string | null;
-  numero_telefono: string;
+  rol: UserRole;
+  fecha_registro: string;     // 👈 CORREGIDO: Nunca es null
+  numero_telefono: string;    // 👈 Corregido: Es obligatorio
   is_2fa_enabled: boolean;
   confirmado_email: boolean;
-  activo: boolean;
 }
 
 /**
@@ -33,6 +29,7 @@ export interface UpdateProfileDTO {
   nombre?: string;
   apellido?: string;
   email?: string;
+  // ❗ Tu backend (usuario.controller.js) usa 'telefono'
   telefono?: string;
   nombre_usuario?: string;
 }
@@ -45,9 +42,9 @@ export interface UpdateUserByAdminDTO {
   nombre?: string;
   apellido?: string;
   email?: string;
-  telefono?: string;
+  telefono?: string; // ❗ Tu backend (usuario.controller.js) usa 'telefono'
   activo?: boolean;
-  rol?: UserRole; // ⬅️ Usa el tipo
+  rol?: UserRole;
   nombre_usuario?: string;
 }
 
@@ -61,8 +58,8 @@ export interface CreateUsuarioDTO {
   email: string;
   dni: string;
   nombre_usuario: string;
-  contraseña: string; // El backend se encargará del hash
-  rol: UserRole; // ⬅️ Usa el tipo
+  contraseña: string; // Tu backend (auth.controller) espera 'contraseña'
+  rol: UserRole;
   numero_telefono: string;
 }
 
@@ -72,13 +69,4 @@ export interface CreateUsuarioDTO {
  */
 export interface SearchUsuarioParams {
   q: string;
-}
-
-/**
- * ❗ DTO DE ENTRADA (Añadido)
- * Datos para solicitar el reenvío del email de confirmación.
- * (Usado por auth.service.ts)
- */
-export interface ResendConfirmationDTO {
-  email: string;
 }

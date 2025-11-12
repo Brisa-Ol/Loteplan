@@ -1,4 +1,4 @@
-// src/components/layout/Navbar/NavbarBase.tsx
+// src/components/layout/Navbar/NavbarBase.tsx (CORREGIDO)
 import React, { useCallback, useMemo, useState } from "react";
 import {
   AppBar, Box, Toolbar, Container, Button, IconButton,
@@ -87,6 +87,9 @@ const NavButton = React.memo<{
   navButtonSx: object;
   theme: any;
 }>(({ item, onClick, navButtonSx, theme }) => {
+  // ❗ Si es un divisor, no renderizamos nada (los divisores solo van en submenús)
+  if (item.isDivider) return null; 
+
   const isMiCuentaButton = item.label === "Mi Cuenta" || item.label.includes("(Admin)");
 
   const buttonSx = isMiCuentaButton
@@ -101,7 +104,6 @@ const NavButton = React.memo<{
       }
     : navButtonSx;
 
-  // ✅ Uso del type guard para submenu
   if (hasSubmenu(item)) {
     return (
       <PopupState variant="popover" popupId={`popup-menu-${item.label}`}>
@@ -162,7 +164,6 @@ const MobileNavItem = React.memo<{
   item: NavItem;
   onClick: (item: NavItem) => void;
 }>(({ item, onClick }) => {
-  // ✅ Uso del type guard aquí también
   if (hasSubmenu(item)) {
     return (
       <Box>
@@ -206,6 +207,9 @@ const MobileNavItem = React.memo<{
     );
   }
 
+  // ❗ Si es un divisor, no renderizamos nada (los divisores solo van en submenús)
+  if (item.isDivider) return null;
+
   return (
     <ListItem disablePadding>
       <ListItemButton
@@ -244,6 +248,9 @@ const NavbarBase: React.FC<NavbarBaseProps> = ({
 
   const handleItemClick = useCallback(
     (item: NavItem) => {
+      // No hacer nada si es un divisor (aunque no deberían llegar aquí)
+      if (item.isDivider) return; 
+      
       setDrawerOpen(false);
       if (item.action) {
         item.action();
@@ -255,10 +262,11 @@ const NavbarBase: React.FC<NavbarBaseProps> = ({
   );
 
   const handleLogoClick = useCallback(() => {
+    // ❗ CORRECCIÓN: Forzamos el tipo para que coincida con NavItem
     handleItemClick({ label: "Home", path: homePath } as NavItem);
   }, [homePath, handleItemClick]);
 
-  // Estilos memoizados
+  // Estilos
   const navButtonSx = useMemo(
     () => ({
       color: theme.palette.text.primary,
@@ -278,11 +286,10 @@ const NavbarBase: React.FC<NavbarBaseProps> = ({
     [navItems, userNavItems]
   );
 
-  // Componente de botones de acción
+  // Botones de Acción
   const ActionButtons = useCallback(
     ({ fullWidth = false }: { fullWidth?: boolean }) => {
       if (actionButtons.length === 0) return null;
-
       return (
         <>
           {actionButtons.map((btn) => (
@@ -293,6 +300,7 @@ const NavbarBase: React.FC<NavbarBaseProps> = ({
               fullWidth={fullWidth}
               onClick={
                 btn.path
+                  // ❗ CORRECCIÓN: Forzamos el tipo para que coincida con NavItem
                   ? () => handleItemClick({ label: btn.label, path: btn.path } as NavItem)
                   : btn.action
               }
@@ -336,9 +344,10 @@ const NavbarBase: React.FC<NavbarBaseProps> = ({
                 justifyContent: "center",
               }}
             >
-              {navItems.map((item) => (
+              {/* ❗ CORRECCIÓN DE KEY */}
+              {navItems.map((item, index) => (
                 <NavButton
-                  key={item.label}
+                  key={item.isDivider ? `divider-${index}` : item.label}
                   item={item}
                   onClick={handleItemClick}
                   navButtonSx={navButtonSx}
@@ -356,9 +365,10 @@ const NavbarBase: React.FC<NavbarBaseProps> = ({
                 justifyContent: "flex-end",
               }}
             >
-              {userNavItems.map((item) => (
+              {/* ❗ CORRECCIÓN DE KEY */}
+              {userNavItems.map((item, index) => (
                 <NavButton
-                  key={item.label}
+                  key={item.isDivider ? `divider-${index}` : item.label}
                   item={item}
                   onClick={handleItemClick}
                   navButtonSx={navButtonSx}
@@ -423,9 +433,10 @@ const NavbarBase: React.FC<NavbarBaseProps> = ({
 
           {/* Lista de Navegación Mobile */}
           <List sx={{ flex: 1 }}>
-            {allNavItems.map((item) => (
+            {/* ❗ CORRECCIÓN DE KEY */}
+            {allNavItems.map((item, index) => (
               <MobileNavItem
-                key={item.label}
+                key={item.isDivider ? `divider-${index}` : item.label}
                 item={item}
                 onClick={handleItemClick}
               />

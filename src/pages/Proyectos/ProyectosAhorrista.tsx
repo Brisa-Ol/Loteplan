@@ -1,26 +1,24 @@
-// src/pages/Proyectos/ProyectosAhorrista.tsx (Optimizado)
+// src/pages/Proyectos/ProyectosAhorrista.tsx (Optimizado y Corregido)
 // ═══════════════════════════════════════════════════════════
 import React from "react";
 import { Box, Stack, Chip, Typography } from "@mui/material";
 import { PageContainer, PageHeader, SectionTitle } from "../../components/common";
 import { QueryHandler } from "../../components/common/QueryHandler/QueryHandler";
-// ❗ CAMBIO: Asumimos que la ruta correcta es la común
 import { ProjectCard } from "../../components/common/ProjectCard/ProjectCard"; 
 import { useQuery } from '@tanstack/react-query';
 import type { ProyectoDTO } from "../../types/dto/proyecto.dto";
 
-// ❗ CAMBIO 1: Importamos la función específica
-import { getProyectosDeAhorristas } from '../../Services/proyecto.service'; 
+// ❗ CORRECCIÓN 1: Importamos el servicio por DEFECTO (sin llaves)
+import proyectoService from '../../Services/proyecto.service'; 
 
 const ProyectosAhorrista: React.FC = () => {
   
-  // ❗ CAMBIO 2: Usamos la nueva función y un queryKey más limpio
+  // ❗ CORRECCIÓN 2: Usamos el objeto importado y el nombre correcto de la función
   const { data: proyectos, isLoading, error } = useQuery<ProyectoDTO[], Error>({
     queryKey: ['proyectosAhorrista'],
-    queryFn: getProyectosDeAhorristas, // Ya no usamos getAllActiveProyectos
+    queryFn: proyectoService.getActiveProyectosAhorrista, // 👈 Nombre corregido
   });
 
-  // ❗ CAMBIO 3: Ya no filtramos. Solo nos aseguramos de que sea un array.
   const proyectosAhorrista = proyectos || [];
 
   return (
@@ -37,7 +35,6 @@ const ProyectosAhorrista: React.FC = () => {
         fullHeight={true} 
       >
 
-        {/* ❗ CAMBIO 4: Usamos la nueva variable (ya no se llama 'filteredProjects') */}
         {proyectosAhorrista.length === 0 ? (
           <Box textAlign="center" py={8}>
             <Typography variant="h5" color="text.secondary">
@@ -54,7 +51,6 @@ const ProyectosAhorrista: React.FC = () => {
 
             <SectionTitle>Proyectos disponibles</SectionTitle>
 
-            {/* ❗ CAMBIO 5: Limpieza de código. Simplifiqué el doble <Box> por uno solo centrado */}
             <Box
               sx={{
                 display: "grid",
@@ -62,7 +58,7 @@ const ProyectosAhorrista: React.FC = () => {
                 gap: 3,
                 maxWidth: 1200,
                 width: "100%",
-                mx: "auto", // <-- Centra el grid
+                mx: "auto",
                 mb: 8,
               }}
             >

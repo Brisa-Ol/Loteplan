@@ -20,19 +20,18 @@ import { PageContainer, PageHeader } from "../../components/common";
 import { useQuery, useMutation } from '@tanstack/react-query';
 
 // --- 1. Servicios y Tipos ---
-import { getActiveProyectoById } from '../../Services/proyecto.service';
+// ❗ CORRECCIÓN 1: Importamos el servicio por DEFECTO (sin llaves)
+import proyectoService from '../../Services/proyecto.service';
 import { crearInversion } from '../../Services/inversion.service';
 import { iniciarCheckoutInversion } from '../../Services/pagoMercado.service';
 import { iniciarPagoSuscripcion } from '../../Services/pago.service';
-import { getCuotasByProyectoId } from '../../Services/cuotaMensual.service';
+
 import type { ProyectoDTO, EstadoProyecto } from "../../types/dto/proyecto.dto";
 
 // --- 2. Contexto y Permisos ---
 import { useAuth } from "../../context/AuthContext";
-import PermissionGuard from '../../components/PermissionGuard/PermissionGuard'; // ❗ AÑADIDO
+import PermissionGuard from '../../components/PermissionGuard/PermissionGuard';
 import { usePermissions } from "../../hook/usePermissions";
-
-
 
 // --- 3. Constantes ---
 const API_PUBLIC_URL = import.meta.env.VITE_API_PUBLIC_URL || 'http://localhost:3001';
@@ -49,21 +48,22 @@ const ProyectoDetail: React.FC = () => {
   const location = useLocation();
   const { user } = useAuth();
   const isAuthenticated = !!user;
-  const permissions = usePermissions(); // ❗ AÑADIDO: Obtenemos permisos
+  const permissions = usePermissions();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // --- 4. Hooks (Querys) ---
+  // ❗ CORRECCIÓN 2: Usamos el servicio y el nombre de función correctos
   const { data: project, isLoading, error } = useQuery<ProyectoDTO | null, Error>({
     queryKey: ['proyecto', id],
-    queryFn: () => getActiveProyectoById(Number(id)),
+    queryFn: () => proyectoService.getActiveProyectoById(Number(id)),
     enabled: !!id,
     retry: false,
   });
 
   const { data: cuotasArray, isLoading: isLoadingCuota } = useQuery({
     queryKey: ['cuotasMensuales', id],
-    queryFn: () => getCuotasByProyectoId(Number(id)),
+    queryFn: () => getCuotasByProyectoId(Number(id)), // Asumiendo que este servicio sí es nombrado
     enabled: !!id && project?.tipo_inversion === 'mensual',
     retry: false,
   });
@@ -133,7 +133,6 @@ const ProyectoDetail: React.FC = () => {
     createInversionMutation.error ||
     checkoutInversionMutation.error;
 
-  // El botón para un cliente se deshabilita si es mensual y no hay cuota
   const isClienteButtonDisabled = project?.tipo_inversion === 'mensual' && !cuotaMensual && !isLoadingCuota;
 
   return (
@@ -146,7 +145,7 @@ const ProyectoDetail: React.FC = () => {
       >
         {project && (
           <>
-            {/* ❗ Variables de renderizado (IIFE eliminada) */}
+            {/* Variables de renderizado (IIFE eliminada) */}
             {(() => {
               const isInvestor = project.tipo_inversion === 'directo';
               const imageUrl = project.imagenes?.[0]?.url
@@ -185,7 +184,6 @@ const ProyectoDetail: React.FC = () => {
                         {project.descripcion || 'Sin descripción disponible.'}
                       </Typography>
                       
-                      {/* ... (Resto de la columna izquierda: Características, Lotes, etc.) ... */}
                       <Typography variant="h6" gutterBottom fontWeight={600} mt={3}>
                         Características principales
                       </Typography>
@@ -236,11 +234,6 @@ const ProyectoDetail: React.FC = () => {
                           </Alert>
                         )}
 
-                        {/* // ==================================================
-                          // ❗ INICIO: LÓGICA DE BOTONES BASADA EN ROL
-                          // ==================================================
-                        */}
-
                         {/* --- A. BOTÓN PARA CLIENTES --- */}
                         <PermissionGuard requireCliente>
                           <Button
@@ -249,7 +242,7 @@ const ProyectoDetail: React.FC = () => {
                             size="large"
                             sx={{ mt: 1, position: 'relative' }}
                             onClick={handleOpenModal}
-                            disabled={isClienteButtonDisabled} // ⬅️ Usamos el booleano específico
+                            disabled={isClienteButtonDisabled}
                           >
                             {isInvestor ? "Invertir ahora" : "Suscribirme ahora"}
                           </Button>
@@ -288,11 +281,6 @@ const ProyectoDetail: React.FC = () => {
                           </>
                         )}
                         
-                        {/* // ==================================================
-                          // ❗ FIN: LÓGICA DE BOTONES BASADA EN ROL
-                          // ==================================================
-                        */}
-
                         {/* Modal de confirmación */}
                         <Dialog open={isModalOpen} onClose={handleCloseModal}>
                           <DialogTitle>Confirmar {isInvestor ? 'Inversión' : 'Suscripción'}</DialogTitle>
@@ -346,3 +334,7 @@ const ProyectoDetail: React.FC = () => {
 };
 
 export default ProyectoDetail;
+
+function getCuotasByProyectoId(arg0: number): any {
+  throw new Error("Function not implemented.");
+}

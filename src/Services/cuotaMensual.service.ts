@@ -1,36 +1,55 @@
-// src/services/cuotaMensual.service.ts (CORREGIDO - RUTA SIMPLIFICADA)
+// src/services/cuotaMensual.service.ts
 import httpService from './httpService';
-import type {
-  CuotaMensualDTO,
-  CreateCuotaMensualDTO,
-  UpdateCuotaMensualDTO
-} from '../types/dto/cuotaMensual.dto';
+import type { CuotaMensualDTO, CreateCuotaMensualDTO } from '../types/dto/cuotaMensual.dto';
 
-const ENDPOINT = '/cuotas_mensuales';
+// ❗ Tu ruta de backend es '/cuota_mensual'
+const ENDPOINT = '/cuota_mensual'; 
 
-export const createCuota = (data: CreateCuotaMensualDTO): Promise<CuotaMensualDTO> => {
-  return httpService.post(ENDPOINT, data);
+const cuotaMensualService = {
+  /**
+   * (Admin) Crea una nueva cuota mensual para un proyecto.
+   * Llama a: POST /api/cuota_mensual
+   */
+  async createCuota(cuotaData: CreateCuotaMensualDTO): Promise<CuotaMensualDTO> {
+    const { data } = await httpService.post<CuotaMensualDTO>(ENDPOINT, cuotaData);
+    return data;
+  },
+
+  /**
+   * (Admin) Actualiza una cuota mensual.
+   * Llama a: PUT /api/cuota_mensual/:id
+   */
+  async updateCuota(id: string, cuotaData: Partial<CreateCuotaMensualDTO>): Promise<CuotaMensualDTO> {
+    const { data } = await httpService.put<CuotaMensualDTO>(`${ENDPOINT}/${id}`, cuotaData);
+    return data;
+  },
+
+  /**
+   * (Usuario/Admin) Obtiene todas las cuotas de un proyecto.
+   * Llama a: GET /api/cuota_mensual/:id_proyecto
+   */
+  async getCuotasByProyecto(idProyecto: string | number): Promise<CuotaMensualDTO[]> {
+    const { data } = await httpService.get<CuotaMensualDTO[]>(`${ENDPOINT}/${idProyecto}`);
+    return data;
+  },
+
+  /**
+   * (Usuario/Admin) Obtiene la última cuota de un proyecto.
+   * Llama a: GET /api/cuota_mensual/:id_proyecto/last
+   */
+  async getLastCuotaByProyecto(idProyecto: string | number): Promise<CuotaMensualDTO> {
+    const { data } = await httpService.get<CuotaMensualDTO>(`${ENDPOINT}/${idProyecto}/last`);
+    return data;
+  },
+
+  /**
+   * (Admin) Elimina (soft delete) una cuota.
+   * Llama a: DELETE /api/cuota_mensual/:id
+   */
+  async deleteCuota(id: string | number): Promise<{ mensaje: string }> {
+    const { data } = await httpService.delete<{ mensaje: string }>(`${ENDPOINT}/${id}`);
+    return data;
+  },
 };
 
-export const updateCuota = (id: number, data: UpdateCuotaMensualDTO): Promise<CuotaMensualDTO> => {
-  return httpService.put(`${ENDPOINT}/${id}`, data);
-};
- /**
-  * Llama a: GET /api/cuotas_mensuales/:id_proyecto
-  * Esta función llama a GET /api/cuotas_mensuales/proyecto/:id_proyecto
- */
-export const getCuotasByProyectoId = (id_proyecto: number): Promise<CuotaMensualDTO[]> => {
-
-  return httpService.get(`${ENDPOINT}/${id_proyecto}`);
-};
-/**
- * Obtiene la ÚLTIMA cuota de un proyecto (basado en tus rutas del backend).
- * Llama a: GET /api/cuotas_mensuales/:id_proyecto/last
- */
-export const getLatestCuotaByProyectoId = (id_proyecto: number): Promise<CuotaMensualDTO> => {
-  return httpService.get(`${ENDPOINT}/${id_proyecto}/last`);
-};
-
-export const deleteCuota = (id: number): Promise<void> => {
-  return httpService.delete(`${ENDPOINT}/${id}`);
-};
+export default cuotaMensualService;

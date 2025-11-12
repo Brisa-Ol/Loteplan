@@ -1,95 +1,119 @@
-// src/services/proyecto.service.ts (CORREGIDO Y OPTIMIZADO)
+// src/services/proyecto.service.ts
 import httpService from './httpService';
-import type {
-  ProyectoDTO,
-  CreateProyectoDTO,
+import type { 
+  ProyectoDTO, 
+  CreateProyectoDTO, 
   UpdateProyectoDTO,
   AssignLotesDTO
 } from '../types/dto/proyecto.dto';
+import type { 
+  CompletionRateDTO, 
+  MonthlyProgressItem 
+} from '../types/dto/auth.types'; // ❗ Tus DTOs de métricas
 
-// La ruta base es /api/proyectos
 const ENDPOINT = '/proyectos';
 
-// --- Funciones para Usuarios ---
+const proyectoService = {
+  // ══════════════════════════════════════════════════════════
+  // 🛡️ FUNCIONES DE ADMINISTRADOR
+  // ══════════════════════════════════════════════════════════
 
-/**
- * Obtiene TODOS los proyectos ACTIVOS (para mostrar en la web).
- * Llama a: GET /api/proyectos/activos
- */
-export const getAllActiveProyectos = (): Promise<ProyectoDTO[]> => {
-  return httpService.get(`${ENDPOINT}/activos`);
+  /** Llama a: GET /api/proyectos */
+  async getAllProyectos(): Promise<ProyectoDTO[]> {
+    const { data } = await httpService.get<ProyectoDTO[]>(ENDPOINT);
+    return data;
+  },
+
+  /** Llama a: GET /api/proyectos/:id */
+  async getProyectoById(id: string): Promise<ProyectoDTO> {
+    const { data } = await httpService.get<ProyectoDTO>(`${ENDPOINT}/${id}`);
+    return data;
+  },
+
+  /** Llama a: POST /api/proyectos */
+  async createProyecto(proyectoData: CreateProyectoDTO): Promise<ProyectoDTO> {
+    const { data } = await httpService.post<ProyectoDTO>(ENDPOINT, proyectoData);
+    return data;
+  },
+
+  /** Llama a: PUT /api/proyectos/:id */
+  async updateProyecto(id: string, proyectoData: UpdateProyectoDTO): Promise<ProyectoDTO> {
+    const { data } = await httpService.put<ProyectoDTO>(`${ENDPOINT}/${id}`, proyectoData);
+    return data;
+  },
+
+  /** Llama a: DELETE /api/proyectos/:id */
+  async deleteProyecto(id: string): Promise<{ mensaje: string }> {
+    const { data } = await httpService.delete<{ mensaje: string }>(`${ENDPOINT}/${id}`);
+    return data;
+  },
+
+  /** Llama a: PUT /api/proyectos/:id/lotes */
+  async assignLotesToProyecto(id: string, lotesData: AssignLotesDTO): Promise<ProyectoDTO> {
+    // ❗ Tu backend devuelve { mensaje, proyecto }
+    const { data } = await httpService.put<{ mensaje: string, proyecto: ProyectoDTO }>(
+      `${ENDPOINT}/${id}/lotes`, 
+      lotesData
+    );
+    return data.proyecto;
+  },
+
+  /** Llama a: PUT /api/proyectos/:id/iniciar-proceso */
+  async iniciarProcesoProyecto(id: string): Promise<ProyectoDTO> {
+    // ❗ Tu backend devuelve { mensaje, proyecto }
+    const { data } = await httpService.put<{ mensaje: string, proyecto: ProyectoDTO }>(
+      `${ENDPOINT}/${id}/iniciar-proceso`
+    );
+    return data.proyecto;
+  },
+
+  // --- Métricas de Admin ---
+
+  /** Llama a: GET /api/proyectos/metricas/culminacion */
+  async getCompletionRate(): Promise<CompletionRateDTO> {
+    const { data } = await httpService.get<{ data: CompletionRateDTO }>(`${ENDPOINT}/metricas/culminacion`);
+    return data.data; // ❗ Tu backend envuelve esto en un { mensaje, data }
+  },
+
+  /** Llama a: GET /api/proyectos/metricas/avance-mensual */
+  async getMonthlyProgress(): Promise<MonthlyProgressItem[]> {
+    const { data } = await httpService.get<{ data: MonthlyProgressItem[] }>(`${ENDPOINT}/metricas/avance-mensual`);
+    return data.data; // ❗ Tu backend envuelve esto en un { mensaje, data }
+  },
+
+  // ══════════════════════════════════════════════════════════
+  // 🧍 FUNCIONES PÚBLICAS/USUARIO
+  // ══════════════════════════════════════════════════════════
+
+  /** Llama a: GET /api/proyectos/activos */
+  async getActiveProyectos(): Promise<ProyectoDTO[]> {
+    const { data } = await httpService.get<ProyectoDTO[]>(`${ENDPOINT}/activos`);
+    return data;
+  },
+  
+  /** Llama a: GET /api/proyectos/activos/ahorristas */
+  async getActiveProyectosAhorrista(): Promise<ProyectoDTO[]> {
+    const { data } = await httpService.get<ProyectoDTO[]>(`${ENDPOINT}/activos/ahorristas`);
+    return data;
+  },
+  
+  /** Llama a: GET /api/proyectos/activos/inversionistas */
+  async getActiveProyectosInversionista(): Promise<ProyectoDTO[]> {
+    const { data } = await httpService.get<ProyectoDTO[]>(`${ENDPOINT}/activos/inversionistas`);
+    return data;
+  },
+  
+  /** Llama a: GET /api/proyectos/:id/activo */
+  async getActiveProyectoById(id: string | number): Promise<ProyectoDTO> {
+    const { data } = await httpService.get<ProyectoDTO>(`${ENDPOINT}/${id}/activo`);
+    return data;
+  },
+
+  /** Llama a: GET /api/proyectos/mis-proyectos */
+  async getMyProjects(): Promise<ProyectoDTO[]> {
+    const { data } = await httpService.get<ProyectoDTO[]>(`${ENDPOINT}/mis-proyectos`);
+    return data;
+  },
 };
 
-/**
- * ❗ NUEVO (Optimización)
- * Obtiene solo los proyectos ACTIVOS para Ahorristas (mensual).
- * Llama a: GET /api/proyectos/activos/ahorristas
- */
-export const getProyectosDeAhorristas = (): Promise<ProyectoDTO[]> => {
-  return httpService.get(`${ENDPOINT}/activos/ahorristas`);
-};
-
-/**
- * ❗ NUEVO (Optimización)
- * Obtiene solo los proyectos ACTIVOS para Inversionistas (directo).
- * Llama a: GET /api/proyectos/activos/inversionistas
- */
-export const getProyectosDeInversion = (): Promise<ProyectoDTO[]> => {
-  return httpService.get(`${ENDPOINT}/activos/inversionistas`);
-};
-
-
-/**
- * Obtiene un proyecto ACTIVO específico por ID (para ver detalles).
- * ❗ CORRECCIÓN: La ruta pública en tu backend es /:id/activo
- * Llama a: GET /api/proyectos/:id/activo
- */
-export const getActiveProyectoById = (id: number): Promise<ProyectoDTO> => {
-  return httpService.get(`${ENDPOINT}/${id}/activo`);
-};
-
-/**
- * Obtiene los proyectos en los que el usuario ha invertido o está suscripto.
- * ❗ CORRECCIÓN: El nombre de la función y la ruta se ajustaron al backend.
- * Llama a: GET /api/proyectos/mis-proyectos
- */
-export const getMisProyectos = (): Promise<ProyectoDTO[]> => {
-  // Tu backend usa /mis-proyectos, no /mis-inversiones
-  return httpService.get(`${ENDPOINT}/mis-proyectos`);
-};
-
-// --- Funciones para Administradores ---
-
-/**
- * (Admin) Crea un nuevo proyecto.
- * Llama a: POST /api/proyectos
- */
-export const createProyecto = (data: CreateProyectoDTO): Promise<ProyectoDTO> => {
-  return httpService.post(ENDPOINT, data);
-};
-
-/**
- * (Admin) Actualiza los datos de un proyecto.
- * Llama a: PUT /api/proyectos/:id
- */
-export const updateProyecto = (id: number, data: UpdateProyectoDTO): Promise<ProyectoDTO> => {
-  return httpService.put(`${ENDPOINT}/${id}`, data);
-};
-
-/**
- * (Admin) Asigna lotes a un proyecto existente.
- * ❗ CORRECCIÓN: Tu backend usa el método PUT y la ruta /:id/lotes
- * Llama a: PUT /api/proyectos/:id/lotes
- */
-export const assignLotesToProyecto = (id: number, data: AssignLotesDTO): Promise<ProyectoDTO> => {
-  // Tu backend espera PUT, no POST, y en la ruta /lotes
-  return httpService.put(`${ENDPOINT}/${id}/lotes`, data);
-};
-
-/**
- * (Admin) Realiza un soft delete de un proyecto.
- * Llama a: DELETE /api/proyectos/:id
- */
-export const deleteProyecto = (id: number): Promise<void> => {
-  return httpService.delete(`${ENDPOINT}/${id}`);
-};
+export default proyectoService;

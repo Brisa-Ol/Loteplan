@@ -4,8 +4,9 @@ import React from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { Box, CircularProgress} from '@mui/material';
 import { useAuth } from '../../context/AuthContext';
-import type { UserRole } from '../../types/auth.types';
+
 import { usePermissions } from '../../hook/usePermissions';
+import type { UserRole } from '../../types/dto/auth.types';
 
 interface ProtectedRouteProps {
   requiredRoles?: UserRole[]; // ⬅️ 2. Aceptamos una lista opcional de roles requeridos

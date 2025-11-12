@@ -1,4 +1,4 @@
-// src/Services/auth.service.ts
+// src/services/auth.service.ts (CORREGIDO PARA TU httpService)
 
 import httpService from "./httpService";
 import type {
@@ -11,143 +11,165 @@ import type {
   TwoFASetupResponse,
   TwoFAEnableRequest,
   TwoFADisableRequest,
-  ForgotPasswordDTO,
-  ResendConfirmationDTO,
-  ResetPasswordDTO,
-} from "../types/dto/auth.types";
+  ForgotPasswordData,  // ❗ Usamos 'Data'
+  ResendConfirmationData, // ❗ Usamos 'Data'
+  ResetPasswordData,    // ❗ Usamos 'Data'
+  MessageResponse,
+} from "../types/dto/auth.types"; // ❗ Usamos el DTO unificado
 
 const API_ENDPOINT = "/auth";
 const TOKEN_KEY = "auth_token";
 const TWO_FA_TOKEN_KEY = "two_fa_token";
 
+// ❗ Tu backend (auth.controller.js, línea 46) devuelve esto:
+type RegisterResponse = MessageResponse & {
+  user: {
+    id: number;
+    nombre_usuario: string;
+    email: string;
+  }
+};
+
 const authService = {
   // ══════════════════════════════════════════════════════════
-  // 🔐 TOKEN MANAGEMENT
+  // TOKEN MANAGEMENT (Sin cambios)
   // ══════════════════════════════════════════════════════════
 
-  setToken(token: string): void {
-    localStorage.setItem(TOKEN_KEY, token);
-  },
-
-  getToken(): string | null {
-    return localStorage.getItem(TOKEN_KEY);
-  },
-
-  removeToken(): void {
-    localStorage.removeItem(TOKEN_KEY);
-  },
-
-  set2FAToken(token: string): void {
-    localStorage.setItem(TWO_FA_TOKEN_KEY, token);
-  },
-
-  get2FAToken(): string | null {
-    return localStorage.getItem(TWO_FA_TOKEN_KEY);
-  },
-
-  remove2FAToken(): void {
-    localStorage.removeItem(TWO_FA_TOKEN_KEY);
-  },
-
-  isAuthenticated(): boolean {
-    return !!this.getToken();
-  },
-
-  async logout(): Promise<void> {
-    try {
-      await httpService.post(`${API_ENDPOINT}/logout`);
-    } catch {
-      // Ignorar errores si ya expiró la sesión
-    } finally {
-      this.removeToken();
-      this.remove2FAToken();
-      window.location.href = "/login";
-    }
+  setToken(token: string): void { localStorage.setItem(TOKEN_KEY, token); },
+  getToken(): string | null { return localStorage.getItem(TOKEN_KEY); },
+  removeToken(): void { localStorage.removeItem(TOKEN_KEY); },
+  set2FAToken(token: string): void { localStorage.setItem(TWO_FA_TOKEN_KEY, token); },
+  get2FAToken(): string | null { return localStorage.getItem(TWO_FA_TOKEN_KEY); },
+  remove2FAToken(): void { localStorage.removeItem(TWO_FA_TOKEN_KEY); },
+  isAuthenticated(): boolean { return !!this.getToken(); },
+  logout(): void {
+    this.removeToken();
+    this.remove2FAToken();
+    window.location.href = "/login";
   },
 
   // ══════════════════════════════════════════════════════════
-  // 👤 AUTH OPERATIONS
+  // AUTH OPERATIONS (CORREGIDO)
   // ══════════════════════════════════════════════════════════
 
-  async register(data: RegisterData): Promise<void> {
-    await httpService.post(`${API_ENDPOINT}/register`, data);
+  async register(data: RegisterData): Promise<RegisterResponse> {
+    // ❗ CORRECCIÓN: Desestructuramos 'data' de la respuesta de httpService
+    const { data: responseData } = await httpService.post<RegisterResponse>(
+      `${API_ENDPOINT}/register`, 
+      data
+    );
+    return responseData;
   },
 
   async login(data: LoginCredentials): Promise<LoginResponse> {
-    // ✅ CORRECCIÓN: Desestructuramos 'data' del AxiosResponse
+    // ❗ CORRECCIÓN: Desestructuramos 'data'
     const { data: response } = await httpService.post<LoginResponse>(
       `${API_ENDPOINT}/login`,
       data
     );
 
-    // Verificamos si el backend exige 2FA
+    // Ahora 'response' ES el objeto JSON (LoginResponse)
     if ("is2FARequired" in response && response.is2FARequired) {
-      if (response.twoFaToken) {
-        this.set2FAToken(response.twoFaToken);
-      }
-    } else if ("token" in response && response.token) {
-      this.setToken(response.token);
+      this.set2FAToken(response.twoFaToken);
+    } else {
+      this.setToken((response as AuthResponse).token);
     }
 
     return response;
   },
 
   async verify2FA(data: Verify2FAData): Promise<AuthResponse> {
+    // ❗ CORRECCIÓN: Desestructuramos 'data'
     const { data: response } = await httpService.post<AuthResponse>(
       `${API_ENDPOINT}/2fa/verify`,
       data
     );
 
-    if (response.token) {
-      this.remove2FAToken();
-      this.setToken(response.token);
-    }
+    this.remove2FAToken();
+    this.setToken(response.token);
 
     return response;
   },
 
   async getCurrentUser(): Promise<User> {
+    // ❗ CORRECCIÓN: Desestructuramos 'data'
     const { data } = await httpService.get<User>("/usuarios/me");
     return data;
   },
 
   // ══════════════════════════════════════════════════════════
-  // 🔢 2FA MANAGEMENT
+  // 2FA MANAGEMENT
   // ══════════════════════════════════════════════════════════
 
   async generate2FASecret(): Promise<TwoFASetupResponse> {
+    // ❗ CORRECCIÓN: Desestructuramos 'data'
     const { data } = await httpService.post<TwoFASetupResponse>(
       `${API_ENDPOINT}/2fa/generate-secret`
     );
     return data;
   },
 
-  async enable2FA(data: TwoFAEnableRequest): Promise<void> {
-    await httpService.post(`${API_ENDPOINT}/2fa/enable`, data);
+  async enable2FA(data: TwoFAEnableRequest): Promise<MessageResponse> {
+    // ❗ CORRECCIÓN: Desestructuramos 'data'
+    const { data: responseData } = await httpService.post<MessageResponse>(
+      `${API_ENDPOINT}/2fa/enable`, 
+      data
+    );
+    return responseData;
   },
 
-  async disable2FA(data: TwoFADisableRequest): Promise<void> {
-    await httpService.post(`${API_ENDPOINT}/2fa/disable`, data);
+  async disable2FA(data: TwoFADisableRequest): Promise<MessageResponse> {
+    // ❗ CORRECCIÓN: Desestructuramos 'data'
+    const { data: responseData } = await httpService.post<MessageResponse>(
+      `${API_ENDPOINT}/2fa/disable`, 
+      data
+    );
+    return responseData;
   },
 
   // ══════════════════════════════════════════════════════════
-  // 📧 EMAIL & PASSWORD RECOVERY
+  // EMAIL & PASSWORD RECOVERY
   // ══════════════════════════════════════════════════════════
 
-  async confirmEmail(token: string): Promise<void> {
-    await httpService.get(`${API_ENDPOINT}/confirmar_email/${token}`);
+  async confirmEmail(token: string): Promise<MessageResponse> {
+    // ❗ CORRECCIÓN: Desestructuramos 'data'
+    const { data } = await httpService.get<MessageResponse>(
+      `${API_ENDPOINT}/confirmar_email/${token}`
+    );
+    return data;
   },
 
-  async resendConfirmation(data: ResendConfirmationDTO): Promise<void> {
-    await httpService.post(`${API_ENDPOINT}/reenviar_confirmacion`, data);
+  async resendConfirmation(data: ResendConfirmationData): Promise<MessageResponse> {
+    // ❗ CORRECCIÓN: Desestructuramos 'data'
+    const { data: responseData } = await httpService.post<MessageResponse>(
+      `${API_ENDPOINT}/reenviar_confirmacion`, 
+      data
+    );
+    return responseData;
   },
 
-  async forgotPassword(data: ForgotPasswordDTO): Promise<void> {
-    await httpService.post(`${API_ENDPOINT}/forgot-password`, data);
+  async forgotPassword(data: ForgotPasswordData): Promise<MessageResponse> {
+    // ❗ CORRECCIÓN: Desestructuramos 'data'
+    const { data: responseData } = await httpService.post<MessageResponse>(
+      `${API_ENDPOINT}/forgot-password`, 
+      data
+    );
+    return responseData;
   },
 
-  async resetPassword(token: string, data: ResetPasswordDTO): Promise<void> {
-    await httpService.post(`${API_ENDPOINT}/reset-password/${token}`, data);
+  async resetPassword(token: string, data: ResetPasswordData): Promise<MessageResponse> {
+    // ❗ CORRECCIÓN: Desestructuramos 'data'
+    const { data: responseData } = await httpService.post<MessageResponse>(
+      `${API_ENDPOINT}/reset-password/${token}`, 
+      data
+    );
+    return responseData;
+  },
+  
+  async logoutUser(): Promise<MessageResponse> {
+    // ❗ CORRECCIÓN: Desestructuramos 'data'
+    const { data } = await httpService.post<MessageResponse>(`${API_ENDPOINT}/logout`);
+    return data;
   },
 };
 

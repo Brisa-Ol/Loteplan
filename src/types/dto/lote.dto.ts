@@ -1,57 +1,45 @@
 // src/types/dto/lote.dto.ts
-import type { ImagenDTO } from './imagen.dto'; // <-- Importante
+import type { BaseDTO } from './base.dto';
+import type { ImagenDTO } from './imagen.dto';
+
+export type EstadoSubasta = 'pendiente' | 'activa' | 'finalizada';
 
 /**
- * Define los estados posibles para la subasta de un lote.
- * (Este tipo ya lo teníamos).
+ * DTO DE SALIDA (Lo que recibes del backend)
  */
-export type LoteEstadoSubasta = 'pendiente' | 'activa' | 'finalizada';
-
-/**
- * ❗ DTO DE SALIDA (ACTUALIZADO)
- * Representa el lote que RECIBIMOS del backend.
- * Ahora incluye el array de imágenes.
- */
-export interface LoteDTO {
-  id: number;
+export interface LoteDTO extends BaseDTO {
   id_proyecto: number | null;
   nombre_lote: string;
-  precio_base: number;
-  estado_subasta: LoteEstadoSubasta;
+  precio_base: number; // Tu modelo usa DECIMAL, TypeScript usa number
+  estado_subasta: EstadoSubasta;
   fecha_inicio: string | null;
   fecha_fin: string | null;
-  activo: boolean | null;
   id_puja_mas_alta: number | null;
   id_ganador: number | null;
   intentos_fallidos_pago: number;
   excedente_visualizacion: number;
-  fecha_creacion?: string;
-  fecha_actualizacion?: string;
-
-  /**
-   * ❗ NUEVO CAMPO (basado en el 'include' de tu backend)
-   * Lista de imágenes asociadas a este lote.
-   */
-  imagenes?: ImagenDTO[];
+  latitud: number | null;
+  longitud: number | null;
+  imagenes?: ImagenDTO[]; // ❗ Incluye las imágenes
+  fecha_creacion: string;
+  fecha_actualizacion: string;
 }
 
 /**
- * ❗ DTO DE ENTRADA (NUEVO)
- * Datos que el admin ENVÍA para crear un nuevo lote.
- * (Basado en la función 'create' de tu backend).
+ * DTO DE ENTRADA (Lo que envías para crear un lote)
+ * (Basado en lote.service.js -> create)
  */
 export interface CreateLoteDTO {
   nombre_lote: string;
   precio_base: number;
-  fecha_inicio: string; // "YYYY-MM-DDTHH:mm:ssZ"
-  fecha_fin: string;    // "YYYY-MM-DDTHH:mm:ssZ"
   id_proyecto?: number | null;
-  // 'estado_subasta' y 'activo' usan los defaults del modelo
+  fecha_inicio?: string | null; // "YYYY-MM-DD"
+  fecha_fin?: string | null; // "YYYY-MM-DD"
+  latitud?: number | null;
+  longitud?: number | null;
 }
 
 /**
- * ❗ DTO DE ENTRADA (NUEVO)
- * Datos que el admin ENVÍA para actualizar un lote.
- * (Basado en la función 'update' de tu backend).
+ * DTO DE ENTRADA (Lo que envías para actualizar un lote)
  */
-export type UpdateLoteDTO = Partial<CreateLoteDTO & { estado_subasta: LoteEstadoSubasta }>;
+export type UpdateLoteDTO = Partial<CreateLoteDTO & { activo: boolean }>;

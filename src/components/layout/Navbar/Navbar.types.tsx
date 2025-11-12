@@ -1,16 +1,56 @@
+// src/components/layout/Navbar/Navbar.types.ts (CORREGIDO)
 import type { SvgIconComponent } from "@mui/icons-material";
 
-export interface BaseNavItem {
+// ══════════════════════════════════════════════════════════
+// DEFINICIONES DE ITEMS DE NAVEGACIÓN
+// (Esta es la corrección: separamos los tipos en lugar de usar BaseNavItem)
+// ══════════════════════════════════════════════════════════
+
+interface CommonItemProps {
   label: string;
-  submenu?: NavItem[];
-  isDivider?: boolean;
   icon?: SvgIconComponent;
 }
 
-export type NavItem =
-  | (BaseNavItem & { path: string; action?: never })
-  | (BaseNavItem & { action: () => void; path?: never })
-  | (BaseNavItem & { submenu: NavItem[]; path?: never; action?: never });
+// 1. Un item que es un link
+interface PathItem extends CommonItemProps {
+  path: string;
+  action?: never;
+  submenu?: never;
+  isDivider?: never;
+}
+
+// 2. Un item que ejecuta una acción (ej. Logout)
+interface ActionItem extends CommonItemProps {
+  action: () => void;
+  path?: never;
+  submenu?: never;
+  isDivider?: never;
+}
+
+// 3. Un item que tiene un submenú
+interface SubmenuItem extends CommonItemProps {
+  submenu: NavItem[];
+  path?: never;
+  action?: never;
+  isDivider?: never;
+}
+
+// 4. Un item que es solo un divisor
+interface DividerItem {
+  isDivider: true;
+  label?: never;
+  path?: never;
+  action?: never;
+  submenu?: never;
+  icon?: never;
+}
+
+// NavItem es la unión de todas las posibilidades
+export type NavItem = PathItem | ActionItem | SubmenuItem | DividerItem;
+
+// ══════════════════════════════════════════════════════════
+// OTROS TIPOS (Sin cambios)
+// ══════════════════════════════════════════════════════════
 
 export interface ActionButton {
   label: string;
@@ -27,7 +67,7 @@ export interface NavbarConfig {
   actionButtons: ActionButton[];
 }
 
-// ✅ Type guard recomendado
-export const hasSubmenu = (item: NavItem): item is Extract<NavItem, { submenu: NavItem[] }> => {
-  return Array.isArray(item.submenu) && item.submenu.length > 0;
+// Type guard (Sigue funcionando)
+export const hasSubmenu = (item: NavItem): item is SubmenuItem => {
+  return 'submenu' in item && Array.isArray(item.submenu) && item.submenu.length > 0;
 };

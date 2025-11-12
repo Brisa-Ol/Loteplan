@@ -1,20 +1,17 @@
-// src/App.tsx
+// src/App.tsx (CORREGIDO Y CONECTADO)
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
-import { Box } from "@mui/material";
+import { Box, Typography } from "@mui/material";
 import theme from "./theme";
 
 // Layout Components
 import Navbar from "./components/layout/Navbar/Navbar";
 import Footer from "./components/layout/Footer/Footer";
 
-// Pages
+// Pages (Públicas)
 import Home from "./pages/Home/Home";
-import ProyectosAhorrista from "./pages/Proyectos/ProyectosAhorrista";
-import ProyectosInversionista from "./pages/Proyectos/ProyectosInversionista";
-import ProyectoDetail from "./pages/Proyectos/ProyectoDetail";
 import Ahorrista from "./pages/ComoFunciona/Ahorrista/Ahorrista";
 import Inversionista from "./pages/ComoFunciona/Inversionista/Inversionista";
 import Preguntas from "./pages/Preguntas/Preguntas";
@@ -33,13 +30,27 @@ import { AuthProvider } from "./context/AuthContext";
 // Rutas Protegidas
 import { ProtectedRoute } from "./routes/ProtectedRoute/ProtectedRoute";
 
-// Mi Cuenta (cliente)
+// Páginas de Cliente
+import ProyectosAhorrista from "./pages/Proyectos/ProyectosAhorrista";
+import ProyectosInversionista from "./pages/Proyectos/ProyectosInversionista";
+import ProyectoDetail from "./pages/Proyectos/ProyectoDetail";
 import MiCuentaPerfil from "./pages/MiCuenta/Perfil";
 import MisPagos from "./pages/MiCuenta/MisPagos";
 import MisSuscripciones from "./pages/MiCuenta/Suscripciones";
 
-// Admin
-import AdminDashboard from "./pages/Admin/AdminDashboard"; // ✅ ya enlazado
+// ❗ Páginas de Admin (Importaciones Reales)
+import AdminDashboard from "./pages/Admin/AdminDashboard";
+import AdminProyectos from "./pages/Admin/AdminProyectos"; // 👈 Importamos la página real
+// ❗ Mantenemos placeholders para las que aún no hemos hecho
+const AdminUsers: React.FC = () => (
+  <Box p={4}><Typography variant="h4">Página de Gestión de Usuarios (Admin)</Typography></Box>
+);
+const AdminKYC: React.FC = () => (
+  <Box p={4}><Typography variant="h4">Página de Gestión de KYC (Admin)</Typography></Box>
+);
+const MiCuentaConfig: React.FC = () => (
+  <Box p={4}><Typography variant="h4">Página de Configuración de Cuenta</Typography></Box>
+);
 
 // ──────────────────────────────────────────────────────────
 // REACT QUERY CLIENT
@@ -47,7 +58,7 @@ import AdminDashboard from "./pages/Admin/AdminDashboard"; // ✅ ya enlazado
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      refetchOnWindowFocus: false, // evita refetch cada vez que cambiás de pestaña
+      refetchOnWindowFocus: false,
       retry: 1,
       staleTime: 1000 * 60 * 2, // cache por 2 minutos
     },
@@ -60,7 +71,7 @@ const queryClient = new QueryClient({
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
     <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
-      <Navbar /> {/* ✅ Usa tu NavbarBase internamente */}
+      <Navbar />
       <Box component="main" sx={{ flexGrow: 1, width: "100%" }}>
         {children}
       </Box>
@@ -90,35 +101,43 @@ const App: React.FC = () => {
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/proyectos" element={<RoleSelection />} />
-                <Route path="/proyectos/ahorrista" element={<ProyectosAhorrista />} />
-                <Route path="/proyectos/inversionista" element={<ProyectosInversionista />} />
-                <Route path="/proyectos/:id" element={<ProyectoDetail />} />
                 <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                <Route path="/unauthorized" element={<Unauthorized />} />
 
                 {/* --- RUTAS CLIENTE --- */}
+                {/* (Solo 'cliente' puede ver esto) */}
                 <Route element={<ProtectedRoute requiredRoles={["cliente"]} />}>
+                  {/* ❗ CORRECCIÓN: Eliminadas las rutas públicas duplicadas */}
+                  <Route path="/proyectos/ahorrista" element={<ProyectosAhorrista />} />
+                  <Route path="/proyectos/inversionista" element={<ProyectosInversionista />} />
+                  <Route path="/proyectos/:id" element={<ProyectoDetail />} />
                   <Route path="/mi-cuenta/pagos" element={<MisPagos />} />
                   <Route path="/mi-cuenta/suscripciones" element={<MisSuscripciones />} />
                 </Route>
 
                 {/* --- RUTAS ADMIN --- */}
+                {/* (Solo 'admin' puede ver esto) */}
                 <Route element={<ProtectedRoute requiredRoles={["admin"]} />}>
                   <Route path="/admin/dashboard" element={<AdminDashboard />} />
-                  {/* Futuras rutas: <Route path="/admin/users" ... /> etc. */}
+                  {/* ❗ CORRECCIÓN: Rutas de admin alineadas con tu Navbar */}
+                  <Route path="/admin/users" element={<AdminUsers />} />
+                  <Route path="/admin/proyectos" element={<AdminProyectos />} />
+                  <Route path="/admin/kyc" element={<AdminKYC />} />
                 </Route>
 
                 {/* --- RUTAS COMPARTIDAS --- */}
+                {/* (Tanto 'cliente' como 'admin' pueden ver esto) */}
                 <Route element={<ProtectedRoute requiredRoles={["cliente", "admin"]} />}>
                   <Route path="/mi-cuenta/perfil" element={<MiCuentaPerfil />} />
+                  <Route path="/mi-cuenta/configuracion" element={<MiCuentaConfig />} />
                 </Route>
 
                 {/* --- RUTAS FALLBACK --- */}
-                <Route path="/unauthorized" element={<Unauthorized />} />
                 <Route path="*" element={<Home />} />
               </Routes>
             </Layout>
           </AuthProvider>
-          <ReactQueryDevtools initialIsOpen={false} /> {/* ✅ para debug */}
+          <ReactQueryDevtools initialIsOpen={false} />
         </QueryClientProvider>
       </Router>
     </ThemeProvider>
