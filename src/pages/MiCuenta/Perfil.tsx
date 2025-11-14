@@ -1,4 +1,4 @@
-// src/pages/MiCuenta/Perfil.tsx (VERSIÓN LIMPIA Y MODERNA)
+// src/pages/MiCuenta/Perfil.tsx (CORREGIDO)
 // ═══════════════════════════════════════════════════════════
 import React, { useState } from 'react';
 import {
@@ -16,25 +16,29 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { PageContainer } from '../../components/common';
 import { useMutation } from '@tanstack/react-query';
-import { updateMyProfile } from '../../Services/usuario.service';
+// ❗ CORRECCIÓN 1: Importar el 'default' y usar la ruta en minúscula 'services'
+import usuarioService from '../../Services/usuario.service';
 import type { UpdateProfileDTO } from '../../types/dto/usuario.dto';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 
 const Perfil: React.FC = () => {
+  // ❗ OJO: Esto espera que tu AuthContext provea 'updateUserContext'
   const { user, updateUserContext } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [successOpen, setSuccessOpen] = useState(false);
 
   const mutation = useMutation({
-    mutationFn: (data: UpdateProfileDTO) => updateMyProfile(data),
+    // ❗ CORRECCIÓN 2: Llamar a la función a través del objeto 'usuarioService'
+    mutationFn: (data: UpdateProfileDTO) =>
+      usuarioService.updateMyProfile(data),
     onSuccess: (updatedUser) => {
-      updateUserContext(updatedUser);
+      updateUserContext(updatedUser); // Actualiza el 'user' en el contexto
       setIsEditing(false);
       setSuccessOpen(true);
     },
     onError: (error: any) => {
-      console.error("Error al actualizar el perfil:", error);
+      console.error('Error al actualizar el perfil:', error);
     },
   });
 
@@ -47,13 +51,21 @@ const Perfil: React.FC = () => {
       nombre_usuario: user?.nombre_usuario || '',
     },
     validationSchema: Yup.object({
-      nombre: Yup.string().min(2, "Mínimo 2 caracteres").required("El nombre es requerido"),
-      apellido: Yup.string().min(2, "Mínimo 2 caracteres").required("El apellido es requerido"),
+      nombre: Yup.string()
+        .min(2, 'Mínimo 2 caracteres')
+        .required('El nombre es requerido'),
+      apellido: Yup.string()
+        .min(2, 'Mínimo 2 caracteres')
+        .required('El apellido es requerido'),
       numero_telefono: Yup.string()
-        .matches(/^[0-9()+\- ]+$/, "Formato de teléfono inválido")
-        .required("El teléfono es requerido"),
-      email: Yup.string().email("Email inválido").required("El email es requerido"),
-      nombre_usuario: Yup.string().min(4, "Mínimo 4 caracteres").required("El nombre de usuario es requerido"),
+        .matches(/^[0-9()+\- ]+$/, 'Formato de teléfono inválido')
+        .required('El teléfono es requerido'),
+      email: Yup.string()
+        .email('Email inválido')
+        .required('El email es requerido'),
+      nombre_usuario: Yup.string()
+        .min(4, 'Mínimo 4 caracteres')
+        .required('El nombre de usuario es requerido'),
     }),
     onSubmit: (values) => {
       mutation.mutate(values);
@@ -140,7 +152,8 @@ const Perfil: React.FC = () => {
               <Stack spacing={2}>
                 {mutation.isError && (
                   <Alert severity="error">
-                    {(mutation.error as Error)?.message || "No se pudo guardar los cambios."}
+                    {(mutation.error as Error)?.message ||
+                      'No se pudo guardar los cambios.'}
                   </Alert>
                 )}
 
@@ -148,17 +161,24 @@ const Perfil: React.FC = () => {
                   <TextField
                     fullWidth
                     label="Nombre"
-                    {...formik.getFieldProps("nombre")}
-                    error={formik.touched.nombre && Boolean(formik.errors.nombre)}
+                    {...formik.getFieldProps('nombre')}
+                    error={
+                      formik.touched.nombre && Boolean(formik.errors.nombre)
+                    }
                     helperText={formik.touched.nombre && formik.errors.nombre}
                     disabled={mutation.isPending}
                   />
                   <TextField
                     fullWidth
                     label="Apellido"
-                    {...formik.getFieldProps("apellido")}
-                    error={formik.touched.apellido && Boolean(formik.errors.apellido)}
-                    helperText={formik.touched.apellido && formik.errors.apellido}
+                    {...formik.getFieldProps('apellido')}
+                    error={
+                      formik.touched.apellido &&
+                      Boolean(formik.errors.apellido)
+                    }
+                    helperText={
+                      formik.touched.apellido && formik.errors.apellido
+                    }
                     disabled={mutation.isPending}
                   />
                 </Stack>
@@ -166,25 +186,37 @@ const Perfil: React.FC = () => {
                 <TextField
                   fullWidth
                   label="Nombre de Usuario"
-                  {...formik.getFieldProps("nombre_usuario")}
-                  error={formik.touched.nombre_usuario && Boolean(formik.errors.nombre_usuario)}
-                  helperText={formik.touched.nombre_usuario && formik.errors.nombre_usuario}
+                  {...formik.getFieldProps('nombre_usuario')}
+                  error={
+                    formik.touched.nombre_usuario &&
+                    Boolean(formik.errors.nombre_usuario)
+                  }
+                  helperText={
+                    formik.touched.nombre_usuario &&
+                    formik.errors.nombre_usuario
+                  }
                   disabled={mutation.isPending}
                 />
 
                 <TextField
                   fullWidth
                   label="Número de Teléfono"
-                  {...formik.getFieldProps("numero_telefono")}
-                  error={formik.touched.numero_telefono && Boolean(formik.errors.numero_telefono)}
-                  helperText={formik.touched.numero_telefono && formik.errors.numero_telefono}
+                  {...formik.getFieldProps('numero_telefono')}
+                  error={
+                    formik.touched.numero_telefono &&
+                    Boolean(formik.errors.numero_telefono)
+                  }
+                  helperText={
+                    formik.touched.numero_telefono &&
+                    formik.errors.numero_telefono
+                  }
                   disabled={mutation.isPending}
                 />
 
                 <TextField
                   fullWidth
                   label="Email"
-                  {...formik.getFieldProps("email")}
+                  {...formik.getFieldProps('email')}
                   error={formik.touched.email && Boolean(formik.errors.email)}
                   helperText={formik.touched.email && formik.errors.email}
                   disabled={mutation.isPending}
@@ -199,7 +231,12 @@ const Perfil: React.FC = () => {
                 />
 
                 {/* Botones */}
-                <Stack direction="row" justifyContent="flex-end" spacing={2} mt={1}>
+                <Stack
+                  direction="row"
+                  justifyContent="flex-end"
+                  spacing={2}
+                  mt={1}
+                >
                   <Button
                     variant="outlined"
                     onClick={() => {
@@ -219,7 +256,10 @@ const Perfil: React.FC = () => {
                   >
                     {mutation.isPending ? (
                       <>
-                        <CircularProgress size={22} sx={{ position: 'absolute' }} />
+                        <CircularProgress
+                          size={22}
+                          sx={{ position: 'absolute' }}
+                        />
                         <span style={{ opacity: 0 }}>Guardando...</span>
                       </>
                     ) : (

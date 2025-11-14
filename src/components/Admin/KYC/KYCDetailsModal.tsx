@@ -1,4 +1,5 @@
-// src/components/Admin/KYC/KYCDetailsModal.tsx (Adaptado y SIN Grid)
+// src/components/Admin/KYC/KYCDetailsModal.tsx
+// (Versión 2, Sin Grid y con componentes helper)
 
 import React, { useState } from 'react';
 import {
@@ -17,7 +18,7 @@ import {
   Card,
   CardMedia,
   CircularProgress,
-  Divider
+  Divider,
 } from '@mui/material';
 import {
   Close as CloseIcon,
@@ -29,10 +30,9 @@ import {
   LocationOn as LocationIcon,
   Wifi as WifiIcon,
   Image as ImageIcon,
-  VideoLibrary as VideoIcon
+  VideoLibrary as VideoIcon,
 } from '@mui/icons-material';
-// ❗ Asegúrate de que las rutas de importación sean correctas
-import type { KycDTO, RejectKycDTO } from '../../../types/dto/kyc.dto'; 
+import type { KycDTO, RejectKycDTO } from '../../../types/dto/kyc.dto';
 
 // ════════════════════════════════════════════════════════════
 // PROPS
@@ -51,13 +51,13 @@ interface KYCDetailsModalProps {
 // COMPONENTE PRINCIPAL
 // ════════════════════════════════════════════════════════════
 
-const KYCDetailsModal: React.FC<KYCDetailsModalProps> = ({ 
-  open, 
-  onClose, 
+const KYCDetailsModal: React.FC<KYCDetailsModalProps> = ({
+  open,
+  onClose,
   kyc,
   onApprove,
   onReject,
-  isLoading = false 
+  isLoading = false,
 }) => {
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
@@ -71,8 +71,7 @@ const KYCDetailsModal: React.FC<KYCDetailsModalProps> = ({
   const handleApprove = async () => {
     if (!kyc) return;
     try {
-      // ❗ Tu servicio kyc.service.ts espera 'id_usuario'
-      await onApprove(kyc.id_usuario); 
+      await onApprove(kyc.id_usuario);
       onClose();
     } catch (error) {
       console.error('Error al aprobar KYC:', error);
@@ -97,7 +96,6 @@ const KYCDetailsModal: React.FC<KYCDetailsModalProps> = ({
     if (!kyc) return;
 
     try {
-      // ❗ Tu servicio kyc.service.ts espera 'id_usuario'
       await onReject(kyc.id_usuario, { motivo_rechazo: rejectReason });
       setShowRejectDialog(false);
       onClose();
@@ -116,12 +114,18 @@ const KYCDetailsModal: React.FC<KYCDetailsModalProps> = ({
   // HELPER FUNCTIONS
   // ──────────────────────────────────────────────────────────
 
-  const getStatusColor = (status: string): 'success' | 'error' | 'warning' | 'default' => {
+  const getStatusColor = (
+    status: string
+  ): 'success' | 'error' | 'warning' | 'default' => {
     switch (status) {
-      case 'APROBADA': return 'success';
-      case 'RECHAZADA': return 'error';
-      case 'PENDIENTE': return 'warning';
-      default: return 'default';
+      case 'APROBADA':
+        return 'success';
+      case 'RECHAZADA':
+        return 'error';
+      case 'PENDIENTE':
+        return 'warning';
+      default:
+        return 'default';
     }
   };
 
@@ -132,13 +136,13 @@ const KYCDetailsModal: React.FC<KYCDetailsModalProps> = ({
       month: '2-digit',
       year: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     });
   };
-  
+
   const formatDateOnly = (dateString: string | null | undefined) => {
     if (!dateString) return 'N/A';
-    // ❗ Sumamos 1 día para corregir UTC (común en DATEONLY)
+    // Sumamos 1 día para corregir UTC (común en DATEONLY de BD)
     const date = new Date(dateString);
     date.setDate(date.getDate() + 1);
     return date.toLocaleDateString('es-AR', {
@@ -157,11 +161,22 @@ const KYCDetailsModal: React.FC<KYCDetailsModalProps> = ({
   const isPending = kyc.estado_verificacion === 'PENDIENTE';
 
   // Componente reutilizable para mostrar info
-  const InfoItem: React.FC<{ icon: React.ReactNode, label: string, value: React.ReactNode }> = ({ icon, label, value }) => (
+  const InfoItem: React.FC<{
+    icon: React.ReactNode;
+    label: string;
+    value: React.ReactNode;
+  }> = ({ icon, label, value }) => (
     <Stack direction="row" spacing={1.5} alignItems="center">
-      <Box color="action.active" sx={{ display: 'flex' }}>{icon}</Box>
+      <Box color="action.active" sx={{ display: 'flex' }}>
+        {icon}
+      </Box>
       <Box>
-        <Typography variant="caption" color="text.secondary" display="block" lineHeight={1.2}>
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          display="block"
+          lineHeight={1.2}
+        >
           {label}
         </Typography>
         <Typography variant="body2" fontWeight="medium">
@@ -172,11 +187,17 @@ const KYCDetailsModal: React.FC<KYCDetailsModalProps> = ({
   );
 
   // Componente reutilizable para mostrar imagen
-  const ImageCard: React.FC<{ url: string | null, title: string, icon: React.ReactNode }> = ({ url, title, icon }) => {
-    if (!url) return null;
+  const ImageCard: React.FC<{
+    url: string | null | undefined; // Acepta undefined también
+    title: string;
+    icon: React.ReactNode;
+  }> = ({ url, title, icon }) => {
+    if (!url) return null; // No renderiza nada si la URL no existe
     return (
-      <Box sx={{ width: { xs: '100%', sm: '33.33%' }, p: 1 }}> {/* Simula Grid item xs=12 sm=4 */}
-        <Card 
+      <Box sx={{ width: { xs: '100%', sm: '33.33%' }, p: 1 }}>
+        {' '}
+        {/* Simula Grid item xs=12 sm=4 */}
+        <Card
           elevation={3}
           sx={{ cursor: 'pointer', '&:hover': { boxShadow: 6 } }}
           onClick={() => handleImageClick(url)}
@@ -201,18 +222,24 @@ const KYCDetailsModal: React.FC<KYCDetailsModalProps> = ({
     );
   };
 
-
   return (
     <>
       {/* MODAL PRINCIPAL */}
-      <Dialog 
-        open={open} 
+      <Dialog
+        open={open}
         onClose={isLoading ? undefined : onClose}
         maxWidth="lg"
         fullWidth
       >
         {/* HEADER */}
-        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
+        <DialogTitle
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            pb: 1,
+          }}
+        >
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <BadgeIcon color="primary" />
             <Typography variant="h6" fontWeight="bold">
@@ -227,10 +254,9 @@ const KYCDetailsModal: React.FC<KYCDetailsModalProps> = ({
         {/* CONTENT */}
         <DialogContent dividers>
           <Stack spacing={3}>
-            
             {/* ESTADO Y INFO BÁSICA */}
             <Stack direction="row" spacing={2} alignItems="center">
-              <Chip 
+              <Chip
                 label={kyc.estado_verificacion}
                 color={getStatusColor(kyc.estado_verificacion)}
                 size="medium"
@@ -245,26 +271,33 @@ const KYCDetailsModal: React.FC<KYCDetailsModalProps> = ({
               <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
                 Información del Solicitante
               </Typography>
-              <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2, flexWrap: 'wrap' }}>
+              <Box
+                sx={{
+                  display: 'flex',
+                  flexDirection: { xs: 'column', sm: 'row' },
+                  gap: 2,
+                  flexWrap: 'wrap',
+                }}
+              >
                 <Box sx={{ width: { xs: '100%', sm: 'calc(50% - 8px)' } }}>
-                  <InfoItem 
-                    icon={<PersonIcon fontSize="small" />} 
-                    label="Nombre Completo" 
-                    value={kyc.nombre_completo || 'N/A'} 
+                  <InfoItem
+                    icon={<PersonIcon fontSize="small" />}
+                    label="Nombre Completo"
+                    value={kyc.nombre_completo || 'N/A'}
                   />
                 </Box>
                 <Box sx={{ width: { xs: '100%', sm: 'calc(50% - 8px)' } }}>
-                  <InfoItem 
-                    icon={<BadgeIcon fontSize="small" />} 
-                    label="Tipo y Número de Documento" 
-                    value={`${kyc.tipo_documento} - ${kyc.numero_documento}`} 
+                  <InfoItem
+                    icon={<BadgeIcon fontSize="small" />}
+                    label="Tipo y Número de Documento"
+                    value={`${kyc.tipo_documento} - ${kyc.numero_documento}`}
                   />
                 </Box>
                 <Box sx={{ width: { xs: '100%', sm: 'calc(50% - 8px)' } }}>
-                  <InfoItem 
-                    icon={<CalendarIcon fontSize="small" />} 
-                    label="Fecha de Nacimiento" 
-                    value={formatDateOnly(kyc.fecha_nacimiento)} 
+                  <InfoItem
+                    icon={<CalendarIcon fontSize="small" />}
+                    label="Fecha de Nacimiento"
+                    value={formatDateOnly(kyc.fecha_nacimiento)}
                   />
                 </Box>
               </Box>
@@ -277,28 +310,39 @@ const KYCDetailsModal: React.FC<KYCDetailsModalProps> = ({
               <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
                 Documentos Presentados
               </Typography>
-              <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, flexWrap: 'wrap', mx: -1 }}>
-                <ImageCard 
-                  url={kyc.url_foto_documento_frente} 
-                  title="Frente del Documento" 
-                  icon={<ImageIcon fontSize="small" color="action" />} 
+              <Box
+                sx={{
+                  display: 'flex',
+                  flexDirection: { xs: 'column', sm: 'row' },
+                  flexWrap: 'wrap',
+                  mx: -1,
+                }}
+              >
+                <ImageCard
+                  url={kyc.url_foto_documento_frente}
+                  title="Frente del Documento"
+                  icon={<ImageIcon fontSize="small" color="action" />}
                 />
-                <ImageCard 
-                  url={kyc.url_foto_documento_dorso} 
-                  title="Dorso del Documento" 
-                  icon={<ImageIcon fontSize="small" color="action" />} 
+                <ImageCard
+                  url={kyc.url_foto_documento_dorso}
+                  title="Dorso del Documento"
+                  icon={<ImageIcon fontSize="small" color="action" />}
                 />
-                <ImageCard 
-                  url={kyc.url_foto_selfie_con_documento} 
-                  title="Selfie con Documento" 
-                  icon={<PersonIcon fontSize="small" color="action" />} 
+                <ImageCard
+                  url={kyc.url_foto_selfie_con_documento}
+                  title="Selfie con Documento"
+                  icon={<PersonIcon fontSize="small" color="action" />}
                 />
               </Box>
               {kyc.url_video_verificacion && (
                 <Alert icon={<VideoIcon />} severity="info" sx={{ mt: 2 }}>
                   <Typography variant="body2">
                     <strong>Video de Verificación:</strong>{' '}
-                    <a href={kyc.url_video_verificacion} target="_blank" rel="noopener noreferrer">
+                    <a
+                      href={kyc.url_video_verificacion}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
                       Ver Video
                     </a>
                   </Typography>
@@ -313,22 +357,29 @@ const KYCDetailsModal: React.FC<KYCDetailsModalProps> = ({
               <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
                 Información Técnica
               </Typography>
-              <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2, flexWrap: 'wrap' }}>
+              <Box
+                sx={{
+                  display: 'flex',
+                  flexDirection: { xs: 'column', sm: 'row' },
+                  gap: 2,
+                  flexWrap: 'wrap',
+                }}
+              >
                 {kyc.ip_verificacion && (
                   <Box sx={{ width: { xs: '100%', sm: 'calc(50% - 8px)' } }}>
-                    <InfoItem 
-                      icon={<WifiIcon fontSize="small" />} 
-                      label="Dirección IP" 
-                      value={kyc.ip_verificacion} 
+                    <InfoItem
+                      icon={<WifiIcon fontSize="small" />}
+                      label="Dirección IP"
+                      value={kyc.ip_verificacion}
                     />
                   </Box>
                 )}
-                {(kyc.latitud_verificacion && kyc.longitud_verificacion) && (
+                {kyc.latitud_verificacion && kyc.longitud_verificacion && (
                   <Box sx={{ width: { xs: '100%', sm: 'calc(50% - 8px)' } }}>
-                    <InfoItem 
-                      icon={<LocationIcon fontSize="small" />} 
-                      label="Geolocalización" 
-                      value={`${kyc.latitud_verificacion}, ${kyc.longitud_verificacion}`} 
+                    <InfoItem
+                      icon={<LocationIcon fontSize="small" />}
+                      label="Geolocalización"
+                      value={`${kyc.latitud_verificacion}, ${kyc.longitud_verificacion}`}
                     />
                   </Box>
                 )}
@@ -340,21 +391,29 @@ const KYCDetailsModal: React.FC<KYCDetailsModalProps> = ({
               <>
                 <Divider />
                 <Box>
-                  <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                  <Typography
+                    variant="subtitle1"
+                    fontWeight="bold"
+                    gutterBottom
+                  >
                     Estado de Verificación
                   </Typography>
-                  <Alert 
-                    severity={kyc.estado_verificacion === 'APROBADA' ? 'success' : 'error'}
+                  <Alert
+                    severity={
+                      kyc.estado_verificacion === 'APROBADA' ? 'success' : 'error'
+                    }
                   >
                     <Typography variant="body2">
                       <strong>Estado:</strong> {kyc.estado_verificacion}
                     </Typography>
                     <Typography variant="body2">
-                      <strong>Fecha:</strong> {formatDate(kyc.fecha_verificacion)}
+                      <strong>Fecha:</strong>{' '}
+                      {formatDate(kyc.fecha_verificacion)}
                     </Typography>
                     {kyc.motivo_rechazo && (
                       <Typography variant="body2" sx={{ mt: 1 }}>
-                        <strong>Motivo del rechazo:</strong> {kyc.motivo_rechazo}
+                        <strong>Motivo del rechazo:</strong>{' '}
+                        {kyc.motivo_rechazo}
                       </Typography>
                     )}
                   </Alert>
@@ -366,17 +425,17 @@ const KYCDetailsModal: React.FC<KYCDetailsModalProps> = ({
 
         {/* ACCIONES */}
         <DialogActions sx={{ p: 2.5, gap: 1 }}>
-          <Button 
-            onClick={onClose} 
+          <Button
+            onClick={onClose}
             variant="outlined"
             disabled={isLoading}
           >
             Cerrar
           </Button>
-          
+
           {isPending && (
             <>
-              <Button 
+              <Button
                 onClick={handleRejectClick}
                 variant="outlined"
                 color="error"
@@ -385,12 +444,18 @@ const KYCDetailsModal: React.FC<KYCDetailsModalProps> = ({
               >
                 Rechazar
               </Button>
-              <Button 
+              <Button
                 onClick={handleApprove}
                 variant="contained"
                 color="success"
                 disabled={isLoading}
-                startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : <CheckCircleIcon />}
+                startIcon={
+                  isLoading ? (
+                    <CircularProgress size={20} color="inherit" />
+                  ) : (
+                    <CheckCircleIcon />
+                  )
+                }
               >
                 {isLoading ? 'Aprobando...' : 'Aprobar Verificación'}
               </Button>
@@ -414,7 +479,8 @@ const KYCDetailsModal: React.FC<KYCDetailsModalProps> = ({
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
             <Alert severity="warning">
-              Esta acción notificará al usuario y deberá volver a iniciar el proceso.
+              Esta acción notificará al usuario y deberá volver a iniciar el
+              proceso.
             </Alert>
             <TextField
               fullWidth
@@ -435,19 +501,25 @@ const KYCDetailsModal: React.FC<KYCDetailsModalProps> = ({
           </Stack>
         </DialogContent>
         <DialogActions sx={{ p: 2.5, gap: 1 }}>
-          <Button 
+          <Button
             onClick={() => setShowRejectDialog(false)}
             variant="outlined"
             disabled={isLoading}
           >
             Cancelar
           </Button>
-          <Button 
+          <Button
             onClick={handleRejectSubmit}
             variant="contained"
             color="error"
             disabled={isLoading}
-            startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : <CancelIcon />}
+            startIcon={
+              isLoading ? (
+                <CircularProgress size={20} color="inherit" />
+              ) : (
+                <CancelIcon />
+              )
+            }
           >
             {isLoading ? 'Rechazando...' : 'Confirmar Rechazo'}
           </Button>
@@ -462,7 +534,11 @@ const KYCDetailsModal: React.FC<KYCDetailsModalProps> = ({
         fullWidth
       >
         <DialogTitle>
-          <Stack direction="row" justifyContent="space-between" alignItems="center">
+          <Stack
+            direction="row"
+            justifyContent="space-between"
+            alignItems="center"
+          >
             <Typography variant="h6">Imagen Ampliada</Typography>
             <IconButton onClick={() => setSelectedImage(null)}>
               <CloseIcon />
@@ -472,13 +548,13 @@ const KYCDetailsModal: React.FC<KYCDetailsModalProps> = ({
         <DialogContent>
           {selectedImage && (
             <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-              <img 
-                src={selectedImage} 
+              <img
+                src={selectedImage}
                 alt="Imagen ampliada"
-                style={{ 
-                  maxWidth: '100%', 
+                style={{
+                  maxWidth: '100%',
                   maxHeight: '80vh',
-                  objectFit: 'contain'
+                  objectFit: 'contain',
                 }}
               />
             </Box>

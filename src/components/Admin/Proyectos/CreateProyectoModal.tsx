@@ -1,29 +1,24 @@
-// src/components/Admin/Proyectos/CreateProyectoModal.tsx
-import React, { useEffect } from 'react';
+// src/components/Admin/Proyectos/CreateProyectoModal.tsx (CON UNA IMAGEN)
+import React, { useEffect, useState } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button,
   TextField, MenuItem, Stack, Box, Typography, IconButton,
-  CircularProgress, Alert, Autocomplete, Checkbox
+  CircularProgress, Alert, Divider
 } from '@mui/material';
 import { Close as CloseIcon, Add as AddIcon } from '@mui/icons-material';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
-import { useQuery } from '@tanstack/react-query';
 
-// 1. Importamos DTOs y Servicios necesarios
 import type { CreateProyectoDTO } from '../../../types/dto/proyecto.dto';
-import type { LoteDTO } from '../../../types/dto/lote.dto';
-import loteService from '../../../Services/lote.service';
+import SingleImageUpload from '../../common/singleImageUpload/SingleImageUpload';
 
-// 2. Definimos las Props
 interface CreateProyectoModalProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (data: CreateProyectoDTO) => Promise<void>;
+  onSubmit: (data: CreateProyectoDTO, image: File | null) => Promise<void>;
   isLoading?: boolean;
 }
 
-// 3. Definimos la Validación con Yup
 const validationSchema = Yup.object({
   nombre_proyecto: Yup.string().min(5, 'Mínimo 5 caracteres').required('Requerido'),
   descripcion: Yup.string().nullable(),
@@ -32,8 +27,6 @@ const validationSchema = Yup.object({
   moneda: Yup.string().required('Requerido'),
   fecha_inicio: Yup.date().required('Requerido'),
   fecha_cierre: Yup.date().required('Requerido'),
-  
-  // --- Campos Condicionales ---
   plazo_inversion: Yup.number().when('tipo_inversion', {
     is: 'mensual',
     then: (schema) => schema.min(1, 'Debe ser mayor a 0').required('Requerido para tipo "mensual"'),
@@ -45,28 +38,18 @@ const validationSchema = Yup.object({
     otherwise: (schema) => schema.nullable(),
   }),
   suscripciones_minimas: Yup.number().nullable(),
-  
-  // --- Campos Opcionales ---
   forma_juridica: Yup.string().nullable(),
   latitud: Yup.number().nullable(),
   longitud: Yup.number().nullable(),
-  lotesIds: Yup.array().of(Yup.number()).nullable(),
 });
 
-// 4. Componente Principal
 const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({ 
   open, 
   onClose, 
   onSubmit, 
   isLoading = false 
 }) => {
-
-  // 5. Query para traer Lotes Disponibles (sin asignar)
-  const { data: lotesDisponibles = [], isLoading: isLoadingLotes } = useQuery<LoteDTO[], Error>({
-    queryKey: ['unassignedLotes'],
-    queryFn: loteService.getUnassignedLotes,
-    enabled: open, // Solo busca lotes cuando el modal está abierto
-  });
+  const [image, setImage] = useState<File | null>(null);
 
   const formik = useFormik<CreateProyectoDTO>({
     initialValues: {
@@ -83,13 +66,13 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
       fecha_cierre: '',
       latitud: undefined,
       longitud: undefined,
-      lotesIds: []
     },
     validationSchema: validationSchema,
     onSubmit: async (values) => {
       try {
-        await onSubmit(values);
+        await onSubmit(values, image);
         formik.resetForm();
+        setImage(null);
         onClose();
       } catch (error) {
         console.error('Error al crear proyecto:', error);
@@ -97,19 +80,17 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
     },
   });
   
-  // Efecto para cambiar la moneda automáticamente
   useEffect(() => {
     if (formik.values.tipo_inversion === 'mensual') {
       formik.setFieldValue('moneda', 'ARS');
     } else if (formik.values.tipo_inversion === 'directo') {
       formik.setFieldValue('moneda', 'USD');
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formik.values.tipo_inversion]);
-
 
   const handleClose = () => {
     formik.resetForm();
+    setImage(null);
     onClose();
   };
 
@@ -129,7 +110,7 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
         <DialogContent dividers>
           <Stack spacing={3} sx={{ mt: 1 }}>
             
-            {/* --- Información Básica --- */}
+            {/* Información Básica */}
             <Box>
               <Typography variant="subtitle2" color="text.secondary" gutterBottom fontWeight="medium">
                 Información Básica
@@ -156,7 +137,7 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
               />
             </Box>
 
-            {/* --- Tipo de Inversión y Moneda --- */}
+            {/* Tipo de Inversión y Moneda */}
             <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
               <TextField
                 fullWidth
@@ -184,7 +165,7 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
               </TextField>
             </Box>
 
-            {/* --- Monto y Plazos --- */}
+            {/* Monto y Fechas */}
             <Box>
               <Typography variant="subtitle2" color="text.secondary" gutterBottom fontWeight="medium">
                 Montos y Plazos
@@ -228,7 +209,7 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
               </Box>
             </Box>
 
-            {/* --- CAMPOS CONDICIONALES PARA 'MENSUAL' --- */}
+            {/* Campos Condicionales para Mensual */}
             {formik.values.tipo_inversion === 'mensual' && (
               <Box>
                 <Typography variant="subtitle2" color="text.secondary" gutterBottom fontWeight="medium">
@@ -263,15 +244,13 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
                     label="Suscripciones Mínimas"
                     type="number"
                     {...formik.getFieldProps('suscripciones_minimas')}
-                    error={formik.touched.suscripciones_minimas && Boolean(formik.errors.suscripciones_minimas)}
-                    helperText={formik.touched.suscripciones_minimas && formik.errors.suscripciones_minimas}
                     disabled={isLoading}
                   />
                 </Box>
               </Box>
             )}
 
-            {/* --- Campos Opcionales (Lotes, Jurídico, Geo) --- */}
+            {/* Campos Adicionales */}
             <Box>
               <Typography variant="subtitle2" color="text.secondary" gutterBottom fontWeight="medium">
                 Detalles Adicionales
@@ -284,7 +263,7 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
                 disabled={isLoading}
                 sx={{ mb: 2 }}
               />
-              <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2, mb: 2 }}>
+              <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
                 <TextField
                   fullWidth
                   id="latitud"
@@ -302,44 +281,24 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
                   disabled={isLoading}
                 />
               </Box>
-              
-              <Autocomplete
-                multiple
-                id="lotesIds"
-                options={lotesDisponibles}
-                getOptionLabel={(option) => `(ID: ${option.id}) ${option.nombre_lote}`}
-                value={lotesDisponibles.filter(lote => formik.values.lotesIds?.includes(lote.id))}
-                onChange={(_, newValue) => {
-                  formik.setFieldValue('lotesIds', newValue.map(lote => lote.id));
-                }}
-                loading={isLoadingLotes}
+            </Box>
+
+            <Divider />
+
+            {/* Upload de UNA SOLA Imagen para Proyecto */}
+            <Box>
+              <Typography variant="subtitle2" color="text.secondary" gutterBottom fontWeight="medium">
+                Imagen Principal del Proyecto
+              </Typography>
+              <SingleImageUpload
+                image={image}
+                onChange={setImage}
+                maxSizeMB={15}
                 disabled={isLoading}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="Asignar Lotes Disponibles (Opcional)"
-                    placeholder="Buscar lotes..."
-                    InputProps={{
-                      ...params.InputProps,
-                      endAdornment: (
-                        <>
-                          {isLoadingLotes ? <CircularProgress color="inherit" size={20} /> : null}
-                          {params.InputProps.endAdornment}
-                        </>
-                      ),
-                    }}
-                  />
-                )}
-                renderOption={(props, option, { selected }) => (
-                  <li {...props}>
-                    <Checkbox style={{ marginRight: 8 }} checked={selected} />
-                    {option.nombre_lote} (ID: {option.id})
-                  </li>
-                )}
               />
-              {lotesDisponibles.length === 0 && !isLoadingLotes && (
-                <Alert severity="info" sx={{ mt: 1 }}>
-                  No hay lotes disponibles sin asignar. Debes crear lotes primero.
+              {!image && (
+                <Alert severity="info" sx={{ mt: 2 }}>
+                  Puedes agregar la imagen principal ahora o después de crear el proyecto.
                 </Alert>
               )}
             </Box>

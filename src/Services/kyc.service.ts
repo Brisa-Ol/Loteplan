@@ -1,6 +1,5 @@
-// src/services/kyc.service.ts (COMPLETO Y ALINEADO)
 import httpService from './httpService';
-import type { KycDTO, KycStatusDTO, RejectKycDTO } from '../types/dto/kyc.dto';
+import type { KycDTO, KYCStatus, RejectKycDTO, KYCSubmissionResponse, KYCStatusResponse } from '../types/dto/kyc.dto';
 
 const ENDPOINT = '/kyc';
 
@@ -22,10 +21,10 @@ const kycService = {
    * (Usuario) Envía los datos y archivos para verificación.
    * Llama a: POST /api/kyc/submit
    * ❗ 'data' DEBE ser un objeto FormData construido en tu componente React.
+   * ❗ CORRECCIÓN: El DTO define KYCSubmissionResponse como la respuesta
    */
-  async submitVerificationData(data: FormData): Promise<KycDTO> {
-    // ❗ CORRECCIÓN: Desestructuramos 'data'
-    const { data: responseData } = await httpService.post<KycDTO>(`${ENDPOINT}/submit`, data, {
+  async submitVerificationData(data: FormData): Promise<KYCSubmissionResponse> {
+    const { data: responseData } = await httpService.post<KYCSubmissionResponse>(`${ENDPOINT}/submit`, data, {
       // Es crucial enviar el header correcto para archivos
       headers: {
         'Content-Type': 'multipart/form-data',
@@ -37,10 +36,10 @@ const kycService = {
   /**
    * (Usuario) Obtiene el estado de verificación del usuario actual.
    * Llama a: GET /api/kyc/status
+   * ❗ CORRECCIÓN: El DTO define KYCStatusResponse como la respuesta
    */
-  async getVerificationStatus(): Promise<KycStatusDTO> {
-    // ❗ CORRECCIÓN: Desestructuramos 'data'
-    const { data } = await httpService.get<KycStatusDTO>(`${ENDPOINT}/status`);
+  async getVerificationStatus(): Promise<KYCStatusResponse> {
+    const { data } = await httpService.get<KYCStatusResponse>(`${ENDPOINT}/status`);
     return data;
   },
 
@@ -60,9 +59,10 @@ const kycService = {
   /**
    * (Admin) Aprueba la verificación de un usuario.
    * Llama a: POST /api/kyc/approve/:idUsuario
+   * ❗ CORRECCIÓN: Cambiamos el tipo de retorno a MessageResponse para alinear con el componente
    */
-  async approveVerification(idUsuario: string | number): Promise<KycDTO> { // ❗ CORRECCIÓN: Tu backend devuelve el KycDTO actualizado
-    const { data } = await httpService.post<KycDTO>(
+  async approveVerification(idUsuario: string | number): Promise<MessageResponse> { 
+    const { data } = await httpService.post<MessageResponse>(
       `${ENDPOINT}/approve/${idUsuario}`
     );
     return data;
@@ -71,12 +71,13 @@ const kycService = {
   /**
    * (Admin) Rechaza la verificación de un usuario.
    * Llama a: POST /api/kyc/reject/:idUsuario
+   * ❗ CORRECCIÓN: Cambiamos el tipo de retorno a MessageResponse para alinear con el componente
    */
   async rejectVerification(
     idUsuario: string | number, 
     data: RejectKycDTO
-  ): Promise<KycDTO> { // ❗ CORRECCIÓN: Tu backend devuelve el KycDTO actualizado
-    const { data: responseData } = await httpService.post<KycDTO>(
+  ): Promise<MessageResponse> { 
+    const { data: responseData } = await httpService.post<MessageResponse>(
       `${ENDPOINT}/reject/${idUsuario}`,
       data
     );

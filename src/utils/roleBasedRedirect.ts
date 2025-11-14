@@ -1,5 +1,7 @@
 // src/utils/roleBasedRedirect.ts
 
+import type { UserRole } from "../types/dto/usuario.dto";
+
 
 /**
  * Retorna la ruta de dashboard predeterminada según el rol del usuario

@@ -1,8 +1,11 @@
-// src/hooks/use2FA.ts (ESTE ES EL ARCHIVO NUEVO QUE NECESITAS CREAR)
+// src/hooks/use2FA.ts
+// (Corregido el campo 'code' por 'token')
 
 import { useState } from 'react';
-import auth2faService from '../Services/auth2fa.service'; // ⬅️ Importa el servicio
+import auth2faService from '../Services/auth2fa.service';
 
+// ❗ Asumo que el servicio está en 'Services' (Mayúscula) como en tu AdminDashboard
+// Si está en 'services' (minúscula), ajusta la ruta de importación.
 
 /**
  * Hook para manejar la lógica de estado de la
@@ -11,7 +14,7 @@ import auth2faService from '../Services/auth2fa.service'; // ⬅️ Importa el s
 export const use2FA = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Estados para guardar los datos del secreto
   const [secret, setSecret] = useState<string | null>(null);
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
@@ -25,13 +28,9 @@ export const use2FA = () => {
     clearError();
     setIsLoading(true);
     try {
-      // Llama al servicio que pegaste
       const response = await auth2faService.generateSecret();
-      
-      // Guarda los datos en el estado del hook
       setSecret(response.secret);
       setQrCodeUrl(response.otpauthUrl);
-      
       return true;
     } catch (err: any) {
       setError(err.response?.data?.error || 'Error al generar el secreto 2FA.');
@@ -48,9 +47,9 @@ export const use2FA = () => {
     clearError();
     setIsLoading(true);
     try {
-      // Llama al servicio que pegaste
-      await auth2faService.enable({ code: code });
-      
+      // ❗ CORRECCIÓN: El DTO espera 'token', no 'code'.
+      await auth2faService.enable({ token: code });
+
       return true;
     } catch (err: any) {
       setError(err.response?.data?.error || 'El código 2FA es incorrecto.');

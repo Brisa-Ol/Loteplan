@@ -78,7 +78,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
       apellido: '',
       email: '',
       nombre_usuario: '',
-      telefono: '', // ❗ CORREGIDO: de 'telefono' a 'numero_telefono'
+      numero_telefono: '', // ❗ CORREGIDO: de 'telefono' a 'numero_telefono'
       rol: 'cliente',
       activo: true,
     },
@@ -103,7 +103,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         apellido: user.apellido || '',
         email: user.email || '',
         nombre_usuario: user.nombre_usuario || '',
-        telefono: user.numero_telefono || '', // ❗ CORREGIDO
+        numero_telefono: user.numero_telefono || '', // ❗ CORREGIDO
         rol: user.rol || 'cliente',
         activo: user.activo ?? true,
       });
@@ -183,8 +183,8 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                 id="numero_telefono"
                 label="Teléfono"
                 {...formik.getFieldProps('numero_telefono')} // ❗ CORREGIDO
-                error={formik.touched.telefono && Boolean(formik.errors.telefono)} // ❗ CORREGIDO
-                helperText={formik.touched.telefono && formik.errors.telefono} // ❗ CORREGIDO
+                error={formik.touched.numero_telefono && Boolean(formik.errors.numero_telefono)} // ❗ CORREGIDO
+                helperText={formik.touched.numero_telefono && formik.errors.numero_telefono} // ❗ CORREGIDO
                 disabled={isLoading}
                 required
               />

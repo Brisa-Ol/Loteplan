@@ -1,202 +1,205 @@
-// src/pages/Admin/AdminProyectos.tsx (COMPLETO CON TODOS LOS MODALES)
 import React, { useState } from 'react';
 import {
   Box, Paper, Typography, Button, TableContainer, Table,
   TableHead, TableRow, TableCell, TableBody, Chip,
-  IconButton, Tooltip, Stack, Alert, Snackbar
+  IconButton, Tooltip, Stack, Alert, Snackbar,
+  Dialog, DialogTitle, DialogContent, DialogActions, DialogContentText
 } from '@mui/material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
-  Layers as LotesIcon,
-  CreditCard as CuotaIcon,
-  CheckCircle as CheckCircleIcon,
-  PauseCircle as PauseIcon,
-  Error as ErrorIcon
+  Image as ImageIcon
 } from '@mui/icons-material';
 
+// --- IMPORTS ACTUALIZADOS ---
 import proyectoService from '../../Services/proyecto.service';
-import type { 
-  ProyectoDTO, 
-  EstadoProyecto, 
-  TipoInversion,
-  CreateProyectoDTO,
-  UpdateProyectoDTO,
-  AssignLotesDTO
-} from '../../types/dto/proyecto.dto';
+// ❗ Importamos el servicio de ADMIN para crear/borrar imágenes
+import adminImagenService from '../../Services/adminImagen.service'; 
+// Asumo que tu DTO se llama ProyectoDTO
+import type { ProyectoDTO, CreateProyectoDTO, UpdateProyectoDTO } from '../../types/dto/proyecto.dto';
 
 import { PageContainer, PageHeader, SectionTitle } from '../../components/common';
 import { QueryHandler } from '../../components/common/QueryHandler/QueryHandler';
-import { AdminBreadcrumbs } from '../../components/layout/Navbar/AdminBreadcrumbs';
 
-// ❗ IMPORTAMOS LOS 3 MODALES
+// --- IMPORTAMOS LOS 3 MODALES ---
 import CreateProyectoModal from '../../components/Admin/Proyectos/CreateProyectoModal';
+// 2. Importamos tu modal de Edición
 import EditProyectoModal from '../../components/Admin/Proyectos/EditProyectoModal';
-import AssignLotesModal from '../../components/Admin/Proyectos/AssignLotesModal';
-import ConfigCuotasModal from '../../components/Admin/Proyectos/ConfigCuotasModal';
-
-// Helpers de estado y tipo
-const estadoMap: Record<EstadoProyecto, { label: string; color: "success" | "warning" | "default" }> = {
-  "En proceso": { label: "En Proceso", color: "success" },
-  "En Espera": { label: "En Espera", color: "warning" },
-  "Finalizado": { label: "Finalizado", color: "default" },
-};
-
-const tipoMap: Record<TipoInversion, { label: string; color: "primary" | "info" }> = {
-  "directo": { label: "Inversión", color: "primary" },
-  "mensual": { label: "Ahorro", color: "info" },
-};
+// 3. Importamos el NUEVO modal de Gestión de Imágenes
+import ManageImagesModal from '../../components/Admin/Proyectos/ManageImagesModal'; 
 
 const AdminProyectos: React.FC = () => {
   const queryClient = useQueryClient();
 
-  // ❗ Estados para los 4 modales
+  // --- ESTADOS DE MODALES ACTUALIZADOS ---
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
-  const [assignLotesModalOpen, setAssignLotesModalOpen] = useState(false);
-  const [configCuotasModalOpen, setConfigCuotasModalOpen] = useState(false);
+  const [manageImagesModalOpen, setManageImagesModalOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedProyecto, setSelectedProyecto] = useState<ProyectoDTO | null>(null);
 
   // Snackbar
-  const [snackbar, setSnackbar] = useState({ 
-    open: false, 
-    message: '', 
-    severity: 'success' as 'success' | 'error' 
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success' as 'success' | 'error' | 'info' | 'warning'
   });
 
-  // Query
+  // Query (Sin cambios)
   const { data: proyectos = [], isLoading, error } = useQuery<ProyectoDTO[], Error>({
     queryKey: ['adminAllProjects'],
     queryFn: proyectoService.getAllProyectos
   });
 
-  // ══════════════════════════════════════════════════════════
-  // MUTACIONES
-  // ══════════════════════════════════════════════════════════
-
+  // --- MUTACIÓN DE CREACIÓN (CORREGIDA) ---
   const createMutation = useMutation({
-    mutationFn: proyectoService.createProyecto,
-    onSuccess: () => {
+    mutationFn: async ({ data, image }: { data: CreateProyectoDTO; image: File | null }) => {
+      // 1. Crear el proyecto
+      const createdProyecto = await proyectoService.createProyecto(data);
+
+      // 2. Si hay imagen, subirla usando adminImagenService
+      if (image && createdProyecto?.id) {
+        console.log(`Subiendo imagen para el Proyecto ID: ${createdProyecto.id}...`);
+        
+        // ❗ USA EL SERVICIO CORRECTO
+        await adminImagenService.create(
+          image,
+          data.descripcion || data.nombre_proyecto, // Usamos la descripción o el nombre como desc. de imagen
+          createdProyecto.id, // id_proyecto
+          null // id_lote
+        );
+      }
+      return createdProyecto;
+    },
+    onSuccess: (data) => {
+      // Invalidamos para refrescar la tabla
       queryClient.invalidateQueries({ queryKey: ['adminAllProjects'] });
-      queryClient.invalidateQueries({ queryKey: ['unassignedLotes'] });
+      // Si subimos imagen, también invalidamos las imágenes de ese proyecto (para el modal de gestión)
+      if (data?.id) {
+        queryClient.invalidateQueries({ queryKey: ['projectImages', data.id] });
+      }
       setSnackbar({ open: true, message: 'Proyecto creado con éxito', severity: 'success' });
+      setCreateModalOpen(false);
     },
     onError: (err: any) => {
-      setSnackbar({ 
-        open: true, 
-        message: err.response?.data?.error || 'Error al crear el proyecto', 
-        severity: 'error' 
+      setSnackbar({
+        open: true,
+        message: err.response?.data?.error || 'Error al crear el proyecto',
+        severity: 'error'
       });
     }
   });
 
+  // --- MUTACIÓN DE EDICIÓN (NUEVA) ---
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: UpdateProyectoDTO }) => 
+    // Tu modal EditProyectoModal pasa (id, data)
+    mutationFn: ({ id, data }: { id: string, data: UpdateProyectoDTO }) => 
       proyectoService.updateProyecto(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminAllProjects'] });
       setSnackbar({ open: true, message: 'Proyecto actualizado con éxito', severity: 'success' });
+      setEditModalOpen(false); // Cierra el modal de edición
     },
     onError: (err: any) => {
-      setSnackbar({ 
-        open: true, 
-        message: err.response?.data?.error || 'Error al actualizar el proyecto', 
-        severity: 'error' 
+      setSnackbar({
+        open: true,
+        message: err.response?.data?.error || 'Error al actualizar el proyecto',
+        severity: 'error'
       });
     }
   });
 
-  const assignLotesMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: AssignLotesDTO }) => 
-      proyectoService.assignLotesToProyecto(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['adminAllProjects'] });
-      queryClient.invalidateQueries({ queryKey: ['unassignedLotes'] });
-      setSnackbar({ open: true, message: 'Lotes asignados con éxito', severity: 'success' });
-    },
-    onError: (err: any) => {
-      setSnackbar({ 
-        open: true, 
-        message: err.response?.data?.error || 'Error al asignar lotes', 
-        severity: 'error' 
-      });
-    }
-  });
-
+  // Mutación para eliminar proyecto (Sin cambios)
   const deleteMutation = useMutation({
-    mutationFn: proyectoService.deleteProyecto,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['adminAllProjects'] });
-      setSnackbar({ open: true, message: 'Proyecto desactivado', severity: 'success' });
-    },
-    onError: (err: any) => {
-      setSnackbar({ 
-        open: true, 
-        message: err.response?.data?.error || 'Error al desactivar', 
-        severity: 'error' 
-      });
-    }
+    mutationFn: (id: number) => proyectoService.deleteProyecto(id.toString()),
+     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminAllProjects'] });
+      setSnackbar({ open: true, message: 'Proyecto desactivado', severity: 'success' });
+      setDeleteDialogOpen(false);
+    },
+    onError: (err: any) => {
+      setSnackbar({
+        open: true,
+        message: err.response?.data?.error || 'Error al desactivar',
+        severity: 'error'
+      });
+    }
   });
 
-  // ══════════════════════════════════════════════════════════
-  // HANDLERS
-  // ══════════════════════════════════════════════════════════
-
-  const handleCreateSubmit = async (data: CreateProyectoDTO) => {
-    await createMutation.mutateAsync(data);
+  // --- HANDLERS ---
+  
+  // Este handler ya es compatible con tu CreateProyectoModal (que usa Formik)
+  const handleCreateSubmit = async (data: CreateProyectoDTO, image: File | null) => {
+    await createMutation.mutateAsync({ data, image });
   };
 
-  const handleEditClick = (proyecto: ProyectoDTO) => {
-    setSelectedProyecto(proyecto);
-    setEditModalOpen(true);
-  };
-
+  // Este handler es compatible con tu EditProyectoModal
   const handleEditSubmit = async (id: string, data: UpdateProyectoDTO) => {
     await updateMutation.mutateAsync({ id, data });
   };
 
-  const handleAssignLotesClick = (proyecto: ProyectoDTO) => {
+  // Handlers para abrir/cerrar modales
+  const handleEditClick = (proyecto: ProyectoDTO) => {
     setSelectedProyecto(proyecto);
-    setAssignLotesModalOpen(true);
+    setEditModalOpen(true);
   };
-
-  const handleAssignLotesSubmit = async (id: string, data: AssignLotesDTO) => {
-    await assignLotesMutation.mutateAsync({ id, data });
-  };
-
-  const handleConfigCuotasClick = (proyecto: ProyectoDTO) => {
+  
+  const handleManageImagesClick = (proyecto: ProyectoDTO) => {
     setSelectedProyecto(proyecto);
-    setConfigCuotasModalOpen(true);
+    setManageImagesModalOpen(true);
   };
 
-  const handleDelete = (id: number) => {
-    if (window.confirm("¿Estás seguro de que deseas desactivar este proyecto?")) {
-      deleteMutation.mutate(id.toString());
+  const handleDeleteClick = (proyecto: ProyectoDTO) => {
+    setSelectedProyecto(proyecto);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (selectedProyecto) {
+      deleteMutation.mutate(selectedProyecto.id);
     }
+  };
+  
+  // Función para cerrar y limpiar la selección
+  const handleCloseModals = () => {
+    setEditModalOpen(false);
+    setManageImagesModalOpen(false);
+    setDeleteDialogOpen(false);
+    // Retrasamos un poco para que el modal se cierre antes de que el dato desaparezca
+    setTimeout(() => setSelectedProyecto(null), 150); 
+  };
+
+  const getEstadoChip = (estado: string) => {
+     const map: Record<string, { color: any; label: string }> = {
+       'En Espera': { color: 'warning', label: 'En Espera' },
+       'En proceso': { color: 'success', label: 'En Proceso' },
+       'Finalizado': { color: 'default', label: 'Finalizado' },
+     };
+     return map[estado] || { color: 'default', label: estado };
   };
 
   return (
-    <PageContainer maxWidth="lg">
-      <AdminBreadcrumbs />
+    <PageContainer maxWidth="xl">
       <PageHeader
         title="Gestión de Proyectos"
-        subtitle="Crea, edita, asigna lotes y configura cuotas para todos los proyectos."
+        subtitle="Crea y administra los proyectos de inversión."
       />
 
       <Paper elevation={2} sx={{ p: 3, overflow: 'hidden' }}>
-        <Stack 
-          direction={{ xs: 'column', md: 'row' }} 
-          justifyContent="space-between" 
-          alignItems="center" 
+        <Stack
+          direction="row"
+          justifyContent="space-between"
+          alignItems="center"
           sx={{ mb: 3 }}
         >
           <SectionTitle>
             Todos los Proyectos ({proyectos.length})
           </SectionTitle>
-          <Button 
-            variant="contained" 
+
+          <Button
+            variant="contained"
             startIcon={<AddIcon />}
             onClick={() => setCreateModalOpen(true)}
           >
@@ -210,22 +213,26 @@ const AdminProyectos: React.FC = () => {
           ) : (
             <TableContainer>
               <Table>
+                
+                {/* --- SECCIÓN DE TABLA RESTAURADA --- */}
                 <TableHead>
                   <TableRow>
                     <TableCell>Nombre del Proyecto</TableCell>
-                    <TableCell>Tipo</TableCell>
+                    <TableCell>Tipo Inversión</TableCell>
+                    <TableCell>Monto</TableCell>
                     <TableCell>Estado</TableCell>
-                    <TableCell align="center">Lotes Asignados</TableCell>
+                    <TableCell align="center">Imágenes</TableCell>
                     <TableCell align="center">Acciones</TableCell>
                   </TableRow>
                 </TableHead>
+
                 <TableBody>
                   {proyectos.map((proyecto) => {
-                    const estado = estadoMap[proyecto.estado_proyecto];
-                    const tipo = tipoMap[proyecto.tipo_inversion];
+                    const estadoChip = getEstadoChip(proyecto.estado_proyecto);
 
                     return (
                       <TableRow key={proyecto.id} hover>
+                        {/* Celda 1: Nombre e ID */}
                         <TableCell>
                           <Typography variant="body1" fontWeight={600}>
                             {proyecto.nombre_proyecto}
@@ -234,79 +241,89 @@ const AdminProyectos: React.FC = () => {
                             ID: {proyecto.id}
                           </Typography>
                         </TableCell>
+
+                        {/* Celda 2: Tipo Inversión */}
                         <TableCell>
-                          <Chip label={tipo.label} size="small" color={tipo.color} />
-                        </TableCell>
-                        <TableCell>
-                          <Chip 
-                            label={estado.label} 
-                            size="small" 
-                            color={estado.color} 
-                            icon={
-                              estado.color === 'success' ? <CheckCircleIcon /> : 
-                              (estado.color === 'warning' ? <PauseIcon /> : <ErrorIcon />)
-                            }
+                          <Chip
+                            label={proyecto.tipo_inversion === 'mensual' ? 'Ahorro' : 'Inversión'}
+                            size="small"
+                            color={proyecto.tipo_inversion === 'mensual' ? 'primary' : 'secondary'}
                           />
                         </TableCell>
-                        <TableCell align="center">
+
+                        {/* Celda 3: Monto */}
+                        <TableCell>
                           <Typography variant="body2" fontWeight={500}>
-                            {proyecto.lotes?.length || 0}
+                            {proyecto.moneda} ${proyecto.monto_inversion?.toLocaleString() || 0}
                           </Typography>
                         </TableCell>
+
+                        {/* Celda 4: Estado */}
+                        <TableCell>
+                          <Chip
+                            label={estadoChip.label}
+                            size="small"
+                            color={estadoChip.color}
+                          />
+                        </TableCell>
+
+                        {/* Celda 5: Conteo de Imágenes */}
                         <TableCell align="center">
-                          <Tooltip title="Editar Proyecto">
-                            <IconButton 
-                              size="small" 
-                              color="primary"
-                              onClick={() => handleEditClick(proyecto)}
-                            >
-                              <EditIcon />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Asignar Lotes">
-                            <IconButton 
-                              size="small" 
-                              color="default"
-                              onClick={() => handleAssignLotesClick(proyecto)}
-                            >
-                              <LotesIcon />
-                            </IconButton>
-                          </Tooltip>
-                          {proyecto.tipo_inversion === 'mensual' && (
-                            <Tooltip title="Configurar Cuotas">
-                              <IconButton 
-                                size="small" 
-                                color="default"
-                                onClick={() => handleConfigCuotasClick(proyecto)}
+                          <Typography variant="body2" fontWeight={500}>
+                            {proyecto.imagenes?.length || 0}
+                          </Typography>
+                        </TableCell>
+
+                        {/* Celda 6: Acciones */}
+                        <TableCell align="center">
+                          <Stack direction="row" spacing={0} justifyContent="center">
+                            
+                            <Tooltip title="Editar Proyecto">
+                              <IconButton
+                                size="small"
+                                color="primary"
+                                onClick={() => handleEditClick(proyecto)}
                               >
-                                <CuotaIcon />
+                                <EditIcon fontSize="small" />
                               </IconButton>
                             </Tooltip>
-                          )}
-                          <Tooltip title="Desactivar Proyecto">
-                            <IconButton 
-                              size="small" 
-                              color="error"
-                              onClick={() => handleDelete(proyecto.id)}
-                            >
-                              <DeleteIcon />
-                            </IconButton>
-                          </Tooltip>
+
+                            <Tooltip title="Gestionar Imágenes">
+                              <IconButton
+                                size="small"
+                                color="default"
+                                onClick={() => handleManageImagesClick(proyecto)}
+                              >
+                                <ImageIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                            
+                            <Tooltip title="Desactivar Proyecto">
+                              <IconButton
+                                size="small"
+                                color="error"
+                                onClick={() => handleDeleteClick(proyecto)}
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          </Stack>
                         </TableCell>
                       </TableRow>
                     );
                   })}
                 </TableBody>
+                {/* --- FIN DE SECCIÓN RESTAURADA --- */}
+
               </Table>
             </TableContainer>
           )}
         </QueryHandler>
       </Paper>
+
+      {/* --- RENDERIZADO DE MODALES --- */}
       
-      {/* ══════════════════════════════════════════════════════════ */}
-      {/* MODALES */}
-      {/* ══════════════════════════════════════════════════════════ */}
-      
+      {/* 1. TU MODAL DE CREACIÓN */}
       <CreateProyectoModal
         open={createModalOpen}
         onClose={() => setCreateModalOpen(false)}
@@ -314,38 +331,50 @@ const AdminProyectos: React.FC = () => {
         isLoading={createMutation.isPending}
       />
 
+      {/* 2. TU MODAL DE EDICIÓN */}
       <EditProyectoModal
         open={editModalOpen}
-        onClose={() => {
-          setEditModalOpen(false);
-          setSelectedProyecto(null);
-        }}
+        onClose={handleCloseModals}
         onSubmit={handleEditSubmit}
         proyecto={selectedProyecto}
         isLoading={updateMutation.isPending}
       />
 
-      <AssignLotesModal
-        open={assignLotesModalOpen}
-        onClose={() => {
-          setAssignLotesModalOpen(false);
-          setSelectedProyecto(null);
-        }}
-        onSubmit={handleAssignLotesSubmit}
-        proyecto={selectedProyecto}
-        isLoading={assignLotesMutation.isPending}
-      />
+      {/* 3. NUEVO MODAL DE GESTIÓN DE IMÁGENES */}
+      {selectedProyecto && (
+         <ManageImagesModal
+          open={manageImagesModalOpen}
+          onClose={handleCloseModals}
+          proyecto={selectedProyecto}
+        />
+      )}
 
-      <ConfigCuotasModal
-        open={configCuotasModalOpen}
-        onClose={() => {
-          setConfigCuotasModalOpen(false);
-          setSelectedProyecto(null);
-        }}
-        proyecto={selectedProyecto}
-      />
+      {/* DIÁLOGO DE CONFIRMACIÓN */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={handleCloseModals}
+      >
+        <DialogTitle>Confirmar Desactivación</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            ¿Estás seguro de que deseas desactivar el proyecto{' '}
+            <strong>{selectedProyecto?.nombre_proyecto}</strong>?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseModals}>Cancelar</Button>
+          <Button
+            onClick={confirmDelete}
+            variant="contained"
+            color="error"
+            disabled={deleteMutation.isPending}
+          >
+            Desactivar
+          </Button>
+        </DialogActions>
+      </Dialog>
 
-      {/* Snackbar */}
+      {/* SNACKBAR */}
       <Snackbar
         open={snackbar.open}
         autoHideDuration={4000}

@@ -1,54 +1,78 @@
-import httpService from './httpService';
+import type { IImagen } from "../types/dto/imagen.dto";
+import apiClient from "./httpService"; // 👈 AJUSTE REALIZADO
 
 
-import type {
-  ImagenDTO,
-  CreateImagenDTO,
-  UpdateImagenDTO
-} from '../types/dto/imagen.dto.ts';
-
-// La ruta base es /api/imagenes
-const ENDPOINT = '/imagenes';
+const API_URL = "/imagenes";
 
 /**
- * Obtiene todas las imágenes ACTIVAS de un proyecto.
- * Llama a: GET /api/imagenes/proyecto/:id_proyecto
- * (Tu backend debe tener esta ruta que use 'findByProjectIdActivo').
+ * Servicio para la gestión de Imágenes (vistas de usuario).
+ * Utiliza httpService para incluir automáticamente el token y manejar errores 401.
  */
-export const getImagenesByProyectoId = (id_proyecto: number): Promise<ImagenDTO[]> => {
-  return httpService.get(`${ENDPOINT}/proyecto/${id_proyecto}`);
-};
+class ImagenService {
+  [x: string]: any;
+  /**
+   * Obtiene todas las imágenes activas asociadas a un proyecto.
+   * @param idProyecto - ID del proyecto.
+   */
+  async getImagesByProjectId(idProyecto: number): Promise<IImagen[]> {
+    try {
+      // Tu httpService (apiClient) ya incluye el interceptor de respuesta,
+      // por lo que solo necesitamos devolver data en caso de éxito.
+      const response = await apiClient.get<IImagen[]>(
+        `${API_URL}/proyecto/${idProyecto}`
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error al obtener imágenes por proyecto:", error);
+      // El interceptor de httpService ya maneja el 401 (logout/redirect).
+      // Aquí relanzamos el error para que el componente que llama (UI)
+      // pueda reaccionar (ej. mostrar un toast de error).
+      throw error;
+    }
+  }
 
-/**
- * Obtiene todas las imágenes ACTIVAS de un lote.
- * Llama a: GET /api/imagenes/lote/:id_lote
- * (Tu backend debe tener esta ruta que use 'findByLoteIdActivo').
- */
-export const getImagenesByLoteId = (id_lote: number): Promise<ImagenDTO[]> => {
-  return httpService.get(`${ENDPOINT}/lote/${id_lote}`);
-};
+  /**
+   * Obtiene todas las imágenes activas asociadas a un lote.
+   * @param idLote - ID del lote.
+   */
+  async getImagesByLoteId(idLote: number): Promise<IImagen[]> {
+    try {
+      const response = await apiClient.get<IImagen[]>(
+        `${API_URL}/lote/${idLote}`
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error al obtener imágenes por lote:", error);
+      throw error;
+    }
+  }
 
-/**
- * (Admin) Crea un nuevo registro de imagen (después de subir el archivo).
- * Llama a: POST /api/imagenes
- */
-export const createImagen = (data: CreateImagenDTO): Promise<ImagenDTO> => {
-  return httpService.post(ENDPOINT, data);
-};
+  /**
+   * Obtiene todas las imágenes activas (sin filtrar por proyecto/lote).
+   */
+  async getAllActive(): Promise<IImagen[]> {
+    try {
+      const response = await apiClient.get<IImagen[]>(`${API_URL}/activas`);
+      return response.data;
+    } catch (error) {
+      console.error("Error al obtener imágenes activas:", error);
+      throw error;
+    }
+  }
 
-/**
- * (Admin) Actualiza la descripción o asociación de una imagen.
- * Llama a: PUT /api/imagenes/:id
- */
-export const updateImagen = (id: number, data: UpdateImagenDTO): Promise<ImagenDTO> => {
-  return httpService.put(`${ENDPOINT}/${id}`, data);
-};
+  /**
+   * Obtiene una imagen activa específica por ID.
+   * @param id - ID de la imagen.
+   */
+  async getActiveById(id: number): Promise<IImagen> {
+    try {
+      const response = await apiClient.get<IImagen>(`${API_URL}/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error("Error al obtener imagen activa por ID:", error);
+      throw error;
+    }
+  }
+}
 
-/**
- * (Admin) Realiza un soft delete de una imagen.
- * Llama a: DELETE /api/imagenes/:id
- */
-export const deleteImagen = (id: number): Promise<void> => {
-  // Tu backend llamará a 'softDelete'
-  return httpService.delete(`${ENDPOINT}/${id}`);
-};
+export default new ImagenService();

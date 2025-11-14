@@ -1,7 +1,14 @@
 // src/context/AuthContext.tsx
 
-import React, { createContext, useState, useEffect, useContext, type ReactNode } from "react";
+import React, {
+  createContext,
+  useState,
+  useEffect,
+  useContext,
+  type ReactNode,
+} from "react";
 import authService from "../Services/auth.service";
+import auth2faService from "../Services/auth2fa.service"; // ✅ Servicio separado
 import { AxiosError } from "axios";
 import type {
   User,
@@ -31,6 +38,7 @@ interface AuthContextType {
   register: (data: RegisterData) => Promise<void>;
   logout: () => void;
   refetchUser: () => Promise<void>;
+  updateUserContext: (user: User) => void;
   clearError: () => void;
   generate2FASecret: () => Promise<TwoFASetupResponse>;
   enable2FA: (data: TwoFAEnableRequest) => Promise<void>;
@@ -88,10 +96,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   // ══════════════════════════════════════════════════════════
-  // PUBLIC FUNCTIONS
+  // AUTENTICACIÓN
   // ══════════════════════════════════════════════════════════
 
-  const login = async (credentials: LoginCredentials): Promise<LoginResponse> => {
+  const login = async (
+    credentials: LoginCredentials
+  ): Promise<LoginResponse> => {
     try {
       setError(null);
       setIsLoading(true);
@@ -150,10 +160,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const logout = () => {
+    authService.logout();
+    setUser(null);
+    setRequires2FA(false);
+    setTwoFaToken(null);
+  };
+
+  // ══════════════════════════════════════════════════════════
+  // GESTIÓN DE 2FA
+  // ══════════════════════════════════════════════════════════
+
   const generate2FASecret = async (): Promise<TwoFASetupResponse> => {
     try {
       setError(null);
-      return await authService.generate2FASecret();
+      return await auth2faService.generateSecret(); // ✅ Servicio separado
     } catch (err) {
       return handleError(err, "Error al generar código 2FA");
     }
@@ -162,7 +183,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const enable2FA = async (data: TwoFAEnableRequest): Promise<void> => {
     try {
       setError(null);
-      await authService.enable2FA(data);
+      await auth2faService.enable(data); // ✅ Servicio separado
       await refetchUser();
     } catch (err) {
       handleError(err, "Error al habilitar 2FA");
@@ -172,12 +193,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const disable2FA = async (data: TwoFADisableRequest): Promise<void> => {
     try {
       setError(null);
-      await authService.disable2FA(data);
+      await auth2faService.disable(data); // ✅ Servicio separado
       await refetchUser();
     } catch (err) {
       handleError(err, "Error al deshabilitar 2FA");
     }
   };
+
+  // ══════════════════════════════════════════════════════════
+  // RECUPERACIÓN DE CONTRASEÑA Y EMAIL
+  // ══════════════════════════════════════════════════════════
 
   const resendConfirmation = async (email: string): Promise<void> => {
     try {
@@ -198,7 +223,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       await authService.forgotPassword({ email });
     } catch (err) {
       const error = err as AxiosError<{ error: string }>;
-      const errorMessage = error.response?.data?.error || "Error al procesar la solicitud";
+      const errorMessage =
+        error.response?.data?.error || "Error al procesar la solicitud";
       setError(errorMessage);
       throw err;
     } finally {
@@ -206,15 +232,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const logout = () => {
-    authService.logout();
-    setUser(null);
-    setRequires2FA(false);
-    setTwoFaToken(null);
-  };
+  // ══════════════════════════════════════════════════════════
+  // UTILIDADES
+  // ══════════════════════════════════════════════════════════
 
   const refetchUser = async () => {
     await loadUser();
+  };
+
+  const updateUserContext = (updatedUser: User) => {
+    setUser(updatedUser);
   };
 
   const clearError = () => {
@@ -235,6 +262,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         register,
         logout,
         refetchUser,
+        updateUserContext,
         clearError,
         generate2FASecret,
         enable2FA,

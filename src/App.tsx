@@ -1,55 +1,55 @@
-// src/App.tsx (CORREGIDO Y CONECTADO)
-import React from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { ThemeProvider } from "@mui/material/styles";
-import CssBaseline from "@mui/material/CssBaseline";
-import { Box, Typography } from "@mui/material";
-import theme from "./theme";
+// src/App.tsx (CORREGIDO: Rutas separadas para Usuarios y KYC)
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { ThemeProvider } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+import { Box, Typography } from '@mui/material';
+import theme from './theme';
 
 // Layout Components
-import Navbar from "./components/layout/Navbar/Navbar";
-import Footer from "./components/layout/Footer/Footer";
+import Navbar from './components/layout/Navbar/Navbar';
+import Footer from './components/layout/Footer/Footer';
 
 // Pages (Públicas)
-import Home from "./pages/Home/Home";
-import Ahorrista from "./pages/ComoFunciona/Ahorrista/Ahorrista";
-import Inversionista from "./pages/ComoFunciona/Inversionista/Inversionista";
-import Preguntas from "./pages/Preguntas/Preguntas";
-import Login from "./pages/Auth/LoginPage";
-import Register from "./pages/Auth/Register";
-import Nosotros from "./pages/Nosotros/Nosotros";
-import RoleSelection from "./pages/Proyectos/RoleSelection";
-import Unauthorized from "./pages/Unauthorized";
-import ForgotPasswordPage from "./pages/Auth/components/ForgotPassword/ForgotPassword";
+import Home from './pages/Home/Home';
+import Ahorrista from './pages/ComoFunciona/Ahorrista/Ahorrista';
+import Inversionista from './pages/ComoFunciona/Inversionista/Inversionista';
+import Preguntas from './pages/Preguntas/Preguntas';
+import Login from './pages/Auth/LoginPage';
+import Register from './pages/Auth/Register';
+import Nosotros from './pages/Nosotros/Nosotros';
+import RoleSelection from './pages/Proyectos/RoleSelection';
+import Unauthorized from './pages/Unauthorized';
+import ForgotPasswordPage from './pages/Auth/components/ForgotPassword/ForgotPassword';
 
 // Providers
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-import { AuthProvider } from "./context/AuthContext";
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import { AuthProvider } from './context/AuthContext';
 
 // Rutas Protegidas
-import { ProtectedRoute } from "./routes/ProtectedRoute/ProtectedRoute";
+import { ProtectedRoute } from './routes/ProtectedRoute/ProtectedRoute';
 
 // Páginas de Cliente
-import ProyectosAhorrista from "./pages/Proyectos/ProyectosAhorrista";
-import ProyectosInversionista from "./pages/Proyectos/ProyectosInversionista";
-import ProyectoDetail from "./pages/Proyectos/ProyectoDetail";
-import MiCuentaPerfil from "./pages/MiCuenta/Perfil";
-import MisPagos from "./pages/MiCuenta/MisPagos";
-import MisSuscripciones from "./pages/MiCuenta/Suscripciones";
+import ProyectosAhorrista from './pages/Proyectos/ProyectosAhorrista';
+import ProyectosInversionista from './pages/Proyectos/ProyectosInversionista';
+import ProyectoDetail from './pages/Proyectos/ProyectoDetail';
+import MiCuentaPerfil from './pages/MiCuenta/Perfil';
+import MisPagos from './pages/MiCuenta/MisPagos';
+import MisSuscripciones from './pages/MiCuenta/Suscripciones';
 
-// ❗ Páginas de Admin (Importaciones Reales)
-import AdminDashboard from "./pages/Admin/AdminDashboard";
-import AdminProyectos from "./pages/Admin/AdminProyectos"; // 👈 Importamos la página real
-// ❗ Mantenemos placeholders para las que aún no hemos hecho
-const AdminUsers: React.FC = () => (
-  <Box p={4}><Typography variant="h4">Página de Gestión de Usuarios (Admin)</Typography></Box>
-);
-const AdminKYC: React.FC = () => (
-  <Box p={4}><Typography variant="h4">Página de Gestión de KYC (Admin)</Typography></Box>
-);
+// Páginas de Admin
+import AdminDashboard from './pages/Admin/AdminDashboard';
+import AdminProyectos from './pages/Admin/AdminProyectos';
+import AdminLotes from './pages/Admin/AdminLotes';
+import AdminUsuarios from './pages/Admin/AdminUsuarios';
+import AdminKYC from './pages/Admin/AdminKYC';
+
+// Placeholder para Configuración
 const MiCuentaConfig: React.FC = () => (
-  <Box p={4}><Typography variant="h4">Página de Configuración de Cuenta</Typography></Box>
+  <Box p={4}>
+    <Typography variant="h4">Página de Configuración de Cuenta</Typography>
+  </Box>
 );
 
 // ──────────────────────────────────────────────────────────
@@ -60,7 +60,7 @@ const queryClient = new QueryClient({
     queries: {
       refetchOnWindowFocus: false,
       retry: 1,
-      staleTime: 1000 * 60 * 2, // cache por 2 minutos
+      staleTime: 1000 * 60 * 2,
     },
   },
 });
@@ -70,9 +70,9 @@ const queryClient = new QueryClient({
 // ──────────────────────────────────────────────────────────
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <Navbar />
-      <Box component="main" sx={{ flexGrow: 1, width: "100%" }}>
+      <Box component="main" sx={{ flexGrow: 1, width: '100%' }}>
         {children}
       </Box>
       <Footer />
@@ -105,9 +105,7 @@ const App: React.FC = () => {
                 <Route path="/unauthorized" element={<Unauthorized />} />
 
                 {/* --- RUTAS CLIENTE --- */}
-                {/* (Solo 'cliente' puede ver esto) */}
-                <Route element={<ProtectedRoute requiredRoles={["cliente"]} />}>
-                  {/* ❗ CORRECCIÓN: Eliminadas las rutas públicas duplicadas */}
+                <Route element={<ProtectedRoute requiredRoles={['cliente']} />}>
                   <Route path="/proyectos/ahorrista" element={<ProyectosAhorrista />} />
                   <Route path="/proyectos/inversionista" element={<ProyectosInversionista />} />
                   <Route path="/proyectos/:id" element={<ProyectoDetail />} />
@@ -116,18 +114,16 @@ const App: React.FC = () => {
                 </Route>
 
                 {/* --- RUTAS ADMIN --- */}
-                {/* (Solo 'admin' puede ver esto) */}
-                <Route element={<ProtectedRoute requiredRoles={["admin"]} />}>
+                <Route element={<ProtectedRoute requiredRoles={['admin']} />}>
                   <Route path="/admin/dashboard" element={<AdminDashboard />} />
-                  {/* ❗ CORRECCIÓN: Rutas de admin alineadas con tu Navbar */}
-                  <Route path="/admin/users" element={<AdminUsers />} />
+                  <Route path="/admin/usuarios" element={<AdminUsuarios />} />
                   <Route path="/admin/proyectos" element={<AdminProyectos />} />
+                  <Route path="/admin/lotes" element={<AdminLotes />} />
                   <Route path="/admin/kyc" element={<AdminKYC />} />
                 </Route>
 
                 {/* --- RUTAS COMPARTIDAS --- */}
-                {/* (Tanto 'cliente' como 'admin' pueden ver esto) */}
-                <Route element={<ProtectedRoute requiredRoles={["cliente", "admin"]} />}>
+                <Route element={<ProtectedRoute requiredRoles={['cliente', 'admin']} />}>
                   <Route path="/mi-cuenta/perfil" element={<MiCuentaPerfil />} />
                   <Route path="/mi-cuenta/configuracion" element={<MiCuentaConfig />} />
                 </Route>

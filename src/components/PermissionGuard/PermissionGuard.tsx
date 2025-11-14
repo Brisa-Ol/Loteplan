@@ -1,6 +1,6 @@
 // src/components/PermissionGuard/PermissionGuard.tsx
 import React from 'react';
-import type { UserRole } from '../../types/auth.types';
+import type { UserRole } from '../../types/dto/auth.types';
 import { usePermissions } from '../../hook/usePermissions';
 
 interface PermissionGuardProps {

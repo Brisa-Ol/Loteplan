@@ -333,7 +333,7 @@ const NavbarBase: React.FC<NavbarBaseProps> = ({
             }}
           >
             {/* Logo */}
-            <Logo src={logoPath} onClick={handleLogoClick} />
+            <Logo src={"../public/navbar/nav.png"} onClick={handleLogoClick} />
 
             {/* Navegación Desktop (Centro) */}
             <Box

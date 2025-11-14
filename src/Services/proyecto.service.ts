@@ -9,7 +9,7 @@ import type {
 import type { 
   CompletionRateDTO, 
   MonthlyProgressItem 
-} from '../types/dto/auth.types'; // ❗ Tus DTOs de métricas
+} from '../types/dto/auth.types';
 
 const ENDPOINT = '/proyectos';
 
@@ -25,7 +25,7 @@ const proyectoService = {
   },
 
   /** Llama a: GET /api/proyectos/:id */
-  async getProyectoById(id: string): Promise<ProyectoDTO> {
+  async getProyectoById(id: number | string): Promise<ProyectoDTO> {
     const { data } = await httpService.get<ProyectoDTO>(`${ENDPOINT}/${id}`);
     return data;
   },
@@ -37,20 +37,19 @@ const proyectoService = {
   },
 
   /** Llama a: PUT /api/proyectos/:id */
-  async updateProyecto(id: string, proyectoData: UpdateProyectoDTO): Promise<ProyectoDTO> {
+  async updateProyecto(id: number | string, proyectoData: UpdateProyectoDTO): Promise<ProyectoDTO> {
     const { data } = await httpService.put<ProyectoDTO>(`${ENDPOINT}/${id}`, proyectoData);
     return data;
   },
 
   /** Llama a: DELETE /api/proyectos/:id */
-  async deleteProyecto(id: string): Promise<{ mensaje: string }> {
+  async deleteProyecto(id: number | string): Promise<{ mensaje: string }> {
     const { data } = await httpService.delete<{ mensaje: string }>(`${ENDPOINT}/${id}`);
     return data;
   },
 
   /** Llama a: PUT /api/proyectos/:id/lotes */
-  async assignLotesToProyecto(id: string, lotesData: AssignLotesDTO): Promise<ProyectoDTO> {
-    // ❗ Tu backend devuelve { mensaje, proyecto }
+  async assignLotesToProyecto(id: number | string, lotesData: AssignLotesDTO): Promise<ProyectoDTO> {
     const { data } = await httpService.put<{ mensaje: string, proyecto: ProyectoDTO }>(
       `${ENDPOINT}/${id}/lotes`, 
       lotesData
@@ -59,8 +58,7 @@ const proyectoService = {
   },
 
   /** Llama a: PUT /api/proyectos/:id/iniciar-proceso */
-  async iniciarProcesoProyecto(id: string): Promise<ProyectoDTO> {
-    // ❗ Tu backend devuelve { mensaje, proyecto }
+  async iniciarProcesoProyecto(id: number | string): Promise<ProyectoDTO> {
     const { data } = await httpService.put<{ mensaje: string, proyecto: ProyectoDTO }>(
       `${ENDPOINT}/${id}/iniciar-proceso`
     );
@@ -72,13 +70,13 @@ const proyectoService = {
   /** Llama a: GET /api/proyectos/metricas/culminacion */
   async getCompletionRate(): Promise<CompletionRateDTO> {
     const { data } = await httpService.get<{ data: CompletionRateDTO }>(`${ENDPOINT}/metricas/culminacion`);
-    return data.data; // ❗ Tu backend envuelve esto en un { mensaje, data }
+    return data.data;
   },
 
   /** Llama a: GET /api/proyectos/metricas/avance-mensual */
   async getMonthlyProgress(): Promise<MonthlyProgressItem[]> {
     const { data } = await httpService.get<{ data: MonthlyProgressItem[] }>(`${ENDPOINT}/metricas/avance-mensual`);
-    return data.data; // ❗ Tu backend envuelve esto en un { mensaje, data }
+    return data.data;
   },
 
   // ══════════════════════════════════════════════════════════
@@ -104,7 +102,7 @@ const proyectoService = {
   },
   
   /** Llama a: GET /api/proyectos/:id/activo */
-  async getActiveProyectoById(id: string | number): Promise<ProyectoDTO> {
+  async getActiveProyectoById(id: number | string): Promise<ProyectoDTO> {
     const { data } = await httpService.get<ProyectoDTO>(`${ENDPOINT}/${id}/activo`);
     return data;
   },
