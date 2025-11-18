@@ -58,4 +58,4 @@ const auth2faService = {
   },
 };
 
-export default auth2faService;
+export { auth2faService };

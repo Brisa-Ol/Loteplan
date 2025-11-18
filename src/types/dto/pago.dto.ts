@@ -51,3 +51,26 @@ export { type IniciarCheckoutResponseDTO }; // 👈 Re-exportar
 export interface CreatePagoInicialDTO {
   id_proyecto: number;
 }
+
+/**
+ * 🔴 ADMIN: Métricas de recaudo mensual
+ */
+export interface MetricasRecaudoMensualDto {
+  mes: number;
+  anio: number;
+  recaudo_total: number;
+  monto_vencido: number;
+  total_pagos: number;
+  pagos_pendientes: number;
+}
+
+/**
+ * 🔴 ADMIN: Tasa de pagos a tiempo
+ */
+export interface TasaPagosATiempoDto {
+  mes: number;
+  anio: number;
+  tasa_pagos_a_tiempo: string; // porcentaje como string
+  total_pagos: number;
+  pagos_a_tiempo: number;
+}

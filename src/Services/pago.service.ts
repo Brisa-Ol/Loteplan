@@ -42,3 +42,25 @@ export const iniciarPagoSuscripcion = (data: CreatePagoInicialDTO): Promise<Inic
   return httpService.post(`${SUSCRIPCION_ENDPOINT}/iniciar-pago`, data);
 };
 
+/**
+ * 🔴 ADMIN: Obtiene métricas de recaudo mensual
+ * Llama a: GET /api/pagos/metricas/mensuales?mes=...&anio=...
+ */
+export const getMetricasRecaudoMensual = async (mes: number, anio: number) => {
+  const { data } = await httpService.get(`${PAGO_ENDPOINT}/metricas/mensuales`, {
+    params: { mes, anio }
+  });
+  return data;
+};
+
+/**
+ * 🔴 ADMIN: Obtiene tasa de pagos a tiempo
+ * Llama a: GET /api/pagos/metricas/a-tiempo?mes=...&anio=...
+ */
+export const getTasaPagosATiempo = async (mes: number, anio: number) => {
+  const { data } = await httpService.get(`${PAGO_ENDPOINT}/metricas/a-tiempo`, {
+    params: { mes, anio }
+  });
+  return data;
+};
+

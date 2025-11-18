@@ -3,14 +3,13 @@
 import React from "react";
 import { Box, Stack, Card, Typography } from "@mui/material";
 import { CheckCircle as CheckCircleIcon } from "@mui/icons-material";
-import {
-  PageContainer,
-  PageHeader,
-  SectionTitle,
-  ImageCard,
-  IconCard,
-} from "../../components/common";
+
 import { features, steps, benefits } from "./Home.data";
+import { PageContainer } from "../../components/common/PageContainer/PageContainer";
+import { PageHeader } from "../../components/common/PageHeader/PageHeader";
+import { SectionTitle } from "../../components/common/SectionTitle/SectionTitle";
+import { ImageCard } from "../../components/common/ImageCard/ImageCard";
+import { IconCard } from "../../components/common/IconCard/IconCard";
 
 const Home: React.FC = () => {
   return (

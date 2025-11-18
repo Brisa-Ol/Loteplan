@@ -52,4 +52,4 @@ const cuotaMensualService = {
   },
 };
 
-export default cuotaMensualService;
+export { cuotaMensualService };

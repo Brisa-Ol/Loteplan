@@ -25,3 +25,21 @@ export const getMisInversiones = (): Promise<InversionDTO[]> => {
 export const getInversionById = (id: number): Promise<InversionDTO> => {
   return httpService.get(`${ENDPOINT}/${id}`);
 };
+
+/**
+ * 🔴 ADMIN: Obtiene métricas de liquidez
+ * Llama a: GET /api/inversiones/metricas/liquidez
+ */
+export const getMetricasLiquidez = async () => {
+  const { data } = await httpService.get(`${ENDPOINT}/metricas/liquidez`);
+  return data;
+};
+
+/**
+ * 🔴 ADMIN: Obtiene inversión agregada por usuario
+ * Llama a: GET /api/inversiones/metricas/agregado-por-usuario
+ */
+export const getInversionAgregadaPorUsuario = async () => {
+  const { data } = await httpService.get(`${ENDPOINT}/metricas/agregado-por-usuario`);
+  return data;
+};

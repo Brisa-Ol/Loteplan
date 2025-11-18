@@ -1,9 +1,22 @@
-// src/components/layout/Navbar/NavbarBase.tsx (CORREGIDO)
+// src/components/layout/Navbar/NavbarBase.tsx
 import React, { useCallback, useMemo, useState } from "react";
 import {
-  AppBar, Box, Toolbar, Container, Button, IconButton,
-  Drawer, List, ListItem, ListItemButton, ListItemText,
-  Menu, MenuItem, Divider, MenuList, ListItemIcon
+  AppBar,
+  Box,
+  Toolbar,
+  Container,
+  Button,
+  IconButton,
+  Drawer,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemText,
+  Menu,
+  MenuItem,
+  Divider,
+  MenuList,
+  ListItemIcon,
 } from "@mui/material";
 import {
   Menu as MenuIcon,
@@ -13,7 +26,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "@mui/material/styles";
 import type { NavItem, ActionButton } from "./Navbar.types";
-import { hasSubmenu } from "./Navbar.types";
+import { hasSubmenu, isDividerItem } from "./Navbar.types";
 import PopupState, { bindTrigger, bindMenu } from "material-ui-popup-state";
 
 // ══════════════════════════════════════════════════════════
@@ -56,7 +69,7 @@ const SubMenuItem = React.memo<{
   onClose: () => void;
   onClick: (item: NavItem) => void;
 }>(({ item, onClose, onClick }) => {
-  if (item.isDivider) {
+  if (isDividerItem(item)) {
     return <Divider sx={{ my: 0.5 }} />;
   }
 
@@ -87,23 +100,25 @@ const NavButton = React.memo<{
   navButtonSx: object;
   theme: any;
 }>(({ item, onClick, navButtonSx, theme }) => {
-  // ❗ Si es un divisor, no renderizamos nada (los divisores solo van en submenús)
-  if (item.isDivider) return null; 
+  // No renderizar divisores en navbar principal
+  if (isDividerItem(item)) return null;
 
-  const isMiCuentaButton = item.label === "Mi Cuenta" || item.label.includes("(Admin)");
+  const isMiCuentaButton =
+    item.label === "Mi Cuenta" || item.label.includes("(Admin)");
 
   const buttonSx = isMiCuentaButton
     ? {
-        ...navButtonSx,
-        color: theme.palette.primary.contrastText,
-        px: 2.5,
-        "&:hover": {
-          backgroundColor: theme.palette.primary.dark,
-          opacity: 1,
-        },
-      }
+      ...navButtonSx,
+      color: theme.palette.primary.contrastText,
+      px: 2.5,
+      "&:hover": {
+        backgroundColor: theme.palette.primary.dark,
+        opacity: 1,
+      },
+    }
     : navButtonSx;
 
+  // Botón con submenú
   if (hasSubmenu(item)) {
     return (
       <PopupState variant="popover" popupId={`popup-menu-${item.label}`}>
@@ -127,13 +142,14 @@ const NavButton = React.memo<{
                   borderRadius: 2,
                   boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
                   minWidth: 180,
+                  mt: 0.5,
                 },
               }}
             >
               <MenuList dense sx={{ p: 0 }}>
                 {item.submenu.map((sub, index) => (
                   <SubMenuItem
-                    key={sub.isDivider ? `divider-${index}` : sub.label}
+                    key={isDividerItem(sub) ? `divider-${index}` : sub.label}
                     item={sub}
                     onClose={popupState.close}
                     onClick={onClick}
@@ -151,7 +167,7 @@ const NavButton = React.memo<{
   return (
     <Button
       onClick={() => onClick(item)}
-      sx={navButtonSx}
+      sx={buttonSx}
       disabled={!item.path && !item.action}
     >
       {item.label}
@@ -164,6 +180,7 @@ const MobileNavItem = React.memo<{
   item: NavItem;
   onClick: (item: NavItem) => void;
 }>(({ item, onClick }) => {
+  // Item con submenú
   if (hasSubmenu(item)) {
     return (
       <Box>
@@ -177,7 +194,7 @@ const MobileNavItem = React.memo<{
         </ListItem>
 
         {item.submenu.map((sub, index) => {
-          if (sub.isDivider) {
+          if (isDividerItem(sub)) {
             return <Divider key={`divider-mob-${index}`} sx={{ my: 0.5 }} />;
           }
           const IconComponent = sub.icon;
@@ -207,9 +224,10 @@ const MobileNavItem = React.memo<{
     );
   }
 
-  // ❗ Si es un divisor, no renderizamos nada (los divisores solo van en submenús)
-  if (item.isDivider) return null;
+  // No renderizar divisores
+  if (isDividerItem(item)) return null;
 
+  // Item simple
   return (
     <ListItem disablePadding>
       <ListItemButton
@@ -241,17 +259,20 @@ const NavbarBase: React.FC<NavbarBaseProps> = ({
   const navigate = useNavigate();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  // Callbacks
+  // ════════════════════════════════════════════════════════
+  // CALLBACKS
+  // ════════════════════════════════════════════════════════
+
   const handleDrawerToggle = useCallback((open: boolean) => {
     setDrawerOpen(open);
   }, []);
 
   const handleItemClick = useCallback(
     (item: NavItem) => {
-      // No hacer nada si es un divisor (aunque no deberían llegar aquí)
-      if (item.isDivider) return; 
-      
+      if (isDividerItem(item)) return;
+
       setDrawerOpen(false);
+
       if (item.action) {
         item.action();
       } else if (item.path) {
@@ -262,11 +283,14 @@ const NavbarBase: React.FC<NavbarBaseProps> = ({
   );
 
   const handleLogoClick = useCallback(() => {
-    // ❗ CORRECCIÓN: Forzamos el tipo para que coincida con NavItem
-    handleItemClick({ label: "Home", path: homePath } as NavItem);
-  }, [homePath, handleItemClick]);
+    navigate(homePath);
+    setDrawerOpen(false);
+  }, [homePath, navigate]);
 
-  // Estilos
+  // ════════════════════════════════════════════════════════
+  // ESTILOS MEMOIZADOS
+  // ════════════════════════════════════════════════════════
+
   const navButtonSx = useMemo(
     () => ({
       color: theme.palette.text.primary,
@@ -286,7 +310,10 @@ const NavbarBase: React.FC<NavbarBaseProps> = ({
     [navItems, userNavItems]
   );
 
-  // Botones de Acción
+  // ════════════════════════════════════════════════════════
+  // BOTONES DE ACCIÓN
+  // ════════════════════════════════════════════════════════
+
   const ActionButtons = useCallback(
     ({ fullWidth = false }: { fullWidth?: boolean }) => {
       if (actionButtons.length === 0) return null;
@@ -300,8 +327,7 @@ const NavbarBase: React.FC<NavbarBaseProps> = ({
               fullWidth={fullWidth}
               onClick={
                 btn.path
-                  // ❗ CORRECCIÓN: Forzamos el tipo para que coincida con NavItem
-                  ? () => handleItemClick({ label: btn.label, path: btn.path } as NavItem)
+                  ? () => navigate(btn.path!)
                   : btn.action
               }
               sx={{
@@ -316,11 +342,16 @@ const NavbarBase: React.FC<NavbarBaseProps> = ({
         </>
       );
     },
-    [actionButtons, handleItemClick]
+    [actionButtons, navigate]
   );
+
+  // ════════════════════════════════════════════════════════
+  // RENDER
+  // ════════════════════════════════════════════════════════
 
   return (
     <>
+      {/* ════════ APP BAR ════════ */}
       <AppBar position="fixed" color="secondary" elevation={1}>
         <Container maxWidth="lg">
           <Toolbar
@@ -344,10 +375,9 @@ const NavbarBase: React.FC<NavbarBaseProps> = ({
                 justifyContent: "center",
               }}
             >
-              {/* ❗ CORRECCIÓN DE KEY */}
               {navItems.map((item, index) => (
                 <NavButton
-                  key={item.isDivider ? `divider-${index}` : item.label}
+                  key={isDividerItem(item) ? `divider-${index}` : item.label}
                   item={item}
                   onClick={handleItemClick}
                   navButtonSx={navButtonSx}
@@ -365,10 +395,9 @@ const NavbarBase: React.FC<NavbarBaseProps> = ({
                 justifyContent: "flex-end",
               }}
             >
-              {/* ❗ CORRECCIÓN DE KEY */}
               {userNavItems.map((item, index) => (
                 <NavButton
-                  key={item.isDivider ? `divider-${index}` : item.label}
+                  key={isDividerItem(item) ? `divider-user-${index}` : item.label}
                   item={item}
                   onClick={handleItemClick}
                   navButtonSx={navButtonSx}
@@ -397,7 +426,7 @@ const NavbarBase: React.FC<NavbarBaseProps> = ({
         </Container>
       </AppBar>
 
-      {/* Drawer Mobile */}
+      {/* ════════ DRAWER MOBILE ════════ */}
       <Drawer
         anchor="right"
         open={drawerOpen}
@@ -422,7 +451,7 @@ const NavbarBase: React.FC<NavbarBaseProps> = ({
               mb: 2,
             }}
           >
-            <Logo src={logoPath} onClick={handleLogoClick} isMobile />
+            <Logo src={"../public/navbar/nav.png"} onClick={handleLogoClick} isMobile />
             <IconButton
               onClick={() => handleDrawerToggle(false)}
               aria-label="Cerrar menú"
@@ -433,10 +462,9 @@ const NavbarBase: React.FC<NavbarBaseProps> = ({
 
           {/* Lista de Navegación Mobile */}
           <List sx={{ flex: 1 }}>
-            {/* ❗ CORRECCIÓN DE KEY */}
             {allNavItems.map((item, index) => (
               <MobileNavItem
-                key={item.isDivider ? `divider-${index}` : item.label}
+                key={isDividerItem(item) ? `divider-mob-${index}` : item.label}
                 item={item}
                 onClick={handleItemClick}
               />

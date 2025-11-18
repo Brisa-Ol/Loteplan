@@ -1,4 +1,4 @@
-// src/App.tsx (CORREGIDO: Rutas separadas para Usuarios y KYC)
+// src/App.tsx (CORREGIDO)
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
@@ -11,14 +11,13 @@ import Navbar from './components/layout/Navbar/Navbar';
 import Footer from './components/layout/Footer/Footer';
 
 // Pages (Públicas)
-import Home from './pages/Home/Home';
 import Ahorrista from './pages/ComoFunciona/Ahorrista/Ahorrista';
 import Inversionista from './pages/ComoFunciona/Inversionista/Inversionista';
 import Preguntas from './pages/Preguntas/Preguntas';
 import Login from './pages/Auth/LoginPage';
 import Register from './pages/Auth/Register';
 import Nosotros from './pages/Nosotros/Nosotros';
-import RoleSelection from './pages/Proyectos/RoleSelection';
+import RoleSelection from './pages/Cliente/Proyectos/RoleSelection';
 import Unauthorized from './pages/Unauthorized';
 import ForgotPasswordPage from './pages/Auth/components/ForgotPassword/ForgotPassword';
 
@@ -31,19 +30,21 @@ import { AuthProvider } from './context/AuthContext';
 import { ProtectedRoute } from './routes/ProtectedRoute/ProtectedRoute';
 
 // Páginas de Cliente
-import ProyectosAhorrista from './pages/Proyectos/ProyectosAhorrista';
-import ProyectosInversionista from './pages/Proyectos/ProyectosInversionista';
-import ProyectoDetail from './pages/Proyectos/ProyectoDetail';
-import MiCuentaPerfil from './pages/MiCuenta/Perfil';
-import MisPagos from './pages/MiCuenta/MisPagos';
-import MisSuscripciones from './pages/MiCuenta/Suscripciones';
+import ProyectosAhorrista from './pages/Cliente/Proyectos/ProyectosAhorrista';
+import ProyectosInversionista from './pages/Cliente/Proyectos/ProyectosInversionista';
+import ProyectoDetail from './pages/Cliente/Proyectos/ProyectoDetail';
+import Home from './pages/Home/Home';
+import MisPagos from './pages/Cliente/MiCuenta/MisPagos';
 
 // Páginas de Admin
-import AdminDashboard from './pages/Admin/AdminDashboard';
-import AdminProyectos from './pages/Admin/AdminProyectos';
-import AdminLotes from './pages/Admin/AdminLotes';
-import AdminUsuarios from './pages/Admin/AdminUsuarios';
-import AdminKYC from './pages/Admin/AdminKYC';
+import AdminDashboard from './pages/Admin/Dashboard/AdminDashboard';
+import AdminUsuarios from './pages/Admin/Usuarios/AdminUsuarios';
+import AdminProyectos from './pages/Admin/Proyectos/AdminProyectos';
+import AdminLotes from './pages/Admin/Lotes/AdminLotes';
+import AdminKYC from './pages/Admin/Usuarios/AdminKYC';
+import Perfil from './pages/Cliente/MiCuenta/Perfil';
+
+
 
 // Placeholder para Configuración
 const MiCuentaConfig: React.FC = () => (
@@ -108,9 +109,7 @@ const App: React.FC = () => {
                 <Route element={<ProtectedRoute requiredRoles={['cliente']} />}>
                   <Route path="/proyectos/ahorrista" element={<ProyectosAhorrista />} />
                   <Route path="/proyectos/inversionista" element={<ProyectosInversionista />} />
-                  <Route path="/proyectos/:id" element={<ProyectoDetail />} />
                   <Route path="/mi-cuenta/pagos" element={<MisPagos />} />
-                  <Route path="/mi-cuenta/suscripciones" element={<MisSuscripciones />} />
                 </Route>
 
                 {/* --- RUTAS ADMIN --- */}
@@ -124,7 +123,8 @@ const App: React.FC = () => {
 
                 {/* --- RUTAS COMPARTIDAS --- */}
                 <Route element={<ProtectedRoute requiredRoles={['cliente', 'admin']} />}>
-                  <Route path="/mi-cuenta/perfil" element={<MiCuentaPerfil />} />
+                  <Route path="/proyectos/:id" element={<ProyectoDetail />} />
+                  <Route path="/mi-cuenta/perfil" element={<Perfil />} />
                   <Route path="/mi-cuenta/configuracion" element={<MiCuentaConfig />} />
                 </Route>
 

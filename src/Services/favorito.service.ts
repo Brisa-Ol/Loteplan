@@ -35,9 +35,9 @@ export const isFavorito = (idLote: number): Promise<IsFavoritoResponseDTO> => {
 
 /**
  * (Admin) Obtiene estadísticas de cuántos usuarios marcaron cada lote como favorito.
- * Llama a: GET /api/favoritos/estadisticas?proyectoId={id}
+ * Llama a: GET /api/favorito/estadisticas?id_proyecto={id}
  */
 export const getEstadisticasFavoritos = (idProyecto?: number): Promise<EstadisticasFavoritoDTO[]> => {
-  const params = idProyecto ? { params: { proyectoId: idProyecto } } : {};
+  const params = idProyecto ? { params: { id_proyecto: idProyecto } } : {};
   return httpService.get(`${ENDPOINT}/estadisticas`, params);
 };

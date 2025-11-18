@@ -166,6 +166,18 @@ const usuarioService = {
     );
     return responseData;
   },
+
+  /**
+   * 🔴 ADMIN: Obtiene estadísticas de nuevos usuarios
+   * Backend: GET /usuarios/metricas/nuevos?dias=...
+   */
+  async getNuevosUsuarios(dias: number = 7): Promise<{ hoy: number; ultimos_dias: number }> {
+    const { data } = await httpService.get<{ hoy: number; ultimos_dias: number }>(
+      `${API_ENDPOINT}/metricas/nuevos`,
+      { params: { dias } }
+    );
+    return data;
+  },
 };
 
-export default usuarioService;
+export { usuarioService };

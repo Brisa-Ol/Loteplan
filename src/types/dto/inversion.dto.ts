@@ -38,3 +38,22 @@ export interface InversionCreadaResponseDTO {
   modelo: string;
   url_pago_sugerida: string; // ej: "/api/inversion/iniciar-pago/1"
 }
+
+/**
+ * 🔴 ADMIN: Métricas de liquidez
+ */
+export interface MetricasLiquidezDto {
+  total_pagado: number;
+  total_invertido_registrado: number;
+  tasa_liquidez: string; // porcentaje como string
+}
+
+/**
+ * 🔴 ADMIN: Inversión agregada por usuario
+ */
+export interface InversionAgregadaPorUsuarioDto {
+  id_usuario: number;
+  nombre_usuario: string;
+  email: string;
+  monto_total_invertido: number;
+}

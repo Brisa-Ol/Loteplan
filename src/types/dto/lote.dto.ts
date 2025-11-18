@@ -1,82 +1,67 @@
-// src/types/dto/lote.dto.ts
+// Archivo: src/types/lote.dto.ts
 
-import type { BaseDTO } from './base.dto';
-import type { ImagenDTO } from './imagen.dto';
+
+export interface IImagen {
+  id: number;
+  url: string;
+ 
+}
 
 /**
- * Estados posibles de subasta de un lote
+ * Interfaz principal basada en tu modelo Sequelize 'Lote'.
+ * Esta es la data que recibes de 'findAll', 'findById', etc.
  */
-export type EstadoSubasta = 'pendiente' | 'activa' | 'finalizada';
-
-/**
- * DTO DE SALIDA - Lote completo
- * (Basado en V1/V2 - Asume que BaseDTO tiene id, activo, fechas)
- */
-export interface LoteDTO extends BaseDTO {
+export interface LoteDTO {
+  id: number;
   id_proyecto: number | null;
   nombre_lote: string;
-  precio_base: number;
-  estado_subasta: EstadoSubasta;
-  fecha_inicio: string | null;
-  fecha_fin: string | null;
+  precio_base: string; // DECIMAL se maneja como string
+  estado_subasta: 'pendiente' | 'activa' | 'finalizada'; // ENUM
+  fecha_inicio: string | null; // DATE se maneja como string ISO
+  fecha_fin: string | null; // DATE
+  activo: boolean;
   id_puja_mas_alta: number | null;
   id_ganador: number | null;
   intentos_fallidos_pago: number;
-  excedente_visualizacion: number;
+  excedente_visualizacion: string; // DECIMAL
+  
+  // Nuevos campos de geolocalización
+  latitud: string | null; // DECIMAL
+  longitud: string | null; // DECIMAL
 
-  // Campos de geolocalización
-  latitud: number | null;
-  longitud: number | null;
+  // Timestamps (si están habilitados)
+  fecha_creacion: string;
+  fecha_actualizacion: string;
 
-  // Relaciones
-  imagenes?: ImagenDTO[];
+  // Relación (basada en los 'include' de tu servicio)
+  imagenes?: IImagen[];
 }
 
 /**
- * DTO DE ENTRADA - Crear Lote
- * (Idéntico en V1 y V2)
+ * DTO para crear un nuevo lote.
+ * (POST /)
  */
-export interface CreateLoteDTO {
+export interface LoteCreateDTO {
   id_proyecto?: number | null;
   nombre_lote: string;
-  precio_base: number;
+  precio_base: number; // Es más seguro enviar string desde formularios
+  estado_subasta?: 'pendiente' | 'activa' | 'finalizada';
   fecha_inicio?: string | null;
   fecha_fin?: string | null;
-  latitud?: number | null;
-  longitud?: number | null;
+  latitud?: string | number | null;
+  longitud?: string | number | null;
 }
 
 /**
- * DTO DE ENTRADA - Actualizar Lote
- * ❗ CORREGIDO: Incluye los campos de V1 (estado_subasta) y V2 (activo).
+ * DTO para actualizar un lote.
+ * (PUT /:id)
  */
-export interface UpdateLoteDTO {
-  nombre_lote?: string;
-  precio_base?: number;
-  estado_subasta?: EstadoSubasta; // 👈 Campo clave que faltaba en V2
-  fecha_inicio?: string | null;
-  fecha_fin?: string | null;
-  id_proyecto?: number | null;
-  latitud?: number | null;
-  longitud?: number | null;
-  activo?: boolean; // 👈 Campo clave que faltaba en V1
-  imagenes?: File[];
-}
+export type LoteUpdateDTO = Partial<LoteCreateDTO>;
 
 /**
- * DTO para iniciar subasta
- * (De V1 - Necesario para el servicio)
+ * Respuesta genérica para operaciones exitosas que solo devuelven un mensaje.
+ * (Ej: DELETE, startAuction, endAuction)
  */
-export interface StartAuctionDTO {
-  fecha_inicio?: string;
-  fecha_fin?: string;
-}
-
-/**
- * Respuesta al finalizar subasta
- * (De V1 - Necesario para el servicio)
- */
-export interface EndAuctionResponse {
+export interface SimpleMessageResponse {
   mensaje: string;
-  pujaGanadoraId?: number;
 }

@@ -95,4 +95,4 @@ const kycService = {
   },
 };
 
-export default kycService;
+export { kycService };

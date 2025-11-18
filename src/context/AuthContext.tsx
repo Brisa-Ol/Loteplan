@@ -1,4 +1,4 @@
-// src/context/AuthContext.tsx
+// src/context/AuthContext.tsx (CORREGIDO)
 
 import React, {
   createContext,
@@ -7,11 +7,16 @@ import React, {
   useContext,
   type ReactNode,
 } from "react";
-import authService from "../Services/auth.service";
-import auth2faService from "../Services/auth2fa.service"; // ✅ Servicio separado
 import { AxiosError } from "axios";
+
+// 1. IMPORTAR SERVICIOS Y DTOS ADICIONALES
+import { authService } from "../Services/auth.service";
+import { auth2faService } from "../Services/auth2fa.service";
+import { kycService } from "../Services/kyc.service";
+import type { UsuarioDTO } from "../types/dto/usuario.dto"; // ❗ AÑADIDO
+import type { KYCStatus } from "../types/dto/kyc.dto"; // ❗ AÑADIDO
 import type {
-  User,
+  // ❗ 'User' ya no se usa, usamos 'AuthenticatedUser'
   LoginCredentials,
   RegisterData,
   AuthResponse,
@@ -23,11 +28,24 @@ import type {
 } from "../types/dto/auth.types";
 
 // ══════════════════════════════════════════════════════════
-// CONTEXT INTERFACE
+// 2. NUEVA INTERFAZ DE USUARIO COMBINADA
+// ══════════════════════════════════════════════════════════
+
+/**
+ * Este es el tipo de objeto 'user' que usará el Contexto.
+ * Combina el perfil del usuario (UsuarioDTO) con su estado de KYC.
+ */
+export interface AuthenticatedUser extends UsuarioDTO {
+  estado_kyc: KYCStatus;
+}
+
+// ══════════════════════════════════════════════════════════
+// 3. INTERFAZ DEL CONTEXTO (ACTUALIZADA)
 // ══════════════════════════════════════════════════════════
 
 interface AuthContextType {
-  user: User | null;
+  // ❗ TIPO ACTUALIZADO
+  user: AuthenticatedUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   requires2FA: boolean;
@@ -38,7 +56,8 @@ interface AuthContextType {
   register: (data: RegisterData) => Promise<void>;
   logout: () => void;
   refetchUser: () => Promise<void>;
-  updateUserContext: (user: User) => void;
+  // ❗ TIPO ACTUALIZADO
+  updateUserContext: (user: AuthenticatedUser) => void;
   clearError: () => void;
   generate2FASecret: () => Promise<TwoFASetupResponse>;
   enable2FA: (data: TwoFAEnableRequest) => Promise<void>;
@@ -58,7 +77,8 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  // ❗ TIPO ACTUALIZADO
+  const [user, setUser] = useState<AuthenticatedUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [requires2FA, setRequires2FA] = useState(false);
   const [twoFaToken, setTwoFaToken] = useState<string | null>(() =>
@@ -71,18 +91,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   // ══════════════════════════════════════════════════════════
-  // INTERNAL FUNCTIONS
+  // 4. FUNCIÓN 'loadUser' (MODIFICADA)
   // ══════════════════════════════════════════════════════════
 
   const loadUser = async () => {
     try {
       if (authService.isAuthenticated()) {
-        const userData = await authService.getCurrentUser();
-        setUser(userData);
+        // Carga el perfil de usuario y el estado de KYC en paralelo
+        const [perfilResponse, kycResponse] = await Promise.all([
+          authService.getCurrentUser(), // Devuelve UsuarioDTO
+          // ❗❗ CORRECCIÓN APLICADA AQUÍ ❗❗
+          kycService.getVerificationStatus() // Devuelve KYCStatusResponse
+        ]);
+
+        // Combina los resultados en un solo objeto de usuario
+        const userCompleto: AuthenticatedUser = {
+          ...perfilResponse, // Datos del usuario (nombre, email, rol, etc.)
+          estado_kyc: kycResponse.estado_verificacion // Añade el estado de KYC
+        };
+        
+        setUser(userCompleto);
       }
     } catch (error) {
-      console.error("Error loading user:", error);
+      console.error("Error al cargar datos combinados del usuario:", error);
+      // Si falla CUALQUIERA de las llamadas, cerramos la sesión
+      // para evitar un estado de "semi-autenticado".
       authService.logout();
+      setUser(null); 
     } finally {
       setIsLoading(false);
     }
@@ -96,7 +131,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   // ══════════════════════════════════════════════════════════
-  // AUTENTICACIÓN
+  // AUTENTICACIÓN (Sin cambios, 'loadUser' hace el trabajo)
   // ══════════════════════════════════════════════════════════
 
   const login = async (
@@ -114,6 +149,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return response;
       }
 
+      // 'loadUser' ahora cargará perfil + kyc
       await loadUser();
       return response as AuthResponse;
     } catch (err) {
@@ -140,6 +176,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setRequires2FA(false);
       setTwoFaToken(null);
 
+      // 'loadUser' ahora cargará perfil + kyc
       await loadUser();
     } catch (err) {
       handleError(err, "Código 2FA incorrecto");
@@ -174,7 +211,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const generate2FASecret = async (): Promise<TwoFASetupResponse> => {
     try {
       setError(null);
-      return await auth2faService.generateSecret(); // ✅ Servicio separado
+      return await auth2faService.generateSecret();
     } catch (err) {
       return handleError(err, "Error al generar código 2FA");
     }
@@ -183,7 +220,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const enable2FA = async (data: TwoFAEnableRequest): Promise<void> => {
     try {
       setError(null);
-      await auth2faService.enable(data); // ✅ Servicio separado
+      await auth2faService.enable(data);
       await refetchUser();
     } catch (err) {
       handleError(err, "Error al habilitar 2FA");
@@ -193,7 +230,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const disable2FA = async (data: TwoFADisableRequest): Promise<void> => {
     try {
       setError(null);
-      await auth2faService.disable(data); // ✅ Servicio separado
+      await auth2faService.disable(data);
       await refetchUser();
     } catch (err) {
       handleError(err, "Error al deshabilitar 2FA");
@@ -237,10 +274,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // ══════════════════════════════════════════════════════════
 
   const refetchUser = async () => {
+    // 'loadUser' ahora cargará perfil + kyc
     await loadUser();
   };
 
-  const updateUserContext = (updatedUser: User) => {
+  // ❗ TIPO ACTUALIZADO
+  const updateUserContext = (updatedUser: AuthenticatedUser) => {
     setUser(updatedUser);
   };
 

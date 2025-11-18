@@ -1,74 +1,144 @@
-// src/types/dto/proyecto.dto.ts (Actualizado)
-import type { BaseDTO } from './base.dto';
-import type { LoteDTO } from './lote.dto';
-import type { ImagenDTO } from './imagen.dto';
+// src/types/proyecto.dto.ts
 
-export type TipoInversion = 'directo' | 'mensual';
-export type EstadoProyecto = 'En Espera' | 'En proceso' | 'Finalizado';
+// ----------------------------------------------------------
+// PROYECTO — CREATE
+// ----------------------------------------------------------
 
-/**
- * DTO DE SALIDA 
- */
-export interface ProyectoDTO extends BaseDTO {
+export interface CreateProyectoDto {
   nombre_proyecto: string;
-  descripcion: string | null;
-  tipo_inversion: TipoInversion;
-  plazo_inversion: number | null;
-  forma_juridica: string | null;
-  monto_inversion: number | null;
-  moneda: string | null;
-  suscripciones_actuales: number;
-  suscripciones_minimas: number | null;
-  obj_suscripciones: number | null;
-  objetivo_notificado: boolean;
-  estado_proyecto: EstadoProyecto;
-  fecha_inicio: string;
-  fecha_cierre: string;
-  pack_de_lotes: boolean | null;
-  fecha_inicio_proceso: string | null;
-  meses_restantes: number | null;
-  // ❗ AÑADIDOS: Campos de geolocalización (tu backend los soporta)
-  latitud: number | null;
-  longitud: number | null;
-  lotes?: LoteDTO[];
-  imagenes?: ImagenDTO[];
-}
-
-/**
- * ❗ DTO DE ENTRADA (NUEVO)
- * Datos que el admin ENVÍA para crear un nuevo proyecto.
- */
-export interface CreateProyectoDTO {
-  nombre_proyecto: string;
-  descripcion?: string | null;
-  tipo_inversion: TipoInversion;
-  plazo_inversion?: number | null; // Obligatorio si es mensual
-  forma_juridica?: string | null;
-  monto_inversion: number;       // Obligatorio para ambos tipos
-  moneda?: string | null;         // El backend pone default
-  suscripciones_minimas?: number | null;
-  obj_suscripciones?: number | null; // Obligatorio si es mensual
-  fecha_inicio: string;           // "YYYY-MM-DD"
-  fecha_cierre: string;           // "YYYY-MM-DD"
-  activo?: boolean;
-  
-  // ❗ AÑADIDOS: Campos de geolocalización (tu backend los soporta)
-  latitud?: number | null;
-  longitud?: number | null;
-
+  descripcion?: string;
+  tipo_inversion: "directo" | "mensual";
+  plazo_inversion?: number;
+  forma_juridica?: string;
+  monto_inversion: string; // siempre string
+  moneda?: string;
+  obj_suscripciones?: number;
+  suscripciones_minimas?: number;
+  fecha_inicio: string; 
+  fecha_cierre: string; 
+  pack_de_lotes?: boolean;
+  latitud?: string | null;
+  longitud?: string | null;
   lotesIds?: number[];
 }
 
-/**
- * ❗ DTO DE ENTRADA (NUEVO)
- * Datos que el admin ENVÍA para actualizar un proyecto.
- */
-export type UpdateProyectoDTO = Partial<Omit<CreateProyectoDTO, 'tipo_inversion' | 'lotesIds'>>;
+// ----------------------------------------------------------
+// PROYECTO — UPDATE
+// ----------------------------------------------------------
 
-/**
- * ❗ DTO DE ENTRADA (NUEVO)
- * Datos que el admin ENVÍA para asignar lotes a un proyecto existente.
- */
-export interface AssignLotesDTO {
+export interface ProyectoUpdateDTO {
+  nombre_proyecto?: string;
+  descripcion?: string;
+  tipo_inversion?: "directo" | "mensual";
+  plazo_inversion?: number;
+  forma_juridica?: string;
+  monto_inversion?: string;
+  moneda?: string;
+  obj_suscripciones?: number;
+  suscripciones_minimas?: number;
+  fecha_inicio?: string;
+  fecha_cierre?: string;
+  pack_de_lotes?: boolean;
+  latitud?: string | null;
+  longitud?: string | null;
+  estado_proyecto?: "En Espera" | "En proceso" | "Finalizado";
+}
+
+// ----------------------------------------------------------
+// PROYECTO — RESPONSE
+// ----------------------------------------------------------
+
+export interface ProyectoDTO {
+  id: number;
+  activo: boolean;
+  nombre_proyecto: string;
+  descripcion?: string;
+  tipo_inversion: "directo" | "mensual";
+  plazo_inversion?: number;
+  forma_juridica?: string;
+  monto_inversion: string;
+  moneda: string;
+  suscripciones_actuales: number;
+  suscripciones_minimas: number;
+  obj_suscripciones?: number | null;
+  objetivo_notificado: boolean;
+  estado_proyecto: "En Espera" | "En proceso" | "Finalizado";
+  fecha_inicio: string;
+  fecha_cierre: string;
+  pack_de_lotes: boolean;
+  fecha_inicio_proceso?: string | null;
+  meses_restantes?: number | null;
+
+  // ubicaciones como string (coincide con Sequelize DECIMAL)
+  latitud?: string | null;
+  longitud?: string | null;
+
+  lotes?: LoteDto[];
+  imagenes?: ImagenDTO[];
+
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ----------------------------------------------------------
+// LOTE SIMPLIFICADO
+// ----------------------------------------------------------
+
+export interface LoteDto {
+  id: number;
+  nombre_lote: string;
+  precio_base?: string;
+  id_proyecto?: number;
+  ubicacion?: string;          // opcional (frontend)
+  estado_lote?: string;        // opcional
+}
+
+// ----------------------------------------------------------
+// IMAGEN SIMPLIFICADA
+// ----------------------------------------------------------
+
+export interface ImagenDTO {
+  id: number;
+  url: string;
+  descripcion?: string;
+  id_proyecto: number;
+}
+
+// ----------------------------------------------------------
+// ASIGNAR LOTES
+// ----------------------------------------------------------
+
+export interface AsignarLotesDto {
   lotesIds: number[];
+}
+
+// ----------------------------------------------------------
+// MÉTRICAS (KPIs)
+// ----------------------------------------------------------
+
+// KPI 4 — Tasa de Culminación
+export interface MetricasCulminacionDto {
+  total_iniciados: number;
+  total_finalizados: number;
+  tasa_culminacion: string; // porcentaje como string
+}
+
+// ✔ tu API devuelve ESTE OBJETO directamente
+export type CompletionRateResponse = MetricasCulminacionDto;
+
+// KPI 5 — Avance mensual
+export interface ProgresoMensualProyectoDto {
+  id: number;
+  nombre: string;
+  estado: "En Espera" | "En proceso" | "Finalizado";
+  meta_suscripciones: number;
+  suscripciones_actuales: number;
+  porcentaje_avance: string;
+}
+
+export type MetricasAvanceMensualDto = ProgresoMensualProyectoDto[];
+
+// API response estandarizada
+export interface MonthlyProgressResponse {
+  data: MetricasAvanceMensualDto;
 }

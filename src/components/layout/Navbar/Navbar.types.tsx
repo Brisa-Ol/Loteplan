@@ -1,9 +1,8 @@
-// src/components/layout/Navbar/Navbar.types.ts (CORREGIDO)
+// src/components/layout/Navbar/Navbar.types.ts
 import type { SvgIconComponent } from "@mui/icons-material";
 
 // ══════════════════════════════════════════════════════════
-// DEFINICIONES DE ITEMS DE NAVEGACIÓN
-// (Esta es la corrección: separamos los tipos en lugar de usar BaseNavItem)
+// TIPOS BASE DE NAVEGACIÓN
 // ══════════════════════════════════════════════════════════
 
 interface CommonItemProps {
@@ -11,7 +10,7 @@ interface CommonItemProps {
   icon?: SvgIconComponent;
 }
 
-// 1. Un item que es un link
+// Item con path (link directo)
 interface PathItem extends CommonItemProps {
   path: string;
   action?: never;
@@ -19,7 +18,7 @@ interface PathItem extends CommonItemProps {
   isDivider?: never;
 }
 
-// 2. Un item que ejecuta una acción (ej. Logout)
+// Item con acción (ej. logout, abrir modal)
 interface ActionItem extends CommonItemProps {
   action: () => void;
   path?: never;
@@ -27,7 +26,7 @@ interface ActionItem extends CommonItemProps {
   isDivider?: never;
 }
 
-// 3. Un item que tiene un submenú
+// Item con submenú desplegable
 interface SubmenuItem extends CommonItemProps {
   submenu: NavItem[];
   path?: never;
@@ -35,7 +34,7 @@ interface SubmenuItem extends CommonItemProps {
   isDivider?: never;
 }
 
-// 4. Un item que es solo un divisor
+// Divisor visual en menús
 interface DividerItem {
   isDivider: true;
   label?: never;
@@ -45,11 +44,11 @@ interface DividerItem {
   icon?: never;
 }
 
-// NavItem es la unión de todas las posibilidades
+// Unión de todos los tipos posibles
 export type NavItem = PathItem | ActionItem | SubmenuItem | DividerItem;
 
 // ══════════════════════════════════════════════════════════
-// OTROS TIPOS (Sin cambios)
+// BOTONES DE ACCIÓN
 // ══════════════════════════════════════════════════════════
 
 export interface ActionButton {
@@ -59,15 +58,34 @@ export interface ActionButton {
   action?: () => void;
 }
 
+// ══════════════════════════════════════════════════════════
+// CONFIGURACIÓN DEL NAVBAR
+// ══════════════════════════════════════════════════════════
+
 export interface NavbarConfig {
   logoPath: string;
   homePath: string;
-  navItems: NavItem[];
-  userNavItems: NavItem[];
+  navItems: NavItem[];        // Navegación principal (centro)
+  userNavItems: NavItem[];    // Navegación de usuario (derecha)
   actionButtons: ActionButton[];
 }
 
-// Type guard (Sigue funcionando)
+// ══════════════════════════════════════════════════════════
+// TYPE GUARDS
+// ══════════════════════════════════════════════════════════
+
 export const hasSubmenu = (item: NavItem): item is SubmenuItem => {
   return 'submenu' in item && Array.isArray(item.submenu) && item.submenu.length > 0;
+};
+
+export const isPathItem = (item: NavItem): item is PathItem => {
+  return 'path' in item && typeof item.path === 'string';
+};
+
+export const isActionItem = (item: NavItem): item is ActionItem => {
+  return 'action' in item && typeof item.action === 'function';
+};
+
+export const isDividerItem = (item: NavItem): item is DividerItem => {
+  return 'isDivider' in item && item.isDivider === true;
 };

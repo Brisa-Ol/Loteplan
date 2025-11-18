@@ -2,7 +2,7 @@
 // (Corregido el campo 'code' por 'token')
 
 import { useState } from 'react';
-import auth2faService from '../Services/auth2fa.service';
+import { auth2faService } from '../Services/auth2fa.service';
 
 // ❗ Asumo que el servicio está en 'Services' (Mayúscula) como en tu AdminDashboard
 // Si está en 'services' (minúscula), ajusta la ruta de importación.
