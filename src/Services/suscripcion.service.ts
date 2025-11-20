@@ -1,78 +1,144 @@
 // src/services/suscripcion.service.ts
+
+import type { GenericResponseDto } from '../types/dto/auth.dto';
+import type { CancellationMetricsDto, ConfirmarSuscripcion2faDto, ConfirmarSuscripcionWebhookDto, IniciarSuscripcionDto, MorosityMetricsDto, SuscripcionCanceladaDto, SuscripcionDto, SuscripcionInitResponse } from '../types/dto/suscripcion.dto';
 import httpService from './httpService';
+import type { AxiosResponse } from 'axios';
+ // Ajusta la ruta a tus DTOs
 
-// Importamos los DTOs que vamos a recibir
-import type { SuscripcionProyectoDTO } from '../types/dto/suscripcionProyecto.dto';
-import type { SuscripcionCanceladaDTO } from '../types/dto/suscripcionCancelada.dto';
-import type { PagoDTO } from '../types/dto/pago.dto';
+// ⚠️ IMPORTANTE: Definimos ambos endpoints base aquí
+const BASE_ENDPOINT = '/suscripciones';       // Para altas, pagos y consultas activas
+const BASE_ENDPOINT_CANCEL = '/suscripcion';  // Para cancelaciones (singular, según tus rutas backend)
 
-// La ruta base es /api/suscripciones (o como la llames en tu index.js)
-const ENDPOINT = '/suscripciones';
+const SuscripcionService = {
 
-// --- Funciones para Usuarios ---
+  // =================================================
+  // 🚀 PROCESO DE ALTA (USUARIO)
+  // =================================================
 
-/**
- * DTO DE ENTRADA para crear una nueva suscripción
- */
-export interface CreateSuscripcionDTO {
-  id_proyecto: number;
-}
+  /**
+   * Paso 1: Solicitar unirse al proyecto.
+   * ⚠️ Puede devolver 202 si requiere 2FA.
+   */
+  iniciar: async (data: IniciarSuscripcionDto): Promise<AxiosResponse<SuscripcionInitResponse>> => {
+    return await httpService.post(`${BASE_ENDPOINT}/iniciar-pago`, data);
+  },
 
-/**
- * DTO DE SALIDA al crear una suscripción (incluye la primera cuota)
- */
-export interface CreateSuscripcionResponseDTO {
-  suscripcion: SuscripcionProyectoDTO;
-  primerPago: PagoDTO; // La cuota 1 que se crea automáticamente
-}
+  /**
+   * Paso 2 (Si 2FA): Confirmar y obtener link de pago.
+   */
+  confirmar2FA: async (data: ConfirmarSuscripcion2faDto): Promise<AxiosResponse<SuscripcionInitResponse>> => {
+    return await httpService.post(`${BASE_ENDPOINT}/confirmar-2fa`, data);
+  },
 
-/**
- * 🆕 FUNCIÓN CLAVE: Crea una nueva suscripción mensual a un proyecto.
- * Esto debería crear automáticamente la primera cuota (Pago).
- * Llama a: POST /api/suscripciones
- */
-export const crearSuscripcion = (data: CreateSuscripcionDTO): Promise<CreateSuscripcionResponseDTO> => {
-  return httpService.post(ENDPOINT, data);
+  /**
+   * Webhook o confirmación manual post-pago.
+   */
+  confirmarPagoFinal: async (data: ConfirmarSuscripcionWebhookDto): Promise<AxiosResponse<GenericResponseDto>> => {
+    return await httpService.post(`${BASE_ENDPOINT}/confirmar-pago`, data);
+  },
+
+  // =================================================
+  // 👤 GESTIÓN USUARIO
+  // =================================================
+
+  getMySubscriptions: async (): Promise<AxiosResponse<SuscripcionDto[]>> => {
+    return await httpService.get(`${BASE_ENDPOINT}/mis_suscripciones`);
+  },
+
+  getMySubscriptionById: async (id: number): Promise<AxiosResponse<SuscripcionDto>> => {
+    return await httpService.get(`${BASE_ENDPOINT}/mis_suscripciones/${id}`);
+  },
+
+  /**
+   * Cancelar suscripción propia (Soft Delete).
+   * ⚠️ Requiere 2FA si es operación sensible.
+   */
+  cancelMySubscription: async (id: number): Promise<AxiosResponse<GenericResponseDto>> => {
+    // Esta usa la ruta 'mis_suscripciones' del endpoint base plural
+    return await httpService.delete(`${BASE_ENDPOINT}/mis_suscripciones/${id}`);
+  },
+
+  // =================================================
+  // 👮 GESTIÓN ADMIN (Activas)
+  // =================================================
+
+  findAll: async (): Promise<AxiosResponse<SuscripcionDto[]>> => {
+    return await httpService.get(BASE_ENDPOINT);
+  },
+
+  findAllActive: async (): Promise<AxiosResponse<SuscripcionDto[]>> => {
+    return await httpService.get(`${BASE_ENDPOINT}/activas`);
+  },
+
+  findByProjectActive: async (idProyecto: number): Promise<AxiosResponse<SuscripcionDto[]>> => {
+    return await httpService.get(`${BASE_ENDPOINT}/proyecto/${idProyecto}`);
+  },
+
+  findAllByProject: async (idProyecto: number): Promise<AxiosResponse<SuscripcionDto[]>> => {
+    return await httpService.get(`${BASE_ENDPOINT}/proyecto/${idProyecto}/all`);
+  },
+
+  findByIdAdmin: async (id: number): Promise<AxiosResponse<SuscripcionDto>> => {
+    return await httpService.get(`${BASE_ENDPOINT}/${id}`);
+  },
+
+  softDeleteAdmin: async (id: number): Promise<AxiosResponse<GenericResponseDto>> => {
+    return await httpService.delete(`${BASE_ENDPOINT}/${id}`);
+  },
+
+  // =================================================
+  // 📊 MÉTRICAS
+  // =================================================
+
+  getMorosityMetrics: async (): Promise<AxiosResponse<MorosityMetricsDto>> => {
+    return await httpService.get(`${BASE_ENDPOINT}/metrics/morosidad`);
+  },
+
+  getCancellationMetrics: async (): Promise<AxiosResponse<CancellationMetricsDto>> => {
+    return await httpService.get(`${BASE_ENDPOINT}/metrics/cancelacion`);
+  },
+
+  // =================================================
+  // 🛑 GESTIÓN DE CANCELACIONES (USUARIO - Historial)
+  // =================================================
+
+  /**
+   * Cancela una suscripción propia (Endpoint alternativo o específico de cancelación).
+   * Ruta: PUT /api/suscripcion/:id/cancelar
+   */
+  cancel: async (idSuscripcion: number): Promise<AxiosResponse<GenericResponseDto>> => {
+    return await httpService.put(`${BASE_ENDPOINT_CANCEL}/${idSuscripcion}/cancelar`);
+  },
+
+  /**
+   * Obtiene el historial de cancelaciones del usuario.
+   * Ruta: GET /api/suscripcion/mis_canceladas
+   */
+  getMyCancellations: async (): Promise<AxiosResponse<SuscripcionCanceladaDto[]>> => {
+    return await httpService.get(`${BASE_ENDPOINT_CANCEL}/mis_canceladas`);
+  },
+
+  // =================================================
+  // 👮 GESTIÓN DE CANCELACIONES (ADMIN)
+  // =================================================
+
+  /**
+   * Obtiene TODAS las cancelaciones del sistema.
+   * Ruta: GET /api/suscripcion/canceladas
+   */
+  findAllCanceled: async (): Promise<AxiosResponse<SuscripcionCanceladaDto[]>> => {
+    return await httpService.get(`${BASE_ENDPOINT_CANCEL}/canceladas`);
+  },
+
+  /**
+   * Obtiene cancelaciones de un proyecto específico.
+   * Ruta: GET /api/suscripcion/proyecto/canceladas/:id
+   */
+  findCanceledByProject: async (idProyecto: number): Promise<AxiosResponse<SuscripcionCanceladaDto[]>> => {
+    return await httpService.get(`${BASE_ENDPOINT_CANCEL}/proyecto/canceladas/${idProyecto}`);
+  }
+
 };
 
-/**
- * Obtiene las suscripciones ACTIVAS del usuario logueado.
- * Llama a: GET /api/suscripciones/mis-suscripciones
- */
-export const getMisSuscripcionesActivas = (): Promise<SuscripcionProyectoDTO[]> => {
-  return httpService.get(`${ENDPOINT}/mis-suscripciones`);
-};
-
-/**
- * 💥 ACCIÓN CLAVE: Cancela una suscripción activa (soft delete).
- * Llama a: DELETE /api/suscripciones/:id
- */
-export const cancelarSuscripcion = (suscripcionId: number): Promise<void> => {
-  return httpService.delete(`${ENDPOINT}/${suscripcionId}`);
-};
-
-/**
- * Obtiene el historial de suscripciones CANCELADAS del usuario logueado.
- * Llama a: GET /api/suscripciones/canceladas/mis-suscripciones
- */
-export const getMisSuscripcionesCanceladas = (): Promise<SuscripcionCanceladaDTO[]> => {
-  return httpService.get(`${ENDPOINT}/canceladas/mis-suscripciones`);
-};
-
-// --- Funciones para Administradores ---
-
-/**
- * (Admin) Obtiene TODAS las suscripciones canceladas.
- * Llama a: GET /api/suscripciones/canceladas
- */
-export const getAllSuscripcionesCanceladas = (): Promise<SuscripcionCanceladaDTO[]> => {
-  return httpService.get(`${ENDPOINT}/canceladas`);
-};
-
-/**
- * (Admin) Obtiene las suscripciones canceladas para un proyecto específico.
- * Llama a: GET /api/suscripciones/canceladas/proyecto/:proyectoId
- */
-export const getCanceladasPorProyecto = (proyectoId: number): Promise<SuscripcionCanceladaDTO[]> => {
-  return httpService.get(`${ENDPOINT}/canceladas/proyecto/${proyectoId}`);
-};
+export default SuscripcionService;

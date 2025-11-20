@@ -1,145 +1,92 @@
-// src/services/lote.service.ts
-// (CORREGIDO: Se cambiaron todos los IDs de 'string' a 'number')
-
+import type { GenericResponseDto } from '../types/dto/auth.dto';
+import type { CreateLoteDto, LoteDto, UpdateLoteDto } from '../types/dto/lote.dto';
 import httpService from './httpService';
-import type {
-  LoteDTO,
-  CreateLoteDTO,
-  UpdateLoteDTO,
-  StartAuctionDTO,
-  EndAuctionResponse,
-} from '../types/dto/lote.dto';
+import type { AxiosResponse } from 'axios';
 
-const ENDPOINT = '/lotes';
 
-// ══════════════════════════════════════════════════════════
-// 📦 CRUD BÁSICO DE LOTES
-// ══════════════════════════════════════════════════════════
+const BASE_ENDPOINT = '/lotes'; // Asumiendo prefijo en router
 
-/**
- * Obtiene todos los lotes (admin only)
- */
-export const getAllLotes = async (): Promise<LoteDTO[]> => {
-  const { data } = await httpService.get<LoteDTO[]>(ENDPOINT);
-  return data;
+const LoteService = {
+
+  // =================================================
+  // 👁️ VISTA PÚBLICA / USUARIO
+  // =================================================
+
+  /**
+   * Obtiene todos los lotes activos (Catálogo principal).
+   */
+  getAllActive: async (): Promise<AxiosResponse<LoteDto[]>> => {
+    return await httpService.get(`${BASE_ENDPOINT}/activos`);
+  },
+
+  /**
+   * Obtiene detalle de un lote activo.
+   */
+  getByIdActive: async (id: number): Promise<AxiosResponse<LoteDto>> => {
+    return await httpService.get(`${BASE_ENDPOINT}/${id}/activo`);
+  },
+
+  // =================================================
+  // ⚙️ GESTIÓN ADMINISTRATIVA (ADMIN)
+  // =================================================
+
+  create: async (data: CreateLoteDto): Promise<AxiosResponse<LoteDto>> => {
+    return await httpService.post(BASE_ENDPOINT, data);
+  },
+
+  update: async (id: number, data: UpdateLoteDto): Promise<AxiosResponse<LoteDto>> => {
+    return await httpService.put(`${BASE_ENDPOINT}/${id}`, data);
+  },
+
+  /**
+   * Soft delete (borrado lógico).
+   */
+  delete: async (id: number): Promise<AxiosResponse<GenericResponseDto>> => {
+    return await httpService.delete(`${BASE_ENDPOINT}/${id}`);
+  },
+
+  findAllAdmin: async (): Promise<AxiosResponse<LoteDto[]>> => {
+    return await httpService.get(BASE_ENDPOINT);
+  },
+
+  findByIdAdmin: async (id: number): Promise<AxiosResponse<LoteDto>> => {
+    return await httpService.get(`${BASE_ENDPOINT}/${id}`);
+  },
+
+  /**
+   * Obtiene lotes "huérfanos" (sin proyecto asignado).
+   * Útil para el panel de "Asignar Lotes a Proyecto".
+   */
+  getUnassigned: async (): Promise<AxiosResponse<LoteDto[]>> => {
+    return await httpService.get(`${BASE_ENDPOINT}/sin_proyecto`);
+  },
+
+  /**
+   * Obtiene todos los lotes de un proyecto específico (Vista Admin).
+   */
+  getByProject: async (idProyecto: number): Promise<AxiosResponse<LoteDto[]>> => {
+    return await httpService.get(`${BASE_ENDPOINT}/proyecto/${idProyecto}`);
+  },
+
+  // =================================================
+  // 🔨 CONTROL DE SUBASTA (ADMIN)
+  // =================================================
+
+  /**
+   * Inicia manualmente la subasta.
+   * Dispara notificaciones a suscriptores.
+   */
+  startAuction: async (id: number): Promise<AxiosResponse<GenericResponseDto>> => {
+    return await httpService.post(`${BASE_ENDPOINT}/${id}/start_auction`);
+  },
+
+  /**
+   * Finaliza manualmente la subasta.
+   * Asigna ganador y genera transacción.
+   */
+  endAuction: async (id: number): Promise<AxiosResponse<GenericResponseDto>> => {
+    return await httpService.put(`${BASE_ENDPOINT}/${id}/end`);
+  }
 };
 
-/**
- * Obtiene todos los lotes activos
- */
-export const getActiveLotes = async (): Promise<LoteDTO[]> => {
-  const { data } = await httpService.get<LoteDTO[]>(`${ENDPOINT}/activos`);
-  return data;
-};
-
-/**
- * Obtiene un lote por ID (admin)
- */
-export const getLoteById = async (id: number): Promise<LoteDTO> => { // ❗ Corregido
-  const { data } = await httpService.get<LoteDTO>(`${ENDPOINT}/${id}`);
-  return data;
-};
-
-/**
- * Obtiene un lote activo por ID
- */
-export const getActiveLoteById = async (id: number): Promise<LoteDTO> => { // ❗ Corregido
-  const { data } = await httpService.get<LoteDTO>(`${ENDPOINT}/${id}/activo`);
-  return data;
-};
-
-/**
- * Crea un nuevo lote
- */
-export const createLote = async (loteData: CreateLoteDTO): Promise<LoteDTO> => {
-  const { data } = await httpService.post<LoteDTO>(ENDPOINT, loteData);
-  return data;
-};
-
-/**
- * Actualiza un lote
- */
-export const updateLote = async (
-  id: number, // ❗ Corregido
-  loteData: UpdateLoteDTO
-): Promise<LoteDTO> => {
-  const { data } = await httpService.put<LoteDTO>(`${ENDPOINT}/${id}`, loteData);
-  return data;
-};
-
-/**
- * Desactiva un lote (soft delete)
- */
-export const deleteLote = async (id: number): Promise<void> => { // ❗ Corregido
-  await httpService.delete(`${ENDPOINT}/${id}`);
-};
-
-// ══════════════════════════════════════════════════════════
-// 🔨 GESTIÓN DE PROYECTOS
-// ══════════════════════════════════════════════════════════
-
-/**
- * Obtiene lotes sin proyecto asignado
- */
-export const getUnassignedLotes = async (): Promise<LoteDTO[]> => {
-  const { data } = await httpService.get<LoteDTO[]>(`${ENDPOINT}/sin_proyecto`);
-  return data;
-};
-
-/**
- * Obtiene lotes de un proyecto específico
- */
-export const getLotesByProyecto = async (proyectoId: number): Promise<LoteDTO[]> => { // ❗ Corregido
-  const { data } = await httpService.get<LoteDTO[]>(
-    `${ENDPOINT}/proyecto/${proyectoId}`
-  );
-  return data;
-};
-
-// ══════════════════════════════════════════════════════════
-// 🎯 GESTIÓN DE SUBASTAS
-// ══════════════════════════════════════════════════════════
-
-/**
- * Inicia la subasta de un lote
- */
-export const startAuction = async (
-  id: number, // ❗ Corregido
-  data?: StartAuctionDTO
-): Promise<{ mensaje: string }> => {
-  const { data: response } = await httpService.post<{ mensaje: string }>(
-    `${ENDPOINT}/${id}/start_auction`,
-    data || {}
-  );
-  return response;
-};
-
-/**
- * Finaliza la subasta de un lote
- */
-export const endAuction = async (id: number): Promise<EndAuctionResponse> => { // ❗ Corregido
-  const { data } = await httpService.put<EndAuctionResponse>(
-    `${ENDPOINT}/${id}/end`
-  );
-  return data;
-};
-
-// ══════════════════════════════════════════════════════════
-// EXPORTACIÓN POR DEFECTO
-// ══════════════════════════════════════════════════════════
-
-const loteService = {
-  getAllLotes,
-  getActiveLotes,
-  getLoteById,
-  getActiveLoteById,
-  createLote,
-  updateLote,
-  deleteLote,
-  getUnassignedLotes,
-  getLotesByProyecto,
-  startAuction,
-  endAuction,
-};
-
-export default loteService;
+export default LoteService;

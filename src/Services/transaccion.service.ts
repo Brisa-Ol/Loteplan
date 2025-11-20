@@ -1,51 +1,96 @@
-  // src/services/transaccion.service.ts
-  import httpService from './httpService';
+import type { ConfirmarTransaccionResponse, CreateTransaccionDto, TransaccionDto, UpdateTransaccionDto } from '../types/dto/transaccion.dto';
+import httpService from './httpService';
+import type { AxiosResponse } from 'axios';
 
-  // Importamos los DTOs necesarios
-  import type {
-    TransaccionDTO,
-    IniciarCheckoutDTO,
-    IniciarCheckoutResponseDTO
-  } from '../types/dto/transaccion.dto.ts';
 
-  // La ruta base es /api/transacciones (según tu index.js)
-  const ENDPOINT = '/transacciones';
+const BASE_ENDPOINT = '/transacciones'; // Ajustar según tu router (ej: /api/transacciones)
 
-  /**
-   * 💳 FUNCIÓN CLAVE: Inicia el proceso de checkout para cualquier tipo de pago.
-   * Llama a: POST /api/transacciones/iniciar-checkout
-   * (Asumiendo una ruta que usa 'iniciarTransaccionYCheckout').
-   */
-  export const iniciarCheckout = (data: IniciarCheckoutDTO): Promise<IniciarCheckoutResponseDTO> => {
+const TransaccionService = {
 
-    return httpService.post(`${ENDPOINT}/iniciar-checkout`, data);
-  };
+  // =================================================
+  // 👤 GESTIÓN USUARIO (Mis Transacciones)
+  // =================================================
 
   /**
-   * Obtiene el historial de transacciones del usuario logueado.
-   * Llama a: GET /api/transacciones/mis-transacciones
-   * (Asumiendo una ruta que usa 'findByUserId').
+   * Obtiene el historial completo de transacciones del usuario.
+   * GET /mis_transacciones
    */
-  export const getMisTransacciones = (): Promise<TransaccionDTO[]> => {
-    return httpService.get(`${ENDPOINT}/mis-transacciones`);
-  };
+  getMyTransactions: async (): Promise<AxiosResponse<TransaccionDto[]>> => {
+    return await httpService.get(`${BASE_ENDPOINT}/mis_transacciones`);
+  },
 
   /**
-   * Obtiene una transacción específica por ID (si pertenece al usuario).
-   * Llama a: GET /api/transacciones/:id
-   * (Asumiendo que la ruta usa 'findById' y valida la propiedad).
+   * Obtiene el detalle de una transacción propia.
+   * GET /mis_transacciones/:id
    */
-  export const getTransaccionById = (id: number): Promise<TransaccionDTO | null> => {
-    return httpService.get(`${ENDPOINT}/${id}`);
-  };
-
-  // --- Funciones para Administradores (Opcional) ---
+  getMyTransactionById: async (id: number): Promise<AxiosResponse<TransaccionDto>> => {
+    return await httpService.get(`${BASE_ENDPOINT}/mis_transacciones/${id}`);
+  },
 
   /**
-   * (Admin) Obtiene TODAS las transacciones del sistema.
-   * Llama a: GET /api/transacciones
-   * (Tu backend usa 'findAll').
+   * Actualiza una transacción propia (si la lógica de negocio lo permite).
+   * PUT /mis_transacciones/:id
    */
-  export const getAllTransacciones = (): Promise<TransaccionDTO[]> => {
-    return httpService.get(ENDPOINT);
-  };
+  updateMyTransaction: async (id: number, data: UpdateTransaccionDto): Promise<AxiosResponse<TransaccionDto>> => {
+    return await httpService.put(`${BASE_ENDPOINT}/mis_transacciones/${id}`, data);
+  },
+
+  // =================================================
+  // 👮 GESTIÓN ADMINISTRATIVA (Admin)
+  // =================================================
+
+  /**
+   * Obtiene TODAS las transacciones del sistema.
+   * GET /
+   */
+  findAll: async (): Promise<AxiosResponse<TransaccionDto[]>> => {
+    return await httpService.get(BASE_ENDPOINT);
+  },
+
+  /**
+   * Obtiene una transacción por ID (sin restricción de usuario).
+   * GET /:id
+   */
+  findById: async (id: number): Promise<AxiosResponse<TransaccionDto>> => {
+    return await httpService.get(`${BASE_ENDPOINT}/${id}`);
+  },
+
+  /**
+   * Crea una transacción manualmente.
+   * POST /
+   */
+  create: async (data: CreateTransaccionDto): Promise<AxiosResponse<TransaccionDto>> => {
+    return await httpService.post(BASE_ENDPOINT, data);
+  },
+
+  /**
+   * Actualiza datos de una transacción (Admin).
+   * PUT /:id
+   */
+  update: async (id: number, data: UpdateTransaccionDto): Promise<AxiosResponse<TransaccionDto>> => {
+    return await httpService.put(`${BASE_ENDPOINT}/${id}`, data);
+  },
+
+  /**
+   * Borrado lógico de una transacción.
+   * DELETE /:id
+   */
+  softDelete: async (id: number): Promise<AxiosResponse<void>> => {
+    return await httpService.delete(`${BASE_ENDPOINT}/${id}`);
+  },
+
+  // =================================================
+  // ⚡ ACCIONES CRÍTICAS (Admin)
+  // =================================================
+
+  /**
+   * Fuerza la confirmación de una transacción (ejecuta lógica de negocio asociada).
+   * Útil si el webhook falló pero el dinero entró.
+   * PUT /:id/confirmar
+   */
+  forceConfirm: async (id: number): Promise<AxiosResponse<ConfirmarTransaccionResponse>> => {
+    return await httpService.put(`${BASE_ENDPOINT}/${id}/confirmar`);
+  }
+};
+
+export default TransaccionService;

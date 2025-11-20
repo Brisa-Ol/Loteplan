@@ -1,98 +1,38 @@
 import httpService from './httpService';
-import type { KycDTO, KYCStatus, RejectKycDTO, KYCSubmissionResponse, KYCStatusResponse } from '../types/dto/kyc.dto';
+import type { AxiosResponse } from 'axios';
+import type { KycStatusResponseDto, SubmitKycDto } from '../types/dto/kyc.dto';
 
-const ENDPOINT = '/kyc';
+const BASE_ENDPOINT = '/kyc'; // Ajusta si en app.js usaste otro prefijo
 
-// ❗ Definimos el tipo de respuesta genérico que usa tu backend
-type MessageResponse = {
-  message: string;
-};
-
-/**
- * Servicio para la gestión de Verificaciones KYC (Usuario y Admin)
- */
-const kycService = {
-
-  // =================================================================
-  // 🧍 RUTAS DE USUARIO (Basadas en kyc.routes.js)
-  // =================================================================
+const KycService = {
+  
+  /**
+   * GET /api/kyc/status
+   * Verifica si el usuario ya subió documentos y en qué estado están.
+   */
+  getStatus: async (): Promise<AxiosResponse<KycStatusResponseDto>> => {
+    return await httpService.get(`${BASE_ENDPOINT}/status`);
+  },
 
   /**
-   * (Usuario) Envía los datos y archivos para verificación.
-   * Llama a: POST /api/kyc/submit
-   * ❗ 'data' DEBE ser un objeto FormData construido en tu componente React.
-   * ❗ CORRECCIÓN: El DTO define KYCSubmissionResponse como la respuesta
+   * POST /api/kyc/submit
+   * Sube los 4 archivos requeridos.
    */
-  async submitVerificationData(data: FormData): Promise<KYCSubmissionResponse> {
-    const { data: responseData } = await httpService.post<KYCSubmissionResponse>(`${ENDPOINT}/submit`, data, {
-      // Es crucial enviar el header correcto para archivos
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
+  submit: async (files: SubmitKycDto): Promise<AxiosResponse<KycStatusResponseDto>> => {
+    const formData = new FormData();
+    
+    // ⚠️ LOS NOMBRES DEBEN COINCIDIR EXACTAMENTE CON TU MIDDLEWARE DE BACKEND
+    formData.append('documento_frente', files.documento_frente);
+    formData.append('documento_dorso', files.documento_dorso);
+    formData.append('selfie_con_documento', files.selfie_con_documento);
+    formData.append('video_verificacion', files.video_verificacion);
+
+    return await httpService.post(`${BASE_ENDPOINT}/submit`, formData, {
+      headers: { 
+        'Content-Type': 'multipart/form-data' // Crucial para subida de archivos
+      }
     });
-    return responseData;
-  },
-
-  /**
-   * (Usuario) Obtiene el estado de verificación del usuario actual.
-   * Llama a: GET /api/kyc/status
-   * ❗ CORRECCIÓN: El DTO define KYCStatusResponse como la respuesta
-   */
-  async getVerificationStatus(): Promise<KYCStatusResponse> {
-    const { data } = await httpService.get<KYCStatusResponse>(`${ENDPOINT}/status`);
-    return data;
-  },
-
-  // =================================================================
-  // 🛡️ RUTAS DE ADMINISTRADOR (Basadas en kyc.routes.js)
-  // =================================================================
-
-  /**
-   * (Admin) Lista todas las solicitudes pendientes de revisión.
-   * Llama a: GET /api/kyc/pending
-   */
-  async getPendingVerifications(): Promise<KycDTO[]> {
-    const { data } = await httpService.get<KycDTO[]>(`${ENDPOINT}/pending`);
-    return data;
-  },
-
-  /**
-   * (Admin) Aprueba la verificación de un usuario.
-   * Llama a: POST /api/kyc/approve/:idUsuario
-   * ❗ CORRECCIÓN: Cambiamos el tipo de retorno a MessageResponse para alinear con el componente
-   */
-  async approveVerification(idUsuario: string | number): Promise<MessageResponse> { 
-    const { data } = await httpService.post<MessageResponse>(
-      `${ENDPOINT}/approve/${idUsuario}`
-    );
-    return data;
-  },
-
-  /**
-   * (Admin) Rechaza la verificación de un usuario.
-   * Llama a: POST /api/kyc/reject/:idUsuario
-   * ❗ CORRECCIÓN: Cambiamos el tipo de retorno a MessageResponse para alinear con el componente
-   */
-  async rejectVerification(
-    idUsuario: string | number, 
-    data: RejectKycDTO
-  ): Promise<MessageResponse> { 
-    const { data: responseData } = await httpService.post<MessageResponse>(
-      `${ENDPOINT}/reject/${idUsuario}`,
-      data
-    );
-    return responseData;
-  },
-
-  /**
-   * (Admin) Obtiene el estado de KYC de un usuario específico
-   * ❗ NOTA: Esta ruta no está en tu kyc.routes.js, pero la dejamos
-   * por si la necesitas para el panel de admin.
-   */
-  async getKYCStatus(userId: number | string): Promise<KycDTO> {
-    const { data } = await httpService.get<KycDTO>(`${ENDPOINT}/status/${userId}`);
-    return data;
-  },
+  }
 };
 
-export default kycService;
+export default KycService;

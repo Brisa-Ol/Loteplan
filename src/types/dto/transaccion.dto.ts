@@ -1,69 +1,65 @@
-// src/types/dto/transaccion.dto.ts
-import type { BaseDTO } from './base.dto';
-import type { PagoMercadoDTO } from './pagoMercado.dto'; // <-- Importar DTO de MP
+import type { BaseDTO } from "./base.dto";
+// ==========================================
+// 📤 REQUEST DTOs (Lo que envías)
+// ==========================================
+
+
 
 /**
- * Define los estados posibles para una transacción.
- * (Este tipo ya lo teníamos).
+ * Datos para crear una transacción manualmente (si fuera necesario).
+ * Usualmente el sistema las crea, pero tu controlador expone el endpoint.
  */
-export type TransaccionEstado =
-  | 'pendiente'
-  | 'pagado'
-  | 'fallido'
-  | 'reembolsado'
-  | 'expirado'
-  | 'rechazado_proyecto_cerrado'
-  | 'rechazado_por_capacidad'
-  | 'en_proceso'
-  | 'revertido'; // Añadir si usas 'revertido'
-
-/**
- * ❗ DTO DE SALIDA (ACTUALIZADO)
- * Representa una transacción que RECIBIMOS del backend.
- * Puede incluir opcionalmente detalles del pago en la pasarela.
- */
-export interface TransaccionDTO extends BaseDTO {
-  tipo_transaccion: string; // 'directo', 'Puja', 'pago_suscripcion_inicial', 'mensual'
+export interface CreateTransaccionDto {
+  tipo_transaccion: 'inversion' | 'pago' | 'puja' | 'recarga' | 'mensual' | 'directo';
   monto: number;
-  fecha_transaccion: string | null;
+  id_proyecto?: number;
+  id_inversion?: number;
+  id_puja?: number;
+  id_suscripcion?: number;
+  id_pago_mensual?: number;
+}
+
+/**
+ * Datos para actualizar una transacción (Admin o Usuario propietario).
+ */
+export interface UpdateTransaccionDto {
+  monto?: number;
+  estado_transaccion?: 'pendiente' | 'pagado' | 'fallido' | 'reembolsado';
+  error_detalle?: string;
+  // Otros campos editables según tu lógica
+}
+
+// ==========================================
+// 📥 RESPONSE DTOs (Lo que recibes)
+// ==========================================
+
+/**
+ * Modelo completo de Transacción.
+ */
+export interface TransaccionDto extends BaseDTO {
+  tipo_transaccion: string;
+  monto: number;
+  estado_transaccion: 'pendiente' | 'pagado' | 'fallido' | 'reembolsado' | 'expirado' | 'revertido';
+  fecha_transaccion?: string; // ISO Date
+  error_detalle?: string;
+  
   id_usuario: number;
-  id_proyecto: number | null;
-  id_pago_mensual: number | null;
-  id_pago_pasarela: number | null;
-  id_inversion: number | null;
-  id_puja: number | null;
-  id_suscripcion: number | null; // Añadido basado en el servicio
-  estado_transaccion: TransaccionEstado;
-  error_detalle?: string | null; // Añadido basado en el servicio
-
-  /**
-   * ❗ Campo Opcional del 'include' (si el backend lo envía)
-   * Detalles del pago realizado a través de Mercado Pago.
-   */
-  pago_pasarela?: PagoMercadoDTO;
+  
+  // Referencias cruzadas
+  id_proyecto?: number;
+  id_inversion?: number;
+  id_puja?: number;
+  id_suscripcion?: number;
+  id_pago_mensual?: number;
+  
+  // Referencia externa
+  id_pago_pasarela?: number;
 }
 
 /**
- * ❗ DTO DE ENTRADA (NUEVO)
- * Datos que el frontend ENVÍA para iniciar el proceso de checkout.
- * (Basado en la función 'iniciarTransaccionYCheckout').
+ * Respuesta de confirmación manual (Admin).
  */
-export interface IniciarCheckoutDTO {
-  /** El tipo de entidad que se está pagando */
-  modelo: 'inversion' | 'pago' | 'puja';
-  /** El ID de la Inversion, Pago (cuota) o Puja */
-  modeloId: number;
-}
-
-/**
- * ❗ DTO DE SALIDA (NUEVO)
- * Respuesta que el backend envía tras iniciar el checkout.
- */
-export interface IniciarCheckoutResponseDTO {
-  success: boolean;
-  message: string;
-  transaccionId: number;
-  modelo: string;
-  modeloId: number;
-  redirectUrl: string; // 👈 La URL de Mercado Pago
+export interface ConfirmarTransaccionResponse {
+  mensaje: string;
+  transaccion: TransaccionDto;
 }

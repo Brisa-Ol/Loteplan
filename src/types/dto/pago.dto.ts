@@ -1,53 +1,68 @@
-// src/types/dto/pago.dto.ts (CORREGIDO)
-import type { BaseDTO } from './base.dto';
-import type { SuscripcionProyectoDTO } from './suscripcionProyecto.dto';
-import type { ProyectoDTO } from './proyecto.dto';
-import type { UsuarioDTO } from './usuario.dto';
-import type { IniciarCheckoutResponseDTO } from './transaccion.dto';
+import type { BaseDTO } from "./base.dto";
 
-export type PagoEstado = 
-  | 'pendiente'
-  | 'pagado'
-  | 'vencido'
-  | 'cancelado'
-  | 'cubierto_por_puja';
+// ==========================================
+// 📤 REQUEST DTOs (Lo que envías)
+// ==========================================
 
-/**
- * DTO DE SALIDA (para recibir pagos desde el backend)
- */
-export interface PagoDTO extends BaseDTO {
-  id_suscripcion: number | null;
-  id_usuario: number | null;
-  id_proyecto: number | null;
+
+
+export interface CreatePagoManualDto {
+  id_suscripcion: number;
+}
+
+export interface ConfirmarPago2faDto {
+  pagoId: number;
+  codigo_2fa: string;
+}
+
+// ==========================================
+// 📥 RESPONSE DTOs (Lo que recibes)
+// ==========================================
+
+export interface PagoDto extends BaseDTO {
+  id_suscripcion: number;
+  id_usuario?: number;
+  id_proyecto?: number;
+  
   monto: number;
-  fecha_vencimiento: string;
-  fecha_pago: string | null;
-  estado_pago: PagoEstado;
   mes: number;
-  suscripcion?: SuscripcionProyectoDTO & {
-    proyectoAsociado?: ProyectoDTO;
-    usuario?: UsuarioDTO;
-  };
+  fecha_vencimiento: string; // ISO Date Only (YYYY-MM-DD)
+  fecha_pago?: string;       // ISO Date Only
+  
+  estado_pago: 'pendiente' | 'pagado' | 'vencido' | 'cancelado' | 'cubierto_por_puja';
 }
 
 /**
- * DTO DE ENTRADA (para pagar una cuota YA EXISTENTE)
+ * Respuesta del intento de Checkout (Mensualidad).
+ * Idéntica estructura lógica que Inversiones.
  */
-export interface CreatePaymentOrderDTO {
-  pagoId: number; 
+export interface PagoCheckoutResponse {
+  message: string;
+  
+  // Caso A: Redirección directa
+  redirectUrl?: string;
+  transaccionId?: number;
+  
+  // Caso B: Requiere 2FA (Status 202)
+  is2FARequired?: boolean;
+  pagoId?: number;
 }
 
-/**
- * DTO DE SALIDA (respuesta al pedir checkout)
- */
-export interface CreatePaymentOrderResponseDTO {
-  preferenceId: string;
-  redirectUrl: string; // <-- Asegúrate que tu servicio `iniciarCheckout` devuelva esto
+// ==========================================
+// 📊 MÉTRICAS (ADMIN)
+// ==========================================
+
+export interface MonthlyMetricsDto {
+  mes: string; // "MM/YYYY"
+  total_recaudado: number;
+  total_pagos_generados: number;
+  total_pagos_vencidos: number;
+  tasa_morosidad: number; // %
+  total_pagos_pagados: number;
 }
-export { type IniciarCheckoutResponseDTO }; // 👈 Re-exportar
-/**
- * DTO DE ENTRADA (para crear la CUOTA 1)
- */
-export interface CreatePagoInicialDTO {
-  id_proyecto: number;
+
+export interface OnTimeMetricsDto {
+  total_pagados: number;
+  pagos_a_tiempo: number;
+  tasa_pagos_a_tiempo: number; // %
 }

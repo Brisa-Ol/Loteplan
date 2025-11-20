@@ -1,37 +1,30 @@
-// src/hook/usePermissions.ts
+// src/hooks/usePermissions.ts
 
 import { useMemo } from "react";
 import { useAuth } from "../context/AuthContext";
-import type { UserRole } from "../types/dto/auth.types";
 
-
-interface PermissionCheck {
-  isAdmin: boolean;
-  isCliente: boolean;
-  hasRole: (roles: UserRole | UserRole[]) => boolean;
-}
-
-/**
- * Hook para verificar permisos del usuario actual
- */
-export const usePermissions = (): PermissionCheck => {
+export const usePermissions = () => {
   const { user } = useAuth();
 
   return useMemo(() => {
+    // Verificación segura con Optional Chaining
     const isAdmin = user?.rol === "admin";
     const isCliente = user?.rol === "cliente";
 
-    const hasRole = (roles: UserRole | UserRole[]): boolean => {
-      if (!user) return false;
-      
-      const roleArray = Array.isArray(roles) ? roles : [roles];
-      return roleArray.includes(user.rol);
+    // Helper para verificar arrays de roles
+    const hasRole = (role: string | string[]) => {
+      if (!user?.rol) return false;
+      if (Array.isArray(role)) {
+        return role.includes(user.rol);
+      }
+      return user.rol === role;
     };
 
     return {
       isAdmin,
       isCliente,
       hasRole,
+      role: user?.rol // Por si necesitas acceder al string directo
     };
   }, [user]);
 };

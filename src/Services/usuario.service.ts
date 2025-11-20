@@ -1,171 +1,110 @@
-// src/services/usuario.service.ts
-// (Versión limpia y correcta)
-
+import type { GenericResponseDto } from '../types/dto/auth.dto';
+import type { UpdateProfileDto, UpdateUserAdminDto, UsuarioDto } from '../types/dto/usuario.dto';
 import httpService from './httpService';
-import type {
-  UsuarioDTO,
-  UpdateProfileDTO,
-  UpdateUserByAdminDTO,
-  CreateUsuarioDTO,
-  SearchUsuarioParams,
-} from '../types/dto/usuario.dto';
-import type { MessageResponse } from '../types/dto/auth.types';
+import type { AxiosResponse } from 'axios';
 
-const API_ENDPOINT = '/usuarios';
 
-// ══════════════════════════════════════════════════════════
-// SERVICIO DE USUARIOS
-// ══════════════════════════════════════════════════════════
+const BASE_ENDPOINT = '/usuarios'; // Ajustar según router (/api/usuarios)
 
-const usuarioService = {
-  // ──────────────────────────────────────────────────────────
-  // RUTAS DE USUARIO AUTENTICADO (/me)
-  // ──────────────────────────────────────────────────────────
+const UsuarioService = {
+
+  // =================================================
+  // 👤 GESTIÓN DE PERFIL PROPIO (ME)
+  // =================================================
 
   /**
-   * Obtiene los datos del usuario autenticado
-   * Backend: GET /usuarios/me
+   * Obtiene los datos del usuario logueado.
+   * GET /me
    */
-  async getCurrentUser(): Promise<UsuarioDTO> {
-    const { data } = await httpService.get<UsuarioDTO>(`${API_ENDPOINT}/me`);
-    return data;
+  getMe: async (): Promise<AxiosResponse<UsuarioDto>> => {
+    return await httpService.get(`${BASE_ENDPOINT}/me`);
   },
 
   /**
-   * Actualiza el perfil del usuario autenticado
-   * Backend: PUT /usuarios/me
+   * Actualiza los datos del usuario logueado.
+   * PUT /me
    */
-  async updateMyProfile(data: UpdateProfileDTO): Promise<UsuarioDTO> {
-    const backendData = {
-      ...data,
-      telefono: data.numero_telefono,
-      numero_telefono: undefined,
-    };
-
-    const { data: responseData } = await httpService.put<UsuarioDTO>(
-      `${API_ENDPOINT}/me`,
-      backendData
-    );
-    return responseData;
+  updateMe: async (data: UpdateProfileDto): Promise<AxiosResponse<UsuarioDto>> => {
+    return await httpService.put(`${BASE_ENDPOINT}/me`, data);
   },
 
   /**
-   * Elimina (soft delete) la cuenta del usuario autenticado
-   * Backend: DELETE /usuarios/me
+   * Elimina (soft delete) la cuenta propia.
+   * DELETE /me
    */
-  async deleteMyAccount(): Promise<void> {
-    await httpService.delete(`${API_ENDPOINT}/me`);
+  deleteMe: async (): Promise<AxiosResponse<GenericResponseDto>> => {
+    return await httpService.delete(`${BASE_ENDPOINT}/me`);
   },
 
-  // ──────────────────────────────────────────────────────────
-  // RUTAS DE ADMINISTRACIÓN
-  // ──────────────────────────────────────────────────────────
+  // =================================================
+  // 👮 GESTIÓN DE USUARIOS (ADMIN)
+  // =================================================
 
   /**
-   * Obtiene todos los usuarios (solo admin)
-   * Backend: GET /usuarios
+   * Obtiene todos los usuarios (incluidos inactivos).
+   * GET /
    */
-  async getAllUsers(): Promise<UsuarioDTO[]> {
-    const { data } = await httpService.get<UsuarioDTO[]>(API_ENDPOINT);
-    return data;
-  },
-
-  /**
-   * Obtiene solo usuarios activos (solo admin)
-   * Backend: GET /usuarios/activos
-   */
-  async getActiveUsers(): Promise<UsuarioDTO[]> {
-    const { data } = await httpService.get<UsuarioDTO[]>(
-      `${API_ENDPOINT}/activos`
-    );
-    return data;
+  findAll: async (): Promise<AxiosResponse<UsuarioDto[]>> => {
+    return await httpService.get(BASE_ENDPOINT);
   },
 
   /**
-   * Obtiene solo administradores (solo admin)
-   * Backend: GET /usuarios/admins
+   * Obtiene solo usuarios activos.
+   * GET /activos
    */
-  async getAdmins(): Promise<UsuarioDTO[]> {
-    const { data } = await httpService.get<UsuarioDTO[]>(
-      `${API_ENDPOINT}/admins`
-    );
-    return data;
+  findAllActive: async (): Promise<AxiosResponse<UsuarioDto[]>> => {
+    return await httpService.get(`${BASE_ENDPOINT}/activos`);
   },
 
   /**
-   * Busca usuarios por nombre de usuario o email (solo admin)
-   * Backend: GET /usuarios/search?q=...
+   * Obtiene solo administradores activos.
+   * GET /admins
    */
-  async searchUsers(params: SearchUsuarioParams): Promise<UsuarioDTO[]> {
-    const { data } = await httpService.get<UsuarioDTO[]>(
-      `${API_ENDPOINT}/search`,
-      { params }
-    );
-    return data;
+  findAllAdmins: async (): Promise<AxiosResponse<UsuarioDto[]>> => {
+    return await httpService.get(`${BASE_ENDPOINT}/admins`);
   },
 
   /**
-   * Obtiene un usuario por ID (solo admin)
-   * Backend: GET /usuarios/:id
+   * Busca usuarios por nombre o email.
+   * GET /search?q=termino
    */
-  async getUserById(id: number): Promise<UsuarioDTO> {
-    const { data } = await httpService.get<UsuarioDTO>(
-      `${API_ENDPOINT}/${id}`
-    );
-    return data;
+  search: async (term: string): Promise<AxiosResponse<UsuarioDto[]>> => {
+    return await httpService.get(`${BASE_ENDPOINT}/search`, {
+      params: { q: term }
+    });
   },
 
   /**
-   * Actualiza un usuario por ID (solo admin)
-   * Backend: PUT /usuarios/:id
+   * Obtiene un usuario específico por ID.
+   * GET /:id
    */
-  async updateUserById(
-    id: number,
-    data: UpdateUserByAdminDTO
-  ): Promise<UsuarioDTO> {
-    const backendData = {
-      ...data,
-      telefono: data.numero_telefono,
-      numero_telefono: undefined,
-    };
-
-    const { data: responseData } = await httpService.put<UsuarioDTO>(
-      `${API_ENDPOINT}/${id}`,
-      backendData
-    );
-    return responseData;
+  findById: async (id: number): Promise<AxiosResponse<UsuarioDto>> => {
+    return await httpService.get(`${BASE_ENDPOINT}/${id}`);
   },
 
   /**
-   * Elimina (soft delete) un usuario por ID (solo admin)
-   * Backend: DELETE /usuarios/:id
+   * Actualiza un usuario específico (Admin).
+   * PUT /:id
    */
-  async deleteUserById(id: number): Promise<void> {
-    await httpService.delete(`${API_ENDPOINT}/${id}`);
+  updateAdmin: async (id: number, data: UpdateUserAdminDto): Promise<AxiosResponse<UsuarioDto>> => {
+    return await httpService.put(`${BASE_ENDPOINT}/${id}`, data);
   },
 
   /**
-   * Resetea el 2FA de un usuario (solo admin)
-   * Backend: PATCH /usuarios/:id/reset-2fa
+   * Borrado lógico de un usuario (Admin).
+   * DELETE /:id
    */
-  async adminReset2FA(id: number): Promise<MessageResponse> {
-    const { data } = await httpService.patch<MessageResponse>(
-      `${API_ENDPOINT}/${id}/reset-2fa`
-    );
-    return data;
+  softDeleteAdmin: async (id: number): Promise<AxiosResponse<GenericResponseDto>> => {
+    return await httpService.delete(`${BASE_ENDPOINT}/${id}`);
   },
 
   /**
-   * Crea un nuevo usuario (solo admin)
-   * Backend: POST /usuarios
+   * Resetea el 2FA de un usuario (Acción crítica de Admin).
+   * PATCH /:id/reset-2fa
    */
-  async createUser(data: CreateUsuarioDTO): Promise<UsuarioDTO> {
-    const { data: responseData } = await httpService.post<UsuarioDTO>(
-      API_ENDPOINT,
-      data
-    );
-    return responseData;
-  },
+  adminReset2FA: async (id: number): Promise<AxiosResponse<GenericResponseDto>> => {
+    return await httpService.patch(`${BASE_ENDPOINT}/${id}/reset-2fa`);
+  }
 };
 
-export default usuarioService;
+export default UsuarioService;

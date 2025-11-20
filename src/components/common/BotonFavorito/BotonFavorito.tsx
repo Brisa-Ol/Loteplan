@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { IconButton, Tooltip, CircularProgress } from "@mui/material";
 import { Favorite, FavoriteBorder } from "@mui/icons-material";
-import { toggleFavorito, isFavorito } from "../../../Services/favorito.service";
+
 import { useAuth } from "../../../context/AuthContext";
 
 interface FavoriteButtonProps {

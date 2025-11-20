@@ -1,46 +1,72 @@
-/**
- * Define los métodos de pasarela (ejemplo).
- */
-export type MetodoPasarela = 'mercadopago' | 'stripe' | string;
+// ==========================================
+// 📤 REQUEST DTOs (Lo que envías)
+// ==========================================
 
 /**
- * Define los estados posibles para un pago en la pasarela,
- * basado en el ENUM del modelo de Sequelize.
+ * Datos para generar un checkout manual/genérico
+ * (Usualmente usado si falló el primer intento y se reintenta).
  */
-export type PagoMercadoEstado = 
-  | 'pendiente'
-  | 'aprobado'
-  | 'rechazado'
-  | 'devuelto'
-  | 'en_proceso';
+export interface CreateCheckoutGenericoDto {
+  id_transaccion?: number; // Si es reintento
+  
+  // Si es nueva transacción manual
+  tipo_transaccion?: 'inversion' | 'pago' | 'puja' | 'recarga';
+  monto?: number;
+  id_proyecto?: number;
+  id_inversion?: number;
+  id_puja?: number;
+  id_suscripcion?: number;
+  
+  metodo?: 'mercadopago'; // Por defecto
+}
+
+// ==========================================
+// 📥 RESPONSE DTOs (Lo que recibes)
+// ==========================================
 
 /**
- * DTO para el modelo PagoMercado.
- * Representa la información *segura* de la pasarela de pago que se envía al frontend.
- *
- * NOTA: Este modelo NO extiendes 'BaseDTO'.
+ * Respuesta al iniciar un checkout.
+ * Puede ser una redirección directa O pedir 2FA (dependiendo del controlador que lo maneje).
  */
-export interface PagoMercadoDTO {
-  id: number;
-  id_transaccion: number;
-  id_transaccion_pasarela: string | null;
+export interface CheckoutResponseDto {
+  success?: boolean;
+  message?: string;
   
-  // DataTypes.DECIMAL se mapea a number
-  monto_pagado: number;
+  // Datos clave para la redirección
+  redirectUrl?: string; // 🔗 La URL de Mercado Pago
+  transaccionId?: number;
   
-  metodo_pasarela: MetodoPasarela;
-  tipo_medio_pago: string | null;
+  // Si el backend pide 2FA antes (Status 202)
+  is2FARequired?: boolean;
+  pagoId?: number; // Contexto para el 2FA
+}
+
+/**
+ * Estado detallado de una transacción y su pago en pasarela.
+ * Usado en la pantalla de "Resultado de Pago".
+ */
+export interface PaymentStatusResponseDto {
+  transaccion: {
+    id: number;
+    tipo: string;
+    monto: number;
+    estado: 'pendiente' | 'pagado' | 'fallido' | 'reembolsado' | 'en_proceso';
+    fecha: string; // ISO Date
+    
+    // Contexto
+    id_inversion?: number;
+    id_puja?: number;
+    id_suscripcion?: number;
+    id_proyecto?: number;
+  };
   
-  // DataTypes.ENUM se mapea a nuestro tipo de unión literal
-  estado: PagoMercadoEstado;
-
-  // DataTypes.DATE se mapea a string (ISO 8601)
-  fecha_aprobacion: string | null;
-
-  // Timestamps estándar (createdAt/updatedAt) porque 'timestamps: true'
-  createdAt?: string;
-  updatedAt?: string;
-
-  // IMPORTANTE: El campo 'detalles_raw' (JSON) se OMITE intencionalmente
-  // de este DTO, ya que no debe ser expuesto al frontend.
+  // Puede ser null si el usuario cerró MP antes de pagar
+  pagoPasarela: {
+    id: number;
+    transaccionIdPasarela: string; // ID de MP
+    monto: number;
+    estado: 'approved' | 'pending' | 'rejected' | 'cancelled' | 'refunded' | 'in_process';
+    metodo: string; // ej: credit_card
+    fecha: string;
+  } | null;
 }

@@ -1,64 +1,60 @@
-// src/services/resumenCuenta.service.ts
+import type { GenericResponseDto } from '../types/dto/auth.dto';
+import type { ResumenCuentaDto, UpdateResumenCuentaDto } from '../types/dto/resumenCuenta.dto';
 import httpService from './httpService';
+import type { AxiosResponse } from 'axios';
 
-// Importamos los DTOs necesarios
-import type {
-  ResumenCuentaDTO,
-  UserAccountSummaryDTO, // El DTO específico para la vista del usuario
-  UpdateResumenCuentaDTO
-} from '../types/dto/resumenCuenta.dto.ts';
 
-// La ruta base es /api/resumen-cuentas (según tu index.js)
-const ENDPOINT = '/resumen-cuentas';
+const BASE_ENDPOINT = '/resumenes-cuenta'; // Ajustar según app.js (ej: /api/resumenes_cuenta)
 
-// --- Funciones para Usuarios ---
+const ResumenCuentaService = {
 
-/**
- * Obtiene todos los resúmenes de cuenta del usuario logueado.
- * Llama a: GET /api/resumen-cuentas/mis-resumenes
- * (Asumiendo una ruta que usa 'getAccountSummariesByUserId').
- */
-export const getMisResumenes = (): Promise<UserAccountSummaryDTO[]> => {
-  // El backend usa req.user.id para filtrar
-  return httpService.get(`${ENDPOINT}/mis-resumenes`);
+  // =================================================
+  // 👤 GESTIÓN USUARIO (Mis Resúmenes)
+  // =================================================
+
+  /**
+   * Obtiene todos los resúmenes de cuenta del usuario autenticado.
+   * GET /mis_resumenes
+   */
+  getMyAccountSummaries: async (): Promise<AxiosResponse<ResumenCuentaDto[]>> => {
+    return await httpService.get(`${BASE_ENDPOINT}/mis_resumenes`);
+  },
+
+  /**
+   * Obtiene un resumen específico por ID (validando propiedad).
+   * GET /:id
+   */
+  getById: async (id: number): Promise<AxiosResponse<ResumenCuentaDto>> => {
+    return await httpService.get(`${BASE_ENDPOINT}/${id}`);
+  },
+
+  // =================================================
+  // 👮 GESTIÓN ADMINISTRATIVA (Admin)
+  // =================================================
+
+  /**
+   * Obtiene TODOS los resúmenes del sistema.
+   * GET /
+   */
+  findAll: async (): Promise<AxiosResponse<ResumenCuentaDto[]>> => {
+    return await httpService.get(BASE_ENDPOINT);
+  },
+
+  /**
+   * Actualiza manualmente un resumen (corrección de datos).
+   * PUT /:id
+   */
+  update: async (id: number, data: UpdateResumenCuentaDto): Promise<AxiosResponse<ResumenCuentaDto>> => {
+    return await httpService.put(`${BASE_ENDPOINT}/${id}`, data);
+  },
+
+  /**
+   * Borrado lógico.
+   * DELETE /:id
+   */
+  softDelete: async (id: number): Promise<AxiosResponse<GenericResponseDto>> => {
+    return await httpService.delete(`${BASE_ENDPOINT}/${id}`);
+  }
 };
 
-/**
- * Obtiene un resumen específico por ID (si pertenece al usuario).
- * Llama a: GET /api/resumen-cuentas/:id
- * (Asumiendo que la ruta usa 'findResumenByIdAndUserId').
- */
-export const getResumenById = (id: number): Promise<ResumenCuentaDTO | null> => {
-  // Usamos el DTO base aquí, ya que no necesita 'proyecto_info' anidado
-  return httpService.get(`${ENDPOINT}/${id}`);
-};
-
-// --- Funciones para Administradores ---
-
-/**
- * (Admin) Obtiene TODOS los resúmenes de cuenta.
- * Llama a: GET /api/resumen-cuentas
- * (Tu backend usa 'findAll').
- */
-export const getAllResumenes = (): Promise<ResumenCuentaDTO[]> => {
-  return httpService.get(ENDPOINT);
-};
-
-/**
- * (Admin) Actualiza un resumen de cuenta.
- * Llama a: PUT /api/resumen-cuentas/:id
- * (Tu backend usa 'update').
- */
-export const updateResumen = (id: number, data: UpdateResumenCuentaDTO): Promise<ResumenCuentaDTO> => {
-  // Asumiendo que el backend devuelve el resumen actualizado
-  return httpService.put(`${ENDPOINT}/${id}`, data);
-};
-
-/**
- * (Admin) Realiza un soft delete de un resumen.
- * Llama a: DELETE /api/resumen-cuentas/:id
- * (Tu backend usa 'softDelete').
- */
-export const deleteResumen = (id: number): Promise<void> => {
-  return httpService.delete(`${ENDPOINT}/${id}`);
-};
+export default ResumenCuentaService;

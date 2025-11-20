@@ -1,222 +1,107 @@
-// src/services/auth.service.ts
-
-import httpService from "./httpService";
+import httpService from './httpService'; // Tu instancia personalizada de Axios
+import type { AxiosResponse } from 'axios';
 import type {
-  LoginCredentials,
-  RegisterData,
-  Verify2FAData,
-  LoginResponse,
-  AuthResponse,
-  User,
-  ForgotPasswordData,
-  ResendConfirmationData,
-  ResetPasswordData,
-  MessageResponse,
-} from "../types/dto/auth.types";
+  RegisterRequestDto,
+  LoginRequestDto,
+  LoginResponseDto,
+  Verify2faRequestDto,
+  LoginSuccessResponse,
+  GenericResponseDto,
+  ResendConfirmationDto,
+  ForgotPasswordDto,
+  ResetPasswordDto,
+  Generate2faSecretResponse,
+  Enable2faDto
+} from '../types/dto/auth.dto'; // Ajusta la ruta a tus DTOs
 
-const API_ENDPOINT = "/auth";
-const TOKEN_KEY = "auth_token";
-const TWO_FA_TOKEN_KEY = "two_fa_token";
-
-// ══════════════════════════════════════════════════════════
-// TIPOS DE RESPUESTA ESPECÍFICOS DEL BACKEND
-// ══════════════════════════════════════════════════════════
-
-type RegisterResponse = MessageResponse & {
-  user: {
-    id: number;
-    nombre_usuario: string;
-    email: string;
-  };
-};
-
-// ══════════════════════════════════════════════════════════
-// SERVICIO DE AUTENTICACIÓN
-// ══════════════════════════════════════════════════════════
-
-const authService = {
-  // ──────────────────────────────────────────────────────────
-  // GESTIÓN DE TOKENS (LOCAL STORAGE)
-  // ──────────────────────────────────────────────────────────
-
-  setToken(token: string): void {
-    localStorage.setItem(TOKEN_KEY, token);
-  },
-
-  getToken(): string | null {
-    return localStorage.getItem(TOKEN_KEY);
-  },
-
-  removeToken(): void {
-    localStorage.removeItem(TOKEN_KEY);
-  },
-
-  set2FAToken(token: string): void {
-    localStorage.setItem(TWO_FA_TOKEN_KEY, token);
-  },
-
-  get2FAToken(): string | null {
-    return localStorage.getItem(TWO_FA_TOKEN_KEY);
-  },
-
-  remove2FAToken(): void {
-    localStorage.removeItem(TWO_FA_TOKEN_KEY);
-  },
-
-  isAuthenticated(): boolean {
-    return !!this.getToken();
-  },
-
-  // ──────────────────────────────────────────────────────────
-  // REGISTRO Y CONFIRMACIÓN DE EMAIL
-  // ──────────────────────────────────────────────────────────
+const AuthService = {
+  
+  // =================================================
+  // 📝 REGISTRO Y LOGIN
+  // =================================================
 
   /**
    * Registra un nuevo usuario
-   * Backend: POST /auth/register
    */
-  async register(data: RegisterData): Promise<RegisterResponse> {
-    const { data: responseData } = await httpService.post<RegisterResponse>(
-      `${API_ENDPOINT}/register`,
-      data
-    );
-    return responseData;
+  register: async (data: RegisterRequestDto): Promise<AxiosResponse<GenericResponseDto>> => {
+    return await httpService.post('/auth/register', data);
   },
 
   /**
-   * Confirma el email del usuario mediante token
-   * Backend: GET /auth/confirmar_email/:token
+   * Inicia sesión. 
+   * ⚠️ OJO: Puede devolver el token final O pedir 2FA.
+   * Revisa response.data.is2FARequired en el componente.
    */
-  async confirmEmail(token: string): Promise<MessageResponse> {
-    const { data } = await httpService.get<MessageResponse>(
-      `${API_ENDPOINT}/confirmar_email/${token}`
-    );
-    return data;
+  login: async (data: LoginRequestDto): Promise<AxiosResponse<LoginResponseDto>> => {
+    return await httpService.post('/auth/login', data);
   },
 
   /**
-   * Reenvía el email de confirmación
-   * Backend: POST /auth/reenviar_confirmacion
+   * Paso 2 del Login: Verifica el código TOTP y devuelve el token real
    */
-  async resendConfirmation(
-    data: ResendConfirmationData
-  ): Promise<MessageResponse> {
-    const { data: responseData } = await httpService.post<MessageResponse>(
-      `${API_ENDPOINT}/reenviar_confirmacion`,
-      data
-    );
-    return responseData;
-  },
-
-  // ──────────────────────────────────────────────────────────
-  // INICIO DE SESIÓN (CON SOPORTE 2FA)
-  // ──────────────────────────────────────────────────────────
-
-  /**
-   * Inicia sesión con identificador (email o nombre_usuario) y contraseña
-   * Backend: POST /auth/login
-   * 
-   * Retorna:
-   * - Auth2FARequiredResponse (status 202) si 2FA está activo
-   * - AuthResponse (status 200) si no requiere 2FA
-   */
-  async login(data: LoginCredentials): Promise<LoginResponse> {
-    const { data: response } = await httpService.post<LoginResponse>(
-      `${API_ENDPOINT}/login`,
-      data
-    );
-
-    // Si requiere 2FA, guardar token temporal
-    if ("is2FARequired" in response && response.is2FARequired) {
-      this.set2FAToken(response.twoFaToken);
-    } else {
-      // Si no requiere 2FA, guardar token de sesión final
-      this.setToken((response as AuthResponse).token);
-    }
-
-    return response;
+  verify2fa: async (data: Verify2faRequestDto): Promise<AxiosResponse<LoginSuccessResponse>> => {
+    return await httpService.post('/auth/2fa/verify', data);
   },
 
   /**
-   * Verifica el código 2FA (Paso 2 del login)
-   * Backend: POST /auth/2fa/verify
+   * Cierra sesión (El cliente debe borrar el token localmente también)
    */
-  async verify2FA(data: Verify2FAData): Promise<AuthResponse> {
-    const { data: response } = await httpService.post<AuthResponse>(
-      `${API_ENDPOINT}/2fa/verify`,
-      data
-    );
-
-    // Limpiar token temporal y guardar token de sesión final
-    this.remove2FAToken();
-    this.setToken(response.token);
-
-    return response;
+  logout: async (): Promise<AxiosResponse<GenericResponseDto>> => {
+    return await httpService.post('/auth/logout');
   },
 
-  // ──────────────────────────────────────────────────────────
-  // GESTIÓN DE USUARIO AUTENTICADO
-  // ──────────────────────────────────────────────────────────
+  // =================================================
+  // 📧 GESTIÓN DE CUENTA (Email / Password)
+  // =================================================
 
-  /**
-   * Obtiene los datos del usuario autenticado
-   * Backend: GET /usuarios/me
-   */
-  async getCurrentUser(): Promise<User> {
-    const { data } = await httpService.get<User>("/usuarios/me");
-    return data;
+  confirmEmail: async (token: string): Promise<AxiosResponse<GenericResponseDto>> => {
+    return await httpService.get(`/auth/confirmar_email/${token}`);
   },
 
+  resendConfirmation: async (data: ResendConfirmationDto): Promise<AxiosResponse<GenericResponseDto>> => {
+    return await httpService.post('/auth/reenviar_confirmacion', data);
+  },
+
+  forgotPassword: async (data: ForgotPasswordDto): Promise<AxiosResponse<GenericResponseDto>> => {
+    return await httpService.post('/auth/forgot-password', data);
+  },
+
+  resetPassword: async (token: string, data: ResetPasswordDto): Promise<AxiosResponse<GenericResponseDto>> => {
+    return await httpService.post(`/auth/reset-password/${token}`, data);
+  },
+
+  // =================================================
+  // 🔐 CONFIGURACIÓN 2FA (Perfil de Usuario)
+  // =================================================
+
   /**
-   * Cierra la sesión del usuario (cliente)
-   * Backend: POST /auth/logout
+   * Genera el secreto y la URL para el código QR
    */
-  async logoutUser(): Promise<MessageResponse> {
-    const { data } = await httpService.post<MessageResponse>(
-      `${API_ENDPOINT}/logout`
-    );
-    return data;
+  generate2faSecret: async (): Promise<AxiosResponse<Generate2faSecretResponse>> => {
+    return await httpService.post('/auth/2fa/generate-secret');
   },
 
   /**
-   * Cierra la sesión y limpia el almacenamiento local
+   * Activa el 2FA enviando un código de prueba
    */
-  logout(): void {
-    this.removeToken();
-    this.remove2FAToken();
-    window.location.href = "/login";
-  },
-
-  // ──────────────────────────────────────────────────────────
-  // RECUPERACIÓN DE CONTRASEÑA
-  // ──────────────────────────────────────────────────────────
-
-  /**
-   * Solicita el envío de email para restablecer contraseña
-   * Backend: POST /auth/forgot-password
-   */
-  async forgotPassword(data: ForgotPasswordData): Promise<MessageResponse> {
-    const { data: responseData } = await httpService.post<MessageResponse>(
-      `${API_ENDPOINT}/forgot-password`,
-      data
-    );
-    return responseData;
+  enable2fa: async (data: Enable2faDto): Promise<AxiosResponse<GenericResponseDto>> => {
+    return await httpService.post('/auth/2fa/enable', data);
   },
 
   /**
-   * Restablece la contraseña usando el token del email
-   * Backend: POST /auth/reset-password/:token
+   * Desactiva el 2FA
    */
-  async resetPassword(
-    token: string,
-    data: ResetPasswordData
-  ): Promise<MessageResponse> {
-    const { data: responseData } = await httpService.post<MessageResponse>(
-      `${API_ENDPOINT}/reset-password/${token}`,
-      data
-    );
-    return responseData;
-  },
+  disable2fa: async (): Promise<AxiosResponse<GenericResponseDto>> => {
+    return await httpService.post('/auth/2fa/disable');
+  }
+  
 };
-
-export default authService;
+/**
+ * Estructura del error cuando el Rate Limiter bloquea al usuario.
+ * Status HTTP: 429
+ */
+export interface RateLimitErrorDto {
+  success: false;
+  error: string; // Ej: "Demasiados intentos de inicio de sesión fallidos..."
+}
+export default AuthService;

@@ -1,64 +1,82 @@
-// src/types/dto/resumenCuenta.dto.ts
+import type { BaseDTO } from "./base.dto";
+
+
+// ==========================================
+// 📤 REQUEST DTOs (Lo que envías)
+// ==========================================
+
 
 /**
- * ❗ Define la estructura del objeto DENTRO del campo JSON 'detalle_cuota'.
- * BASADO en la función 'createAccountSummary' de tu backend.
- * Asegúrate de que estos campos coincidan con lo que realmente guardas.
+ * Datos para crear/inicializar un resumen de cuenta (Admin/Sistema).
+ * Usualmente esto ocurre automáticamente al crear la suscripción.
  */
-export interface DetalleCuotaConfig {
-  nombre_cemento: string | null;
+export interface CreateResumenCuentaDto {
+  id_suscripcion: number;
+  id_proyecto: number;
+  
+  // Configuración de la cuota base
+  nombre_cemento: string;
   valor_cemento_unidades: number;
   valor_cemento: number;
+  meses_proyecto: number;
+  
+  // Porcentajes
   porcentaje_plan: number;
+  porcentaje_administrativo: number;
+  porcentaje_iva: number;
+}
+
+export interface UpdateResumenCuentaDto {
+  // Permite correcciones manuales de admin
+  cuotas_pagadas?: number;
+  cuotas_vencidas?: number;
+  porcentaje_pagado?: number;
+}
+
+// ==========================================
+// 📥 RESPONSE DTOs (Lo que recibes)
+// ==========================================
+
+/**
+ * Detalle desglosado de la cuota (guardado como JSON en BD).
+ */
+export interface DetalleCuotaJson {
+  nombre_cemento: string;
+  valor_cemento_unidades: number;
+  valor_cemento: number;
+  
   valor_movil: number;
-  valor_mensual: number; // Valor base mensual sin cargos
+  valor_mensual: number;
+  
+  porcentaje_plan: number;
+  
+  // Desglose de costos
   carga_administrativa: number;
   iva_carga_administrativa: number;
-  valor_mensual_final: number; // Monto total que se cobrará
+  
+  // El valor final que paga el usuario
+  valor_mensual_final: number;
 }
 
 /**
- * ❗ DTO DE SALIDA PRINCIPAL
- * Representa el resumen de cuenta que RECIBIMOS del backend.
+ * Modelo principal de Resumen de Cuenta.
  */
-export interface ResumenCuentaDTO {
-  id: number;
+export interface ResumenCuentaDto extends BaseDTO {
   id_suscripcion: number;
   nombre_proyecto: string;
-  meses_proyecto: number; // Total de meses del plan
+  meses_proyecto: number; // Total de cuotas
+  
+  // Estado de progreso
   cuotas_pagadas: number;
   cuotas_vencidas: number;
-  porcentaje_pagado: number;
-
-  /**
-   * El campo JSONB se mapea a nuestra interfaz DetalleCuotaConfig.
-   */
-  detalle_cuota: DetalleCuotaConfig;
-
-  // Timestamps
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-/**
- * ❗ DTO DE SALIDA ESPECÍFICO (NUEVO)
- * Representa la estructura devuelta por 'getAccountSummariesByUserId'.
- * Incluye información anidada del proyecto.
- */
-export interface UserAccountSummaryDTO extends ResumenCuentaDTO {
-  proyecto_info?: { // Puede ser opcional si alguna suscripción no tiene proyecto asociado
+  porcentaje_pagado: number; // Float (0.0 - 100.0)
+  
+  // Detalles financieros
+  detalle_cuota: DetalleCuotaJson;
+  
+  // Información extra que a veces incluye el backend (en getAccountSummariesByUserId)
+  proyecto_info?: {
     nombre_proyecto: string;
-    descripcion: string | null;
+    descripcion: string;
   };
 }
-
-/**
- * ❗ DTO DE ENTRADA (NUEVO - Admin)
- * Datos que el admin ENVÍA para actualizar un resumen (raro, pero posible).
- */
-export type UpdateResumenCuentaDTO = Partial<{
-  cuotas_pagadas: number;
-  cuotas_vencidas: number;
-  porcentaje_pagado: number;
-  // 'detalle_cuota' probablemente no se actualiza manualmente
-}>;

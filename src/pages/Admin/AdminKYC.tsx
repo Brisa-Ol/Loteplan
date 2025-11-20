@@ -18,7 +18,7 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import { useQuery } from '@tanstack/react-query';
 import type { KycDTO, KYCStatus, RejectKycDTO } from '../../types/dto/kyc.dto';
 import kycService from '../../Services/kyc.service';
-import KYCDetailsModal from '../../components/Admin/KYC/KYCDetailsModal';
+import KYCDetailsModal from './components/KYC/KYCDetailsModal';
 
 
 // ══════════════════════════════════════════════════════════

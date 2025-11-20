@@ -1,78 +1,126 @@
-import type { IImagen } from "../types/dto/imagen.dto";
-import apiClient from "./httpService"; // 👈 AJUSTE REALIZADO
+import type { GenericResponseDto } from '../types/dto/auth.dto';
+import type { CreateImagenDto, ImagenDto, UpdateImagenDto } from '../types/dto/imagen.dto';
+import httpService from './httpService';
+import type { AxiosResponse } from 'axios';
 
 
-const API_URL = "/imagenes";
+// Asumo que la ruta base en tu app.js es /api/imagenes
+const BASE_ENDPOINT = '/imagenes';
 
-/**
- * Servicio para la gestión de Imágenes (vistas de usuario).
- * Utiliza httpService para incluir automáticamente el token y manejar errores 401.
- */
-class ImagenService {
-  [x: string]: any;
-  /**
-   * Obtiene todas las imágenes activas asociadas a un proyecto.
-   * @param idProyecto - ID del proyecto.
-   */
-  async getImagesByProjectId(idProyecto: number): Promise<IImagen[]> {
-    try {
-      // Tu httpService (apiClient) ya incluye el interceptor de respuesta,
-      // por lo que solo necesitamos devolver data en caso de éxito.
-      const response = await apiClient.get<IImagen[]>(
-        `${API_URL}/proyecto/${idProyecto}`
-      );
-      return response.data;
-    } catch (error) {
-      console.error("Error al obtener imágenes por proyecto:", error);
-      // El interceptor de httpService ya maneja el 401 (logout/redirect).
-      // Aquí relanzamos el error para que el componente que llama (UI)
-      // pueda reaccionar (ej. mostrar un toast de error).
-      throw error;
-    }
-  }
+const ImagenService = {
+
+  // =================================================
+  // 🖼️ CREACIÓN (ADMIN) - MULTIPART/FORM-DATA
+  // =================================================
 
   /**
-   * Obtiene todas las imágenes activas asociadas a un lote.
-   * @param idLote - ID del lote.
+   * Sube una imagen al servidor.
+   * Requiere autenticación de Admin.
    */
-  async getImagesByLoteId(idLote: number): Promise<IImagen[]> {
-    try {
-      const response = await apiClient.get<IImagen[]>(
-        `${API_URL}/lote/${idLote}`
-      );
-      return response.data;
-    } catch (error) {
-      console.error("Error al obtener imágenes por lote:", error);
-      throw error;
-    }
-  }
+  create: async (data: CreateImagenDto): Promise<AxiosResponse<ImagenDto>> => {
+    const formData = new FormData();
+    
+    // ⚠️ CRÍTICO: El nombre 'image' debe coincidir con uploadImage.single("image") en tu backend
+    formData.append('image', data.file); 
+
+    if (data.descripcion) formData.append('descripcion', data.descripcion);
+    
+    // Validación lógica simple antes de enviar
+    if (data.id_proyecto) formData.append('id_proyecto', data.id_proyecto.toString());
+    if (data.id_lote) formData.append('id_lote', data.id_lote.toString());
+
+    return await httpService.post(BASE_ENDPOINT, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  },
+
+  // =================================================
+  // 🔍 CONSULTAS DE ASOCIACIÓN (USUARIO/PUBLICO)
+  // =================================================
 
   /**
-   * Obtiene todas las imágenes activas (sin filtrar por proyecto/lote).
+   * Obtiene las imágenes activas de un Proyecto.
+   * Ideal para carruseles o galerías de proyecto.
    */
-  async getAllActive(): Promise<IImagen[]> {
-    try {
-      const response = await apiClient.get<IImagen[]>(`${API_URL}/activas`);
-      return response.data;
-    } catch (error) {
-      console.error("Error al obtener imágenes activas:", error);
-      throw error;
-    }
-  }
+  getByProject: async (idProyecto: number): Promise<AxiosResponse<ImagenDto[]>> => {
+    return await httpService.get(`${BASE_ENDPOINT}/proyecto/${idProyecto}`);
+  },
 
   /**
-   * Obtiene una imagen activa específica por ID.
-   * @param id - ID de la imagen.
+   * Obtiene las imágenes activas de un Lote.
+   * Ideal para el detalle del lote.
    */
-  async getActiveById(id: number): Promise<IImagen> {
-    try {
-      const response = await apiClient.get<IImagen>(`${API_URL}/${id}`);
-      return response.data;
-    } catch (error) {
-      console.error("Error al obtener imagen activa por ID:", error);
-      throw error;
-    }
-  }
-}
+  getByLote: async (idLote: number): Promise<AxiosResponse<ImagenDto[]>> => {
+    return await httpService.get(`${BASE_ENDPOINT}/lote/${idLote}`);
+  },
 
-export default new ImagenService();
+  /**
+   * Obtiene TODAS las imágenes activas del sistema.
+   */
+  getAllActive: async (): Promise<AxiosResponse<ImagenDto[]>> => {
+    return await httpService.get(`${BASE_ENDPOINT}/activas`);
+  },
+
+  // =================================================
+  // ⚙️ GESTIÓN ADMINISTRATIVA (ADMIN)
+  // =================================================
+
+  /**
+   * Obtiene imágenes huérfanas (sin proyecto ni lote).
+   * Útil para paneles de limpieza o asignación manual.
+   */
+  getUnassigned: async (): Promise<AxiosResponse<ImagenDto[]>> => {
+    return await httpService.get(`${BASE_ENDPOINT}/unassigned`);
+  },
+
+  /**
+   * Obtiene TODAS las imágenes (incluso inactivas).
+   */
+  getAll: async (): Promise<AxiosResponse<ImagenDto[]>> => {
+    return await httpService.get(BASE_ENDPOINT);
+  },
+
+  /**
+   * Busca por ID (Ruta Admin que incluye eliminadas).
+   */
+  getByIdAdmin: async (id: number): Promise<AxiosResponse<ImagenDto>> => {
+    return await httpService.get(`${BASE_ENDPOINT}/admin/${id}`);
+  },
+
+  /**
+   * Actualiza metadatos (descripción, reasignación de proyecto/lote).
+   */
+  update: async (id: number, data: UpdateImagenDto): Promise<AxiosResponse<ImagenDto>> => {
+    return await httpService.put(`${BASE_ENDPOINT}/${id}`, data);
+  },
+
+  /**
+   * Borrado lógico.
+   */
+  softDelete: async (id: number): Promise<AxiosResponse<GenericResponseDto>> => {
+    return await httpService.delete(`${BASE_ENDPOINT}/${id}`);
+  },
+
+  // =================================================
+  // 🛠️ UTILIDADES PARA EL FRONTEND
+  // =================================================
+
+  /**
+   * Helper para construir la URL completa de la imagen.
+   * Útil si tu backend devuelve rutas relativas como '/uploads/...'
+   * y necesitas prefijarlas con la URL base de la API.
+   */
+  resolveImageUrl: (relativePath: string): string => {
+    if (!relativePath) return '/assets/placeholder.png'; // Imagen por defecto
+    if (relativePath.startsWith('http')) return relativePath;
+    
+    // Obtiene la URL base desde tu variable de entorno (ej: http://localhost:3000)
+    const apiBase = import.meta.env.VITE_API_BASE_URL || ''; 
+    // Asumiendo que VITE_API_BASE_URL incluye '/api', a veces hay que limpiar si las imágenes están en la raíz
+    const rootUrl = apiBase.replace('/api', ''); 
+    
+    return `${rootUrl}${relativePath}`;
+  }
+};
+
+export default ImagenService;

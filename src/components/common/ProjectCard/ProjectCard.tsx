@@ -1,5 +1,5 @@
 // src/components/common/ProjectCard/ProjectCard.tsx
-// ═══════════════════════════════════════════════════════════
+
 import React from "react";
 import {
   Card,
@@ -9,20 +9,17 @@ import {
   Chip,
   Box,
   Button,
-  IconButton,
+  Stack,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import { LocationOn as LocationIcon, Favorite, FavoriteBorder } from "@mui/icons-material";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "../../../context/AuthContext";
-import { isFavorito, toggleFavorito } from "../../../Services/favorito.service";
-import type { EstadoProyecto, ProyectoDTO } from "../../../types/dto/proyecto.dto";
+import { LocationOn as LocationIcon } from "@mui/icons-material";
+import type { EstadoProyecto, ProyectoDto } from "../../../types/dto/proyecto.dto";
+import ImagenService from "../../../Services/imagen.service";
 
-
-const API_PUBLIC_URL = import.meta.env.VITE_API_PUBLIC_URL || "http://localhost:3001";
+// Importaciones de arquitectura
 
 interface ProjectCardProps {
-  project: ProyectoDTO;
+  project: ProyectoDto;
   type: "ahorrista" | "inversionista";
 }
 
@@ -34,97 +31,44 @@ const statusMap: Record<EstadoProyecto, "active" | "completed" | "upcoming"> = {
 
 export const ProjectCard: React.FC<ProjectCardProps> = ({ project, type }) => {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const { isAuthenticated } = useAuth();
 
-  const projectStatus = statusMap[project.estado_proyecto as EstadoProyecto] || "upcoming";
+  const projectStatus = statusMap[project.estado_proyecto] || "upcoming";
 
-  const imageUrl = project.imagenes?.[0]?.url
-    ? `${API_PUBLIC_URL}${project.imagenes[0].url}`
-    : "/images/placeholder.jpg";
+  // ✅ Usamos el servicio centralizado para la URL de la imagen
+  const imageUrl = project.imagenes && project.imagenes.length > 0
+    ? ImagenService.resolveImageUrl(project.imagenes[0].url)
+    : "/assets/placeholder-project.jpg"; // Asegúrate de tener esta imagen en public/assets
 
-  const statusColors: Record<"active" | "completed" | "upcoming", "success" | "default" | "info"> = {
+  const statusColors = {
     active: "success",
     completed: "default",
     upcoming: "info",
-  };
+  } as const;
 
-  const statusLabels: Record<"active" | "completed" | "upcoming", string> = {
+  const statusLabels = {
     active: "Activo",
     completed: "Finalizado",
     upcoming: "Próximamente",
   };
 
-  const { data: favoritoData } = useQuery({
-    queryKey: ["isFavorito", project.id],
-    queryFn: () => isFavorito(project.id),
-    enabled: isAuthenticated,
-    staleTime: 5 * 60 * 1000,
-  });
-
-  const isProjectFavorito = favoritoData?.esFavorito || false;
-
-  const toggleFavoritoMutation = useMutation({
-    mutationFn: (projectId: number) => toggleFavorito(projectId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["isFavorito", project.id] });
-      queryClient.invalidateQueries({ queryKey: ["misFavoritos"] });
-    },
-    onError: (error: Error) => {
-      console.error("Error al marcar favorito:", error);
-      alert(`Error: ${error.message}`);
-    },
-  });
-
-  const handleToggleFavorito = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!isAuthenticated) {
-      navigate("/login", { state: { from: location.pathname } });
-      return;
-    }
-    toggleFavoritoMutation.mutate(project.id);
-  };
-
   return (
     <Card
       sx={{
-        position: "relative",
+        width: "100%",
+        height: "100%",
         display: "flex",
         flexDirection: "column",
-        height: "100%",
-        borderRadius: 4,
-        boxShadow: "0 2px 10px rgba(0,0,0,0.05)",
+        borderRadius: 3, // Bordes redondeados modernos
+        boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
         overflow: "hidden",
         transition: "all 0.3s ease",
         backgroundColor: "#fff",
         "&:hover": {
-          transform: "translateY(-4px)",
-          boxShadow: "0 6px 20px rgba(0,0,0,0.1)",
+          transform: "translateY(-5px)",
+          boxShadow: "0 12px 24px rgba(0,0,0,0.12)",
         },
       }}
     >
-      {/* --- Botón de Favorito --- */}
-      {isAuthenticated && (
-        <IconButton
-          onClick={handleToggleFavorito}
-          disabled={toggleFavoritoMutation.isPending}
-          sx={{
-            position: "absolute",
-            top: 10,
-            right: 10,
-            backgroundColor: "rgba(255, 255, 255, 0.9)",
-            "&:hover": { backgroundColor: "rgba(255, 255, 255, 1)" },
-            zIndex: 2,
-          }}
-        >
-          {isProjectFavorito ? (
-            <Favorite fontSize="small" color="error" />
-          ) : (
-            <FavoriteBorder fontSize="small" sx={{ color: "text.secondary" }} />
-          )}
-        </IconButton>
-      )}
-
       <CardMedia
         component="img"
         height="200"
@@ -132,7 +76,6 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, type }) => {
         alt={project.nombre_proyecto}
         sx={{
           objectFit: "cover",
-          filter: "brightness(0.96)",
         }}
       />
 
@@ -141,109 +84,105 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, type }) => {
           flexGrow: 1,
           display: "flex",
           flexDirection: "column",
-          p: 2.5,
+          p: 3,
         }}
       >
-        {/* Estado + Ubicación */}
+        {/* --- Estado + Ubicación --- */}
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
           <Chip
             label={statusLabels[projectStatus]}
             color={statusColors[projectStatus]}
             size="small"
-            sx={{
-              fontWeight: 600,
-              borderRadius: 2,
-              textTransform: "capitalize",
-            }}
+            sx={{ fontWeight: 600, borderRadius: 1 }}
           />
           <Box display="flex" alignItems="center" gap={0.5}>
             <LocationIcon sx={{ fontSize: 16, color: "text.secondary" }} />
-            <Typography variant="caption" color="text.secondary">
-              {project.forma_juridica || "Ubicación pendiente"}
+            <Typography variant="caption" color="text.secondary" noWrap maxWidth={120}>
+              {project.forma_juridica || "Ubicación N/A"}
             </Typography>
           </Box>
         </Box>
 
-        {/* Título */}
+        {/* --- Título --- */}
         <Typography
           variant="h6"
           fontWeight={700}
           noWrap
-          sx={{ mb: 1, color: "text.primary" }}
+          gutterBottom
+          title={project.nombre_proyecto} // Tooltip nativo por si se corta
         >
           {project.nombre_proyecto}
         </Typography>
 
-        {/* Descripción */}
+        {/* --- Descripción --- */}
         <Typography
           variant="body2"
           color="text.secondary"
           sx={{
-            mb: 2,
+            mb: 3,
             display: "-webkit-box",
             WebkitLineClamp: 2,
             WebkitBoxOrient: "vertical",
             overflow: "hidden",
+            minHeight: 40, // Altura fija para alinear tarjetas
           }}
         >
-          {project.descripcion || "Sin descripción"}
+          {project.descripcion || "Sin descripción disponible para este proyecto."}
         </Typography>
 
-        {/* Datos financieros */}
+        {/* --- Datos Financieros (Abajo) --- */}
         <Box mt="auto">
           {type === "ahorrista" ? (
-            <Box display="flex" justifyContent="space-between" alignItems="center">
+            // VISTA AHORRISTA
+            <Stack direction="row" justifyContent="space-between" alignItems="baseline">
               <Box>
-                <Typography variant="caption" color="text.secondary">
-                  Cuota mensual
+                <Typography variant="caption" color="text.secondary" display="block">
+                  Cuota Mensual
                 </Typography>
-                <Typography variant="h6" color="primary" fontWeight={700}>
-                  {project.moneda || "$"} {project.monto_inversion?.toLocaleString() ?? "N/A"}
+                <Typography variant="h6" color="primary.main" fontWeight={700}>
+                  {project.moneda || "$"} {Number(project.monto_inversion).toLocaleString()}
                 </Typography>
               </Box>
               <Box textAlign="right">
-                <Typography variant="caption" color="text.secondary">
+                <Typography variant="caption" color="text.secondary" display="block">
                   Plazo
                 </Typography>
                 <Typography variant="body1" fontWeight={600}>
                   {project.plazo_inversion ?? "N/A"} meses
                 </Typography>
               </Box>
-            </Box>
+            </Stack>
           ) : (
-            <Box display="flex" justifyContent="space-between" alignItems="center">
+            // VISTA INVERSIONISTA
+            <Stack direction="row" justifyContent="space-between" alignItems="baseline">
               <Box>
-                <Typography variant="caption" color="text.secondary">
-                  Inversión mín.
+                <Typography variant="caption" color="text.secondary" display="block">
+                  Inversión Total
                 </Typography>
-                <Typography variant="h6" color="primary" fontWeight={700}>
-                  {project.moneda || "USD"} {project.monto_inversion?.toLocaleString() ?? "N/A"}
+                <Typography variant="h6" color="primary.main" fontWeight={700}>
+                  {project.moneda || "USD"} {Number(project.monto_inversion).toLocaleString()}
                 </Typography>
               </Box>
               <Box textAlign="right">
-                <Typography variant="caption" color="text.secondary">
-                  Rentabilidad
+                <Typography variant="caption" color="text.secondary" display="block">
+                  Lotes Disp.
                 </Typography>
-                <Typography variant="h6" color="success.main" fontWeight={700}>
-                  N/A %
+                <Typography variant="body1" fontWeight={600} color="success.main">
+                  {project.lotes ? project.lotes.length : 0}
                 </Typography>
               </Box>
-            </Box>
+            </Stack>
           )}
 
-          {/* Botón */}
+          {/* --- Botón --- */}
           <Button
             variant="contained"
             fullWidth
-            sx={{
-              mt: 2.5,
-              textTransform: "none",
-              fontWeight: 700,
-              borderRadius: 2,
-            }}
+            size="large"
+            sx={{ mt: 3, borderRadius: 2, fontWeight: 'bold' }}
             onClick={() => navigate(`/proyectos/${project.id}`)}
           >
-            Ver detalles
+            Ver Detalles
           </Button>
         </Box>
       </CardContent>

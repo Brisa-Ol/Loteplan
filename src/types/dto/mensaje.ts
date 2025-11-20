@@ -1,45 +1,47 @@
-// src/types/dto/mensaje.dto.ts
-import type { BaseDTO } from './base.dto';
-import type { UsuarioDTO } from './usuario.dto'; // Importamos el DTO seguro de Usuario
+
+import type { UserDto } from "./auth.dto";
+import type { BaseDTO } from "./base.dto";
+
+// ==========================================
+// 📤 REQUEST DTOs (Lo que envías)
+// ==========================================
+
+
+export interface EnviarMensajeDto {
+  id_receptor: number;
+  contenido: string;
+}
+
+// ==========================================
+// 📥 RESPONSE DTOs (Lo que recibes)
+// ==========================================
 
 /**
- * ❗ DTO DE SALIDA (ACTUALIZADO)
- * Representa el mensaje que RECIBIMOS del backend.
- *
- * Tu backend service ('obtenerPorUsuario') usa 'include' para
- * adjuntar los objetos 'remitente' y 'receptor',
- * así que los definimos aquí.
+ * Representación de un Mensaje.
  */
-export interface MensajeDTO extends BaseDTO {
-  // --- Atributos de BaseDTO ---
-  // id: number;
-  // activo: boolean;
-  // createdAt?: string;
-  // updatedAt?: string;
-
-  // --- Atributos específicos de Mensaje ---
+export interface MensajeDto extends BaseDTO {
   id_remitente: number;
   id_receptor: number;
   contenido: string;
-  fecha_envio: string; // Se recibe como un string ISO
+  fecha_envio: string; // ISO Date
   leido: boolean;
-
-  /**
-   * ❗ Campos del 'include'
-   * Estos objetos son añadidos por tu backend service.
-   * Son opcionales (?) por si alguna consulta no los incluye.
-   */
-  remitente?: UsuarioDTO; // El objeto del usuario que envió
-  receptor?: UsuarioDTO;  // El objeto del usuario que recibió
+  
+  // El backend incluye los modelos asociados en 'obtenerPorUsuario'
+  // Hacemos estos campos opcionales (?) porque no siempre vienen en todas las consultas
+  remitente?: Partial<UserDto>; 
+  receptor?: Partial<UserDto>;
 }
 
 /**
- * ❗ DTO DE ENTRADA (NUEVO)
- * Datos que el frontend ENVÍA para crear un nuevo mensaje.
- * (Basado en la función 'crear' de tu backend).
+ * Respuesta del conteo de no leídos
  */
-export interface CreateMensajeDTO {
-  id_receptor: number;
-  contenido: string;
-  // 'id_remitente' lo pone el backend (basado en el token del usuario logueado)
+export interface ConteoNoLeidosResponse {
+  conteo: number;
 }
+
+// ==========================================
+// 🛠️ CONSTANTES DE SISTEMA
+// ==========================================
+
+// ID reservado que usas en el backend para mensajes automáticos
+export const SYSTEM_USER_ID = 2;

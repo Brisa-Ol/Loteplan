@@ -1,117 +1,112 @@
-// src/services/proyecto.service.ts
+import type { GenericResponseDto } from '../types/dto/auth.dto';
+import type { AsignarLotesDto, CompletionRateDto, CreateProyectoDto, MonthlyProgressItemDto, ProyectoDto, UpdateProyectoDto } from '../types/dto/proyecto.dto';
 import httpService from './httpService';
-import type { 
-  ProyectoDTO, 
-  CreateProyectoDTO, 
-  UpdateProyectoDTO,
-  AssignLotesDTO
-} from '../types/dto/proyecto.dto';
-import type { 
-  CompletionRateDTO, 
-  MonthlyProgressItem 
-} from '../types/dto/auth.types';
+import type { AxiosResponse } from 'axios';
 
-const ENDPOINT = '/proyectos';
 
-const proyectoService = {
-  // ══════════════════════════════════════════════════════════
-  // 🛡️ FUNCIONES DE ADMINISTRADOR
-  // ══════════════════════════════════════════════════════════
+const BASE_ENDPOINT = '/proyectos'; // Asume prefijo en router
 
-  /** Llama a: GET /api/proyectos */
-  async getAllProyectos(): Promise<ProyectoDTO[]> {
-    const { data } = await httpService.get<ProyectoDTO[]>(ENDPOINT);
-    return data;
+const ProyectoService = {
+
+  // =================================================
+  // 👁️ VISTA PÚBLICA / USUARIO
+  // =================================================
+
+  /**
+   * Obtiene TODOS los proyectos activos.
+   */
+  getAllActive: async (): Promise<AxiosResponse<ProyectoDto[]>> => {
+    return await httpService.get(`${BASE_ENDPOINT}/activos`);
   },
 
-  /** Llama a: GET /api/proyectos/:id */
-  async getProyectoById(id: number | string): Promise<ProyectoDTO> {
-    const { data } = await httpService.get<ProyectoDTO>(`${ENDPOINT}/${id}`);
-    return data;
+  /**
+   * Obtiene solo proyectos tipo 'mensual' (Ahorristas).
+   */
+  getAhorristasActive: async (): Promise<AxiosResponse<ProyectoDto[]>> => {
+    return await httpService.get(`${BASE_ENDPOINT}/activos/ahorristas`);
   },
 
-  /** Llama a: POST /api/proyectos */
-  async createProyecto(proyectoData: CreateProyectoDTO): Promise<ProyectoDTO> {
-    const { data } = await httpService.post<ProyectoDTO>(ENDPOINT, proyectoData);
-    return data;
+  /**
+   * Obtiene solo proyectos tipo 'directo' (Inversionistas).
+   */
+  getInversionistasActive: async (): Promise<AxiosResponse<ProyectoDto[]>> => {
+    return await httpService.get(`${BASE_ENDPOINT}/activos/inversionistas`);
   },
 
-  /** Llama a: PUT /api/proyectos/:id */
-  async updateProyecto(id: number | string, proyectoData: UpdateProyectoDTO): Promise<ProyectoDTO> {
-    const { data } = await httpService.put<ProyectoDTO>(`${ENDPOINT}/${id}`, proyectoData);
-    return data;
+  /**
+   * Obtiene "Mis Proyectos" (donde el usuario invirtió o se suscribió).
+   */
+  getMyProjects: async (): Promise<AxiosResponse<ProyectoDto[]>> => {
+    return await httpService.get(`${BASE_ENDPOINT}/mis-proyectos`);
   },
 
-  /** Llama a: DELETE /api/proyectos/:id */
-  async deleteProyecto(id: number | string): Promise<{ mensaje: string }> {
-    const { data } = await httpService.delete<{ mensaje: string }>(`${ENDPOINT}/${id}`);
-    return data;
+  /**
+   * Detalle de un proyecto activo (Validación de seguridad backend).
+   */
+  getByIdActive: async (id: number): Promise<AxiosResponse<ProyectoDto>> => {
+    return await httpService.get(`${BASE_ENDPOINT}/${id}/activo`);
   },
 
-  /** Llama a: PUT /api/proyectos/:id/lotes */
-  async assignLotesToProyecto(id: number | string, lotesData: AssignLotesDTO): Promise<ProyectoDTO> {
-    const { data } = await httpService.put<{ mensaje: string, proyecto: ProyectoDTO }>(
-      `${ENDPOINT}/${id}/lotes`, 
-      lotesData
-    );
-    return data.proyecto;
+  // =================================================
+  // ⚙️ GESTIÓN ADMINISTRATIVA (ADMIN)
+  // =================================================
+
+  /**
+   * Crea un proyecto y dispara notificaciones masivas.
+   * ⚠️ Puede tardar unos segundos debido al envío de mensajes.
+   */
+  create: async (data: CreateProyectoDto): Promise<AxiosResponse<ProyectoDto>> => {
+    return await httpService.post(BASE_ENDPOINT, data);
   },
 
-  /** Llama a: PUT /api/proyectos/:id/iniciar-proceso */
-  async iniciarProcesoProyecto(id: number | string): Promise<ProyectoDTO> {
-    const { data } = await httpService.put<{ mensaje: string, proyecto: ProyectoDTO }>(
-      `${ENDPOINT}/${id}/iniciar-proceso`
-    );
-    return data.proyecto;
+  update: async (id: number, data: UpdateProyectoDto): Promise<AxiosResponse<ProyectoDto>> => {
+    return await httpService.put(`${BASE_ENDPOINT}/${id}`, data);
   },
 
-  // --- Métricas de Admin ---
-
-  /** Llama a: GET /api/proyectos/metricas/culminacion */
-  async getCompletionRate(): Promise<CompletionRateDTO> {
-    const { data } = await httpService.get<{ data: CompletionRateDTO }>(`${ENDPOINT}/metricas/culminacion`);
-    return data.data;
+  /**
+   * Asigna lotes a un proyecto existente.
+   */
+  assignLotes: async (idProyecto: number, lotesIds: number[]): Promise<AxiosResponse<{ mensaje: string, proyecto: ProyectoDto }>> => {
+    const data: AsignarLotesDto = { lotesIds };
+    return await httpService.put(`${BASE_ENDPOINT}/${idProyecto}/lotes`, data);
   },
 
-  /** Llama a: GET /api/proyectos/metricas/avance-mensual */
-  async getMonthlyProgress(): Promise<MonthlyProgressItem[]> {
-    const { data } = await httpService.get<{ data: MonthlyProgressItem[] }>(`${ENDPOINT}/metricas/avance-mensual`);
-    return data.data;
+  /**
+   * Inicia el conteo de meses (Cambia estado a "En proceso").
+   */
+  startProcess: async (idProyecto: number): Promise<AxiosResponse<{ mensaje: string, proyecto: ProyectoDto }>> => {
+    return await httpService.put(`${BASE_ENDPOINT}/${idProyecto}/iniciar-proceso`);
   },
 
-  // ══════════════════════════════════════════════════════════
-  // 🧍 FUNCIONES PÚBLICAS/USUARIO
-  // ══════════════════════════════════════════════════════════
-
-  /** Llama a: GET /api/proyectos/activos */
-  async getActiveProyectos(): Promise<ProyectoDTO[]> {
-    const { data } = await httpService.get<ProyectoDTO[]>(`${ENDPOINT}/activos`);
-    return data;
-  },
-  
-  /** Llama a: GET /api/proyectos/activos/ahorristas */
-  async getActiveProyectosAhorrista(): Promise<ProyectoDTO[]> {
-    const { data } = await httpService.get<ProyectoDTO[]>(`${ENDPOINT}/activos/ahorristas`);
-    return data;
-  },
-  
-  /** Llama a: GET /api/proyectos/activos/inversionistas */
-  async getActiveProyectosInversionista(): Promise<ProyectoDTO[]> {
-    const { data } = await httpService.get<ProyectoDTO[]>(`${ENDPOINT}/activos/inversionistas`);
-    return data;
-  },
-  
-  /** Llama a: GET /api/proyectos/:id/activo */
-  async getActiveProyectoById(id: number | string): Promise<ProyectoDTO> {
-    const { data } = await httpService.get<ProyectoDTO>(`${ENDPOINT}/${id}/activo`);
-    return data;
+  getAllAdmin: async (): Promise<AxiosResponse<ProyectoDto[]>> => {
+    return await httpService.get(BASE_ENDPOINT);
   },
 
-  /** Llama a: GET /api/proyectos/mis-proyectos */
-  async getMyProjects(): Promise<ProyectoDTO[]> {
-    const { data } = await httpService.get<ProyectoDTO[]>(`${ENDPOINT}/mis-proyectos`);
-    return data;
+  getByIdAdmin: async (id: number): Promise<AxiosResponse<ProyectoDto>> => {
+    return await httpService.get(`${BASE_ENDPOINT}/${id}`);
   },
+
+  softDelete: async (id: number): Promise<AxiosResponse<GenericResponseDto>> => {
+    return await httpService.delete(`${BASE_ENDPOINT}/${id}`);
+  },
+
+  // =================================================
+  // 📊 MÉTRICAS (KPIs)
+  // =================================================
+
+  /**
+   * KPI 4: Tasa de Culminación.
+   */
+  getCompletionRateMetrics: async (): Promise<AxiosResponse<{ mensaje: string, data: CompletionRateDto }>> => {
+    return await httpService.get(`${BASE_ENDPOINT}/metricas/culminacion`);
+  },
+
+  /**
+   * KPI 5: Avance Mensual de Suscripciones.
+   */
+  getMonthlyProgressMetrics: async (): Promise<AxiosResponse<{ mensaje: string, data: MonthlyProgressItemDto[] }>> => {
+    return await httpService.get(`${BASE_ENDPOINT}/metricas/avance-mensual`);
+  }
 };
 
-export default proyectoService;
+export default ProyectoService;

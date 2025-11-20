@@ -1,44 +1,83 @@
-// src/services/pago.service.ts (CORREGIDO)
+import type { GenericResponseDto } from '../types/dto/auth.dto';
+import type { ConfirmarPago2faDto, CreatePagoManualDto, MonthlyMetricsDto, OnTimeMetricsDto, PagoCheckoutResponse, PagoDto } from '../types/dto/pago.dto';
 import httpService from './httpService';
-// 👇 Importar TODOS los tipos necesarios desde el archivo DTO
-import type { 
-  PagoDTO, 
-  CreatePagoInicialDTO, // DTO para cuota 1
-  CreatePaymentOrderDTO,
-  IniciarCheckoutResponseDTO // DTO para iniciar checkout
-} from '../types/dto/pago.dto';
+import type { AxiosResponse } from 'axios';
 
-const PAGO_ENDPOINT = '/pagos';
-const SUSCRIPCION_ENDPOINT = '/suscripciones'; 
 
-export const crearPagoInicial = (data: CreatePagoInicialDTO): Promise<PagoDTO> => {
-  // Llama a: POST /api/suscripciones/iniciar-pago
-  return httpService.post(`${SUSCRIPCION_ENDPOINT}/iniciar-pago`, data);
+const BASE_ENDPOINT = '/pagos'; // Ajustar según router
+
+const PagoService = {
+
+  // =================================================
+  // 💳 FLUJO DE PAGO (USUARIO)
+  // =================================================
+
+  /**
+   * Obtiene el historial de pagos del usuario.
+   */
+  getMyPayments: async (): Promise<AxiosResponse<PagoDto[]>> => {
+    return await httpService.get(`${BASE_ENDPOINT}/mis_pagos`);
+  },
+
+  /**
+   * Inicia el proceso de pago de una mensualidad.
+   * ⚠️ Puede devolver 202 si requiere 2FA.
+   */
+  iniciarPagoMensual: async (idPago: number): Promise<AxiosResponse<PagoCheckoutResponse>> => {
+    return await httpService.post(`${BASE_ENDPOINT}/pagar-mes/${idPago}`);
+  },
+
+  /**
+   * Confirma el pago con código 2FA y obtiene la URL de pasarela.
+   */
+  confirmarPago2FA: async (data: ConfirmarPago2faDto): Promise<AxiosResponse<PagoCheckoutResponse>> => {
+    return await httpService.post(`${BASE_ENDPOINT}/confirmar-pago-2fa`, data);
+  },
+
+  // =================================================
+  // 📊 MÉTRICAS Y ADMIN
+  // =================================================
+
+  findAll: async (): Promise<AxiosResponse<PagoDto[]>> => {
+    return await httpService.get(BASE_ENDPOINT);
+  },
+
+  findById: async (id: number): Promise<AxiosResponse<PagoDto>> => {
+    return await httpService.get(`${BASE_ENDPOINT}/${id}`);
+  },
+
+  /**
+   * KPI 1 y 2: Morosidad y Recaudo
+   */
+  getMonthlyMetrics: async (mes: number, anio: number): Promise<AxiosResponse<{ message: string, data: MonthlyMetricsDto }>> => {
+    return await httpService.get(`${BASE_ENDPOINT}/metricas/mensuales`, {
+      params: { mes, anio }
+    });
+  },
+
+  /**
+   * KPI 3: Pagos a Tiempo
+   */
+  getOnTimeMetrics: async (mes: number, anio: number): Promise<AxiosResponse<{ message: string, data: OnTimeMetricsDto }>> => {
+    return await httpService.get(`${BASE_ENDPOINT}/metricas/a-tiempo`, {
+      params: { mes, anio }
+    });
+  },
+
+  /**
+   * Generar cuota manual (Testing/Admin)
+   */
+  triggerManualPayment: async (data: CreatePagoManualDto): Promise<AxiosResponse<any>> => {
+    return await httpService.post(`${BASE_ENDPOINT}/trigger-manual-payment`, data);
+  },
+
+  update: async (id: number, data: Partial<PagoDto>): Promise<AxiosResponse<PagoDto>> => {
+    return await httpService.put(`${BASE_ENDPOINT}/${id}`, data);
+  },
+
+  softDelete: async (id: number): Promise<AxiosResponse<GenericResponseDto>> => {
+    return await httpService.delete(`${BASE_ENDPOINT}/${id}`);
+  }
 };
 
-/**
- * Llama a: GET /api/pagos/mis-pagos
- */
-export const getMisPagos = (): Promise<PagoDTO[]> => {
-  return httpService.get(`${PAGO_ENDPOINT}/mis_pagos`); 
-};
-
-/**
- * Obtiene un pago específico por ID.
- * Llama a: GET /api/pagos/:id
- */
-export const getPagoById = (id: number): Promise<PagoDTO> => {
-  return httpService.get(`${PAGO_ENDPOINT}/${id}`);
-};
-/**
- * Inicia el pago de una cuota mensual específica.
- * Llama a: POST /api/pagos/pagar-mes/:id
- */
-export const createPaymentOrder = (pagoId: Number): Promise<any> => {
-  return httpService.post(`${PAGO_ENDPOINT}/pagar-mes/${pagoId}`);
-};
-
-export const iniciarPagoSuscripcion = (data: CreatePagoInicialDTO): Promise<IniciarCheckoutResponseDTO> => {
-  return httpService.post(`${SUSCRIPCION_ENDPOINT}/iniciar-pago`, data);
-};
-
+export default PagoService;

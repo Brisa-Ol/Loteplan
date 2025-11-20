@@ -1,43 +1,53 @@
+import type { CheckFavoritoResponseDto, EstadisticasFavoritosResponseDto, ToggleFavoritoRequestDto, ToggleFavoritoResponseDto } from '../types/dto/favorito.dto';
+import type { LoteDto } from '../types/dto/lote.dto';
 import httpService from './httpService';
+import type { AxiosResponse } from 'axios';
 
-import type { LoteDTO } from '../types/dto/lote.dto';
-import type {
-  ToggleFavoritoResponseDTO,
-  EstadisticasFavoritoDTO,
-  IsFavoritoResponseDTO
-} from '../types/dto/favorito.dto';
 
-const ENDPOINT = '/favoritos';
+const FavoritoService = {
 
-/**
- * Agrega o elimina un lote de los favoritos del usuario logueado.
- * Llama a: POST /api/favoritos/toggle/:idLote
- */
-export const toggleFavorito = (idLote: number): Promise<ToggleFavoritoResponseDTO> => {
-  return httpService.post(`${ENDPOINT}/toggle/${idLote}`);
+  // =================================================
+  // ❤️ GESTIÓN USUARIO (Mis Favoritos)
+  // =================================================
+
+  /**
+   * Agrega o quita un lote de favoritos.
+   * Endpoint: POST /api/favoritos/toggle (ajusta la ruta base según tu router)
+   */
+  toggle: async (idLote: number): Promise<AxiosResponse<ToggleFavoritoResponseDto>> => {
+    const data: ToggleFavoritoRequestDto = { id_lote: idLote };
+    return await httpService.post('/favoritos/toggle', data);
+  },
+
+  /**
+   * Obtiene la lista de lotes favoritos del usuario actual.
+   * El backend devuelve directamente un array de Lotes.
+   */
+  getMisFavoritos: async (): Promise<AxiosResponse<LoteDto[]>> => {
+    return await httpService.get('/favoritos/mis_favoritos');
+  },
+
+  /**
+   * Verifica si un lote específico es favorito (útil para pintar el corazón en la UI).
+   * Endpoint: GET /api/favoritos/check/:id
+   */
+  checkEsFavorito: async (idLote: number): Promise<AxiosResponse<CheckFavoritoResponseDto>> => {
+    return await httpService.get(`/favoritos/check/${idLote}`);
+  },
+
+  // =================================================
+  // 📊 GESTIÓN ADMINISTRATIVA (Estadísticas)
+  // =================================================
+
+  /**
+   * Obtiene métricas de favoritos para un proyecto específico.
+   * Requiere ID de proyecto obligatorio.
+   */
+  getEstadisticas: async (idProyecto: number): Promise<AxiosResponse<EstadisticasFavoritosResponseDto>> => {
+    return await httpService.get('/favoritos/estadisticas', {
+      params: { id_proyecto: idProyecto }
+    });
+  }
 };
 
-/**
- * Obtiene la lista de lotes favoritos (activos) del usuario logueado.
- * Llama a: GET /api/favoritos/mis-favoritos
- */
-export const getMisFavoritos = (): Promise<LoteDTO[]> => {
-  return httpService.get(`${ENDPOINT}/mis-favoritos`);
-};
-
-/**
- * Verifica si un lote específico es favorito del usuario logueado.
- * Llama a: GET /api/favoritos/status/:idLote
- */
-export const isFavorito = (idLote: number): Promise<IsFavoritoResponseDTO> => {
-  return httpService.get(`${ENDPOINT}/status/${idLote}`);
-};
-
-/**
- * (Admin) Obtiene estadísticas de cuántos usuarios marcaron cada lote como favorito.
- * Llama a: GET /api/favoritos/estadisticas?proyectoId={id}
- */
-export const getEstadisticasFavoritos = (idProyecto?: number): Promise<EstadisticasFavoritoDTO[]> => {
-  const params = idProyecto ? { params: { proyectoId: idProyecto } } : {};
-  return httpService.get(`${ENDPOINT}/estadisticas`, params);
-};
+export default FavoritoService;

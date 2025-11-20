@@ -1,92 +1,51 @@
-// src/types/dto/usuario.dto.ts
+
+
+// ==========================================
+// 📤 REQUEST DTOs (Lo que envías)
+// ==========================================
 
 import type { BaseDTO } from "./base.dto";
 
-export type UserRole = "admin" | "cliente";
-
-// ══════════════════════════════════════════════════════════
-// DTO DE SALIDA (Completo)
-// ══════════════════════════════════════════════════════════
-
 /**
- * DTO completo del usuario según el modelo backend (models/Usuario.js)
- * Usado para: GET /usuarios/me, GET /usuarios/:id, etc.
+ * Datos que el PROPIO usuario puede actualizar.
  */
-export interface UsuarioDTO extends BaseDTO {
-  activo: boolean;
-  nombre: string;
-  apellido: string;
-  email: string;
-  dni: string;
-  nombre_usuario: string;
-  rol: UserRole;
-  fecha_registro: string; // ISO date string
-  numero_telefono: string;
-  is_2fa_enabled: boolean;
-  confirmado_email: boolean;
-}
-
-// ══════════════════════════════════════════════════════════
-// DTO DE ENTRADA (PUT /usuarios/me)
-// ══════════════════════════════════════════════════════════
-
-/**
- * Datos que un CLIENTE puede actualizar de su propio perfil
- * Backend: usuario.controller.js updateMe() línea 110
- */
-export interface UpdateProfileDTO {
+export interface UpdateProfileDto {
   nombre?: string;
   apellido?: string;
   email?: string;
-  numero_telefono?: string; // ⚠️ Tu controller usa 'telefono' pero el modelo es 'numero_telefono'
+  numero_telefono?: string; 
   nombre_usuario?: string;
 }
 
-// ══════════════════════════════════════════════════════════
-// DTO DE ENTRADA (PUT /usuarios/:id)
-// ══════════════════════════════════════════════════════════
-
 /**
- * Datos que un ADMIN puede actualizar de cualquier usuario
- * Backend: usuario.controller.js update() línea 60
+ * Datos que un ADMIN puede actualizar en otro usuario.
  */
-export interface UpdateUserByAdminDTO {
-  nombre?: string;
-  apellido?: string;
-  email?: string;
-  numero_telefono?: string; // ⚠️ Tu controller usa 'telefono' pero el modelo es 'numero_telefono'
+export interface UpdateUserAdminDto extends UpdateProfileDto {
+  rol?: 'admin' | 'cliente';
   activo?: boolean;
-  rol?: UserRole;
-  nombre_usuario?: string;
 }
 
-// ══════════════════════════════════════════════════════════
-// DTO DE ENTRADA (POST /usuarios)
-// ══════════════════════════════════════════════════════════
+// ==========================================
+// 📥 RESPONSE DTOs (Lo que recibes)
+// ==========================================
 
 /**
- * Datos para crear un nuevo usuario (solo ADMIN)
- * Backend: usuario.controller.js create()
+ * Modelo completo de Usuario (seguro para frontend).
+ * No incluye hashes ni secretos.
  */
-export interface CreateUsuarioDTO {
+export interface UsuarioDto extends BaseDTO {
   nombre: string;
   apellido: string;
   email: string;
   dni: string;
   nombre_usuario: string;
-  contraseña: string;
-  rol: UserRole;
   numero_telefono: string;
-}
-
-// ══════════════════════════════════════════════════════════
-// DTO DE BÚSQUEDA
-// ══════════════════════════════════════════════════════════
-
-/**
- * Parámetros de query para buscar usuarios
- * Backend: GET /usuarios/search?q=...
- */
-export interface SearchUsuarioParams {
-  q: string;
+  rol: 'admin' | 'cliente';
+  
+  // Estados
+  activo: boolean;
+  confirmado_email: boolean;
+  is_2fa_enabled: boolean;
+  
+  fecha_registro?: string; // ISO Date
 }

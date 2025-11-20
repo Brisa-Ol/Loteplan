@@ -1,55 +1,55 @@
-// src/services/cuotaMensual.service.ts
+import type { GenericResponseDto } from '../types/dto/auth.dto';
+import type { CreateCuotaMensualDto, CuotaMensualDto, UpdateCuotaMensualDto } from '../types/dto/cuotaMensual.dto';
 import httpService from './httpService';
-import type { CuotaMensualDTO, CreateCuotaMensualDTO } from '../types/dto/cuotaMensual.dto';
+import type { AxiosResponse } from 'axios';
 
-// ❗ Tu ruta de backend es '/cuota_mensual'
-const ENDPOINT = '/cuota_mensual'; 
 
-const cuotaMensualService = {
+const CuotaMensualService = {
+
+  // =================================================
+  // ⚙️ GESTIÓN ADMINISTRATIVA (Admin)
+  // =================================================
+
   /**
-   * (Admin) Crea una nueva cuota mensual para un proyecto.
-   * Llama a: POST /api/cuota_mensual
+   * Crea una cuota y actualiza el monto total del proyecto asociado.
    */
-  async createCuota(cuotaData: CreateCuotaMensualDTO): Promise<CuotaMensualDTO> {
-    const { data } = await httpService.post<CuotaMensualDTO>(ENDPOINT, cuotaData);
-    return data;
+  create: async (data: CreateCuotaMensualDto): Promise<AxiosResponse<CuotaMensualDto>> => {
+    return await httpService.post('/cuotas-mensuales', data);
   },
 
   /**
-   * (Admin) Actualiza una cuota mensual.
-   * Llama a: PUT /api/cuota_mensual/:id
+   * Actualiza valores de la cuota.
+   * ⚠️ Esto dispara un recálculo financiero en el backend.
    */
-  async updateCuota(id: string, cuotaData: Partial<CreateCuotaMensualDTO>): Promise<CuotaMensualDTO> {
-    const { data } = await httpService.put<CuotaMensualDTO>(`${ENDPOINT}/${id}`, cuotaData);
-    return data;
+  update: async (id: number, data: UpdateCuotaMensualDto): Promise<AxiosResponse<CuotaMensualDto>> => {
+    return await httpService.put(`/cuotas-mensuales/${id}`, data);
   },
 
   /**
-   * (Usuario/Admin) Obtiene todas las cuotas de un proyecto.
-   * Llama a: GET /api/cuota_mensual/:id_proyecto
+   * Eliminación lógica de la cuota.
    */
-  async getCuotasByProyecto(idProyecto: string | number): Promise<CuotaMensualDTO[]> {
-    const { data } = await httpService.get<CuotaMensualDTO[]>(`${ENDPOINT}/${idProyecto}`);
-    return data;
+  softDelete: async (id: number): Promise<AxiosResponse<GenericResponseDto>> => {
+    return await httpService.delete(`/cuotas-mensuales/${id}`);
+  },
+
+  // =================================================
+  // 🔍 CONSULTAS (Usuario / Admin)
+  // =================================================
+
+  /**
+   * Obtiene el historial de todas las cuotas configuradas para un proyecto.
+   */
+  getByProjectId: async (idProyecto: number): Promise<AxiosResponse<CuotaMensualDto[]>> => {
+    return await httpService.get(`/cuotas-mensuales/${idProyecto}`);
   },
 
   /**
-   * (Usuario/Admin) Obtiene la última cuota de un proyecto.
-   * Llama a: GET /api/cuota_mensual/:id_proyecto/last
+   * Obtiene la ÚLTIMA cuota activa (la vigente) de un proyecto.
+   * Útil para mostrar el precio actual en la tarjeta del proyecto.
    */
-  async getLastCuotaByProyecto(idProyecto: string | number): Promise<CuotaMensualDTO> {
-    const { data } = await httpService.get<CuotaMensualDTO>(`${ENDPOINT}/${idProyecto}/last`);
-    return data;
-  },
-
-  /**
-   * (Admin) Elimina (soft delete) una cuota.
-   * Llama a: DELETE /api/cuota_mensual/:id
-   */
-  async deleteCuota(id: string | number): Promise<{ mensaje: string }> {
-    const { data } = await httpService.delete<{ mensaje: string }>(`${ENDPOINT}/${id}`);
-    return data;
-  },
+  getLastByProjectId: async (idProyecto: number): Promise<AxiosResponse<CuotaMensualDto>> => {
+    return await httpService.get(`/cuotas-mensuales/${idProyecto}/last`);
+  }
 };
 
-export default cuotaMensualService;
+export default CuotaMensualService;

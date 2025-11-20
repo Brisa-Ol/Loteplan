@@ -1,4 +1,5 @@
 // src/pages/Auth/LoginPage.tsx
+
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
@@ -19,20 +20,34 @@ import {
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 import { useFormik } from "formik";
 import * as Yup from "yup";
-import { PageContainer } from "../../components/common";
+
+// Asegúrate de que estas rutas de importación sean correctas en tu proyecto
+import { PageContainer } from "../../components/common/PageContainer/PageContainer";
 import { useAuth } from "../../context/AuthContext";
 import AuthFormContainer from "./components/AuthFormContainer/AuthFormContainer";
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, verify2FA, requires2FA, error, isLoading, clearError, logout } = useAuth();
+  
+  // Extraemos todo lo necesario del Contexto
+  const { 
+    login, 
+    verify2FA, 
+    requires2FA, // Estado global que indica si el backend pidió 2FA (202 Accepted)
+    error, 
+    isLoading, 
+    clearError, 
+    logout 
+  } = useAuth();
 
   const [showPassword, setShowPassword] = useState(false);
+  
+  // Mensajes que vienen de redirecciones (ej: registro exitoso)
   const successMessage = location.state?.message;
-  const from = (location.state as { from?: string } | null)?.from || "/";
+  const from = (location.state as { from?: string } | null)?.from || "/dashboard"; // Redirige a dashboard por defecto
 
-  // 🔹 Limpieza del mensaje de éxito tras 5 segundos
+  // Limpieza automática de mensajes flash
   useEffect(() => {
     if (!successMessage) return;
     const timer = setTimeout(() => {
@@ -41,85 +56,99 @@ const LoginPage: React.FC = () => {
     return () => clearTimeout(timer);
   }, [successMessage, navigate, location.pathname]);
 
-  // 🔹 Configuración Formik + Yup
+  // Configuración del Formulario
   const formik = useFormik({
     initialValues: {
-      identificador: "", // Puede ser email o nombre de usuario
-      password: "",
-      code2FA: "",
+      identificador: "", // Coincide con el Backend (email o usuario)
+      password: "",      // Se mapeará a 'contraseña'
+      code2FA: "",       // Para el modal
     },
     validationSchema: Yup.object({
       identificador: Yup.string().required("Ingresá tu email o nombre de usuario"),
+      // La contraseña solo es requerida si NO estamos en paso 2FA
       password: requires2FA ? Yup.string() : Yup.string().required("Ingresá tu contraseña"),
+      // El código solo es requerido SI estamos en paso 2FA
       code2FA: requires2FA ? Yup.string().required("Ingresá el código 2FA") : Yup.string(),
     }),
-    enableReinitialize: true,
     onSubmit: async (values) => {
       clearError();
       try {
         if (!requires2FA) {
+          // PASO 1: Login Normal
           await login({
             identificador: values.identificador,
-            contraseña: values.password,
+            contraseña: values.password, // ⚠️ Mapeo clave: backend espera 'contraseña'
           });
         } else {
+          // PASO 2: Verificación 2FA (si el backend respondió con 202 antes)
           await verify2FA(values.code2FA);
         }
-
+        
+        // Si no hubo error (el context maneja el throw), redirigimos
+        // Nota: La redirección idealmente ocurre dentro del useEffect que escucha 'isAuthenticated'
+        // o aquí si login devuelve promesa resuelta.
         if (!error) navigate(from, { replace: true });
+
       } catch (err) {
-        console.error("Error en login/2FA:", err);
+        console.error("Fallo en el proceso de login", err);
       }
     },
   });
 
+  // Cancelar el proceso de 2FA y limpiar estado
   const handleCancel2FA = () => {
-    logout();
-    formik.resetForm();
+    logout(); // Limpia tokens temporales en el context
+    formik.setFieldValue("code2FA", "");
     clearError();
   };
 
-  const isDisabled = isLoading || requires2FA;
+  const isDisabled = isLoading;
 
   return (
     <PageContainer maxWidth="sm">
       <AuthFormContainer title="Iniciar Sesión" subtitle="Ingresá tus datos para continuar">
-        {/* ✅ Mensaje de éxito */}
+        
+        {/* Alertas */}
         {successMessage && (
           <Alert severity="success" sx={{ mb: 2 }}>
             {successMessage}
           </Alert>
         )}
 
-        {/* ⚠️ Error al iniciar sesión */}
         {error && !requires2FA && (
           <Alert severity="error" sx={{ mb: 2 }} onClose={clearError}>
             {error}
           </Alert>
         )}
 
-        {/* 🧾 Formulario principal */}
+        {/* Formulario Principal */}
         <form onSubmit={formik.handleSubmit}>
-          <Stack spacing={1}>
+          <Stack spacing={2}>
             <TextField
               fullWidth
+              id="identificador"
+              name="identificador"
               label="Email o Nombre de Usuario"
-              margin="normal"
-              {...formik.getFieldProps("identificador")}
+              value={formik.values.identificador}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
               error={formik.touched.identificador && Boolean(formik.errors.identificador)}
               helperText={formik.touched.identificador && formik.errors.identificador}
-              disabled={isDisabled}
+              disabled={isDisabled || requires2FA} // Deshabilitar si estamos en 2FA
             />
 
             <TextField
               fullWidth
+              id="password"
+              name="password"
               label="Contraseña"
-              margin="normal"
               type={showPassword ? "text" : "password"}
-              {...formik.getFieldProps("password")}
+              value={formik.values.password}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
               error={formik.touched.password && Boolean(formik.errors.password)}
               helperText={formik.touched.password && formik.errors.password}
-              disabled={isDisabled}
+              disabled={isDisabled || requires2FA}
               InputProps={{
                 endAdornment: (
                   <InputAdornment position="end">
@@ -136,7 +165,8 @@ const LoginPage: React.FC = () => {
               variant="contained"
               type="submit"
               disabled={isDisabled}
-              sx={{ mt: 3, py: 1.2 }}
+              size="large"
+              sx={{ mt: 2 }}
             >
               {isLoading && !requires2FA ? (
                 <CircularProgress size={24} sx={{ color: "white" }} />
@@ -147,75 +177,64 @@ const LoginPage: React.FC = () => {
           </Stack>
         </form>
 
-        {/* 🔹 Enlaces auxiliares */}
+        {/* Links Auxiliares */}
         <Box textAlign="center" mt={3}>
           <Button
             onClick={() => navigate("/register")}
-            sx={{
-              textTransform: "none",
-              color: "primary.main",
-              fontWeight: 500,
-            }}
-            disabled={isLoading}
+            sx={{ textTransform: "none" }}
+            disabled={isDisabled}
           >
             ¿No tienes cuenta? Regístrate
           </Button>
-        </Box>
-
-        <Box textAlign="center" mt={1}>
+          <br />
           <Button
             onClick={() => navigate("/forgot-password")}
-            sx={{
-              textTransform: "none",
-              color: "primary.main",
-              fontWeight: 500,
-            }}
-            disabled={isLoading}
+            sx={{ textTransform: "none", mt: 1 }}
+            color="secondary"
+            disabled={isDisabled}
           >
             ¿Olvidaste tu contraseña?
           </Button>
         </Box>
       </AuthFormContainer>
 
-      {/* 🔐 Diálogo 2FA */}
+      {/* Modal Flotante para 2FA (Solo aparece si requires2FA es true) */}
       <Dialog open={requires2FA} onClose={handleCancel2FA}>
-        <DialogTitle>Verificación en Dos Pasos</DialogTitle>
+        <DialogTitle>Verificación de Seguridad</DialogTitle>
         <form onSubmit={formik.handleSubmit}>
           <DialogContent>
-            <Stack spacing={2}>
-              <DialogContentText>
-                Ingresa el código de tu aplicación de autenticación para continuar.
-              </DialogContentText>
+            <DialogContentText sx={{ mb: 2 }}>
+              Tu cuenta tiene activada la autenticación de dos factores.
+              Ingresa el código de 6 dígitos de tu aplicación.
+            </DialogContentText>
 
-              {error && requires2FA && (
-                <Alert severity="error" onClose={clearError}>
-                  {error}
-                </Alert>
-              )}
+            {error && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {error}
+              </Alert>
+            )}
 
-              <TextField
-                fullWidth
-                label="Código 2FA"
-                margin="normal"
-                placeholder="123456"
-                {...formik.getFieldProps("code2FA")}
-                error={formik.touched.code2FA && Boolean(formik.errors.code2FA)}
-                helperText={formik.touched.code2FA && formik.errors.code2FA}
-                autoFocus
-                disabled={isLoading}
-              />
-            </Stack>
+            <TextField
+              autoFocus
+              fullWidth
+              id="code2FA"
+              name="code2FA"
+              label="Código 2FA"
+              placeholder="000000"
+              inputProps={{ maxLength: 6, style: { textAlign: 'center', letterSpacing: 4 } }}
+              value={formik.values.code2FA}
+              onChange={formik.handleChange}
+              error={formik.touched.code2FA && Boolean(formik.errors.code2FA)}
+              helperText={formik.touched.code2FA && formik.errors.code2FA}
+              disabled={isLoading}
+            />
           </DialogContent>
-          <DialogActions sx={{ p: 3, pt: 0 }}>
-            <Button onClick={handleCancel2FA} disabled={isLoading}>
+          <DialogActions sx={{ px: 3, pb: 3 }}>
+            <Button onClick={handleCancel2FA} color="inherit" disabled={isLoading}>
               Cancelar
             </Button>
             <Button type="submit" variant="contained" disabled={isLoading}>
-              {isLoading ? (
-                <CircularProgress size={24} sx={{ color: "white" }} />
-              ) : (
-                "Verificar"
-              )}
+              {isLoading ? <CircularProgress size={20} /> : "Verificar"}
             </Button>
           </DialogActions>
         </form>

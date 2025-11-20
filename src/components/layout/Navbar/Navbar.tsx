@@ -6,45 +6,49 @@ import NavbarBase from "./NavbarBase";
 import { Skeleton, AppBar, Toolbar, Container, Box } from "@mui/material";
 
 /**
- * Componente principal del Navbar que decide qué mostrar según el estado de autenticación
- * - Muestra skeleton mientras carga
+ * Componente principal del Navbar
+ * - Muestra skeleton mientras carga la autenticación
  * - Delega toda la lógica de menús al hook useNavbarMenu
- * - Usa un único componente base (NavbarBase) para todos los casos
+ * - Usa NavbarBase para renderizar la UI
  */
 const Navbar: React.FC = () => {
   const { isLoading } = useAuth();
   const navbarConfig = useNavbarMenu();
 
-  // Mostrar skeleton mientras carga
+  // ════════════════════════════════════════════════════════
+  // SKELETON MIENTRAS CARGA
+  // ════════════════════════════════════════════════════════
   if (isLoading) {
     return (
       <>
         <AppBar position="fixed" color="secondary" elevation={1}>
           <Container maxWidth="lg">
-            <Toolbar 
-              disableGutters 
-              sx={{ 
+            <Toolbar
+              disableGutters
+              sx={{
                 minHeight: { xs: 64, md: 70 },
                 display: "flex",
                 justifyContent: "space-between",
-                alignItems: "center"
+                alignItems: "center",
               }}
             >
               {/* Logo skeleton */}
               <Skeleton variant="rectangular" width={150} height={40} />
-              
+
               {/* Nav items skeleton (desktop) */}
-              <Box sx={{ 
-                display: { xs: "none", md: "flex" }, 
-                gap: 2, 
-                flex: 1, 
-                justifyContent: "center" 
-              }}>
+              <Box
+                sx={{
+                  display: { xs: "none", md: "flex" },
+                  gap: 2,
+                  flex: 1,
+                  justifyContent: "center",
+                }}
+              >
                 <Skeleton variant="text" width={80} height={40} />
                 <Skeleton variant="text" width={120} height={40} />
                 <Skeleton variant="text" width={90} height={40} />
               </Box>
-              
+
               {/* Action buttons skeleton (desktop) */}
               <Box sx={{ display: { xs: "none", md: "flex" }, gap: 2 }}>
                 <Skeleton variant="rounded" width={120} height={36} />
@@ -62,7 +66,9 @@ const Navbar: React.FC = () => {
     );
   }
 
-  // Renderizar navbar con la configuración obtenida del hook
+  // ════════════════════════════════════════════════════════
+  // RENDER NAVBAR
+  // ════════════════════════════════════════════════════════
   return (
     <NavbarBase
       logoPath={navbarConfig.logoPath}
@@ -73,5 +79,7 @@ const Navbar: React.FC = () => {
     />
   );
 };
+
+Navbar.displayName = "Navbar";
 
 export default Navbar;

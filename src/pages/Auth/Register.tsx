@@ -1,3 +1,5 @@
+// src/pages/Auth/Register.tsx
+
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
@@ -15,14 +17,18 @@ import {
   DialogTitle,
   AlertTitle,
   Stack,
+  Grid,
 } from "@mui/material";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 import { useFormik } from "formik";
 import * as Yup from "yup";
+
 import { PageContainer } from "../../components/common/PageContainer/PageContainer";
 import { useAuth } from "../../context/AuthContext";
-import type { RegisterData } from "../../types/dto/auth.types";
+// Importamos la interfaz correcta
+
 import AuthFormContainer from "./components/AuthFormContainer/AuthFormContainer";
+import type { RegisterRequestDto } from "../../types/dto/auth.dto";
 
 const Register: React.FC = () => {
   const navigate = useNavigate();
@@ -31,9 +37,11 @@ const Register: React.FC = () => {
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  
+  // Estado para el modal de éxito
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [registeredEmail, setRegisteredEmail] = useState("");
-  const [isModalLoading, setIsModalLoading] = useState(false);
+  const [isResending, setIsResending] = useState(false);
   const [modalMessage, setModalMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const successMessage = location.state?.message;
@@ -47,7 +55,6 @@ const Register: React.FC = () => {
     }
   }, [successMessage, navigate, location.pathname]);
 
-  // ✅ Configuración Formik + Yup
   const formik = useFormik({
     initialValues: {
       nombre: "",
@@ -60,37 +67,25 @@ const Register: React.FC = () => {
       confirmPassword: "",
     },
     validationSchema: Yup.object({
-      nombre: Yup.string()
-        .trim()
-        .min(2, "Mínimo 2 caracteres")
-        .required("El nombre es requerido"),
-      apellido: Yup.string()
-        .trim()
-        .min(2, "Mínimo 2 caracteres")
-        .required("El apellido es requerido"),
-      email: Yup.string()
-        .trim()
-        .email("Email inválido")
-        .required("El email es requerido"),
+      nombre: Yup.string().min(2, "Muy corto").required("Requerido"),
+      apellido: Yup.string().min(2, "Muy corto").required("Requerido"),
+      email: Yup.string().email("Email inválido").required("Requerido"),
       dni: Yup.string()
         .matches(/^\d+$/, "Solo números")
         .min(7, "DNI inválido")
         .max(8, "DNI inválido")
-        .required("El DNI es requerido"),
+        .required("Requerido"),
       nombre_usuario: Yup.string()
-        .trim()
         .min(4, "Mínimo 4 caracteres")
-        .matches(/^[a-zA-Z0-9_]+$/, "Solo letras, números y guión bajo")
-        .required("El nombre de usuario es requerido"),
+        .required("Requerido"),
       numero_telefono: Yup.string()
         .matches(/^\d+$/, "Solo números")
-        .min(10, "Teléfono inválido")
-        .max(10, "Teléfono inválido")
-        .required("El teléfono es requerido"),
+        .min(10, "Mínimo 10 dígitos")
+        .required("Requerido"),
       contraseña: Yup.string()
         .min(8, "Mínimo 8 caracteres")
-        .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, "Debe contener mayúsculas, minúsculas y números")
-        .required("La contraseña es requerida"),
+        .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, "Debe tener mayúscula, minúscula y número")
+        .required("Requerida"),
       confirmPassword: Yup.string()
         .oneOf([Yup.ref("contraseña")], "Las contraseñas no coinciden")
         .required("Confirma tu contraseña"),
@@ -98,212 +93,214 @@ const Register: React.FC = () => {
     onSubmit: async (values) => {
       clearError();
       try {
-        const data: RegisterData = {
+        // ⚠️ Mapeo Estricto al DTO del backend
+        const data: RegisterRequestDto = {
           nombre: values.nombre,
           apellido: values.apellido,
           email: values.email,
-          contraseña: values.contraseña,
+          contraseña: values.contraseña, // Enviamos 'contraseña'
           dni: values.dni,
           nombre_usuario: values.nombre_usuario,
-          numero_telefono: values.numero_telefono,
+          numero_telefono: values.numero_telefono, // Ajuste de nombre si el DTO usa 'numero_telefono'
         };
+        
         await register(data);
+        
+        // Si no falla, abrir modal
         setRegisteredEmail(values.email);
         setIsModalOpen(true);
         setModalMessage(null);
       } catch (err) {
-        console.error("Error en el registro:", err);
+        console.error("Error registro:", err);
       }
     },
   });
 
-  const renderPasswordAdornment = (show: boolean, toggle: () => void) => (
-    <InputAdornment position="end">
-      <IconButton onClick={toggle} edge="end" disabled={isLoading}>
-        {show ? <VisibilityOff /> : <Visibility />}
-      </IconButton>
-    </InputAdornment>
-  );
-
   const handleResendEmail = async () => {
     setModalMessage(null);
-    setIsModalLoading(true);
+    setIsResending(true);
     try {
       await resendConfirmation(registeredEmail);
-      setModalMessage({ type: "success", text: "¡Email de confirmación reenviado!" });
+      setModalMessage({ type: "success", text: "¡Email reenviado con éxito!" });
     } catch {
-      setModalMessage({ type: "error", text: "Error al reenviar el email. Inténtalo de nuevo." });
+      setModalMessage({ type: "error", text: "No se pudo reenviar el email." });
     } finally {
-      setIsModalLoading(false);
+      setIsResending(false);
     }
   };
 
-  const handleModifyEmail = () => setIsModalOpen(false);
-  const handleGoToLogin = () => {
+  const handleCloseModal = () => {
     setIsModalOpen(false);
-    navigate("/login");
+    navigate("/login"); // Al cerrar, mandamos al login
   };
 
   return (
     <PageContainer maxWidth="sm">
       <AuthFormContainer
-        title="Crear cuenta"
-        subtitle="Comenzá tu camino como ahorrista o inversionista"
-        maxWidth={500}
+        title="Crear Cuenta"
+        subtitle="Únete a nuestra plataforma de inversión"
+        maxWidth={600} // Un poco más ancho para los inputs en fila
       >
-        {successMessage && <Alert severity="success" sx={{ mb: 2 }}>{successMessage}</Alert>}
-        {error && <Alert severity="error" sx={{ mb: 2 }} onClose={clearError}>{error}</Alert>}
+        {error && <Alert severity="error" sx={{ mb: 3 }} onClose={clearError}>{error}</Alert>}
 
         <form onSubmit={formik.handleSubmit}>
-          <Box display="flex" gap={2}>
+          <Stack spacing={2}>
+            
+            <Box display="flex" gap={2}>
+              <TextField
+                fullWidth
+                label="Nombre"
+                {...formik.getFieldProps("nombre")}
+                error={formik.touched.nombre && Boolean(formik.errors.nombre)}
+                helperText={formik.touched.nombre && formik.errors.nombre}
+                disabled={isLoading}
+              />
+              <TextField
+                fullWidth
+                label="Apellido"
+                {...formik.getFieldProps("apellido")}
+                error={formik.touched.apellido && Boolean(formik.errors.apellido)}
+                helperText={formik.touched.apellido && formik.errors.apellido}
+                disabled={isLoading}
+              />
+            </Box>
+
             <TextField
               fullWidth
-              label="Nombre"
-              {...formik.getFieldProps("nombre")}
-              error={formik.touched.nombre && Boolean(formik.errors.nombre)}
-              helperText={formik.touched.nombre && formik.errors.nombre}
+              label="Email"
+              type="email"
+              {...formik.getFieldProps("email")}
+              error={formik.touched.email && Boolean(formik.errors.email)}
+              helperText={formik.touched.email && formik.errors.email}
               disabled={isLoading}
             />
+
+            <Box display="flex" gap={2}>
+                <TextField
+                fullWidth
+                label="DNI"
+                {...formik.getFieldProps("dni")}
+                // Filtro solo números en tiempo real
+                onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '').slice(0, 8);
+                    formik.setFieldValue("dni", val);
+                }}
+                error={formik.touched.dni && Boolean(formik.errors.dni)}
+                helperText={formik.touched.dni && formik.errors.dni}
+                disabled={isLoading}
+                />
+                <TextField
+                fullWidth
+                label="Teléfono"
+                {...formik.getFieldProps("numero_telefono")}
+                onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '').slice(0, 15);
+                    formik.setFieldValue("numero_telefono", val);
+                }}
+                error={formik.touched.numero_telefono && Boolean(formik.errors.numero_telefono)}
+                helperText={formik.touched.numero_telefono && formik.errors.numero_telefono}
+                disabled={isLoading}
+                />
+            </Box>
+
             <TextField
               fullWidth
-              label="Apellido"
-              {...formik.getFieldProps("apellido")}
-              error={formik.touched.apellido && Boolean(formik.errors.apellido)}
-              helperText={formik.touched.apellido && formik.errors.apellido}
+              label="Nombre de Usuario"
+              {...formik.getFieldProps("nombre_usuario")}
+              error={formik.touched.nombre_usuario && Boolean(formik.errors.nombre_usuario)}
+              helperText={formik.touched.nombre_usuario && formik.errors.nombre_usuario}
               disabled={isLoading}
             />
-          </Box>
 
-          <TextField
-            fullWidth
-            label="Email"
-            margin="normal"
-            {...formik.getFieldProps("email")}
-            error={formik.touched.email && Boolean(formik.errors.email)}
-            helperText={formik.touched.email && formik.errors.email}
-            disabled={isLoading}
-          />
+            <TextField
+              fullWidth
+              label="Contraseña"
+              type={showPassword ? "text" : "password"}
+              {...formik.getFieldProps("contraseña")}
+              error={formik.touched.contraseña && Boolean(formik.errors.contraseña)}
+              helperText={formik.touched.contraseña && formik.errors.contraseña}
+              disabled={isLoading}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton onClick={() => setShowPassword(!showPassword)} edge="end">
+                      {showPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+            />
 
-          {/* ✅ Solo números en tiempo real */}
-          <TextField
-            fullWidth
-            label="DNI"
-            margin="normal"
-            {...formik.getFieldProps("dni")}
-            onChange={(e) => {
-              const value = e.target.value.replace(/\D/g, "").slice(0, 8);
-              formik.setFieldValue("dni", value);
-            }}
-            error={formik.touched.dni && Boolean(formik.errors.dni)}
-            helperText={formik.touched.dni && formik.errors.dni}
-            disabled={isLoading}
-          />
+            <TextField
+              fullWidth
+              label="Confirmar Contraseña"
+              type={showConfirmPassword ? "text" : "password"}
+              {...formik.getFieldProps("confirmPassword")}
+              error={formik.touched.confirmPassword && Boolean(formik.errors.confirmPassword)}
+              helperText={formik.touched.confirmPassword && formik.errors.confirmPassword}
+              disabled={isLoading}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton onClick={() => setShowConfirmPassword(!showConfirmPassword)} edge="end">
+                      {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+            />
 
-          <TextField
-            fullWidth
-            label="Nombre de Usuario"
-            margin="normal"
-            {...formik.getFieldProps("nombre_usuario")}
-            error={formik.touched.nombre_usuario && Boolean(formik.errors.nombre_usuario)}
-            helperText={formik.touched.nombre_usuario && formik.errors.nombre_usuario}
-            disabled={isLoading}
-          />
-
-          <TextField
-            fullWidth
-            label="Número de Teléfono"
-            margin="normal"
-            {...formik.getFieldProps("numero_telefono")}
-            onChange={(e) => {
-              const value = e.target.value.replace(/\D/g, "").slice(0, 10);
-              formik.setFieldValue("numero_telefono", value);
-            }}
-            error={formik.touched.numero_telefono && Boolean(formik.errors.numero_telefono)}
-            helperText={formik.touched.numero_telefono && formik.errors.numero_telefono}
-            disabled={isLoading}
-          />
-
-          <TextField
-            fullWidth
-            label="Contraseña"
-            margin="normal"
-            type={showPassword ? "text" : "password"}
-            {...formik.getFieldProps("contraseña")}
-            error={formik.touched.contraseña && Boolean(formik.errors.contraseña)}
-            helperText={formik.touched.contraseña && formik.errors.contraseña}
-            disabled={isLoading}
-            InputProps={{
-              endAdornment: renderPasswordAdornment(showPassword, () => setShowPassword(!showPassword)),
-            }}
-          />
-
-          <TextField
-            fullWidth
-            label="Confirmar contraseña"
-            margin="normal"
-            type={showConfirmPassword ? "text" : "password"}
-            {...formik.getFieldProps("confirmPassword")}
-            error={formik.touched.confirmPassword && Boolean(formik.errors.confirmPassword)}
-            helperText={formik.touched.confirmPassword && formik.errors.confirmPassword}
-            disabled={isLoading}
-            InputProps={{
-              endAdornment: renderPasswordAdornment(showConfirmPassword, () =>
-                setShowConfirmPassword(!showConfirmPassword)
-              ),
-            }}
-          />
-
-          <Button
-            fullWidth
-            variant="contained"
-            type="submit"
-            disabled={isLoading}
-            sx={{ mt: 3, py: 1.2 }}
-          >
-            {isLoading ? <CircularProgress size={24} sx={{ color: "white" }} /> : "Registrarse"}
-          </Button>
-
-          <Box textAlign="center" mt={2}>
             <Button
-              onClick={() => navigate("/login")}
-              sx={{ textTransform: "none", color: "primary.main", fontWeight: 500 }}
+              fullWidth
+              variant="contained"
+              type="submit"
+              size="large"
               disabled={isLoading}
+              sx={{ mt: 2 }}
             >
-              ¿Ya tenés cuenta? Iniciá sesión
+              {isLoading ? <CircularProgress size={24} color="inherit" /> : "Registrarse"}
             </Button>
-          </Box>
+
+            <Box textAlign="center">
+                <Button onClick={() => navigate("/login")} sx={{ textTransform: "none" }}>
+                    ¿Ya tienes cuenta? Inicia sesión
+                </Button>
+            </Box>
+          </Stack>
         </form>
       </AuthFormContainer>
 
-      {/* ✅ Modal de confirmación */}
-      <Dialog open={isModalOpen} onClose={handleGoToLogin}>
+      {/* Modal de Confirmación de Registro */}
+      <Dialog open={isModalOpen} onClose={() => {}}>
         <DialogTitle>¡Registro Exitoso!</DialogTitle>
         <DialogContent>
-          <DialogContentText>Enviamos un email de confirmación a:</DialogContentText>
-          <Box component="span" sx={{ display: "block", fontWeight: 600, my: 1, fontSize: "1.1rem" }}>
-            {registeredEmail}
-          </Box>
-          <DialogContentText>Revisá tu bandeja (y spam) para activar tu cuenta.</DialogContentText>
+          <DialogContentText>
+            Hemos enviado un correo de confirmación a <strong>{registeredEmail}</strong>.
+            <br /><br />
+            Por favor, revisa tu bandeja de entrada (y spam) y haz clic en el enlace para activar tu cuenta.
+          </DialogContentText>
 
           {modalMessage && (
             <Alert severity={modalMessage.type} sx={{ mt: 2 }}>
               {modalMessage.text}
             </Alert>
           )}
-
-          <Alert severity="warning" sx={{ mt: 2 }}>
-            <AlertTitle>¿Email incorrecto o no te llegó?</AlertTitle>
-            Podés modificar tu email o reenviar el correo.
-          </Alert>
         </DialogContent>
-        <DialogActions sx={{ p: 3, pt: 1, justifyContent: "space-between" }}>
-          <Stack spacing={1} direction="row">
-            <Button onClick={handleModifyEmail} disabled={isModalLoading}>Modificar Email</Button>
-            <Button onClick={handleResendEmail} disabled={isModalLoading}>
-              {isModalLoading ? <CircularProgress size={24} /> : "Reenviar Email"}
-            </Button>
-          </Stack>
-          <Button onClick={handleGoToLogin} variant="contained" autoFocus>Ir a Login</Button>
+        <DialogActions sx={{ p: 3 }}>
+          <Button 
+            onClick={handleResendEmail} 
+            disabled={isResending}
+            color="secondary"
+          >
+            {isResending ? "Enviando..." : "Reenviar Email"}
+          </Button>
+          <Button 
+            onClick={handleCloseModal} 
+            variant="contained" 
+            autoFocus
+          >
+            Ir al Login
+          </Button>
         </DialogActions>
       </Dialog>
     </PageContainer>

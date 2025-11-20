@@ -1,82 +1,61 @@
-// src/types/dto/lote.dto.ts
 
-import type { BaseDTO } from './base.dto';
-import type { ImagenDTO } from './imagen.dto';
+// ==========================================
+// 📤 REQUEST DTOs (Lo que envías)
+// ==========================================
 
-/**
- * Estados posibles de subasta de un lote
- */
-export type EstadoSubasta = 'pendiente' | 'activa' | 'finalizada';
+import type { BaseDTO } from "./base.dto";
+import type { ImagenDto } from "./imagen.dto";
 
-/**
- * DTO DE SALIDA - Lote completo
- * (Basado en V1/V2 - Asume que BaseDTO tiene id, activo, fechas)
- */
-export interface LoteDTO extends BaseDTO {
-  id_proyecto: number | null;
+export interface CreateLoteDto {
   nombre_lote: string;
   precio_base: number;
-  estado_subasta: EstadoSubasta;
-  fecha_inicio: string | null;
-  fecha_fin: string | null;
-  id_puja_mas_alta: number | null;
-  id_ganador: number | null;
-  intentos_fallidos_pago: number;
-  excedente_visualizacion: number;
+  
+  // Ubicación
+  latitud?: number;
+  longitud?: number;
+  
+  // Asociación (Opcional, si es subasta privada)
+  id_proyecto?: number | null;
 
-  // Campos de geolocalización
-  latitud: number | null;
-  longitud: number | null;
-
-  // Relaciones
-  imagenes?: ImagenDTO[];
+  // Fechas para subasta programada
+  fecha_inicio?: string; // ISO Date
+  fecha_fin?: string;    // ISO Date
 }
 
+export interface UpdateLoteDto extends Partial<CreateLoteDto> {
+  // Permite actualizar campos parciales
+  estado_subasta?: 'pendiente' | 'activa' | 'finalizada';
+}
+
+// ==========================================
+// 📥 RESPONSE DTOs (Lo que recibes)
+// ==========================================
+
 /**
- * DTO DE ENTRADA - Crear Lote
- * (Idéntico en V1 y V2)
+ * Modelo principal de Lote.
  */
-export interface CreateLoteDTO {
-  id_proyecto?: number | null;
+export interface LoteDto extends BaseDTO {
   nombre_lote: string;
-  precio_base: number;
-  fecha_inicio?: string | null;
-  fecha_fin?: string | null;
-  latitud?: number | null;
-  longitud?: number | null;
-}
-
-/**
- * DTO DE ENTRADA - Actualizar Lote
- * ❗ CORREGIDO: Incluye los campos de V1 (estado_subasta) y V2 (activo).
- */
-export interface UpdateLoteDTO {
-  nombre_lote?: string;
-  precio_base?: number;
-  estado_subasta?: EstadoSubasta; // 👈 Campo clave que faltaba en V2
-  fecha_inicio?: string | null;
-  fecha_fin?: string | null;
-  id_proyecto?: number | null;
-  latitud?: number | null;
-  longitud?: number | null;
-  activo?: boolean; // 👈 Campo clave que faltaba en V1
-  imagenes?: File[];
-}
-
-/**
- * DTO para iniciar subasta
- * (De V1 - Necesario para el servicio)
- */
-export interface StartAuctionDTO {
+  precio_base: number; // Se recibe como string o number dependiendo de config de axios, idealmente number
+  
+  // Estado Subasta
+  estado_subasta: 'pendiente' | 'activa' | 'finalizada';
   fecha_inicio?: string;
   fecha_fin?: string;
-}
-
-/**
- * Respuesta al finalizar subasta
- * (De V1 - Necesario para el servicio)
- */
-export interface EndAuctionResponse {
-  mensaje: string;
-  pujaGanadoraId?: number;
+  
+  // Relaciones
+  id_proyecto: number | null; // null = Lote Público
+  id_ganador?: number;
+  id_puja_mas_alta?: number;
+  
+  // Visualización
+  imagenes?: ImagenDto[]; // Array de imágenes asociadas
+  
+  // Geo
+  latitud?: number;
+  longitud?: number;
+  
+  // Datos calculados o extras del backend
+  intentos_fallidos_pago?: number;
+  excedente_visualizacion?: number;
 }

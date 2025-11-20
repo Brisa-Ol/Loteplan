@@ -1,61 +1,47 @@
-// src/services/auth2fa.service.ts
+import httpService from './httpService';
+import type { AxiosResponse } from 'axios';
+import type { 
+  Generate2faSecretResponseDto, 
+  Enable2faRequestDto, 
+  Disable2faRequestDto 
+} from '../types/dto/auth2fa.dto';
+import type { GenericResponseDto } from '../types/dto/auth.dto';
 
-import httpService from "./httpService";
-import type {
-  TwoFASetupResponse,
-  TwoFAEnableRequest,
-  TwoFADisableRequest,
-  MessageResponse,
-} from "../types/dto/auth.types";
 
-const API_ENDPOINT = "/auth/2fa";
-
-// ══════════════════════════════════════════════════════════
-// SERVICIO DE AUTENTICACIÓN DE DOS FACTORES (2FA)
-// ══════════════════════════════════════════════════════════
-
-const auth2faService = {
-  // ──────────────────────────────────────────────────────────
-  // GENERACIÓN Y CONFIGURACIÓN DE 2FA
-  // ──────────────────────────────────────────────────────────
-
+const Auth2faService = {
+  
   /**
-   * Genera un nuevo secreto 2FA y la URL del código QR
-   * Backend: POST /auth/2fa/generate-secret
-   * Requiere: JWT de sesión normal
+   * Paso 1: Generar el secreto y obtener la URL para el QR.
+   * El usuario debe estar logueado.
    */
-  async generateSecret(): Promise<TwoFASetupResponse> {
-    const { data } = await httpService.post<TwoFASetupResponse>(
-      `${API_ENDPOINT}/generate-secret`
-    );
-    return data;
+  generateSecret: async (): Promise<AxiosResponse<Generate2faSecretResponseDto>> => {
+    // Asumo que la ruta base es /auth según tus rutas anteriores
+    return await httpService.post('/auth/2fa/generate-secret');
   },
 
   /**
-   * Verifica el código TOTP y habilita 2FA permanentemente
-   * Backend: POST /auth/2fa/enable
-   * Requiere: JWT de sesión normal
+   * Paso 2: Verificar el código TOTP y activar el 2FA en la BD.
    */
-  async enable(data: TwoFAEnableRequest): Promise<MessageResponse> {
-    const { data: responseData } = await httpService.post<MessageResponse>(
-      `${API_ENDPOINT}/enable`,
-      data
-    );
-    return responseData;
+  enable: async (data: Enable2faRequestDto): Promise<AxiosResponse<GenericResponseDto>> => {
+    return await httpService.post('/auth/2fa/enable', data);
   },
 
   /**
-   * Deshabilita el 2FA (requiere contraseña y código TOTP actual)
-   * Backend: POST /auth/2fa/disable
-   * Requiere: JWT de sesión normal
+   * Desactivar 2FA (Requiere contraseña y código actual).
    */
-  async disable(data: TwoFADisableRequest): Promise<MessageResponse> {
-    const { data: responseData } = await httpService.post<MessageResponse>(
-      `${API_ENDPOINT}/disable`,
-      data
-    );
-    return responseData;
+  disable: async (data: Disable2faRequestDto): Promise<AxiosResponse<GenericResponseDto>> => {
+    return await httpService.post('/auth/2fa/disable', data);
   },
+
+  /**
+   * 💡 HELPER UTILITARIO (No es una llamada a API)
+   * Si usas una librería como 'qrcode' en el front, esto es un ejemplo
+   * de cómo se usaría en tu componente, no en el servicio HTTP.
+   */
+  // generateQrCodeImage: async (otpauthUrl: string) => {
+  //   import QRCode from 'qrcode';
+  //   return await QRCode.toDataURL(otpauthUrl);
+  // }
 };
 
-export default auth2faService;
+export default Auth2faService;
