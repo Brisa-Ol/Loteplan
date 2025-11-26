@@ -1,38 +1,76 @@
+// src/services/kyc.service.ts (CORREGIDO Y FUNCIONAL)
+import type { KycDTO, KycStatusDTO, RejectKycDTO } from '../types/dto/kyc.dto';
 import httpService from './httpService';
-import type { AxiosResponse } from 'axios';
-import type { KycStatusResponseDto, SubmitKycDto } from '../types/dto/kyc.dto';
 
-const BASE_ENDPOINT = '/kyc'; // Ajusta si en app.js usaste otro prefijo
 
-const KycService = {
-  
+const ENDPOINT = '/kyc';
+
+const kycService = {
+
+  // =================================================================
+  // 👤 MÉTODOS DE USUARIO (Cliente)
+  // =================================================================
+
   /**
-   * GET /api/kyc/status
-   * Verifica si el usuario ya subió documentos y en qué estado están.
+   * (Usuario) Envía los datos y archivos para verificación.
+   * Llama a: POST /api/kyc/submit
    */
-  getStatus: async (): Promise<AxiosResponse<KycStatusResponseDto>> => {
-    return await httpService.get(`${BASE_ENDPOINT}/status`);
+  async submitVerificationData(formData: FormData): Promise<KycDTO> {
+    // ❗ CORRECCIÓN: Desestructuramos { data } para obtener el KycDTO
+    const { data } = await httpService.post<KycDTO>(`${ENDPOINT}/submit`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return data;
   },
 
   /**
-   * POST /api/kyc/submit
-   * Sube los 4 archivos requeridos.
+   * (Usuario) Obtiene el estado de verificación del usuario actual.
+   * Llama a: GET /api/kyc/status
    */
-  submit: async (files: SubmitKycDto): Promise<AxiosResponse<KycStatusResponseDto>> => {
-    const formData = new FormData();
-    
-    // ⚠️ LOS NOMBRES DEBEN COINCIDIR EXACTAMENTE CON TU MIDDLEWARE DE BACKEND
-    formData.append('documento_frente', files.documento_frente);
-    formData.append('documento_dorso', files.documento_dorso);
-    formData.append('selfie_con_documento', files.selfie_con_documento);
-    formData.append('video_verificacion', files.video_verificacion);
+  async getVerificationStatus(): Promise<KycStatusDTO> {
+    // ❗ CORRECCIÓN: Desestructuramos { data }
+    const { data } = await httpService.get<KycStatusDTO>(`${ENDPOINT}/status`);
+    return data;
+  },
 
-    return await httpService.post(`${BASE_ENDPOINT}/submit`, formData, {
-      headers: { 
-        'Content-Type': 'multipart/form-data' // Crucial para subida de archivos
-      }
-    });
-  }
+  // =================================================================
+  // 👮 MÉTODOS DE ADMINISTRADOR (Gestión)
+  // =================================================================
+
+  /**
+   * (Admin) Lista todas las solicitudes pendientes de revisión.
+   * Llama a: GET /api/kyc/pending
+   */
+  async getPendingVerifications(): Promise<KycDTO[]> {
+    // ❗ CORRECCIÓN: Desestructuramos { data }
+    const { data } = await httpService.get<KycDTO[]>(`${ENDPOINT}/pending`);
+    return data;
+  },
+
+  /**
+   * (Admin) Aprueba la verificación de un usuario.
+   * Llama a: POST /api/kyc/approve/:idUsuario
+   */
+  async approveVerification(idUsuario: string | number): Promise<KycDTO> {
+    // ❗ CORRECCIÓN: Desestructuramos { data }
+    const { data } = await httpService.post<KycDTO>(`${ENDPOINT}/approve/${idUsuario}`);
+    return data;
+  },
+
+  /**
+   * (Admin) Rechaza la verificación de un usuario.
+   * Llama a: POST /api/kyc/reject/:idUsuario
+   */
+  async rejectVerification(idUsuario: string | number, rejectData: RejectKycDTO): Promise<KycDTO> {
+    // ❗ CORRECCIÓN: Desestructuramos { data }
+    const { data } = await httpService.post<KycDTO>(
+      `${ENDPOINT}/reject/${idUsuario}`, 
+      rejectData
+    );
+    return data;
+  },
 };
 
-export default KycService;
+export default kycService;

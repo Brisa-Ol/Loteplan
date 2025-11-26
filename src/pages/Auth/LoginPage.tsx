@@ -21,7 +21,6 @@ import { Visibility, VisibilityOff } from "@mui/icons-material";
 import { useFormik } from "formik";
 import * as Yup from "yup";
 
-// Asegúrate de que estas rutas de importación sean correctas en tu proyecto
 import { PageContainer } from "../../components/common/PageContainer/PageContainer";
 import { useAuth } from "../../context/AuthContext";
 import AuthFormContainer from "./components/AuthFormContainer/AuthFormContainer";
@@ -30,24 +29,46 @@ const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   
-  // Extraemos todo lo necesario del Contexto
+  // Extraemos user del contexto para poder verificar su rol
   const { 
     login, 
     verify2FA, 
-    requires2FA, // Estado global que indica si el backend pidió 2FA (202 Accepted)
+    requires2FA, 
     error, 
     isLoading, 
     clearError, 
-    logout 
+    logout, 
+    user,             // Necesario para el rol
+    isAuthenticated   // Necesario para saber si ya terminó el login
   } = useAuth();
 
   const [showPassword, setShowPassword] = useState(false);
-  
-  // Mensajes que vienen de redirecciones (ej: registro exitoso)
   const successMessage = location.state?.message;
-  const from = (location.state as { from?: string } | null)?.from || "/dashboard"; // Redirige a dashboard por defecto
+  const from = (location.state as { from?: string } | null)?.from;
 
-  // Limpieza automática de mensajes flash
+  // 1. EFECTO DE REDIRECCIÓN AUTOMÁTICA
+  // Se ejecuta cuando el estado de autenticación cambia (Login exitoso)
+  useEffect(() => {
+    if (isAuthenticated && user && !requires2FA) {
+      
+      // Si venía de una url protegida, lo devolvemos allí
+      if (from) {
+        navigate(from, { replace: true });
+        return;
+      }
+
+      // Si no, redirigimos según el rol
+      if (user.rol === 'admin') {
+        navigate('/Admin/Dashboard/AdminDashboard', { replace: true });
+      } else if (user.rol === 'cliente') {
+        navigate('/client/UserDashboard/UserDashboard', { replace: true });
+      } else {
+        navigate('/', { replace: true }); // Fallback
+      }
+    }
+  }, [isAuthenticated, user, requires2FA, navigate, from]);
+
+  // 2. Limpieza de mensaje flash
   useEffect(() => {
     if (!successMessage) return;
     const timer = setTimeout(() => {
@@ -56,49 +77,40 @@ const LoginPage: React.FC = () => {
     return () => clearTimeout(timer);
   }, [successMessage, navigate, location.pathname]);
 
-  // Configuración del Formulario
   const formik = useFormik({
     initialValues: {
-      identificador: "", // Coincide con el Backend (email o usuario)
-      password: "",      // Se mapeará a 'contraseña'
-      code2FA: "",       // Para el modal
+      identificador: "",
+      password: "",
+      code2FA: "",
     },
     validationSchema: Yup.object({
       identificador: Yup.string().required("Ingresá tu email o nombre de usuario"),
-      // La contraseña solo es requerida si NO estamos en paso 2FA
       password: requires2FA ? Yup.string() : Yup.string().required("Ingresá tu contraseña"),
-      // El código solo es requerido SI estamos en paso 2FA
       code2FA: requires2FA ? Yup.string().required("Ingresá el código 2FA") : Yup.string(),
     }),
     onSubmit: async (values) => {
       clearError();
       try {
         if (!requires2FA) {
-          // PASO 1: Login Normal
+          // Paso 1: Credenciales
           await login({
             identificador: values.identificador,
-            contraseña: values.password, // ⚠️ Mapeo clave: backend espera 'contraseña'
+            contraseña: values.password, // Backend espera 'contraseña'
           });
         } else {
-          // PASO 2: Verificación 2FA (si el backend respondió con 202 antes)
+          // Paso 2: 2FA
           await verify2FA(values.code2FA);
         }
-        
-        // Si no hubo error (el context maneja el throw), redirigimos
-        // Nota: La redirección idealmente ocurre dentro del useEffect que escucha 'isAuthenticated'
-        // o aquí si login devuelve promesa resuelta.
-        if (!error) navigate(from, { replace: true });
-
+        // La redirección ocurrirá automáticamente gracias al useEffect de arriba
       } catch (err) {
         console.error("Fallo en el proceso de login", err);
       }
     },
   });
 
-  // Cancelar el proceso de 2FA y limpiar estado
   const handleCancel2FA = () => {
-    logout(); // Limpia tokens temporales en el context
-    formik.setFieldValue("code2FA", "");
+    logout();
+    formik.resetForm();
     clearError();
   };
 
@@ -121,7 +133,7 @@ const LoginPage: React.FC = () => {
           </Alert>
         )}
 
-        {/* Formulario Principal */}
+        {/* Formulario */}
         <form onSubmit={formik.handleSubmit}>
           <Stack spacing={2}>
             <TextField
@@ -134,7 +146,7 @@ const LoginPage: React.FC = () => {
               onBlur={formik.handleBlur}
               error={formik.touched.identificador && Boolean(formik.errors.identificador)}
               helperText={formik.touched.identificador && formik.errors.identificador}
-              disabled={isDisabled || requires2FA} // Deshabilitar si estamos en 2FA
+              disabled={isDisabled || requires2FA}
             />
 
             <TextField
@@ -198,7 +210,7 @@ const LoginPage: React.FC = () => {
         </Box>
       </AuthFormContainer>
 
-      {/* Modal Flotante para 2FA (Solo aparece si requires2FA es true) */}
+      {/* Modal 2FA */}
       <Dialog open={requires2FA} onClose={handleCancel2FA}>
         <DialogTitle>Verificación de Seguridad</DialogTitle>
         <form onSubmit={formik.handleSubmit}>

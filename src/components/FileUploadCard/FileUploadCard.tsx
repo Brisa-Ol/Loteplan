@@ -1,4 +1,3 @@
-
 import { Box, Typography, Button, Paper, IconButton } from '@mui/material';
 import { CloudUpload, Delete, CheckCircle } from '@mui/icons-material';
 import type { ChangeEvent } from 'react';

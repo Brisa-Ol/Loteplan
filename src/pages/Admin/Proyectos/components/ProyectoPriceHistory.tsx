@@ -1,24 +1,44 @@
-// ============================================================================
-// COMPONENTE D: ProyectoPriceHistory.tsx
-// Historial de cuotas mensuales (solo para proyectos mensuales)
-// ============================================================================
-import { useQuery } from '@tanstack/react-query';
-import { Alert, Box, Chip, CircularProgress, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material';
-import cuotaMensualService from '../../../../Services/cuotaMensual.service';
-import type { CuotaMensualDTO } from '../../../../types/dto/cuotaMensual.dto';
-import { QueryHandler } from '../../../../components/common/QueryHandler/QueryHandler';
+import React from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { 
+  Alert, Box, Chip, Paper, Table, TableBody, TableCell, 
+  TableContainer, TableHead, TableRow, Typography, IconButton, Tooltip 
+} from '@mui/material';
+import { Delete as DeleteIcon } from '@mui/icons-material';
 
+
+import { QueryHandler } from '../../../../components/common/QueryHandler/QueryHandler';
+import CuotaMensualService from '../../../../Services/cuotaMensual.service';
+import type { CuotaMensualDto } from '../../../../types/dto/cuotaMensual.dto';
 
 interface ProyectoPriceHistoryProps {
   proyectoId: number;
 }
 
-export const ProyectoPriceHistory: React.FC<ProyectoPriceHistoryProps> = ({
+const ProyectoPriceHistory: React.FC<ProyectoPriceHistoryProps> = ({
   proyectoId
 }) => {
-  const { data: cuotas = [], isLoading, error } = useQuery<CuotaMensualDTO[], Error>({
-    queryKey: ['cuotasByProyecto', proyectoId],
-    queryFn: () => cuotaMensualService.getCuotasByProyecto(proyectoId.toString()),
+  const queryClient = useQueryClient();
+  const queryKey = ['cuotasByProyecto', proyectoId];
+
+  // 1. Cargar Historial
+  const { data: cuotas = [], isLoading, error } = useQuery<CuotaMensualDto[], Error>({
+    queryKey: queryKey,
+    queryFn: async () => (await CuotaMensualService.getCuotasByProyecto(proyectoId)).data,
+  });
+
+  // 2. Mutación para Eliminar (Soft Delete) - CUMPLE REQUISITO 6.3
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await CuotaMensualService.softDelete(id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKey });
+      // También refrescamos el proyecto porque el precio actual podría cambiar
+      queryClient.invalidateQueries({ queryKey: ['adminAllProjects'] });
+      alert('Cuota eliminada del historial.');
+    },
+    onError: (err: any) => alert('Error al eliminar: ' + err.message)
   });
 
   return (
@@ -34,7 +54,7 @@ export const ProyectoPriceHistory: React.FC<ProyectoPriceHistoryProps> = ({
           </Alert>
         ) : (
           <TableContainer component={Paper} variant="outlined">
-            <Table>
+            <Table size="small">
               <TableHead>
                 <TableRow sx={{ bgcolor: 'primary.main' }}>
                   <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Fecha</TableCell>
@@ -51,20 +71,23 @@ export const ProyectoPriceHistory: React.FC<ProyectoPriceHistoryProps> = ({
                   <TableCell sx={{ color: 'white', fontWeight: 'bold' }} align="center">
                     Estado
                   </TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 'bold' }} align="right">
+                    Acciones
+                  </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {cuotas.map((cuota, index) => (
                   <TableRow key={cuota.id}>
                     <TableCell>
-                      {new Date(cuota.createdAt!).toLocaleDateString()}
+                      {cuota.createdAt ? new Date(cuota.createdAt).toLocaleDateString() : '-'}
                     </TableCell>
                     <TableCell>{cuota.nombre_cemento_cemento || 'N/A'}</TableCell>
                     <TableCell align="right">{cuota.valor_cemento_unidades}</TableCell>
-                    <TableCell align="right">${cuota.valor_cemento.toFixed(2)}</TableCell>
+                    <TableCell align="right">${Number(cuota.valor_cemento).toFixed(2)}</TableCell>
                     <TableCell align="right">
                       <Typography variant="body2" fontWeight="bold" color="primary">
-                        ${cuota.valor_mensual_final.toFixed(2)}
+                        ${Number(cuota.valor_mensual_final).toFixed(2)}
                       </Typography>
                     </TableCell>
                     <TableCell align="center">
@@ -72,7 +95,22 @@ export const ProyectoPriceHistory: React.FC<ProyectoPriceHistoryProps> = ({
                         label={index === 0 ? "ACTUAL" : "HISTÓRICO"}
                         size="small"
                         color={index === 0 ? "success" : "default"}
+                        variant={index === 0 ? "filled" : "outlined"}
                       />
+                    </TableCell>
+                    <TableCell align="right">
+                       {/* Solo permitimos borrar si no es la única (opcional) o siempre */}
+                       <Tooltip title="Eliminar registro">
+                         <IconButton 
+                           size="small" 
+                           color="error"
+                           onClick={() => {
+                              if(confirm('¿Eliminar este registro de cuota?')) deleteMutation.mutate(cuota.id);
+                           }}
+                         >
+                            <DeleteIcon fontSize="small" />
+                         </IconButton>
+                       </Tooltip>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -84,3 +122,5 @@ export const ProyectoPriceHistory: React.FC<ProyectoPriceHistoryProps> = ({
     </Box>
   );
 };
+
+export default ProyectoPriceHistory;

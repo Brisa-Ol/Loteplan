@@ -3,8 +3,23 @@ import type { CreateLoteDto, LoteDto, UpdateLoteDto } from '../types/dto/lote.dt
 import httpService from './httpService';
 import type { AxiosResponse } from 'axios';
 
+const BASE_ENDPOINT = '/lotes';
 
-const BASE_ENDPOINT = '/lotes'; // Asumiendo prefijo en router
+// Definimos las respuestas específicas para las acciones de subasta
+// para poder tipar correctamente el retorno (el ganador, el lote actualizado, etc.)
+interface StartAuctionResponse {
+  mensaje: string;
+  lote?: LoteDto;
+}
+
+interface EndAuctionResponse {
+  mensaje: string;
+  lote?: LoteDto;
+  ganador?: {
+    id: number;
+    nombre: string;
+  };
+}
 
 const LoteService = {
 
@@ -76,7 +91,7 @@ const LoteService = {
    * Inicia manualmente la subasta.
    * Dispara notificaciones a suscriptores.
    */
-  startAuction: async (id: number): Promise<AxiosResponse<GenericResponseDto>> => {
+  startAuction: async (id: number): Promise<AxiosResponse<StartAuctionResponse>> => {
     return await httpService.post(`${BASE_ENDPOINT}/${id}/start_auction`);
   },
 
@@ -84,7 +99,7 @@ const LoteService = {
    * Finaliza manualmente la subasta.
    * Asigna ganador y genera transacción.
    */
-  endAuction: async (id: number): Promise<AxiosResponse<GenericResponseDto>> => {
+  endAuction: async (id: number): Promise<AxiosResponse<EndAuctionResponse>> => {
     return await httpService.put(`${BASE_ENDPOINT}/${id}/end`);
   }
 };

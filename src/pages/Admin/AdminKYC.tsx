@@ -1,150 +1,172 @@
-// src/pages/Admin/AdminKYC.tsx
-import React, { useState } from 'react';
+import React from 'react';
 import {
-  Card,
-  CardContent,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
   Typography,
-  Chip,
   Box,
-  IconButton,
-  Tooltip,
-  Stack,
-  CircularProgress,
+  IconButton
 } from '@mui/material';
-import HourglassIcon from '@mui/icons-material/HourglassEmpty';
-import ApproveIcon from '@mui/icons-material/CheckCircle';
-import RejectIcon from '@mui/icons-material/Cancel';
-import VisibilityIcon from '@mui/icons-material/Visibility';
-import { useQuery } from '@tanstack/react-query';
-import type { KycDTO, KYCStatus, RejectKycDTO } from '../../types/dto/kyc.dto';
-import kycService from '../../Services/kyc.service';
-import KYCDetailsModal from './components/KYC/KYCDetailsModal';
+import { Close as CloseIcon, Check as CheckIcon, Block as BlockIcon } from '@mui/icons-material';
+import type { KycDTO } from '../../types/dto/kyc.dto';
 
 
-// ══════════════════════════════════════════════════════════
-// MAPA DE ESTADOS (usa los mismos nombres que en KYCStatus)
-// ══════════════════════════════════════════════════════════
-const estadoMap: Record<KYCStatus, { label: string; color: 'warning' | 'success' | 'error'; icon: React.ElementType }> = {
-  PENDIENTE: { label: 'Pendiente', color: 'warning', icon: HourglassIcon },
-  APROBADA: { label: 'Aprobada', color: 'success', icon: ApproveIcon },
-  RECHAZADA: { label: 'Rechazada', color: 'error', icon: RejectIcon },
-};
+interface KYCDetailsModalProps {
+  open: boolean;
+  kyc: KycDTO;
+  onClose: () => void;
+  onApprove: () => void;
+  onReject: () => void;
+}
 
-// ══════════════════════════════════════════════════════════
-// COMPONENTE PRINCIPAL
-// ══════════════════════════════════════════════════════════
-const AdminKYC: React.FC = () => {
-  const { data: kycList, isLoading } = useQuery<KycDTO[]>({
-    queryKey: ['kyc-pendientes'],
-    queryFn: kycService.getPendingVerifications,
-  });
+const KYCDetailsModal: React.FC<KYCDetailsModalProps> = ({ 
+  open, 
+  kyc, 
+  onClose, 
+  onApprove, 
+  onReject 
+}) => {
 
-  const [selectedKyc, setSelectedKyc] = useState<KycDTO | null>(null);
-
-  // ══════════════════════════════════════════════════════════
-  // LOADING
-  // ══════════════════════════════════════════════════════════
-  if (isLoading) {
-    return (
-      <Box display="flex" justifyContent="center" mt={5}>
-        <CircularProgress />
-      </Box>
-    );
-  }
-
-  // ══════════════════════════════════════════════════════════
-  // SIN DATOS
-  // ══════════════════════════════════════════════════════════
-  if (!kycList?.length) {
-    return (
-      <Typography color="text.secondary" sx={{ textAlign: 'center', mt: 3 }}>
-        No hay verificaciones pendientes.
-      </Typography>
-    );
-  }
-
-  // ══════════════════════════════════════════════════════════
-  // LISTADO DE KYC
-  // ══════════════════════════════════════════════════════════
   return (
-    <>
-      <Typography variant="h4" sx={{ mb: 3, fontWeight: 600 }}>
-        Verificaciones de Identidad (KYC)
-      </Typography>
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+      <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Typography variant="h6" component="div">
+          Detalle de Verificación
+        </Typography>
+        <IconButton onClick={onClose}>
+          <CloseIcon />
+        </IconButton>
+      </DialogTitle>
+      
+      <DialogContent dividers>
+        {/* USAMOS BOX CON FLEXBOX EN LUGAR DE GRID 
+            flexDirection: column en móviles, row en escritorio (md)
+        */}
+        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 4 }}>
+          
+          {/* --- COLUMNA IZQUIERDA (DATOS) --- */}
+          <Box sx={{ flex: 1, minWidth: { md: '300px' } }}>
+            <Typography variant="subtitle2" color="text.secondary">Solicitante</Typography>
+            <Typography variant="body1" fontWeight="bold" gutterBottom>
+              {kyc.nombre_completo}
+            </Typography>
 
-      <Stack spacing={2} sx={{ width: '100%', mt: 2 }}>
-        {kycList.map((kyc) => {
-          const estadoInfo = estadoMap[kyc.estado_verificacion];
-          const EstadoIcon = estadoInfo.icon;
+            <Typography variant="subtitle2" color="text.secondary" mt={2}>Documento</Typography>
+            <Typography variant="body1" gutterBottom>
+              {kyc.tipo_documento}: {kyc.numero_documento}
+            </Typography>
 
-          return (
-            <Card
-              key={kyc.id}
-              sx={{
-                borderLeft: '5px solid',
-                borderColor: `${estadoInfo.color}.main`,
-                p: 1,
-              }}
-            >
-              <CardContent>
-                <Box display="flex" justifyContent="space-between" alignItems="center">
-                  {/* Info del Usuario */}
-                  <Box>
-                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                      {kyc.nombre_completo || 'Sin nombre registrado'}
-                    </Typography>
+            <Typography variant="subtitle2" color="text.secondary" mt={2}>Estado Actual</Typography>
+            <Typography variant="body1" gutterBottom sx={{ 
+                color: kyc.estado_verificacion === 'PENDIENTE' ? 'warning.main' : 'text.primary',
+                fontWeight: 'bold'
+            }}>
+              {kyc.estado_verificacion}
+            </Typography>
 
-                    <Typography variant="body2" color="text.secondary">
-                      {kyc.usuario?.email || 'Sin email'}
-                    </Typography>
+            {kyc.fecha_nacimiento && (
+               <>
+                <Typography variant="subtitle2" color="text.secondary" mt={2}>Fecha Nacimiento</Typography>
+                <Typography variant="body1">
+                    {new Date(kyc.fecha_nacimiento).toLocaleDateString()}
+                </Typography>
+               </>
+            )}
+          </Box>
 
-                    <Typography variant="body2" color="text.secondary">
-                      Usuario: {kyc.usuario?.nombre_usuario || '—'}
-                    </Typography>
+          {/* --- COLUMNA DERECHA (FOTOS) --- */}
+          <Box sx={{ flex: 2 }}>
+            <Typography variant="h6" gutterBottom>Evidencia</Typography>
+            
+            <Box mb={3}>
+              <Typography variant="caption" display="block" sx={{ mb: 1, fontWeight: 600 }}>
+                Frente del Documento
+              </Typography>
+              <Box 
+                component="img" 
+                src={kyc.url_foto_documento_frente} 
+                alt="DNI Frente" 
+                sx={{ 
+                  width: '100%', 
+                  borderRadius: 2, 
+                  border: '1px solid #e0e0e0', 
+                  maxHeight: 300, 
+                  objectFit: 'contain',
+                  bgcolor: '#f5f5f5'
+                }} 
+              />
+            </Box>
 
-                    {kyc.fecha_verificacion && (
-                      <Typography variant="body2" color="text.secondary">
-                        Verificado el:{' '}
-                        {new Date(kyc.fecha_verificacion).toLocaleDateString()}
-                      </Typography>
-                    )}
-                  </Box>
+            {kyc.url_foto_documento_dorso && (
+              <Box mb={3}>
+                <Typography variant="caption" display="block" sx={{ mb: 1, fontWeight: 600 }}>
+                    Dorso del Documento
+                </Typography>
+                <Box 
+                  component="img" 
+                  src={kyc.url_foto_documento_dorso} 
+                  alt="DNI Dorso" 
+                  sx={{ 
+                    width: '100%', 
+                    borderRadius: 2, 
+                    border: '1px solid #e0e0e0', 
+                    maxHeight: 300, 
+                    objectFit: 'contain',
+                    bgcolor: '#f5f5f5'
+                  }} 
+                />
+              </Box>
+            )}
 
-                  {/* Estado y acciones */}
-                  <Box display="flex" alignItems="center" gap={1}>
-                    <Chip
-                      icon={<EstadoIcon />}
-                      label={estadoInfo.label}
-                      color={estadoInfo.color}
-                      variant="outlined"
-                    />
+            <Box>
+              <Typography variant="caption" display="block" sx={{ mb: 1, fontWeight: 600 }}>
+                Selfie con Documento
+              </Typography>
+              <Box 
+                component="img" 
+                src={kyc.url_foto_selfie_con_documento} 
+                alt="Selfie" 
+                sx={{ 
+                  width: '100%', 
+                  borderRadius: 2, 
+                  border: '1px solid #e0e0e0', 
+                  maxHeight: 400, 
+                  objectFit: 'contain',
+                  bgcolor: '#f5f5f5'
+                }} 
+              />
+            </Box>
+          </Box>
+        </Box>
+      </DialogContent>
 
-                    <Tooltip title="Ver detalles">
-                      <IconButton onClick={() => setSelectedKyc(kyc)}>
-                        <VisibilityIcon />
-                      </IconButton>
-                    </Tooltip>
-                  </Box>
-                </Box>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </Stack>
+      <DialogActions sx={{ p: 3 }}>
+        <Button onClick={onClose} color="inherit">
+          Cancelar
+        </Button>
+        
+        <Button 
+          onClick={onReject} 
+          variant="outlined" 
+          color="error" 
+          startIcon={<BlockIcon />}
+        >
+          Rechazar
+        </Button>
 
-      {/* Modal de detalles */}
-      {selectedKyc && (
-        <KYCDetailsModal
-                  open={!!selectedKyc}
-                  kyc={selectedKyc}
-                  onClose={() => setSelectedKyc(null)} onApprove={function (id: number): Promise<void> {
-                      throw new Error('Function not implemented.');
-                  } } onReject={function (id: number, data: RejectKycDTO): Promise<void> {
-                      throw new Error('Function not implemented.');
-                  } }        />
-      )}
-    </>
+        <Button 
+          onClick={onApprove} 
+          variant="contained" 
+          color="success" 
+          startIcon={<CheckIcon />}
+        >
+          Aprobar
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 };
 
-export default AdminKYC;
+export default KYCDetailsModal;

@@ -1,7 +1,5 @@
-// ============================================================================
-// ProyectoStateActions.tsx
-// Componente para gestionar las acciones de cambio de estado del proyecto
-// ============================================================================
+// src/components/Admin/Proyectos/Components/ProyectoStateActions.tsx
+
 import React from 'react';
 import {
   Box, Paper, Typography, Button, Stack, Alert, Divider, Chip
@@ -12,10 +10,12 @@ import {
   Pause as PauseIcon,
   Info as InfoIcon
 } from '@mui/icons-material';
-import type { ProyectoDTO } from '../../../../types/dto/proyecto.dto';
+import type { ProyectoDto } from '../../../../types/dto/proyecto.dto';
+
+
 
 interface ProyectoStateActionsProps {
-  proyecto: ProyectoDTO;
+  proyecto: ProyectoDto;
   onIniciarProceso: () => void;
   onFinalizar: () => void;
   isLoading: boolean;
@@ -27,13 +27,12 @@ export const ProyectoStateActions: React.FC<ProyectoStateActionsProps> = ({
   onFinalizar,
   isLoading
 }) => {
-  // Determinar qué acciones están disponibles según el estado
+  // Lógica de estado
   const canIniciarProceso = 
     proyecto.tipo_inversion === 'mensual' && 
     proyecto.estado_proyecto === 'En Espera';
 
   const canFinalizar = proyecto.estado_proyecto === 'En proceso';
-
   const isFinished = proyecto.estado_proyecto === 'Finalizado';
 
   return (
@@ -53,14 +52,22 @@ export const ProyectoStateActions: React.FC<ProyectoStateActionsProps> = ({
           </Stack>
           
           <Stack direction="row" spacing={2} alignItems="center">
+            {/* ✅ CORRECCIÓN: Usamos sx para simular 'large' ya que la prop no existe */}
             <Chip
               label={proyecto.estado_proyecto}
               color={
                 proyecto.estado_proyecto === 'En Espera' ? 'warning' :
                 proyecto.estado_proyecto === 'En proceso' ? 'success' : 'default'
               }
-              size="large"
+              // size="medium" (Default)
+              sx={{ 
+                fontSize: '1rem', 
+                height: 32, 
+                px: 1,
+                fontWeight: 'bold'
+              }}
             />
+            
             {proyecto.tipo_inversion === 'mensual' && proyecto.estado_proyecto === 'En proceso' && (
               <Box>
                 <Typography variant="caption" color="text.secondary" display="block">
@@ -118,7 +125,7 @@ export const ProyectoStateActions: React.FC<ProyectoStateActionsProps> = ({
                 • Plazo de inversión: {proyecto.plazo_inversion} meses
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                • Cuota mensual configurada: ${proyecto.monto_inversion?.toLocaleString()}
+                • Cuota mensual configurada: ${Number(proyecto.monto_inversion).toLocaleString()}
               </Typography>
             </Stack>
 
@@ -150,21 +157,6 @@ export const ProyectoStateActions: React.FC<ProyectoStateActionsProps> = ({
               detendrá la generación de pagos mensuales. Esta acción no puede revertirse.
             </Alert>
 
-            <Typography variant="body2" color="text.secondary" mb={2}>
-              Usa esta opción cuando:
-            </Typography>
-            <Stack spacing={0.5} mb={2} pl={2}>
-              <Typography variant="body2" color="text.secondary">
-                • El plazo de inversión ha terminado
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                • Todos los lotes han sido subastados
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                • Las suscripciones han completado sus pagos
-              </Typography>
-            </Stack>
-
             <Button
               variant="contained"
               color="info"
@@ -187,24 +179,13 @@ export const ProyectoStateActions: React.FC<ProyectoStateActionsProps> = ({
                 Proyecto Finalizado
               </Typography>
             </Stack>
-
             <Typography variant="body2" color="text.secondary">
               Este proyecto ha sido marcado como finalizado. No se pueden realizar más acciones 
               de cambio de estado. Los datos históricos permanecen disponibles para auditoría.
             </Typography>
           </Paper>
         )}
-
-        {/* Info Adicional */}
-        {proyecto.tipo_inversion === 'directo' && !isFinished && (
-          <Alert severity="info">
-            <strong>Proyectos de Inversión Directa:</strong> No tienen un flujo automático de 
-            conteo mensual. Puedes finalizar el proyecto cuando la inversión haya sido completada.
-          </Alert>
-        )}
       </Stack>
     </Box>
   );
 };
-
-export default ProyectoStateActions;

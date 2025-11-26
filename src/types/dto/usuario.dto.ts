@@ -49,3 +49,18 @@ export interface UsuarioDto extends BaseDTO {
   
   fecha_registro?: string; // ISO Date
 }
+
+/**
+ * DTO para la creación de un nuevo usuario (Admin).
+ * Incluye campos obligatorios + contraseña.
+ */
+export interface CreateUsuarioDto {
+  nombre: string;
+  apellido: string;
+  email: string;
+  dni: string;
+  nombre_usuario: string;
+  numero_telefono: string;
+  contraseña: string; // ⚠️ Solo se envía al crear
+  rol: 'admin' | 'cliente';
+}

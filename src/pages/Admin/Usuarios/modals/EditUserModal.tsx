@@ -1,6 +1,6 @@
-// src/components/Admin/Users/EditUserModal.tsx (Adaptado con Formik/Yup y SIN Grid)
+// src/components/Admin/Users/EditUserModal.tsx
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -25,12 +25,11 @@ import {
   CheckCircle as CheckCircleIcon,
   Cancel as CancelIcon
 } from '@mui/icons-material';
-import { useFormik } from 'formik'; // ❗ 1. Importamos Formik
-import * as Yup from 'yup'; // ❗ 2. Importamos Yup
+import { useFormik } from 'formik';
+import * as Yup from 'yup';
+import type { UpdateUserAdminDto, UsuarioDto } from '../../../../types/dto/usuario.dto';
 
-// ❗ 3. Importamos los tipos centralizados
-import type { UpdateUserByAdminDTO } from '../../../../types/dto/usuario.dto'; 
-import type { User } from '../../../../types/dto/auth.dto';
+
 
 // ════════════════════════════════════════════════════════════
 // PROPS
@@ -39,16 +38,15 @@ import type { User } from '../../../../types/dto/auth.dto';
 interface EditUserModalProps {
   open: boolean;
   onClose: () => void;
-  user: User | null; // Usamos el tipo 'User' de auth.types.ts
-  onSubmit: (id: number, data: UpdateUserByAdminDTO) => Promise<void>;
+  user: UsuarioDto | null; // ✅ Usamos el DTO de respuesta
+  onSubmit: (id: number, data: UpdateUserAdminDto) => Promise<void>; // ✅ Usamos el DTO de envío
   isLoading?: boolean;
 }
 
 // ════════════════════════════════════════════════════════════
-// VALIDACIÓN
+// VALIDACIÓN (Yup)
 // ════════════════════════════════════════════════════════════
 
-// ❗ 4. Usamos los nombres de campo de 'UpdateUserByAdminDTO'
 const validationSchema = Yup.object({
   nombre: Yup.string().min(2, "Mínimo 2 caracteres").required("El nombre es requerido"),
   apellido: Yup.string().min(2, "Mínimo 2 caracteres").required("El apellido es requerido"),
@@ -71,31 +69,32 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
   isLoading = false 
 }) => {
 
-  // ❗ 5. Usamos Formik para manejar el estado y la validación
-  const formik = useFormik<UpdateUserByAdminDTO>({
+  // 2. Configuración de Formik con el DTO de Actualización
+  const formik = useFormik<UpdateUserAdminDto>({
     initialValues: {
       nombre: '',
       apellido: '',
       email: '',
       nombre_usuario: '',
-      numero_telefono: '', // ❗ CORREGIDO: de 'telefono' a 'numero_telefono'
+      numero_telefono: '',
       rol: 'cliente',
       activo: true,
     },
     validationSchema: validationSchema,
-    enableReinitialize: true, // Permite que los valores se actualicen cuando 'user' cambie
+    enableReinitialize: true, // Importante para cargar los datos cuando 'user' llega
     onSubmit: async (values) => {
       if (!user) return;
       try {
+        // values ya coincide con UpdateUserAdminDto gracias a TypeScript
         await onSubmit(user.id, values);
-        onClose(); // Cierra solo si tiene éxito
+        onClose();
       } catch (error) {
         console.error('Error al actualizar usuario:', error);
       }
     },
   });
 
-  // Efecto para cargar datos en Formik cuando el 'user' (prop) cambia
+  // 3. Cargar datos del usuario en el formulario
   useEffect(() => {
     if (user) {
       formik.setValues({
@@ -103,13 +102,13 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         apellido: user.apellido || '',
         email: user.email || '',
         nombre_usuario: user.nombre_usuario || '',
-        numero_telefono: user.numero_telefono || '', // ❗ CORREGIDO
+        numero_telefono: user.numero_telefono || '',
         rol: user.rol || 'cliente',
-        activo: user.activo ?? true,
+        activo: user.activo ?? true, // Usamos ?? por si activo es false
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]); // Se ejecuta solo cuando el 'user' (prop) cambia
+  }, [user]);
 
   if (!user) return null;
 
@@ -136,24 +135,24 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         <DialogContent dividers>
           <Stack spacing={3} sx={{ mt: 1 }}>
             
-            <Alert severity="info" icon={false}>
-              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                <Typography variant="body2" fontWeight="medium">
+            {/* DATOS DE SOLO LECTURA (IDs y Fechas) */}
+            <Alert severity="info" icon={false} sx={{ borderRadius: 2 }}>
+              <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+                <Typography variant="body2">
                   <strong>ID:</strong> {user.id}
                 </Typography>
-                <Typography variant="body2" fontWeight="medium">
+                <Typography variant="body2">
                   <strong>DNI:</strong> {user.dni}
                 </Typography>
-                <Typography variant="body2" fontWeight="medium">
-                  {/* ❗ CORRECCIÓN: Tu tipo 'User' ahora tiene 'fecha_registro' */}
-                  <strong>Registro:</strong> {new Date(user.fecha_registro || '').toLocaleDateString()}
+                <Typography variant="body2">
+                  <strong>Registro:</strong> {user.fecha_registro ? new Date(user.fecha_registro).toLocaleDateString() : '-'}
                 </Typography>
               </Box>
             </Alert>
 
-            {/* INFORMACIÓN PERSONAL (SIN GRID) */}
+            {/* SECCIÓN 1: INFORMACIÓN PERSONAL */}
             <Box>
-              <Typography variant="subtitle2" color="text.secondary" gutterBottom fontWeight="medium">
+              <Typography variant="subtitle2" color="primary" gutterBottom fontWeight="bold">
                 Información Personal
               </Typography>
               <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2, mb: 2 }}>
@@ -182,17 +181,17 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                 fullWidth
                 id="numero_telefono"
                 label="Teléfono"
-                {...formik.getFieldProps('numero_telefono')} // ❗ CORREGIDO
-                error={formik.touched.numero_telefono && Boolean(formik.errors.numero_telefono)} // ❗ CORREGIDO
-                helperText={formik.touched.numero_telefono && formik.errors.numero_telefono} // ❗ CORREGIDO
+                {...formik.getFieldProps('numero_telefono')}
+                error={formik.touched.numero_telefono && Boolean(formik.errors.numero_telefono)}
+                helperText={formik.touched.numero_telefono && formik.errors.numero_telefono}
                 disabled={isLoading}
                 required
               />
             </Box>
 
-            {/* CREDENCIALES (SIN GRID) */}
+            {/* SECCIÓN 2: CREDENCIALES */}
             <Box>
-              <Typography variant="subtitle2" color="text.secondary" gutterBottom fontWeight="medium">
+              <Typography variant="subtitle2" color="primary" gutterBottom fontWeight="bold">
                 Credenciales
               </Typography>
               <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
@@ -220,17 +219,18 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
               </Box>
             </Box>
 
-            {/* PERMISOS Y ESTADO (SIN GRID) */}
+            {/* SECCIÓN 3: PERMISOS Y ESTADO */}
             <Box>
-              <Typography variant="subtitle2" color="text.secondary" gutterBottom fontWeight="medium">
+              <Typography variant="subtitle2" color="primary" gutterBottom fontWeight="bold">
                 Permisos y Estado
               </Typography>
-              <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2, alignItems: 'center' }}>
+              <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2, alignItems: 'stretch' }}>
+                
+                {/* Selector de Rol */}
                 <TextField
-                  fullWidth
                   select
                   id="rol"
-                  label="Rol"
+                  label="Rol de Usuario"
                   {...formik.getFieldProps('rol')}
                   disabled={isLoading}
                   sx={{ flex: 1 }}
@@ -238,39 +238,40 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                   <MenuItem value="cliente">Cliente</MenuItem>
                   <MenuItem value="admin">Administrador</MenuItem>
                 </TextField>
+
+                {/* Switch de Activo/Inactivo */}
                 <Box sx={{ 
                   p: 1, 
                   border: '1px solid', 
-                  borderColor: 'divider', 
+                  borderColor: formik.values.activo ? 'success.light' : 'divider', 
+                  bgcolor: formik.values.activo ? 'success.lighter' : 'transparent',
                   borderRadius: 1, 
                   flex: 1, 
-                  minHeight: 56, 
                   display: 'flex', 
-                  alignItems: 'center' 
+                  alignItems: 'center',
+                  justifyContent: 'center'
                 }}>
                   <FormControlLabel
                     control={
                       <Switch
-                        checked={formik.values.activo}
-                        onChange={formik.handleChange} // Formik maneja el 'checked'
+                        checked={Boolean(formik.values.activo)}
+                        onChange={formik.handleChange}
                         name="activo"
                         color="success"
                         disabled={isLoading}
                       />
                     }
                     label={
-                      <Box>
-                        <Typography variant="body2" fontWeight="medium">
-                          {formik.values.activo ? 'Cuenta Activa' : 'Cuenta Inactiva'}
-                        </Typography>
-                      </Box>
+                      <Typography variant="body2" fontWeight="bold" color={formik.values.activo ? 'success.main' : 'text.secondary'}>
+                        {formik.values.activo ? 'CUENTA ACTIVA' : 'CUENTA SUSPENDIDA'}
+                      </Typography>
                     }
                   />
                 </Box>
               </Box>
             </Box>
 
-            {/* ESTADO DE SEGURIDAD (SOLO LECTURA) */}
+            {/* SECCIÓN 4: INDICADORES DE SEGURIDAD (Visual) */}
             <Box>
               <Typography variant="subtitle2" color="text.secondary" gutterBottom fontWeight="medium">
                 Estado de Seguridad
@@ -278,30 +279,35 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
               <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                 <Chip 
                   icon={user.confirmado_email ? <CheckCircleIcon /> : <CancelIcon />}
-                  label={user.confirmado_email ? 'Email Confirmado' : 'Email Pendiente'} 
+                  label={user.confirmado_email ? 'Email Confirmado' : 'Email No Confirmado'} 
                   color={user.confirmado_email ? 'success' : 'warning'}
                   size="small"
+                  variant="outlined"
                 />
                 <Chip 
-                  label={user.is_2fa_enabled ? '2FA Activo' : '2FA Inactivo'} 
+                  label={user.is_2fa_enabled ? '2FA Habilitado' : '2FA Deshabilitado'} 
                   color={user.is_2fa_enabled ? 'info' : 'default'}
                   size="small"
+                  variant="outlined"
                 />
               </Stack>
             </Box>
 
+            {/* Alerta de suspensión */}
             {!formik.values.activo && (
-              <Alert severity="warning">
-                <strong>Advertencia:</strong> Al desactivar esta cuenta, el usuario no podrá iniciar sesión.
+              <Alert severity="error" variant="filled">
+                <strong>Atención:</strong> Al desactivar esta cuenta, el usuario perderá el acceso inmediato a la plataforma.
               </Alert>
             )}
+
           </Stack>
         </DialogContent>
 
-        <DialogActions sx={{ p: 2.5, gap: 1 }}>
+        <DialogActions sx={{ p: 3 }}>
           <Button 
             onClick={onClose} 
             variant="outlined"
+            color="inherit"
             disabled={isLoading}
           >
             Cancelar
@@ -309,6 +315,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
           <Button 
             type="submit" 
             variant="contained"
+            color="primary"
             disabled={isLoading || !formik.isValid}
             startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : <EditIcon />}
           >

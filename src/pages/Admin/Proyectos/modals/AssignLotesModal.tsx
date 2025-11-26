@@ -9,17 +9,19 @@ import { Close as CloseIcon, Layers as LotesIcon } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
 
 // --- Servicios ---
-import loteService from '../../../../Services/lote.service';
+// ✅ CORRECCIÓN: Importar con el nombre exacto que tiene el export default
+import LoteService from '../../../../Services/lote.service';
 
 // --- Tipos ---
-import type { ProyectoDTO } from '../../../../types/dto/proyecto.dto';
-import type { LoteDTO } from '../../../../types/dto/lote.dto';
+// ✅ CORRECCIÓN: Usar LoteDto y ProyectoDto (coincidiendo con tus archivos .dto.ts)
+import type { ProyectoDto } from '../../../../types/dto/proyecto.dto';
+import type { LoteDto } from '../../../../types/dto/lote.dto';
 
 interface AssignLotesModalProps {
   open: boolean;
   onClose: () => void;
   onSubmit: (proyectoId: string, data: { lotesIds: number[] }) => void;
-  proyecto: ProyectoDTO | null;
+  proyecto: ProyectoDto | null;
   isLoading?: boolean;
 }
 
@@ -30,13 +32,17 @@ export const AssignLotesModal: React.FC<AssignLotesModalProps> = ({
   proyecto,
   isLoading = false 
 }) => {
-  const [selectedLotes, setSelectedLotes] = useState<LoteDTO[]>([]);
+  const [selectedLotes, setSelectedLotes] = useState<LoteDto[]>([]);
 
-  // 1. Query para traer lotes sin asignar (Llamada corregida)
-  const { data: lotesDisponibles = [], isLoading: isLoadingLotes } = useQuery<LoteDTO[], Error>({
-    queryKey: ['lotesSinProyecto'], // Key consistente
-    queryFn: loteService.getLotesSinProyecto, // Método correcto del servicio
-    enabled: open, // Solo ejecuta si el modal está abierto
+  // 1. Query para traer lotes sin asignar
+  const { data: lotesDisponibles = [], isLoading: isLoadingLotes } = useQuery<LoteDto[]>({
+    queryKey: ['lotesSinProyecto'],
+    // ✅ CORRECCIÓN: Usamos el método correcto 'getUnassigned' y extraemos .data
+    queryFn: async () => {
+      const response = await LoteService.getUnassigned();
+      return response.data;
+    },
+    enabled: open, 
   });
 
   const handleSubmit = () => {
@@ -47,7 +53,6 @@ export const AssignLotesModal: React.FC<AssignLotesModalProps> = ({
       lotesIds: selectedLotes.map(lote => lote.id)
     });
     
-    // Limpiamos la selección pero NO cerramos aquí (esperamos éxito de la mutación en el padre)
     setSelectedLotes([]);
   };
 
@@ -58,6 +63,7 @@ export const AssignLotesModal: React.FC<AssignLotesModalProps> = ({
 
   if (!proyecto) return null;
 
+  // Asumimos que ProyectoDto tiene una propiedad opcional 'lotes'
   const lotesYaAsignados = proyecto.lotes || [];
 
   return (
@@ -78,16 +84,19 @@ export const AssignLotesModal: React.FC<AssignLotesModalProps> = ({
         <Stack spacing={3} sx={{ mt: 1 }}>
           
           {/* Información del Proyecto */}
-          <Box sx={{ p: 2, bgcolor: 'primary.50', borderRadius: 1 }}>
-            <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-              {proyecto.nombre_proyecto}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Tipo: {proyecto.tipo_inversion === 'mensual' ? 'Ahorro (Mensual)' : 'Inversión (Directo)'}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Estado: {proyecto.estado_proyecto}
-            </Typography>
+          <Box sx={{ p: 2, bgcolor: 'primary.light', borderRadius: 1, opacity: 0.2 }}> 
+             {/* Ajusté el color a primary.light con opacidad simulada o usa un gris suave si primary.50 no existe en tu tema */}
+             <Box sx={{ opacity: 1, color: 'text.primary' }}>
+                <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                  {proyecto.nombre_proyecto}
+                </Typography>
+                <Typography variant="body2">
+                  Tipo: {proyecto.tipo_inversion === 'mensual' ? 'Ahorro (Mensual)' : 'Inversión (Directo)'}
+                </Typography>
+                <Typography variant="body2">
+                  Estado: {proyecto.estado_proyecto}
+                </Typography>
+             </Box>
           </Box>
 
           {/* Lotes Ya Asignados */}
@@ -100,9 +109,8 @@ export const AssignLotesModal: React.FC<AssignLotesModalProps> = ({
                 {lotesYaAsignados.map((lote) => (
                   <Chip
                     key={lote.id}
-                    // Usamos nombre_lote (si tu backend devuelve numero_lote, ajusta aquí)
                     label={`${lote.nombre_lote} (ID: ${lote.id})`}
-                    color="primary"
+                    color="default"
                     size="small"
                     variant="outlined"
                   />
@@ -122,11 +130,12 @@ export const AssignLotesModal: React.FC<AssignLotesModalProps> = ({
               id="lotes-selector"
               options={lotesDisponibles}
               // Muestra Nombre y Precio
-              getOptionLabel={(option) => `${option.nombre_lote} ($${option.precio_base?.toLocaleString()})`}
+              getOptionLabel={(option) => `${option.nombre_lote} ($${Number(option.precio_base).toLocaleString()})`}
               value={selectedLotes}
               onChange={(_, newValue) => setSelectedLotes(newValue)}
               loading={isLoadingLotes}
               disabled={isLoading}
+              isOptionEqualToValue={(option, value) => option.id === value.id} // Importante para evitar warnings
               renderInput={(params) => (
                 <TextField
                   {...params}
@@ -150,7 +159,9 @@ export const AssignLotesModal: React.FC<AssignLotesModalProps> = ({
                     <Typography variant="body2" fontWeight={500}>
                       {option.nombre_lote}
                     </Typography>
-                  
+                    <Typography variant="caption" color="text.secondary">
+                       ID: {option.id} - Base: ${Number(option.precio_base).toLocaleString()}
+                    </Typography>
                   </Box>
                 </li>
               )}
@@ -158,7 +169,7 @@ export const AssignLotesModal: React.FC<AssignLotesModalProps> = ({
             
             {lotesDisponibles.length === 0 && !isLoadingLotes && (
               <Alert severity="warning" sx={{ mt: 2 }}>
-                No hay lotes disponibles sin asignar. Debes crear lotes primero desde la gestión de lotes.
+                No hay lotes "huérfanos" disponibles. Crea nuevos lotes sin proyecto asignado primero.
               </Alert>
             )}
 
@@ -189,5 +200,4 @@ export const AssignLotesModal: React.FC<AssignLotesModalProps> = ({
   );
 };
 
-// Exportación por defecto para facilitar importación
 export default AssignLotesModal;

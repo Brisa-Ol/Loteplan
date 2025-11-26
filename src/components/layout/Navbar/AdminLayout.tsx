@@ -1,62 +1,37 @@
-import React, { useState } from 'react';
-import { Box, CssBaseline, IconButton, useTheme, useMediaQuery } from '@mui/material';
-import { Menu as MenuIcon } from '@mui/icons-material';
+import React from 'react';
 import { Outlet } from 'react-router-dom';
-import Sidebar, { DRAWER_WIDTH } from './Sidebar';
+import { Box } from '@mui/material';
+import { useQuery } from '@tanstack/react-query';
+import AdminSidebar from './AdminSidebar';
+import kycService from '../../../Services/kyc.service';
 
 
 const AdminLayout: React.FC = () => {
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-
-  const handleDrawerToggle = () => {
-    setMobileOpen(!mobileOpen);
-  };
+  // Query para obtener conteo de KYCs pendientes
+  const { data: pendingKYC = 0 } = useQuery({
+    queryKey: ['adminPendingKYC'],
+    queryFn: async () => {
+      // El servicio devuelve KycDTO[], usamos .length para el badge
+      const solicitudes = await kycService.getPendingVerifications();
+      return solicitudes.length;
+    },
+    refetchInterval: 60000 // Refrescar cada minuto
+  });
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f4f6f8' }}>
-      <CssBaseline />
+    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+      <AdminSidebar pendingKYC={pendingKYC} />
       
-      {/* 1. Sidebar (Navegación Principal del Admin) */}
-      <Box
-        component="nav"
-        sx={{ width: { md: DRAWER_WIDTH }, flexShrink: { md: 0 } }}
-      >
-        <Sidebar 
-          open={mobileOpen} 
-          onClose={handleDrawerToggle} 
-        />
-      </Box>
-
-      {/* 2. Área de Contenido Admin */}
       <Box
         component="main"
         sx={{
-          flexGrow: 1,
-          p: 3,
-          width: { md: `calc(100% - ${DRAWER_WIDTH}px)` },
+          flex: 1,
+          bgcolor: 'background.default', // Usar token del tema mejor que color fijo
           minHeight: '100vh',
-          display: 'flex',
-          flexDirection: 'column',
-          position: 'relative'
+          overflow: 'auto'
         }}
       >
-        {/* Botón Hamburguesa (Solo visible en móvil para abrir el sidebar) */}
-        <Box sx={{ display: { xs: 'block', md: 'none' }, mb: 2 }}>
-          <IconButton
-            color="inherit"
-            aria-label="open drawer"
-            edge="start"
-            onClick={handleDrawerToggle}
-            sx={{ bgcolor: 'white', boxShadow: 1 }}
-          >
-            <MenuIcon />
-          </IconButton>
-        </Box>
-
-        {/* Aquí se renderizan las pantallas de Admin */}
-        <Outlet /> 
+        <Outlet />
       </Box>
     </Box>
   );

@@ -6,10 +6,10 @@ import {
   TrendingUp, Warning, MoneyOff, AttachMoney 
 } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
-import PagoService from '../../../../Services/pago.service';
-import SuscripcionService from '../../../../Services/suscripcion.service';
-import InversionService from '../../../../Services/inversion.service';
-import { PageContainer } from '../../../../components/common/PageContainer/PageContainer';
+import PagoService from '../../../Services/pago.service';
+import SuscripcionService from '../../../Services/suscripcion.service';
+import InversionService from '../../../Services/inversion.service';
+import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
 
 
 
@@ -89,14 +89,12 @@ const AdminDashboard: React.FC = () => {
 
   return (
     <PageContainer maxWidth="xl">
-      <Box mb={5}>
-        <Typography variant="h3" gutterBottom fontWeight={700} color="text.primary">
-          Dashboard Administrativo
-        </Typography>
-        <Typography variant="subtitle1" color="text.secondary">
-          Visión general del estado financiero y operativo de la plataforma.
-        </Typography>
-      </Box>
+
+      {/* Encabezado */}
+            <Box textAlign="center" mb={5}>
+              <Typography variant="h4" fontWeight="bold" color="primary.main">Dashboard Administrativo</Typography>
+              <Typography color="text.secondary"> Visión general del estado financiero y operativo de la plataforma.</Typography>
+            </Box>
 
       {/* GRID LAYOUT MANUAL (CSS Grid) */}
       <Box sx={{ 

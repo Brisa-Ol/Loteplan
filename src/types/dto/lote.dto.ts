@@ -1,21 +1,25 @@
+import type { BaseDTO } from "./base.dto";
+import type { ImagenDto } from "./imagen.dto";
+
+// ==========================================
+// 🛠️ TYPES
+// ==========================================
+export type EstadoSubasta = 'pendiente' | 'activa' | 'finalizada';
 
 // ==========================================
 // 📤 REQUEST DTOs (Lo que envías)
 // ==========================================
 
-import type { BaseDTO } from "./base.dto";
-import type { ImagenDto } from "./imagen.dto";
-
 export interface CreateLoteDto {
   nombre_lote: string;
   precio_base: number;
   
-  // Ubicación
-  latitud?: number;
-  longitud?: number;
-  
   // Asociación (Opcional, si es subasta privada)
-  id_proyecto?: number | null;
+  id_proyecto?: number | null; // null = Lote Público
+
+  // Ubicación (Ahora obligatorios en el tipo, opcionales en lógica)
+  latitud?: number | null;
+  longitud?: number | null;
 
   // Fechas para subasta programada
   fecha_inicio?: string; // ISO Date
@@ -23,8 +27,13 @@ export interface CreateLoteDto {
 }
 
 export interface UpdateLoteDto extends Partial<CreateLoteDto> {
-  // Permite actualizar campos parciales
-  estado_subasta?: 'pendiente' | 'activa' | 'finalizada';
+  // Permite actualizar campos parciales + campos exclusivos de update
+  activo?: boolean;
+  estado_subasta?: EstadoSubasta;
+  
+  // Admin puede forzar estos campos manualmente
+  id_ganador?: number | null;
+  intentos_fallidos_pago?: number;
 }
 
 // ==========================================
@@ -33,29 +42,31 @@ export interface UpdateLoteDto extends Partial<CreateLoteDto> {
 
 /**
  * Modelo principal de Lote.
+ * Refleja la estructura de la base de datos (Lote.js).
  */
 export interface LoteDto extends BaseDTO {
   nombre_lote: string;
-  precio_base: number; // Se recibe como string o number dependiendo de config de axios, idealmente number
+  precio_base: number; // Viene como string '1500.00' del decimal, convertir a Number en front
   
   // Estado Subasta
-  estado_subasta: 'pendiente' | 'activa' | 'finalizada';
+  estado_subasta: EstadoSubasta;
   fecha_inicio?: string;
   fecha_fin?: string;
+  activo: boolean;
   
   // Relaciones
-  id_proyecto: number | null; // null = Lote Público
-  id_ganador?: number;
-  id_puja_mas_alta?: number;
+  id_proyecto: number | null; 
+  id_ganador: number | null;
+  id_puja_mas_alta: number | null;
   
   // Visualización
-  imagenes?: ImagenDto[]; // Array de imágenes asociadas
+  imagenes?: ImagenDto[]; 
   
   // Geo
-  latitud?: number;
-  longitud?: number;
+  latitud?: number | null;
+  longitud?: number | null;
   
   // Datos calculados o extras del backend
-  intentos_fallidos_pago?: number;
-  excedente_visualizacion?: number;
+  intentos_fallidos_pago: number;
+  excedente_visualizacion: number;
 }

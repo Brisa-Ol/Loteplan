@@ -1,407 +1,285 @@
-// src/pages/Admin/AdminDashboard.tsx
-// (CORREGIDO: Se eliminan las tarjetas de stats de usuarios)
-
-import React, { useState } from 'react';
-import {
-  Box,
-  Typography,
-  Paper,
-  Card,
-  CardContent,
-  Avatar,
-  Stack,
-  Snackbar,
-  Alert,
-  LinearProgress,
-  useTheme,
-  Chip,
+import React, { useState, useMemo } from 'react';
+import { 
+  Box, Typography, Paper, Table, TableBody, TableCell, 
+  TableContainer, TableHead, TableRow, Chip, IconButton, Tooltip, 
+  Stack, Button, TextField, MenuItem, InputAdornment 
 } from '@mui/material';
-import {
-  PendingActions as PendingActionsIcon,
-  Assessment as AssessmentIcon,
-  TrendingUp as TrendingUpIcon,
+import { 
+  Block as BlockIcon, 
+  CheckCircle, 
+  PersonAdd, 
+  Search, 
+  Group as GroupIcon, 
+  MarkEmailRead, 
+  Security, 
+  Edit as EditIcon // ✏️ Icono para editar
 } from '@mui/icons-material';
-import { useQuery } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip as RechartsTooltip,
-  Legend,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-} from 'recharts';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 
-// Se elimina import de User
-import type { KycDTO } from '../../types/dto/kyc.dto';
+import type { UsuarioDto, CreateUsuarioDto, UpdateUserAdminDto } from '../../types/dto/usuario.dto';
+
+// Componentes Comunes
 import { PageContainer } from '../../components/common/PageContainer/PageContainer';
-import { PageHeader } from '../../components/common/PageHeader/PageHeader';
 import { QueryHandler } from '../../components/common/QueryHandler/QueryHandler';
-import proyectoService from '../../Services/proyecto.service';
-import kycService from '../../Services/kyc.service';
+import UsuarioService from '../../Services/usuario.service';
+import CreateUserModal from './Usuarios/modals/CreateUserModal';
+import EditUserModal from './Usuarios/modals/EditUserModal';
 
-// ════════════════════════════════════════════════════════════
-// TIPOS DE MÉTRICAS
-// ════════════════════════════════════════════════════════════
 
-interface CompletionRateDTO {
-  tasa_culminacion: string;
-  total_finalizados: number;
-  total_iniciados: number;
-}
+// Componente de Tarjeta KPI (Pequeña)
+const MiniStatCard: React.FC<{ title: string; value: number; icon: React.ReactNode; color: string }> = ({ title, value, icon, color }) => (
+  <Paper elevation={0} sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 2, bgcolor: 'background.paper', borderRadius: 2, border: '1px solid #eee' }}>
+    <Box sx={{ bgcolor: `${color}.light`, color: `${color}.main`, p: 1, borderRadius: '50%', display: 'flex' }}>
+      {icon}
+    </Box>
+    <Box>
+      <Typography variant="h5" fontWeight="bold">{value}</Typography>
+      <Typography variant="caption" color="text.secondary">{title}</Typography>
+    </Box>
+  </Paper>
+);
 
-interface MonthlyProgressItem {
-  id: number;
-  nombre: string;
-  estado: 'En proceso' | 'En Espera' | 'Finalizado';
-  meta_suscripciones: number;
-  suscripciones_actuales: number;
-  porcentaje_avance: string;
-}
+const AdminUsuarios: React.FC = () => {
+  const queryClient = useQueryClient();
+  
+  // Estados de Filtros y Búsqueda
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
 
-// ════════════════════════════════════════════════════════════
-// COMPONENTE PRINCIPAL
-// ════════════════════════════════════════════════════════════
+  // 🟢 ESTADOS PARA LOS MODALES
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false); // Controla modal Crear
+  const [editingUser, setEditingUser] = useState<UsuarioDto | null>(null); // Controla modal Editar (si no es null, se abre)
 
-const AdminDashboard: React.FC = () => {
-  const navigate = useNavigate();
-  const theme = useTheme();
-
-  const [snackbar, setSnackbar] = useState({
-    open: false,
-    message: '',
-    severity: 'success' as 'success' | 'error' | 'warning' | 'info',
+  // 1. Query: Obtener todos los usuarios
+  const { data: usuarios = [], isLoading, error } = useQuery<UsuarioDto[]>({
+    queryKey: ['adminUsuarios'],
+    queryFn: async () => {
+        const res = await UsuarioService.findAll();
+        return res.data; 
+    }
   });
 
-  // ══════════════════════════════════════════════════════════
-  // QUERIES - (Se elimina la query de usuarios)
-  // ══════════════════════════════════════════════════════════
+  // 2. KPIs (Estadísticas rápidas)
+  const stats = useMemo(() => ({
+    total: usuarios.length,
+    activos: usuarios.filter(u => u.activo).length,
+    confirmados: usuarios.filter(u => u.confirmado_email).length,
+    con2FA: usuarios.filter(u => u.is_2fa_enabled).length
+  }), [usuarios]);
 
-  const {
-    data: pendingKYC = [],
-    isLoading: loadingKYC,
-    error: kycError,
-  } = useQuery<KycDTO[], Error>({
-    queryKey: ['pendingKYC'],
-    queryFn: kycService.getPendingVerifications,
+  // 3. Filtrado en frontend (Búsqueda + Estado)
+  const filteredUsers = useMemo(() => {
+    return usuarios.filter(user => {
+      const term = searchTerm.toLowerCase();
+      const matchesSearch = 
+        user.nombre_usuario.toLowerCase().includes(term) ||
+        user.email.toLowerCase().includes(term) ||
+        user.nombre.toLowerCase().includes(term) ||
+        user.apellido.toLowerCase().includes(term);
+      
+      const matchesStatus = 
+        filterStatus === 'all' ? true :
+        filterStatus === 'active' ? user.activo :
+        !user.activo;
+
+      return matchesSearch && matchesStatus;
+    });
+  }, [usuarios, searchTerm, filterStatus]);
+
+  // ==============================================================
+  // 4. MUTACIONES (Conexión con Backend)
+  // ==============================================================
+
+  // A. Crear Usuario
+  const createMutation = useMutation({
+    mutationFn: async (data: CreateUsuarioDto) => {
+        return await UsuarioService.create(data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminUsuarios'] });
+      setIsCreateModalOpen(false); // Cerrar modal
+      alert('Usuario creado con éxito. Se ha enviado un correo de confirmación.');
+    },
+    onError: (err: any) => alert(`Error al crear: ${err.response?.data?.error || err.message}`)
   });
 
-  const {
-    data: completionRate,
-    isLoading: isLoadingCompletion,
-    error: errorCompletion,
-  } = useQuery<CompletionRateDTO, Error>({
-    queryKey: ['completionRate'],
-    queryFn: proyectoService.getCompletionRate,
+  // B. Editar Usuario
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number, data: UpdateUserAdminDto }) => {
+        return await UsuarioService.updateAdmin(id, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminUsuarios'] });
+      setEditingUser(null); // Cerrar modal (limpiando el usuario seleccionado)
+      alert('Usuario actualizado correctamente.');
+    },
+    onError: (err: any) => alert(`Error al actualizar: ${err.response?.data?.error || err.message}`)
   });
 
-  const {
-    data: monthlyProgress = [],
-    isLoading: isLoadingProgress,
-    error: errorProgress,
-  } = useQuery<MonthlyProgressItem[], Error>({
-    queryKey: ['monthlyProgress'],
-    queryFn: proyectoService.getMonthlyProgress,
+  // C. Activar/Desactivar Rápido
+  const toggleStatusMutation = useMutation({
+    mutationFn: async (usuario: UsuarioDto) => {
+      if (usuario.activo) {
+        await UsuarioService.softDeleteAdmin(usuario.id);
+      } else {
+        await UsuarioService.updateAdmin(usuario.id, { activo: true });
+      }
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['adminUsuarios'] }),
+    onError: (err: any) => alert(`Error: ${err.message}`)
   });
-
-  const isLoading =
-    loadingKYC || isLoadingCompletion || isLoadingProgress;
-  const queryError = kycError || errorCompletion || errorProgress;
-
-  // ══════════════════════════════════════════════════════════
-  // DATOS PROCESADOS (Se eliminan stats de usuarios)
-  // ══════════════════════════════════════════════════════════
-
-  const RECHART_COLORS = [
-    theme.palette.primary.main,
-    theme.palette.success.main,
-    theme.palette.warning.main,
-    theme.palette.error.main,
-    theme.palette.info.main,
-  ];
-
-  const stats = {
-    pendingKYC: pendingKYC.length,
-    proyectosEnProceso: monthlyProgress.filter((p) => p.estado === 'En proceso')
-      .length,
-    proyectosEnEspera: monthlyProgress.filter((p) => p.estado === 'En Espera')
-      .length,
-    totalFinalizados: completionRate?.total_finalizados ?? 0,
-  };
-
-  const chartDataSuscripciones = monthlyProgress.map((p) => ({
-    nombre: p.nombre.length > 15 ? p.nombre.substring(0, 15) + '...' : p.nombre,
-    avance: parseFloat(p.porcentaje_avance),
-    meta: p.meta_suscripciones,
-    actuales: p.suscripciones_actuales,
-  }));
-
-  const estadosData = [
-    { name: 'En Proceso', value: stats.proyectosEnProceso },
-    { name: 'En Espera', value: stats.proyectosEnEspera },
-    { name: 'Finalizados', value: stats.totalFinalizados },
-  ].filter((item) => item.value > 0);
-
-  // ══════════════════════════════════════════════════════════
-  // RENDER
-  // ══════════════════════════════════════════════════════════
 
   return (
-    <PageContainer maxWidth="xl" sx={{ py: 4 }}>
-      <PageHeader
-        title="Panel de Administración"
-        subtitle="Métricas de KPIs, Proyectos y Usuarios."
-      />
-
-      {/* Tarjetas de Estadísticas (Solo queda KYC) */}
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', mx: -1.5, mb: 4 }}>
-        <Box sx={{ width: { xs: '100%', sm: '50%', md: '20%' }, p: 1.5 }}>
-          <Card
-            elevation={2}
-            sx={{
-              cursor: 'pointer',
-              '&:hover': { boxShadow: 4 },
-              height: '100%',
-            }}
-            onClick={() => navigate('/admin/kyc')}
-          >
-            <CardContent>
-              <Stack direction="row" alignItems="center" spacing={2}>
-                <Avatar sx={{ bgcolor: 'error.main' }}>
-                  <PendingActionsIcon />
-                </Avatar>
-                <Box>
-                  <Typography variant="h4" fontWeight="bold">
-                    {stats.pendingKYC}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    KYC Pendientes
-                  </Typography>
-                </Box>
-              </Stack>
-            </CardContent>
-          </Card>
-        </Box>
+    <PageContainer maxWidth="xl">
+      
+      {/* Encabezado */}
+      <Box textAlign="center" mb={5}>
+        <Typography variant="h4" fontWeight="bold" color="primary.main">Gestión de Usuarios</Typography>
+        <Typography color="text.secondary">Administra el acceso y los roles de los usuarios del sistema.</Typography>
       </Box>
 
-      <QueryHandler
-        isLoading={isLoading}
-        error={queryError as Error | null}
-        fullHeight
-      >
-        <Stack spacing={3}>
-          {/* Gráficos */}
-          <Box
-            sx={{
-              display: 'flex',
-              flexDirection: { xs: 'column', lg: 'row' },
-              gap: 3,
-            }}
-          >
-            {/* Gráfico de Barras */}
-            <Box sx={{ width: { xs: '100%', lg: 'calc(66.66% - 12px)' } }}>
-              <Paper elevation={2} sx={{ p: 3, height: '100%' }}>
-                <Box
-                  sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}
-                >
-                  <AssessmentIcon color="primary" />
-                  <Typography variant="h6" fontWeight="bold">
-                    Avance de Suscripciones (KPI 5)
-                  </Typography>
-                </Box>
-                {monthlyProgress.length === 0 ? (
-                  <Alert severity="info">
-                    No hay proyectos mensuales activos para mostrar.
-                  </Alert>
-                ) : (
-                  <ResponsiveContainer width="100%" height={350}>
-                    <BarChart data={chartDataSuscripciones}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="nombre" />
-                      <YAxis />
-                      <RechartsTooltip
-                        content={({ active, payload }) => {
-                          if (active && payload && payload.length) {
-                            const data = payload[0].payload;
-                            return (
-                              <Paper sx={{ p: 1.5, border: '1px solid #ccc' }}>
-                                <Typography variant="body2" fontWeight="bold">
-                                  {data.nombre}
-                                </Typography>
-                                <Typography
-                                  variant="caption"
-                                  color="text.secondary"
-                                >
-                                  Avance: {data.avance.toFixed(2)}%
-                                </Typography>
-                                <br />
-                                <Typography
-                                  variant="caption"
-                                  color="text.secondary"
-                                >
-                                  Suscripciones: {data.actuales} / {data.meta}
-                                </Typography>
-                              </Paper>
-                            );
-                          }
-                          return null;
-                        }}
-                      />
-                      <Legend />
-                      <Bar
-                        dataKey="avance"
-                        fill={theme.palette.primary.main}
-                        name="% Avance"
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                )}
-              </Paper>
-            </Box>
+      {/* KPIs */}
+      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} mb={4}>
+        <Box flex={1}><MiniStatCard title="Total Usuarios" value={stats.total} icon={<GroupIcon />} color="primary" /></Box>
+        <Box flex={1}><MiniStatCard title="Activos" value={stats.activos} icon={<CheckCircle />} color="success" /></Box>
+        <Box flex={1}><MiniStatCard title="Email Confirmado" value={stats.confirmados} icon={<MarkEmailRead />} color="info" /></Box>
+        <Box flex={1}><MiniStatCard title="Con 2FA" value={stats.con2FA} icon={<Security />} color="warning" /></Box>
+      </Stack>
 
-            {/* Gráfico de Torta */}
-            <Box sx={{ width: { xs: '100%', lg: 'calc(33.33% - 12px)' } }}>
-              <Paper elevation={2} sx={{ p: 3, height: '100%' }}>
-                <Box
-                  sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}
-                >
-                  <TrendingUpIcon color="primary" />
-                  <Typography variant="h6" fontWeight="bold">
-                    Distribución de Estados
-                  </Typography>
-                </Box>
-                {estadosData.length === 0 ? (
-                  <Alert severity="info">No hay datos disponibles.</Alert>
-                ) : (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={estadosData}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={({ name, percent }) =>
-                          `${name}: ${((percent || 0) * 100).toFixed(0)}%`
-                        }
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {estadosData.map((entry, index) => (
-                          <Cell
-                            key={`cell-${index}`}
-                            fill={RECHART_COLORS[index % RECHART_COLORS.length]}
-                          />
-                        ))}
-                      </Pie>
-                      <RechartsTooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
-                )}
-              </Paper>
-            </Box>
-          </Box>
+      {/* Barra de Herramientas (Filtros + Botón Crear) */}
+      <Paper sx={{ p: 2, mb: 3, display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center', borderRadius: 2 }} elevation={0} variant="outlined">
+        <TextField 
+          placeholder="Buscar por nombre, email o usuario..." 
+          size="small" 
+          sx={{ flexGrow: 1, minWidth: 250 }}
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          InputProps={{ startAdornment: <InputAdornment position="start"><Search /></InputAdornment> }}
+        />
+        
+        <TextField
+          select
+          label="Filtrar por estado"
+          size="small"
+          value={filterStatus}
+          onChange={(e) => setFilterStatus(e.target.value)}
+          sx={{ minWidth: 150 }}
+        >
+          <MenuItem value="all">Todos</MenuItem>
+          <MenuItem value="active">Activos</MenuItem>
+          <MenuItem value="inactive">Inactivos</MenuItem>
+        </TextField>
 
-          {/* Detalle de Proyectos */}
-          <Box>
-            <Paper elevation={2} sx={{ p: 3 }}>
-              <Typography variant="h6" fontWeight="bold" gutterBottom>
-                Detalle de Proyectos Mensuales
-              </Typography>
-              {monthlyProgress.length === 0 ? (
-                <Alert severity="info">
-                  No hay proyectos mensuales activos.
-                </Alert>
-              ) : (
-                <Stack spacing={2} sx={{ mt: 2 }}>
-                  {monthlyProgress.map((proyecto) => {
-                    const porcentaje = parseFloat(proyecto.porcentaje_avance);
-                    const color =
-                      porcentaje >= 100
-                        ? 'success'
-                        : porcentaje >= 50
-                          ? 'primary'
-                          : porcentaje >= 25
-                            ? 'warning'
-                            : 'error';
-                    return (
-                      <Box key={proyecto.id}>
-                        <Stack
-                          direction="row"
-                          justifyContent="space-between"
-                          alignItems="center"
-                          sx={{ mb: 0.5 }}
+        {/* 🆕 BOTÓN NUEVO USUARIO */}
+        <Button 
+            variant="contained" 
+            startIcon={<PersonAdd />} 
+            color="primary"
+            onClick={() => setIsCreateModalOpen(true)}
+        >
+          Nuevo Usuario
+        </Button>
+      </Paper>
+
+      {/* Tabla de Usuarios */}
+      <QueryHandler isLoading={isLoading} error={error as Error | null}>
+        <TableContainer component={Paper} elevation={0} variant="outlined" sx={{ borderRadius: 2 }}>
+          <Table>
+            <TableHead sx={{ bgcolor: 'grey.50' }}>
+              <TableRow>
+                <TableCell sx={{ fontWeight: 'bold', color: 'text.secondary' }}>ID</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', color: 'text.secondary' }}>Usuario</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', color: 'text.secondary' }}>Email</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', color: 'text.secondary' }}>Rol</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', color: 'text.secondary' }}>Estado</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', color: 'text.secondary' }} align="right">Acciones</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filteredUsers.map((user) => (
+                <TableRow key={user.id} hover>
+                  <TableCell>{user.id}</TableCell>
+                  <TableCell>
+                    <Typography variant="body2" fontWeight={600}>{user.nombre_usuario}</Typography>
+                    <Typography variant="caption" color="text.secondary">{user.nombre} {user.apellido}</Typography>
+                  </TableCell>
+                  <TableCell>{user.email}</TableCell>
+                  <TableCell>
+                    <Chip 
+                      label={user.rol} 
+                      size="small" 
+                      color={user.rol === 'admin' ? 'primary' : 'default'} 
+                      variant={user.rol === 'admin' ? 'filled' : 'outlined'}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Chip 
+                      label={user.activo ? 'Activo' : 'Inactivo'} 
+                      color={user.activo ? 'success' : 'default'} 
+                      size="small" 
+                    />
+                  </TableCell>
+                  <TableCell align="right">
+                    
+                    {/* ✏️ BOTÓN EDITAR: Abre el modal 'EditUserModal' */}
+                    <Tooltip title="Editar Usuario">
+                        <IconButton 
+                            color="primary" 
+                            onClick={() => setEditingUser(user)}
+                            sx={{ mr: 1 }}
                         >
-                          <Box
-                            sx={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 1,
-                            }}
-                          >
-                            <Typography variant="body1" fontWeight={600}>
-                              {proyecto.nombre}
-                            </Typography>
-                            <Chip
-                              label={proyecto.estado}
-                              size="small"
-                              color={
-                                proyecto.estado === 'En proceso'
-                                  ? 'success'
-                                  : 'warning'
-                              }
-                            />
-                          </Box>
-                          <Typography variant="body2" fontWeight={500}>
-                            {proyecto.suscripciones_actuales} /{' '}
-                            {proyecto.meta_suscripciones} suscripciones
-                          </Typography>
-                        </Stack>
-                        <LinearProgress
-                          variant="determinate"
-                          value={Math.min(porcentaje, 100)}
-                          color={color}
-                          sx={{ height: 8, borderRadius: 1 }}
-                        />
-                        <Typography
-                          variant="caption"
-                          color="text.secondary"
-                          sx={{ mt: 0.5 }}
-                        >
-                          {porcentaje.toFixed(2)}% completado
-                        </Typography>
-                      </Box>
-                    );
-                  })}
-                </Stack>
+                            <EditIcon />
+                        </IconButton>
+                    </Tooltip>
+
+                    {/* 🚫 BOTÓN ACTIVAR/DESACTIVAR */}
+                    <Tooltip title={user.activo ? "Desactivar cuenta" : "Reactivar cuenta"}>
+                      <IconButton onClick={() => toggleStatusMutation.mutate(user)}>
+                        {user.activo ? <BlockIcon color="error" /> : <CheckCircle color="success" />}
+                      </IconButton>
+                    </Tooltip>
+
+                  </TableCell>
+                </TableRow>
+              ))}
+              {filteredUsers.length === 0 && (
+                 <TableRow><TableCell colSpan={6} align="center" sx={{ py: 4 }}>No se encontraron usuarios.</TableCell></TableRow>
               )}
-            </Paper>
-          </Box>
-        </Stack>
+            </TableBody>
+          </Table>
+        </TableContainer>
       </QueryHandler>
 
-      {/* Snackbar */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={4000}
-        onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert
-          severity={snackbar.severity}
-          onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
+      {/* ==============================================================
+          MODALES (Renderizados condicionalmente por estado)
+      ============================================================== */}
+
+      {/* 1. Modal Crear */}
+      <CreateUserModal 
+        open={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        // onSubmit recibe solo los datos (CreateUsuarioDto)
+        onSubmit={async (data) => {
+            await createMutation.mutateAsync(data);
+        }}
+        isLoading={createMutation.isPending}
+      />
+
+      {/* 2. Modal Editar */}
+      <EditUserModal 
+        open={!!editingUser} // Se abre si editingUser tiene datos
+        onClose={() => setEditingUser(null)}
+        user={editingUser}
+        // onSubmit recibe ID y datos (UpdateUserAdminDto)
+        onSubmit={async (id, data) => {
+            await updateMutation.mutateAsync({ id, data });
+        }}
+        isLoading={updateMutation.isPending}
+      />
+
     </PageContainer>
   );
 };
 
-export default AdminDashboard;
+export default AdminUsuarios;

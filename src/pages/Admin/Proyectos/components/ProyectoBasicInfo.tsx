@@ -9,11 +9,12 @@ import {
   LocationOn as LocationIcon,
   CalendarToday as CalendarIcon
 } from '@mui/icons-material';
+import type { ProyectoDto } from '../../../../types/dto/proyecto.dto';
 
-import type { ProyectoDTO } from '../../../../types/dto/proyecto.dto';
+
 
 interface ProyectoBasicInfoProps {
-  proyecto: ProyectoDTO;
+  proyecto: ProyectoDto;
   onEdit: () => void;
   onManageImages: () => void;
 }

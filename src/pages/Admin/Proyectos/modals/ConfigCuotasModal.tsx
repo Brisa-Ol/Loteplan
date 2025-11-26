@@ -1,10 +1,8 @@
-// src/components/Admin/Proyectos/ConfigCuotasModal.tsx
 import React, { useState, useEffect } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button,
   TextField, Stack, Box, Typography, IconButton, CircularProgress,
-  Alert, Divider, Paper, Table, TableBody, TableCell, TableContainer,
-  TableHead, TableRow, Chip
+  Alert,
 } from '@mui/material';
 import { 
   Close as CloseIcon, 
@@ -15,16 +13,15 @@ import {
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import type { ProyectoDTO } from '../../../../../types/dto/proyecto.dto';
-import cuotaMensualService from '../../../../../Services/cuotaMensual.service';
-import type { CreateCuotaMensualDTO, CuotaMensualDTO } from '../../../../../types/dto/cuotaMensual.dto';
+import type { CreateCuotaMensualDto } from '../../../../types/dto/cuotaMensual.dto';
+import CuotaMensualService from '../../../../Services/cuotaMensual.service';
 
 
 
 interface ConfigCuotasModalProps {
   open: boolean;
   onClose: () => void;
-  proyecto: ProyectoDTO | null;
+  proyecto: ProyectoDto | null;
 }
 
 const validationSchema = Yup.object({
@@ -44,25 +41,27 @@ const ConfigCuotasModal: React.FC<ConfigCuotasModalProps> = ({
   const queryClient = useQueryClient();
   const [showHistory, setShowHistory] = useState(false);
 
-  // Query para obtener el historial de cuotas
-  const { data: cuotasHistorial = [], isLoading: isLoadingHistory } = useQuery<CuotaMensualDTO[], Error>({
-    queryKey: ['cuotasByProyecto', proyecto?.id],
-    queryFn: () => cuotaMensualService.getCuotasByProyecto(proyecto!.id.toString()),
-    enabled: open && !!proyecto && showHistory,
-  });
-
   // Mutation para crear una nueva cuota
   const createMutation = useMutation({
-    mutationFn: cuotaMensualService.createCuota,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['cuotasByProyecto', proyecto?.id] });
-      queryClient.invalidateQueries({ queryKey: ['adminAllProjects'] });
-      formik.resetForm();
-      setShowHistory(true);
+    mutationFn: async (data: CreateCuotaMensualDto) => {
+      const res = await CuotaMensualService.createCuota(data);
+      return res.data;
     },
+    onSuccess: () => {
+      // Invalidamos para recargar el historial y la lista de proyectos (porque cambia el precio)
+      if (proyecto) queryClient.invalidateQueries({ queryKey: ['cuotasByProyecto', proyecto.id] });
+      queryClient.invalidateQueries({ queryKey: ['adminProyectos'] });
+      
+      formik.resetForm();
+      setShowHistory(true); // Mostrar historial tras crear para ver el nuevo registro
+      alert('Cuota configurada y precio actualizado.');
+    },
+    onError: (err: any) => {
+        console.error(err);
+    }
   });
 
-  const formik = useFormik<CreateCuotaMensualDTO>({
+  const formik = useFormik<CreateCuotaMensualDto>({
     initialValues: {
       id_proyecto: proyecto?.id || 0,
       nombre_cemento_cemento: '',
@@ -78,22 +77,14 @@ const ConfigCuotasModal: React.FC<ConfigCuotasModalProps> = ({
       try {
         await createMutation.mutateAsync({
           ...values,
-          id_proyecto: proyecto.id,
+          id_proyecto: proyecto.id, // Asegurar ID correcto
         });
       } catch (error) {
         console.error('Error al crear cuota:', error);
       }
     },
+    enableReinitialize: true, // Para que tome el ID cuando proyecto cargue
   });
-
-  // ✅ CORRECCIÓN: Actualizar id_proyecto cuando cambie el proyecto
-  // Sin incluir 'formik' en las dependencias
-  useEffect(() => {
-    if (proyecto) {
-      formik.setFieldValue('id_proyecto', proyecto.id);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [proyecto?.id]); // ✅ Solo depende del ID del proyecto
 
   const handleClose = () => {
     formik.resetForm();
@@ -107,25 +98,18 @@ const ConfigCuotasModal: React.FC<ConfigCuotasModalProps> = ({
   if (proyecto.tipo_inversion !== 'mensual') {
     return (
       <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <CuotaIcon color="error" />
-            <Typography variant="h6">Configuración No Disponible</Typography>
-          </Box>
-        </DialogTitle>
+        <DialogTitle>Configuración No Disponible</DialogTitle>
         <DialogContent>
           <Alert severity="warning">
             Este proyecto es de tipo <strong>Inversión (Directo)</strong> y no requiere configuración de cuotas mensuales.
           </Alert>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose}>Cerrar</Button>
-        </DialogActions>
+        <DialogActions><Button onClick={handleClose}>Cerrar</Button></DialogActions>
       </Dialog>
     );
   }
 
-  // Calcular valores previos (estimación)
+  // Calcular valores previos (estimación visual en tiempo real)
   const valorMovil = formik.values.valor_cemento_unidades * formik.values.valor_cemento;
   const totalDelPlan = valorMovil * (formik.values.porcentaje_plan / 100);
   const valorMensual = totalDelPlan / (proyecto.plazo_inversion || 1);
@@ -138,13 +122,9 @@ const ConfigCuotasModal: React.FC<ConfigCuotasModalProps> = ({
       <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <CuotaIcon color="primary" />
-          <Typography variant="h6" fontWeight="bold">
-            Configurar Cuota Mensual
-          </Typography>
+          <Typography variant="h6" fontWeight="bold">Configurar Cuota Mensual</Typography>
         </Box>
-        <IconButton onClick={handleClose} size="small">
-          <CloseIcon />
-        </IconButton>
+        <IconButton onClick={handleClose} size="small"><CloseIcon /></IconButton>
       </DialogTitle>
 
       <form onSubmit={formik.handleSubmit}>
@@ -152,16 +132,10 @@ const ConfigCuotasModal: React.FC<ConfigCuotasModalProps> = ({
           <Stack spacing={3}>
             
             {/* Info del Proyecto */}
-            <Box sx={{ p: 2, bgcolor: 'primary.50', borderRadius: 1 }}>
-              <Typography variant="subtitle1" fontWeight="bold">
-                {proyecto.nombre_proyecto}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Plazo: {proyecto.plazo_inversion} cuotas
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Monto Actual: ${proyecto.monto_inversion?.toLocaleString()} {proyecto.moneda}
-              </Typography>
+            <Box sx={{ p: 2, bgcolor: 'primary.light', borderRadius: 1, bgOpacity: 0.1 }}>
+              <Typography variant="subtitle1" fontWeight="bold">{proyecto.nombre_proyecto}</Typography>
+              <Typography variant="body2">Plazo: {proyecto.plazo_inversion} meses</Typography>
+              <Typography variant="body2">Monto Actual: ${Number(proyecto.monto_inversion).toLocaleString()} {proyecto.moneda}</Typography>
             </Box>
 
             {/* Formulario */}
@@ -216,7 +190,6 @@ const ConfigCuotasModal: React.FC<ConfigCuotasModalProps> = ({
                   type="number"
                   {...formik.getFieldProps('porcentaje_plan')}
                   error={formik.touched.porcentaje_plan && Boolean(formik.errors.porcentaje_plan)}
-                  helperText={formik.touched.porcentaje_plan && formik.errors.porcentaje_plan}
                   disabled={createMutation.isPending}
                 />
                 <TextField
@@ -226,7 +199,6 @@ const ConfigCuotasModal: React.FC<ConfigCuotasModalProps> = ({
                   type="number"
                   {...formik.getFieldProps('porcentaje_administrativo')}
                   error={formik.touched.porcentaje_administrativo && Boolean(formik.errors.porcentaje_administrativo)}
-                  helperText={formik.touched.porcentaje_administrativo && formik.errors.porcentaje_administrativo}
                   disabled={createMutation.isPending}
                 />
                 <TextField
@@ -236,119 +208,33 @@ const ConfigCuotasModal: React.FC<ConfigCuotasModalProps> = ({
                   type="number"
                   {...formik.getFieldProps('porcentaje_iva')}
                   error={formik.touched.porcentaje_iva && Boolean(formik.errors.porcentaje_iva)}
-                  helperText={formik.touched.porcentaje_iva && formik.errors.porcentaje_iva}
                   disabled={createMutation.isPending}
                 />
               </Box>
             </Box>
 
-            <Divider />
-
-            {/* Vista Previa del Cálculo */}
-            <Box>
-              <Typography variant="subtitle2" color="text.secondary" gutterBottom fontWeight="medium">
-                Vista Previa del Cálculo
-              </Typography>
-              <Paper variant="outlined" sx={{ p: 2 }}>
-                <Stack spacing={1}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <Typography variant="body2">Valor Móvil:</Typography>
-                    <Typography variant="body2" fontWeight={500}>${valorMovil.toFixed(2)}</Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <Typography variant="body2">Total del Plan:</Typography>
-                    <Typography variant="body2" fontWeight={500}>${totalDelPlan.toFixed(2)}</Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <Typography variant="body2">Valor Mensual Base:</Typography>
-                    <Typography variant="body2" fontWeight={500}>${valorMensual.toFixed(2)}</Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <Typography variant="body2">Carga Administrativa:</Typography>
-                    <Typography variant="body2" fontWeight={500}>${cargaAdministrativa.toFixed(2)}</Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <Typography variant="body2">IVA Carga:</Typography>
-                    <Typography variant="body2" fontWeight={500}>${ivaCarga.toFixed(2)}</Typography>
-                  </Box>
-                  <Divider sx={{ my: 1 }} />
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <Typography variant="body1" fontWeight="bold" color="primary.main">
-                      Valor Cuota Final:
+            {/* Vista Previa */}
+            <Alert severity="info" icon={false} sx={{ '& .MuiAlert-message': { width: '100%' } }}>
+                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Typography variant="body2">Nueva Cuota Estimada:</Typography>
+                    <Typography variant="h6" fontWeight="bold" color="primary.main">
+                        ${valorMensualFinal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {proyecto.moneda}
                     </Typography>
-                    <Typography variant="body1" fontWeight="bold" color="primary.main">
-                      ${valorMensualFinal.toFixed(2)} {proyecto.moneda}
-                    </Typography>
-                  </Box>
                 </Stack>
-              </Paper>
-              <Alert severity="info" sx={{ mt: 2 }}>
-                Este valor se guardará como el <strong>monto_inversion</strong> del proyecto.
-              </Alert>
-            </Box>
-
-            {/* Historial de Cuotas */}
-            {showHistory && (
-              <Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                  <HistoryIcon color="action" />
-                  <Typography variant="subtitle2" color="text.secondary" fontWeight="medium">
-                    Historial de Configuraciones
-                  </Typography>
-                </Box>
-                {isLoadingHistory ? (
-                  <Box sx={{ textAlign: 'center', py: 2 }}>
-                    <CircularProgress size={30} />
-                  </Box>
-                ) : cuotasHistorial.length === 0 ? (
-                  <Alert severity="info">No hay configuraciones previas.</Alert>
-                ) : (
-                  <TableContainer component={Paper} variant="outlined">
-                    <Table size="small">
-                      <TableHead>
-                        <TableRow>
-                          <TableCell>Fecha</TableCell>
-                          <TableCell>Cemento</TableCell>
-                          <TableCell align="right">Unidades</TableCell>
-                          <TableCell align="right">Cuota Final</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {cuotasHistorial.map((cuota, index) => (
-                          <TableRow key={cuota.id}>
-                            <TableCell>
-                              <Chip 
-                                label={index === 0 ? "ACTUAL" : new Date(cuota.createdAt!).toLocaleDateString()} 
-                                size="small" 
-                                color={index === 0 ? "success" : "default"}
-                              />
-                            </TableCell>
-                            <TableCell>{cuota.nombre_cemento_cemento || 'N/A'}</TableCell>
-                            <TableCell align="right">{cuota.valor_cemento_unidades}</TableCell>
-                            <TableCell align="right">
-                              <Typography variant="body2" fontWeight={500}>
-                                ${cuota.valor_mensual_final.toFixed(2)}
-                              </Typography>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                )}
-              </Box>
-            )}
-
-            {createMutation.isSuccess && (
-              <Alert severity="success">
-                ✅ Cuota configurada exitosamente. El monto del proyecto ha sido actualizado.
-              </Alert>
-            )}
+            </Alert>
 
             {createMutation.isError && (
               <Alert severity="error">
-                ❌ Error al configurar la cuota: {(createMutation.error as Error).message}
+                ❌ Error: {(createMutation.error as Error).message}
               </Alert>
+            )}
+
+            {/* Historial (Opcional) */}
+            {showHistory && (
+               <Box mt={2}>
+                  <Typography variant="h6" gutterBottom>Historial</Typography>
+                  <ProyectoPriceHistory proyectoId={proyecto.id} />
+               </Box>
             )}
 
           </Stack>

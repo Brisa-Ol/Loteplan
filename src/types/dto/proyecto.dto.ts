@@ -19,7 +19,7 @@ export interface CreateProyectoDto {
   nombre_proyecto: string;
   descripcion?: string;
   tipo_inversion: TipoInversion;
-  
+  moneda: string;
   // Configuración Financiera
   monto_inversion: number; // Costo total o cuota mensual
   plazo_inversion?: number; // Solo para mensual (meses)
@@ -99,7 +99,7 @@ export interface ProyectoDto extends BaseDTO {
 export interface CompletionRateDto {
   total_iniciados: number;
   total_finalizados: number;
-  tasa_culminacion: string; // "XX.XX"
+  tasa_culminacion: string; 
 }
 
 export interface MonthlyProgressItemDto {
@@ -108,5 +108,5 @@ export interface MonthlyProgressItemDto {
   estado: string;
   meta_suscripciones: number;
   suscripciones_actuales: number;
-  porcentaje_avance: string; // "XX.XX"
+  porcentaje_avance: string;
 }

@@ -19,7 +19,7 @@ export const FavoriteButton: React.FC<FavoriteButtonProps> = ({ loteId }) => {
     if (!isAuthenticated) return;
     const fetchStatus = async () => {
       try {
-        const res = await isFavorito(loteId);
+        const res = await Favorite(loteId);
         setIsFav(res.esFavorito);
       } catch (err) {
         console.error("Error verificando favorito:", err);
