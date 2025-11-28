@@ -23,10 +23,12 @@ import UsuarioService from "../Services/usuario.service";
 import AuthService from "../Services/auth.service";
 import Auth2faService from "../Services/auth2fa.service";
 
+
 interface AuthContextType {
   user: UserDto | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isInitializing: boolean; // 🆕 NUEVO ESTADO PARA CARGA INICIAL
   
   // Estado 2FA temporal (para el flujo de Login)
   requires2FA: boolean;
@@ -59,7 +61,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserDto | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true); // 🆕 TRUE al inicio
   
   // Estados para el flujo de Login con 2FA
   const [requires2FA, setRequires2FA] = useState(false);
@@ -73,7 +76,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const loadUser = useCallback(async () => {
     const token = localStorage.getItem("auth_token");
     if (!token) {
-      setIsLoading(false);
+      setIsInitializing(false); // 🆕 Terminamos inicialización
       return;
     }
 
@@ -87,7 +90,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       localStorage.removeItem("auth_token");
       setUser(null);
     } finally {
-      setIsLoading(false);
+      setIsInitializing(false); // 🆕 Terminamos inicialización
     }
   }, []);
 
@@ -169,15 +172,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     AuthService.logout().catch(console.error);
     
     // 🧹 LIMPIEZA COMPLETA
-    // Opción 1: Limpiar todo el localStorage
     localStorage.clear();
-    
-    // Opción 2: Si prefieres ser más selectivo (comentar la línea anterior y usar estas):
-    // localStorage.removeItem("auth_token");
-    // localStorage.removeItem("two_fa_token");
-    // localStorage.removeItem("user_preferences"); // etc...
-    
-    // Limpiar sessionStorage también
     sessionStorage.clear();
     
     // Resetear el estado de React
@@ -187,7 +182,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setError(null);
     
     // 🔄 REFRESCAR LA PÁGINA COMPLETAMENTE
-    // Esto limpia cualquier estado residual en memoria
     window.location.href = '/login';
   };
 
@@ -266,6 +260,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         user,
         isAuthenticated: !!user,
         isLoading,
+        isInitializing, // 🆕 EXPONEMOS EL NUEVO ESTADO
         requires2FA,
         twoFaToken,
         error,

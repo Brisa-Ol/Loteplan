@@ -1,10 +1,16 @@
-import type { GenericResponseDto } from '../types/dto/auth.dto';
-import type { AsignarLotesDto, CompletionRateDto, CreateProyectoDto, MonthlyProgressItemDto, ProyectoDto, UpdateProyectoDto } from '../types/dto/proyecto.dto';
 import httpService from './httpService';
 import type { AxiosResponse } from 'axios';
+import type { GenericResponseDto } from '../types/dto/auth.dto';
+import type { 
+  AsignarLotesDto, 
+  CompletionRateDTO, 
+  CreateProyectoDto, 
+  MonthlyProgressItem, 
+  ProyectoDto, 
+  UpdateProyectoDto 
+} from '../types/dto/proyecto.dto';
 
-
-const BASE_ENDPOINT = '/proyectos'; // Asume prefijo en router
+const BASE_ENDPOINT = '/proyectos';
 
 const ProyectoService = {
 
@@ -12,37 +18,22 @@ const ProyectoService = {
   // 👁️ VISTA PÚBLICA / USUARIO
   // =================================================
 
-  /**
-   * Obtiene TODOS los proyectos activos.
-   */
   getAllActive: async (): Promise<AxiosResponse<ProyectoDto[]>> => {
     return await httpService.get(`${BASE_ENDPOINT}/activos`);
   },
 
-  /**
-   * Obtiene solo proyectos tipo 'mensual' (Ahorristas).
-   */
   getAhorristasActive: async (): Promise<AxiosResponse<ProyectoDto[]>> => {
     return await httpService.get(`${BASE_ENDPOINT}/activos/ahorristas`);
   },
 
-  /**
-   * Obtiene solo proyectos tipo 'directo' (Inversionistas).
-   */
   getInversionistasActive: async (): Promise<AxiosResponse<ProyectoDto[]>> => {
     return await httpService.get(`${BASE_ENDPOINT}/activos/inversionistas`);
   },
 
-  /**
-   * Obtiene "Mis Proyectos" (donde el usuario invirtió o se suscribió).
-   */
   getMyProjects: async (): Promise<AxiosResponse<ProyectoDto[]>> => {
     return await httpService.get(`${BASE_ENDPOINT}/mis-proyectos`);
   },
 
-  /**
-   * Detalle de un proyecto activo (Validación de seguridad backend).
-   */
   getByIdActive: async (id: number): Promise<AxiosResponse<ProyectoDto>> => {
     return await httpService.get(`${BASE_ENDPOINT}/${id}/activo`);
   },
@@ -51,10 +42,6 @@ const ProyectoService = {
   // ⚙️ GESTIÓN ADMINISTRATIVA (ADMIN)
   // =================================================
 
-  /**
-   * Crea un proyecto y dispara notificaciones masivas.
-   * ⚠️ Puede tardar unos segundos debido al envío de mensajes.
-   */
   create: async (data: CreateProyectoDto): Promise<AxiosResponse<ProyectoDto>> => {
     return await httpService.post(BASE_ENDPOINT, data);
   },
@@ -63,17 +50,11 @@ const ProyectoService = {
     return await httpService.put(`${BASE_ENDPOINT}/${id}`, data);
   },
 
-  /**
-   * Asigna lotes a un proyecto existente.
-   */
   assignLotes: async (idProyecto: number, lotesIds: number[]): Promise<AxiosResponse<{ mensaje: string, proyecto: ProyectoDto }>> => {
     const data: AsignarLotesDto = { lotesIds };
     return await httpService.put(`${BASE_ENDPOINT}/${idProyecto}/lotes`, data);
   },
 
-  /**
-   * Inicia el conteo de meses (Cambia estado a "En proceso").
-   */
   startProcess: async (idProyecto: number): Promise<AxiosResponse<{ mensaje: string, proyecto: ProyectoDto }>> => {
     return await httpService.put(`${BASE_ENDPOINT}/${idProyecto}/iniciar-proceso`);
   },
@@ -96,16 +77,21 @@ const ProyectoService = {
 
   /**
    * KPI 4: Tasa de Culminación.
+   * Nota: Extraemos 'data.data' para que React Query reciba el DTO limpio.
    */
-  getCompletionRateMetrics: async (): Promise<AxiosResponse<{ mensaje: string, data: CompletionRateDto }>> => {
-    return await httpService.get(`${BASE_ENDPOINT}/metricas/culminacion`);
+  getCompletionRate: async (): Promise<CompletionRateDTO> => {
+    // Se asume respuesta backend: { mensaje: string, data: CompletionRateDTO }
+    const { data } = await httpService.get<{ mensaje: string, data: CompletionRateDTO }>(`${BASE_ENDPOINT}/metricas/culminacion`);
+    return data.data;
   },
 
   /**
    * KPI 5: Avance Mensual de Suscripciones.
    */
-  getMonthlyProgressMetrics: async (): Promise<AxiosResponse<{ mensaje: string, data: MonthlyProgressItemDto[] }>> => {
-    return await httpService.get(`${BASE_ENDPOINT}/metricas/avance-mensual`);
+  getMonthlyProgress: async (): Promise<MonthlyProgressItem[]> => {
+    // Se asume respuesta backend: { mensaje: string, data: MonthlyProgressItem[] }
+    const { data } = await httpService.get<{ mensaje: string, data: MonthlyProgressItem[] }>(`${BASE_ENDPOINT}/metricas/avance-mensual`);
+    return data.data;
   }
 };
 

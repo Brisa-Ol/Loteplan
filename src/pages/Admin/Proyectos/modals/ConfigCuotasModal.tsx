@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+// src/components/Admin/Proyectos/Modals/ConfigCuotasModal.tsx
+import React, { useState } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button,
   TextField, Stack, Box, Typography, IconButton, CircularProgress,
@@ -12,11 +13,15 @@ import {
 } from '@mui/icons-material';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+
+// Servicios y DTOs
 import type { CreateCuotaMensualDto } from '../../../../types/dto/cuotaMensual.dto';
+import type { ProyectoDto } from '../../../../types/dto/proyecto.dto';
 import CuotaMensualService from '../../../../Services/cuotaMensual.service';
 
-
+// Componentes
+import ProyectoPriceHistory from '../components/ProyectoPriceHistory'; // Asegúrate que la ruta sea correcta
 
 interface ConfigCuotasModalProps {
   open: boolean;
@@ -44,17 +49,21 @@ const ConfigCuotasModal: React.FC<ConfigCuotasModalProps> = ({
   // Mutation para crear una nueva cuota
   const createMutation = useMutation({
     mutationFn: async (data: CreateCuotaMensualDto) => {
-      const res = await CuotaMensualService.createCuota(data);
+      // CORRECCIÓN: El método en el servicio se llama 'create', no 'createCuota'
+      const res = await CuotaMensualService.create(data);
       return res.data;
     },
     onSuccess: () => {
-      // Invalidamos para recargar el historial y la lista de proyectos (porque cambia el precio)
-      if (proyecto) queryClient.invalidateQueries({ queryKey: ['cuotasByProyecto', proyecto.id] });
+      // Invalidamos para recargar el historial y la lista de proyectos
+      if (proyecto) {
+        queryClient.invalidateQueries({ queryKey: ['cuotasByProyecto', proyecto.id] });
+        queryClient.invalidateQueries({ queryKey: ['proyecto', String(proyecto.id)] }); // Recargar detalle proyecto
+      }
       queryClient.invalidateQueries({ queryKey: ['adminProyectos'] });
       
       formik.resetForm();
-      setShowHistory(true); // Mostrar historial tras crear para ver el nuevo registro
-      alert('Cuota configurada y precio actualizado.');
+      setShowHistory(true); 
+      // alert('Cuota configurada y precio actualizado.'); // Mejor usar un Snackbar o dejar que la UI reaccione
     },
     onError: (err: any) => {
         console.error(err);
@@ -77,13 +86,13 @@ const ConfigCuotasModal: React.FC<ConfigCuotasModalProps> = ({
       try {
         await createMutation.mutateAsync({
           ...values,
-          id_proyecto: proyecto.id, // Asegurar ID correcto
+          id_proyecto: proyecto.id,
         });
       } catch (error) {
         console.error('Error al crear cuota:', error);
       }
     },
-    enableReinitialize: true, // Para que tome el ID cuando proyecto cargue
+    enableReinitialize: true,
   });
 
   const handleClose = () => {

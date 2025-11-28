@@ -6,7 +6,6 @@ import type { AxiosResponse } from 'axios';
 const BASE_ENDPOINT = '/lotes';
 
 // Definimos las respuestas específicas para las acciones de subasta
-// para poder tipar correctamente el retorno (el ganador, el lote actualizado, etc.)
 interface StartAuctionResponse {
   mensaje: string;
   lote?: LoteDto;
@@ -101,6 +100,58 @@ const LoteService = {
    */
   endAuction: async (id: number): Promise<AxiosResponse<EndAuctionResponse>> => {
     return await httpService.put(`${BASE_ENDPOINT}/${id}/end`);
+  },
+
+  // =================================================
+  // 🔔 UTILIDADES (HELPERS FRONTEND)
+  // =================================================
+
+  /**
+   * Helper para validar si un lote puede iniciar subasta.
+   * Verifica en frontend antes de llamar al backend.
+   */
+  canStartAuction(lote: LoteDto): { can: boolean; reason?: string } {
+    if (lote.estado_subasta !== 'pendiente') {
+      return { can: false, reason: 'El lote no está en estado pendiente' };
+    }
+    // Lotes públicos o privados pueden iniciar
+    // Si tiene proyecto, se asume que el backend validó la existencia del mismo al crear
+    return { can: true };
+  },
+
+  /**
+   * Helper para validar si un lote puede finalizarse.
+   */
+  canEndAuction(lote: LoteDto): { can: boolean; reason?: string } {
+    if (lote.estado_subasta !== 'activa') {
+      return { can: false, reason: 'Solo se pueden finalizar subastas activas' };
+    }
+    return { can: true };
+  },
+
+  /**
+   * Helper para calcular días restantes de pago.
+   * Útil para la vista de gestión de cobros.
+   */
+  calcularDiasRestantesPago(lote: LoteDto): number {
+    if (!lote.fecha_fin) return 90; // Default si no hay fecha fin, aunque debería haber si terminó
+    
+    const fechaFin = new Date(lote.fecha_fin);
+    // Plazo de 90 días desde que terminó la subasta
+    const fechaLimite = new Date(fechaFin.getTime() + 90 * 24 * 60 * 60 * 1000);
+    const ahora = new Date();
+    const diff = fechaLimite.getTime() - ahora.getTime();
+    
+    return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+  },
+
+  /**
+   * Helper para determinar color de estado según intentos fallidos.
+   */
+  getRiesgoColor(intentos: number): 'success' | 'warning' | 'error' {
+    if (intentos === 0) return 'success';
+    if (intentos === 1) return 'warning';
+    return 'error';
   }
 };
 

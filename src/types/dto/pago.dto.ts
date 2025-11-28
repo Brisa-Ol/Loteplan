@@ -52,17 +52,20 @@ export interface PagoCheckoutResponse {
 // 📊 MÉTRICAS (ADMIN)
 // ==========================================
 
-export interface MonthlyMetricsDto {
+export interface RecaudoMensualDTO {
   mes: string; // "MM/YYYY"
   total_recaudado: number;
+  anio: number;
   total_pagos_generados: number;
+  total_pagos_pendiente: string;
   total_pagos_vencidos: number;
   tasa_morosidad: number; // %
   total_pagos_pagados: number;
 }
 
-export interface OnTimeMetricsDto {
+export interface TasaPagosATiempoDTO {
   total_pagados: number;
   pagos_a_tiempo: number;
+  anio: number;
   tasa_pagos_a_tiempo: number; // %
 }

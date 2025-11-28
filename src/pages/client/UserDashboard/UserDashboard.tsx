@@ -19,9 +19,9 @@ import { useQuery } from '@tanstack/react-query';
 
 // --- Servicios ---
 import MensajeService from '../../../Services/mensaje.service';
-
 import PagoService from '../../../Services/pago.service';
 import SuscripcionService from '../../../Services/suscripcion.service';
+import ResumenCuentaService from '../../../Services/resumenCuenta.service';
 
 // --- Contexto ---
 import { useAuth } from '../../../context/AuthContext';
@@ -30,9 +30,7 @@ import { QueryHandler } from '../../../components/common/QueryHandler/QueryHandl
 
 // --- DTOs ---
 import type { PagoDto } from '../../../types/dto/pago.dto';
-
 import type { SuscripcionDto } from '../../../types/dto/suscripcion.dto';
-import ResumenCuentaService from '../../../Services/resumenCuenta.service';
 import type { ResumenCuentaDto } from '../../../types/dto/resumenCuenta.dto';
 
 const UserDashboard: React.FC = () => {
@@ -47,7 +45,7 @@ const UserDashboard: React.FC = () => {
 
   const { data: suscripciones, isLoading: loadingSuscripciones } = useQuery<SuscripcionDto[]>({
     queryKey: ['misSuscripciones'],
-    queryFn: async () => (await SuscripcionService.getMySubscriptions()).data
+    queryFn: async () => (await SuscripcionService.getMisSuscripciones()).data
   });
 
   const { data: pagos, isLoading: loadingPagos } = useQuery<PagoDto[]>({
@@ -544,7 +542,7 @@ const UserDashboard: React.FC = () => {
                   <Button 
                     variant="contained"
                     size="large"
-                    onClick={() => navigate('/proyectos/ahorrista')}
+                    onClick={() => navigate('/client/Proyectos/RoleSelection')}
                     sx={{ 
                       borderRadius: 3,
                       px: 4,
@@ -582,7 +580,7 @@ const UserDashboard: React.FC = () => {
                     startIcon={<AccountBalanceWallet />}
                     size="large"
                     fullWidth
-                    onClick={() => navigate('/mis-pagos')}
+                    onClick={() => navigate('/pages/client/MiCuenta/MisPagos')}
                     sx={{ 
                       justifyContent: 'flex-start',
                       borderRadius: 3,
@@ -600,7 +598,7 @@ const UserDashboard: React.FC = () => {
                     startIcon={<Gavel />}
                     size="large"
                     fullWidth
-                    onClick={() => navigate('/mis-pujas')}
+                    onClick={() => navigate('/pages/client/MiCuenta/MisSubastas')}
                     sx={{ 
                       justifyContent: 'flex-start',
                       borderRadius: 3,
@@ -617,7 +615,7 @@ const UserDashboard: React.FC = () => {
                     startIcon={<Description />}
                     size="large"
                     fullWidth
-                    onClick={() => navigate('/mis-documentos')}
+                    onClick={() => navigate('/client/MiCuenta/Contratos')}
                     sx={{ 
                       justifyContent: 'flex-start',
                       borderRadius: 3,
@@ -632,6 +630,73 @@ const UserDashboard: React.FC = () => {
 
                 <Divider sx={{ my: 4 }} />
 
+                {/* 🔐 WIDGET DE SEGURIDAD 2FA */}
+                <Box 
+                  sx={{ 
+                    bgcolor: user?.is_2fa_enabled ? '#E8F5E9' : '#FFF3E0',
+                    p: 3,
+                    borderRadius: 3,
+                    textAlign: 'center',
+                    border: '2px solid',
+                    borderColor: user?.is_2fa_enabled ? '#4CAF50' : '#FF9800',
+                    mb: 3
+                  }}
+                >
+                  {user?.is_2fa_enabled ? (
+                    <>
+                      <CheckCircle sx={{ fontSize: 40, color: '#4CAF50', mb: 1 }} />
+                      <Typography variant="subtitle2" gutterBottom fontWeight={700} color="#2E7D32">
+                        Cuenta Protegida
+                      </Typography>
+                      <Typography variant="caption" display="block" color="text.secondary" mb={2}>
+                        Tu 2FA está activo
+                      </Typography>
+                      <Button 
+                        variant="outlined"
+                        size="small"
+                        onClick={() => navigate('/client/profile/security')}
+                        sx={{ 
+                          borderRadius: 2,
+                          fontWeight: 600,
+                          borderWidth: 2,
+                          borderColor: '#4CAF50',
+                          color: '#2E7D32',
+                          '&:hover': { 
+                            borderColor: '#2E7D32',
+                            bgcolor: 'rgba(46, 125, 50, 0.04)' 
+                          }
+                        }}
+                      >
+                        Gestionar
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Warning sx={{ fontSize: 40, color: '#F57C00', mb: 1 }} />
+                      <Typography variant="subtitle2" gutterBottom fontWeight={700} color="#E65100">
+                        Protege tu cuenta
+                      </Typography>
+                      <Typography variant="caption" display="block" color="text.secondary" mb={2}>
+                        Activa la verificación en dos pasos
+                      </Typography>
+                      <Button 
+                        variant="contained"
+                        size="small"
+                        onClick={() => navigate('/client/MiCuenta/SecuritySettings')}
+                        sx={{ 
+                          borderRadius: 2,
+                          fontWeight: 600,
+                          bgcolor: '#FF9800',
+                          '&:hover': { bgcolor: '#F57C00' }
+                        }}
+                      >
+                        Activar Ahora
+                      </Button>
+                    </>
+                  )}
+                </Box>
+
+                {/* ¿Necesitas ayuda? */}
                 <Box 
                   sx={{ 
                     bgcolor: '#F6F6F6',
@@ -662,6 +727,7 @@ const UserDashboard: React.FC = () => {
                 </Box>
               </Paper>
             </Box>
+
           </Box>
         </QueryHandler>
       </Box>

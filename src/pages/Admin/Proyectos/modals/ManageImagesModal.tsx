@@ -7,38 +7,20 @@ import {
 } from '@mui/material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Delete as DeleteIcon, Image as ImageIcon } from '@mui/icons-material';
-import type { ProyectoDTO } from '../../../../types/dto/proyecto.dto';
+
 import imagenService from '../../../../Services/imagen.service';
-import type { CreateImagenDTO, ImagenDTO } from '../../../../types/dto/imagen.dto';
+
 import { QueryHandler } from '../../../../components/common/QueryHandler/QueryHandler';
 import ImageUploadZone from '../../../../components/common/ImageUploadZone/ImageUploadZone';
-
-
-
+import type { CreateImagenDto, ImagenDto } from '../../../../types/dto/imagen.dto';
+import type { ProyectoDto } from '../../../../types/dto/proyecto.dto';
 
 interface ManageImagesModalProps {
   open: boolean;
   onClose: () => void;
-  proyecto: ProyectoDTO;
+  proyecto: ProyectoDto;
 }
 
-/**
- * 🎯 PROPÓSITO: Modal para gestionar las imágenes de un proyecto
- * 
- * FUNCIONALIDADES:
- * 1. Ver todas las imágenes actuales del proyecto
- * 2. Eliminar imágenes existentes
- * 3. Subir nuevas imágenes (una o varias a la vez)
- * 
- * FLUJO DE TRABAJO:
- * 1. Al abrir, carga las imágenes del proyecto desde la API
- * 2. Muestra las imágenes en una lista con opción de eliminar
- * 3. Permite seleccionar nuevas imágenes (zona de arrastrar/soltar)
- * 4. Sube las imágenes seleccionadas al servidor
- * 5. Refresca la lista automáticamente después de cada operación
- */
-
-// Query key única para este proyecto específico
 const getQueryKey = (proyectoId: number) => ['projectImages', proyectoId];
 
 const ManageImagesModal: React.FC<ManageImagesModalProps> = ({
@@ -50,28 +32,30 @@ const ManageImagesModal: React.FC<ManageImagesModalProps> = ({
   const queryKey = getQueryKey(proyecto.id);
 
   // 📦 ESTADO LOCAL
-  const [stagedFiles, setStagedFiles] = useState<File[]>([]); // Archivos preparados para subir
-  const [uploadError, setUploadError] = useState<string | null>(null); // Errores de subida
-  const [deletingImageId, setDeletingImageId] = useState<number | null>(null); // ID de imagen siendo eliminada
+  const [stagedFiles, setStagedFiles] = useState<File[]>([]);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [deletingImageId, setDeletingImageId] = useState<number | null>(null);
 
   // 📥 QUERY: Obtener imágenes actuales del proyecto
-  const { data: imagenes = [], isLoading, error } = useQuery<ImagenDTO[], Error>({
+  const { data: imagenes = [], isLoading, error } = useQuery<ImagenDto[], Error>({
     queryKey: queryKey,
-    queryFn: () => imagenService.getByProjectId(proyecto.id),
-    enabled: open, // Solo carga cuando el modal está abierto
+    // CORRECCIÓN 1: Extraer .data de la respuesta de Axios
+    queryFn: async () => {
+      const response = await imagenService.getByProject(proyecto.id);
+      return response.data;
+    },
+    enabled: open,
   });
 
   // 🗑️ MUTATION: Eliminar una imagen
   const deleteMutation = useMutation({
     mutationFn: (imagenId: number) => imagenService.softDelete(imagenId),
     onMutate: (imagenId) => {
-      // Se ejecuta ANTES de la petición: marca la imagen como "eliminando"
       setDeletingImageId(imagenId);
     },
     onSuccess: () => {
-      // Se ejecuta después del éxito: refresca las queries
-      queryClient.invalidateQueries({ queryKey: queryKey }); // Refresca imágenes del modal
-      queryClient.invalidateQueries({ queryKey: ['adminAllProjects'] }); // Refresca tabla principal
+      queryClient.invalidateQueries({ queryKey: queryKey });
+      queryClient.invalidateQueries({ queryKey: ['adminAllProjects'] }); // Opcional, si muestras la portada en la tabla
       setDeletingImageId(null);
     },
     onError: (err: any) => {
@@ -84,18 +68,18 @@ const ManageImagesModal: React.FC<ManageImagesModalProps> = ({
   // 📤 MUTATION: Subir una nueva imagen
   const uploadMutation = useMutation({
     mutationFn: async (formData: { file: File, descripcion: string }) => {
-      // Prepara los datos según el DTO CreateImagenDTO
-      const imagenData: CreateImagenDTO = {
+      // CORRECCIÓN 2: Crear el objeto DTO completo (incluyendo el archivo)
+      const imagenData: CreateImagenDto = {
+        file: formData.file, // Aquí va el archivo
         descripcion: formData.descripcion,
         id_proyecto: proyecto.id,
         id_lote: null,
       };
       
-      // Usa el servicio de imagen.service.ts que ya tienes
-      return imagenService.create(formData.file, imagenData);
+      // Pasar un solo argumento al servicio
+      return imagenService.create(imagenData);
     },
     onSuccess: () => {
-      // Refresca ambas queries después de subir exitosamente
       queryClient.invalidateQueries({ queryKey: queryKey });
       queryClient.invalidateQueries({ queryKey: ['adminAllProjects'] });
     },
@@ -104,33 +88,20 @@ const ManageImagesModal: React.FC<ManageImagesModalProps> = ({
     }
   });
 
-  // 🎬 HANDLERS: Funciones de interacción
+  // 🎬 HANDLERS
 
-  /**
-   * Maneja el click en el botón de eliminar
-   */
   const handleDeleteClick = (imagenId: number) => {
     if (window.confirm('¿Seguro que deseas eliminar esta imagen?')) {
       deleteMutation.mutate(imagenId);
     }
   };
 
-  /**
-   * Maneja la subida de todos los archivos preparados (staged)
-   * 
-   * PROCESO:
-   * 1. Verifica que haya archivos seleccionados
-   * 2. Crea una promesa por cada archivo
-   * 3. Sube todos en paralelo con Promise.all
-   * 4. Limpia el área de staging si todo sale bien
-   */
   const handleUploadSubmit = async () => {
     if (stagedFiles.length === 0) return;
     
     setUploadError(null);
     
     try {
-      // Sube todas las imágenes en paralelo
       await Promise.all(
         stagedFiles.map(file => 
           uploadMutation.mutateAsync({
@@ -140,18 +111,12 @@ const ManageImagesModal: React.FC<ManageImagesModalProps> = ({
         )
       );
       
-      // Si todas tienen éxito, limpia el área de staging
       setStagedFiles([]);
     } catch (err) {
       console.error("Una o más imágenes fallaron al subir.", err);
-      // El error individual ya es manejado por 'onError' de la mutación
     }
   };
   
-  /**
-   * Maneja el cierre del modal
-   * Limpia todos los estados locales
-   */
   const handleCloseModal = () => {
     setStagedFiles([]);
     setUploadError(null);
@@ -159,10 +124,6 @@ const ManageImagesModal: React.FC<ManageImagesModalProps> = ({
     onClose();
   };
 
-  /**
-   * Efecto de limpieza automática cuando se cierra el modal
-   * Previene estados residuales entre aperturas
-   */
   useEffect(() => {
     if (!open) {
       setStagedFiles([]);
@@ -171,8 +132,8 @@ const ManageImagesModal: React.FC<ManageImagesModalProps> = ({
     }
   }, [open]);
 
-  // 🖼️ URL base para mostrar las imágenes
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+  // Usar el helper del servicio para resolver la URL o la variable de entorno
+  const resolveUrl = (url: string) => imagenService.resolveImageUrl(url);
 
   return (
     <Dialog open={open} onClose={handleCloseModal} maxWidth="md" fullWidth>
@@ -182,10 +143,6 @@ const ManageImagesModal: React.FC<ManageImagesModalProps> = ({
       
       <DialogContent dividers>
         
-        {/* ═══════════════════════════════════════════════════════
-            SECCIÓN 1: IMÁGENES ACTUALES
-            Muestra las imágenes ya subidas con opción de eliminar
-            ═══════════════════════════════════════════════════════ */}
         <Typography variant="h6" gutterBottom>
           Imágenes Actuales ({imagenes.length})
         </Typography>
@@ -225,7 +182,7 @@ const ManageImagesModal: React.FC<ManageImagesModalProps> = ({
                   <ListItemAvatar>
                     <Avatar 
                       variant="rounded" 
-                      src={`${API_BASE_URL}${img.url}`}
+                      src={resolveUrl(img.url)}
                       sx={{ width: 60, height: 60 }}
                     >
                       <ImageIcon />
@@ -236,7 +193,7 @@ const ManageImagesModal: React.FC<ManageImagesModalProps> = ({
                     secondary={
                       <>
                         <Typography variant="caption" display="block">
-                          Subida: {new Date(img.createdAt).toLocaleDateString()}
+                          Subida: {img.createdAt ? new Date(img.createdAt).toLocaleDateString() : '-'}
                         </Typography>
                         <Typography variant="caption" color="text.disabled">
                           {img.url}
@@ -252,24 +209,18 @@ const ManageImagesModal: React.FC<ManageImagesModalProps> = ({
         
         <Divider sx={{ my: 3 }} />
 
-        {/* ═══════════════════════════════════════════════════════
-            SECCIÓN 2: AÑADIR NUEVAS IMÁGENES
-            Zona para seleccionar y subir nuevas imágenes
-            ═══════════════════════════════════════════════════════ */}
         <Typography variant="h6" gutterBottom>
           Añadir Nuevas Imágenes
         </Typography>
         
         <Paper variant="outlined" sx={{ p: 2 }}>
-          {/* Componente de zona de arrastrar/soltar */}
           <ImageUploadZone
             images={stagedFiles}
             onChange={setStagedFiles}
-            maxFiles={10} // Límite de archivos por carga
+            maxFiles={10}
             disabled={uploadMutation.isPending}
           />
           
-          {/* Botón de subida y estado */}
           <Box sx={{ mt: 2, display: 'flex', gap: 2, alignItems: 'center' }}>
             <Button
               variant="contained"
@@ -289,7 +240,6 @@ const ManageImagesModal: React.FC<ManageImagesModalProps> = ({
             )}
           </Box>
           
-          {/* Alerta de error si ocurre */}
           {uploadError && (
             <Alert severity="error" sx={{ mt: 2 }} onClose={() => setUploadError(null)}>
               {uploadError}

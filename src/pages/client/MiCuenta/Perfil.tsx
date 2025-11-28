@@ -27,7 +27,7 @@ import { PageContainer } from '../../../components/common/PageContainer/PageCont
 
 
 const Perfil: React.FC = () => {
-  const { user, refetchUser } = useAuth(); 
+  const { user, refetchUser } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [successOpen, setSuccessOpen] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -39,7 +39,7 @@ const Perfil: React.FC = () => {
       return response.data;
     },
     onSuccess: async () => {
-      await refetchUser(); 
+      await refetchUser();
       setIsEditing(false);
       setSuccessOpen(true);
       setServerError(null);
@@ -57,7 +57,7 @@ const Perfil: React.FC = () => {
       apellido: user?.apellido || '',
       email: user?.email || '',
       // ✅ CORREGIDO: Ahora coincide con la interfaz DTO
-      numero_telefono: user?.numero_telefono || '', 
+      numero_telefono: user?.numero_telefono || '',
       nombre_usuario: user?.nombre_usuario || '',
     },
     validationSchema: Yup.object({
@@ -85,10 +85,10 @@ const Perfil: React.FC = () => {
   return (
     <PageContainer maxWidth="md">
       <Stack spacing={4}>
-        
+
         {/* Encabezado */}
         <Box display="flex" flexDirection="column" alignItems="center" textAlign="center">
-          <Avatar 
+          <Avatar
             sx={{ width: 80, height: 80, mb: 2, bgcolor: 'primary.main', fontSize: '2rem' }}
           >
             {user?.nombre?.charAt(0).toUpperCase()}
@@ -103,7 +103,7 @@ const Perfil: React.FC = () => {
 
         {/* Tarjeta Principal */}
         <Paper elevation={2} sx={{ p: 4, borderRadius: 3 }}>
-          
+
           {serverError && (
             <Alert severity="error" sx={{ mb: 3 }}>
               {serverError}
@@ -112,7 +112,7 @@ const Perfil: React.FC = () => {
 
           <form onSubmit={formik.handleSubmit}>
             <Stack spacing={3}>
-              
+
               {/* --- Datos Personales --- */}
               <Box>
                 <Typography variant="h6" color="primary" gutterBottom>
@@ -209,9 +209,9 @@ const Perfil: React.FC = () => {
               {/* --- Botones de Acción --- */}
               <Box display="flex" justifyContent="flex-end" gap={2} mt={2}>
                 {!isEditing ? (
-                  <Button 
-                    variant="contained" 
-                    startIcon={<EditIcon />} 
+                  <Button
+                    variant="contained"
+                    startIcon={<EditIcon />}
                     onClick={() => setIsEditing(true)}
                     size="large"
                   >
@@ -219,19 +219,19 @@ const Perfil: React.FC = () => {
                   </Button>
                 ) : (
                   <>
-                    <Button 
-                      variant="outlined" 
-                      color="inherit" 
+                    <Button
+                      variant="outlined"
+                      color="inherit"
                       onClick={handleCancel}
                       startIcon={<CloseIcon />}
                       disabled={mutation.isPending}
                     >
                       Cancelar
                     </Button>
-                    <Button 
-                      type="submit" 
-                      variant="contained" 
-                      startIcon={mutation.isPending ? <CircularProgress size={20} color="inherit"/> : <SaveIcon />}
+                    <Button
+                      type="submit"
+                      variant="contained"
+                      startIcon={mutation.isPending ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
                       disabled={mutation.isPending || !formik.isValid}
                     >
                       {mutation.isPending ? 'Guardando...' : 'Guardar Cambios'}

@@ -24,7 +24,7 @@ const ProyectoPriceHistory: React.FC<ProyectoPriceHistoryProps> = ({
   // 1. Cargar Historial
   const { data: cuotas = [], isLoading, error } = useQuery<CuotaMensualDto[], Error>({
     queryKey: queryKey,
-    queryFn: async () => (await CuotaMensualService.getCuotasByProyecto(proyectoId)).data,
+    queryFn: async () => (await CuotaMensualService.getByProjectId(proyectoId)).data,
   });
 
   // 2. Mutación para Eliminar (Soft Delete) - CUMPLE REQUISITO 6.3

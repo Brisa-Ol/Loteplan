@@ -60,3 +60,20 @@ export interface RejectKycDTO {
 export interface KycResponse {
   message: string;
 }
+export interface SubmitKycDto {
+  // Datos del formulario
+  tipo_documento: TipoDocumento;
+  numero_documento: string;
+  nombre_completo: string;
+  fecha_nacimiento?: string;
+  
+  // Archivos (FormData)
+  documento_frente: File;
+  documento_dorso?: File;
+  selfie_con_documento: File;
+  video_verificacion?: File;
+  
+  // Opcional: Geolocalización
+  latitud_verificacion?: number;
+  longitud_verificacion?: number;
+}

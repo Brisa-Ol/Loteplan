@@ -1,87 +1,109 @@
-import type { AggregatedUserMetricDto, CheckoutResponse, ConfirmarPago2faDto, CreateInversionDto, CreateInversionResponse, InversionDto, LiquidityMetricDto } from '../types/dto/inversion.dto';
+// src/Services/inversion.service.ts
+import type {
+  InversionDto,
+  CreateInversionDto,
+  InversionPorUsuarioDTO,
+  LiquidityRateDTO,
+  InversionInitResponse,
+  ConfirmInversion2faDto
+} from '../types/dto/inversion.dto';
 import httpService from './httpService';
 import type { AxiosResponse } from 'axios';
 
-
-// Asumiendo ruta base definida en tu router
-const BASE_ENDPOINT = '/inversiones'; 
+const BASE_ENDPOINT = '/inversiones';
 
 const InversionService = {
 
   // =================================================
-  // 💰 FLUJO DE CREACIÓN Y PAGO (USUARIO)
+  // 💰 GESTIÓN DE INVERSIONES (USUARIO)
   // =================================================
 
   /**
-   * Paso 1: Registrar la intención de inversión.
-   * Estado resultante: 'pendiente'.
+   * Inicia el proceso de inversión (Paso 1).
+   * POST /inversiones/iniciar
    */
-  create: async (data: CreateInversionDto): Promise<AxiosResponse<CreateInversionResponse>> => {
-    return await httpService.post(BASE_ENDPOINT, data);
+  iniciar: async (data: CreateInversionDto): Promise<AxiosResponse<InversionInitResponse>> => {
+    return await httpService.post(`${BASE_ENDPOINT}/iniciar`, data);
   },
 
   /**
-   * Paso 2: Solicitar el link de pago.
-   * ⚠️ IMPORTANTE: Este método puede devolver status 202 (Accepted) si pide 2FA.
-   * El componente debe verificar `response.data.is2FARequired`.
+   * Confirma inversión con 2FA (Paso 2).
+   * POST /inversiones/confirmar-2fa
    */
-  iniciarPago: async (idInversion: number): Promise<AxiosResponse<CheckoutResponse>> => {
-    return await httpService.post(`${BASE_ENDPOINT}/iniciar-pago/${idInversion}`);
-  },
-
-  /**
-   * Paso 3 (Solo si 2FA activo): Confirmar con código y obtener link.
-   */
-  confirmarPago2FA: async (data: ConfirmarPago2faDto): Promise<AxiosResponse<CheckoutResponse>> => {
+  confirmar2FA: async (data: ConfirmInversion2faDto): Promise<AxiosResponse<InversionInitResponse>> => {
     return await httpService.post(`${BASE_ENDPOINT}/confirmar-2fa`, data);
   },
 
-  // =================================================
-  // 🔍 CONSULTAS (USUARIO)
-  // =================================================
-
-  getMyInversions: async (): Promise<AxiosResponse<InversionDto[]>> => {
-    return await httpService.get(`${BASE_ENDPOINT}/mis_inversiones`);
+  /**
+   * Confirma inversión tras webhook de MercadoPago (Paso 3).
+   * POST /inversiones/confirmar-webhook
+   */
+  confirmarWebhook: async (transaccionId: number): Promise<AxiosResponse<InversionDto>> => {
+    return await httpService.post(`${BASE_ENDPOINT}/confirmar-webhook`, { transaccionId });
   },
 
-  getMyInversionById: async (id: number): Promise<AxiosResponse<InversionDto>> => {
-    // Nota: Tu backend tiene una ruta genérica /:id que verifica propiedad si es usuario
-    // o permite acceso si es admin.
+  /**
+   * Obtiene todas las inversiones del usuario logueado.
+   * GET /inversiones/mis-inversiones
+   */
+  getMisInversiones: async (): Promise<AxiosResponse<InversionDto[]>> => {
+    return await httpService.get(`${BASE_ENDPOINT}/mis-inversiones`);
+  },
+
+  /**
+   * Obtiene una inversión específica por ID.
+   * GET /inversiones/:id
+   */
+  getById: async (id: number): Promise<AxiosResponse<InversionDto>> => {
     return await httpService.get(`${BASE_ENDPOINT}/${id}`);
   },
 
   // =================================================
-  // 👮 GESTIÓN Y MÉTRICAS (ADMIN)
+  // 👮 GESTIÓN ADMINISTRATIVA
   // =================================================
 
+  /**
+   * Obtiene todas las inversiones del sistema (Admin).
+   * GET /inversiones
+   */
   findAll: async (): Promise<AxiosResponse<InversionDto[]>> => {
-    return await httpService.get(BASE_ENDPOINT); // GET / (Admin)
-  },
-
-  findAllActive: async (): Promise<AxiosResponse<InversionDto[]>> => {
-    return await httpService.get(`${BASE_ENDPOINT}/activas`);
+    return await httpService.get(BASE_ENDPOINT);
   },
 
   /**
-   * KPI 6: Tasa de Liquidez
+   * Obtiene inversiones por usuario (Admin).
+   * GET /inversiones/usuario/:userId
    */
-  getLiquidityMetrics: async (): Promise<AxiosResponse<{ mensaje: string, data: LiquidityMetricDto }>> => {
+  getByUserId: async (userId: number): Promise<AxiosResponse<InversionDto[]>> => {
+    return await httpService.get(`${BASE_ENDPOINT}/usuario/${userId}`);
+  },
+
+  /**
+   * Obtiene inversiones por proyecto (Admin).
+   * GET /inversiones/proyecto/:proyectoId
+   */
+  getByProyectoId: async (proyectoId: number): Promise<AxiosResponse<InversionDto[]>> => {
+    return await httpService.get(`${BASE_ENDPOINT}/proyecto/${proyectoId}`);
+  },
+
+  // =================================================
+  // 📊 MÉTRICAS (ADMIN)
+  // =================================================
+
+  /**
+   * Obtiene la tasa de liquidez (inversiones pagadas vs registradas).
+   * GET /inversiones/metricas/liquidez
+   */
+  getLiquidityMetrics: async (): Promise<AxiosResponse<{ data: LiquidityRateDTO }>> => {
     return await httpService.get(`${BASE_ENDPOINT}/metricas/liquidez`);
   },
 
   /**
-   * KPI 7: Rendimiento por Inversor
+   * Obtiene inversión agregada por usuario (Top inversores).
+   * GET /inversiones/metricas/agregado-por-usuario
    */
-  getAggregatedMetrics: async (): Promise<AxiosResponse<{ mensaje: string, data: AggregatedUserMetricDto[] }>> => {
+  getAggregatedMetrics: async (): Promise<AxiosResponse<{ data: InversionPorUsuarioDTO[] }>> => {
     return await httpService.get(`${BASE_ENDPOINT}/metricas/agregado-por-usuario`);
-  },
-
-  // =================================================
-  // 🛠️ EDICIÓN (ADMIN)
-  // =================================================
-
-  softDelete: async (id: number): Promise<AxiosResponse<void>> => {
-    return await httpService.delete(`${BASE_ENDPOINT}/${id}`);
   }
 };
 

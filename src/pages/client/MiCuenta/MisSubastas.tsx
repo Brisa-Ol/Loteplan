@@ -1,17 +1,17 @@
 // src/pages/MiCuenta/MisPujas.tsx
 
 import React from 'react';
-import { 
-  Box, Typography, Paper, Button, Stack, Chip, Alert, Divider, 
-  IconButton, Tooltip 
+import {
+  Box, Typography, Paper, Button, Stack, Chip, Alert, Divider,
+  IconButton, Tooltip
 } from '@mui/material';
-import { 
-  Gavel, 
-  Payment, 
-  AccessTime, 
-  CheckCircle, 
-  Cancel, 
-  Visibility 
+import {
+  Gavel,
+  Payment,
+  AccessTime,
+  CheckCircle,
+  Cancel,
+  Visibility
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
@@ -23,7 +23,7 @@ import type { PujaDto } from '../../../types/dto/puja.dto';
 import ImagenService from '../../../Services/imagen.service';
 
 
-const MisPujas: React.FC = () => {
+const MisSubastas: React.FC = () => {
   const navigate = useNavigate();
 
   // 1. Obtener mis pujas
@@ -41,7 +41,7 @@ const MisPujas: React.FC = () => {
     onSuccess: (data) => {
       if (data.is2FARequired) {
         alert(`Se requiere 2FA para la puja ${data.pujaId}.`);
-      } else if (data.url_checkout) { 
+      } else if (data.url_checkout) {
         window.location.href = data.url_checkout;
       }
     },
@@ -52,15 +52,15 @@ const MisPujas: React.FC = () => {
 
   const getStatusConfig = (status: string) => {
     switch (status) {
-      case 'activa': 
-        return { label: 'En Curso', color: 'info', icon: <AccessTime fontSize="small"/> };
-      case 'ganadora_pendiente': 
-        return { label: 'Ganaste - Pagar Ahora', color: 'warning', icon: <Payment fontSize="small"/> };
-      case 'ganadora_pagada': 
-        return { label: 'Adjudicado', color: 'success', icon: <CheckCircle fontSize="small"/> };
-      case 'perdedora': 
-        return { label: 'Superada', color: 'error', icon: <Cancel fontSize="small"/> };
-      default: 
+      case 'activa':
+        return { label: 'En Curso', color: 'info', icon: <AccessTime fontSize="small" /> };
+      case 'ganadora_pendiente':
+        return { label: 'Ganaste - Pagar Ahora', color: 'warning', icon: <Payment fontSize="small" /> };
+      case 'ganadora_pagada':
+        return { label: 'Adjudicado', color: 'success', icon: <CheckCircle fontSize="small" /> };
+      case 'perdedora':
+        return { label: 'Superada', color: 'error', icon: <Cancel fontSize="small" /> };
+      default:
         return { label: status, color: 'default', icon: null };
     }
   };
@@ -83,20 +83,20 @@ const MisPujas: React.FC = () => {
               const statusConfig = getStatusConfig(puja.estado_puja);
               // ✅ Accedemos al lote desde la relación
               const lote = puja.lote;
-              
+
               // ✅ Accedemos al proyecto a través del lote
               const idProyecto = lote?.id_proyecto;
 
-              const imgUrl = lote?.imagenes?.[0]?.url 
+              const imgUrl = lote?.imagenes?.[0]?.url
                 ? ImagenService.resolveImageUrl(lote.imagenes[0].url)
                 : '/images/placeholder-lote.jpg';
 
               return (
-                <Paper 
-                  key={puja.id} 
-                  sx={{ 
-                    p: 0, 
-                    borderRadius: 3, 
+                <Paper
+                  key={puja.id}
+                  sx={{
+                    p: 0,
+                    borderRadius: 3,
                     overflow: 'hidden',
                     border: '1px solid',
                     borderColor: puja.estado_puja === 'ganadora_pendiente' ? 'warning.main' : 'divider',
@@ -105,20 +105,20 @@ const MisPujas: React.FC = () => {
                   }}
                 >
                   <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' } }}>
-                    
-                    <Box 
-                      sx={{ 
-                        width: { xs: '100%', sm: 200 }, 
+
+                    <Box
+                      sx={{
+                        width: { xs: '100%', sm: 200 },
                         height: { xs: 150, sm: 'auto' },
                         backgroundImage: `url(${imgUrl})`,
                         backgroundSize: 'cover',
                         backgroundPosition: 'center',
                         flexShrink: 0
-                      }} 
+                      }}
                     />
 
                     <Box sx={{ p: 3, flexGrow: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                      
+
                       <Box display="flex" justifyContent="space-between" alignItems="flex-start" flexWrap="wrap" gap={1}>
                         <Box>
                           <Typography variant="h6" fontWeight={700}>
@@ -129,9 +129,9 @@ const MisPujas: React.FC = () => {
                             Proyecto ID: {idProyecto || 'N/A'}
                           </Typography>
                         </Box>
-                        <Chip 
-                          label={statusConfig.label} 
-                          color={statusConfig.color as any} 
+                        <Chip
+                          label={statusConfig.label}
+                          color={statusConfig.color as any}
                           icon={statusConfig.icon as any}
                           sx={{ fontWeight: 600 }}
                         />
@@ -162,7 +162,7 @@ const MisPujas: React.FC = () => {
                       <Box display="flex" justifyContent="flex-end" alignItems="center" gap={2} mt="auto">
                         <Tooltip title="Ver Proyecto">
                           {/* ✅ CORRECCIÓN AQUÍ: Navegación segura */}
-                          <IconButton 
+                          <IconButton
                             onClick={() => idProyecto && navigate(`/proyectos/${idProyecto}`)}
                             disabled={!idProyecto}
                           >
@@ -171,8 +171,8 @@ const MisPujas: React.FC = () => {
                         </Tooltip>
 
                         {puja.estado_puja === 'ganadora_pendiente' && (
-                          <Button 
-                            variant="contained" 
+                          <Button
+                            variant="contained"
                             color="warning"
                             startIcon={<Gavel />}
                             onClick={() => payMutation.mutate(puja.id)}
@@ -205,8 +205,8 @@ const MisPujas: React.FC = () => {
             <Typography variant="body2" color="text.secondary" mb={3}>
               Explora los proyectos de inversión directa y encontrá tu lote ideal.
             </Typography>
-            <Button 
-              variant="contained" 
+            <Button
+              variant="contained"
               onClick={() => navigate('/proyectos/inversionista')}
             >
               Ver Oportunidades
@@ -218,4 +218,4 @@ const MisPujas: React.FC = () => {
   );
 };
 
-export default MisPujas;
+export default MisSubastas;

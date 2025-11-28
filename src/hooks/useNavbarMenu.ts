@@ -1,7 +1,8 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext"; // Ajusta la ruta si es necesario
-
+import PersonIcon from '@mui/icons-material/Person';
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import {
   Dashboard as DashboardIcon,
   People as PeopleIcon,
@@ -73,31 +74,16 @@ export const useNavbarMenu = (): NavbarConfig => {
         },
         {
           label: "Gestión de Usuarios",
-          path: "Admin/AdminUsuarios",
-          icon: DashboardIcon,
+          path: "Admin/Usuarios/AdminUsuarios",
+          icon: PersonIcon,
         },
         {
           label: "Gestion de Proyectos",
+          path: "/Admin/Proyectos/AdminProyectos",
           icon: ConstructionIcon,
-          submenu: [
-            {
-              label: "Todos los Proyectos",
-              path: "/Admin/Proyectos/Proyectos/AdminProyectos",
-              icon: ApartmentIcon,
-            },
-            {
-              label: "Métricas",
-              path: "/admin/proyectos/metricas",
-              icon: AssessmentIcon,
-            },
-            { isDivider: true, label: "" },
-            {
-              label: "Cuotas Mensuales",
-              path: "/admin/cuotas",
-              icon: AttachMoneyIcon,
-            },
-          ],
         },
+
+
         {
           label: "Lotes",
           icon: TerrainIcon,
@@ -107,7 +93,12 @@ export const useNavbarMenu = (): NavbarConfig => {
               path: "/Admin/Lotes/AdminLotes",
               icon: TerrainIcon,
             },
-          
+            {
+              label: "Monitor de Impagos",
+              path: "/Admin/Lotes/AdminDashboardImpagos",
+              icon: TerrainIcon,
+            },
+
             { isDivider: true, label: "" },
             {
               label: "Subastas",
@@ -170,12 +161,12 @@ export const useNavbarMenu = (): NavbarConfig => {
           ],
         },
         {
-          label: "Reportes",
+          label: "Verificacion Documentos",
           icon: BarChartIcon,
           submenu: [
             {
-              label: "KPIs Generales",
-              path: "/admin/reportes/kpis",
+              label: "Solicitudes",
+              path: "/Admin/Usuarios/AdminKYC",
               icon: BarChartIcon,
             },
             {
@@ -197,6 +188,16 @@ export const useNavbarMenu = (): NavbarConfig => {
               label: "Mi Perfil",
               path: "/admin/perfil",
               icon: AccountCircleIcon,
+            },
+            {
+              label: "Seguridad",
+              path: "/client/MiCuenta/SecuritySettings",
+              icon: SettingsIcon,
+            },
+            {
+              label: "Verificacion de identidad",
+              path: "/client/MiCuenta/VerificacionKYC",
+              icon: SettingsIcon,
             },
             { isDivider: true, label: "" },
             {
@@ -231,8 +232,8 @@ export const useNavbarMenu = (): NavbarConfig => {
 
       const clientNavItems: NavItem[] = [
         {
-          label: "Inicio",
-          path: "/",
+          label: "Dashboard",
+          path: "/client/UserDashboard/UserDashboard",
         },
         {
           label: "Como Funciona",
@@ -240,19 +241,19 @@ export const useNavbarMenu = (): NavbarConfig => {
           submenu: [
             {
               label: "Para Ahorristas",
-              path: "/ahorrista",
+              path: "/ComoFunciona/Ahorrista/Ahorrista",
               icon: AccountCircleIcon,
             },
             {
               label: "Para Inversionistas",
-              path: "/inversionista",
+              path: "/ComoFunciona/Inversionista/Inversionista",
               icon: AttachMoneyIcon,
             },
           ],
         },
         {
           label: "Proyectos",
-          path: "/proyectos",
+          path: "/client/Proyectos/RoleSelection",
         },
         {
           label: "Mi Portafolio",
@@ -265,12 +266,12 @@ export const useNavbarMenu = (): NavbarConfig => {
             },
             {
               label: "Mis Suscripciones",
-              path: "/cliente/suscripciones",
+              path: "/client/MiCuenta/Suscripciones",
               icon: SupervisedUserIcon,
             },
             {
-              label: "Mis Pujas",
-              path: "/cliente/pujas",
+              label: "Mis Subastas",
+              path: "/pages/client/MiCuenta/MisSubastas",
               icon: GavelIcon,
             },
             { isDivider: true, label: "" },
@@ -286,7 +287,7 @@ export const useNavbarMenu = (): NavbarConfig => {
           icon: PaidIcon,
           submenu: [
             {
-              label: "Pagos Mensuales",
+              label: "Pagos ",
               path: "/cliente/pagos",
               icon: CalendarIcon,
             },
@@ -299,7 +300,7 @@ export const useNavbarMenu = (): NavbarConfig => {
         },
         {
           label: "Mis Contratos",
-          path: "/cliente/contratos",
+          path: "/client/MiCuenta/Contratos",
           icon: AssignmentIcon,
         },
       ];
@@ -312,24 +313,29 @@ export const useNavbarMenu = (): NavbarConfig => {
           submenu: [
             {
               label: "Mi Perfil",
-              path: "/cliente/perfil",
+              path: "/client/MiCuenta/Perfil",
               icon: AccountCircleIcon,
             },
             {
               label: "Mensajes",
-              path: "/cliente/mensajes",
+              path: "/client/MiCuenta/MensajesPage",
               icon: DescriptionIcon,
             },
             { isDivider: true, label: "" },
             // Mostrar advertencia si no está verificado
             ...(!isVerified ? [
               {
-                label: kycStatus === 'PENDIENTE' ? "⏳ Verificación en Proceso" : "⚠️ Completar Verificación",
+                label: kycStatus === 'PENDIENTE' ? "⏳ Verificación en Proceso" : "⚠️ Completar Verificación kyc",
                 path: "/cliente/verificacion",
                 icon: AdminIcon,
               } as NavItem,
               { isDivider: true, label: "" } as NavItem,
             ] : []),
+  {
+              label: "Seguridad con Token",
+              path: "/client/MiCuenta/SecuritySettings",
+              icon: AdminPanelSettingsIcon ,
+            },
             {
               label: "Cerrar Sesión",
               icon: LogoutIcon,

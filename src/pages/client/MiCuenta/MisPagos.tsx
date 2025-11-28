@@ -35,7 +35,7 @@ const MisPagos: React.FC = () => {
         alert(`Se requiere 2FA para el pago ${data.pagoId}. Implementar modal aquí.`);
         return;
       }
-      
+
       // CASO B: Redirección directa
       if (data.redirectUrl) {
         window.location.href = data.redirectUrl;
@@ -52,7 +52,7 @@ const MisPagos: React.FC = () => {
 
   // Helper para colores de estado
   const getStatusColor = (status: string) => {
-    switch(status) {
+    switch (status) {
       case 'pagado': return 'success';
       case 'pendiente': return 'warning';
       case 'vencido': return 'error';
@@ -66,15 +66,15 @@ const MisPagos: React.FC = () => {
       <Typography variant="h4" gutterBottom fontWeight="bold">
         Historial de Pagos
       </Typography>
-      
-      <QueryHandler 
-        isLoading={isLoading} 
-        error={error as Error | null} 
+
+      <QueryHandler
+        isLoading={isLoading}
+        error={error as Error | null}
         loadingMessage="Cargando pagos..."
       >
         {pagos && pagos.length > 0 ? (
           <Stack spacing={2}>
-            
+
             {checkoutMutation.isError && (
               <Alert severity="error">
                 Error al iniciar pago: {(checkoutMutation.error as any).message}
@@ -84,7 +84,7 @@ const MisPagos: React.FC = () => {
             {pagos.map(pago => (
               <Paper key={pago.id} elevation={2} sx={{ p: 3, borderRadius: 2 }}>
                 <Box display="flex" justifyContent="space-between" alignItems="flex-start" flexWrap="wrap" gap={2}>
-                  
+
                   {/* Info Izquierda */}
                   <Box>
                     <Typography variant="h6" color="primary">
@@ -103,15 +103,15 @@ const MisPagos: React.FC = () => {
 
                   {/* Estado y Acción Derecha */}
                   <Stack alignItems="flex-end" spacing={2}>
-                    <Chip 
-                      label={pago.estado_pago.toUpperCase().replace('_', ' ')} 
+                    <Chip
+                      label={pago.estado_pago.toUpperCase().replace('_', ' ')}
                       color={getStatusColor(pago.estado_pago) as any}
                       size="small"
                     />
 
                     {(pago.estado_pago === 'pendiente' || pago.estado_pago === 'vencido') && (
-                      <Button 
-                        variant="contained" 
+                      <Button
+                        variant="contained"
                         onClick={() => handlePagarClick(pago.id)}
                         disabled={checkoutMutation.isPending}
                         size="small"

@@ -1,4 +1,3 @@
-// src/pages/Admin/Proyectos/ProyectoDetailPage.tsx
 import React, { useState } from 'react';
 import {
   Box, Paper, Typography, Button, Stack, Tabs, Tab, Chip,
@@ -12,21 +11,17 @@ import {
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import proyectoService from '../../../../Services/proyecto.service';
-import { QueryHandler } from '../../../../components/common/QueryHandler/QueryHandler';
-import type { ProyectoDTO } from '../../../../types/dto/proyecto.dto';
-
-// Componentes
-import ProyectoBasicInfo from '../components/ProyectoBasicInfo';
-import { ProyectoLotesManager } from '../components/ProyectoLotesManager';
-import { ProyectoPriceHistory } from '../components/ProyectoPriceHistory';
-import { ProyectoSuscripciones } from '../components/ProyectoSuscripciones';
-import { ProyectoStateActions } from '../components/ProyectoStateActions';
-
-// Modales
-import ManageImagesModal from '../modals/ManageImagesModal';
-import EditProyectoModal from '../modals/EditProyectoModal';
-import AssignLotesModal from '../modals/AssignLotesModal';
+import proyectoService from '../../../Services/proyecto.service';
+import type { ProyectoDto } from '../../../types/dto/proyecto.dto';
+import { QueryHandler } from '../../../components/common/QueryHandler/QueryHandler';
+import ProyectoLotesManager from './components/ProyectoLotesManager';
+import ProyectoBasicInfo from './components/ProyectoBasicInfo';
+import ManageImagesModal from './modals/ManageImagesModal';
+import EditProyectoModal from './modals/EditProyectoModal';
+import ProyectoPriceHistory from './components/ProyectoPriceHistory';
+import AssignLotesModal from './modals/AssignLotesModal';
+import ProyectoSuscripciones from './components/ProyectoSuscripciones';
+import { ProyectoStateActions } from './components/ProyectoStateActions';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -60,47 +55,50 @@ const ProyectoDetailPage: React.FC = () => {
   const [lotesModalOpen, setLotesModalOpen] = useState(false);
 
   // Query: Obtener datos del proyecto
-  const { data: proyecto, isLoading, error } = useQuery<ProyectoDTO, Error>({
+  const { data: proyecto, isLoading, error } = useQuery<ProyectoDto, Error>({
     queryKey: ['proyecto', id],
-    queryFn: () => proyectoService.getProyectoById(Number(id)),
+    queryFn: async () => {
+      const response = await proyectoService.getByIdAdmin(Number(id));
+      return response.data;
+    },
     enabled: !!id,
   });
 
   // Mutation: Actualizar proyecto
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) =>
-      proyectoService.updateProyecto(id, data),
+    mutationFn: ({ id, data }: { id: number; data: any }) =>
+      proyectoService.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['proyecto', id] });
-      queryClient.invalidateQueries({ queryKey: ['adminAllProjects'] });
+      queryClient.invalidateQueries({ queryKey: ['adminProyectos'] });
       setEditModalOpen(false);
     },
   });
 
   // Mutation: Iniciar proceso (solo para mensuales)
   const iniciarProcesoMutation = useMutation({
-    mutationFn: (proyectoId: string) =>
-      proyectoService.iniciarProcesoProyecto(proyectoId),
+    mutationFn: (proyectoId: number) =>
+      proyectoService.startProcess(proyectoId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['proyecto', id] });
-      queryClient.invalidateQueries({ queryKey: ['adminAllProjects'] });
+      queryClient.invalidateQueries({ queryKey: ['adminProyectos'] });
     },
   });
 
   // Mutation: Finalizar proyecto
   const finalizarMutation = useMutation({
-    mutationFn: (proyectoId: string) =>
-      proyectoService.updateProyecto(proyectoId, { estado_proyecto: 'Finalizado' }),
+    mutationFn: (proyectoId: number) =>
+      proyectoService.update(proyectoId, { estado_proyecto: 'Finalizado' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['proyecto', id] });
-      queryClient.invalidateQueries({ queryKey: ['adminAllProjects'] });
+      queryClient.invalidateQueries({ queryKey: ['adminProyectos'] });
     },
   });
 
   // Mutation: Asignar lotes
   const assignLotesMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) =>
-      proyectoService.assignLotesToProyecto(id, data),
+    mutationFn: ({ id, lotesIds }: { id: number; lotesIds: number[] }) =>
+      proyectoService.assignLotes(id, lotesIds),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['proyecto', id] });
       setLotesModalOpen(false);
@@ -108,26 +106,26 @@ const ProyectoDetailPage: React.FC = () => {
   });
 
   // Handlers
-  const handleEditSubmit = async (proyectoId: string, data: any) => {
+  const handleEditSubmit = async (proyectoId: number, data: any) => {
     await updateMutation.mutateAsync({ id: proyectoId, data });
   };
 
   const handleIniciarProceso = () => {
     if (!id) return;
     if (window.confirm('¿Iniciar el proceso de este proyecto? Esto comenzará el conteo de meses.')) {
-      iniciarProcesoMutation.mutate(id);
+      iniciarProcesoMutation.mutate(Number(id));
     }
   };
 
   const handleFinalizar = () => {
     if (!id) return;
     if (window.confirm('¿Marcar este proyecto como FINALIZADO? Esta acción es permanente.')) {
-      finalizarMutation.mutate(id);
+      finalizarMutation.mutate(Number(id));
     }
   };
 
-  const handleAssignLotes = async (proyectoId: string, data: any) => {
-    await assignLotesMutation.mutateAsync({ id: proyectoId, data });
+  const handleAssignLotes = async (proyectoId: number, lotesIds: number[]) => {
+    await assignLotesMutation.mutateAsync({ id: proyectoId, lotesIds });
   };
 
   if (!id) {
@@ -316,11 +314,12 @@ const ProyectoDetailPage: React.FC = () => {
               </TabPanel>
             </Paper>
 
-            {/* Modales */}
+            {/* Modales - AQUI ESTÁ LA CORRECCIÓN PRINCIPAL */}
             <EditProyectoModal
               open={editModalOpen}
               onClose={() => setEditModalOpen(false)}
-              onSubmit={handleEditSubmit}
+              // Corrección: Forzamos la conversión a Number(id)
+              onSubmit={(id, data) => handleEditSubmit(Number(id), data)}
               proyecto={proyecto}
               isLoading={updateMutation.isPending}
             />
@@ -334,7 +333,8 @@ const ProyectoDetailPage: React.FC = () => {
             <AssignLotesModal
               open={lotesModalOpen}
               onClose={() => setLotesModalOpen(false)}
-              onSubmit={handleAssignLotes}
+              // Corrección: Forzamos la conversión a Number(proyectoId)
+              onSubmit={(proyectoId, data) => handleAssignLotes(Number(proyectoId), data.lotesIds)}
               proyecto={proyecto}
               isLoading={assignLotesMutation.isPending}
             />

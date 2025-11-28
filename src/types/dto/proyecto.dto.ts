@@ -96,16 +96,16 @@ export interface ProyectoDto extends BaseDTO {
 // 📊 MÉTRICAS (ADMIN)
 // ==========================================
 
-export interface CompletionRateDto {
+export interface CompletionRateDTO  {
   total_iniciados: number;
   total_finalizados: number;
   tasa_culminacion: string; 
 }
 
-export interface MonthlyProgressItemDto {
+export interface MonthlyProgressItem  {
   id: number;
   nombre: string;
-  estado: string;
+  estado: 'En proceso' | 'En Espera' | 'Finalizado';
   meta_suscripciones: number;
   suscripciones_actuales: number;
   porcentaje_avance: string;

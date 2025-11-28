@@ -64,18 +64,17 @@ export interface SuscripcionInitResponse {
 // 📊 MÉTRICAS (ADMIN)
 // ==========================================
 
-export interface MorosityMetricsDto {
-  kpi_name: string;
-  total_pagos_generados: string; // Viene como string decimal del backend
-  total_en_riesgo: string;
-  tasa_morosidad: string; // Porcentaje
+export interface MorosidadDTO {
+  total_generado: string;
+  monto_en_riesgo: string;
+  tasa_morosidad: string;
+  suscripciones_en_riesgo: number;
 }
 
-export interface CancellationMetricsDto {
-  kpi_name: string;
+export interface CancelacionDTO {
   total_suscripciones: number;
   total_canceladas: number;
-  tasa_cancelacion: string; // Porcentaje
+  tasa_cancelacion: string;
 }
 
 // ==========================================

@@ -15,16 +15,14 @@ import {
   Edit as EditIcon // ✏️ Icono para editar
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import UsuarioService from '../../../Services/usuario.service';
+import type { CreateUsuarioDto, UpdateUserAdminDto, UsuarioDto } from '../../../types/dto/usuario.dto';
+import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
+import { QueryHandler } from '../../../components/common/QueryHandler/QueryHandler';
+import CreateUserModal from './modals/CreateUserModal';
+import EditUserModal from './modals/EditUserModal';
 
 
-import type { UsuarioDto, CreateUsuarioDto, UpdateUserAdminDto } from '../../types/dto/usuario.dto';
-
-// Componentes Comunes
-import { PageContainer } from '../../components/common/PageContainer/PageContainer';
-import { QueryHandler } from '../../components/common/QueryHandler/QueryHandler';
-import UsuarioService from '../../Services/usuario.service';
-import CreateUserModal from './Usuarios/modals/CreateUserModal';
-import EditUserModal from './Usuarios/modals/EditUserModal';
 
 
 // Componente de Tarjeta KPI (Pequeña)

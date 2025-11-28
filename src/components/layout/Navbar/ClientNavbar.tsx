@@ -6,26 +6,27 @@ import {
   Menu, MenuItem, Divider, Badge, useMediaQuery, useTheme, Container
 } from '@mui/material';
 import {
-  Menu as MenuIcon, Close, Notifications, ExpandMore
+  Menu as MenuIcon, Close, Notifications, ExpandMore,
+  CheckCircle
 } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
 
 import { useAuth } from '../../../context/AuthContext';
-
 import MensajeService from '../../../Services/mensaje.service';
 import { useNavbarMenu, type NavItem } from '../../../hooks/useNavbarMenu';
 
+// 👇 IMPORTACIÓN DEL DIÁLOGO
+import { LogoutDialog } from '../../common/LogoutDialog/LogoutDialog';
+
 // =================================================================
-// 1. SUB-COMPONENTE PARA MENÚS DESPLEGABLES (Desktop)
+// 1. SUB-COMPONENTE PARA MENÚS DESPLEGABLES (Desktop) - CORREGIDO
 // =================================================================
-// Este componente maneja la lógica de abrir/cerrar el menú de "Como Funciona"
 const NavDropdown: React.FC<{ item: NavItem }> = ({ item }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
 
-  // Verifica si alguna de las opciones hijas está activa para pintar el botón padre
   const isChildActive = item.submenu?.some(sub => 
     sub.path && location.pathname.startsWith(sub.path)
   );
@@ -38,11 +39,10 @@ const NavDropdown: React.FC<{ item: NavItem }> = ({ item }) => {
     setAnchorEl(null);
   };
 
-  const handleItemClick = (path?: string) => {
-    if (path) {
-      navigate(path);
-      handleClose();
-    }
+  const handleItemClick = (path?: string, action?: () => void) => {
+    if (action) action();
+    else if (path) navigate(path);
+    handleClose();
   };
 
   return (
@@ -64,18 +64,25 @@ const NavDropdown: React.FC<{ item: NavItem }> = ({ item }) => {
         onClose={handleClose}
         PaperProps={{ elevation: 2, sx: { mt: 1, minWidth: 180 } }}
       >
+        {/* ✅ CORRECCIÓN: Eliminamos React.Fragment y devolvemos items directos */}
         {item.submenu?.map((sub, idx) => {
+             // 1. Si es divisor, retornamos el Divider directamente
+             if (sub.isDivider) {
+                 return <Divider key={idx} />;
+             }
+
+             // 2. Si es item normal, retornamos el MenuItem directamente
              const Icon = sub.icon;
              return (
                 <MenuItem 
-                    key={idx} 
-                    onClick={() => handleItemClick(sub.path)}
-                    selected={sub.path ? location.pathname === sub.path : false}
+                   key={idx} 
+                   onClick={() => handleItemClick(sub.path, sub.action)}
+                   selected={sub.path ? location.pathname === sub.path : false}
                 >
-                    {Icon && <ListItemIcon><Icon fontSize="small" /></ListItemIcon>}
-                    {sub.label}
+                   {Icon && <ListItemIcon><Icon fontSize="small" /></ListItemIcon>}
+                   {sub.label}
                 </MenuItem>
-             )
+             );
         })}
       </Menu>
     </>
@@ -91,9 +98,10 @@ const ClientNavbar: React.FC = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated } = useAuth(); 
   
-  const { navItems, userNavItems, actionButtons } = useNavbarMenu();
+  // 👇 DESESTRUCTURAMOS logoutProps DEL HOOK
+  const { config: { navItems, userNavItems, actionButtons }, logoutProps } = useNavbarMenu();
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuAnchor, setUserMenuAnchor] = useState<null | HTMLElement>(null);
@@ -146,23 +154,23 @@ const ClientNavbar: React.FC = () => {
         {navItems.map((item, idx) => {
             const Icon = item.icon;
             
-            // LÓGICA MOBILE: Si tiene submenu, mostramos el título y sus hijos indentados
             if (item.submenu && !item.path) {
                 return (
                     <React.Fragment key={idx}>
-                         <ListItem>
+                          <ListItem>
                              <ListItemText 
                                 primary={item.label} 
                                 primaryTypographyProps={{ fontWeight: 'bold', color: 'text.primary' }} 
                              />
-                         </ListItem>
-                         {item.submenu.map((sub, sIdx) => {
+                          </ListItem>
+                          {item.submenu.map((sub, sIdx) => {
                              if(sub.isDivider) return null;
                              const SubIcon = sub.icon;
                              return (
                                 <ListItemButton 
                                     key={sIdx} 
-                                    onClick={() => handleNavigate(sub.path || '')} 
+                                    // Soporte para acción (logout) o navegación
+                                    onClick={() => sub.action ? sub.action() : handleNavigate(sub.path || '')} 
                                     sx={{ pl: 4 }}
                                     selected={isActive(sub.path)}
                                 >
@@ -170,13 +178,12 @@ const ClientNavbar: React.FC = () => {
                                     <ListItemText primary={sub.label} />
                                 </ListItemButton>
                              )
-                         })}
-                         <Divider sx={{ my: 1 }} />
+                          })}
+                          <Divider sx={{ my: 1 }} />
                     </React.Fragment>
                 )
             }
             
-            // Ítem normal
             return (
                 <ListItem key={idx} disablePadding>
                     <ListItemButton onClick={() => handleNavigate(item.path || '')} selected={isActive(item.path)}>
@@ -185,6 +192,24 @@ const ClientNavbar: React.FC = () => {
                     </ListItemButton>
                 </ListItem>
             )
+        })}
+        {/* Renderizar items de usuario (como cerrar sesión) en mobile */}
+        {isAuthenticated && userNavItems[0]?.submenu?.map((sub, idx) => {
+             if(sub.isDivider) return <Divider key={`u-${idx}`} />;
+             const SubIcon = sub.icon;
+             return (
+                <ListItemButton 
+                    key={`u-${idx}`}
+                    onClick={() => {
+                        setMobileOpen(false);
+                        if(sub.action) sub.action();
+                        else if(sub.path) handleNavigate(sub.path);
+                    }}
+                >
+                    {SubIcon && <ListItemIcon sx={{ color: sub.label === 'Cerrar Sesión' ? 'error.main' : 'inherit' }}><SubIcon /></ListItemIcon>}
+                    <ListItemText primary={sub.label} sx={{ color: sub.label === 'Cerrar Sesión' ? 'error.main' : 'inherit' }} />
+                </ListItemButton>
+             )
         })}
       </List>
 
@@ -210,21 +235,16 @@ const ClientNavbar: React.FC = () => {
       <AppBar position="sticky" elevation={0} sx={{ bgcolor: 'background.paper', borderBottom: '1px solid', borderColor: 'divider' }}>
         <Container maxWidth="xl">
           <Toolbar sx={{ px: { xs: 0 }, minHeight: { xs: 64, md: 72 } }}>
-            {/* Logo */}
             <Box component={RouterLink} to="/" sx={{ display: 'flex', alignItems: 'center', gap: 1, textDecoration: 'none', mr: 4 }}>
               <Box component="img" src="/navbar/nav.png" alt="Logo" sx={{ height: { xs: 28, md: 36 } }} />
             </Box>
 
-            {/* LINKS DESKTOP */}
             {!isMobile && (
               <Box sx={{ display: 'flex', gap: 1, flex: 1 }}>
                 {navItems.map((link) => {
-                    // 🚀 CORRECCIÓN AQUÍ: Si tiene submenu, usamos el componente NavDropdown
                     if (link.submenu && !link.path) {
                         return <NavDropdown key={link.label} item={link} />;
                     }
-                    
-                    // Si es un link normal
                     return (
                         <Button
                             key={link.label}
@@ -249,7 +269,6 @@ const ClientNavbar: React.FC = () => {
 
             {isMobile && <Box sx={{ flex: 1 }} />}
 
-            {/* Acciones Usuario / Login */}
             {!isMobile && (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 {isAuthenticated ? (
@@ -265,9 +284,25 @@ const ClientNavbar: React.FC = () => {
                       sx={{ textTransform: 'none', color: 'text.primary', ml: 1 }}
                       endIcon={<ExpandMore />}
                     >
-                      <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main', mr: 1, fontSize: '0.875rem' }}>
-                        {user?.nombre?.charAt(0) || 'U'}
-                      </Avatar>
+                      <Badge
+                          overlap="circular"
+                          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                          badgeContent={
+                            user?.is_2fa_enabled ? (
+                              <CheckCircle sx={{ 
+                                width: 16, height: 16, color: '#4CAF50',
+                                bgcolor: 'white', borderRadius: '50%', border: '2px solid white'
+                              }} />
+                            ) : null
+                          }
+                        >
+                          <Avatar sx={{ 
+                            width: 32, height: 32, bgcolor: 'primary.main', mr: 1,
+                            fontSize: '0.875rem', border: user?.is_2fa_enabled ? '2px solid #4CAF50' : 'none'
+                          }}>
+                            {user?.nombre?.charAt(0) || 'U'}
+                          </Avatar>
+                        </Badge>
                       <Typography variant="body2" fontWeight={500}>{user?.nombre?.split(' ')[0]}</Typography>
                     </Button>
 
@@ -284,7 +319,7 @@ const ClientNavbar: React.FC = () => {
                                 <MenuItem 
                                     key={idx} 
                                     onClick={() => {
-                                        if (item.action) item.action();
+                                        if (item.action) item.action(); // Aquí se dispara el setOpenLogoutDialog(true)
                                         else if (item.path) handleNavigate(item.path);
                                         setUserMenuAnchor(null);
                                     }}
@@ -317,9 +352,9 @@ const ClientNavbar: React.FC = () => {
             {isMobile && (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                  {isAuthenticated && (
-                     <IconButton onClick={() => handleNavigate('/cliente/mensajes')}>
-                         <Badge badgeContent={unreadCount} color="error"><Notifications /></Badge>
-                     </IconButton>
+                      <IconButton onClick={() => handleNavigate('/cliente/mensajes')}>
+                          <Badge badgeContent={unreadCount} color="error"><Notifications /></Badge>
+                      </IconButton>
                  )}
                 <IconButton onClick={() => setMobileOpen(true)} sx={{ color: 'text.primary' }}>
                   <MenuIcon />
@@ -342,6 +377,13 @@ const ClientNavbar: React.FC = () => {
       <Box component="main" sx={{ flexGrow: 1, minHeight: 'calc(100vh - 72px)' }}>
         <Outlet />
       </Box>
+
+      {/* 👇 AQUÍ RENDERIZAMOS EL MODAL GLOBALMENTE PARA EL CLIENTE */}
+      <LogoutDialog 
+        open={logoutProps.open}
+        onClose={logoutProps.onClose}
+        onConfirm={logoutProps.onConfirm}
+      />
     </>
   );
 };

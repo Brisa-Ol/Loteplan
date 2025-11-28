@@ -1,4 +1,3 @@
-// src/components/Admin/Layout/AdminSidebar.tsx
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
@@ -11,6 +10,8 @@ import {
 import { useAuth } from '../../../context/AuthContext';
 import { useNavbarMenu } from '../../../hooks/useNavbarMenu';
 
+// 👇 IMPORTACIÓN DEL DIÁLOGO
+import { LogoutDialog } from '../../common/LogoutDialog/LogoutDialog';
 
 const DRAWER_WIDTH = 260;
 const DRAWER_COLLAPSED = 72;
@@ -22,10 +23,10 @@ interface AdminSidebarProps {
 const AdminSidebar: React.FC<AdminSidebarProps> = ({ pendingKYC = 0 }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   
-  // Usamos el hook centralizado
-  const { navItems } = useNavbarMenu();
+  // ✅ CORRECCIÓN: Desestructuramos 'userNavItems' aquí, al nivel superior
+  const { config: { navItems, userNavItems }, logoutProps } = useNavbarMenu();
   
   const [collapsed, setCollapsed] = useState(false);
   const [openMenus, setOpenMenus] = useState<string[]>([]);
@@ -48,17 +49,23 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ pendingKYC = 0 }) => {
     if (path) navigate(path);
   };
 
+  // ✅ NUEVA FUNCIÓN HELPER: Maneja el click de logout usando la config ya cargada
+  const handleLogoutClick = () => {
+    // Buscamos el item "Cerrar Sesión" en la configuración de usuario que ya tenemos en memoria
+    const logoutItem = userNavItems[0]?.submenu?.find(s => s.label === 'Cerrar Sesión');
+    
+    // Si existe y tiene acción (la cual abre el modal), la ejecutamos
+    if (logoutItem?.action) {
+        logoutItem.action();
+    }
+  };
+
   const renderNavItems = (items: any[]) => {
     return items.map((item, index) => {
-      // Determinamos estado activo
       const active = isActive(item.path) || isChildActive(item.submenu);
       const hasSubmenu = item.submenu && item.submenu.length > 0;
       const isOpen = openMenus.includes(item.label);
-      
-      // Lógica de badge para Usuarios (KYC)
       const showBadge = item.label === 'Usuarios' && pendingKYC > 0;
-
-      // 1. Icono del Padre (Mayúscula para que React lo entienda como componente)
       const IconComponent = item.icon;
 
       return (
@@ -100,20 +107,18 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ pendingKYC = 0 }) => {
             </ListItemButton>
           </Tooltip>
 
-          {/* Submenú */}
           {!collapsed && hasSubmenu && (
             <Collapse in={isOpen} timeout="auto" unmountOnExit>
               <List disablePadding>
                 {item.submenu.map((subItem: any, subIndex: number) => {
                   if (subItem.isDivider) return <Divider key={subIndex} sx={{ my: 1 }} />;
-                  
-                  // 2. CORRECCIÓN APLICADA: Variable con Mayúscula (SubIcon)
                   const SubIcon = subItem.icon;
                   const isSubActive = isActive(subItem.path);
 
                   return (
                     <ListItemButton
                       key={subItem.label || subIndex}
+                      // Soporte para acción o navegación
                       onClick={() => subItem.action ? subItem.action() : handleNavigate(subItem.path)}
                       sx={{
                         pl: 6,
@@ -126,8 +131,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ pendingKYC = 0 }) => {
                     >
                       {SubIcon && (
                          <ListItemIcon sx={{ minWidth: 30, color: isSubActive ? 'primary.main' : 'text.secondary' }}>
-                            {/* Renderizamos como componente */}
-                            <SubIcon fontSize="small" />
+                           <SubIcon fontSize="small" />
                          </ListItemIcon>
                       )}
                       <ListItemText
@@ -150,56 +154,71 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ pendingKYC = 0 }) => {
   };
 
   return (
-    <Drawer
-      variant="permanent"
-      sx={{
-        width: collapsed ? DRAWER_COLLAPSED : DRAWER_WIDTH,
-        flexShrink: 0,
-        '& .MuiDrawer-paper': {
-          width: collapsed ? DRAWER_COLLAPSED : DRAWER_WIDTH,
-          boxSizing: 'border-box',
-          transition: 'width 0.2s ease-in-out',
-          overflowX: 'hidden'
-        }
-      }}
-    >
-      {/* Header */}
-      <Box sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: collapsed ? 'center' : 'space-between', minHeight: 64 }}>
-        {!collapsed && (
-          <Box component="img" src="/public/navbar/nav.png" alt="Logo" sx={{ height: 32 }} />
-        )}
-        <IconButton onClick={() => setCollapsed(!collapsed)}>
-          {collapsed ? <ChevronRight /> : <ChevronLeft />}
-        </IconButton>
-      </Box>
+    <>
+        <Drawer
+        variant="permanent"
+        sx={{
+            width: collapsed ? DRAWER_COLLAPSED : DRAWER_WIDTH,
+            flexShrink: 0,
+            '& .MuiDrawer-paper': {
+            width: collapsed ? DRAWER_COLLAPSED : DRAWER_WIDTH,
+            boxSizing: 'border-box',
+            transition: 'width 0.2s ease-in-out',
+            overflowX: 'hidden'
+            }
+        }}
+        >
+        <Box sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: collapsed ? 'center' : 'space-between', minHeight: 64 }}>
+            {!collapsed && (
+            <Box component="img" src="/public/navbar/nav.png" alt="Logo" sx={{ height: 32 }} />
+            )}
+            <IconButton onClick={() => setCollapsed(!collapsed)}>
+            {collapsed ? <ChevronRight /> : <ChevronLeft />}
+            </IconButton>
+        </Box>
 
-      {/* Main Navigation */}
-      <Box sx={{ flex: 1, py: 2, overflowY: 'auto' }}>
-        <List disablePadding>
-          {renderNavItems(navItems)}
-        </List>
-      </Box>
+        <Box sx={{ flex: 1, py: 2, overflowY: 'auto' }}>
+            <List disablePadding>
+            {renderNavItems(navItems)}
+            </List>
+        </Box>
 
-      <Divider />
+        <Divider />
 
-      {/* Footer Usuario */}
-      <Box sx={{ p: 2 }}>
-        {!collapsed ? (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, p: 1.5, borderRadius: 2, bgcolor: 'secondary.light' }}>
-            <Avatar sx={{ width: 36, height: 36, bgcolor: 'primary.main' }}>
-                {user?.nombre?.charAt(0) || 'A'}
-            </Avatar>
-            <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Typography variant="body2" fontWeight={600} noWrap>{user?.nombre}</Typography>
-                <Typography variant="caption" color="text.secondary">Admin</Typography>
-            </Box>
-            <IconButton size="small" onClick={logout}><Logout fontSize="small" /></IconButton>
-            </Box>
-        ) : (
-            <IconButton onClick={logout} sx={{ width: '100%' }}><Logout /></IconButton>
-        )}
-      </Box>
-    </Drawer>
+        <Box sx={{ p: 2 }}>
+            {!collapsed ? (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, p: 1.5, borderRadius: 2, bgcolor: 'secondary.light' }}>
+                <Avatar sx={{ width: 36, height: 36, bgcolor: 'primary.main' }}>
+                    {user?.nombre?.charAt(0) || 'A'}
+                </Avatar>
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography variant="body2" fontWeight={600} noWrap>{user?.nombre}</Typography>
+                    <Typography variant="caption" color="text.secondary">Admin</Typography>
+                </Box>
+                {/* ✅ CORREGIDO: Usamos handleLogoutClick en lugar de lógica inline compleja */}
+                <IconButton size="small" onClick={handleLogoutClick} color="primary">
+                    <Logout fontSize="small" />
+                </IconButton>
+                </Box>
+            ) : (
+                // ✅ CORREGIDO: Usamos handleLogoutClick aquí también
+                <IconButton 
+                    sx={{ width: '100%' }} 
+                    onClick={handleLogoutClick}
+                >
+                    <Logout />
+                </IconButton>
+            )}
+        </Box>
+        </Drawer>
+
+        {/* 👇 AQUÍ RENDERIZAMOS EL MODAL PARA EL ADMIN */}
+        <LogoutDialog 
+            open={logoutProps.open}
+            onClose={logoutProps.onClose}
+            onConfirm={logoutProps.onConfirm}
+        />
+    </>
   );
 };
 
