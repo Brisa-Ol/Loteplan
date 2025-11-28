@@ -19,7 +19,7 @@ import { useNavbarMenu, type NavItem } from '../../../hooks/useNavbarMenu';
 import { LogoutDialog } from '../../common/LogoutDialog/LogoutDialog';
 
 // =================================================================
-// 1. SUB-COMPONENTE PARA MENÚS DESPLEGABLES (Desktop) - CORREGIDO
+// 1. SUB-COMPONENTE PARA MENÚS DESPLEGABLES (Desktop)
 // =================================================================
 const NavDropdown: React.FC<{ item: NavItem }> = ({ item }) => {
   const navigate = useNavigate();
@@ -64,25 +64,21 @@ const NavDropdown: React.FC<{ item: NavItem }> = ({ item }) => {
         onClose={handleClose}
         PaperProps={{ elevation: 2, sx: { mt: 1, minWidth: 180 } }}
       >
-        {/* ✅ CORRECCIÓN: Eliminamos React.Fragment y devolvemos items directos */}
         {item.submenu?.map((sub, idx) => {
-             // 1. Si es divisor, retornamos el Divider directamente
-             if (sub.isDivider) {
-                 return <Divider key={idx} />;
-             }
-
-             // 2. Si es item normal, retornamos el MenuItem directamente
              const Icon = sub.icon;
              return (
-                <MenuItem 
-                   key={idx} 
-                   onClick={() => handleItemClick(sub.path, sub.action)}
-                   selected={sub.path ? location.pathname === sub.path : false}
-                >
-                   {Icon && <ListItemIcon><Icon fontSize="small" /></ListItemIcon>}
-                   {sub.label}
-                </MenuItem>
-             );
+                 <React.Fragment key={idx}>
+                    {sub.isDivider ? <Divider /> : (
+                        <MenuItem 
+                           onClick={() => handleItemClick(sub.path, sub.action)}
+                           selected={sub.path ? location.pathname === sub.path : false}
+                        >
+                            {Icon && <ListItemIcon><Icon fontSize="small" /></ListItemIcon>}
+                            {sub.label}
+                        </MenuItem>
+                    )}
+                 </React.Fragment>
+             )
         })}
       </Menu>
     </>
@@ -98,7 +94,7 @@ const ClientNavbar: React.FC = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, isAuthenticated } = useAuth(); 
+  const { user, isAuthenticated } = useAuth(); // Ya no necesitamos logout aquí directo
   
   // 👇 DESESTRUCTURAMOS logoutProps DEL HOOK
   const { config: { navItems, userNavItems, actionButtons }, logoutProps } = useNavbarMenu();
@@ -352,9 +348,9 @@ const ClientNavbar: React.FC = () => {
             {isMobile && (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                  {isAuthenticated && (
-                      <IconButton onClick={() => handleNavigate('/cliente/mensajes')}>
-                          <Badge badgeContent={unreadCount} color="error"><Notifications /></Badge>
-                      </IconButton>
+                     <IconButton onClick={() => handleNavigate('/cliente/mensajes')}>
+                         <Badge badgeContent={unreadCount} color="error"><Notifications /></Badge>
+                     </IconButton>
                  )}
                 <IconButton onClick={() => setMobileOpen(true)} sx={{ color: 'text.primary' }}>
                   <MenuIcon />

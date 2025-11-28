@@ -317,10 +317,9 @@ const AdminDashboard: React.FC = () => {
           Accesos Rápidos
         </Typography>
         <Stack direction="row" gap={2} flexWrap="wrap" sx={{ mt: 2 }}>
-          <Button variant="outlined" startIcon={<PersonIcon/>} onClick={() => navigate('/Admin/Usuarios/AdminUsuarios')}>Usuarios</Button>
-          <Button variant="outlined" startIcon={<HandymanIcon/>} onClick={() => navigate('/Admin/Proyectos/Proyectos/AdminProyectos')}>Proyectos</Button>
-          <Button variant="outlined" startIcon={<LandscapeIcon/>} onClick={() => navigate('/Admin/Lotes/AdminLotes')}>Lotes</Button>
-          <Button variant="outlined" startIcon={<MoneyIcon />} onClick={() => navigate('/admin/cuotas')}>Definir Cuota Mensual</Button>
+          <Button variant="outlined" startIcon={<PersonIcon/>} onClick={() => navigate('/admin/usuarios')}>Usuarios</Button>
+          <Button variant="outlined" startIcon={<HandymanIcon/>} onClick={() => navigate('/admin/proyectos')}>Proyectos</Button>
+          <Button variant="outlined" startIcon={<LandscapeIcon/>} onClick={() => navigate('/admin/lotes')}>Lotes</Button>
           <Button variant="outlined" startIcon={<AssessmentIcon />} onClick={() => navigate('/admin/contracts')}>Subir Contrato</Button>
         </Stack>
       </Paper>
