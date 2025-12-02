@@ -30,8 +30,6 @@ import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import type { AdminDisable2FADto, UpdateUserAdminDto, UsuarioDto } from '../../../../types/dto/usuario.dto';
 import UsuarioService from '../../../../Services/usuario.service';
-// Asegúrate de que la ruta de importación sea correcta según tu estructura
-
 
 // ════════════════════════════════════════════════════════════
 // 🆕 COMPONENTE DE CONFIRMACIÓN PARA DESACTIVAR 2FA
@@ -47,7 +45,6 @@ const Disable2FADialog: React.FC<{
 
   const handleSubmit = () => {
     if (justificacion.trim().length < 10) {
-      // Idealmente usar un toast/snackbar, pero alert funciona para validación rápida
       alert('La justificación debe tener al menos 10 caracteres');
       return;
     }
@@ -123,8 +120,8 @@ const validationSchema = Yup.object({
   apellido: Yup.string().min(2, "Mínimo 2 caracteres").required("El apellido es requerido"),
   email: Yup.string().email("Email inválido").required("El email es requerido"),
   nombre_usuario: Yup.string().min(4, "Mínimo 4 caracteres").required("El nombre de usuario es requerido"),
-  // ⚠️ CAMBIO IMPORTANTE: Validamos 'telefono' en lugar de 'numero_telefono'
-  telefono: Yup.string().matches(/^\d+$/, "Solo números").min(10, "Teléfono inválido").required("El teléfono es requerido"),
+  // ✅ FIX CRÍTICO: Ahora usa 'numero_telefono' como en el DTO
+  numero_telefono: Yup.string().matches(/^\d+$/, "Solo números").min(10, "Teléfono inválido").required("El teléfono es requerido"),
   rol: Yup.string().oneOf(['admin', 'cliente']).required("Requerido"),
   activo: Yup.boolean().required("Requerido"),
 });
@@ -140,24 +137,22 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
   onSubmit, 
   isLoading = false 
 }) => {
-  // Estado para controlar el diálogo de desactivación 2FA
   const [showDisable2FADialog, setShowDisable2FADialog] = useState(false);
   const [isDisabling2FA, setIsDisabling2FA] = useState(false);
 
-  // Inicializamos Formik con UpdateUserAdminDto
-  // Nota: UpdateUserAdminDto usa 'telefono', no 'numero_telefono'
+  // ✅ FIX: Ahora usa 'numero_telefono' en todo el formulario
   const formik = useFormik<UpdateUserAdminDto>({
     initialValues: {
       nombre: '',
       apellido: '',
       email: '',
       nombre_usuario: '',
-      telefono: '', // Corresponde al campo del DTO de actualización
+      numero_telefono: '', // ✅ CORREGIDO
       rol: 'cliente',
       activo: true,
     },
     validationSchema: validationSchema,
-    enableReinitialize: true, // Permite reiniciar valores cuando cambia 'user'
+    enableReinitialize: true,
     onSubmit: async (values) => {
       if (!user) return;
       try {
@@ -169,7 +164,6 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
     },
   });
 
-  // Cargar datos del usuario en el formulario
   useEffect(() => {
     if (user) {
       formik.setValues({
@@ -177,8 +171,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         apellido: user.apellido || '',
         email: user.email || '',
         nombre_usuario: user.nombre_usuario || '',
-        // 🚨 MAPEO CRÍTICO: De 'numero_telefono' (BD) a 'telefono' (DTO Update)
-        telefono: user.numero_telefono || '', 
+        numero_telefono: user.numero_telefono || '', // ✅ CORREGIDO: Ya no mapea
         rol: user.rol || 'cliente',
         activo: user.activo ?? true,
       });
@@ -186,22 +179,17 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
-  // FUNCIÓN PARA DESACTIVAR 2FA
   const handleDisable2FA = async (justificacion: string) => {
     if (!user) return;
     
     setIsDisabling2FA(true);
     try {
       const payload: AdminDisable2FADto = { justificacion };
-      // Llamada al servicio corregido (PATCH /reset-2fa)
       await UsuarioService.adminReset2FA(user.id, payload);
       
       alert('✅ 2FA desactivado correctamente.');
       setShowDisable2FADialog(false);
-      
-      // Cerrar modal principal para forzar refresco en la tabla padre si es necesario
       onClose();
-      // Opcional: window.location.reload() si no gestionas estado global
     } catch (error: any) {
       const errorMsg = error.response?.data?.error || error.message || 'Error desconocido';
       alert(`❌ Error al desactivar 2FA: ${errorMsg}`);
@@ -236,7 +224,6 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
           <DialogContent dividers>
             <Stack spacing={3} sx={{ mt: 1 }}>
               
-              {/* DATOS DE SOLO LECTURA (IDs y Fechas) */}
               <Alert severity="info" icon={false} sx={{ borderRadius: 2 }}>
                 <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
                   <Typography variant="body2">
@@ -251,7 +238,6 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                 </Box>
               </Alert>
 
-              {/* SECCIÓN 1: INFORMACIÓN PERSONAL */}
               <Box>
                 <Typography variant="subtitle2" color="primary" gutterBottom fontWeight="bold">
                   Información Personal
@@ -278,22 +264,22 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                     required
                   />
                 </Box>
+                {/* ✅ FIX: Ahora usa 'numero_telefono' */}
                 <TextField
                   fullWidth
-                  id="telefono" // ⚠️ Nombre del campo ajustado a 'telefono'
-                  name="telefono" // ⚠️ Nombre del campo ajustado a 'telefono'
+                  id="numero_telefono"
+                  name="numero_telefono"
                   label="Teléfono"
-                  value={formik.values.telefono}
+                  value={formik.values.numero_telefono}
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
-                  error={formik.touched.telefono && Boolean(formik.errors.telefono)}
-                  helperText={formik.touched.telefono && formik.errors.telefono}
+                  error={formik.touched.numero_telefono && Boolean(formik.errors.numero_telefono)}
+                  helperText={formik.touched.numero_telefono && formik.errors.numero_telefono}
                   disabled={isLoading}
                   required
                 />
               </Box>
 
-              {/* SECCIÓN 2: CREDENCIALES */}
               <Box>
                 <Typography variant="subtitle2" color="primary" gutterBottom fontWeight="bold">
                   Credenciales
@@ -323,7 +309,6 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                 </Box>
               </Box>
 
-              {/* SECCIÓN 3: PERMISOS Y ESTADO */}
               <Box>
                 <Typography variant="subtitle2" color="primary" gutterBottom fontWeight="bold">
                   Permisos y Estado
@@ -373,7 +358,6 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                 </Box>
               </Box>
 
-              {/* SECCIÓN 4: INDICADORES DE SEGURIDAD */}
               <Box>
                 <Typography variant="subtitle2" color="text.secondary" gutterBottom fontWeight="medium">
                   Estado de Seguridad
@@ -394,7 +378,6 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                   />
                 </Stack>
 
-                {/* BOTÓN PARA DESACTIVAR 2FA */}
                 {user.is_2fa_enabled && (
                   <Box sx={{ mt: 2 }}>
                     <Divider sx={{ mb: 2 }} />
@@ -420,7 +403,6 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                 )}
               </Box>
 
-              {/* Alerta de suspensión */}
               {!formik.values.activo && (
                 <Alert severity="error" variant="filled">
                   <strong>Atención:</strong> Al desactivar esta cuenta, el usuario perderá el acceso inmediato a la plataforma.
@@ -452,7 +434,6 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         </form>
       </Dialog>
 
-      {/* DIÁLOGO DE CONFIRMACIÓN PARA DESACTIVAR 2FA */}
       <Disable2FADialog
         open={showDisable2FADialog}
         onClose={() => setShowDisable2FADialog(false)}

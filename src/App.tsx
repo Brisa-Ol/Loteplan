@@ -1,3 +1,5 @@
+// src/App.tsx
+
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
@@ -5,16 +7,12 @@ import { Box, CircularProgress } from '@mui/material';
 import CssBaseline from '@mui/material/CssBaseline';
 import theme from './theme';
 
-// Providers
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
-// Layouts
 import ClientNavbar from './components/layout/Navbar/ClientNavbar';
 import AdminLayout from './components/layout/Navbar/AdminLayout';
-
-// Componente de Seguridad
 import ProtectedRoute from './routes/ProtectedRoute/ProtectedRoute';
 
 // --- PÁGINAS PÚBLICAS ---
@@ -38,26 +36,26 @@ import MisPagos from './pages/client/MiCuenta/MisPagos';
 import MisSuscripciones from './pages/client/MiCuenta/MisSuscripciones';
 import ProyectosAhorrista from './pages/client/Proyectos/ProyectosAhorrista';
 import ProyectosInversionista from './pages/client/Proyectos/ProyectosInversionista';
-
-
-// --- PÁGINAS ADMIN ---
-import AdminDashboard from './pages/Admin/Dashboard/AdminDashboard';
 import UserDashboard from './pages/client/UserDashboard/UserDashboard';
-import AdminLotes from './pages/Admin/Lotes/AdminLotes';
-import AdminSubastas from './pages/Admin/Lotes/AdminSubastas';
 import SecuritySettings from './pages/client/MiCuenta/SecuritySettings';
-import AdminDashboardImpagos from './pages/Admin/Lotes/AdminDashboardImpagos';
-import AdminUsuarios from './pages/Admin/Usuarios/AdminUsuarios';
 import RoleSelection from './pages/client/Proyectos/RoleSelection';
 import MensajesPage from './pages/client/MiCuenta/MensajesPage';
 import Contratos from './pages/client/MiCuenta/Contratos';
 import MisSubastas from './pages/client/MiCuenta/MisSubastas';
-import AdminKYC from './pages/Admin/Usuarios/AdminKYC';
-import AdminProyectos from './pages/Admin/Proyectos/AdminProyectos';
 import VerificacionKYC from './pages/client/MiCuenta/VerificacionKYC';
 import DetalleProyecto from './pages/client/Proyectos/DetalleProyecto';
 
+// --- PÁGINAS ADMIN ---
+import AdminDashboard from './pages/Admin/Dashboard/AdminDashboard';
 
+import AdminKYC from './pages/Admin/Usuarios/AdminKYC';
+import AdminProyectos from './pages/Admin/Proyectos/AdminProyectos';
+import SalaControlPujas from './pages/Admin/Lotes/SalaControlPujas';
+import ControlPagos from './pages/Admin/Lotes/ControlPagos';
+import InventarioLotes from './pages/Admin/Lotes/InventarioLotes';
+import AdminUsuarios from './pages/Admin/Usuarios/AdminUsuarios';
+import MisFavoritos from './pages/client/MiCuenta/MisFavoritos';
+import DetalleLote from './pages/client/Lotes/DetalleLote';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -65,7 +63,7 @@ const queryClient = new QueryClient({
   },
 });
 
-// COMPONENTE DE PANTALLA DE CARGA
+// ✅ PANTALLA DE CARGA MEJORADA
 const AppLoadingScreen: React.FC = () => (
   <Box 
     sx={{ 
@@ -78,15 +76,18 @@ const AppLoadingScreen: React.FC = () => (
   >
     <Box textAlign="center">
       <CircularProgress size={60} thickness={4} />
-      <Box mt={2} color="text.secondary">Cargando...</Box>
+      <Box mt={2} color="text.secondary" fontWeight={500}>
+        Cargando...
+      </Box>
     </Box>
   </Box>
 );
 
-// WRAPPER QUE CONTROLA LA CARGA INICIAL
+// ✅ WRAPPER MEJORADO - Evita el parpadeo del navbar
 const AppContent: React.FC = () => {
-  const { isInitializing } = useAuth();
+  const { isInitializing, user } = useAuth();
 
+  // ⚠️ CRÍTICO: Mientras carga, NO renderizar NINGÚN navbar
   if (isInitializing) {
     return <AppLoadingScreen />;
   }
@@ -97,15 +98,14 @@ const AppContent: React.FC = () => {
       {/* 🟢 RUTAS PÚBLICAS Y CLIENTE (Usan ClientNavbar)  */}
       {/* ================================================= */}
       <Route element={<ClientNavbar />}>
-        {/* A. Páginas Públicas (Home y Landing) */}
-        {/* CORREGIDO: Rutas estándar en minúsculas */}
+        {/* A. Páginas Públicas */}
         <Route path="/" element={<Home />} />
         <Route path="/como-funciona/ahorrista" element={<Ahorrista />} />
         <Route path="/como-funciona/inversionista" element={<Inversionista />} />
         <Route path="/nosotros" element={<Nosotros />} />
         <Route path="/preguntas" element={<Preguntas />} />
         
-        {/* B. Auth (Rutas estándar) */}
+        {/* B. Auth */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
@@ -113,26 +113,23 @@ const AppContent: React.FC = () => {
         <Route path="/confirm-email/:token" element={<ConfirmEmailPage />} />
         <Route path="/unauthorized" element={<Unauthorized />} />
 
-        {/* C. Exploración Pública (Lotes y Proyectos) - Pueden ser públicas o protegidas según prefieras */}
-        {/* Estas rutas las usan tanto usuarios logueados como visitantes para ver la "vidriera" */}
+        {/* C. Exploración Pública de Proyectos */}
         <Route path="/proyectos/ahorrista" element={<ProyectosAhorrista />} />
         <Route path="/proyectos/inversionista" element={<ProyectosInversionista />} />
-        <Route path="/proyectos/:id" element={<DetalleProyecto />} /> {/* 👈 Faltaba esta ruta vital */}
-        
+        <Route path="/Lotes/DetalleLote" element={<DetalleLote />} />
 
-
-        {/* D. Rutas Protegidas de CLIENTE (Mi Cuenta, etc.) */}
+        {/* D. Rutas Protegidas de CLIENTE */}
         <Route element={<ProtectedRoute allowedRoles={['cliente']} />}>
           <Route path="/client/dashboard" element={<UserDashboard />} />
           <Route path="/client/perfil" element={<Perfil />} />
           <Route path="/client/kyc" element={<VerificacionKYC />} />
           <Route path="/client/pagos" element={<MisPagos />} />
           <Route path="/client/mensajes" element={<MensajesPage />} />
-          <Route path="/client/seguridad" element={<SecuritySettings/>} />
+          <Route path="/client/seguridad" element={<SecuritySettings />} />
           <Route path="/client/suscripciones" element={<MisSuscripciones />} />
+          <Route path="/client/Favoritos" element={<MisFavoritos />} />
           <Route path="/client/subastas" element={<MisSubastas />} />
           <Route path="/client/contratos" element={<Contratos />} />
-          
           <Route path="/client/proyectos/seleccion" element={<RoleSelection />} />
         </Route>
       </Route>
@@ -145,11 +142,10 @@ const AppContent: React.FC = () => {
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/admin/usuarios" element={<AdminUsuarios />} />
           <Route path="/admin/kyc" element={<AdminKYC />} />
-          <Route path="/admin/proyectos" element={<AdminProyectos />} />
-          <Route path="/admin/lotes" element={<AdminLotes />} />
-          <Route path="/admin/impagos" element={<AdminDashboardImpagos />} />
-          <Route path="/admin/subastas" element={<AdminSubastas />} />
-          
+          <Route path="/admin/Proyectos" element={<AdminProyectos />} />
+        <Route path="/Admin/Lotes" element={<InventarioLotes />} />
+          <Route path="/admin/ControlPagos" element={<ControlPagos />} />
+          <Route path="/admin/SalaControlPujas" element={<SalaControlPujas />} />
         </Route>
       </Route>
 

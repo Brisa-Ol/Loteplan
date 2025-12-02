@@ -19,12 +19,9 @@ import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { useMutation } from '@tanstack/react-query';
 import { useAuth } from '../../../context/AuthContext';
-import type { UpdateProfileDto } from '../../../types/dto/usuario.dto';
+import type { UpdateUserMeDto } from '../../../types/dto/usuario.dto'; // ✅ FIX: Usar el DTO correcto
 import UsuarioService from '../../../Services/usuario.service';
 import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
-
-// Importaciones de tu arquitectura
-
 
 const Perfil: React.FC = () => {
   const { user, refetchUser } = useAuth();
@@ -34,7 +31,7 @@ const Perfil: React.FC = () => {
 
   // 1. Configuración de la Mutación
   const mutation = useMutation({
-    mutationFn: async (data: UpdateProfileDto) => {
+    mutationFn: async (data: UpdateUserMeDto) => {
       const response = await UsuarioService.updateMe(data);
       return response.data;
     },
@@ -51,13 +48,12 @@ const Perfil: React.FC = () => {
   });
 
   // 2. Configuración del Formulario
-  const formik = useFormik<UpdateProfileDto>({
+  const formik = useFormik<UpdateUserMeDto>({
     initialValues: {
       nombre: user?.nombre || '',
       apellido: user?.apellido || '',
       email: user?.email || '',
-      // ✅ CORREGIDO: Ahora coincide con la interfaz DTO
-      numero_telefono: user?.numero_telefono || '',
+      numero_telefono: user?.numero_telefono || '', // ✅ CORRECTO
       nombre_usuario: user?.nombre_usuario || '',
     },
     validationSchema: Yup.object({

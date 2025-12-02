@@ -15,11 +15,11 @@ import { useAuth } from '../../../context/AuthContext';
 import MensajeService from '../../../Services/mensaje.service';
 import { useNavbarMenu, type NavItem } from '../../../hooks/useNavbarMenu';
 
-// 👇 IMPORTACIÓN DEL DIÁLOGO
+// Importación del diálogo de logout
 import { LogoutDialog } from '../../common/LogoutDialog/LogoutDialog';
 
 // =================================================================
-// 1. SUB-COMPONENTE PARA MENÚS DESPLEGABLES (Desktop)
+// SUB-COMPONENTE PARA MENÚS DESPLEGABLES (Desktop) - CORREGIDO
 // =================================================================
 const NavDropdown: React.FC<{ item: NavItem }> = ({ item }) => {
   const navigate = useNavigate();
@@ -64,21 +64,25 @@ const NavDropdown: React.FC<{ item: NavItem }> = ({ item }) => {
         onClose={handleClose}
         PaperProps={{ elevation: 2, sx: { mt: 1, minWidth: 180 } }}
       >
+        {/* ✅ SOLUCIÓN: Mapeo directo sin Fragments */}
         {item.submenu?.map((sub, idx) => {
-             const Icon = sub.icon;
-             return (
-                 <React.Fragment key={idx}>
-                    {sub.isDivider ? <Divider /> : (
-                        <MenuItem 
-                           onClick={() => handleItemClick(sub.path, sub.action)}
-                           selected={sub.path ? location.pathname === sub.path : false}
-                        >
-                            {Icon && <ListItemIcon><Icon fontSize="small" /></ListItemIcon>}
-                            {sub.label}
-                        </MenuItem>
-                    )}
-                 </React.Fragment>
-             )
+          // 1. Si es divisor, devolvemos el componente Divider directamente
+          if (sub.isDivider) {
+            return <Divider key={`div-${idx}`} />;
+          }
+
+          // 2. Si es item normal, devolvemos MenuItem
+          const Icon = sub.icon;
+          return (
+            <MenuItem 
+              key={`item-${idx}`}
+              onClick={() => handleItemClick(sub.path, sub.action)}
+              selected={sub.path ? location.pathname === sub.path : false}
+            >
+              {Icon && <ListItemIcon><Icon fontSize="small" /></ListItemIcon>}
+              {sub.label}
+            </MenuItem>
+          );
         })}
       </Menu>
     </>
@@ -86,17 +90,16 @@ const NavDropdown: React.FC<{ item: NavItem }> = ({ item }) => {
 };
 
 // =================================================================
-// 2. COMPONENTE PRINCIPAL NAVBAR
+// COMPONENTE PRINCIPAL NAVBAR
 // =================================================================
-
 const ClientNavbar: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, isAuthenticated } = useAuth(); // Ya no necesitamos logout aquí directo
+  const { user, isAuthenticated } = useAuth();
   
-  // 👇 DESESTRUCTURAMOS logoutProps DEL HOOK
+  // Desestructuramos logoutProps del hook
   const { config: { navItems, userNavItems, actionButtons }, logoutProps } = useNavbarMenu();
 
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -108,7 +111,9 @@ const ClientNavbar: React.FC = () => {
       try {
         const res = await MensajeService.getUnreadCount(); 
         return (res.data as any).cantidad || (res.data as any).count || 0; 
-      } catch (e) { return 0; }
+      } catch (e) { 
+        return 0; 
+      }
     },
     enabled: isAuthenticated,
     refetchInterval: 30000
@@ -126,21 +131,36 @@ const ClientNavbar: React.FC = () => {
     return location.pathname.startsWith(path);
   };
 
-  // --- DRAWER MOBILE ---
+  // DRAWER MOBILE
   const mobileDrawer = (
     <Box sx={{ width: 280, height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <Box sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid', borderColor: 'divider' }}>
+      <Box sx={{ 
+        p: 2, 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'space-between', 
+        borderBottom: '1px solid', 
+        borderColor: 'divider' 
+      }}>
         <Box component="img" src="/navbar/nav.png" alt="Logo" sx={{ height: 32 }} />
-        <IconButton onClick={() => setMobileOpen(false)}><Close /></IconButton>
+        <IconButton onClick={() => setMobileOpen(false)}>
+          <Close />
+        </IconButton>
       </Box>
 
       {isAuthenticated && user && (
         <Box sx={{ p: 2, bgcolor: 'action.hover' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <Avatar sx={{ bgcolor: 'primary.main' }}>{user.nombre?.charAt(0)}</Avatar>
+            <Avatar sx={{ bgcolor: 'primary.main' }}>
+              {user.nombre?.charAt(0)}
+            </Avatar>
             <Box>
-              <Typography variant="subtitle2" fontWeight={600}>{user.nombre} {user.apellido}</Typography>
-              <Typography variant="caption" color="text.secondary">{user.email}</Typography>
+              <Typography variant="subtitle2" fontWeight={600}>
+                {user.nombre} {user.apellido}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {user.email}
+              </Typography>
             </Box>
           </Box>
         </Box>
@@ -148,79 +168,117 @@ const ClientNavbar: React.FC = () => {
 
       <List sx={{ flex: 1, py: 2 }}>
         {navItems.map((item, idx) => {
-            const Icon = item.icon;
-            
-            if (item.submenu && !item.path) {
-                return (
-                    <React.Fragment key={idx}>
-                          <ListItem>
-                             <ListItemText 
-                                primary={item.label} 
-                                primaryTypographyProps={{ fontWeight: 'bold', color: 'text.primary' }} 
-                             />
-                          </ListItem>
-                          {item.submenu.map((sub, sIdx) => {
-                             if(sub.isDivider) return null;
-                             const SubIcon = sub.icon;
-                             return (
-                                <ListItemButton 
-                                    key={sIdx} 
-                                    // Soporte para acción (logout) o navegación
-                                    onClick={() => sub.action ? sub.action() : handleNavigate(sub.path || '')} 
-                                    sx={{ pl: 4 }}
-                                    selected={isActive(sub.path)}
-                                >
-                                    {SubIcon && <ListItemIcon><SubIcon /></ListItemIcon>}
-                                    <ListItemText primary={sub.label} />
-                                </ListItemButton>
-                             )
-                          })}
-                          <Divider sx={{ my: 1 }} />
-                    </React.Fragment>
-                )
-            }
-            
+          const Icon = item.icon;
+          
+          if (item.submenu && !item.path) {
             return (
-                <ListItem key={idx} disablePadding>
-                    <ListItemButton onClick={() => handleNavigate(item.path || '')} selected={isActive(item.path)}>
-                    {Icon && <ListItemIcon sx={{ color: isActive(item.path) ? 'primary.main' : 'inherit' }}><Icon /></ListItemIcon>}
-                    <ListItemText primary={item.label} />
-                    </ListItemButton>
+              <React.Fragment key={idx}>
+                <ListItem>
+                  <ListItemText 
+                    primary={item.label} 
+                    primaryTypographyProps={{ 
+                      fontWeight: 'bold', 
+                      color: 'text.primary' 
+                    }} 
+                  />
                 </ListItem>
-            )
-        })}
-        {/* Renderizar items de usuario (como cerrar sesión) en mobile */}
-        {isAuthenticated && userNavItems[0]?.submenu?.map((sub, idx) => {
-             if(sub.isDivider) return <Divider key={`u-${idx}`} />;
-             const SubIcon = sub.icon;
-             return (
-                <ListItemButton 
-                    key={`u-${idx}`}
-                    onClick={() => {
+                {item.submenu.map((sub, sIdx) => {
+                  if (sub.isDivider) return null;
+                  const SubIcon = sub.icon;
+                  return (
+                    <ListItemButton 
+                      key={sIdx} 
+                      onClick={() => {
                         setMobileOpen(false);
-                        if(sub.action) sub.action();
-                        else if(sub.path) handleNavigate(sub.path);
-                    }}
-                >
-                    {SubIcon && <ListItemIcon sx={{ color: sub.label === 'Cerrar Sesión' ? 'error.main' : 'inherit' }}><SubIcon /></ListItemIcon>}
-                    <ListItemText primary={sub.label} sx={{ color: sub.label === 'Cerrar Sesión' ? 'error.main' : 'inherit' }} />
-                </ListItemButton>
-             )
+                        if (sub.action) sub.action();
+                        else if (sub.path) handleNavigate(sub.path);
+                      }} 
+                      sx={{ pl: 4 }}
+                      selected={isActive(sub.path)}
+                    >
+                      {SubIcon && (
+                        <ListItemIcon>
+                          <SubIcon />
+                        </ListItemIcon>
+                      )}
+                      <ListItemText primary={sub.label} />
+                    </ListItemButton>
+                  );
+                })}
+                <Divider sx={{ my: 1 }} />
+              </React.Fragment>
+            );
+          }
+          
+          return (
+            <ListItem key={idx} disablePadding>
+              <ListItemButton 
+                onClick={() => handleNavigate(item.path || '')} 
+                selected={isActive(item.path)}
+              >
+                {Icon && (
+                  <ListItemIcon sx={{ 
+                    color: isActive(item.path) ? 'primary.main' : 'inherit' 
+                  }}>
+                    <Icon />
+                  </ListItemIcon>
+                )}
+                <ListItemText primary={item.label} />
+              </ListItemButton>
+            </ListItem>
+          );
+        })}
+        
+        {/* Renderizar items de usuario en mobile */}
+        {isAuthenticated && userNavItems[0]?.submenu?.map((sub, idx) => {
+          if (sub.isDivider) return <Divider key={`u-${idx}`} />;
+          const SubIcon = sub.icon;
+          return (
+            <ListItemButton 
+              key={`u-${idx}`}
+              onClick={() => {
+                setMobileOpen(false);
+                if (sub.action) sub.action();
+                else if (sub.path) handleNavigate(sub.path);
+              }}
+            >
+              {SubIcon && (
+                <ListItemIcon sx={{ 
+                  color: sub.label === 'Cerrar Sesión' ? 'error.main' : 'inherit' 
+                }}>
+                  <SubIcon />
+                </ListItemIcon>
+              )}
+              <ListItemText 
+                primary={sub.label} 
+                sx={{ 
+                  color: sub.label === 'Cerrar Sesión' ? 'error.main' : 'inherit' 
+                }} 
+              />
+            </ListItemButton>
+          );
         })}
       </List>
 
       {!isAuthenticated && (
-        <Box sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider', display: 'flex', flexDirection: 'column', gap: 1 }}>
-            {actionButtons.map((btn, idx) => (
-                <Button 
-                    key={idx} 
-                    variant={btn.variant || 'outlined'} 
-                    fullWidth 
-                    onClick={() => handleNavigate(btn.path || '')}
-                >
-                    {btn.label}
-                </Button>
-            ))}
+        <Box sx={{ 
+          p: 2, 
+          borderTop: '1px solid', 
+          borderColor: 'divider', 
+          display: 'flex', 
+          flexDirection: 'column', 
+          gap: 1 
+        }}>
+          {actionButtons.map((btn, idx) => (
+            <Button 
+              key={idx} 
+              variant={btn.variant || 'outlined'} 
+              fullWidth 
+              onClick={() => handleNavigate(btn.path || '')}
+            >
+              {btn.label}
+            </Button>
+          ))}
         </Box>
       )}
     </Box>
@@ -228,37 +286,70 @@ const ClientNavbar: React.FC = () => {
 
   return (
     <>
-      <AppBar position="sticky" elevation={0} sx={{ bgcolor: 'background.paper', borderBottom: '1px solid', borderColor: 'divider' }}>
+      <AppBar 
+        position="sticky" 
+        elevation={0} 
+        sx={{ 
+          bgcolor: 'background.paper', 
+          borderBottom: '1px solid', 
+          borderColor: 'divider' 
+        }}
+      >
         <Container maxWidth="xl">
           <Toolbar sx={{ px: { xs: 0 }, minHeight: { xs: 64, md: 72 } }}>
-            <Box component={RouterLink} to="/" sx={{ display: 'flex', alignItems: 'center', gap: 1, textDecoration: 'none', mr: 4 }}>
-              <Box component="img" src="/navbar/nav.png" alt="Logo" sx={{ height: { xs: 28, md: 36 } }} />
+            <Box 
+              component={RouterLink} 
+              to="/" 
+              sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 1, 
+                textDecoration: 'none', 
+                mr: 4 
+              }}
+            >
+              <Box 
+                component="img" 
+                src="/navbar/nav.png" 
+                alt="Logo" 
+                sx={{ height: { xs: 28, md: 36 } }} 
+              />
             </Box>
 
             {!isMobile && (
               <Box sx={{ display: 'flex', gap: 1, flex: 1 }}>
                 {navItems.map((link) => {
-                    if (link.submenu && !link.path) {
-                        return <NavDropdown key={link.label} item={link} />;
-                    }
-                    return (
-                        <Button
-                            key={link.label}
-                            onClick={() => handleNavigate(link.path || '')}
-                            sx={{
-                                color: isActive(link.path) ? 'primary.main' : 'text.secondary',
-                                fontWeight: isActive(link.path) ? 600 : 400,
-                                position: 'relative',
-                                '&::after': isActive(link.path) ? {
-                                    content: '""', position: 'absolute', bottom: 0, left: '50%', transform: 'translateX(-50%)',
-                                    width: '60%', height: 3, bgcolor: 'primary.main', borderRadius: '3px 3px 0 0'
-                                } : {},
-                                '&:hover': { color: 'primary.main', bgcolor: 'transparent' }
-                            }}
-                        >
-                            {link.label}
-                        </Button>
-                    );
+                  if (link.submenu && !link.path) {
+                    return <NavDropdown key={link.label} item={link} />;
+                  }
+                  return (
+                    <Button
+                      key={link.label}
+                      onClick={() => handleNavigate(link.path || '')}
+                      sx={{
+                        color: isActive(link.path) ? 'primary.main' : 'text.secondary',
+                        fontWeight: isActive(link.path) ? 600 : 400,
+                        position: 'relative',
+                        '&::after': isActive(link.path) ? {
+                          content: '""', 
+                          position: 'absolute', 
+                          bottom: 0, 
+                          left: '50%', 
+                          transform: 'translateX(-50%)',
+                          width: '60%', 
+                          height: 3, 
+                          bgcolor: 'primary.main', 
+                          borderRadius: '3px 3px 0 0'
+                        } : {},
+                        '&:hover': { 
+                          color: 'primary.main', 
+                          bgcolor: 'transparent' 
+                        }
+                      }}
+                    >
+                      {link.label}
+                    </Button>
+                  );
                 })}
               </Box>
             )}
@@ -269,7 +360,10 @@ const ClientNavbar: React.FC = () => {
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 {isAuthenticated ? (
                   <>
-                    <IconButton onClick={() => handleNavigate('/cliente/mensajes')} sx={{ color: 'text.secondary' }}>
+                    <IconButton 
+                      onClick={() => handleNavigate('/client/mensajes')} 
+                      sx={{ color: 'text.secondary' }}
+                    >
                       <Badge badgeContent={unreadCount} color="error">
                         <Notifications />
                       </Badge>
@@ -277,29 +371,43 @@ const ClientNavbar: React.FC = () => {
 
                     <Button
                       onClick={(e) => setUserMenuAnchor(e.currentTarget)}
-                      sx={{ textTransform: 'none', color: 'text.primary', ml: 1 }}
+                      sx={{ 
+                        textTransform: 'none', 
+                        color: 'text.primary', 
+                        ml: 1 
+                      }}
                       endIcon={<ExpandMore />}
                     >
                       <Badge
-                          overlap="circular"
-                          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-                          badgeContent={
-                            user?.is_2fa_enabled ? (
-                              <CheckCircle sx={{ 
-                                width: 16, height: 16, color: '#4CAF50',
-                                bgcolor: 'white', borderRadius: '50%', border: '2px solid white'
-                              }} />
-                            ) : null
-                          }
-                        >
-                          <Avatar sx={{ 
-                            width: 32, height: 32, bgcolor: 'primary.main', mr: 1,
-                            fontSize: '0.875rem', border: user?.is_2fa_enabled ? '2px solid #4CAF50' : 'none'
-                          }}>
-                            {user?.nombre?.charAt(0) || 'U'}
-                          </Avatar>
-                        </Badge>
-                      <Typography variant="body2" fontWeight={500}>{user?.nombre?.split(' ')[0]}</Typography>
+                        overlap="circular"
+                        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                        badgeContent={
+                          user?.is_2fa_enabled ? (
+                            <CheckCircle sx={{ 
+                              width: 16, 
+                              height: 16, 
+                              color: '#4CAF50',
+                              bgcolor: 'white', 
+                              borderRadius: '50%', 
+                              border: '2px solid white'
+                            }} />
+                          ) : null
+                        }
+                      >
+                        <Avatar sx={{ 
+                          width: 32, 
+                          height: 32, 
+                          bgcolor: 'primary.main', 
+                          mr: 1,
+                          fontSize: '0.875rem', 
+                          border: user?.is_2fa_enabled ? '2px solid #4CAF50' : 'none'
+                        }}>
+                          {user?.nombre?.charAt(0) || 'U'}
+                        </Avatar>
+                      </Badge>
+                      <Typography variant="body2" fontWeight={500}>
+                        {user?.nombre?.split(' ')[0]}
+                      </Typography>
                     </Button>
 
                     <Menu
@@ -308,37 +416,47 @@ const ClientNavbar: React.FC = () => {
                       onClose={() => setUserMenuAnchor(null)}
                       PaperProps={{ elevation: 2, sx: { mt: 1, minWidth: 200 } }}
                     >
-                        {userNavItems[0]?.submenu?.map((item, idx) => {
-                            if (item.isDivider) return <Divider key={idx} />;
-                            const ItemIcon = item.icon;
-                            return (
-                                <MenuItem 
-                                    key={idx} 
-                                    onClick={() => {
-                                        if (item.action) item.action(); // Aquí se dispara el setOpenLogoutDialog(true)
-                                        else if (item.path) handleNavigate(item.path);
-                                        setUserMenuAnchor(null);
-                                    }}
-                                    sx={item.label === 'Cerrar Sesión' ? { color: 'error.main' } : {}}
-                                >
-                                    {ItemIcon && <ListItemIcon><ItemIcon fontSize="small" color={item.label === 'Cerrar Sesión' ? 'error' : 'inherit'} /></ListItemIcon>}
-                                    {item.label}
-                                </MenuItem>
-                            )
-                        })}
+                      {/* ✅ FIX: Mismo arreglo en el menú de usuario */}
+                      {userNavItems[0]?.submenu?.map((item, idx) => {
+                        if (item.isDivider) return <Divider key={idx} />;
+                        const ItemIcon = item.icon;
+                        return (
+                          <MenuItem 
+                            key={idx} 
+                            onClick={() => {
+                              if (item.action) item.action();
+                              else if (item.path) handleNavigate(item.path);
+                              setUserMenuAnchor(null);
+                            }}
+                            sx={item.label === 'Cerrar Sesión' ? { 
+                              color: 'error.main' 
+                            } : {}}
+                          >
+                            {ItemIcon && (
+                              <ListItemIcon>
+                                <ItemIcon 
+                                  fontSize="small" 
+                                  color={item.label === 'Cerrar Sesión' ? 'error' : 'inherit'} 
+                                />
+                              </ListItemIcon>
+                            )}
+                            {item.label}
+                          </MenuItem>
+                        );
+                      })}
                     </Menu>
                   </>
                 ) : (
                   <>
                     {actionButtons.map((btn, idx) => (
-                        <Button 
-                            key={idx} 
-                            variant={btn.variant || 'text'} 
-                            onClick={() => handleNavigate(btn.path || '')}
-                            sx={idx === 0 ? { mr: 1 } : {}}
-                        >
-                            {btn.label}
-                        </Button>
+                      <Button 
+                        key={idx} 
+                        variant={btn.variant || 'text'} 
+                        onClick={() => handleNavigate(btn.path || '')}
+                        sx={idx === 0 ? { mr: 1 } : {}}
+                      >
+                        {btn.label}
+                      </Button>
                     ))}
                   </>
                 )}
@@ -347,12 +465,17 @@ const ClientNavbar: React.FC = () => {
 
             {isMobile && (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                 {isAuthenticated && (
-                     <IconButton onClick={() => handleNavigate('/cliente/mensajes')}>
-                         <Badge badgeContent={unreadCount} color="error"><Notifications /></Badge>
-                     </IconButton>
-                 )}
-                <IconButton onClick={() => setMobileOpen(true)} sx={{ color: 'text.primary' }}>
+                {isAuthenticated && (
+                  <IconButton onClick={() => handleNavigate('/client/mensajes')}>
+                    <Badge badgeContent={unreadCount} color="error">
+                      <Notifications />
+                    </Badge>
+                  </IconButton>
+                )}
+                <IconButton 
+                  onClick={() => setMobileOpen(true)} 
+                  sx={{ color: 'text.primary' }}
+                >
                   <MenuIcon />
                 </IconButton>
               </Box>
@@ -374,7 +497,7 @@ const ClientNavbar: React.FC = () => {
         <Outlet />
       </Box>
 
-      {/* 👇 AQUÍ RENDERIZAMOS EL MODAL GLOBALMENTE PARA EL CLIENTE */}
+      {/* Modal de logout */}
       <LogoutDialog 
         open={logoutProps.open}
         onClose={logoutProps.onClose}

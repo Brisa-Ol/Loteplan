@@ -1,45 +1,52 @@
-
-
-// ==========================================
-// 📤 REQUEST DTOs (Lo que envías)
-// ==========================================
-
+// src/types/dto/imagen.dto.ts
 import type { BaseDTO } from "./base.dto";
 
+// ==========================================
+// 📥 RESPONSE DTO (Lo que recibes del Backend)
+// ==========================================
+
+export interface ImagenDto extends BaseDTO {
+  url: string;         // Ej: '/uploads/imagenes/foto-123.jpg'
+  descripcion?: string;
+  
+  // Nota: 'es_principal' no estaba en tu modelo Sequelize original compartido,
+  // pero lo usas en el frontend. Si no existe en BD, será undefined.
+  es_principal?: boolean; 
+  
+  // Relaciones
+  id_proyecto: number | null;
+  id_lote: number | null;
+}
+
+// ==========================================
+// 📤 REQUEST DTOs (Lo que envías al Backend)
+// ==========================================
+
 /**
- * Datos para subir una nueva imagen.
- * Se transforma a FormData en el servicio.
- * ⚠️ Regla de Negocio: Solo id_proyecto O id_lote, no ambos.
+ * DTO para SUBIR una imagen (POST).
+ * ⚠️ Importante: Esto se convierte a FormData en el servicio.
  */
 export interface CreateImagenDto {
-  file: File; // Se enviará como 'image'
+  // El archivo físico del input type="file"
+  file: File; 
+  
   descripcion?: string;
+  
+  // Debe enviarse al menos uno de los dos
   id_proyecto?: number | null;
   id_lote?: number | null;
 }
 
 /**
- * Datos para actualizar metadatos de la imagen.
- * No incluye el archivo, ya que tu controlador 'update' solo actualiza campos de BD.
+ * DTO para ACTUALIZAR datos de una imagen (PUT).
+ * Generalmente solo actualizas metadata, no el archivo en sí.
  */
 export interface UpdateImagenDto {
   descripcion?: string;
   id_proyecto?: number | null;
   id_lote?: number | null;
-  activo?: boolean;
-}
-
-// ==========================================
-// 📥 RESPONSE DTOs (Lo que recibes)
-// ==========================================
-
-/**
- * Modelo de Imagen que viene de la Base de Datos.
- */
-export interface ImagenDto extends BaseDTO {
-  url: string; // Ruta relativa ej: '/uploads/imagenes/foto-123.jpg'
-  descripcion?: string;
   
-  id_proyecto: number | null;
-  id_lote: number | null;
+  // Si tuvieras lógica de "imagen principal" en BD, iría aquí
+  es_principal?: boolean; 
+  activo?: boolean;
 }

@@ -29,7 +29,6 @@ const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   
-  // Extraemos user del contexto para poder verificar su rol
   const { 
     login, 
     verify2FA, 
@@ -38,16 +37,15 @@ const LoginPage: React.FC = () => {
     isLoading, 
     clearError, 
     logout, 
-    user,             // Necesario para el rol
-    isAuthenticated   // Necesario para saber si ya terminó el login
+    user,
+    isAuthenticated
   } = useAuth();
 
   const [showPassword, setShowPassword] = useState(false);
   const successMessage = location.state?.message;
   const from = (location.state as { from?: string } | null)?.from;
 
-  // 1. EFECTO DE REDIRECCIÓN AUTOMÁTICA
-  // Se ejecuta cuando el estado de autenticación cambia (Login exitoso)
+  // ✅ REDIRECCIÓN MEJORADA
   useEffect(() => {
     if (isAuthenticated && user && !requires2FA) {
       
@@ -57,18 +55,18 @@ const LoginPage: React.FC = () => {
         return;
       }
 
-      // Si no, redirigimos según el rol
+      // ✅ CORREGIDO: Rutas reales según App.tsx
       if (user.rol === 'admin') {
-        navigate('/Admin/Dashboard/AdminDashboard', { replace: true });
+        navigate('/admin/dashboard', { replace: true });
       } else if (user.rol === 'cliente') {
-        navigate('/client/UserDashboard/UserDashboard', { replace: true });
+        navigate('/client/dashboard', { replace: true });
       } else {
-        navigate('/', { replace: true }); // Fallback
+        navigate('/', { replace: true });
       }
     }
   }, [isAuthenticated, user, requires2FA, navigate, from]);
 
-  // 2. Limpieza de mensaje flash
+  // Limpieza de mensaje flash
   useEffect(() => {
     if (!successMessage) return;
     const timer = setTimeout(() => {
@@ -92,16 +90,13 @@ const LoginPage: React.FC = () => {
       clearError();
       try {
         if (!requires2FA) {
-          // Paso 1: Credenciales
           await login({
             identificador: values.identificador,
-            contraseña: values.password, // Backend espera 'contraseña'
+            contraseña: values.password,
           });
         } else {
-          // Paso 2: 2FA
           await verify2FA(values.code2FA);
         }
-        // La redirección ocurrirá automáticamente gracias al useEffect de arriba
       } catch (err) {
         console.error("Fallo en el proceso de login", err);
       }
@@ -120,7 +115,6 @@ const LoginPage: React.FC = () => {
     <PageContainer maxWidth="sm">
       <AuthFormContainer title="Iniciar Sesión" subtitle="Ingresá tus datos para continuar">
         
-        {/* Alertas */}
         {successMessage && (
           <Alert severity="success" sx={{ mb: 2 }}>
             {successMessage}
@@ -133,7 +127,6 @@ const LoginPage: React.FC = () => {
           </Alert>
         )}
 
-        {/* Formulario */}
         <form onSubmit={formik.handleSubmit}>
           <Stack spacing={2}>
             <TextField
@@ -189,7 +182,6 @@ const LoginPage: React.FC = () => {
           </Stack>
         </form>
 
-        {/* Links Auxiliares */}
         <Box textAlign="center" mt={3}>
           <Button
             onClick={() => navigate("/register")}

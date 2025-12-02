@@ -4,7 +4,7 @@ import httpService from './httpService';
 import type { AxiosResponse } from 'axios';
 
 
-const BASE_ENDPOINT = '/resumenes-cuenta'; // Ajustar según app.js (ej: /api/resumenes_cuenta)
+const BASE_ENDPOINT = '/resumen-cuentas'; // Ajustar según app.js (ej: /api/resumenes_cuenta)
 
 const ResumenCuentaService = {
 

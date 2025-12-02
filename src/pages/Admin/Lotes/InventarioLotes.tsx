@@ -21,7 +21,7 @@ import { QueryHandler } from '../../../components/common/QueryHandler/QueryHandl
 
 // Modales
 import ManageLoteImagesModal from './modals/ManageLoteImagesModal';
-import CreateEditLoteModal from './modals/CreateLoteModal';
+import CreateEditLoteModal from './modals/CreateEditLoteModal';
 
 // Interfaces Auxiliares
 interface ApiErrorResponse {
@@ -43,7 +43,7 @@ const MiniStatCard: React.FC<{ title: string; value: number; icon: React.ReactNo
   </Paper>
 );
 
-const AdminLotes: React.FC = () => {
+const InventarioLotes: React.FC = () => {
   const queryClient = useQueryClient();
   
   // --- ESTADOS ---
@@ -361,4 +361,4 @@ const AdminLotes: React.FC = () => {
   );
 };
 
-export default AdminLotes;
+export default InventarioLotes;

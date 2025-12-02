@@ -10,8 +10,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import type { LoteDto } from '../../../types/dto/lote.dto';
 import LoteService from '../../../Services/lote.service';
-import { PujarModal } from './components/PujarModal';
-
+import { PujarModal } from '../Proyectos/components/PujarModal';
+import { FavoritoButton } from '../../../components/common/BotonFavorito/BotonFavorito';
 
 
 interface Props {
@@ -60,7 +60,7 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
         Lotes en Subasta
       </Typography>
       
-      {/* 🏗️ LAYOUT: CSS Grid Responsivo (Reemplaza a Grid Item) */}
+      {/* 🏗️ LAYOUT: CSS Grid Responsivo */}
       <Box 
         sx={{ 
           display: 'grid',
@@ -76,30 +76,42 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
           <Card 
             key={lote.id} 
             variant="outlined" 
+            // Navegación al hacer clic en la tarjeta
+            onClick={() => navigate(`/lotes/${lote.id}`)}
             sx={{ 
               height: '100%', 
               display: 'flex', 
               flexDirection: 'column',
               borderRadius: 3,
               transition: 'all 0.2s',
+              cursor: 'pointer',
               '&:hover': { boxShadow: 3, borderColor: 'primary.main' }
             }}
           >
             <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
               
-              {/* Cabecera del Lote */}
+              {/* Header con nombre y favorito */}
               <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={2}>
-                 <Typography variant="h6" fontWeight="bold" lineHeight={1.2}>
-                    {lote.nombre_lote}
-                 </Typography>
-                 
-                 {lote.estado_subasta === 'finalizada' ? (
+                <Typography variant="h6" fontWeight="bold" lineHeight={1.2} flex={1}>
+                  {lote.nombre_lote}
+                </Typography>
+                
+                {/* 🛑 IMPORTANTE: e.stopPropagation() previene que al hacer clic 
+                   en el corazón o el chip se active la navegación de la tarjeta.
+                */}
+                <Box display="flex" alignItems="center" gap={1} onClick={(e) => e.stopPropagation()}>
+                  
+                  {/* 👇 BOTÓN DE FAVORITO INTEGRADO */}
+                  <FavoritoButton loteId={lote.id} size="small" />
+                  
+                  {lote.estado_subasta === 'finalizada' ? (
                     <Chip label="Vendido" color="default" size="small" variant="filled" />
-                 ) : lote.estado_subasta === 'activa' ? (
+                  ) : lote.estado_subasta === 'activa' ? (
                     <Chip label="Activo" color="success" size="small" icon={<CheckCircle />} />
-                 ) : (
+                  ) : (
                     <Chip label="Próximamente" color="info" size="small" icon={<LockClock />} />
-                 )}
+                  )}
+                </Box>
               </Stack>
               
               {/* Precio Base */}
@@ -119,7 +131,10 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
                     variant="contained" 
                     fullWidth 
                     startIcon={<Gavel />}
-                    onClick={() => {
+                    onClick={(e) => {
+                        // 🛑 Detener propagación para que no navegue al detalle al pulsar el botón
+                        e.stopPropagation(); 
+                        
                         if(!isAuthenticated) return navigate('/login');
                         setSelectedLote(lote);
                     }}

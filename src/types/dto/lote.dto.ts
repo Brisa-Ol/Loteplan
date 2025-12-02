@@ -1,72 +1,133 @@
-import type { BaseDTO } from "./base.dto";
+// src/types/dto/lote.dto.ts
+
 import type { ImagenDto } from "./imagen.dto";
 
 // ==========================================
-// 🛠️ TYPES
+// 🛠️ ENUMS & TYPES
 // ==========================================
+
 export type EstadoSubasta = 'pendiente' | 'activa' | 'finalizada';
+
+// ==========================================
+// 📥 RESPONSE DTO (Lo que recibes del Backend)
+// ==========================================
+
+/**
+ * DTO Principal de Lote
+ * Alineado 100% con el modelo Sequelize Lote.js
+ */
+export interface LoteDto {
+  // 1. Identificadores
+  id: number;
+  id_proyecto: number | null; // allowNull: true en BD
+
+  // 2. Datos básicos
+  nombre_lote: string;
+  precio_base: number; // En BD es DECIMAL, Sequelize lo devuelve como string, pero en TS lo tipamos number para operar
+
+  // 3. Estado y Tiempos
+  estado_subasta: EstadoSubasta;
+  fecha_inicio: string | null; // DataTypes.DATE devuelve string ISO
+  fecha_fin: string | null;
+  activo: boolean;
+
+  // 4. Relaciones de Subasta (Foreign Keys)
+  id_puja_mas_alta: number | null;
+  id_ganador: number | null;
+
+  // 5. Campos de Control (Críticos según tu modelo)
+  intentos_fallidos_pago: number; // defaultValue: 0
+  excedente_visualizacion: number; // defaultValue: 0, DECIMAL
+
+  // 6. Ubicación Geográfica (Nuevos campos)
+  latitud: number | null;  // DECIMAL(10, 8)
+  longitud: number | null; // DECIMAL(11, 8)
+
+  // 7. Timestamps PERSONALIZADOS
+  // ⚠️ Alineados a tu configuración: createdAt: "fecha_creacion"
+  fecha_creacion: string;
+  fecha_actualizacion: string;
+
+  // =====================================
+  // Relaciones (Includes opcionales)
+  // =====================================
+  imagenes?: ImagenDto[];
+  proyecto?: ProyectoMinimalDto;
+  ganador?: UsuarioMinimalDto;
+  pujas?: any[]; // Opcional si incluyes historial
+}
 
 // ==========================================
 // 📤 REQUEST DTOs (Lo que envías)
 // ==========================================
 
+/**
+ * DTO para Crear Lote
+ * Solo incluye lo necesario para el INSERT inicial
+ */
 export interface CreateLoteDto {
+  id_proyecto?: number | null;
   nombre_lote: string;
   precio_base: number;
   
-  // Asociación (Opcional, si es subasta privada)
-  id_proyecto?: number | null; // null = Lote Público
-
-  // Ubicación (Ahora obligatorios en el tipo, opcionales en lógica)
+  // Opcionales (Tienen default en BD o son nullables)
+  estado_subasta?: EstadoSubasta;
+  fecha_inicio?: string | null;
+  fecha_fin?: string | null;
+  
+  // Ubicación
   latitud?: number | null;
   longitud?: number | null;
-
-  // Fechas para subasta programada
-  fecha_inicio?: string; // ISO Date
-  fecha_fin?: string;    // ISO Date
 }
-
-export interface UpdateLoteDto extends Partial<CreateLoteDto> {
-  // Permite actualizar campos parciales + campos exclusivos de update
-  activo?: boolean;
-  estado_subasta?: EstadoSubasta;
-  
-  // Admin puede forzar estos campos manualmente
-  id_ganador?: number | null;
-  intentos_fallidos_pago?: number;
-}
-
-// ==========================================
-// 📥 RESPONSE DTOs (Lo que recibes)
-// ==========================================
 
 /**
- * Modelo principal de Lote.
- * Refleja la estructura de la base de datos (Lote.js).
+ * DTO para Actualizar Lote
  */
-export interface LoteDto extends BaseDTO {
-  nombre_lote: string;
-  precio_base: number; // Viene como string '1500.00' del decimal, convertir a Number en front
+export interface UpdateLoteDto extends Partial<CreateLoteDto> {
+  // Campos administrativos que no se suelen enviar al crear, pero sí al editar
+  activo?: boolean;
   
-  // Estado Subasta
-  estado_subasta: EstadoSubasta;
-  fecha_inicio?: string;
-  fecha_fin?: string;
-  activo: boolean;
-  
-  // Relaciones
-  id_proyecto: number | null; 
-  id_ganador: number | null;
-  id_puja_mas_alta: number | null;
-  
-  // Visualización
-  imagenes?: ImagenDto[]; 
-  
-  // Geo
-  latitud?: number | null;
-  longitud?: number | null;
-  
-  // Datos calculados o extras del backend
-  intentos_fallidos_pago: number;
-  excedente_visualizacion: number;
+  // Para control manual del administrador
+  id_ganador?: number | null;
+  id_puja_mas_alta?: number | null;
+  intentos_fallidos_pago?: number;
+  excedente_visualizacion?: number;
+}
+
+// ==========================================
+// 🧩 DTOs AUXILIARES
+// ==========================================
+
+export interface ProyectoMinimalDto {
+  id: number;
+  nombre_proyecto: string;
+  descripcion?: string;
+}
+
+export interface UsuarioMinimalDto {
+  id: number;
+  nombre: string;
+  apellido: string;
+  email: string;
+  nombre_usuario?: string;
+}
+
+/**
+ * Respuestas específicas de las acciones de subasta
+ */
+export interface StartAuctionResponse {
+  mensaje: string;
+  lote?: LoteDto;
+}
+
+export interface EndAuctionResponse {
+  mensaje: string;
+  lote?: LoteDto;
+  ganador?: {
+    id: number;
+    nombre: string;
+  };
+  transaccion?: {
+    id: number;
+  };
 }

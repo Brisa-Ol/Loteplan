@@ -98,6 +98,8 @@ const UsuarioService = {
   /**
    * Actualizar usuario como Admin
    * Backend: router.put("/:id", ...)
+   * ⚠️ IMPORTANTE: El backend filtra solo estos campos:
+   * - nombre, apellido, email, numero_telefono, activo, rol, nombre_usuario
    */
   updateAdmin: async (id: number, data: UpdateUserAdminDto): Promise<AxiosResponse<UsuarioDto>> => {
     return await httpService.put(`${ENDPOINT}/${id}`, data);
@@ -118,31 +120,32 @@ const UsuarioService = {
   /**
    * Resetear/Desactivar 2FA de un usuario específico
    * Backend: router.patch("/:id/reset-2fa", ...)
+   * ✅ VALIDADO: Usa PATCH correctamente
    */
   adminReset2FA: async (
     userId: number, 
-    data?: AdminDisable2FADto 
+    data: AdminDisable2FADto 
   ): Promise<AxiosResponse<GenericResponseDto>> => {
     return await httpService.patch(`${ENDPOINT}/${userId}/reset-2fa`, data);
   },
 
   // =================================================
-  // 📧 GESTIÓN DE EMAIL Y RECUPERACIÓN (Auth Flow)
+  // 📧 GESTIÓN DE EMAIL Y RECUPERACIÓN
   // =================================================
 
   /**
    * Confirmar el email del usuario mediante token URL
-   * ⚠️ CORREGIDO: Tu backend usa GET y la ruta /confirmar/:token
+   * Backend: router.get("/confirmar/:token", ...)
    */
   confirmEmail: async (token: string): Promise<AxiosResponse<GenericResponseDto>> => {
-    // Nota: A veces los navegadores hacen esto automáticamente al clickear el link,
-    // pero si lo manejas desde el front capturando el token de la URL:
     return await httpService.get(`${ENDPOINT}/confirmar/${token}`);
   },
 
+  // ⚠️ NOTA: Las siguientes rutas NO EXISTEN en tu backend actual.
+  // Si las necesitas, debes crearlas en usuario.routes.js
+
   /**
-   * ⚠️ ATENCIÓN: Esta ruta NO está en tu archivo de rutas backend actual,
-   * pero la lógica SÍ existe en tu servicio backend (resendConfirmationEmail).
+   * ⚠️ RUTA NO IMPLEMENTADA EN BACKEND
    * Se asume ruta: POST /usuarios/resend-confirmation
    */
   resendConfirmationEmail: async (email: string): Promise<AxiosResponse<GenericResponseDto>> => {
@@ -150,7 +153,7 @@ const UsuarioService = {
   },
 
   /**
-   * ⚠️ ATENCIÓN: Lógica existe en backend (generatePasswordResetToken), falta ruta.
+   * ⚠️ RUTA NO IMPLEMENTADA EN BACKEND
    * Se asume ruta: POST /usuarios/forgot-password
    */
   forgotPassword: async (email: string): Promise<AxiosResponse<GenericResponseDto>> => {
@@ -158,19 +161,15 @@ const UsuarioService = {
   },
 
   /**
-   * ⚠️ ATENCIÓN: Lógica existe en backend (findByResetToken), falta ruta.
+   * ⚠️ RUTA NO IMPLEMENTADA EN BACKEND
    * Se asume ruta: GET /usuarios/reset-password/:token
    */
   validateResetToken: async (token: string): Promise<AxiosResponse<UsuarioDto>> => {
     return await httpService.get(`${ENDPOINT}/reset-password/${token}`);
   },
 
-  // =================================================
-  // 🔎 BÚSQUEDAS ESPECÍFICAS
-  // =================================================
-
   /**
-   * ⚠️ ATENCIÓN: Lógica existe en backend (findByDni), falta ruta.
+   * ⚠️ RUTA NO IMPLEMENTADA EN BACKEND
    * Se asume ruta: GET /usuarios/dni/:dni
    */
   findByDni: async (dni: string): Promise<AxiosResponse<UsuarioDto>> => {

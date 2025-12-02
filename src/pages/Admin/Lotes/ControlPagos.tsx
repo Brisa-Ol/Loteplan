@@ -1,3 +1,4 @@
+// src/pages/Admin/Lotes/ControlPagos.tsx
 import React, { useMemo } from 'react';
 import {
   Box, Typography, Paper, Card, CardContent, 
@@ -7,7 +8,7 @@ import {
 } from '@mui/material';
 import { 
   Warning, ErrorOutline, CheckCircle, Person,
-  RestartAlt, Info, Timeline, Gavel
+  Info, Timeline, Gavel
 } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
 
@@ -56,7 +57,7 @@ const MetricCard: React.FC<{
   </Card>
 );
 
-// Helper para calcular días restantes
+// ✅ Helper que respeta la lógica del backend (90 días desde fecha_fin)
 const calcularDiasRestantes = (lote: LoteDto): number => {
   if (!lote.fecha_fin) return 90;
   
@@ -68,26 +69,28 @@ const calcularDiasRestantes = (lote: LoteDto): number => {
   return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
 };
 
-const AdminDashboardImpagos: React.FC = () => {
+const ControlPagos: React.FC = () => {
   
   const { data: lotes = [], isLoading, error } = useQuery<LoteDto[]>({
     queryKey: ['adminLotes'],
     queryFn: async () => (await LoteService.findAllAdmin()).data,
-    refetchInterval: 15000, // Actualizar cada 15 segundos
+    refetchInterval: 15000,
   });
 
-  // Análisis de datos
+  // ✅ Análisis que respeta lógica del backend
   const analytics = useMemo(() => {
     const finalizados = lotes.filter(l => l.estado_subasta === 'finalizada' && l.id_ganador);
     
-    const pendientesPago = finalizados.filter(l => (l.intentos_fallidos_pago || 0) > 0 && (l.intentos_fallidos_pago || 0) < 3);
+    // Pendientes: intentos_fallidos_pago > 0 y < 3 (backend usa este campo)
+    const pendientesPago = finalizados.filter(l => 
+      (l.intentos_fallidos_pago || 0) > 0 && (l.intentos_fallidos_pago || 0) < 3
+    );
+    
     const riesgoCritico = pendientesPago.filter(l => (l.intentos_fallidos_pago || 0) >= 2);
     const primerIntento = pendientesPago.filter(l => (l.intentos_fallidos_pago || 0) === 1);
     
-    // Lotes próximos a vencer (menos de 10 días)
     const proximosVencer = pendientesPago.filter(l => calcularDiasRestantes(l) <= 10);
     
-    // Capital en riesgo
     const capitalEnRiesgo = riesgoCritico.reduce((acc, l) => acc + Number(l.precio_base), 0);
     
     return {
@@ -110,22 +113,22 @@ const AdminDashboardImpagos: React.FC = () => {
       {/* Header */}
       <Box mb={4}>
         <Typography variant="h4" fontWeight="bold" color="primary.main">
-          Monitor de Impagos y Reasignaciones
+          Control de Pagos
         </Typography>
         <Typography color="text.secondary">
-          Sistema automático de seguimiento de pagos y reasignación de lotes (90 días / 3 intentos)
+          Sistema automático de seguimiento de pagos y reasignación (90 días / 3 intentos máx.)
         </Typography>
       </Box>
 
-      {/* Alerta de sistema */}
+      {/* Alerta informativa */}
       <Alert severity="info" icon={<Info />} sx={{ mb: 3 }}>
         <Typography variant="body2" fontWeight={600}>
           🤖 Sistema Automático Activo
         </Typography>
         <Typography variant="caption">
           El sistema verifica diariamente los vencimientos y gestiona automáticamente:
-          (1) Marca impagos, (2) Devuelve tokens, (3) Reasigna al siguiente postor, 
-          (4) Tras 3 intentos fallidos → Reingreso automático.
+          (1) Marca impagos, (2) Devuelve tokens, (3) Reasigna al siguiente postor válido, 
+          (4) Tras 3 intentos fallidos → Reingreso automático del lote.
         </Typography>
       </Alert>
 
@@ -144,11 +147,11 @@ const AdminDashboardImpagos: React.FC = () => {
           description="Subastas completadas"
         />
         <MetricCard
-          title="Pendientes de Pago"
+          title="En Proceso de Cobro"
           value={analytics.pendientesPago}
           icon={<Timeline fontSize="large" />}
           color="warning"
-          description="En proceso de cobro"
+          description="Con al menos 1 intento"
         />
         <MetricCard
           title="Riesgo Crítico"
@@ -173,7 +176,7 @@ const AdminDashboardImpagos: React.FC = () => {
             ⚠️ ATENCIÓN: {analytics.riesgoCritico} lote{analytics.riesgoCritico > 1 ? 's' : ''} en riesgo crítico
           </Typography>
           <Typography variant="caption">
-            Estos lotes están a 1 intento de reingreso automático. El sistema reasignará en las próximas 24-48h si no se paga.
+            Están a 1 intento del reingreso automático. El sistema reasignará si no se paga antes del vencimiento.
           </Typography>
         </Alert>
       )}
@@ -184,7 +187,7 @@ const AdminDashboardImpagos: React.FC = () => {
             ⏰ {analytics.proximosVencer} lote{analytics.proximosVencer > 1 ? 's' : ''} con menos de 10 días de plazo
           </Typography>
           <Typography variant="caption">
-            Considera contactar a los ganadores para recordar el vencimiento.
+            Considera contactar a los ganadores como recordatorio.
           </Typography>
         </Alert>
       )}
@@ -193,7 +196,10 @@ const AdminDashboardImpagos: React.FC = () => {
       <Paper elevation={0} variant="outlined" sx={{ borderRadius: 2, overflow: 'hidden' }}>
         <Box sx={{ bgcolor: 'grey.50', p: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
           <Typography variant="h6" fontWeight="bold">
-            Detalle de Lotes con Impagos Activos
+            Lotes Pendientes de Pago
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            Solo se muestran lotes con intentos_fallidos_pago &gt; 0 y &lt; 3 (según lógica del backend)
           </Typography>
         </Box>
 
@@ -202,10 +208,10 @@ const AdminDashboardImpagos: React.FC = () => {
             <Box textAlign="center" py={6}>
               <CheckCircle sx={{ fontSize: 60, color: 'success.light', mb: 2 }} />
               <Typography variant="h6" color="text.secondary">
-                ¡Excelente! No hay impagos activos
+                ¡Excelente! No hay pendientes de pago con intentos fallidos
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Todos los lotes finalizados están pagados o están en el primer intento.
+                Todos los lotes finalizados están en primer intento de pago o ya pagados.
               </Typography>
             </Box>
           ) : (
@@ -216,7 +222,7 @@ const AdminDashboardImpagos: React.FC = () => {
                     <TableCell sx={{ fontWeight: 'bold' }}>Lote</TableCell>
                     <TableCell sx={{ fontWeight: 'bold' }}>Ganador Actual</TableCell>
                     <TableCell sx={{ fontWeight: 'bold' }}>Monto</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Intentos</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Intentos Fallidos</TableCell>
                     <TableCell sx={{ fontWeight: 'bold' }}>Días Restantes</TableCell>
                     <TableCell sx={{ fontWeight: 'bold' }}>Estado</TableCell>
                     <TableCell sx={{ fontWeight: 'bold' }}>Próxima Acción</TableCell>
@@ -317,8 +323,8 @@ const AdminDashboardImpagos: React.FC = () => {
                           <Tooltip 
                             title={
                               esRiesgoCritico 
-                                ? "Si vence el plazo, el sistema automáticamente marcará incumplimiento, devolverá el token y reasignará al siguiente postor. Si no hay más postores, reingresará."
-                                : "El sistema monitoreará el vencimiento y actuará automáticamente."
+                                ? "Si vence el plazo, el sistema marcará incumplimiento, devolverá el token y reasignará automáticamente al siguiente postor. Si no hay más postores válidos, el lote reingresará."
+                                : "El sistema monitoreará el vencimiento y actuará automáticamente al vencer los 90 días."
                             }
                           >
                             <IconButton size="small" color="info">
@@ -339,7 +345,7 @@ const AdminDashboardImpagos: React.FC = () => {
       {/* Explicación del flujo automático */}
       <Paper sx={{ p: 3, mt: 4, bgcolor: 'grey.50' }}>
         <Typography variant="h6" fontWeight="bold" gutterBottom>
-          🔄 Flujo Automático de Reasignación
+          🔄 Flujo Automático de Reasignación (Backend)
         </Typography>
         <Divider sx={{ my: 2 }} />
         <Stack spacing={2}>
@@ -349,7 +355,7 @@ const AdminDashboardImpagos: React.FC = () => {
             </Typography>
             <Typography variant="caption" color="text.secondary">
               • Se asigna el ganador (puja más alta)<br />
-              • Se establece plazo de 90 días<br />
+              • Se establece plazo de 90 días desde fecha_fin<br />
               • intentos_fallidos_pago = 1
             </Typography>
           </Box>
@@ -361,7 +367,7 @@ const AdminDashboardImpagos: React.FC = () => {
             <Typography variant="caption" color="text.secondary">
               • El sistema detecta vencimientos diarios<br />
               • Marca la puja como 'ganadora_incumplimiento'<br />
-              • Devuelve el token al usuario<br />
+              • Devuelve el token al usuario incumplidor<br />
               • Notifica el impago por email + mensaje interno
             </Typography>
           </Box>
@@ -371,22 +377,22 @@ const AdminDashboardImpagos: React.FC = () => {
               🔄 Paso 3: Reasignación Automática
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              • Busca el siguiente postor más alto<br />
+              • Busca el siguiente postor más alto válido (no incumplidor)<br />
               • Le asigna el lote con nuevo plazo de 90 días<br />
-              • Incrementa intentos_fallidos_pago<br />
-              • Envía notificación de reasignación
+              • Incrementa intentos_fallidos_pago del lote<br />
+              • Envía notificación de reasignación al nuevo ganador
             </Typography>
           </Box>
 
           <Box>
             <Typography variant="body2" fontWeight={600} color="error.main">
-              ♻️ Paso 4: Reingreso (3 intentos agotados)
+              ♻️ Paso 4: Reingreso (3 intentos agotados o sin postores)
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              • Si no hay más postores O se agotan los 3 intentos:<br />
-              • Borra TODAS las pujas del lote<br />
+              • Si no hay más postores válidos O se agotan los 3 intentos:<br />
+              • Borra TODAS las pujas del lote (limpieza completa)<br />
               • Resetea el lote a estado 'pendiente'<br />
-              • Envía mensaje al administrador<br />
+              • Libera el token del último postor activo<br />
               • El lote queda disponible para la próxima subasta anual
             </Typography>
           </Box>
@@ -397,4 +403,4 @@ const AdminDashboardImpagos: React.FC = () => {
   );
 };
 
-export default AdminDashboardImpagos;
+export default ControlPagos;

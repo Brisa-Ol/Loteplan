@@ -1,63 +1,86 @@
-// src/components/common/FavoriteButton/FavoriteButton.tsx
-import React, { useState, useEffect } from "react";
-import { IconButton, Tooltip, CircularProgress } from "@mui/material";
-import { Favorite, FavoriteBorder } from "@mui/icons-material";
+// src/components/common/FavoritoButton/FavoritoButton.tsx
+import React, { useState } from 'react';
+import { IconButton, Tooltip, CircularProgress } from '@mui/material';
+import { Favorite, FavoriteBorder } from '@mui/icons-material';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import FavoritoService from '../../../Services/favorito.service';
+import { useAuth } from '../../../context/AuthContext';
 
-import { useAuth } from "../../../context/AuthContext";
-
-interface FavoriteButtonProps {
+interface FavoritoButtonProps {
   loteId: number;
+  size?: 'small' | 'medium' | 'large';
+  showTooltip?: boolean;
 }
 
-export const FavoriteButton: React.FC<FavoriteButtonProps> = ({ loteId }) => {
+export const FavoritoButton: React.FC<FavoritoButtonProps> = ({ 
+  loteId, 
+  size = 'medium',
+  showTooltip = true 
+}) => {
   const { isAuthenticated } = useAuth();
-  const [isFav, setIsFav] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const queryClient = useQueryClient();
 
-  // ✅ Verifica si el lote ya está en favoritos al cargar
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    const fetchStatus = async () => {
-      try {
-        const res = await Favorite(loteId);
-        setIsFav(res.esFavorito);
-      } catch (err) {
-        console.error("Error verificando favorito:", err);
-      }
-    };
-    fetchStatus();
-  }, [loteId, isAuthenticated]);
+  // Consultar estado inicial
+  const { data: favoritoData } = useQuery({
+    queryKey: ['favorito', loteId],
+    queryFn: async () => (await FavoritoService.checkEsFavorito(loteId)).data,
+    enabled: isAuthenticated // Solo si está autenticado
+  });
 
-  // ❤️ Toggle favorito / no favorito
-  const handleToggle = async () => {
+  const isFavorito = favoritoData?.es_favorito || false;
+
+  // Mutación para toggle
+  const toggleMutation = useMutation({
+    mutationFn: () => FavoritoService.toggle(loteId),
+    onSuccess: () => {
+      // Invalidar queries relacionadas
+      queryClient.invalidateQueries({ queryKey: ['favorito', loteId] });
+      queryClient.invalidateQueries({ queryKey: ['misFavoritos'] });
+    },
+    onError: (error: any) => {
+      alert(error.response?.data?.error || 'Error al gestionar favorito');
+    }
+  });
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Evitar que active navegación del card
     if (!isAuthenticated) {
-      alert("Tenés que iniciar sesión para agregar favoritos ❤️");
+      alert('Debes iniciar sesión para guardar favoritos');
       return;
     }
-    setLoading(true);
-    try {
-      const res = await toggleFavorito(loteId);
-      setIsFav(res.agregado);
-    } catch (err) {
-      console.error("Error al cambiar favorito:", err);
-    } finally {
-      setLoading(false);
-    }
+    toggleMutation.mutate();
   };
 
-  return (
-    <Tooltip title={isFav ? "Quitar de favoritos" : "Agregar a favoritos"}>
-      <span>
-        <IconButton onClick={handleToggle} disabled={loading}>
-          {loading ? (
-            <CircularProgress size={20} />
-          ) : isFav ? (
-            <Favorite color="error" />
-          ) : (
-            <FavoriteBorder color="action" />
-          )}
-        </IconButton>
-      </span>
-    </Tooltip>
+  if (!isAuthenticated) return null; // No mostrar si no está logueado
+
+  const button = (
+    <IconButton
+      onClick={handleClick}
+      disabled={toggleMutation.isPending}
+      sx={{
+        color: isFavorito ? '#CC6333' : '#CCCCCC',
+        transition: 'all 0.2s',
+        '&:hover': {
+          color: '#CC6333',
+          transform: 'scale(1.1)',
+          bgcolor: 'rgba(204, 99, 51, 0.08)'
+        }
+      }}
+      size={size}
+    >
+      {toggleMutation.isPending ? (
+        <CircularProgress size={size === 'small' ? 16 : 24} sx={{ color: '#CC6333' }} />
+      ) : isFavorito ? (
+        <Favorite />
+      ) : (
+        <FavoriteBorder />
+      )}
+    </IconButton>
   );
+
+  return showTooltip ? (
+    <Tooltip title={isFavorito ? 'Quitar de favoritos' : 'Agregar a favoritos'}>
+      {button}
+    </Tooltip>
+  ) : button;
 };

@@ -1,125 +1,88 @@
-import type { GenericResponseDto } from '../types/dto/auth.dto';
+// src/Services/imagen.service.ts
 import type { CreateImagenDto, ImagenDto, UpdateImagenDto } from '../types/dto/imagen.dto';
 import httpService from './httpService';
 import type { AxiosResponse } from 'axios';
 
 
-// Asumo que la ruta base en tu app.js es /api/imagenes
 const BASE_ENDPOINT = '/imagenes';
+
+// ✅ 1. CORRECCIÓN: Definir la URL del servidor para los assets estáticos
+// Esto apunta a 'http://localhost:3000' (sin el /api)
+const SERVER_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
 
 const ImagenService = {
 
-  // =================================================
-  // 🖼️ CREACIÓN (ADMIN) - MULTIPART/FORM-DATA
-  // =================================================
-
   /**
-   * Sube una imagen al servidor.
-   * Requiere autenticación de Admin.
+   * Transforma la ruta relativa de la BD en una URL absoluta funcional.
+   * Evita errores 404 al buscar la imagen en el puerto del frontend.
    */
-  create: async (data: CreateImagenDto): Promise<AxiosResponse<ImagenDto>> => {
-    const formData = new FormData();
-    
-    // ⚠️ CRÍTICO: El nombre 'image' debe coincidir con uploadImage.single("image") en tu backend
-    formData.append('image', data.file); 
+  resolveImageUrl: (path: string | undefined | null): string => {
+    if (!path) return '/assets/placeholder-lote.jpg';
+    if (path.startsWith('http')) return path;
 
-    if (data.descripcion) formData.append('descripcion', data.descripcion);
-    
-    // Validación lógica simple antes de enviar
-    if (data.id_proyecto) formData.append('id_proyecto', data.id_proyecto.toString());
-    if (data.id_lote) formData.append('id_lote', data.id_lote.toString());
-
-    return await httpService.post(BASE_ENDPOINT, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
+    // Aseguramos que la ruta comience con slash
+    const cleanPath = path.startsWith('/') ? path : `/${path}`;
+    return `${SERVER_URL}${cleanPath}`;
   },
 
-  // =================================================
-  // 🔍 CONSULTAS DE ASOCIACIÓN (USUARIO/PUBLICO)
-  // =================================================
+  // ==========================================
+  // 📖 LECTURA (GET)
+  // ==========================================
 
-  /**
-   * Obtiene las imágenes activas de un Proyecto.
-   * Ideal para carruseles o galerías de proyecto.
-   */
-  getByProject: async (idProyecto: number): Promise<AxiosResponse<ImagenDto[]>> => {
+  getAllByProyecto: async (idProyecto: number): Promise<AxiosResponse<ImagenDto[]>> => {
     return await httpService.get(`${BASE_ENDPOINT}/proyecto/${idProyecto}`);
   },
 
-  /**
-   * Obtiene las imágenes activas de un Lote.
-   * Ideal para el detalle del lote.
-   */
-  getByLote: async (idLote: number): Promise<AxiosResponse<ImagenDto[]>> => {
+  getAllByLote: async (idLote: number): Promise<AxiosResponse<ImagenDto[]>> => {
     return await httpService.get(`${BASE_ENDPOINT}/lote/${idLote}`);
   },
 
-  /**
-   * Obtiene TODAS las imágenes activas del sistema.
-   */
   getAllActive: async (): Promise<AxiosResponse<ImagenDto[]>> => {
     return await httpService.get(`${BASE_ENDPOINT}/activas`);
   },
 
-  // =================================================
-  // ⚙️ GESTIÓN ADMINISTRATIVA (ADMIN)
-  // =================================================
-
-  /**
-   * Obtiene imágenes huérfanas (sin proyecto ni lote).
-   * Útil para paneles de limpieza o asignación manual.
-   */
-  getUnassigned: async (): Promise<AxiosResponse<ImagenDto[]>> => {
-    return await httpService.get(`${BASE_ENDPOINT}/unassigned`);
+  getById: async (id: number): Promise<AxiosResponse<ImagenDto>> => {
+    return await httpService.get(`${BASE_ENDPOINT}/${id}`);
   },
 
-  /**
-   * Obtiene TODAS las imágenes (incluso inactivas).
-   */
-  getAll: async (): Promise<AxiosResponse<ImagenDto[]>> => {
-    return await httpService.get(BASE_ENDPOINT);
-  },
+  // ==========================================
+  // ✍️ ESCRITURA (POST, PUT, DELETE)
+  // ==========================================
 
   /**
-   * Busca por ID (Ruta Admin que incluye eliminadas).
+   * ✅ 2. CORRECCIÓN: Método Create con manejo de FormData
+   * Necesario para enviar archivos binarios al backend (Multer).
    */
-  getByIdAdmin: async (id: number): Promise<AxiosResponse<ImagenDto>> => {
-    return await httpService.get(`${BASE_ENDPOINT}/admin/${id}`);
+  create: async (data: CreateImagenDto): Promise<AxiosResponse<ImagenDto>> => {
+    const formData = new FormData();
+    
+    // El backend espera el campo 'image' según tu configuración de Multer
+    formData.append('image', data.file); 
+    
+    if (data.descripcion) formData.append('descripcion', data.descripcion);
+    
+    // Convertimos números a string para FormData
+    if (data.id_lote) formData.append('id_lote', String(data.id_lote));
+    if (data.id_proyecto) formData.append('id_proyecto', String(data.id_proyecto));
+
+    return await httpService.post(BASE_ENDPOINT, formData, {
+      headers: {
+        // Axios detecta FormData y pone el Content-Type: multipart/form-data automáticamente,
+        // pero es buena práctica saber que aquí cambia el tipo de contenido.
+        'Content-Type': 'multipart/form-data',
+      },
+    });
   },
 
-  /**
-   * Actualiza metadatos (descripción, reasignación de proyecto/lote).
-   */
   update: async (id: number, data: UpdateImagenDto): Promise<AxiosResponse<ImagenDto>> => {
     return await httpService.put(`${BASE_ENDPOINT}/${id}`, data);
   },
 
   /**
-   * Borrado lógico.
+   * ✅ 3. CORRECCIÓN: Método Delete faltante
    */
-  softDelete: async (id: number): Promise<AxiosResponse<GenericResponseDto>> => {
+  softDelete: async (id: number): Promise<AxiosResponse<void>> => {
     return await httpService.delete(`${BASE_ENDPOINT}/${id}`);
-  },
-
-  // =================================================
-  // 🛠️ UTILIDADES PARA EL FRONTEND
-  // =================================================
-
-  /**
-   * Helper para construir la URL completa de la imagen.
-   * Útil si tu backend devuelve rutas relativas como '/uploads/...'
-   * y necesitas prefijarlas con la URL base de la API.
-   */
-  resolveImageUrl: (relativePath: string): string => {
-    if (!relativePath) return '/assets/placeholder.png'; // Imagen por defecto
-    if (relativePath.startsWith('http')) return relativePath;
-    
-    // Obtiene la URL base desde tu variable de entorno (ej: http://localhost:3000)
-    const apiBase = import.meta.env.VITE_API_BASE_URL || ''; 
-    // Asumiendo que VITE_API_BASE_URL incluye '/api', a veces hay que limpiar si las imágenes están en la raíz
-    const rootUrl = apiBase.replace('/api', ''); 
-    
-    return `${rootUrl}${relativePath}`;
   }
 };
 

@@ -9,93 +9,41 @@ import {
   CreditScore as TokenIcon,
   EventRepeat as MesesIcon
 } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
 
-// --- MOCKS Y TIPOS (Para que funcione la Demo) ---
-// En tu proyecto real, esto viene de tus imports:
-// import SuscripcionService from '../../../Services/suscripcion.service';
-// import { PageContainer } from '../../../components/common';
-// import { QueryHandler } from '../../../components/common/QueryHandler/QueryHandler';
+// --- IMPORTS DE SERVICIOS Y TIPOS ---
+import SuscripcionService from '../../../Services/suscripcion.service';
+// Ajusta la ruta "../../../" según dónde esté guardado este componente en tu proyecto
+import type { SuscripcionDto } from '../../../types/dto/suscripcion.dto'; 
 
-interface SuscripcionDto {
-  id: number;
-  id_proyecto: number;
-  tokens_disponibles: number;
-  meses_a_pagar: number;
-  saldo_a_favor: number;
-  estado: 'activa' | 'cancelada' | 'finalizada';
-  proyectoAsociado: {
-    nombre_proyecto: string;
-  };
-}
-
-// Simulación del Servicio
-const MockSuscripcionService = {
-  getMisSuscripciones: async () => {
-    await new Promise(r => setTimeout(r, 800)); // Delay
-    return {
-      data: [
-        {
-          id: 101,
-          id_proyecto: 5,
-          tokens_disponibles: 1250,
-          meses_a_pagar: 12,
-          saldo_a_favor: 0,
-          estado: 'activa',
-          proyectoAsociado: { nombre_proyecto: 'Residencial Altos del Valle' }
-        },
-        {
-          id: 102,
-          id_proyecto: 8,
-          tokens_disponibles: 500,
-          meses_a_pagar: 24,
-          saldo_a_favor: 150.50,
-          estado: 'activa',
-          proyectoAsociado: { nombre_proyecto: 'Torre Centrum - Depto 402' }
-        }
-      ] as SuscripcionDto[]
-    };
-  },
-  cancelar: async (id: number) => {
-    await new Promise(r => setTimeout(r, 1000)); // Delay
-    return { data: { mensaje: 'Cancelado correctamente' } };
-  }
-};
-
-// Componente Wrapper Simulado
-const PageContainer: React.FC<{maxWidth: string, children: React.ReactNode}> = ({children}) => (
-  <Box sx={{ p: 3, maxWidth: '900px', margin: '0 auto' }}>{children}</Box>
-);
-
-const QueryHandler: React.FC<any> = ({isLoading, error, children}) => {
-  if (isLoading) return <Box display="flex" justifyContent="center" p={5}><CircularProgress /></Box>;
-  if (error) return <Alert severity="error">{error.message}</Alert>;
-  return <>{children}</>;
-};
-
-// --- COMPONENTE PRINCIPAL ---
+// --- IMPORTS DE COMPONENTES COMUNES ---
+import { PageContainer } from '../../../components/common'; 
+import { QueryHandler } from '../../../components/common/QueryHandler/QueryHandler';
 
 const MisSuscripciones: React.FC = () => {
-  // Simulación de navegación
-  const navigate = (path: string) => console.log(`Navegando a: ${path}`);
+  const navigate = useNavigate();
 
-  // Estados locales (simulando React Query)
+  // Estados
   const [suscripciones, setSuscripciones] = useState<SuscripcionDto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<any>(null);
+  
+  // Estados para cancelar (Modal)
   const [isCancelling, setIsCancelling] = useState(false);
-
-  // Estados para el Modal de Confirmación (Mejor UX)
   const [openConfirm, setOpenConfirm] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
-  // 1. Cargar Datos (Simulando useQuery)
+  // 1. Cargar Datos Reales
   const fetchSuscripciones = async () => {
     setIsLoading(true);
+    setError(null);
     try {
-      // AQUÍ USARÍAS: await SuscripcionService.getMisSuscripciones();
-      const res = await MockSuscripcionService.getMisSuscripciones();
-      setSuscripciones(res.data);
+      const response = await SuscripcionService.getMisSuscripciones();
+      // Axios devuelve la data dentro de .data
+      setSuscripciones(response.data); 
     } catch (e) {
-      console.error(e);
+      console.error("Error al obtener suscripciones:", e);
+      setError(e);
     } finally {
       setIsLoading(false);
     }
@@ -105,27 +53,29 @@ const MisSuscripciones: React.FC = () => {
     fetchSuscripciones();
   }, []);
 
-  // 2. Manejar Cancelación (Simulando useMutation)
+  // 2. Manejar Cancelación
   const handleConfirmCancel = async () => {
     if (!selectedId) return;
     
     setIsCancelling(true);
     try {
-      // AQUÍ USARÍAS: await SuscripcionService.cancelar(selectedId);
-      await MockSuscripcionService.cancelar(selectedId);
+      await SuscripcionService.cancelar(selectedId);
       
-      // Actualizar UI
-      alert('Suscripción cancelada exitosamente.');
+      // Actualizar estado local eliminando la suscripción cancelada
       setSuscripciones(prev => prev.filter(s => s.id !== selectedId));
       setOpenConfirm(false);
+      
+      // Opcional: Podrías añadir un toast/snackbar aquí
+      // toast.success("Suscripción cancelada correctamente");
     } catch (err: any) {
-      alert("No se pudo cancelar la suscripción.");
+      console.error("Error al cancelar:", err);
+      alert("Hubo un error al intentar cancelar la suscripción.");
     } finally {
       setIsCancelling(false);
     }
   };
 
-  // Abrir modal
+  // Abrir modal de confirmación
   const handleOpenCancelDialog = (id: number) => {
     setSelectedId(id);
     setOpenConfirm(true);
@@ -142,7 +92,7 @@ const MisSuscripciones: React.FC = () => {
         </Typography>
       </Box>
 
-      <QueryHandler isLoading={isLoading} error={null}>
+      <QueryHandler isLoading={isLoading} error={error}>
         {suscripciones.length > 0 ? (
           <Stack spacing={2}>
             {suscripciones.map((susc) => (
@@ -161,9 +111,10 @@ const MisSuscripciones: React.FC = () => {
               >
                 <Box display="flex" justifyContent="space-between" alignItems="flex-start" flexWrap="wrap" gap={2}>
                   
-                  {/* Info Principal */}
+                  {/* Información Principal */}
                   <Box>
                     <Typography variant="h6" fontWeight="bold" color="text.primary">
+                      {/* Asegúrate que tu DTO traiga 'proyectoAsociado'. Si no, ajusta esta línea */}
                       {susc.proyectoAsociado?.nombre_proyecto || `Proyecto #${susc.id_proyecto}`}
                     </Typography>
                     
@@ -174,7 +125,7 @@ const MisSuscripciones: React.FC = () => {
                     <Stack direction="row" spacing={1} flexWrap="wrap" gap={1}>
                       <Chip 
                         icon={<TokenIcon />} 
-                        label={`${susc.tokens_disponibles} Tokens`} 
+                        label={`${susc.tokens_disponibles ?? 0} Tokens`} 
                         size="small" 
                         color="secondary" 
                         sx={{ fontWeight: 600 }}
@@ -185,7 +136,8 @@ const MisSuscripciones: React.FC = () => {
                         size="small" 
                         variant="outlined" 
                       />
-                      {Number(susc.saldo_a_favor) > 0 && (
+                      {/* Verificación segura de saldo */}
+                      {susc.saldo_a_favor !== undefined && Number(susc.saldo_a_favor) > 0 && (
                         <Chip 
                           label={`Saldo a favor: $${Number(susc.saldo_a_favor).toLocaleString()}`} 
                           size="small" 
@@ -228,7 +180,7 @@ const MisSuscripciones: React.FC = () => {
         )}
       </QueryHandler>
 
-      {/* --- DIÁLOGO DE CONFIRMACIÓN (Mejor UX para Cliente) --- */}
+      {/* --- DIÁLOGO DE CONFIRMACIÓN --- */}
       <Dialog
         open={openConfirm}
         onClose={() => !isCancelling && setOpenConfirm(false)}
@@ -237,9 +189,9 @@ const MisSuscripciones: React.FC = () => {
         <DialogTitle fontWeight="bold">¿Cancelar suscripción?</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Si cancelas ahora, perderás tu progreso de inversión en este proyecto y los beneficios acumulados. 
+            Si cancelas ahora, se detendrán los cobros futuros.
             <br /><br />
-            <strong>Esta acción no se puede deshacer.</strong>
+            <strong>¿Estás seguro de que deseas continuar?</strong>
           </DialogContentText>
         </DialogContent>
         <DialogActions sx={{ p: 2.5 }}>
@@ -248,7 +200,7 @@ const MisSuscripciones: React.FC = () => {
             disabled={isCancelling}
             color="inherit"
           >
-            Mantener Suscripción
+            Volver
           </Button>
           <Button 
             onClick={handleConfirmCancel} 

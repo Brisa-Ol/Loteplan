@@ -78,15 +78,15 @@ export const useNavbarMenu = () => {
       const adminNavItems: NavItem[] = [
         { label: "Dashboard", path: "/admin/dashboard", icon: DashboardIcon },
         { label: "Gestión de Usuarios", path: "/admin/usuarios", icon: PersonIcon },
-        { label: "Gestion de Proyectos", path: "/admin/proyectos", icon: ConstructionIcon },
+        { label: "Gestion de Proyectos", path: "/admin/Proyectos", icon: ConstructionIcon },
         {
           label: "Lotes",
           icon: TerrainIcon,
           submenu: [
-            { label: "Gestión de Lotes", path: "/admin/lotes", icon: TerrainIcon },
-            { label: "Monitor de Impagos", path: "/admin/impagos", icon: TerrainIcon },
+            { label: "Gestión de Lotes", path: "/admin/Lotes", icon: TerrainIcon },
+            { label: "Control de Pagos", path: "/admin/ControlPagos", icon: TerrainIcon },
             { isDivider: true, label: "" },
-            { label: "Subastas", path: "/admin/subastas", icon: GavelIcon },
+            { label: "Sala de Pujas", path: "/admin/SalaControlPujas", icon: GavelIcon },
           ],
         },
         {
@@ -152,6 +152,7 @@ export const useNavbarMenu = () => {
                 { label: "Mis Inversiones", path: "/client/inversiones", icon: AttachMoneyIcon },
                 { label: "Mis Suscripciones", path: "/client/suscripciones", icon: SupervisedUserIcon },
                 { label: "Mis Subastas", path: "/client/subastas", icon: GavelIcon },
+                { label: "Mis Favoritos", path: "/client/Favoritos", icon: GavelIcon },
             ]
         },
         // ... resto de items cliente

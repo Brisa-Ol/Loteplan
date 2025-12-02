@@ -7,11 +7,9 @@ import {
   Box,
   Typography,
   Avatar,
-  Fade,
   Grow
 } from '@mui/material';
 import { Logout as LogoutIcon } from '@mui/icons-material';
-import { useTheme } from '@mui/material/styles';
 
 interface LogoutDialogProps {
   open: boolean;
@@ -20,33 +18,43 @@ interface LogoutDialogProps {
 }
 
 export const LogoutDialog: React.FC<LogoutDialogProps> = ({ open, onClose, onConfirm }) => {
-  const theme = useTheme();
-
   return (
     <Dialog
       open={open}
       onClose={onClose}
-      TransitionComponent={Grow} // Animación de entrada suave
+      TransitionComponent={Grow}
+      transitionDuration={300}
       maxWidth="xs"
       fullWidth
       PaperProps={{
         elevation: 0,
         sx: {
-          borderRadius: 3, // Usa el borderRadius del theme (12px * 2 aprox o ajustado)
+          borderRadius: 3,
           p: 2,
-          boxShadow: '0 24px 48px rgba(0,0,0,0.2)', // Sombra más dramática para modales
+          boxShadow: '0 24px 48px rgba(0,0,0,0.2)',
         }
       }}
+      // Mejora de accesibilidad
+      aria-labelledby="logout-dialog-title"
+      aria-describedby="logout-dialog-description"
     >
-      <DialogContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', pt: 3 }}>
-        
+      <DialogContent 
+        sx={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          alignItems: 'center', 
+          textAlign: 'center', 
+          pt: 3,
+          pb: 2
+        }}
+      >
         {/* Icono Circular Animado */}
         <Avatar
           sx={{
             width: 64,
             height: 64,
-            bgcolor: 'warning.light', // Fondo suave naranjita (del theme)
-            color: 'warning.main',    // Icono naranja fuerte
+            bgcolor: 'warning.light',
+            color: 'warning.main',
             mb: 2,
             boxShadow: '0 8px 16px rgba(245, 124, 0, 0.15)'
           }}
@@ -54,19 +62,35 @@ export const LogoutDialog: React.FC<LogoutDialogProps> = ({ open, onClose, onCon
           <LogoutIcon sx={{ fontSize: 32 }} />
         </Avatar>
 
-        <Typography variant="h5" gutterBottom fontWeight="700" color="text.primary">
+        <Typography 
+          id="logout-dialog-title"
+          variant="h5" 
+          gutterBottom 
+          fontWeight={700} 
+          color="text.primary"
+        >
           ¿Cerrar Sesión?
         </Typography>
 
-        <Typography variant="body1" color="text.secondary" sx={{ mb: 1 }}>
+        <Typography 
+          id="logout-dialog-description"
+          variant="body1" 
+          color="text.secondary"
+        >
           Estás a punto de salir de tu cuenta.
         </Typography>
-    
       </DialogContent>
 
-      <DialogActions sx={{ px: 3, pb: 3, pt: 1, flexDirection: 'column', gap: 1.5 }}>
-        
-        {/* Botón Principal (Primary del Theme #CC6333) */}
+      <DialogActions 
+        sx={{ 
+          px: 3, 
+          pb: 3, 
+          pt: 1, 
+          flexDirection: 'column', 
+          gap: 1.5 
+        }}
+      >
+        {/* Botón Principal */}
         <Button 
           onClick={onConfirm} 
           variant="contained" 
@@ -74,27 +98,33 @@ export const LogoutDialog: React.FC<LogoutDialogProps> = ({ open, onClose, onCon
           fullWidth
           size="large"
           disableElevation
+          autoFocus // El botón primario tiene foco automático
           sx={{ 
             borderRadius: 2,
-            fontSize: '1rem'
+            fontSize: '1rem',
+            textTransform: 'none',
+            fontWeight: 600
           }}
         >
           Sí, Cerrar Sesión
         </Button>
 
-        {/* Botón Secundario (Outlined del Theme) */}
+        {/* Botón Secundario */}
         <Button 
           onClick={onClose} 
-          color="inherit" 
           variant="text" 
           fullWidth
+          size="large"
           sx={{ 
             borderRadius: 2,
             color: 'text.secondary',
-            '&:hover': { bgcolor: 'action.hover' }
+            textTransform: 'none',
+            '&:hover': { 
+              bgcolor: 'action.hover' 
+            }
           }}
         >
-          Cancelar y Volver
+          Cancelar
         </Button>
       </DialogActions>
     </Dialog>

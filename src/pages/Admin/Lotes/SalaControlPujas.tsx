@@ -1,14 +1,16 @@
+// src/pages/Admin/Lotes/SalaControl.tsx
 import React, { useMemo, useState } from 'react';
 import { 
   Box, Typography, Paper, Card, CardContent, CardActions, 
   Button, Chip, Stack, Avatar, Alert, LinearProgress,
-  useTheme, Tabs, Tab, IconButton, Tooltip, Dialog,
-  DialogTitle, DialogContent, DialogActions, TextField
+  useTheme, Tabs, Tab, Dialog, DialogTitle, DialogContent, 
+  DialogActions, TextField, Table, TableBody, TableCell,
+  TableContainer, TableHead, TableRow, Tooltip, IconButton
 } from '@mui/material';
 import { 
   Gavel, Timer, StopCircle, ReceiptLong, 
   MonetizationOn, Warning, Person, Email,
-  CheckCircle, ContentCopy, WhatsApp
+  CheckCircle, ContentCopy, Info, TrendingUp
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -16,9 +18,12 @@ import { PageContainer } from '../../../components/common/PageContainer/PageCont
 import { QueryHandler } from '../../../components/common/QueryHandler/QueryHandler';
 
 import type { LoteDto } from '../../../types/dto/lote.dto';
+import type { PujaDto } from '../../../types/dto/puja.dto';
 import LoteService from '../../../Services/lote.service';
+import PujaService from '../../../Services/puja.service';
 import imagenService from '../../../Services/imagen.service';
 
+// ✅ Card de estadística reutilizable
 const KpiCard: React.FC<{ 
   title: string; 
   value: string | number; 
@@ -38,7 +43,7 @@ const KpiCard: React.FC<{
   </Card>
 );
 
-// ✅ NUEVO: Modal de contacto al ganador
+// ✅ Modal de contacto al ganador
 const ContactarGanadorModal: React.FC<{
   open: boolean;
   onClose: () => void;
@@ -106,21 +111,30 @@ const ContactarGanadorModal: React.FC<{
     </Dialog>
   );
 };
-
-const AdminSubastas: React.FC = () => {
+  
+const SalaControlPujas: React.FC = () => {
   const queryClient = useQueryClient();
   const theme = useTheme();
   const [tabValue, setTabValue] = useState(0);
   const [contactarModalOpen, setContactarModalOpen] = useState(false);
   const [loteSeleccionado, setLoteSeleccionado] = useState<LoteDto | null>(null);
 
-  const { data: lotes = [], isLoading, error } = useQuery<LoteDto[]>({
+  // ✅ Queries principales
+  const { data: lotes = [], isLoading: loadingLotes, error: errorLotes } = useQuery<LoteDto[]>({
     queryKey: ['adminLotes'],
     queryFn: async () => (await LoteService.findAllAdmin()).data,
-    refetchInterval: 10000,
+    refetchInterval: 10000, // Actualiza cada 10 segundos
   });
 
-  const { activos, pendientesPago, dineroEnJuego, lotesRiesgo } = useMemo(() => {
+  // ✅ NUEVO: Cargar todas las pujas (para mostrar actividad)
+  const { data: pujas = [], isLoading: loadingPujas } = useQuery<PujaDto[]>({
+    queryKey: ['adminPujas'],
+    queryFn: async () => (await PujaService.findAll()).data,
+    refetchInterval: 15000,
+  });
+
+  // ✅ Analytics calculados del inventario
+  const analytics = useMemo(() => {
     const _activos = lotes.filter(l => l.estado_subasta === 'activa');
     const _pendientes = lotes.filter(l => 
       l.estado_subasta === 'finalizada' && 
@@ -128,28 +142,34 @@ const AdminSubastas: React.FC = () => {
       (l.intentos_fallidos_pago || 0) < 3
     );
     
-    // ✅ NUEVO: Identificar lotes en riesgo crítico (2 intentos fallidos)
     const _riesgo = _pendientes.filter(l => (l.intentos_fallidos_pago || 0) >= 2);
-    
     const _dinero = _activos.reduce((acc, curr) => acc + Number(curr.precio_base), 0);
+
+    // ✅ NUEVO: Estadísticas de pujas
+    const pujasActivas = pujas.filter(p => p.estado_puja === 'activa');
+    const totalPujadores = new Set(pujasActivas.map(p => p.id_usuario)).size;
 
     return { 
       activos: _activos, 
       pendientesPago: _pendientes, 
       dineroEnJuego: _dinero,
-      lotesRiesgo: _riesgo.length
+      lotesRiesgo: _riesgo.length,
+      totalPujas: pujasActivas.length,
+      totalPujadores
     };
-  }, [lotes]);
+  }, [lotes, pujas]);
 
+  // ✅ Mutación: Finalizar subasta
   const endAuctionMutation = useMutation({
     mutationFn: (id: number) => LoteService.endAuction(id),
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ['adminLotes'] });
+      queryClient.invalidateQueries({ queryKey: ['adminPujas'] });
       const msg = (res.data as any).mensaje || 'Subasta finalizada.';
       alert(`🏁 ${msg}`);
     },
     onError: (err: any) => {
-      alert(`❌ Error al finalizar: ${err.message || 'Error desconocido'}`);
+      alert(`❌ Error: ${err.message || 'Error desconocido'}`);
     }
   });
 
@@ -161,7 +181,7 @@ const AdminSubastas: React.FC = () => {
     setContactarModalOpen(true);
   };
 
-  // ✅ NUEVO: Calcular días restantes de pago
+  // ✅ Helper: Calcular días restantes de pago (respeta backend: 90 días desde fecha_fin)
   const calcularDiasRestantes = (lote: LoteDto): number => {
     if (!lote.fecha_fin) return 90;
     const fechaFin = new Date(lote.fecha_fin);
@@ -171,46 +191,60 @@ const AdminSubastas: React.FC = () => {
     return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
   };
 
+  // ✅ NUEVO: Obtener pujas de un lote específico
+  const getPujasDelLote = (loteId: number): PujaDto[] => {
+    return pujas.filter(p => p.id_lote === loteId && p.estado_puja === 'activa');
+  };
+
   return (
     <PageContainer maxWidth="xl">
       
+      {/* Header */}
       <Box mb={4}>
         <Typography variant="h4" sx={{ color: 'primary.main', fontWeight: 700 }}>
           Sala de Control de Subastas
         </Typography>
         <Typography color="text.secondary">
-          Monitoreo en tiempo real de lotes activos y gestión de adjudicaciones.
+          Monitoreo en tiempo real de lotes activos, pujas y gestión de adjudicaciones
         </Typography>
       </Box>
 
+      {/* Estadísticas */}
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} mb={4}>
         <KpiCard 
           title="Subastas En Vivo" 
-          value={activos.length} 
+          value={analytics.activos.length} 
           icon={<Gavel fontSize="large" />} 
           color="success" 
         />
         <KpiCard 
-          title="Capital en Juego (Base)" 
-          value={`$${dineroEnJuego.toLocaleString()}`} 
+          title="Capital en Juego" 
+          value={`$${analytics.dineroEnJuego.toLocaleString()}`} 
           icon={<MonetizationOn fontSize="large" />} 
           color="info" 
         />
         <KpiCard 
+          title="Pujas Activas" 
+          value={analytics.totalPujas} 
+          icon={<TrendingUp fontSize="large" />} 
+          color="success" 
+        />
+        <KpiCard 
           title="Pendientes de Pago" 
-          value={pendientesPago.length} 
+          value={analytics.pendientesPago.length} 
           icon={<ReceiptLong fontSize="large" />} 
           color="warning" 
         />
       </Stack>
 
-      {/* ✅ NUEVO: Alerta de lotes en riesgo crítico */}
-      {lotesRiesgo > 0 && (
+      {/* Alertas */}
+      {analytics.lotesRiesgo > 0 && (
         <Alert severity="error" sx={{ mb: 3 }} icon={<Warning />}>
-          <strong>⚠️ ATENCIÓN:</strong> Hay {lotesRiesgo} lote{lotesRiesgo > 1 ? 's' : ''} con 2 o más intentos fallidos de pago. Próximo al reingreso automático.
+          <strong>⚠️ ATENCIÓN:</strong> Hay {analytics.lotesRiesgo} lote{analytics.lotesRiesgo > 1 ? 's' : ''} con 2+ intentos fallidos de pago.
         </Alert>
       )}
 
+      {/* Tabs */}
       <Paper elevation={0} sx={{ mb: 3, bgcolor: 'background.paper', borderRadius: 2 }}>
         <Tabs 
           value={tabValue} 
@@ -219,17 +253,17 @@ const AdminSubastas: React.FC = () => {
           textColor="primary"
           sx={{ '& .Mui-selected': { color: `${theme.palette.primary.main} !important`, fontWeight: 700 } }}
         >
-          <Tab icon={<Timer />} label={`EN VIVO (${activos.length})`} iconPosition="start" />
-          <Tab icon={<ReceiptLong />} label={`Gestión de Cobros (${pendientesPago.length})`} iconPosition="start" />
+          <Tab icon={<Timer />} label={`EN VIVO (${analytics.activos.length})`} iconPosition="start" />
+          <Tab icon={<ReceiptLong />} label={`Gestión de Cobros (${analytics.pendientesPago.length})`} iconPosition="start" />
         </Tabs>
       </Paper>
 
-      <QueryHandler isLoading={isLoading} error={error as Error}>
+      <QueryHandler isLoading={loadingLotes || loadingPujas} error={errorLotes as Error}>
         
         {/* VISTA 1: MONITOR EN VIVO */}
         {tabValue === 0 && (
           <Box>
-            {activos.length === 0 ? (
+            {analytics.activos.length === 0 ? (
               <Box 
                 sx={{ 
                   textAlign: 'center', 
@@ -242,10 +276,10 @@ const AdminSubastas: React.FC = () => {
               >
                 <Timer sx={{ fontSize: 60, color: 'text.disabled', mb: 2 }} />
                 <Typography variant="h6" color="text.secondary" fontWeight={600}>
-                  No hay subastas activas en este momento.
+                  No hay subastas activas en este momento
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Inicia una subasta desde la pantalla "Gestión de Lotes".
+                  Inicia una subasta desde "Inventario de Lotes"
                 </Typography>
               </Box>
             ) : (
@@ -254,106 +288,129 @@ const AdminSubastas: React.FC = () => {
                 gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' }, 
                 gap: 3 
               }}>
-                {activos.map(lote => (
-                  <Card key={lote.id} sx={{ 
-                    border: '2px solid', 
-                    borderColor: 'success.main', 
-                    position: 'relative', 
-                    bgcolor: 'background.default',
-                    overflow: 'visible',
-                    transition: 'transform 0.2s',
-                    '&:hover': { transform: 'translateY(-4px)', boxShadow: 4 }
-                  }}>
-                    <Chip 
-                      label="EN VIVO" 
-                      sx={{ 
-                        bgcolor: 'success.main', 
-                        color: 'white', 
-                        position: 'absolute', 
-                        top: -12, 
-                        right: 20, 
-                        fontWeight: 700,
-                        boxShadow: 3,
-                        animation: 'pulse 2s infinite',
-                        '@keyframes pulse': {
-                          '0%': { boxShadow: '0 0 0 0 rgba(76, 175, 80, 0.7)' },
-                          '70%': { boxShadow: '0 0 0 10px rgba(76, 175, 80, 0)' },
-                          '100%': { boxShadow: '0 0 0 0 rgba(76, 175, 80, 0)' },
-                        }
-                      }} 
-                      icon={<Gavel style={{ color: 'white' }} />}
-                    />
+                {analytics.activos.map(lote => {
+                  const pujasDelLote = getPujasDelLote(lote.id);
+                  const pujaMasAlta = pujasDelLote.length > 0 
+                    ? Math.max(...pujasDelLote.map(p => Number(p.monto_puja)))
+                    : Number(lote.precio_base);
 
-                    <CardContent>
-                      <Stack direction="row" spacing={2} mb={3} alignItems="center">
-                        <Avatar 
-                          src={getLoteImage(lote)} 
-                          sx={{ width: 70, height: 70, borderRadius: 2, boxShadow: 2 }} 
-                          variant="rounded"
-                        >
-                          <Gavel />
-                        </Avatar>
-                        <Box>
-                          <Typography variant="h6" fontWeight={700} noWrap title={lote.nombre_lote}>
-                            {lote.nombre_lote}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">ID: {lote.id}</Typography>
-                        </Box>
-                      </Stack>
-                      
-                      <Box sx={{ bgcolor: 'success.light', color: 'success.dark', p: 2, borderRadius: 2, mb: 2, textAlign: 'center' }}>
-                        <Typography variant="caption" fontWeight={700} sx={{ opacity: 0.8, letterSpacing: 1 }}>PRECIO BASE</Typography>
-                        <Typography variant="h3" fontWeight={700} sx={{ color: 'success.dark' }}>
-                          ${Number(lote.precio_base).toLocaleString()}
-                        </Typography>
-                      </Box>
-
-                      <Stack direction="row" justifyContent="space-between" sx={{ px: 1 }}>
-                        <Box textAlign="center">
-                          <Typography variant="caption" color="text.secondary">OFERTAS</Typography>
-                          <Typography fontWeight={700}>--</Typography>
-                        </Box>
-                        <Box textAlign="center">
-                          <Typography variant="caption" color="text.secondary">TIEMPO</Typography>
-                          <Typography fontWeight={700} color="error.main">--:--</Typography>
-                        </Box>
-                      </Stack>
-                    </CardContent>
-
-                    <CardActions sx={{ p: 2, pt: 0 }}>
-                      <Button 
-                        fullWidth 
-                        variant="outlined" 
-                        color="error" 
-                        startIcon={<StopCircle />}
-                        onClick={() => {
-                          if(confirm(`⚠️ ¿Estás seguro de finalizar manualmente la subasta de "${lote.nombre_lote}"?`)) {
-                            endAuctionMutation.mutate(lote.id);
+                  return (
+                    <Card key={lote.id} sx={{ 
+                      border: '2px solid', 
+                      borderColor: 'success.main', 
+                      position: 'relative', 
+                      bgcolor: 'background.default',
+                      overflow: 'visible',
+                      transition: 'transform 0.2s',
+                      '&:hover': { transform: 'translateY(-4px)', boxShadow: 4 }
+                    }}>
+                      <Chip 
+                        label="EN VIVO" 
+                        sx={{ 
+                          bgcolor: 'success.main', 
+                          color: 'white', 
+                          position: 'absolute', 
+                          top: -12, 
+                          right: 20, 
+                          fontWeight: 700,
+                          boxShadow: 3,
+                          animation: 'pulse 2s infinite',
+                          '@keyframes pulse': {
+                            '0%': { boxShadow: '0 0 0 0 rgba(76, 175, 80, 0.7)' },
+                            '70%': { boxShadow: '0 0 0 10px rgba(76, 175, 80, 0)' },
+                            '100%': { boxShadow: '0 0 0 0 rgba(76, 175, 80, 0)' },
                           }
-                        }}
-                        sx={{ borderWidth: 2, '&:hover': { borderWidth: 2 } }}
-                      >
-                        Finalizar Ahora
-                      </Button>
-                    </CardActions>
-                  </Card>
-                ))}
+                        }} 
+                        icon={<Gavel style={{ color: 'white' }} />}
+                      />
+
+                      <CardContent>
+                        <Stack direction="row" spacing={2} mb={3} alignItems="center">
+                          <Avatar 
+                            src={getLoteImage(lote)} 
+                            sx={{ width: 70, height: 70, borderRadius: 2, boxShadow: 2 }} 
+                            variant="rounded"
+                          >
+                            <Gavel />
+                          </Avatar>
+                          <Box>
+                            <Typography variant="h6" fontWeight={700} noWrap title={lote.nombre_lote}>
+                              {lote.nombre_lote}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              ID: {lote.id}
+                            </Typography>
+                          </Box>
+                        </Stack>
+                        
+                        {/* ✅ Precio actual (puede ser mayor que el base si hay pujas) */}
+                        <Box sx={{ 
+                          bgcolor: pujasDelLote.length > 0 ? 'warning.light' : 'success.light', 
+                          color: pujasDelLote.length > 0 ? 'warning.dark' : 'success.dark',
+                          p: 2, 
+                          borderRadius: 2, 
+                          mb: 2, 
+                          textAlign: 'center' 
+                        }}>
+                          <Typography variant="caption" fontWeight={700} sx={{ opacity: 0.8, letterSpacing: 1 }}>
+                            {pujasDelLote.length > 0 ? 'PUJA MÁS ALTA' : 'PRECIO BASE'}
+                          </Typography>
+                          <Typography variant="h3" fontWeight={700}>
+                            ${pujaMasAlta.toLocaleString()}
+                          </Typography>
+                        </Box>
+
+                        <Stack direction="row" justifyContent="space-between" sx={{ px: 1 }}>
+                          <Box textAlign="center">
+                            <Typography variant="caption" color="text.secondary">OFERTAS</Typography>
+                            <Typography fontWeight={700} color={pujasDelLote.length > 0 ? 'success.main' : 'text.secondary'}>
+                              {pujasDelLote.length}
+                            </Typography>
+                          </Box>
+                          <Box textAlign="center">
+                            <Typography variant="caption" color="text.secondary">POSTORES</Typography>
+                            <Typography fontWeight={700}>
+                              {new Set(pujasDelLote.map(p => p.id_usuario)).size}
+                            </Typography>
+                          </Box>
+                        </Stack>
+                      </CardContent>
+
+                      <CardActions sx={{ p: 2, pt: 0 }}>
+                        <Button 
+                          fullWidth 
+                          variant="outlined" 
+                          color="error" 
+                          startIcon={<StopCircle />}
+                          onClick={() => {
+                            if(confirm(`⚠️ ¿Finalizar subasta de "${lote.nombre_lote}"?`)) {
+                              endAuctionMutation.mutate(lote.id);
+                            }
+                          }}
+                          sx={{ borderWidth: 2, '&:hover': { borderWidth: 2 } }}
+                        >
+                          Finalizar Ahora
+                        </Button>
+                      </CardActions>
+                    </Card>
+                  );
+                })}
               </Box>
             )}
           </Box>
         )}
 
-        {/* VISTA 2: GESTIÓN DE COBROS (MEJORADA) */}
+        {/* VISTA 2: GESTIÓN DE COBROS */}
         {tabValue === 1 && (
           <Box>
-            {pendientesPago.length > 0 && (
+            {analytics.pendientesPago.length > 0 && (
               <Alert severity="warning" sx={{ mb: 3 }}>
-                Hay <strong>{pendientesPago.length} lotes adjudicados</strong> pendientes de pago. Contacta a los ganadores.
+                Hay <strong>{analytics.pendientesPago.length} lotes adjudicados</strong> pendientes de pago.
               </Alert>
             )}
             
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {pendientesPago.map(lote => {
+              {analytics.pendientesPago.map(lote => {
                 const intentos = lote.intentos_fallidos_pago || 0;
                 const diasRestantes = calcularDiasRestantes(lote);
                 const esRiesgoCritico = intentos >= 2;
@@ -372,7 +429,7 @@ const AdminSubastas: React.FC = () => {
                   >
                     <Stack direction={{ xs: 'column', md: 'row' }} alignItems="center" spacing={3}>
                       
-                      {/* Imagen + Info Básica */}
+                      {/* Imagen + Info */}
                       <Stack direction="row" spacing={2} flex={1} alignItems="center">
                         <Avatar 
                           src={getLoteImage(lote)} 
@@ -384,7 +441,7 @@ const AdminSubastas: React.FC = () => {
                         <Box>
                           <Typography fontWeight={700}>{lote.nombre_lote}</Typography>
                           <Typography variant="caption" color="text.secondary">
-                            Finalizó: {new Date(lote.fecha_fin || '').toLocaleDateString()}
+                            Finalizó: {lote.fecha_fin ? new Date(lote.fecha_fin).toLocaleDateString() : 'N/A'}
                           </Typography>
                           {esRiesgoCritico && (
                             <Chip 
@@ -402,8 +459,12 @@ const AdminSubastas: React.FC = () => {
                         <Stack direction="row" alignItems="center" spacing={1}>
                           <Person color="action" />
                           <Box>
-                            <Typography variant="body2" fontWeight={600}>Usuario #{lote.id_ganador}</Typography>
-                            <Typography variant="caption" color="text.secondary">Ganador</Typography>
+                            <Typography variant="body2" fontWeight={600}>
+                              Usuario #{lote.id_ganador}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              Ganador
+                            </Typography>
                           </Box>
                         </Stack>
                       </Box>
@@ -439,28 +500,24 @@ const AdminSubastas: React.FC = () => {
                       </Box>
 
                       {/* Acciones */}
-                      <Stack direction="row" spacing={1}>
-                        <Tooltip title="Contactar vía mensaje interno">
-                          <Button 
-                            variant={esRiesgoCritico ? 'contained' : 'outlined'} 
-                            size="small"
-                            color={esRiesgoCritico ? 'error' : 'primary'}
-                            startIcon={<Email />}
-                            onClick={() => handleContactar(lote)}
-                          >
-                            Contactar
-                          </Button>
-                        </Tooltip>
-                      </Stack>
+                      <Button 
+                        variant={esRiesgoCritico ? 'contained' : 'outlined'} 
+                        size="small"
+                        color={esRiesgoCritico ? 'error' : 'primary'}
+                        startIcon={<Email />}
+                        onClick={() => handleContactar(lote)}
+                      >
+                        Contactar
+                      </Button>
                     </Stack>
                   </Paper>
                 );
               })}
 
-              {pendientesPago.length === 0 && (
+              {analytics.pendientesPago.length === 0 && (
                  <Box textAlign="center" py={5} color="text.secondary">
                     <CheckCircle sx={{ fontSize: 40, color: 'success.light', mb: 1 }} />
-                    <Typography>No hay cobros pendientes. ¡Todos los pagos están al día!</Typography>
+                    <Typography>No hay cobros pendientes. ¡Todo al día!</Typography>
                  </Box>
               )}
             </Box>
@@ -482,4 +539,4 @@ const AdminSubastas: React.FC = () => {
   );
 };
 
-export default AdminSubastas;
+export default SalaControlPujas;

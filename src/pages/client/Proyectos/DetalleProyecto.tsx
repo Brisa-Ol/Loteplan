@@ -25,7 +25,8 @@ import { QueryHandler } from '../../../components/common/QueryHandler/QueryHandl
 // Componentes Específicos (Las piezas que ya creamos)
 
 import { useAuth } from '../../../context/AuthContext';
-import { ListaLotesProyecto } from './ListaLotesProyecto';
+import { ListaLotesProyecto } from '../Lotes/ListaLotesProyecto';
+
 
 interface TabPanelProps {
   children?: React.ReactNode;

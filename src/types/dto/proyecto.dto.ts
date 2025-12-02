@@ -1,11 +1,10 @@
 import type { BaseDTO } from "./base.dto";
 import type { ImagenDto } from "./imagen.dto";
 import type { LoteDto } from "./lote.dto";
+
 // ==========================================
 // 🛠️ ENUMS & TYPES
 // ==========================================
-
-
 
 export type TipoInversion = 'directo' | 'mensual';
 export type EstadoProyecto = 'En Espera' | 'En proceso' | 'Finalizado';
@@ -19,7 +18,7 @@ export interface CreateProyectoDto {
   nombre_proyecto: string;
   descripcion?: string;
   tipo_inversion: TipoInversion;
-  moneda: string;
+  
   // Configuración Financiera
   monto_inversion: number; // Costo total o cuota mensual
   plazo_inversion?: number; // Solo para mensual (meses)
@@ -41,10 +40,13 @@ export interface CreateProyectoDto {
   lotesIds?: number[]; // IDs de lotes para asociar al crear
 }
 
-export interface UpdateProyectoDto extends Partial<Omit<CreateProyectoDto, 'lotesIds'>> {
+export interface UpdateProyectoDto extends Partial<Omit<CreateProyectoDto, 'lotesIds' | 'tipo_inversion'>> {
   // No incluye lotesIds porque se actualizan en un endpoint separado
+  // No incluye tipo_inversion porque no debería cambiar después de crear el proyecto
+  
   estado_proyecto?: EstadoProyecto;
   activo?: boolean;
+  moneda?: MonedaProyecto; // ✅ AGREGADO: Permite actualizar la moneda
 }
 
 export interface AsignarLotesDto {
@@ -105,7 +107,7 @@ export interface CompletionRateDTO  {
 export interface MonthlyProgressItem  {
   id: number;
   nombre: string;
-  estado: 'En proceso' | 'En Espera' | 'Finalizado';
+  estado: EstadoProyecto;
   meta_suscripciones: number;
   suscripciones_actuales: number;
   porcentaje_avance: string;

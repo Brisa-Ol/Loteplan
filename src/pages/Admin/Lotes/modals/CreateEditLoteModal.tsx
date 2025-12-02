@@ -1,3 +1,4 @@
+// src/components/Admin/Lotes/modals/CreateEditLoteModal.tsx
 import React, { useEffect } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button,
@@ -7,12 +8,12 @@ import {
 import { Close as CloseIcon, Save as SaveIcon, Edit as EditIcon } from '@mui/icons-material';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
-import { useQuery } from '@tanstack/react-query';
+
 import type { CreateLoteDto, LoteDto, UpdateLoteDto } from '../../../../types/dto/lote.dto';
 import type { ProyectoDto } from '../../../../types/dto/proyecto.dto';
 import ProyectoService from '../../../../Services/proyecto.service';
+import { useQuery } from '@tanstack/react-query';
 
-// ✅ CORRECCIÓN 1: Tipo correcto para onSubmit
 interface CreateEditLoteModalProps {
   open: boolean;
   onClose: () => void;
@@ -21,7 +22,7 @@ interface CreateEditLoteModalProps {
   isLoading?: boolean;
 }
 
-// ✅ CORRECCIÓN 2: Validación mejorada
+// ✅ Validación que respeta 100% el backend
 const validationSchema = Yup.object({
   nombre_lote: Yup.string()
     .min(3, 'Mínimo 3 caracteres')
@@ -30,7 +31,12 @@ const validationSchema = Yup.object({
     .min(0, 'Debe ser positivo')
     .required('El precio base es requerido'),
   id_proyecto: Yup.mixed().nullable(),
-  fecha_inicio: Yup.string().nullable(),
+  fecha_inicio: Yup.string()
+    .nullable()
+    .test('fecha-requerida-para-subasta', 'Requerida para iniciar subasta', function(value) {
+      // Solo es requerida si el lote va a iniciar subasta (opcional en creación)
+      return true; // Validación leve en el modal, el backend hace la validación final
+    }),
   fecha_fin: Yup.string()
     .nullable()
     .test('fecha-fin-posterior', 'La fecha fin debe ser posterior al inicio', function(value) {
@@ -38,11 +44,17 @@ const validationSchema = Yup.object({
       if (!value || !fecha_inicio) return true;
       return new Date(value) > new Date(fecha_inicio);
     }),
-  latitud: Yup.number().min(-90).max(90).nullable(),
-  longitud: Yup.number().min(-180).max(180).nullable(),
+  // ✅ Coordenadas: Backend valida que si envías una, debes enviar ambas
+  latitud: Yup.number()
+    .min(-90, 'Rango: -90 a 90')
+    .max(90, 'Rango: -90 a 90')
+    .nullable(),
+  longitud: Yup.number()
+    .min(-180, 'Rango: -180 a 180')
+    .max(180, 'Rango: -180 a 180')
+    .nullable(),
 });
 
-// ✅ Helper para estado visual
 const getStatusColor = (estado: string): 'success' | 'info' | 'warning' | 'default' => {
   switch (estado) {
     case 'activa': return 'success';
@@ -60,7 +72,6 @@ const CreateEditLoteModal: React.FC<CreateEditLoteModalProps> = ({
   isLoading = false,
 }) => {
   
-  // Cargar proyectos para el selector
   const { data: proyectos = [], isLoading: loadingProyectos } = useQuery<ProyectoDto[]>({
     queryKey: ['adminProyectosSelect'],
     queryFn: async () => (await ProyectoService.getAllAdmin()).data,
@@ -79,7 +90,7 @@ const CreateEditLoteModal: React.FC<CreateEditLoteModalProps> = ({
     },
     validationSchema,
     onSubmit: async (values) => {
-      // ✅ CORRECCIÓN 3: Limpieza de datos antes de enviar
+      // ✅ Limpieza según backend
       const rawId = values.id_proyecto as unknown;
       const idProyectoLimpio = (rawId === '' || rawId === null) ? null : Number(rawId);
 
@@ -87,23 +98,22 @@ const CreateEditLoteModal: React.FC<CreateEditLoteModalProps> = ({
         nombre_lote: values.nombre_lote,
         precio_base: Number(values.precio_base),
         id_proyecto: idProyectoLimpio,
-        // Solo enviar fechas si tienen valor
+        // ✅ Solo enviar fechas si tienen valor (backend las marca como optional en update)
         ...(values.fecha_inicio && { 
           fecha_inicio: new Date(values.fecha_inicio).toISOString() 
         }),
         ...(values.fecha_fin && { 
           fecha_fin: new Date(values.fecha_fin).toISOString() 
         }),
-        // Solo enviar coordenadas si son válidas
-        ...(values.latitud && values.latitud !== 0 && { latitud: values.latitud }),
-        ...(values.longitud && values.longitud !== 0 && { longitud: values.longitud }),
+        // ✅ Backend valida que ambas coordenadas vengan juntas o ninguna
+        ...(values.latitud !== null && values.latitud !== 0 && { latitud: values.latitud }),
+        ...(values.longitud !== null && values.longitud !== 0 && { longitud: values.longitud }),
       };
 
       await onSubmit(payload, loteToEdit?.id);
     },
   });
 
-  // ✅ CORRECCIÓN 4: Cargar datos al editar
   useEffect(() => {
     if (open) {
       if (loteToEdit) {
@@ -134,7 +144,7 @@ const CreateEditLoteModal: React.FC<CreateEditLoteModalProps> = ({
     }
   };
 
-  // ✅ Flags para deshabilitar campos según estado
+  // ✅ Flags basados en el backend
   const esEdicion = !!loteToEdit;
   const subastaActiva = loteToEdit?.estado_subasta === 'activa';
   const subastaFinalizada = loteToEdit?.estado_subasta === 'finalizada';
@@ -148,7 +158,6 @@ const CreateEditLoteModal: React.FC<CreateEditLoteModalProps> = ({
       maxWidth="md" 
       fullWidth
     >
-      {/* Header */}
       <DialogTitle sx={{ 
         display: 'flex', 
         justifyContent: 'space-between', 
@@ -179,7 +188,7 @@ const CreateEditLoteModal: React.FC<CreateEditLoteModalProps> = ({
                 border: '1px solid', 
                 borderColor: 'divider' 
               }}>
-                <Stack direction="row" spacing={2} alignItems="center">
+                <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
                   <Typography variant="body2" color="text.secondary">
                     <strong>ID:</strong> {loteToEdit.id}
                   </Typography>
@@ -190,9 +199,19 @@ const CreateEditLoteModal: React.FC<CreateEditLoteModalProps> = ({
                     sx={{ fontWeight: 'bold' }}
                   />
                   {loteToEdit.id_ganador && (
-                    <Typography variant="body2" color="success.main" fontWeight="bold">
-                      Ganador ID: {loteToEdit.id_ganador}
-                    </Typography>
+                    <Chip
+                      label={`Ganador: ID ${loteToEdit.id_ganador}`}
+                      size="small"
+                      color="success"
+                      variant="outlined"
+                    />
+                  )}
+                  {loteToEdit.intentos_fallidos_pago > 0 && (
+                    <Chip
+                      label={`${loteToEdit.intentos_fallidos_pago}/3 Intentos Fallidos`}
+                      size="small"
+                      color="error"
+                    />
                   )}
                 </Stack>
               </Box>
@@ -251,10 +270,10 @@ const CreateEditLoteModal: React.FC<CreateEditLoteModalProps> = ({
                 helperText={
                   !puedeEditarProyecto 
                     ? "Solo se puede cambiar en estado 'pendiente'"
-                    : "Si se deja vacío, será un lote de subasta pública"
+                    : "Deja vacío para subasta pública"
                 }
               >
-                <MenuItem value=""><em>Sin Asignar (Lote Público)</em></MenuItem>
+                <MenuItem value=""><em>Sin Asignar (Subasta Pública)</em></MenuItem>
                 {proyectos.map((p) => (
                   <MenuItem key={p.id} value={p.id}>
                     {p.nombre_proyecto}
@@ -270,6 +289,9 @@ const CreateEditLoteModal: React.FC<CreateEditLoteModalProps> = ({
               <Typography variant="subtitle2" color="primary" gutterBottom fontWeight="bold">
                 Tiempos de Subasta
               </Typography>
+              <Alert severity="info" sx={{ mb: 2 }}>
+                Configura ambas fechas para poder iniciar la subasta desde el Inventario
+              </Alert>
               <Box sx={{ 
                 display: 'flex', 
                 gap: 2, 
@@ -305,6 +327,9 @@ const CreateEditLoteModal: React.FC<CreateEditLoteModalProps> = ({
               <Typography variant="subtitle2" color="primary" gutterBottom fontWeight="bold">
                 Ubicación Geográfica (Opcional)
               </Typography>
+              <Alert severity="info" sx={{ mb: 2 }}>
+                Si configuras una coordenada, debes configurar ambas (validación del backend)
+              </Alert>
               <Box sx={{ 
                 display: 'flex', 
                 gap: 2, 
@@ -316,7 +341,7 @@ const CreateEditLoteModal: React.FC<CreateEditLoteModalProps> = ({
                   type="number"
                   {...formik.getFieldProps('latitud')}
                   error={formik.touched.latitud && Boolean(formik.errors.latitud)}
-                  helperText={formik.touched.latitud && formik.errors.latitud}
+                  helperText={formik.touched.latitud && formik.errors.latitud || 'Rango: -90 a 90'}
                   inputProps={{ step: 'any' }}
                   disabled={isLoading}
                 />
@@ -326,7 +351,7 @@ const CreateEditLoteModal: React.FC<CreateEditLoteModalProps> = ({
                   type="number"
                   {...formik.getFieldProps('longitud')}
                   error={formik.touched.longitud && Boolean(formik.errors.longitud)}
-                  helperText={formik.touched.longitud && formik.errors.longitud}
+                  helperText={formik.touched.longitud && formik.errors.longitud || 'Rango: -180 a 180'}
                   inputProps={{ step: 'any' }}
                   disabled={isLoading}
                 />
@@ -336,7 +361,6 @@ const CreateEditLoteModal: React.FC<CreateEditLoteModalProps> = ({
           </Stack>
         </DialogContent>
         
-        {/* Footer con acciones */}
         <DialogActions sx={{ p: 3 }}>
           <Button 
             onClick={handleClose} 

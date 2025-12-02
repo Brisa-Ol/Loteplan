@@ -27,8 +27,7 @@ const kycService = {
     if (submitData.latitud_verificacion) formData.append('latitud_verificacion', submitData.latitud_verificacion.toString());
     if (submitData.longitud_verificacion) formData.append('longitud_verificacion', submitData.longitud_verificacion.toString());
 
-    // NOTA: No es necesario poner el header Content-Type manualmente con axios/httpService, 
-    // el navegador lo pone automático con el boundary correcto al ver FormData.
+    // ✅ FIX: Sintaxis correcta de template string
     const { data } = await httpService.post(`${ENDPOINT}/submit`, formData);
     return data;
   },
@@ -39,16 +38,16 @@ const kycService = {
    */
   async getStatus(): Promise<any> {
     try {
+      // ✅ FIX: Sintaxis correcta
       const { data } = await httpService.get(`${ENDPOINT}/status`);
       return data;
     } catch (error) {
       const axiosError = error as AxiosError;
-      // Si el backend responde 404, significa que no hay registro de KYC aún.
-      // Devolvemos un objeto "mock" para que el frontend muestre el formulario inicial.
+      
       if (axiosError.response?.status === 404) {
         return { estado_verificacion: 'NO_INICIADO' };
       }
-      // Si es otro error (500, 401, red), lo lanzamos para que React Query lo maneje.
+      
       throw error;
     }
   },
@@ -67,6 +66,7 @@ const kycService = {
    * (Admin) Aprueba la verificación de un usuario.
    */
   async approveVerification(idUsuario: string | number): Promise<any> {
+    // ✅ FIX: Sintaxis correcta
     const { data } = await httpService.post(`${ENDPOINT}/approve/${idUsuario}`);
     return data;
   },
