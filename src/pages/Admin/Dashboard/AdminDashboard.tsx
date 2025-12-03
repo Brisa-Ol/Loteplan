@@ -442,7 +442,7 @@ const AdminDashboard: React.FC = () => {
                         Tasa de Morosidad
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
-                        ${parseFloat(morosidad?.monto_en_riesgo ?? '0').toLocaleString()} en riesgo
+                        ${parseFloat(morosidad?.total_en_riesgo ?? '0').toLocaleString()} en riesgo
                       </Typography>
                     </Box>
                   </Stack>

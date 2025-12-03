@@ -96,7 +96,7 @@ const AdminUsuarios: React.FC = () => {
 
   const toggleStatusMutation = useMutation({
     mutationFn: async (usuario: UsuarioDto) => {
-      if (usuario.activo) await UsuarioService.softDeleteAdmin(usuario.id);
+      if (usuario.activo) await UsuarioService.softDelete(usuario.id);
       else await UsuarioService.updateAdmin(usuario.id, { activo: true });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['adminUsuarios'] }),

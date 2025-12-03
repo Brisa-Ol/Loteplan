@@ -1,117 +1,118 @@
 // src/Services/suscripcion.service.ts
+import type { AxiosResponse } from 'axios';
+import httpService from './httpService';
 import type {
   SuscripcionDto,
   IniciarSuscripcionDto,
   ConfirmarSuscripcion2faDto,
   SuscripcionInitResponse,
   MorosidadDTO,
-  CancelacionDTO
+  CancelacionDTO,
+  SuscripcionCanceladaDto
 } from '../types/dto/suscripcion.dto';
-import httpService from './httpService';
-import type { AxiosResponse } from 'axios';
 
-const BASE_ENDPOINT = '/suscripciones';
+// 🚨 CORRECCIÓN BASADA EN TU APP.JS:
+// "app.use('/api/suscripciones', suscripcionProyectoRoutes);"
+const BASE_PRINCIPAL = '/suscripciones';
+
+// "app.use('/api/suscripcionesCanceladas', suscripcionRoutes);"
+const BASE_HISTORIAL = '/suscripcionesCanceladas'; 
 
 const SuscripcionService = {
-
+  
   // =================================================
-  // 📅 GESTIÓN DE SUSCRIPCIONES (USUARIO)
+  // 👤 GESTIÓN USUARIO (Operaciones normales)
   // =================================================
-
-  /**
-   * Inicia el proceso de suscripción a un proyecto mensual (Paso 1).
-   * POST /suscripciones/iniciar
-   */
+  
   iniciar: async (data: IniciarSuscripcionDto): Promise<AxiosResponse<SuscripcionInitResponse>> => {
-    return await httpService.post(`${BASE_ENDPOINT}/iniciar`, data);
+    return await httpService.post(`${BASE_PRINCIPAL}/iniciar-pago`, data);
   },
 
-  /**
-   * Confirma suscripción con 2FA (Paso 2).
-   * POST /suscripciones/confirmar-2fa
-   */
   confirmar2FA: async (data: ConfirmarSuscripcion2faDto): Promise<AxiosResponse<SuscripcionInitResponse>> => {
-    return await httpService.post(`${BASE_ENDPOINT}/confirmar-2fa`, data);
+    return await httpService.post(`${BASE_PRINCIPAL}/confirmar-2fa`, data);
   },
 
-  /**
-   * Confirma suscripción tras webhook de MercadoPago (Paso 3).
-   * POST /suscripciones/confirmar-webhook
-   */
-  confirmarWebhook: async (transaccionId: number): Promise<AxiosResponse<SuscripcionDto>> => {
-    return await httpService.post(`${BASE_ENDPOINT}/confirmar-webhook`, { transaccionId });
-  },
-
-  /**
-   * Obtiene todas las suscripciones activas del usuario logueado.
-   * GET /suscripciones/mis-suscripciones
-   */
   getMisSuscripciones: async (): Promise<AxiosResponse<SuscripcionDto[]>> => {
-    return await httpService.get(`${BASE_ENDPOINT}/mis-suscripciones`);
+    return await httpService.get(`${BASE_PRINCIPAL}/mis_suscripciones`);
   },
 
-  /**
-   * Obtiene una suscripción específica por ID.
-   * GET /suscripciones/:id
-   */
-  getById: async (id: number): Promise<AxiosResponse<SuscripcionDto>> => {
-    return await httpService.get(`${BASE_ENDPOINT}/${id}`);
+  getMiSuscripcionById: async (id: number): Promise<AxiosResponse<SuscripcionDto>> => {
+    return await httpService.get(`${BASE_PRINCIPAL}/mis_suscripciones/${id}`);
   },
 
-  /**
-   * Cancela una suscripción activa.
-   * POST /suscripciones/:id/cancelar
-   */
+  // Cancelación por parte del usuario (Soft Delete)
   cancelar: async (id: number): Promise<AxiosResponse<{ mensaje: string }>> => {
-    return await httpService.post(`${BASE_ENDPOINT}/${id}/cancelar`);
+    return await httpService.delete(`${BASE_PRINCIPAL}/mis_suscripciones/${id}`);
+  },
+
+  confirmarWebhook: async (transaccionId: number): Promise<AxiosResponse<SuscripcionDto>> => {
+    return await httpService.post(`${BASE_PRINCIPAL}/confirmar-pago`, { transaccionId });
   },
 
   // =================================================
-  // 👮 GESTIÓN ADMINISTRATIVA
+  // 👮 GESTIÓN ADMIN - PRINCIPAL
   // =================================================
 
-  /**
-   * Obtiene todas las suscripciones del sistema (Admin).
-   * GET /suscripciones
-   */
+  // Obtener TODAS (Ruta: /api/suscripciones/)
   findAll: async (): Promise<AxiosResponse<SuscripcionDto[]>> => {
-    return await httpService.get(BASE_ENDPOINT);
+    return await httpService.get(BASE_PRINCIPAL); 
   },
 
-  /**
-   * Obtiene suscripciones por usuario (Admin).
-   * GET /suscripciones/usuario/:userId
-   */
-  getByUserId: async (userId: number): Promise<AxiosResponse<SuscripcionDto[]>> => {
-    return await httpService.get(`${BASE_ENDPOINT}/usuario/${userId}`);
+  // Obtener SOLO ACTIVAS (Ruta: /api/suscripciones/activas)
+  findAllActivas: async (): Promise<AxiosResponse<SuscripcionDto[]>> => {
+    return await httpService.get(`${BASE_PRINCIPAL}/activas`); 
   },
 
-  /**
-   * Obtiene suscripciones por proyecto (Admin).
-   * GET /suscripciones/proyecto/:proyectoId
-   */
-  getByProyectoId: async (proyectoId: number): Promise<AxiosResponse<SuscripcionDto[]>> => {
-    return await httpService.get(`${BASE_ENDPOINT}/proyecto/${proyectoId}`);
+  // Obtener por ID (Ruta: /api/suscripciones/:id)
+  getById: async (id: number): Promise<AxiosResponse<SuscripcionDto>> => {
+    return await httpService.get(`${BASE_PRINCIPAL}/${id}`);
+  },
+
+  // Cancelar Admin (Ruta: DELETE /api/suscripciones/:id)
+  cancelarAdmin: async (id: number): Promise<AxiosResponse<{ message: string }>> => {
+    return await httpService.delete(`${BASE_PRINCIPAL}/${id}`);
+  },
+
+  // Filtrar por proyecto (Todas)
+  getAllByProyectoId: async (proyectoId: number): Promise<AxiosResponse<SuscripcionDto[]>> => {
+    return await httpService.get(`${BASE_PRINCIPAL}/proyecto/${proyectoId}/all`);
+  },
+
+  // Filtrar por proyecto (Solo Activas)
+  getActiveByProyectoId: async (proyectoId: number): Promise<AxiosResponse<SuscripcionDto[]>> => {
+    return await httpService.get(`${BASE_PRINCIPAL}/proyecto/${proyectoId}`);
   },
 
   // =================================================
-  // 📊 MÉTRICAS (ADMIN)
+  // 📊 MÉTRICAS (ADMIN) - SOLUCIONADO EL 404
   // =================================================
 
-  /**
-   * Obtiene la tasa de morosidad del sistema.
-   * GET /suscripciones/metrics/morosidad
-   */
-  getMorosityMetrics: async (): Promise<AxiosResponse<{ data: MorosidadDTO }>> => {
-    return await httpService.get(`${BASE_ENDPOINT}/metrics/morosidad`);
+  getMorosityMetrics: async (): Promise<AxiosResponse<MorosidadDTO>> => {
+    // Ruta final: /api/suscripciones/metrics/morosidad
+    return await httpService.get(`${BASE_PRINCIPAL}/metrics/morosidad`);
   },
 
-  /**
-   * Obtiene la tasa de cancelación del sistema.
-   * GET /suscripciones/metrics/cancelacion
-   */
-  getCancellationMetrics: async (): Promise<AxiosResponse<{ data: CancelacionDTO }>> => {
-    return await httpService.get(`${BASE_ENDPOINT}/metrics/cancelacion`);
+  getCancellationMetrics: async (): Promise<AxiosResponse<CancelacionDTO>> => {
+    // Ruta final: /api/suscripciones/metrics/cancelacion
+    return await httpService.get(`${BASE_PRINCIPAL}/metrics/cancelacion`);
+  },
+
+  // =================================================
+  // 🛑 HISTORIAL DE CANCELADAS (TABLA SEPARADA)
+  // Usan la ruta definida en app.js como "/api/suscripcionesCanceladas"
+  // =================================================
+
+  getAllCanceladas: async (): Promise<AxiosResponse<SuscripcionCanceladaDto[]>> => {
+    // Ruta final: /api/suscripcionesCanceladas/canceladas
+    return await httpService.get(`${BASE_HISTORIAL}/canceladas`);
+  },
+
+  getMisCanceladas: async (): Promise<AxiosResponse<SuscripcionCanceladaDto[]>> => {
+    return await httpService.get(`${BASE_HISTORIAL}/mis_canceladas`);
+  },
+
+  getCanceladasByProyectoId: async (proyectoId: number): Promise<AxiosResponse<SuscripcionCanceladaDto[]>> => {
+    return await httpService.get(`${BASE_HISTORIAL}/proyecto/canceladas/${proyectoId}`);
   }
 };
 

@@ -69,7 +69,7 @@ const calcularDiasRestantes = (lote: LoteDto): number => {
   return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
 };
 
-const ControlPagos: React.FC = () => {
+const LotePagos: React.FC = () => {
   
   const { data: lotes = [], isLoading, error } = useQuery<LoteDto[]>({
     queryKey: ['adminLotes'],
@@ -403,4 +403,4 @@ const ControlPagos: React.FC = () => {
   );
 };
 
-export default ControlPagos;
+export default LotePagos;

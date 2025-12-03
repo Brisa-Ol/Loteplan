@@ -77,14 +77,30 @@ export const useNavbarMenu = () => {
     if (user?.rol === "admin") {
       const adminNavItems: NavItem[] = [
         { label: "Dashboard", path: "/admin/dashboard", icon: DashboardIcon },
-        { label: "Gestión de Usuarios", path: "/admin/usuarios", icon: PersonIcon },
-        { label: "Gestion de Proyectos", path: "/admin/Proyectos", icon: ConstructionIcon },
+         { label: "Gestión de Usuarios",
+          icon: PersonIcon, 
+          submenu: [
+            { label: "Control de Usuarios", path: "/admin/usuarios", icon: ConstructionIcon },
+            { label: "Verificacion de usuarios", path: "/admin/KYC", icon: ConstructionIcon },
+          ],},
+       
+        { label: "Proyectos",
+          icon: ConstructionIcon, 
+          submenu: [
+            { label: "Inventario Proyectos", path: "/admin/Proyectos", icon: ConstructionIcon },
+            { label: "Gestion de suscripciones", path: "/admin/suscripciones", icon: ConstructionIcon },
+            { label: "Control de Cancelaciones", path: "/admin/cancelaciones", icon: ConstructionIcon },
+            { label: "Gestion de Inversiones", path: "/admin/Inversiones", icon: ConstructionIcon },
+          ],
+
+
+        },
         {
           label: "Lotes",
           icon: TerrainIcon,
           submenu: [
             { label: "Gestión de Lotes", path: "/admin/Lotes", icon: TerrainIcon },
-            { label: "Control de Pagos", path: "/admin/ControlPagos", icon: TerrainIcon },
+            { label: "Lote Pagos", path: "/admin/LotePagos", icon: TerrainIcon },
             { isDivider: true, label: "" },
             { label: "Sala de Pujas", path: "/admin/SalaControlPujas", icon: GavelIcon },
           ],
@@ -93,7 +109,7 @@ export const useNavbarMenu = () => {
           label: "Finanzas",
           icon: PaidIcon,
           submenu: [
-            { label: "Auditoría Inversiones", path: "/admin/inversiones", icon: AttachMoneyIcon },
+            { label: "Control de Pagos", path: "/admin/Pagos", icon: AttachMoneyIcon },
             { label: "Transacciones", path: "/admin/transacciones", icon: ReceiptIcon },
             // ... otros items
           ],

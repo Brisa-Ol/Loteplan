@@ -13,65 +13,45 @@ const ENDPOINT = '/usuarios';
 
 const UsuarioService = {
   
-  // =================================================
-  // 👤 GESTIÓN DE PERFIL (Usuario Autenticado)
-  // =================================================
+  // ===========================================
+  // 1. RUTAS DE ADMINISTRACIÓN (Estáticas y Base)
+  // ===========================================
 
   /**
-   * Obtener perfil del usuario autenticado
-   * Backend: router.get("/me", ...)
+   * Crear nuevo usuario (Admin)
+   * Backend Route: POST /
    */
-  getMe: async (): Promise<AxiosResponse<UsuarioDto>> => {
-    return await httpService.get(`${ENDPOINT}/me`);
+  create: async (data: CreateUsuarioDto): Promise<AxiosResponse<UsuarioDto>> => {
+    return await httpService.post(ENDPOINT, data);
   },
 
   /**
-   * Actualizar perfil propio
-   * Backend: router.put("/me", ...)
-   */
-  updateMe: async (data: UpdateUserMeDto): Promise<AxiosResponse<UsuarioDto>> => {
-    return await httpService.put(`${ENDPOINT}/me`, data);
-  },
-
-  /**
-   * Darse de baja (Soft Delete propio)
-   * Backend: router.delete("/me", ...)
-   */
-  softDeleteMe: async (): Promise<AxiosResponse<void>> => {
-    return await httpService.delete(`${ENDPOINT}/me`);
-  },
-
-  // =================================================
-  // 👮 GESTIÓN DE ADMINISTRADOR (Requiere Rol Admin)
-  // =================================================
-
-  /**
-   * Obtener todos los usuarios
-   * Backend: router.get("/", ...)
+   * Obtener todos los usuarios (Admin)
+   * Backend Route: GET /
    */
   findAll: async (): Promise<AxiosResponse<UsuarioDto[]>> => {
     return await httpService.get(ENDPOINT);
   },
 
   /**
-   * Obtener solo usuarios activos
-   * Backend: router.get("/activos", ...)
+   * Obtener solo usuarios activos (Admin)
+   * Backend Route: GET /activos
    */
-  findAllActive: async (): Promise<AxiosResponse<UsuarioDto[]>> => {
+  findAllActivos: async (): Promise<AxiosResponse<UsuarioDto[]>> => {
     return await httpService.get(`${ENDPOINT}/activos`);
   },
 
   /**
-   * Obtener todos los administradores activos
-   * Backend: router.get("/admins", ...)
+   * Obtener solo administradores activos (Admin)
+   * Backend Route: GET /admins
    */
   findAllAdmins: async (): Promise<AxiosResponse<UsuarioDto[]>> => {
     return await httpService.get(`${ENDPOINT}/admins`);
   },
 
   /**
-   * Buscar usuarios por nombre o email
-   * Backend: router.get("/search", ...) -> usa req.query.q
+   * Buscar usuarios por query param 'q' (Admin)
+   * Backend Route: GET /search?q=...
    */
   search: async (term: string): Promise<AxiosResponse<UsuarioDto[]>> => {
     return await httpService.get(`${ENDPOINT}/search`, {
@@ -79,48 +59,49 @@ const UsuarioService = {
     });
   },
 
+  // ===========================================
+  // 2. RUTAS DE USUARIO PROPIO Y VERIFICACIÓN
+  // ===========================================
+
   /**
-   * Crear nuevo usuario (Admin crea usuarios manualmente)
-   * Backend: router.post("/", ...)
+   * Confirmar email con token
+   * Backend Route: GET /confirmar/:token
    */
-  create: async (data: CreateUsuarioDto): Promise<AxiosResponse<UsuarioDto>> => {
-    return await httpService.post(ENDPOINT, data);
+  confirmEmail: async (token: string): Promise<AxiosResponse<GenericResponseDto>> => {
+    return await httpService.get(`${ENDPOINT}/confirmar/${token}`);
   },
 
   /**
-   * Obtener usuario por ID
-   * Backend: router.get("/:id", ...)
+   * Obtener perfil propio
+   * Backend Route: GET /me
    */
-  findById: async (id: number): Promise<AxiosResponse<UsuarioDto>> => {
-    return await httpService.get(`${ENDPOINT}/${id}`);
+  getMe: async (): Promise<AxiosResponse<UsuarioDto>> => {
+    return await httpService.get(`${ENDPOINT}/me`);
   },
 
   /**
-   * Actualizar usuario como Admin
-   * Backend: router.put("/:id", ...)
-   * ⚠️ IMPORTANTE: El backend filtra solo estos campos:
-   * - nombre, apellido, email, numero_telefono, activo, rol, nombre_usuario
+   * Actualizar perfil propio
+   * Backend Route: PUT /me
    */
-  updateAdmin: async (id: number, data: UpdateUserAdminDto): Promise<AxiosResponse<UsuarioDto>> => {
-    return await httpService.put(`${ENDPOINT}/${id}`, data);
+  updateMe: async (data: UpdateUserMeDto): Promise<AxiosResponse<UsuarioDto>> => {
+    return await httpService.put(`${ENDPOINT}/me`, data);
   },
 
   /**
-   * Soft Delete - Desactivar usuario por ID
-   * Backend: router.delete("/:id", ...)
+   * Eliminar (Soft Delete) cuenta propia
+   * Backend Route: DELETE /me
    */
-  softDeleteAdmin: async (id: number): Promise<AxiosResponse<GenericResponseDto>> => {
-    return await httpService.delete(`${ENDPOINT}/${id}`);
+  softDeleteMe: async (): Promise<AxiosResponse<void>> => {
+    return await httpService.delete(`${ENDPOINT}/me`);
   },
 
-  // =================================================
-  // 🔐 SEGURIDAD AVANZADA
-  // =================================================
+  // ===========================================
+  // 3. RUTAS DINÁMICAS (Requieren ID)
+  // ===========================================
 
   /**
-   * Resetear/Desactivar 2FA de un usuario específico
-   * Backend: router.patch("/:id/reset-2fa", ...)
-   * ✅ VALIDADO: Usa PATCH correctamente
+   * Resetear 2FA de un usuario (Admin)
+   * Backend Route: PATCH /:id/reset-2fa
    */
   adminReset2FA: async (
     userId: number, 
@@ -129,52 +110,29 @@ const UsuarioService = {
     return await httpService.patch(`${ENDPOINT}/${userId}/reset-2fa`, data);
   },
 
-  // =================================================
-  // 📧 GESTIÓN DE EMAIL Y RECUPERACIÓN
-  // =================================================
-
   /**
-   * Confirmar el email del usuario mediante token URL
-   * Backend: router.get("/confirmar/:token", ...)
+   * Obtener usuario por ID (Admin)
+   * Backend Route: GET /:id
    */
-  confirmEmail: async (token: string): Promise<AxiosResponse<GenericResponseDto>> => {
-    return await httpService.get(`${ENDPOINT}/confirmar/${token}`);
-  },
-
-  // ⚠️ NOTA: Las siguientes rutas NO EXISTEN en tu backend actual.
-  // Si las necesitas, debes crearlas en usuario.routes.js
-
-  /**
-   * ⚠️ RUTA NO IMPLEMENTADA EN BACKEND
-   * Se asume ruta: POST /usuarios/resend-confirmation
-   */
-  resendConfirmationEmail: async (email: string): Promise<AxiosResponse<GenericResponseDto>> => {
-    return await httpService.post(`${ENDPOINT}/resend-confirmation`, { email });
+  findById: async (id: number): Promise<AxiosResponse<UsuarioDto>> => {
+    return await httpService.get(`${ENDPOINT}/${id}`);
   },
 
   /**
-   * ⚠️ RUTA NO IMPLEMENTADA EN BACKEND
-   * Se asume ruta: POST /usuarios/forgot-password
+   * Actualizar usuario por ID (Admin)
+   * Backend Route: PUT /:id
    */
-  forgotPassword: async (email: string): Promise<AxiosResponse<GenericResponseDto>> => {
-    return await httpService.post(`${ENDPOINT}/forgot-password`, { email });
+  update: async (id: number, data: UpdateUserAdminDto): Promise<AxiosResponse<UsuarioDto>> => {
+    return await httpService.put(`${ENDPOINT}/${id}`, data);
   },
 
   /**
-   * ⚠️ RUTA NO IMPLEMENTADA EN BACKEND
-   * Se asume ruta: GET /usuarios/reset-password/:token
+   * Eliminar (Soft Delete) usuario por ID (Admin)
+   * Backend Route: DELETE /:id
    */
-  validateResetToken: async (token: string): Promise<AxiosResponse<UsuarioDto>> => {
-    return await httpService.get(`${ENDPOINT}/reset-password/${token}`);
+  softDelete: async (id: number): Promise<AxiosResponse<GenericResponseDto>> => {
+    return await httpService.delete(`${ENDPOINT}/${id}`);
   },
-
-  /**
-   * ⚠️ RUTA NO IMPLEMENTADA EN BACKEND
-   * Se asume ruta: GET /usuarios/dni/:dni
-   */
-  findByDni: async (dni: string): Promise<AxiosResponse<UsuarioDto>> => {
-    return await httpService.get(`${ENDPOINT}/dni/${dni}`);
-  }
 
 };
 

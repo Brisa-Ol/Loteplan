@@ -50,12 +50,16 @@ import AdminDashboard from './pages/Admin/Dashboard/AdminDashboard';
 
 import AdminKYC from './pages/Admin/Usuarios/AdminKYC';
 import AdminProyectos from './pages/Admin/Proyectos/AdminProyectos';
-import SalaControlPujas from './pages/Admin/Lotes/SalaControlPujas';
-import ControlPagos from './pages/Admin/Lotes/ControlPagos';
+import SalaControlPujas from './pages/Admin/Pujas/SalaControlPujas';
 import InventarioLotes from './pages/Admin/Lotes/InventarioLotes';
 import AdminUsuarios from './pages/Admin/Usuarios/AdminUsuarios';
 import MisFavoritos from './pages/client/MiCuenta/MisFavoritos';
 import DetalleLote from './pages/client/Lotes/DetalleLote';
+import AdminSuscripciones from './pages/Admin/Suscripciones/AdminSuscripciones';
+import AdminInversiones from './pages/Admin/Inversiones/AdminInversiones';
+import AdminCancelaciones from './pages/Admin/Suscripciones/AdminCancelaciones';
+import AdminPagos from './pages/Admin/Pagos/AdminPagos';
+import LotePagos from './pages/Admin/Lotes/LotePagos';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -141,10 +145,14 @@ const AppContent: React.FC = () => {
         <Route element={<AdminLayout />}>
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/admin/usuarios" element={<AdminUsuarios />} />
-          <Route path="/admin/kyc" element={<AdminKYC />} />
+          <Route path="/admin/KYC" element={<AdminKYC />} />
           <Route path="/admin/Proyectos" element={<AdminProyectos />} />
+          <Route path="/admin/suscripciones" element={<AdminSuscripciones />} />
+          <Route path="/admin/Inversiones" element={<AdminInversiones />} />
+          <Route path="/admin/cancelaciones" element={<AdminCancelaciones/>} />
         <Route path="/Admin/Lotes" element={<InventarioLotes />} />
-          <Route path="/admin/ControlPagos" element={<ControlPagos />} />
+          <Route path="/admin/Pagos" element={<AdminPagos />} />
+           <Route path="/admin/LotePagos" element={<LotePagos />} />
           <Route path="/admin/SalaControlPujas" element={<SalaControlPujas />} />
         </Route>
       </Route>

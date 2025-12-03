@@ -1,4 +1,3 @@
-// src/pages/Lotes/DetalleLote.tsx
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -16,21 +15,25 @@ import LoteService from '../../../Services/lote.service';
 import ImagenService from '../../../Services/imagen.service';
 import { PujarModal } from '../../client/Proyectos/components/PujarModal';
 
-
-
 const DetalleLote: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth(); // Obtenemos el usuario para chequear rol
   const [showPujarModal, setShowPujarModal] = useState(false);
 
-  // Tipamos explícitamente el return del Query como LoteDto
+  // Determinar si es admin
+  const isAdmin = user?.rol === 'admin';
+
   const { data: lote, isLoading, error } = useQuery<LoteDto>({
-    queryKey: ['lote', id],
+    queryKey: ['lote', id, isAdmin], // Incluimos el rol en la key
     queryFn: async () => {
       if (!id) throw new Error('ID inválido');
-      const res = await LoteService.getByIdActive(Number(id));
-      return res.data;
+      // 🚀 SELECCIÓN DINÁMICA DE SERVICIO
+      if (isAdmin) {
+        return (await LoteService.findByIdAdmin(Number(id))).data;
+      } else {
+        return (await LoteService.getByIdActive(Number(id))).data;
+      }
     },
     retry: false
   });
@@ -69,7 +72,6 @@ const DetalleLote: React.FC = () => {
 
   const statusConfig = getStatusConfig();
   
-  // Manejo seguro de imágenes según tu DTO (ImagenDto[])
   const imageUrl = lote.imagenes && lote.imagenes.length > 0
     ? ImagenService.resolveImageUrl(lote.imagenes[0].url)
     : '/assets/placeholder-lote.jpg';
@@ -83,12 +85,15 @@ const DetalleLote: React.FC = () => {
           <ArrowBack />
         </IconButton>
         <Typography variant="body2" color="text.secondary">
-          {/* El DTO indica que proyecto es opcional (ProyectoMinimalDto | undefined) */}
           Proyectos / {lote.proyecto?.nombre_proyecto || 'General'} / Lote #{lote.id}
         </Typography>
+        {/* Badge extra para admin si el lote está inactivo */}
+        {isAdmin && !lote.activo && (
+          <Chip label="INACTIVO (ADMIN)" color="error" size="small" />
+        )}
       </Stack>
 
-      {/* LAYOUT PRINCIPAL - CSS Grid */}
+      {/* LAYOUT PRINCIPAL */}
       <Box sx={{ 
         display: 'grid', 
         gridTemplateColumns: { xs: '1fr', lg: '2fr 1fr' },
@@ -122,8 +127,7 @@ const DetalleLote: React.FC = () => {
           <Paper elevation={2} sx={{ p: 4, borderRadius: 3, mb: 3 }}>
             <Typography variant="h5" fontWeight="bold" mb={2}>Información del Lote</Typography>
             <Typography variant="body1" color="text.secondary" sx={{ lineHeight: 1.8 }}>
-              {/* NOTA: Tu LoteDto no tiene campo 'descripcion', mostramos el nombre o info del proyecto */}
-              Lote perteneciente al proyecto <strong>{lote.proyecto?.nombre_proyecto}</strong>. 
+              Lote perteneciente al proyecto <strong>{lote.proyecto?.nombre_proyecto || 'Sin Asignar'}</strong>. 
               {lote.proyecto?.descripcion && (
                 <>
                   <br /><br />
@@ -150,14 +154,13 @@ const DetalleLote: React.FC = () => {
                     </Box>
                   </Box>
                 </Box>
-                {/* Aquí podrías agregar un mapa en el futuro */}
               </Box>
             </Paper>
           )}
 
         </Box>
 
-        {/* COLUMNA DERECHA - Sticky Sidebar */}
+        {/* COLUMNA DERECHA */}
         <Box component="aside">
           <Paper elevation={4} sx={{ p: 4, borderRadius: 3, position: { lg: 'sticky' }, top: 100 }}>
             
@@ -184,7 +187,7 @@ const DetalleLote: React.FC = () => {
             </Box>
 
             {/* Fechas */}
-            {lote.estado_subasta === 'activa' && lote.fecha_inicio && lote.fecha_fin && (
+            {(lote.estado_subasta === 'activa' || isAdmin) && lote.fecha_inicio && lote.fecha_fin && (
               <Card variant="outlined" sx={{ mb: 3, bgcolor: 'success.50' }}>
                 <CardContent>
                   <Stack spacing={2}>
@@ -220,13 +223,17 @@ const DetalleLote: React.FC = () => {
                     if (!isAuthenticated) return navigate('/login');
                     setShowPujarModal(true);
                   }}
+                  // Deshabilitar puja para el admin si es él quien ve el detalle
+                  disabled={isAdmin} 
                   sx={{ py: 2, fontSize: '1.1rem', fontWeight: 'bold', mb: 2 }}
                 >
-                  Realizar Puja
+                  {isAdmin ? 'Modo Admin (No puedes pujar)' : 'Realizar Puja'}
                 </Button>
-                <Alert severity="info" sx={{ fontSize: '0.875rem' }}>
-                  La subasta está activa. Realizá tu oferta para participar.
-                </Alert>
+                {!isAdmin && (
+                  <Alert severity="info" sx={{ fontSize: '0.875rem' }}>
+                    La subasta está activa. Realizá tu oferta para participar.
+                  </Alert>
+                )}
               </>
             ) : lote.estado_subasta === 'pendiente' ? (
               <Alert severity="warning">Esta subasta aún no ha comenzado.</Alert>
@@ -239,8 +246,8 @@ const DetalleLote: React.FC = () => {
 
       </Box>
 
-      {/* Modal de Puja */}
-      {showPujarModal && (
+      {/* Modal de Puja (Solo se abre si no es admin y está activa) */}
+      {showPujarModal && !isAdmin && (
         <PujarModal open={showPujarModal} lote={lote} onClose={() => setShowPujarModal(false)} />
       )}
       

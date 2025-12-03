@@ -55,11 +55,10 @@ const kycService = {
   /**
    * (Admin) Lista todas las solicitudes pendientes.
    */
-  async getPendingVerifications(): Promise<KycDTO[]> {
-    const { data } = await httpService.get<{ total: number; solicitudes: KycDTO[] }>(
-      `${ENDPOINT}/pending`
-    );
-    return data.solicitudes;
+async getPendingVerifications(): Promise<KycDTO[]> {
+    // ✅ CORRECCIÓN: El backend devuelve un array directo (KycDTO[]), no un objeto con propiedad 'solicitudes'
+    const { data } = await httpService.get<KycDTO[]>(`${ENDPOINT}/pending`);
+    return Array.isArray(data) ? data : [];
   },
 
   /**
