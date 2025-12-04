@@ -1,71 +1,87 @@
-
-
-// ==========================================
-// 📤 REQUEST DTOs (Lo que envías)
-// ==========================================
-
 import type { BaseDTO } from "./base.dto";
 
-/**
- * Parámetros para subir una nueva plantilla (Admin)
- * Se convertirá a FormData en el servicio.
- */
-export interface UploadPlantillaDto {
-  file: File;
-  id_proyecto: number;
+// ==========================================
+// 🏭 GESTIÓN DE PLANTILLAS (ADMIN)
+// ==========================================
+
+export interface CreatePlantillaDto {
+  file: File; // Se enviará como 'plantillaFile'
+  nombre_archivo: string;
+  version: number;
+  id_proyecto?: number | null;
 }
 
-/**
- * Parámetros para actualizar el PDF de una plantilla (Admin)
- */
 export interface UpdatePlantillaPdfDto {
   id: number;
-  file: File;
+  file: File; // Se enviará como 'plantillaFile'
 }
 
-/**
- * Parámetros para FIRMAR un contrato.
- * ⚠️ CRÍTICO: Requiere autorización de inversión o suscripción.
- */
-export interface SignContractDto {
-  file: File; // El PDF firmado digitalmente
-  id_contrato_base: number;
-  firma_digital: string; // String de la firma criptográfica
-  id_inversion?: number;   // Opcional (uno de los dos es obligatorio)
-  id_suscripcion?: number; // Opcional
-}
-
-// ==========================================
-// 📥 RESPONSE DTOs (Lo que recibes)
-// ==========================================
-
-/**
- * Modelo principal de Contrato.
- * Extiende BaseDTO.
- */
-export interface ContratoDto extends BaseDTO {
+export interface ContratoPlantillaDto extends BaseDTO {
   nombre_archivo: string;
   url_archivo: string;
-  hash_archivo_original: string; // Hash SHA-256
-  
-  firma_digital?: string;
-  fecha_firma?: string; // ISO Date string
-  estado_firma?: string; // Ejem: 'FIRMADO', 'PENDIENTE' (si tuvieras ese campo)
-  
-  id_proyecto: number;
-  id_usuario_firmante?: number;
-
-  // Relaciones
-  proyecto?: ProyectoDto;
-
-  // 🚨 Campo calculado en el backend (Service: findAndVerifyById)
-  // Si es true, mostrar advertencia roja en la UI
-  integrity_compromised?: boolean; 
+  hash_archivo_original: string;
+  version: number;
+  id_proyecto: number | null;
+  id_usuario_creacion: number;
+  integrity_compromised?: boolean; // 🚨 Alerta visual si es true
 }
 
-/**
- * Respuesta simple para eliminaciones o actualizaciones sin retorno de objeto
- */
+// ==========================================
+// ✍️ PROCESO DE FIRMA (USUARIO)
+// ==========================================
+
+export interface RegistrarFirmaRequestDto {
+  file: File; 
+  id_contrato_plantilla: number;
+  id_proyecto: number;
+  id_usuario_firmante: number;
+  
+  // 🔒 Seguridad obligatoria del Backend
+  codigo_2fa: string; 
+  
+  // 📍 Auditoría
+  latitud_verificacion?: string;
+  longitud_verificacion?: string;
+}
+
+export interface ContratoFirmadoResponseDto {
+  message: string;
+  contrato: {
+    id: number;
+    nombre_archivo: string;
+    fecha_firma: string;
+    estado_firma: 'FIRMADO' | 'REVOCADO' | 'INVALIDO';
+    
+    // Info devuelta por la auto-detección
+    tipo_autorizacion: 'inversion' | 'suscripcion';
+    id_autorizacion: number; 
+  };
+}
+
+// ==========================================
+// 📂 HISTORIAL Y CONSULTAS (GENERAL)
+// ==========================================
+
+export interface ContratoFirmadoDto extends BaseDTO {
+  id_contrato_plantilla: number;
+  nombre_archivo: string;
+  url_archivo: string; // Ruta relativa
+  hash_archivo_firmado: string;
+  fecha_firma: string;
+  estado_firma: 'FIRMADO' | 'REVOCADO' | 'INVALIDO';
+  
+  id_proyecto: number;
+  id_usuario_firmante: number;
+  
+  // Relaciones detectadas por el backend
+  id_inversion_asociada?: number;
+  id_suscripcion_asociada?: number;
+  
+  // Auditoría
+  ip_firma?: string;
+  geolocalizacion_firma?: string;
+}
+
 export interface ContratoActionResponse {
   message: string;
   error?: string;

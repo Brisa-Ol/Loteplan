@@ -40,7 +40,7 @@ import UserDashboard from './pages/client/UserDashboard/UserDashboard';
 import SecuritySettings from './pages/client/MiCuenta/SecuritySettings';
 import RoleSelection from './pages/client/Proyectos/RoleSelection';
 import MensajesPage from './pages/client/MiCuenta/MensajesPage';
-import Contratos from './pages/client/MiCuenta/Contratos';
+import Contratos from './pages/client/Contratos/Historialcontratos';
 import MisSubastas from './pages/client/MiCuenta/MisSubastas';
 import VerificacionKYC from './pages/client/MiCuenta/VerificacionKYC';
 import DetalleProyecto from './pages/client/Proyectos/DetalleProyecto';
@@ -60,6 +60,8 @@ import AdminInversiones from './pages/Admin/Inversiones/AdminInversiones';
 import AdminCancelaciones from './pages/Admin/Suscripciones/AdminCancelaciones';
 import AdminPagos from './pages/Admin/Pagos/AdminPagos';
 import LotePagos from './pages/Admin/Lotes/LotePagos';
+import AdminPlantillas from './pages/Admin/Contrato/AdminPlantillas';
+import AdminContratosFirmados from './pages/Admin/Contrato/Auditoría de Firmas/AdminContratosFirmados';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -145,6 +147,8 @@ const AppContent: React.FC = () => {
         <Route element={<AdminLayout />}>
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/admin/usuarios" element={<AdminUsuarios />} />
+<Route path="/admin/Plantillas" element={<AdminPlantillas />} />
+<Route path="/admin/Firmados" element={<AdminContratosFirmados />} />
           <Route path="/admin/KYC" element={<AdminKYC />} />
           <Route path="/admin/Proyectos" element={<AdminProyectos />} />
           <Route path="/admin/suscripciones" element={<AdminSuscripciones />} />

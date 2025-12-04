@@ -21,6 +21,7 @@
     "@tanstack/react-query-devtools": "^5.90.2",
     "@toolpad/core": "^0.16.0",
     "axios": "^1.13.2",
+    "date-fns": "^4.1.0",
     "formik": "^2.4.6",
     "material-ui-popup-state": "^5.3.6",
     "qrcode": "^1.5.4",

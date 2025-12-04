@@ -89,7 +89,7 @@ const AdminUsuarios: React.FC = () => {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number, data: UpdateUserAdminDto }) => UsuarioService.updateAdmin(id, data),
+    mutationFn: async ({ id, data }: { id: number, data: UpdateUserAdminDto }) => UsuarioService.update(id, data),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['adminUsuarios'] }); setEditingUser(null); alert('Usuario actualizado.'); },
     onError: (err: any) => alert(`Error: ${err.response?.data?.error || err.message}`)
   });
@@ -97,7 +97,7 @@ const AdminUsuarios: React.FC = () => {
   const toggleStatusMutation = useMutation({
     mutationFn: async (usuario: UsuarioDto) => {
       if (usuario.activo) await UsuarioService.softDelete(usuario.id);
-      else await UsuarioService.updateAdmin(usuario.id, { activo: true });
+      else await UsuarioService.update(usuario.id, { activo: true });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['adminUsuarios'] }),
     onError: (err: any) => alert(`Error: ${err.message}`)

@@ -26,7 +26,7 @@ import { QueryHandler } from '../../../components/common/QueryHandler/QueryHandl
 import type { ContratoFirmadoDto } from '../../../types/dto/contrato-firmado.dto';
 import ContratoGeneralService from '../../../Services/contrato-general.service';
 
-const Contratos: React.FC = () => {
+const Historialcontratos: React.FC = () => {
   // Estado local para mostrar spinner en el botón específico que se está descargando
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
 
@@ -190,4 +190,4 @@ const Contratos: React.FC = () => {
   );
 };
 
-export default Contratos;
+export default Historialcontratos;

@@ -105,6 +105,19 @@ export const useNavbarMenu = () => {
             { label: "Sala de Pujas", path: "/admin/SalaControlPujas", icon: GavelIcon },
           ],
         },
+        
+
+{
+          label: "Contratos",
+          icon: PaidIcon,
+          submenu: [
+            { label: "Plantillas", path: "/admin/Plantillas", icon: AttachMoneyIcon },
+            { label: "Firmados", path: "/admin/Firmados", icon: ReceiptIcon },
+            // ... otros items
+          ],
+        },
+
+
         {
           label: "Finanzas",
           icon: PaidIcon,
