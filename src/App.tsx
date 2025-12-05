@@ -62,6 +62,7 @@ import AdminPagos from './pages/Admin/Pagos/AdminPagos';
 import LotePagos from './pages/Admin/Lotes/LotePagos';
 import AdminPlantillas from './pages/Admin/Contrato/AdminPlantillas';
 import AdminContratosFirmados from './pages/Admin/Contrato/Auditoría de Firmas/AdminContratosFirmados';
+import AdminTransacciones from './pages/Admin/Transacciones/AdminTransacciones';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -149,6 +150,8 @@ const AppContent: React.FC = () => {
           <Route path="/admin/usuarios" element={<AdminUsuarios />} />
 <Route path="/admin/Plantillas" element={<AdminPlantillas />} />
 <Route path="/admin/Firmados" element={<AdminContratosFirmados />} />
+
+<Route path="/admin/transacciones" element={<AdminTransacciones />} />
           <Route path="/admin/KYC" element={<AdminKYC />} />
           <Route path="/admin/Proyectos" element={<AdminProyectos />} />
           <Route path="/admin/suscripciones" element={<AdminSuscripciones />} />

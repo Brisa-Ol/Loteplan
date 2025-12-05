@@ -24,6 +24,7 @@ import { PageContainer } from '../../../components/common/PageContainer/PageCont
 import { QueryHandler } from '../../../components/common/QueryHandler/QueryHandler';
 import CreateUserModal from './modals/CreateUserModal';
 import EditUserModal from './modals/EditUserModal';
+import { PageHeader } from '../../../components/common/PageHeader/PageHeader';
 
 // Componente de Tarjeta KPI
 const MiniStatCard: React.FC<{ title: string; value: number; icon: React.ReactNode; color: string }> = ({ title, value, icon, color }) => (
@@ -105,11 +106,11 @@ const AdminUsuarios: React.FC = () => {
 
   return (
     <PageContainer maxWidth="xl">
-      <Box textAlign="center" mb={5}>
-        <Typography variant="h4" fontWeight="bold" color="primary.main">Gestión de Usuarios</Typography>
-        <Typography color="text.secondary">Administra el acceso y los roles de los usuarios del sistema.</Typography>
-      </Box>
-
+      
+<PageHeader
+        title="Gestión de Usuarios"
+        subtitle="Administra el acceso y los roles de los usuarios del sistema"
+      />
       {/* KPIs */}
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} mb={4}>
         <Box flex={1}><MiniStatCard title="Total Usuarios" value={stats.total} icon={<GroupIcon />} color="primary" /></Box>

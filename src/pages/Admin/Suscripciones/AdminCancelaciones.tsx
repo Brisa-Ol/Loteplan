@@ -16,6 +16,7 @@ import type { SuscripcionCanceladaDto } from '../../../types/dto/suscripcion.dto
 import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
 import { QueryHandler } from '../../../components/common/QueryHandler/QueryHandler';
 import DetalleCancelacionModal from './components/DetalleCancelacionModal';
+import { PageHeader } from '../../../components/common/PageHeader/PageHeader';
 
 
 // --- COMPONENTE KPI ---
@@ -94,13 +95,11 @@ const AdminCancelaciones: React.FC = () => {
 
   return (
     <PageContainer maxWidth="xl">
-      <Box mb={4}>
-        <Typography variant="h4" fontWeight="bold" color="error.main">Historial de Cancelaciones</Typography>
-        <Typography variant="body1" color="text.secondary">
-          Monitor de bajas, devoluciones y métricas de retención (Churn).
-        </Typography>
-      </Box>
-
+     
+<PageHeader
+              title="Historial de Cancelaciones"
+              subtitle=" Monitor de bajas, devoluciones y métricas de retención "
+            />
       {/* ========== 1. KPIs ========== */}
       <Box sx={{ 
         display: 'grid', 

@@ -27,6 +27,7 @@ import { QueryHandler } from '../../../components/common/QueryHandler/QueryHandl
 import CreatePlantillaModal from './modals/CreatePlantillaModal';
 import UpdatePdfModal from './modals/UpdatePdfModal';
 import ContratoPlantillaService from '../../../Services/contrato-plantilla.service';
+import { PageHeader } from '../../../components/common/PageHeader/PageHeader';
 
 const AdminPlantillas: React.FC = () => {
   const queryClient = useQueryClient();
@@ -95,15 +96,11 @@ const AdminPlantillas: React.FC = () => {
 
   return (
     <PageContainer maxWidth="xl">
-      <Box textAlign="center" mb={5}>
-        <Typography variant="h4" fontWeight="bold" color="primary.main">
-          Gestión de Plantillas
-        </Typography>
-        <Typography color="text.secondary">
-          Administra los documentos base (PDFs) para la firma de contratos.
-        </Typography>
-      </Box>
 
+<PageHeader
+              title=" Gestión de Plantillas"
+              subtitle=" Administra los documentos base (PDFs) para la firma de contratos."
+            />
       {/* Toolbar */}
       <Paper sx={{ p: 2, mb: 3, display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center', borderRadius: 2 }} elevation={0} variant="outlined">
         <TextField 

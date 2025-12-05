@@ -25,6 +25,7 @@ import type { InversionDto } from '../../../types/dto/inversion.dto';
 import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
 import { QueryHandler } from '../../../components/common/QueryHandler/QueryHandler';
 import DetalleInversionModal from './components/DetalleInversionModal';
+import { PageHeader } from '../../../components/common/PageHeader/PageHeader';
 
 
 // --- COMPONENTE KPI (Sin Grid) ---
@@ -141,11 +142,11 @@ const AdminInversiones: React.FC = () => {
 
   return (
     <PageContainer maxWidth="xl">
-      <Box mb={4}>
-        <Typography variant="h4" fontWeight="bold" color="primary">Inversiones Directas</Typography>
-        <Typography variant="body1" color="text.secondary">Gestión y monitoreo de capital ingresado</Typography>
-      </Box>
 
+<PageHeader
+              title="Inversiones Directas"
+              subtitle=" Gestión y monitoreo de capital ingresado "
+            />
       {/* ========== 1. KPIs (Usando CSS GRID nativo en Box) ========== */}
       <Box sx={{ 
         display: 'grid', 

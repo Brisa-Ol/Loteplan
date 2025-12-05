@@ -19,6 +19,7 @@ import CreateProyectoModal from './modals/CreateProyectoModal';
 import ConfigCuotasModal from './modals/ConfigCuotasModal';
 import EditProyectoModal from './modals/EditProyectoModal';
 import ProjectLotesModal from './modals/ProjectLotesModal';
+import { PageHeader } from '../../../components/common/PageHeader/PageHeader';
 
 // Modales
 
@@ -123,16 +124,11 @@ const AdminProyectos: React.FC = () => {
 
   return (
     <PageContainer maxWidth="xl">
-      {/* Encabezado */}
-      <Box textAlign="center" mb={5}>
-        <Typography variant="h4" fontWeight="bold" color="primary.main">
-          Gestión de Proyectos
-        </Typography>
-        <Typography color="text.secondary">
-          Administra el catálogo de inversiones y sus estados.
-        </Typography>
-      </Box>
-      
+     
+      <PageHeader
+              title="Gestión de Proyectos"
+              subtitle=" Administra el catálogo de inversiones y sus estados."
+            />
       {/* Barra de Herramientas */}
       <Paper 
         sx={{ 

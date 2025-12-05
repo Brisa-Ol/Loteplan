@@ -22,6 +22,7 @@ import type { ContratoFirmadoDto } from '../../../../types/dto/contrato.dto';
 import { PageContainer } from '../../../../components/common/PageContainer/PageContainer';
 import { QueryHandler } from '../../../../components/common/QueryHandler/QueryHandler';
 import ContratoGeneralService from '../../../../Services/contrato-general.service';
+import { PageHeader } from '../../../../components/common/PageHeader/PageHeader';
 
 const AdminContratosFirmados: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -62,15 +63,11 @@ const AdminContratosFirmados: React.FC = () => {
 
   return (
     <PageContainer maxWidth="xl">
-      <Box textAlign="center" mb={5}>
-        <Typography variant="h4" fontWeight="bold" color="primary.main">
-          Auditoría de Contratos Firmados
-        </Typography>
-        <Typography color="text.secondary">
-          Visualiza y descarga los contratos legalizados por los usuarios.
-        </Typography>
-      </Box>
 
+<PageHeader
+              title="   Auditoría de Contratos Firmados"
+              subtitle="  Visualiza y descarga los contratos legalizados por los usuarios."
+            />
       {/* Toolbar */}
       <Paper sx={{ p: 2, mb: 3, display: 'flex', alignItems: 'center', borderRadius: 2 }} elevation={0} variant="outlined">
         <TextField 

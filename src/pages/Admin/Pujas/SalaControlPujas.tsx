@@ -22,6 +22,7 @@ import type { PujaDto } from '../../../types/dto/puja.dto';
 import LoteService from '../../../Services/lote.service';
 import PujaService from '../../../Services/puja.service';
 import imagenService from '../../../Services/imagen.service';
+import { PageHeader } from '../../../components/common/PageHeader/PageHeader';
 
 // --- SUB-COMPONENTES ---
 
@@ -169,15 +170,11 @@ const SalaControlPujas: React.FC = () => {
 
   return (
     <PageContainer maxWidth="xl">
-      <Box mb={4}>
-        <Typography variant="h4" fontWeight={700} color="primary">
-          Sala de Control de Subastas
-        </Typography>
-        <Typography color="text.secondary">
-          Gestión en tiempo real de subastas, cobros y monitoreo de impagos.
-        </Typography>
-      </Box>
 
+<PageHeader
+              title=" Sala de Control de Subastas"
+              subtitle=" Gestión en tiempo real de subastas, cobros y monitoreo de impagos."
+            />
       {/* KPIs */}
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} mb={4}>
         <KpiCard title="En Vivo" value={analytics.activos.length} icon={<Gavel />} color="success" />

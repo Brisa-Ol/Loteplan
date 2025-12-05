@@ -21,6 +21,7 @@ import type { PagoDto } from '../../../types/dto/pago.dto';
 import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
 import { QueryHandler } from '../../../components/common/QueryHandler/QueryHandler';
 import DetallePagoModal from './components/DetallePagoModal';
+import { PageHeader } from '../../../components/common/PageHeader/PageHeader';
 
 // --- COMPONENTE KPI ---
 const KpiCard: React.FC<{ title: string; value: string; sub?: string; color: string; icon: React.ReactNode }> = ({ title, value, sub, color, icon }) => (
@@ -179,11 +180,11 @@ const AdminPagos: React.FC = () => {
 
   return (
     <PageContainer maxWidth="xl">
-      <Box mb={4}>
-        <Typography variant="h4" fontWeight="bold" color="primary">Control de Pagos</Typography>
-        <Typography variant="body1" color="text.secondary">Gestión centralizada de cuotas y recaudación.</Typography>
-      </Box>
 
+<PageHeader
+              title=" Control de Pagos"
+              subtitle="Gestión centralizada de cuotas y recaudación."
+            />
       {/* ========== 1. ALERTAS ========== */}
       <Stack spacing={2} mb={4}>
         {alerts.veryOverdue.length > 0 && (

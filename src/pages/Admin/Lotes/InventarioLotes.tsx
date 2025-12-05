@@ -22,6 +22,7 @@ import { QueryHandler } from '../../../components/common/QueryHandler/QueryHandl
 // Modales
 import ManageLoteImagesModal from './modals/ManageLoteImagesModal';
 import CreateEditLoteModal from './modals/CreateEditLoteModal';
+import { PageHeader } from '../../../components/common/PageHeader/PageHeader';
 
 // Interfaces Auxiliares
 interface ApiErrorResponse {
@@ -168,11 +169,11 @@ const InventarioLotes: React.FC = () => {
     <PageContainer maxWidth="xl">
       
       {/* 1. Encabezado Centrado */}
-      <Box textAlign="center" mb={5}>
-        <Typography variant="h4" fontWeight="bold" color="primary.main">Gestión de Lotes</Typography>
-        <Typography color="text.secondary">Inventario, asignación de proyectos y control de subastas.</Typography>
-      </Box>
-
+     
+<PageHeader
+              title="Gestión de Lotes"
+              subtitle=" Inventario, asignación de proyectos y control de subastas."
+            />
       {/* 2. KPIs */}
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} mb={4}>
         <Box flex={1}><MiniStatCard title="Total Lotes" value={stats.total} icon={<Inventory />} color="primary" /></Box>

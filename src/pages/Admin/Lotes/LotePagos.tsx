@@ -18,6 +18,7 @@ import { QueryHandler } from '../../../components/common/QueryHandler/QueryHandl
 import type { LoteDto } from '../../../types/dto/lote.dto';
 import LoteService from '../../../Services/lote.service';
 import imagenService from '../../../Services/imagen.service';
+import { PageHeader } from '../../../components/common/PageHeader/PageHeader';
 
 // KPI Card
 const MetricCard: React.FC<{
@@ -109,17 +110,11 @@ const LotePagos: React.FC = () => {
 
   return (
     <PageContainer maxWidth="xl">
-      
-      {/* Header */}
-      <Box mb={4}>
-        <Typography variant="h4" fontWeight="bold" color="primary.main">
-          Control de Pagos
-        </Typography>
-        <Typography color="text.secondary">
-          Sistema automático de seguimiento de pagos y reasignación (90 días / 3 intentos máx.)
-        </Typography>
-      </Box>
-
+    
+<PageHeader
+              title="Gestión de Pagos"
+              subtitle=" Sistema automático de seguimiento de pagos y reasignación."
+            />
       {/* Alerta informativa */}
       <Alert severity="info" icon={<Info />} sx={{ mb: 3 }}>
         <Typography variant="body2" fontWeight={600}>

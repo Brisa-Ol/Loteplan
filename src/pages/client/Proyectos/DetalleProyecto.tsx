@@ -11,7 +11,7 @@ import {
   LocationOn, 
   Business, 
   Savings,
-  GppGood // Icono para el botón de firmar
+  GppGood
 } from '@mui/icons-material';
 
 // Servicios y DTOs
@@ -25,7 +25,6 @@ import { PageContainer } from '../../../components/common/PageContainer/PageCont
 import { useAuth } from '../../../context/AuthContext';
 import { ListaLotesProyecto } from '../Lotes/ListaLotesProyecto';
 import ModalFirmaContrato from '../Contratos/components/ModalFirmaContrato';
-
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -45,10 +44,9 @@ function CustomTabPanel(props: TabPanelProps) {
 const DetalleProyecto: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user } = useAuth(); 
   
   const [tabValue, setTabValue] = useState(0);
-  // 👇 2. ESTADO PARA CONTROLAR EL MODAL
   const [showFirma, setShowFirma] = useState(false);
 
   // 1. Obtener datos del proyecto
@@ -62,7 +60,42 @@ const DetalleProyecto: React.FC = () => {
     retry: false
   });
 
-  // 2. Mutación para Suscripción (Solo Proyectos Mensuales)
+  // ─────────────────────────────────────────────────────────────
+  // 🔒 LÓGICA DE SEGURIDAD (Validación Previa a Firma)
+  // ─────────────────────────────────────────────────────────────
+  const handleClickFirmar = () => {
+    if (!user) return;
+
+    // 1. Validar 2FA (Requisito técnico del backend)
+    // Usamos el campo que vimos en tu 'UserDashboard' y 'AuthContext'
+    if (!user.is_2fa_enabled) {
+      const confirmar = window.confirm(
+        "⚠️ Seguridad Requerida\n\n" +
+        "Para firmar contratos digitales con validez legal, es obligatorio tener activada la Verificación en Dos Pasos (2FA).\n\n" +
+        "¿Deseas ir a la configuración de seguridad para activarla ahora?"
+      );
+      
+      if (confirmar) {
+        // Redirigimos a la ruta exacta que usas en tu sistema
+        navigate('/client/MiCuenta/SecuritySettings'); 
+      }
+      return; // Detenemos la ejecución, no abrimos el modal
+    }
+
+    // 2. Validar KYC (Opcional: Si tienes un campo 'estado_identidad' en el user)
+    /* if (user.estado_identidad !== 'APROBADA') {
+       alert("Debes completar la verificación de identidad antes de firmar.");
+       navigate('/client/MiCuenta/Perfil');
+       return;
+    }
+    */
+
+    // 3. Si pasa las validaciones, abrimos el modal
+    setShowFirma(true);
+  };
+  // ─────────────────────────────────────────────────────────────
+
+  // 2. Mutación para Suscripción
   const subMutation = useMutation({
     mutationFn: async () => {
       if (!proyecto) throw new Error("El proyecto no está cargado.");
@@ -75,12 +108,11 @@ const DetalleProyecto: React.FC = () => {
       if (data.is2FARequired) {
         alert('Se requiere verificación 2FA para continuar con el pago.'); 
       } else if (data.redirectUrl) {
-        // Redirige al pago externo
         window.location.href = data.redirectUrl;
       } else {
-        // Si no hay redirect y fue exitoso (ej. saldo en cuenta), sugerimos firmar
+        // Si el pago fue exitoso directo, sugerimos firmar usando la validación segura
         if(window.confirm("Suscripción iniciada correctamente. ¿Deseas firmar el contrato ahora?")) {
-           setShowFirma(true);
+           handleClickFirmar(); // 👈 Usamos la función segura aquí también
         }
       }
     },
@@ -93,12 +125,11 @@ const DetalleProyecto: React.FC = () => {
     setTabValue(newValue);
   };
 
-  // Imagen de portada
+  // Helpers visuales
   const coverImage = proyecto?.imagenes?.[0]
     ? ImagenService.resolveImageUrl(proyecto.imagenes[0].url)
     : '/images/placeholder-project.jpg'; 
 
-  // Porcentaje de fondeo (Solo mensual)
   const porcentaje = (proyecto?.tipo_inversion === 'mensual' && proyecto?.obj_suscripciones > 0)
     ? (proyecto.suscripciones_actuales / proyecto.obj_suscripciones) * 100
     : 0;
@@ -120,42 +151,13 @@ const DetalleProyecto: React.FC = () => {
   return (
     <PageContainer maxWidth="xl">
       
-      {/* --- HERO SECTION (Imagen Principal) --- */}
-      <Box 
-        sx={{ 
-          position: 'relative',
-          height: { xs: 300, md: 450 },
-          width: '100%',
-          borderRadius: 4,
-          overflow: 'hidden',
-          mb: 4,
-          boxShadow: 3
-        }}
-      >
-        <Box 
-          component="img"
-          src={coverImage}
-          alt={proyecto.nombre_proyecto}
-          sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
-        />
-        <Box 
-          sx={{ 
-            position: 'absolute', bottom: 0, left: 0, right: 0,
-            background: 'linear-gradient(to top, rgba(0,0,0,0.85), transparent)',
-            p: { xs: 3, md: 5 },
-            color: 'white'
-          }}
-        >
+      {/* Hero Section */}
+      <Box sx={{ position: 'relative', height: { xs: 300, md: 450 }, width: '100%', borderRadius: 4, overflow: 'hidden', mb: 4, boxShadow: 3 }}>
+        <Box component="img" src={coverImage} alt={proyecto.nombre_proyecto} sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.85), transparent)', p: { xs: 3, md: 5 }, color: 'white' }}>
           <Stack direction="row" spacing={1} mb={1}>
-            <Chip 
-              label={proyecto.tipo_inversion === 'mensual' ? 'Ahorro' : 'Inversión Directa'} 
-              color="primary" 
-              sx={{ fontWeight: 'bold' }}
-            />
-            <Chip 
-              label={proyecto.estado_proyecto} 
-              color={proyecto.estado_proyecto === 'En proceso' ? 'success' : 'default'} 
-            />
+            <Chip label={proyecto.tipo_inversion === 'mensual' ? 'Ahorro' : 'Inversión Directa'} color="primary" sx={{ fontWeight: 'bold' }} />
+            <Chip label={proyecto.estado_proyecto} color={proyecto.estado_proyecto === 'En proceso' ? 'success' : 'default'} />
           </Stack>
           <Typography variant="h3" fontWeight={700} sx={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
             {proyecto.nombre_proyecto}
@@ -167,10 +169,10 @@ const DetalleProyecto: React.FC = () => {
         </Box>
       </Box>
 
-      {/* --- CONTENIDO PRINCIPAL --- */}
+      {/* Contenido */}
       <Box sx={{ display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, gap: 4 }}>
         
-        {/* COLUMNA IZQUIERDA: Información Detallada */}
+        {/* Columna Izquierda */}
         <Box sx={{ flex: 1, minWidth: 0 }}> 
           <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
             <Tabs value={tabValue} onChange={handleTabChange}>
@@ -180,11 +182,10 @@ const DetalleProyecto: React.FC = () => {
             </Tabs>
           </Box>
 
-          {/* Tab 0: Descripción */}
           <CustomTabPanel value={tabValue} index={0}>
             <Typography variant="h6" gutterBottom fontWeight="bold">Sobre este proyecto</Typography>
             <Typography paragraph color="text.secondary" sx={{ whiteSpace: 'pre-line', lineHeight: 1.8 }}>
-              {proyecto.descripcion || "No hay descripción disponible para este proyecto."}
+              {proyecto.descripcion || "No hay descripción disponible."}
             </Typography>
             
             <Box mt={4} p={3} bgcolor="grey.50" borderRadius={2}>
@@ -207,25 +208,15 @@ const DetalleProyecto: React.FC = () => {
             </Box>
           </CustomTabPanel>
 
-          {/* Tab 1: Galería */}
           <CustomTabPanel value={tabValue} index={1}>
              <Box display="grid" gridTemplateColumns="repeat(auto-fill, minmax(200px, 1fr))" gap={2}>
                 {proyecto.imagenes?.map((img, index) => (
-                  <Box 
-                    key={img.id} 
-                    component="img" 
-                    src={ImagenService.resolveImageUrl(img.url)} 
-                    alt={`Galería ${index}`}
-                    sx={{ width: '100%', height: 150, objectFit: 'cover', borderRadius: 2, cursor: 'pointer' }}
-                  />
+                  <Box key={img.id} component="img" src={ImagenService.resolveImageUrl(img.url)} alt={`Galería ${index}`} sx={{ width: '100%', height: 150, objectFit: 'cover', borderRadius: 2, cursor: 'pointer' }} />
                 ))}
-                {(!proyecto.imagenes || proyecto.imagenes.length === 0) && (
-                  <Typography color="text.secondary">No hay imágenes adicionales.</Typography>
-                )}
+                {(!proyecto.imagenes || proyecto.imagenes.length === 0) && <Typography color="text.secondary">No hay imágenes.</Typography>}
              </Box>
           </CustomTabPanel>
 
-          {/* Tab 2: Lotes (SOLO DIRECTO) */}
           {proyecto.tipo_inversion === 'directo' && (
             <CustomTabPanel value={tabValue} index={2}>
               <ListaLotesProyecto idProyecto={proyecto.id} />
@@ -233,20 +224,10 @@ const DetalleProyecto: React.FC = () => {
           )}
         </Box>
 
-        {/* COLUMNA DERECHA: Sticky Sidebar de Inversión */}
+        {/* Columna Derecha (Sidebar) */}
         <Box sx={{ width: { xs: '100%', lg: 380 }, flexShrink: 0 }}>
-          <Paper 
-            elevation={3} 
-            sx={{ 
-              p: 4, 
-              borderRadius: 3, 
-              position: { lg: 'sticky' }, 
-              top: 100 
-            }}
-          >
-            <Typography variant="h5" fontWeight="bold" gutterBottom>
-              Resumen de Inversión
-            </Typography>
+          <Paper elevation={3} sx={{ p: 4, borderRadius: 3, position: { lg: 'sticky' }, top: 100 }}>
+            <Typography variant="h5" fontWeight="bold" gutterBottom>Resumen de Inversión</Typography>
             <Divider sx={{ my: 2 }} />
 
             <Stack spacing={3}>
@@ -260,7 +241,6 @@ const DetalleProyecto: React.FC = () => {
                 </Typography>
               </Box>
 
-              {/* Lógica específica para Ahorristas (Mensual) */}
               {proyecto.tipo_inversion === 'mensual' && (
                 <>
                   <Box display="flex" justifyContent="space-between">
@@ -276,21 +256,14 @@ const DetalleProyecto: React.FC = () => {
                       <Typography variant="caption" fontWeight="bold">Progreso de Fondeo</Typography>
                       <Typography variant="caption" fontWeight="bold">{porcentaje.toFixed(0)}%</Typography>
                     </Box>
-                    <LinearProgress 
-                      variant="determinate" 
-                      value={porcentaje} 
-                      sx={{ height: 10, borderRadius: 5 }} 
-                    />
+                    <LinearProgress variant="determinate" value={porcentaje} sx={{ height: 10, borderRadius: 5 }} />
                     <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block', textAlign: 'right' }}>
                       {proyecto.suscripciones_actuales} de {proyecto.obj_suscripciones} suscriptores
                     </Typography>
                   </Box>
 
-                  {/* 🟢 BOTÓN 1: SUSCRIPCIÓN (PAGO) */}
                   <Button 
-                    variant="contained" 
-                    size="large" 
-                    fullWidth
+                    variant="contained" size="large" fullWidth
                     disabled={subMutation.isPending}
                     onClick={() => {
                        if (!user) return navigate('/login', { state: { from: window.location.pathname }});
@@ -303,7 +276,6 @@ const DetalleProyecto: React.FC = () => {
                     {subMutation.isPending ? 'Procesando...' : 'Suscribirme al Plan'}
                   </Button>
 
-                  {/* 🟢 BOTÓN 2: FIRMA (SI YA PAGÓ) */}
                   {user && (
                     <Tooltip title="Si ya realizaste tu primera inversión, firma tu contrato aquí.">
                       <Button 
@@ -311,7 +283,7 @@ const DetalleProyecto: React.FC = () => {
                         color="success"
                         startIcon={<GppGood />}
                         fullWidth
-                        onClick={() => setShowFirma(true)}
+                        onClick={handleClickFirmar} // 👈 Acción protegida
                         sx={{ mt: 1 }}
                       >
                         Firmar Contrato Digital
@@ -321,35 +293,24 @@ const DetalleProyecto: React.FC = () => {
                 </>
               )}
 
-              {/* Lógica específica para Inversionistas (Directo) */}
               {proyecto.tipo_inversion === 'directo' && (
                 <Box bgcolor="grey.100" p={2} borderRadius={2} textAlign="center">
                   <Typography variant="body2" color="text.secondary" paragraph>
-                    Para invertir en este proyecto, debes seleccionar un lote específico y realizar una puja o compra directa.
+                    Para invertir en este proyecto, selecciona un lote.
                   </Typography>
-                  <Button 
-                    variant="outlined" 
-                    fullWidth 
-                    onClick={() => setTabValue(2)} // Mover a la tab de Lotes
-                  >
+                  <Button variant="outlined" fullWidth onClick={() => setTabValue(2)}>
                     Ver Lotes Disponibles
                   </Button>
                 </Box>
               )}
             </Stack>
 
-            {!user && (
-              <Alert severity="info" sx={{ mt: 3 }}>
-                Inicia sesión para poder invertir.
-              </Alert>
-            )}
+            {!user && <Alert severity="info" sx={{ mt: 3 }}>Inicia sesión para invertir.</Alert>}
           </Paper>
         </Box>
-
       </Box>
 
-      {/* 👇 3. MODAL DE FIRMA INTEGRADO */}
-      {/* Solo se renderiza si el usuario está logueado para tener su ID */}
+      {/* Modal Firma (Solo se renderiza si el usuario cumple requisitos y hace clic) */}
       {user && (
         <ModalFirmaContrato 
           open={showFirma}
@@ -357,9 +318,8 @@ const DetalleProyecto: React.FC = () => {
           idProyecto={Number(id)}
           idUsuario={user.id}
           onFirmaExitosa={() => {
-            // Recargar datos o redirigir
-            // queryClient.invalidateQueries(['misContratos']);
-            navigate('/mis-documentos'); 
+             // Opcional: refrescar estado o navegar a documentos
+             navigate('/client/MiCuenta/Contratos'); 
           }}
         />
       )}

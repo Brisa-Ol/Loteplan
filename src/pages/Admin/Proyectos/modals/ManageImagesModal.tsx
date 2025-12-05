@@ -41,7 +41,7 @@ const ManageImagesModal: React.FC<ManageImagesModalProps> = ({
     queryKey: queryKey,
     // CORRECCIÓN 1: Extraer .data de la respuesta de Axios
     queryFn: async () => {
-      const response = await imagenService.getByProject(proyecto.id);
+      const response = await imagenService.getAllByProyecto(proyecto.id);
       return response.data;
     },
     enabled: open,

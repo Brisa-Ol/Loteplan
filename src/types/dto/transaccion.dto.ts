@@ -1,64 +1,118 @@
 import type { BaseDTO } from "./base.dto";
-// ==========================================
-// 📤 REQUEST DTOs (Lo que envías)
-// ==========================================
 
+export type TipoTransaccion = 
+  | 'directo' 
+  | 'Puja' 
+  | 'pago_suscripcion_inicial' 
+  | 'mensual';
 
+export type EstadoTransaccion = 
+  | 'pendiente' 
+  | 'pagado' 
+  | 'fallido' 
+  | 'reembolsado' 
+  | 'expirado' 
+  | 'rechazado_proyecto_cerrado' 
+  | 'rechazado_por_capacidad' 
+  | 'en_proceso'
+  | 'revertido';
 
-/**
- * Datos para crear una transacción manualmente (si fuera necesario).
- * Usualmente el sistema las crea, pero tu controlador expone el endpoint.
- */
-export interface CreateTransaccionDto {
-  tipo_transaccion: 'inversion' | 'pago' | 'puja' | 'recarga' | 'mensual' | 'directo';
-  monto: number;
-  id_proyecto?: number;
-  id_inversion?: number;
-  id_puja?: number;
-  id_suscripcion?: number;
-  id_pago_mensual?: number;
+// Interfaces auxiliares (Coinciden con los attributes del backend)
+interface UsuarioRelacionado {
+  id: number;
+  nombre: string;
+  apellido: string;
+  email: string;
+  dni?: string;
 }
 
-/**
- * Datos para actualizar una transacción (Admin o Usuario propietario).
- */
-export interface UpdateTransaccionDto {
-  monto?: number;
-  estado_transaccion?: 'pendiente' | 'pagado' | 'fallido' | 'reembolsado';
-  error_detalle?: string;
-  // Otros campos editables según tu lógica
+interface ProyectoRelacionado {
+  id: number;
+  nombre_proyecto: string;
+  tipo_inversion: string;
+  estado_proyecto: string;
+  moneda: string;
 }
 
-// ==========================================
-// 📥 RESPONSE DTOs (Lo que recibes)
-// ==========================================
+interface InversionRelacionada {
+  id: number;
+  monto: number | string;
+  estado: string;
+}
 
-/**
- * Modelo completo de Transacción.
- */
+interface PagoMensualRelacionado {
+  id: number;
+  monto: number | string;
+  estado_pago: string;
+  fecha_vencimiento: string;
+}
+
+interface SuscripcionRelacionada {
+  id: number;
+  monto_suscripcion: number | string;
+  estado: string;
+  meses_a_pagar: number;
+  meses_pagados: number;
+}
+
+interface PujaRelacionada {
+  id: number;
+  monto_puja: number | string;
+  estado: string;
+}
+
+interface PagoPasarelaRelacionado {
+  id: number;
+  monto_pagado: number | string;
+  metodo_pasarela: string;
+  estado: string;
+  id_transaccion_pasarela: string;
+}
+
 export interface TransaccionDto extends BaseDTO {
-  tipo_transaccion: string;
-  monto: number;
-  estado_transaccion: 'pendiente' | 'pagado' | 'fallido' | 'reembolsado' | 'expirado' | 'revertido';
-  fecha_transaccion?: string; // ISO Date
-  error_detalle?: string;
+  tipo_transaccion: TipoTransaccion;
+  monto: number | string;
+  fecha_transaccion: string;
   
   id_usuario: number;
+  id_proyecto?: number | null;
   
-  // Referencias cruzadas
+  // IDs Relacionales
+  id_pago_mensual?: number | null;
+  id_pago_pasarela?: number | null;
+  id_inversion?: number | null;
+  id_puja?: number | null;
+  id_suscripcion?: number | null;
+  
+  estado_transaccion: EstadoTransaccion;
+  error_detalle?: string | null;
+
+  // 👇 OBJETOS RELACIONADOS (Coinciden con tus alias de associations.js)
+  usuario?: UsuarioRelacionado; // as: 'usuario'
+  proyectoTransaccion?: ProyectoRelacionado; // as: 'proyectoTransaccion'
+  inversion?: InversionRelacionada; // as: 'inversion'
+  pagoMensual?: PagoMensualRelacionado; // as: 'pagoMensual'
+  suscripcion?: SuscripcionRelacionada; // as: 'suscripcion'
+  puja?: PujaRelacionada; // as: 'puja'
+  pagoPasarela?: PagoPasarelaRelacionado; // as: 'pagoPasarela'
+}
+
+export interface CreateTransaccionDto {
+  tipo_transaccion: TipoTransaccion;
+  monto: number;
   id_proyecto?: number;
   id_inversion?: number;
   id_puja?: number;
   id_suscripcion?: number;
   id_pago_mensual?: number;
-  
-  // Referencia externa
-  id_pago_pasarela?: number;
 }
 
-/**
- * Respuesta de confirmación manual (Admin).
- */
+export interface UpdateTransaccionDto {
+  monto?: number;
+  estado_transaccion?: EstadoTransaccion;
+  error_detalle?: string;
+}
+
 export interface ConfirmarTransaccionResponse {
   mensaje: string;
   transaccion: TransaccionDto;

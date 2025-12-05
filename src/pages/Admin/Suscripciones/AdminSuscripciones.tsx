@@ -20,6 +20,7 @@ import type { SuscripcionDto } from '../../../types/dto/suscripcion.dto';
 import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
 import { QueryHandler } from '../../../components/common/QueryHandler/QueryHandler';
 import DetalleSuscripcionModal from './components/DetalleSuscripcionModal';
+import { PageHeader } from '../../../components/common/PageHeader/PageHeader';
 
 
 
@@ -168,12 +169,11 @@ const AdminSuscripciones: React.FC = () => {
 
   return (
     <PageContainer maxWidth="xl">
-      <Box textAlign="center" mb={4}>
-        <Typography variant="h4" fontWeight="bold" color="primary.main">
-          Gestión de Suscripciones
-        </Typography>
-      </Box>
-
+     
+<PageHeader
+              title="Gestión de Suscripciones"
+              subtitle=" Monitor de suscripciones activas, canceladas y métricas clave "
+            />
       {/* ========== SECCIÓN DE KPIs ========== */}
       <Stack spacing={2} mb={4}>
         {/* FILA 1: Totales */}
