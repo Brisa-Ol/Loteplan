@@ -7,13 +7,15 @@ import {
   MonetizationOn // Dólares/Valor
 } from "@mui/icons-material";
 import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from "react-router-dom"; // 👈 Importado
+import { useAuth } from "../../../context/AuthContext"; // 👈 Importado
 
 import { PageContainer, PageHeader, SectionTitle } from "../../../components/common";
 import { ProjectCard } from "../../../components/common/ProjectCard/ProjectCard";
 import { QueryHandler } from "../../../components/common/QueryHandler/QueryHandler";
 import proyectoService from '../../../Services/proyecto.service'; 
 
-// --- 🎨 HIGHLIGHTS PARA INVERSORES (Refactorizado con Stack) ---
+// --- 🎨 HIGHLIGHTS PARA INVERSORES ---
 const InvestorHighlights: React.FC<{ count: number }> = ({ count }) => (
   <Paper 
     elevation={0} 
@@ -82,11 +84,26 @@ const InvestorHighlights: React.FC<{ count: number }> = ({ count }) => (
 );
 
 const ProyectosInversionista: React.FC = () => {
+  const navigate = useNavigate(); // 👈 Hook de navegación
+  const { isAuthenticated } = useAuth(); // 👈 Estado de autenticación
+
   const { data: proyectos, isLoading, error } = useQuery({
     queryKey: ['proyectosInversionista'],
     queryFn: async () => (await proyectoService.getInversionistasActive()).data
   });
   const proyectosInversionista = proyectos || [];
+
+  // 🧠 LÓGICA DE REDIRECCIÓN INTELIGENTE
+  const handleProjectClick = (projectId: number | string) => {
+    const targetPath = `/proyectos/${projectId}`;
+
+    if (isAuthenticated) {
+      navigate(targetPath);
+    } else {
+      // Redirigir a login, guardando el destino
+      navigate("/login", { state: { from: targetPath } });
+    }
+  };
 
   return (
     <PageContainer maxWidth="xl">
@@ -114,7 +131,6 @@ const ProyectosInversionista: React.FC = () => {
           </Box>
         ) : (
           <>
-            {/* ✅ Highlights con Stack */}
             <InvestorHighlights count={proyectosInversionista.length} />
 
             <SectionTitle>Oportunidades Abiertas</SectionTitle>
@@ -123,7 +139,7 @@ const ProyectosInversionista: React.FC = () => {
               sx={{
                 display: "grid",
                 gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", md: "repeat(3, 1fr)" },
-                 gap: 5,
+                gap: 5,
                 width: "80%",
                 mx: "auto",
                 mb: 9,
@@ -134,6 +150,8 @@ const ProyectosInversionista: React.FC = () => {
                   key={project.id}
                   project={project}
                   type="inversionista"
+                  // 👇 Pasamos la lógica de click condicional
+                  onClick={() => handleProjectClick(project.id)}
                 />
               ))}
             </Box>

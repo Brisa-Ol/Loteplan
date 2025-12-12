@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { 
   Box, Typography, Paper, Chip, IconButton, Tooltip, 
-  Stack, Button, TextField, MenuItem, InputAdornment, Switch,
+  Stack, Button, TextField, MenuItem, InputAdornment, 
   Snackbar, Alert
 } from '@mui/material';
 import { 
@@ -18,13 +18,14 @@ import type { CreateUsuarioDto, UpdateUserAdminDto, UsuarioDto } from '../../../
 import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
 import { PageHeader } from '../../../components/common/PageHeader/PageHeader';
 import { QueryHandler } from '../../../components/common/QueryHandler/QueryHandler';
-import { DataTable, type DataTableColumn } from '../../../components/common/DataTable/DataTable';
 
 import CreateUserModal from './modals/CreateUserModal';
 import EditUserModal from './modals/EditUserModal';
 
-// ✅ 1. Importar el Hook
 import { useModal } from '../../../hooks/useModal';
+
+// ✅ 1. Importamos DataSwitch (y mantenemos DataTable)
+import { DataTable, type DataTableColumn, DataSwitch } from '../../../components/common/DataTable/DataTable';
 
 const MiniStatCard: React.FC<{ title: string; value: number; icon: React.ReactNode; color: string }> = ({ title, value, icon, color }) => (
   <Paper elevation={0} sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 2, bgcolor: 'background.paper', borderRadius: 2, border: '1px solid #eee' }}>
@@ -45,11 +46,9 @@ const AdminUsuarios: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   
-  // ✅ 2. Usar Hooks para Modales
   const createModal = useModal();
   const editModal = useModal();
   
-  // Estado para Datos
   const [editingUser, setEditingUser] = useState<UsuarioDto | null>(null);
 
   const [snackbar, setSnackbar] = useState<{ open: boolean, message: string, severity: 'success'|'error' }>({
@@ -78,7 +77,7 @@ const AdminUsuarios: React.FC = () => {
     mutationFn: (data: CreateUsuarioDto) => UsuarioService.create(data),
     onSuccess: () => { 
         queryClient.invalidateQueries({ queryKey: ['adminUsuarios'] }); 
-        createModal.close(); // ✅
+        createModal.close(); 
         showMessage('Usuario creado exitosamente');
     },
     onError: (err) => showMessage(`Error al crear: ${getErrorMessage(err)}`, 'error')
@@ -88,7 +87,7 @@ const AdminUsuarios: React.FC = () => {
     mutationFn: ({ id, data }: { id: number, data: UpdateUserAdminDto }) => UsuarioService.update(id, data),
     onSuccess: () => { 
         queryClient.invalidateQueries({ queryKey: ['adminUsuarios'] }); 
-        editModal.close(); // ✅
+        editModal.close(); 
         setEditingUser(null); 
         showMessage('Usuario actualizado correctamente');
     },
@@ -108,14 +107,13 @@ const AdminUsuarios: React.FC = () => {
     onError: (err) => showMessage(`Error al cambiar estado: ${getErrorMessage(err)}`, 'error')
   });
 
-  // Handlers Actualizados
   const handleEditUser = (user: UsuarioDto) => {
     setEditingUser(user);
-    editModal.open(); // ✅
+    editModal.open(); 
   };
 
   const handleCloseEdit = () => {
-    editModal.close(); // ✅
+    editModal.close(); 
     setEditingUser(null);
   };
 
@@ -123,7 +121,6 @@ const AdminUsuarios: React.FC = () => {
      toggleStatusMutation.mutate(usuario);
   };
 
-  // KPIs & Filtrado (Igual)
   const stats = useMemo(() => ({
     total: usuarios.length,
     activos: usuarios.filter(u => u.activo).length,
@@ -147,7 +144,9 @@ const AdminUsuarios: React.FC = () => {
     });
   }, [usuarios, searchTerm, filterStatus]);
 
-  // Columnas
+  // ========================================================================
+  // 🎨 COLUMNAS LIMPIAS: Ya no necesitamos poner opacity en cada render
+  // ========================================================================
   const columns: DataTableColumn<UsuarioDto>[] = [
     { id: 'id', label: 'ID', minWidth: 50 },
     { 
@@ -155,7 +154,14 @@ const AdminUsuarios: React.FC = () => {
       render: (user) => (
         <Stack direction="row" alignItems="center" spacing={1}>
             <Box>
-                <Typography variant="body2" fontWeight={600}>{user.nombre_usuario}</Typography>
+                <Typography variant="body2" fontWeight={600}>
+                    {user.nombre_usuario}
+                    {!user.activo && (
+                         <Typography component="span" variant="caption" color="error" sx={{ ml: 1, fontWeight: 'bold' }}>
+                            (Bloqueado)
+                         </Typography>
+                    )}
+                </Typography>
                 <Typography variant="caption" color="text.secondary">{user.nombre} {user.apellido}</Typography>
             </Box>
             {user.confirmado_email && <Tooltip title="Email Verificado"><VerifiedUserIcon color="success" sx={{ fontSize: 16 }} /></Tooltip>}
@@ -163,25 +169,32 @@ const AdminUsuarios: React.FC = () => {
         </Stack>
       )
     },
-    { id: 'email', label: 'Email', minWidth: 200 },
+    { 
+      id: 'email', label: 'Email', minWidth: 200,
+    },
     { 
       id: 'rol', label: 'Rol', 
-      render: (user) => <Chip label={user.rol} size="small" color={user.rol === 'admin' ? 'primary' : 'default'} variant={user.rol === 'admin' ? 'filled' : 'outlined'} sx={{ textTransform: 'capitalize' }} />
+      render: (user) => (
+        <Chip 
+            label={user.rol} 
+            size="small" 
+            color={user.rol === 'admin' ? 'primary' : 'default'} 
+            variant={user.rol === 'admin' ? 'filled' : 'outlined'} 
+            sx={{ textTransform: 'capitalize' }} 
+        />
+      )
     },
+    // ✅ 2. USO DEL COMPONENTE DataSwitch
     { 
       id: 'acceso', label: 'Acceso', 
       render: (user) => (
-        <Stack direction="row" alignItems="center" spacing={1}>
-            <Switch
-                checked={user.activo}
-                onChange={() => handleToggleStatus(user)}
-                color="success" size="small"
-                disabled={toggleStatusMutation.isPending && toggleStatusMutation.variables?.id === user.id} 
-            />
-            <Typography variant="caption" color={user.activo ? 'success.main' : 'text.disabled'}>
-                {user.activo ? 'Habilitado' : 'Bloqueado'}
-            </Typography>
-        </Stack>
+        <DataSwitch 
+            active={user.activo}
+            onChange={() => handleToggleStatus(user)}
+            activeLabel="Habilitado"
+            inactiveLabel="Bloqueado"
+            disabled={toggleStatusMutation.isPending && toggleStatusMutation.variables?.id === user.id}
+        />
       )
     },
     {
@@ -227,12 +240,23 @@ const AdminUsuarios: React.FC = () => {
 
       <QueryHandler isLoading={isLoading} error={error as Error | null}>
         <DataTable
-            columns={columns} data={filteredUsers} getRowKey={(user) => user.id}
-            emptyMessage="No se encontraron usuarios." pagination={true} defaultRowsPerPage={10}
+            columns={columns} 
+            data={filteredUsers} 
+            getRowKey={(user) => user.id}
+            
+            // ✅ 3. APLICACIÓN GLOBAL DE ESTILOS DE FILA (Opacity/Grayscale)
+            getRowSx={(user) => ({
+                opacity: user.activo ? 1 : 0.4,
+                filter: user.activo ? 'none' : 'grayscale(100%)', // Opcional: Esto lo pone en blanco y negro
+                transition: 'all 0.3s ease'
+            })}
+
+            emptyMessage="No se encontraron usuarios." 
+            pagination={true} 
+            defaultRowsPerPage={10}
         />
       </QueryHandler>
 
-      {/* ✅ MODALES CON HOOK */}
       <CreateUserModal 
         open={createModal.isOpen}
         onClose={createModal.close}

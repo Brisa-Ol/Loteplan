@@ -6,13 +6,15 @@ import {
   Key       // Icono para adjudicación
 } from "@mui/icons-material";
 import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from "react-router-dom"; // 👈 Importado
+import { useAuth } from "../../../context/AuthContext"; // 👈 Importado
 
 import { PageContainer, PageHeader, SectionTitle } from "../../../components/common";
 import { QueryHandler } from "../../../components/common/QueryHandler/QueryHandler";
 import { ProjectCard } from "../../../components/common/ProjectCard/ProjectCard"; 
 import proyectoService from '../../../Services/proyecto.service'; 
 
-// --- 🎨 COMPONENTE VISUAL: Highlights (Refactorizado con Stack) ---
+// --- 🎨 COMPONENTE VISUAL: Highlights ---
 const ProjectHighlights: React.FC<{ count: number }> = ({ count }) => (
   <Paper 
     elevation={0} 
@@ -34,7 +36,7 @@ const ProjectHighlights: React.FC<{ count: number }> = ({ count }) => (
         <Divider 
           orientation="vertical" 
           flexItem 
-          sx={{ display: { xs: 'none', md: 'block' } }} // Ocultar divisor en móvil
+          sx={{ display: { xs: 'none', md: 'block' } }} 
         />
       }
     >
@@ -87,11 +89,27 @@ const ProjectHighlights: React.FC<{ count: number }> = ({ count }) => (
 );
 
 const ProyectosAhorrista: React.FC = () => {
+  const navigate = useNavigate(); // 👈 Hook de navegación
+  const { isAuthenticated } = useAuth(); // 👈 Estado de autenticación
+
   const { data: proyectos, isLoading, error } = useQuery({
     queryKey: ['proyectosAhorrista'],
     queryFn: async () => (await proyectoService.getAhorristasActive()).data
   });
   const proyectosAhorrista = proyectos || [];
+
+  // 🧠 LÓGICA DE REDIRECCIÓN INTELIGENTE
+  const handleProjectClick = (projectId: number | string) => {
+    const targetPath = `/proyectos/${projectId}`;
+
+    if (isAuthenticated) {
+      // Usuario logueado: va directo al detalle
+      navigate(targetPath);
+    } else {
+      // Usuario NO logueado: va al login, pero recordamos a dónde iba
+      navigate("/login", { state: { from: targetPath } });
+    }
+  };
 
   return (
     <PageContainer maxWidth="xl">
@@ -118,12 +136,10 @@ const ProyectosAhorrista: React.FC = () => {
           </Box>
         ) : (
           <>
-            {/* ✅ Highlights con Stack */}
             <ProjectHighlights count={proyectosAhorrista.length} />
 
             <SectionTitle>Catálogo Disponible</SectionTitle>
 
-            {/* Layout de Tarjetas usando CSS Grid nativo (más ligero que MUI Grid) */}
             <Box
               sx={{
                 display: "grid",
@@ -139,6 +155,8 @@ const ProyectosAhorrista: React.FC = () => {
                   key={project.id}
                   project={project}
                   type="ahorrista"
+                  // 👇 Pasamos la lógica de click condicional
+                  onClick={() => handleProjectClick(project.id)}
                 />
               ))}
             </Box>

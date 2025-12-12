@@ -319,7 +319,7 @@ const UserDashboard: React.FC = () => {
                   <Button 
                     variant="contained" size="large" fullWidth 
                     startIcon={<AccountBalanceWallet />} 
-                    onClick={() => navigate('/client/pagos')} // ✅ Ruta correcta
+                    onClick={() => navigate('/pagos')} // ✅ Ruta correcta
                     sx={{ justifyContent: 'flex-start', fontSize: '1rem', boxShadow: theme.shadows[4] }}
                   >
                     Pagar Cuotas

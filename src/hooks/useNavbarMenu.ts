@@ -196,7 +196,7 @@ export const useNavbarMenu = () => {
             icon: AccountBalanceIcon,
             submenu: [
                 { label: "Favoritos", path: "/client/Favoritos", icon: FavoriteIcon },
-                { label: "Contratos", path: "/client/Favoritos", icon: GavelIcon },
+                { label: "Contratos", path: "/client/Contratos", icon: GavelIcon },
             ]
         },
 
@@ -257,6 +257,8 @@ export const useNavbarMenu = () => {
             { label: "Para Inversionistas", path: "/como-funciona/inversionista", icon: AttachMoneyIcon },
           ],
         },
+
+        { label: "Proyectos", path: "/client/proyectos/seleccion" },
         { label: "Nosotros", path: "/nosotros" },
       ],
       userNavItems: [],

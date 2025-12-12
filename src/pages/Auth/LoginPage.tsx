@@ -8,20 +8,17 @@ import {
   Alert,
   Stack,
   CircularProgress,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  DialogTitle,
   Box,
 } from "@mui/material";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 import { useFormik } from "formik";
 import * as Yup from "yup";
 
+// Componentes y Contexto
 import { PageContainer } from "../../components/common/PageContainer/PageContainer";
 import { useAuth } from "../../context/AuthContext";
 import AuthFormContainer from "./components/AuthFormContainer/AuthFormContainer";
+import TwoFactorAuthModal from "../../components/common/TwoFactorAuthModal/TwoFactorAuthModal"; // ✅ Importado
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -33,7 +30,7 @@ const LoginPage: React.FC = () => {
     requires2FA, 
     error, 
     isLoading, 
-    isInitializing, // ✅ IMPORTANTE: Nuevo estado del contexto
+    isInitializing, 
     clearError, 
     logout, 
     user,
@@ -44,20 +41,13 @@ const LoginPage: React.FC = () => {
   const successMessage = location.state?.message;
   const from = (location.state as { from?: string } | null)?.from;
 
-  // ─────────────────────────────────────────────────────────────
   // 1. REDIRECCIÓN INTELIGENTE
-  // ─────────────────────────────────────────────────────────────
   useEffect(() => {
-    // Solo redirigimos si YA terminó de inicializar y está autenticado sin 2FA pendiente
     if (!isInitializing && isAuthenticated && user && !requires2FA) {
-      
-      // A. Si intentó entrar a una ruta protegida, lo devolvemos ahí
       if (from) {
         navigate(from, { replace: true });
         return;
       }
-
-      // B. Redirección por Rol (Coincide con useNavbarMenu)
       if (user.rol === 'admin') {
         navigate('/admin/dashboard', { replace: true });
       } else if (user.rol === 'cliente') {
@@ -77,64 +67,50 @@ const LoginPage: React.FC = () => {
     return () => clearTimeout(timer);
   }, [successMessage, navigate, location.pathname]);
 
-  // ─────────────────────────────────────────────────────────────
-  // 2. FORMIK (Manejo del formulario)
-  // ─────────────────────────────────────────────────────────────
+  // 2. FORMIK (Solo Login Básico)
   const formik = useFormik({
     initialValues: {
       identificador: "",
       password: "",
-      code2FA: "",
     },
     validationSchema: Yup.object({
       identificador: Yup.string().required("Ingresá tu email o nombre de usuario"),
-      password: requires2FA ? Yup.string() : Yup.string().required("Ingresá tu contraseña"),
-      code2FA: requires2FA ? Yup.string().required("Ingresá el código 2FA") : Yup.string(),
+      password: Yup.string().required("Ingresá tu contraseña"),
     }),
     onSubmit: async (values) => {
       clearError();
       try {
-        if (!requires2FA) {
-          // Paso 1: Login normal
-          await login({
-            identificador: values.identificador,
-            contraseña: values.password,
-          });
-        } else {
-          // Paso 2: Verificar 2FA
-          await verify2FA(values.code2FA);
-        }
+         // Si el backend pide 2FA, 'requires2FA' pasará a true automáticamente
+         await login({
+           identificador: values.identificador,
+           contraseña: values.password,
+         });
       } catch (err) {
-        console.error("Fallo en el proceso de login", err);
+        console.error("Fallo en login", err);
       }
     },
   });
 
+  // Handlers para el Modal 2FA
+  const handleVerify2FA = async (code: string) => {
+    try {
+      await verify2FA(code);
+    } catch (err) {
+      // El error se setea en el contexto 'error' automáticamente
+    }
+  };
+
   const handleCancel2FA = () => {
-    logout(); // Esto limpiará el estado requires2FA y recargará la página
-    formik.resetForm();
+    logout(); // Limpia estado y token temporal
     clearError();
   };
 
-  // Bloqueamos inputs si está cargando o inicializando
   const isDisabled = isLoading || isInitializing;
 
-  // ─────────────────────────────────────────────────────────────
-  // 3. RENDERIZADO CONDICIONAL (Evita parpadeos)
-  // ─────────────────────────────────────────────────────────────
-  
-  // Si estamos comprobando el token en localStorage, mostramos loader
+  // Renderizado Condicional de Carga
   if (isInitializing) {
     return (
-      <Box 
-        sx={{ 
-          display: 'flex', 
-          height: '100vh', 
-          alignItems: 'center', 
-          justifyContent: 'center',
-          bgcolor: 'background.default'
-        }}
-      >
+      <Box sx={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center' }}>
         <CircularProgress />
       </Box>
     );
@@ -145,16 +121,12 @@ const LoginPage: React.FC = () => {
       <AuthFormContainer title="Iniciar Sesión" subtitle="Ingresá tus datos para continuar">
         
         {successMessage && (
-          <Alert severity="success" sx={{ mb: 2 }}>
-            {successMessage}
-          </Alert>
+          <Alert severity="success" sx={{ mb: 2 }}>{successMessage}</Alert>
         )}
 
-        {/* Solo mostramos error si NO estamos en el modal de 2FA */}
+        {/* Mostrar error solo si NO estamos en el paso de 2FA (allí lo muestra el modal) */}
         {error && !requires2FA && (
-          <Alert severity="error" sx={{ mb: 2 }} onClose={clearError}>
-            {error}
-          </Alert>
+          <Alert severity="error" sx={{ mb: 2 }} onClose={clearError}>{error}</Alert>
         )}
 
         <form onSubmit={formik.handleSubmit}>
@@ -203,78 +175,32 @@ const LoginPage: React.FC = () => {
               size="large"
               sx={{ mt: 2 }}
             >
-              {isLoading && !requires2FA ? (
-                <CircularProgress size={24} sx={{ color: "white" }} />
-              ) : (
-                "Ingresar"
-              )}
+              {isLoading && !requires2FA ? <CircularProgress size={24} color="inherit" /> : "Ingresar"}
             </Button>
           </Stack>
         </form>
 
         <Box textAlign="center" mt={3}>
-          <Button
-            onClick={() => navigate("/register")}
-            sx={{ textTransform: "none" }}
-            disabled={isDisabled}
-          >
+          <Button onClick={() => navigate("/register")} sx={{ textTransform: "none" }} disabled={isDisabled}>
             ¿No tienes cuenta? Regístrate
           </Button>
           <br />
-          <Button
-            onClick={() => navigate("/forgot-password")}
-            sx={{ textTransform: "none", mt: 1 }}
-            color="secondary"
-            disabled={isDisabled}
-          >
+          <Button onClick={() => navigate("/forgot-password")} sx={{ textTransform: "none", mt: 1 }} color="secondary" disabled={isDisabled}>
             ¿Olvidaste tu contraseña?
           </Button>
         </Box>
       </AuthFormContainer>
 
-      {/* ─────────────────────────────────────────────────────────────
-          MODAL 2FA
-         ───────────────────────────────────────────────────────────── */}
-      <Dialog open={requires2FA} onClose={handleCancel2FA}>
-        <DialogTitle>Verificación de Seguridad</DialogTitle>
-        <form onSubmit={formik.handleSubmit}>
-          <DialogContent>
-            <DialogContentText sx={{ mb: 2 }}>
-              Tu cuenta tiene activada la autenticación de dos factores.
-              Ingresa el código de 6 dígitos de tu aplicación.
-            </DialogContentText>
-
-            {error && (
-              <Alert severity="error" sx={{ mb: 2 }}>
-                {error}
-              </Alert>
-            )}
-
-            <TextField
-              autoFocus
-              fullWidth
-              id="code2FA"
-              name="code2FA"
-              label="Código 2FA"
-              placeholder="000000"
-              inputProps={{ maxLength: 6, style: { textAlign: 'center', letterSpacing: 4 } }}
-              value={formik.values.code2FA}
-              onChange={formik.handleChange}
-              error={formik.touched.code2FA && Boolean(formik.errors.code2FA)}
-              helperText={formik.touched.code2FA && formik.errors.code2FA}
-              disabled={isLoading}
-            />
-          </DialogContent>
-          <DialogActions sx={{ px: 3, pb: 3 }}>
-            <Button onClick={handleCancel2FA} color="inherit" disabled={isLoading}>
-              Cancelar
-            </Button>
-            <Button type="submit" variant="contained" disabled={isLoading}>
-              {isLoading ? <CircularProgress size={20} /> : "Verificar"}
-            </Button>
-          </DialogActions>
-        </form>
-      </Dialog>
+      {/* ✅ MODAL REUTILIZABLE PARA LOGIN CON 2FA */}
+      <TwoFactorAuthModal
+        open={requires2FA}
+        onClose={handleCancel2FA}
+        onSubmit={handleVerify2FA}
+        isLoading={isLoading}
+        error={error} // El error de "Código incorrecto" viene del contexto
+        title="Login Seguro"
+        description="Tu cuenta está protegida con verificación en dos pasos. Ingresa el código de tu aplicación."
+      />
     </PageContainer>
   );
 };

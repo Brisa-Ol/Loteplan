@@ -1,16 +1,13 @@
-// src/pages/Proyectos/RoleSelection.tsx (Limpio y Centralizado)
+// src/pages/Proyectos/RoleSelection.tsx
 // ═══════════════════════════════════════════════════════════
 import React from "react";
 import { Box, Stack } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { Savings as SavingsIcon, AttachMoney as AttachMoneyIcon } from "@mui/icons-material";
 import { PageContainer, PageHeader } from "../../../components/common";
-import { useAuth } from "../../../context/AuthContext";
+// 1. Eliminamos el import de useAuth
 import { RoleCard } from "./components/RoleCard";
-// ❗ 1. Importamos el componente limpio
 
-
-// Esta interface ahora incluye la 'route' que el padre debe saber
 interface Role {
   key: string;
   title: string;
@@ -39,19 +36,13 @@ const roles: Role[] = [
   },
 ];
 
-// Componente principal (Ahora es el "inteligente")
 const RoleSelection: React.FC = () => {
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth(); // 👈 2. La lógica de Auth vive aquí
+  // 2. Eliminamos la llamada al hook useAuth
 
-  // ❗ 3. LÓGICA CENTRALIZADA
-  // Esta función decide QUÉ hacer cuando se hace clic en CUALQUIER tarjeta
+  // 3. Lógica simplificada: Navegación directa
   const handleCardClick = (route: string) => {
-    if (isAuthenticated) {
-      navigate(route);
-    } else {
-      navigate("/login");
-    }
+    navigate(route); 
   };
 
   return (
@@ -69,11 +60,10 @@ const RoleSelection: React.FC = () => {
           sx={{ mt: 4 }}
         >
           {roles.map((role) => (
-            // ❗ 4. Pasamos la lógica como prop
             <RoleCard
               key={role.key}
-              role={role} // Le pasamos el 'role' (el componente usará title, desc, etc.)
-              onCardClick={() => handleCardClick(role.route)} // Le decimos QUÉ HACER al hacer click
+              role={role}
+              onCardClick={() => handleCardClick(role.route)}
             />
           ))}
         </Stack>
@@ -82,5 +72,4 @@ const RoleSelection: React.FC = () => {
   );
 };
 
-// ❗ 5. No olvides el export default
 export default RoleSelection;

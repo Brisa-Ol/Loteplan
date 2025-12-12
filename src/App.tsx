@@ -119,7 +119,11 @@ const AppContent: React.FC = () => {
         <Route path="/como-funciona/inversionista" element={<Inversionista />} />
         <Route path="/nosotros" element={<Nosotros />} />
         <Route path="/preguntas" element={<Preguntas />} />
-        
+
+        <Route path="/proyectos/ahorrista" element={<ProyectosAhorrista />} />
+        <Route path="/proyectos/inversionista" element={<ProyectosInversionista />} />
+        <Route path="/client/proyectos/seleccion" element={<RoleSelection />} />
+
         {/* B. Auth */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<Register />} />
@@ -127,12 +131,6 @@ const AppContent: React.FC = () => {
         <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
         <Route path="/confirm-email/:token" element={<ConfirmEmailPage />} />
         <Route path="/unauthorized" element={<Unauthorized />} />
-
-        {/* C. Exploración Pública de Proyectos */}
-        <Route path="/proyectos/ahorrista" element={<ProyectosAhorrista />} />
-        <Route path="/proyectos/inversionista" element={<ProyectosInversionista />} />
-        
-
 
         {/* D. Rutas Protegidas de CLIENTE */}
         <Route element={<ProtectedRoute allowedRoles={['cliente']} />}>
@@ -146,7 +144,7 @@ const AppContent: React.FC = () => {
           <Route path="/client/Favoritos" element={<MisFavoritos />} />
           <Route path="/client/subastas" element={<MisSubastas />} />
           <Route path="/client/contratos" element={<Contratos />} />
-          <Route path="/client/proyectos/seleccion" element={<RoleSelection />} />
+          
           <Route path="/proyectos/:id" element={<DetalleProyecto />} />
           <Route path="/lotes/:id" element={<DetalleLote />} />
           <Route path="/pages/client/MiCuenta/MisSubastas" element={<MisSubastas />} />
