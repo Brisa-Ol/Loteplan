@@ -1,9 +1,8 @@
-import React from "react";
-import { Box, Typography, Paper, Divider, Stack } from "@mui/material";
+import React, { useState } from "react";
+import { Box, Typography, Paper, Divider, Stack, Tabs, Tab, Avatar } from "@mui/material";
 import { 
   TrendingUp, 
   Security, 
-  Business, 
   MonetizationOn 
 } from "@mui/icons-material";
 import { useQuery } from '@tanstack/react-query';
@@ -11,55 +10,56 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
 
 import { PageContainer, PageHeader, SectionTitle } from "../../../components/common";
-
 import { QueryHandler } from "../../../components/common/QueryHandler/QueryHandler";
 import proyectoService from '../../../Services/proyecto.service'; 
 import { ProjectCard } from "./components/ProjectCard";
 
-// --- 🎨 HIGHLIGHTS PARA INVERSORES ---
-const InvestorHighlights: React.FC<{ count: number }> = ({ count }) => (
+// --- 🎨 1. COMPONENTE VISUAL: Highlights (Diseño Nuevo) ---
+const InvestorHighlights: React.FC = () => (
   <Paper 
     elevation={0} 
-    variant="outlined"
     sx={{ 
-      p: 3, mb: 6, borderRadius: 3,
-      bgcolor: 'background.paper', borderColor: 'divider'
+      p: 3, 
+      mb: 4, 
+      borderRadius: 4, 
+      bgcolor: 'grey.100', // Fondo gris claro consistente
+      border: 'none'
     }}
   >
     <Stack 
       direction={{ xs: 'column', md: 'row' }} 
-      spacing={{ xs: 4, md: 0 }}
-      justifyContent="space-around"
+      spacing={{ xs: 4, md: 8 }} 
+      justifyContent="center"
       alignItems={{ xs: 'flex-start', md: 'center' }}
-      divider={<Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', md: 'block' } }} />}
+      divider={<Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', md: 'block' }, borderColor: 'grey.300' }} />}
     >
-      <Box display="flex" alignItems="center" gap={2} width="100%" justifyContent={{ xs: 'flex-start', md: 'center' }}>
-        <Box sx={{ p: 1.5, borderRadius: '50%', bgcolor: 'primary.light', color: 'primary.main', display: 'flex' }}>
-          <Business fontSize="medium" />
-        </Box>
-        <Box>
-          <Typography variant="h5" fontWeight={800} color="text.primary" lineHeight={1}>{count}</Typography>
-          <Typography variant="caption" color="text.secondary" fontWeight={700} textTransform="uppercase">Oportunidades</Typography>
-        </Box>
-      </Box>
-
-      <Box display="flex" alignItems="center" gap={2} width="100%" justifyContent={{ xs: 'flex-start', md: 'center' }}>
-        <Box sx={{ p: 1.5, borderRadius: '50%', bgcolor: 'success.light', color: 'success.dark', display: 'flex' }}>
+      {/* Elemento 1: Alta Rentabilidad */}
+      <Box display="flex" alignItems="center" gap={2}>
+        <Avatar sx={{ bgcolor: 'success.light', color: 'success.dark', width: 48, height: 48 }}>
           <TrendingUp fontSize="medium" />
-        </Box>
+        </Avatar>
         <Box>
-          <Typography variant="subtitle1" fontWeight={700} color="text.primary" lineHeight={1.2}>Alta Rentabilidad</Typography>
-          <Typography variant="caption" color="text.secondary" display="block">Retornos estimados en USD</Typography>
+          <Typography variant="subtitle1" fontWeight={800} color="text.primary" lineHeight={1.2}>
+            Alta Rentabilidad
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Retornos estimados en USD
+          </Typography>
         </Box>
       </Box>
 
-      <Box display="flex" alignItems="center" gap={2} width="100%" justifyContent={{ xs: 'flex-start', md: 'center' }}>
-        <Box sx={{ p: 1.5, borderRadius: '50%', bgcolor: 'info.light', color: 'info.dark', display: 'flex' }}>
+      {/* Elemento 2: Respaldo Real */}
+      <Box display="flex" alignItems="center" gap={2}>
+        <Avatar sx={{ bgcolor: 'info.light', color: 'info.dark', width: 48, height: 48 }}>
           <Security fontSize="medium" />
-        </Box>
+        </Avatar>
         <Box>
-          <Typography variant="subtitle1" fontWeight={700} color="text.primary" lineHeight={1.2}>Respaldo Real</Typography>
-          <Typography variant="caption" color="text.secondary" display="block">Activos inmobiliarios tangibles</Typography>
+          <Typography variant="subtitle1" fontWeight={800} color="text.primary" lineHeight={1.2}>
+            Respaldo Real
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Activos inmobiliarios tangibles
+          </Typography>
         </Box>
       </Box>
     </Stack>
@@ -69,21 +69,32 @@ const InvestorHighlights: React.FC<{ count: number }> = ({ count }) => (
 const ProyectosInversionista: React.FC = () => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
+  
+  // ✅ Estado para el filtro (Frontend)
+  const [tabValue, setTabValue] = useState<'activos' | 'finalizados'>('activos');
 
-  const { data: proyectos, isLoading, error } = useQuery({
+  // Pedimos TODOS los proyectos
+  const { data: todosLosProyectos, isLoading, error } = useQuery({
     queryKey: ['proyectosInversionista'],
     queryFn: async () => (await proyectoService.getInversionistasActive()).data
   });
-  const proyectosInversionista = proyectos || [];
+  
+  const rawProjects = todosLosProyectos || [];
 
-  // 🧠 LÓGICA DE REDIRECCIÓN INTELIGENTE
+  // ✅ Lógica de filtrado en el cliente
+  const proyectosFiltrados = rawProjects.filter(project => {
+    if (tabValue === 'activos') {
+      return project.estado_proyecto !== 'Finalizado';
+    } else {
+      return project.estado_proyecto === 'Finalizado';
+    }
+  });
+
   const handleProjectClick = (projectId: number | string) => {
     const targetPath = `/proyectos/${projectId}`;
-
     if (isAuthenticated) {
       navigate(targetPath);
     } else {
-      // Redirigir a login, guardando el destino
       navigate("/login", { state: { from: targetPath } });
     }
   };
@@ -101,16 +112,46 @@ const ProyectosInversionista: React.FC = () => {
         loadingMessage="Buscando oportunidades..."
         fullHeight={true}
       >
-        {proyectosInversionista.length === 0 ? (
-          <Box textAlign="center" py={8} bgcolor="grey.50" borderRadius={4}>
-            <MonetizationOn sx={{ fontSize: 60, color: 'text.disabled', mb: 2 }} />
-            <Typography variant="h5" color="text.secondary" fontWeight={500}>No se encontraron oportunidades.</Typography>
-            <Typography variant="body2" color="text.secondary" mt={1}>Nuestros expertos están analizando nuevos proyectos.</Typography>
+        <>
+          {/* 1. Highlights */}
+          <InvestorHighlights />
+
+          {/* 2. Filtros (Tabs) */}
+          <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 4, display: 'flex', justifyContent: 'center' }}>
+            <Tabs 
+              value={tabValue} 
+              onChange={(_, newVal) => setTabValue(newVal)} 
+              centered
+              indicatorColor="primary"
+              textColor="primary"
+              sx={{ '& .MuiTab-root': { textTransform: 'none', fontSize: '1rem', fontWeight: 500 } }}
+            >
+              <Tab label="Oportunidades Abiertas" value="activos" />
+              <Tab label="Proyectos Completados" value="finalizados" />
+            </Tabs>
           </Box>
-        ) : (
-          <>
-            <InvestorHighlights count={proyectosInversionista.length} />
-            <SectionTitle>Oportunidades Abiertas</SectionTitle>
+
+          {/* 3. Título de Sección */}
+          <SectionTitle>
+            {tabValue === 'activos' ? 'Oportunidades Abiertas' : 'Historial de Éxito'}
+          </SectionTitle>
+
+          {/* 4. Grid o Mensaje Vacío */}
+          {proyectosFiltrados.length === 0 ? (
+            <Box textAlign="center" py={8} bgcolor="grey.50" borderRadius={4}>
+              <MonetizationOn sx={{ fontSize: 60, color: 'text.disabled', mb: 2 }} />
+              <Typography variant="h5" color="text.secondary" fontWeight={500}>
+                {tabValue === 'activos' 
+                  ? "No se encontraron oportunidades abiertas." 
+                  : "No hay proyectos completados aún."}
+              </Typography>
+              {tabValue === 'activos' && (
+                <Typography variant="body2" color="text.secondary" mt={1}>
+                  Nuestros expertos están analizando nuevos proyectos.
+                </Typography>
+              )}
+            </Box>
+          ) : (
             <Box
               sx={{
                 display: "grid",
@@ -118,7 +159,7 @@ const ProyectosInversionista: React.FC = () => {
                 gap: 5, width: "80%", mx: "auto", mb: 9,
               }}
             >
-              {proyectosInversionista.map((project) => (
+              {proyectosFiltrados.map((project) => (
                 <ProjectCard
                   key={project.id}
                   project={project}
@@ -127,8 +168,8 @@ const ProyectosInversionista: React.FC = () => {
                 />
               ))}
             </Box>
-          </>
-        )}
+          )}
+        </>
       </QueryHandler>
     </PageContainer>
   );

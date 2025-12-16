@@ -10,9 +10,11 @@ import {
   CircularProgress,
   Box,
   Link,
-  Snackbar 
+  Snackbar,
+  Typography // ✅ Agregamos Typography por si quieres estilizar más el texto
 } from "@mui/material";
-import { Visibility, VisibilityOff } from "@mui/icons-material";
+// ✅ Agregamos un icono bonito para el mensaje (opcional, pero queda pro)
+import { Visibility, VisibilityOff, InfoOutlined } from "@mui/icons-material"; 
 import { useFormik } from "formik";
 import * as Yup from "yup";
 import { PageContainer } from "../../components/common/PageContainer/PageContainer";
@@ -44,9 +46,13 @@ const LoginPage: React.FC = () => {
   const [resendSuccess, setResendSuccess] = useState(false);
 
   const successMessage = location.state?.message;
+  
+  // Capturamos de dónde viene
   const from = (location.state as { from?: string } | null)?.from;
+  
+  // ✅ NUEVA LÓGICA: Detectar si viene de un proyecto para mostrar el mensaje
+  const vieneDeProyecto = from && from.includes('/proyectos/');
 
-  // 🔽 1. MOVEMOS FORMIK AQUÍ ARRIBA (Antes de los useEffects)
   const formik = useFormik({
     initialValues: {
       identificador: "",
@@ -70,8 +76,6 @@ const LoginPage: React.FC = () => {
     },
   });
 
-  // 🔽 2. AHORA SÍ PODEMOS USAR 'formik' EN LOS EFFECTS
-
   // Redirección inteligente
   useEffect(() => {
     if (!isInitializing && isAuthenticated && user && !requires2FA) {
@@ -93,14 +97,12 @@ const LoginPage: React.FC = () => {
   useEffect(() => {
     if (error && (error.includes('Cuenta no activada') || error.includes('no confirmado'))) {
       setShowResendEmail(true);
-      // ✅ Ahora 'formik' ya está definido aquí
       setEmailForResend(formik.values.identificador);
     } else {
       setShowResendEmail(false);
     }
-  }, [error, formik.values.identificador]); // ✅ Y aquí también
+  }, [error, formik.values.identificador]);
 
-  // Limpieza de mensaje flash
   useEffect(() => {
     if (!successMessage) return;
     const timer = setTimeout(() => {
@@ -123,7 +125,7 @@ const LoginPage: React.FC = () => {
     try {
       await verify2FA(code);
     } catch (err) {
-      // El error se maneja en el contexto
+      // handled by context
     }
   };
 
@@ -146,6 +148,19 @@ const LoginPage: React.FC = () => {
     <PageContainer maxWidth="sm">
       <AuthFormContainer title="Iniciar Sesión" subtitle="Ingresá tus datos para continuar">
         
+        {/* ✅ NUEVO MENSAJE CONDICIONAL */}
+        {vieneDeProyecto && !error && !successMessage && (
+          <Alert 
+            severity="info" 
+            icon={<InfoOutlined />}
+            sx={{ mb: 3, alignItems: 'center' }}
+          >
+            <Typography variant="body2" fontWeight={500}>
+              Para ver los detalles completos del proyecto y los lotes disponibles, por favor inicia sesión o Registrate.
+            </Typography>
+          </Alert>
+        )}
+
         {successMessage && (
           <Alert severity="success" sx={{ mb: 2 }}>{successMessage}</Alert>
         )}

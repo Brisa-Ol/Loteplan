@@ -1,9 +1,8 @@
-import React from "react";
-import { Box, Typography, Paper, Divider, Stack } from "@mui/material";
+import React, { useState } from "react";
+import { Box, Typography, Paper, Divider, Stack, Tabs, Tab, Avatar } from "@mui/material";
 import { 
-  HomeWork, // Icono para proyectos
-  Savings,  // Icono para cuotas
-  Key       // Icono para adjudicación
+  Savings,    // Icono para cuotas
+  Key         // Icono para adjudicación
 } from "@mui/icons-material";
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from "react-router-dom";
@@ -15,52 +14,53 @@ import { QueryHandler } from "../../../components/common/QueryHandler/QueryHandl
 import proyectoService from '../../../Services/proyecto.service'; 
 import { ProjectCard } from "./components/ProjectCard";
 
-
-
-// --- 🎨 COMPONENTE VISUAL: Highlights ---
-const ProjectHighlights: React.FC<{ count: number }> = ({ count }) => (
+// --- 🎨 1. COMPONENTE VISUAL: Highlights (Diseño Nuevo) ---
+const ProjectHighlights: React.FC = () => (
   <Paper 
     elevation={0} 
-    variant="outlined"
     sx={{ 
-      p: 3, mb: 6, borderRadius: 3,
-      bgcolor: 'background.paper', borderColor: 'divider'
+      p: 3, 
+      mb: 4, 
+      borderRadius: 4, // Bordes bien redondeados como la imagen
+      bgcolor: 'grey.100', // Fondo gris claro
+      border: 'none'
     }}
   >
     <Stack 
       direction={{ xs: 'column', md: 'row' }} 
-      spacing={{ xs: 4, md: 0 }}
-      justifyContent="space-around"
+      spacing={{ xs: 4, md: 8 }} // Más espacio entre los dos elementos
+      justifyContent="center"
       alignItems={{ xs: 'flex-start', md: 'center' }}
-      divider={<Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', md: 'block' } }} />}
+      // Línea divisoria vertical gris
+      divider={<Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', md: 'block' }, borderColor: 'grey.300' }} />}
     >
-      <Box display="flex" alignItems="center" gap={2} width="100%" justifyContent={{ xs: 'flex-start', md: 'center' }}>
-        <Box sx={{ p: 1.5, borderRadius: '50%', bgcolor: 'primary.light', color: 'primary.main', display: 'flex' }}>
-          <HomeWork fontSize="medium" />
-        </Box>
-        <Box>
-          <Typography variant="h5" fontWeight={800} color="text.primary" lineHeight={1}>{count}</Typography>
-          <Typography variant="caption" color="text.secondary" fontWeight={700} textTransform="uppercase">Proyectos Activos</Typography>
-        </Box>
-      </Box>
-
-      <Box display="flex" alignItems="center" gap={2} width="100%" justifyContent={{ xs: 'flex-start', md: 'center' }}>
-        <Box sx={{ p: 1.5, borderRadius: '50%', bgcolor: 'success.light', color: 'success.dark', display: 'flex' }}>
+      {/* Elemento 1: Cuotas Fijas */}
+      <Box display="flex" alignItems="center" gap={2}>
+        <Avatar sx={{ bgcolor: 'success.light', color: 'success.dark', width: 48, height: 48 }}>
           <Savings fontSize="medium" />
-        </Box>
+        </Avatar>
         <Box>
-          <Typography variant="subtitle1" fontWeight={700} color="text.primary" lineHeight={1.2}>Cuotas Fijas</Typography>
-          <Typography variant="caption" color="text.secondary" display="block">Financiación en pesos sin interés</Typography>
+          <Typography variant="subtitle1" fontWeight={800} color="text.primary" lineHeight={1.2}>
+            Cuotas Fijas
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Financiación en pesos sin interés
+          </Typography>
         </Box>
       </Box>
 
-      <Box display="flex" alignItems="center" gap={2} width="100%" justifyContent={{ xs: 'flex-start', md: 'center' }}>
-        <Box sx={{ p: 1.5, borderRadius: '50%', bgcolor: 'warning.light', color: 'warning.dark', display: 'flex' }}>
+      {/* Elemento 2: Adjudicación Rápida */}
+      <Box display="flex" alignItems="center" gap={2}>
+        <Avatar sx={{ bgcolor: 'warning.light', color: 'warning.dark', width: 48, height: 48 }}>
           <Key fontSize="medium" />
-        </Box>
+        </Avatar>
         <Box>
-          <Typography variant="subtitle1" fontWeight={700} color="text.primary" lineHeight={1.2}>Adjudicación Rápida</Typography>
-          <Typography variant="caption" color="text.secondary" display="block">Posesión desde la cuota 12</Typography>
+          <Typography variant="subtitle1" fontWeight={800} color="text.primary" lineHeight={1.2}>
+            Adjudicación Rápida
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Posesión desde la cuota 12
+          </Typography>
         </Box>
       </Box>
     </Stack>
@@ -70,26 +70,32 @@ const ProjectHighlights: React.FC<{ count: number }> = ({ count }) => (
 const ProyectosAhorrista: React.FC = () => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
+  
+  // ✅ Estado para el filtro (Frontend)
+  const [tabValue, setTabValue] = useState<'activos' | 'finalizados'>('activos');
 
-  // 🔍 DEBUG - ELIMINAR DESPUÉS
-  console.log("🔍 ProyectosAhorrista renderizado");
- 
-
-  const { data: proyectos, isLoading, error } = useQuery({
+  // Pedimos TODOS los proyectos (el backend trae activos + finalizados mientras no estén borrados)
+  const { data: todosLosProyectos, isLoading, error } = useQuery({
     queryKey: ['proyectosAhorrista'],
     queryFn: async () => (await proyectoService.getAhorristasActive()).data
   });
-  const proyectosAhorrista = proyectos || [];
+  
+  const rawProjects = todosLosProyectos || [];
 
-  // 🧠 LÓGICA DE REDIRECCIÓN INTELIGENTE
+  // ✅ Lógica de filtrado en el cliente
+  const proyectosFiltrados = rawProjects.filter(project => {
+    if (tabValue === 'activos') {
+      return project.estado_proyecto !== 'Finalizado';
+    } else {
+      return project.estado_proyecto === 'Finalizado';
+    }
+  });
+
   const handleProjectClick = (projectId: number | string) => {
     const targetPath = `/proyectos/${projectId}`;
-
     if (isAuthenticated) {
-      // Usuario logueado: va directo al detalle
       navigate(targetPath);
     } else {
-      // Usuario NO logueado: va al login, pero recordamos a dónde iba en 'state.from'
       navigate("/login", { state: { from: targetPath } });
     }
   };
@@ -107,15 +113,40 @@ const ProyectosAhorrista: React.FC = () => {
         loadingMessage="Cargando catálogo..."
         fullHeight={true} 
       >
-        {proyectosAhorrista.length === 0 ? (
-          <Box textAlign="center" py={8} bgcolor="grey.50" borderRadius={4}>
-            <Typography variant="h5" color="text.secondary" fontWeight={500}>No se encontraron proyectos disponibles.</Typography>
-            <Typography variant="body2" color="text.secondary" mt={1}>Vuelve a consultar más tarde.</Typography>
+        <>
+          {/* 1. Highlights (Fondo Gris) */}
+          <ProjectHighlights />
+
+          {/* 2. Filtros (Tabs) - DEBAJO de los highlights */}
+          <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 4, display: 'flex', justifyContent: 'center' }}>
+            <Tabs 
+              value={tabValue} 
+              onChange={(_, newVal) => setTabValue(newVal)} 
+              centered 
+              indicatorColor="primary"
+              textColor="primary"
+              sx={{ '& .MuiTab-root': { textTransform: 'none', fontSize: '1rem', fontWeight: 500 } }}
+            >
+              <Tab label="Disponibles (Activos)" value="activos" />
+              <Tab label="Finalizados / Entregados" value="finalizados" />
+            </Tabs>
           </Box>
-        ) : (
-          <>
-            <ProjectHighlights count={proyectosAhorrista.length} />
-            <SectionTitle>Catálogo Disponible</SectionTitle>
+
+          {/* 3. Título de la Sección */}
+          <SectionTitle>
+            {tabValue === 'activos' ? 'Catálogo Disponible' : 'Historial de Éxitos'}
+          </SectionTitle>
+
+          {/* 4. Grid de Proyectos o Mensaje Vacío */}
+          {proyectosFiltrados.length === 0 ? (
+            <Box textAlign="center" py={8} bgcolor="grey.50" borderRadius={4}>
+              <Typography variant="h5" color="text.secondary" fontWeight={500}>
+                {tabValue === 'activos' 
+                  ? "No hay proyectos activos en este momento." 
+                  : "Aún no hay proyectos finalizados en el historial."}
+              </Typography>
+            </Box>
+          ) : (
             <Box
               sx={{
                 display: "grid",
@@ -123,7 +154,7 @@ const ProyectosAhorrista: React.FC = () => {
                 gap: 5, width: "80%", mx: "auto", mb: 9,
               }}
             >
-              {proyectosAhorrista.map((project) => (
+              {proyectosFiltrados.map((project) => (
                 <ProjectCard
                   key={project.id}
                   project={project}
@@ -132,8 +163,8 @@ const ProyectosAhorrista: React.FC = () => {
                 />
               ))}
             </Box>
-          </>
-        )}
+          )}
+        </>
       </QueryHandler>
     </PageContainer>
   );
