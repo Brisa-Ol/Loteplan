@@ -4,12 +4,12 @@ import { Box, CircularProgress, Alert, Button, Typography, Paper } from '@mui/ma
 import { CheckCircleOutline, ErrorOutline } from '@mui/icons-material';
 import AuthService from '../../Services/auth.service';
 
-
 const ConfirmEmailPage: React.FC = () => {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('');
+  const [countdown, setCountdown] = useState(5);
 
   useEffect(() => {
     const confirm = async () => {
@@ -24,13 +24,26 @@ const ConfirmEmailPage: React.FC = () => {
         setStatus('success');
       } catch (error: any) {
         setStatus('error');
-        // El mensaje viene del backend (ej: "Token expirado")
         setMessage(error.response?.data?.error || 'No se pudo confirmar el correo.');
       }
     };
 
     confirm();
   }, [token]);
+
+  // ✅ NUEVO: Redirección automática después del éxito
+  useEffect(() => {
+    if (status === 'success' && countdown > 0) {
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+    
+    if (status === 'success' && countdown === 0) {
+      navigate('/login', { 
+        state: { message: '¡Cuenta activada! Ya puedes iniciar sesión.' } 
+      });
+    }
+  }, [status, countdown, navigate]);
 
   return (
     <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh" p={2}>
@@ -50,8 +63,17 @@ const ConfirmEmailPage: React.FC = () => {
             <Typography color="text.secondary" paragraph>
               Tu correo ha sido confirmado exitosamente. Ya puedes acceder a la plataforma.
             </Typography>
-            <Button variant="contained" fullWidth onClick={() => navigate('/login')}>
-              Iniciar Sesión
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Redirigiendo en {countdown} segundo{countdown !== 1 ? 's' : ''}...
+            </Typography>
+            <Button 
+              variant="contained" 
+              fullWidth 
+              onClick={() => navigate('/login', { 
+                state: { message: '¡Cuenta activada! Ya puedes iniciar sesión.' } 
+              })}
+            >
+              Ir al Login Ahora
             </Button>
           </>
         )}

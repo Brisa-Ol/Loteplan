@@ -9,16 +9,16 @@ import {
   Stack,
   CircularProgress,
   Box,
+  Link,
+  Snackbar 
 } from "@mui/material";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 import { useFormik } from "formik";
 import * as Yup from "yup";
-
-// Componentes y Contexto
 import { PageContainer } from "../../components/common/PageContainer/PageContainer";
 import { useAuth } from "../../context/AuthContext";
 import AuthFormContainer from "./components/AuthFormContainer/AuthFormContainer";
-import TwoFactorAuthModal from "../../components/common/TwoFactorAuthModal/TwoFactorAuthModal"; // ✅ Importado
+import TwoFactorAuthModal from "../../components/common/TwoFactorAuthModal/TwoFactorAuthModal";
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -34,14 +34,45 @@ const LoginPage: React.FC = () => {
     clearError, 
     logout, 
     user,
-    isAuthenticated
+    isAuthenticated,
+    resendConfirmation 
   } = useAuth();
 
   const [showPassword, setShowPassword] = useState(false);
+  const [showResendEmail, setShowResendEmail] = useState(false);
+  const [emailForResend, setEmailForResend] = useState('');
+  const [resendSuccess, setResendSuccess] = useState(false);
+
   const successMessage = location.state?.message;
   const from = (location.state as { from?: string } | null)?.from;
 
-  // 1. REDIRECCIÓN INTELIGENTE
+  // 🔽 1. MOVEMOS FORMIK AQUÍ ARRIBA (Antes de los useEffects)
+  const formik = useFormik({
+    initialValues: {
+      identificador: "",
+      password: "",
+    },
+    validationSchema: Yup.object({
+      identificador: Yup.string().required("Ingresá tu email o nombre de usuario"),
+      password: Yup.string().required("Ingresá tu contraseña"),
+    }),
+    onSubmit: async (values) => {
+      clearError();
+      setShowResendEmail(false);
+      try {
+         await login({
+           identificador: values.identificador,
+           contraseña: values.password,
+         });
+      } catch (err) {
+        console.error("Fallo en login", err);
+      }
+    },
+  });
+
+  // 🔽 2. AHORA SÍ PODEMOS USAR 'formik' EN LOS EFFECTS
+
+  // Redirección inteligente
   useEffect(() => {
     if (!isInitializing && isAuthenticated && user && !requires2FA) {
       if (from) {
@@ -58,6 +89,17 @@ const LoginPage: React.FC = () => {
     }
   }, [isInitializing, isAuthenticated, user, requires2FA, navigate, from]);
 
+  // Detector de error de cuenta no activada
+  useEffect(() => {
+    if (error && (error.includes('Cuenta no activada') || error.includes('no confirmado'))) {
+      setShowResendEmail(true);
+      // ✅ Ahora 'formik' ya está definido aquí
+      setEmailForResend(formik.values.identificador);
+    } else {
+      setShowResendEmail(false);
+    }
+  }, [error, formik.values.identificador]); // ✅ Y aquí también
+
   // Limpieza de mensaje flash
   useEffect(() => {
     if (!successMessage) return;
@@ -67,47 +109,31 @@ const LoginPage: React.FC = () => {
     return () => clearTimeout(timer);
   }, [successMessage, navigate, location.pathname]);
 
-  // 2. FORMIK (Solo Login Básico)
-  const formik = useFormik({
-    initialValues: {
-      identificador: "",
-      password: "",
-    },
-    validationSchema: Yup.object({
-      identificador: Yup.string().required("Ingresá tu email o nombre de usuario"),
-      password: Yup.string().required("Ingresá tu contraseña"),
-    }),
-    onSubmit: async (values) => {
-      clearError();
-      try {
-         // Si el backend pide 2FA, 'requires2FA' pasará a true automáticamente
-         await login({
-           identificador: values.identificador,
-           contraseña: values.password,
-         });
-      } catch (err) {
-        console.error("Fallo en login", err);
-      }
-    },
-  });
+  const handleResendEmail = async () => {
+    try {
+      await resendConfirmation(emailForResend);
+      setResendSuccess(true);
+      setShowResendEmail(false);
+    } catch (err) {
+      console.error('Error al reenviar email:', err);
+    }
+  };
 
-  // Handlers para el Modal 2FA
   const handleVerify2FA = async (code: string) => {
     try {
       await verify2FA(code);
     } catch (err) {
-      // El error se setea en el contexto 'error' automáticamente
+      // El error se maneja en el contexto
     }
   };
 
   const handleCancel2FA = () => {
-    logout(); // Limpia estado y token temporal
+    logout();
     clearError();
   };
 
   const isDisabled = isLoading || isInitializing;
 
-  // Renderizado Condicional de Carga
   if (isInitializing) {
     return (
       <Box sx={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center' }}>
@@ -124,9 +150,27 @@ const LoginPage: React.FC = () => {
           <Alert severity="success" sx={{ mb: 2 }}>{successMessage}</Alert>
         )}
 
-        {/* Mostrar error solo si NO estamos en el paso de 2FA (allí lo muestra el modal) */}
         {error && !requires2FA && (
-          <Alert severity="error" sx={{ mb: 2 }} onClose={clearError}>{error}</Alert>
+          <Alert 
+            severity={error.includes('Cuenta no activada') ? 'warning' : 'error'} 
+            sx={{ mb: 2 }} 
+            onClose={clearError}
+          >
+            {error}
+            {showResendEmail && (
+              <Box mt={1}>
+                <Link 
+                  component="button" 
+                  variant="body2" 
+                  onClick={handleResendEmail}
+                  sx={{ fontWeight: 'bold', cursor: 'pointer', textDecoration: 'underline' }}
+                  color="inherit"
+                >
+                  Reenviar email de confirmación
+                </Link>
+              </Box>
+            )}
+          </Alert>
         )}
 
         <form onSubmit={formik.handleSubmit}>
@@ -191,16 +235,27 @@ const LoginPage: React.FC = () => {
         </Box>
       </AuthFormContainer>
 
-      {/* ✅ MODAL REUTILIZABLE PARA LOGIN CON 2FA */}
       <TwoFactorAuthModal
         open={requires2FA}
         onClose={handleCancel2FA}
         onSubmit={handleVerify2FA}
         isLoading={isLoading}
-        error={error} // El error de "Código incorrecto" viene del contexto
+        error={error}
         title="Login Seguro"
         description="Tu cuenta está protegida con verificación en dos pasos. Ingresa el código de tu aplicación."
       />
+
+      <Snackbar
+        open={resendSuccess}
+        autoHideDuration={6000}
+        onClose={() => setResendSuccess(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={() => setResendSuccess(false)} severity="success" sx={{ width: '100%' }}>
+          Email de confirmación reenviado. Revisa tu bandeja de entrada.
+        </Alert>
+      </Snackbar>
+
     </PageContainer>
   );
 };

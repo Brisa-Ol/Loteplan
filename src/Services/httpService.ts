@@ -2,7 +2,12 @@
 import axios, { type AxiosResponse, type InternalAxiosRequestConfig } from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-
+// ✅ 1. DEFINICIÓN DE LA INTERFAZ CUSTOMERROR (Esto es lo que te falta)
+export interface CustomError extends Error {
+  type?: 'SECURITY_ACTION' | 'ROLE_RESTRICTION' | 'NETWORK_ERROR' | 'UNKNOWN';
+  originalError?: unknown;
+  response?: any; // Opcional, por si quieres acceder a la data de axios
+}
 const httpService = axios.create({
   baseURL: API_BASE_URL,
   headers: {

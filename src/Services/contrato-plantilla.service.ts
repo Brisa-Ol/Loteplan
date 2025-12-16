@@ -7,6 +7,9 @@ import type {
   ContratoActionResponse 
 } from '../types/dto/contrato.dto';
 
+// Ajusta la ruta base según tu backend (en tu router es /contratos/plantillas)
+const ENDPOINT = '/contratos/plantillas';
+
 const ContratoPlantillaService = {
 
   // =================================================
@@ -15,7 +18,8 @@ const ContratoPlantillaService = {
 
   create: async (data: CreatePlantillaDto): Promise<AxiosResponse<{ message: string, plantilla: ContratoPlantillaDto }>> => {
     const formData = new FormData();
-    // ⚠️ IMPORTANTE: El backend middleware 'uploadPlantilla' busca exactamente 'plantillaFile'
+    
+    // ✅ CRÍTICO: Backend espera uploadPlantilla = pdfUploadBase.single("plantillaFile")
     formData.append('plantillaFile', data.file); 
     
     formData.append('nombre_archivo', data.nombre_archivo);
@@ -25,23 +29,23 @@ const ContratoPlantillaService = {
       formData.append('id_proyecto', data.id_proyecto.toString());
     }
 
-    return await httpService.post('/contratos/plantillas/upload', formData, {
+    return await httpService.post(`${ENDPOINT}/upload`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
   },
 
   updatePdf: async (data: UpdatePlantillaPdfDto): Promise<AxiosResponse<{ message: string, plantilla: ContratoPlantillaDto }>> => {
     const formData = new FormData();
-    // ⚠️ IMPORTANTE: 'plantillaFile' aquí también
+    // ✅ CRÍTICO: Aquí también es 'plantillaFile'
     formData.append('plantillaFile', data.file); 
 
-    return await httpService.post(`/contratos/plantillas/update-pdf/${data.id}`, formData, {
+    return await httpService.post(`${ENDPOINT}/update-pdf/${data.id}`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
   },
 
   softDelete: async (id: number): Promise<AxiosResponse<ContratoActionResponse>> => {
-    return await httpService.put(`/contratos/plantillas/soft-delete/${id}`);
+    return await httpService.put(`${ENDPOINT}/soft-delete/${id}`);
   },
 
   // =================================================
@@ -49,19 +53,19 @@ const ContratoPlantillaService = {
   // =================================================
 
   findAll: async (): Promise<AxiosResponse<ContratoPlantillaDto[]>> => {
-    return await httpService.get('/contratos/plantillas/all');
+    return await httpService.get(`${ENDPOINT}/all`);
   },
 
   findUnassociated: async (): Promise<AxiosResponse<ContratoPlantillaDto[]>> => {
-    return await httpService.get('/contratos/plantillas/unassociated');
+    return await httpService.get(`${ENDPOINT}/unassociated`);
   },
 
   findByProject: async (idProyecto: number): Promise<AxiosResponse<ContratoPlantillaDto[]>> => {
-    return await httpService.get(`/contratos/plantillas/project/${idProyecto}`);
+    return await httpService.get(`${ENDPOINT}/project/${idProyecto}`);
   },
 
   getByProjectAndVersion: async (idProyecto: number, version: number): Promise<AxiosResponse<ContratoPlantillaDto>> => {
-    return await httpService.get(`/contratos/plantilla/${idProyecto}/${version}`);
+    return await httpService.get(`${ENDPOINT}/plantilla/${idProyecto}/${version}`);
   }
 };
 

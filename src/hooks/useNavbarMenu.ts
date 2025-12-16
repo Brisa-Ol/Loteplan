@@ -9,10 +9,10 @@ import {
   Dashboard as DashboardIcon,
   Construction as ConstructionIcon,
   Terrain as TerrainIcon,
-  Paid as PaidIcon, // ✅ Mantenemos tu icono personalizado
+  Paid as PaidIcon,
   Assignment as AssignmentIcon,
   Settings as SettingsIcon,
-  AdminPanelSettings as AdminIcon, // Alias para usar en items
+  AdminPanelSettings as AdminIcon,
   AttachMoney as AttachMoneyIcon,
   Receipt as ReceiptIcon,
   AccountBalance as AccountBalanceIcon,
@@ -24,10 +24,6 @@ import {
   Logout as LogoutIcon,
   type SvgIconComponent,
 } from "@mui/icons-material";
-
-// ==========================================
-// 1. DEFINICIÓN DE TIPOS
-// ==========================================
 
 export interface NavItem {
   label: string;
@@ -53,18 +49,12 @@ export const NAVBAR_HEIGHT = {
   desktop: 72,
 };
 
-// ==========================================
-// 2. EL HOOK FINAL (MEJORADO)
-// ==========================================
-
 export const useNavbarMenu = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   
-  // ✅ 1. Manejamos el estado del modal aquí
   const [openLogout, setOpenLogout] = useState(false);
 
-  // ✅ 2. Definimos las props para el diálogo
   const logoutProps = {
     open: openLogout,
     onClose: () => setOpenLogout(false),
@@ -79,7 +69,6 @@ export const useNavbarMenu = () => {
     // ════════════════════════════════════════════════════════
     // A. ADMINISTRADOR
     // ════════════════════════════════════════════════════════
-    // Usamos ?. para evitar error si user es null
     if (user?.rol === "admin") {
       const adminNavItems: NavItem[] = [
         { label: "Dashboard", path: "/admin/dashboard", icon: DashboardIcon },
@@ -88,7 +77,7 @@ export const useNavbarMenu = () => {
           icon: PersonIcon, 
           submenu: [
             { label: "Control de Usuarios", path: "/admin/usuarios", icon: ConstructionIcon },
-            { label: "Verificacion de usuarios", path: "/admin/KYC", icon: AdminPanelSettingsIcon }, // Mejor icono para KYC
+            { label: "Verificacion de usuarios", path: "/admin/KYC", icon: AdminPanelSettingsIcon },
           ],
         },
         { 
@@ -121,7 +110,7 @@ export const useNavbarMenu = () => {
         },
         {
           label: "Finanzas",
-          icon: AccountBalanceIcon, // Icono más acorde a Finanzas
+          icon: AccountBalanceIcon,
           submenu: [
             { label: "Control de Pagos", path: "/admin/Pagos", icon: AttachMoneyIcon },
             { label: "Transacciones", path: "/admin/transacciones", icon: ReceiptIcon },
@@ -132,7 +121,6 @@ export const useNavbarMenu = () => {
 
       const adminUserNavItems: NavItem[] = [
         {
-          // ✅ FIX: user?.nombre protege contra null
           label: user?.nombre || "Admin",
           icon: AccountCircleIcon,
           submenu: [
@@ -161,9 +149,7 @@ export const useNavbarMenu = () => {
     // B. CLIENTE
     // ════════════════════════════════════════════════════════
     if (user?.rol === "cliente") {
-      // ✅ FIX CRÍTICO: Agregamos ?. en (user as any)?.estado_kyc
       const kycStatus = (user as any)?.estado_kyc || 'SIN_INICIAR';
-      // ✅ FIX CRÍTICO: Agregamos user?.is_2fa_enabled
       const isVerified = kycStatus === "APROBADA" && user?.is_2fa_enabled;
 
       const clientNavItems: NavItem[] = [
@@ -176,7 +162,8 @@ export const useNavbarMenu = () => {
             { label: "Para Inversionistas", path: "/como-funciona/inversionista", icon: AttachMoneyIcon },
           ],
         },
-        { label: "Proyectos", path: "/client/proyectos/seleccion" },
+        // ✅ CAMBIO: Ahora apunta a la página de selección de rol
+        { label: "Proyectos", path: "/proyectos/RolSeleccion" },
         {
             label: "Mis Finanzas",
             icon: AccountBalanceIcon,
@@ -184,8 +171,7 @@ export const useNavbarMenu = () => {
                 { label: "Inversiones", path: "/MisInversiones", icon: AttachMoneyIcon },
                 { label: "Suscripciones", path: "/client/suscripciones", icon: SupervisedUserIcon },
                 { label: "Subastas", path: "/client/subastas", icon: GavelIcon },
-               { isDivider: true, label: "Pagos" }, // Separador visual
-                
+                { isDivider: true, label: "Pagos" },
                 { label: "Cuotas a Pagar", path: "/pagos", icon: AttachMoneyIcon }, 
                 { label: "Historial Transacciones", path: "/client/transacciones", icon: ReceiptIcon }, 
                 { label: "Resumen de Cuenta", path: "/MisResumenes", icon: DescriptionIcon }, 
@@ -199,7 +185,6 @@ export const useNavbarMenu = () => {
                 { label: "Contratos", path: "/client/Contratos", icon: GavelIcon },
             ]
         },
-
         {
             label: "Seguridad",
             icon: AccountBalanceIcon,
@@ -211,7 +196,6 @@ export const useNavbarMenu = () => {
             { label: "Proteger mi acceso", path: "/client/seguridad", icon: AdminPanelSettingsIcon },
             ]
         },
-            
       ];
 
       const clientUserNavItems: NavItem[] = [
@@ -222,7 +206,6 @@ export const useNavbarMenu = () => {
             { label: "Mi Perfil", path: "/client/perfil", icon: AccountCircleIcon },
             { label: "Mensajes", path: "/client/mensajes", icon: DescriptionIcon },
             { isDivider: true, label: "" },
-
             {
               label: "Cerrar Sesión",
               icon: LogoutIcon,
@@ -257,8 +240,8 @@ export const useNavbarMenu = () => {
             { label: "Para Inversionistas", path: "/como-funciona/inversionista", icon: AttachMoneyIcon },
           ],
         },
-
-        { label: "Proyectos", path: "/client/proyectos/seleccion" },
+        // ✅ CAMBIO: Para usuarios no logueados también apunta a RolSeleccion
+        { label: "Proyectos", path: "/proyectos/RolSeleccion" },
         { label: "Nosotros", path: "/nosotros" },
       ],
       userNavItems: [],

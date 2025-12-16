@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   Box, Typography, Button, Stack, Chip, LinearProgress, 
   Paper, Divider, Tabs, Tab, Skeleton, Alert, Tooltip,
@@ -14,22 +14,30 @@ import SuscripcionService from '../../../Services/suscripcion.service';
 import InversionService from '../../../Services/inversion.service';
 import ImagenService from '../../../Services/imagen.service';
 import TransaccionService from '../../../Services/transaccion.service';
+import ContratoService from '../../../Services/contrato.service'; // ✅ Servicio unificado
+
+// --- TIPOS ---
+import type { ContratoFirmadoDto } from '../../../types/dto/contrato.dto';
 
 // --- HOOKS ---
-import { useModal } from '../../../hooks/useModal'; // ✅ Usando tu hook
+import { useModal } from '../../../hooks/useModal';
 
 // --- COMPONENTES COMUNES ---
 import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
 import { useAuth } from '../../../context/AuthContext';
-import ModalFirmaContrato from '../Contratos/components/ModalFirmaContrato';
-import { VerContratoModal } from '../Contratos/components/VerContratoModal';
-import { ListaLotesProyecto } from '../Lotes/ListaLotesProyecto';
 import TwoFactorAuthModal from '../../../components/common/TwoFactorAuthModal/TwoFactorAuthModal';
 
-// --- MODALES DE PAGO/INVERSIÓN ---
+// --- COMPONENTES DE CONTRATOS ---
+import ModalFirmaContrato from '../Contratos/components/ModalFirmaContrato';
+import { VerContratoModal } from '../Contratos/components/VerContratoModal'; // Ver Plantilla
+
+
+// --- COMPONENTES DE PROYECTO ---
+import { ListaLotesProyecto } from '../Lotes/ListaLotesProyecto';
 import { SuscribirseModal } from './components/SuscribirseModal';
 import { ConfirmarInversionModal } from './components/ConfirmarInversionModal';
 import { PagoExitosoModal } from './components/PagoExitosoModal'; 
+import { VerContratoFirmadoModal } from './components/VerContratoFirmadoModal';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -50,46 +58,96 @@ const DetalleProyecto: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation(); 
   const { user } = useAuth(); 
+  const queryClient = useQueryClient();
   
-  // --- ESTADOS VISUALES ---
+  // --- ESTADOS LÓGICOS ---
   const [tabValue, setTabValue] = useState(0);
-  const [yaFirmo, setYaFirmo] = useState(false); // ✅ Estado para cambiar el botón visualmente
+  const [yaFirmo, setYaFirmo] = useState(false); 
+  const [puedeFirmar, setPuedeFirmar] = useState(false);
   
-  // --- GESTIÓN DE MODALES (Hook useModal) ---
+  // Estado para el modal de visualización de contrato firmado
+  const [contratoFirmadoSeleccionado, setContratoFirmadoSeleccionado] = useState<ContratoFirmadoDto | null>(null);
+  
+  // --- MODALES (Hooks) ---
   const firmaModal = useModal();
-  const contratoModal = useModal();
+  const contratoModal = useModal(); // Ver Plantilla
   const suscribirseModal = useModal();
   const inversionModal = useModal();
   const pagoExitosoModal = useModal();
   const twoFAModal = useModal();
   
-  // --- ESTADOS DE VERIFICACIÓN DE PAGO (POLLING) ---
+  // --- ESTADOS DE PROCESO ---
   const [verificandoPago, setVerificandoPago] = useState(false);
   const pollingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  // --- ESTADOS DATOS 2FA ---
   const [pendingTransactionId, setPendingTransactionId] = useState<number | null>(null);
   const [error2FA, setError2FA] = useState<string | null>(null);
 
-  // 1. QUERY: Obtener Proyecto
+  // ==========================================
+  // 1. QUERIES (Datos del servidor)
+  // ==========================================
+
+  // A. Obtener Proyecto
   const { data: proyecto, isLoading, error } = useQuery({
     queryKey: ['proyecto', id],
-    queryFn: async () => {
-      if (!id) throw new Error('ID inválido');
-      const res = await ProyectoService.getByIdActive(Number(id));
-      return res.data;
-    },
+    queryFn: async () => (await ProyectoService.getByIdActive(Number(id))).data,
     retry: false
   });
 
-  // Opcional: Si el backend ya trae si el usuario firmó, inicializamos el estado
-  // useEffect(() => {
-  //   if (proyecto?.usuario_ya_firmo) setYaFirmo(true);
-  // }, [proyecto]);
+  // B. Obtener Contratos Firmados (Para saber si ya firmó y obtener el PDF final)
+  const { data: misContratos } = useQuery({
+    queryKey: ['misContratos'],
+    queryFn: async () => (await ContratoService.getMyContracts()).data,
+    enabled: !!user,
+  });
 
-  // ===========================================================================
-  // 🔄 LOGICA DE RETORNO DE MERCADO PAGO (POLLING)
-  // ===========================================================================
+  // C. Obtener Inversiones (Para habilitar firma si es Directo)
+  const { data: misInversiones } = useQuery({
+    queryKey: ['misInversiones'],
+    queryFn: async () => (await InversionService.getMisInversiones()).data,
+    enabled: !!user && proyecto?.tipo_inversion === 'directo',
+  });
+
+  // D. Obtener Suscripciones (Para habilitar firma si es Mensual)
+  const { data: misSuscripciones } = useQuery({
+    queryKey: ['misSuscripciones'],
+    queryFn: async () => (await SuscripcionService.getMisSuscripciones()).data,
+    enabled: !!user && proyecto?.tipo_inversion === 'mensual',
+  });
+
+  // ==========================================
+  // 2. EFECTOS (Lógica de Negocio)
+  // ==========================================
+
+  // Detectar si YA FIRMÓ
+  useEffect(() => {
+    if (misContratos && proyecto) {
+      // Buscamos si existe un contrato FIRMADO y ACTIVO para este proyecto
+      const contrato = misContratos.find(c => c.id_proyecto === proyecto.id && c.estado_firma === 'FIRMADO');
+      if (contrato) {
+        setYaFirmo(true);
+      }
+    }
+  }, [misContratos, proyecto]);
+
+  // Detectar si PUEDE FIRMAR (Tiene pago realizado)
+  useEffect(() => {
+    if (!proyecto || !user) return;
+    
+    let tienePermiso = false;
+
+    if (proyecto.tipo_inversion === 'directo' && misInversiones) {
+      const inv = misInversiones.find(i => i.id_proyecto === proyecto.id && i.estado === 'pagado');
+      if (inv) tienePermiso = true;
+    } 
+    else if (proyecto.tipo_inversion === 'mensual' && misSuscripciones) {
+      const sub = misSuscripciones.find(s => s.id_proyecto === proyecto.id && s.activo);
+      if (sub) tienePermiso = true;
+    }
+
+    setPuedeFirmar(tienePermiso);
+  }, [proyecto, user, misInversiones, misSuscripciones]);
+
+  // Lógica de Retorno de Mercado Pago (Polling)
   useEffect(() => {
     const query = new URLSearchParams(location.search);
     const status = query.get('status');
@@ -101,138 +159,119 @@ const DetalleProyecto: React.FC = () => {
         alert("El pago fue rechazado o no se completó.");
         limpiarUrl();
     }
-
-    return () => {
-        if (pollingTimeoutRef.current) clearTimeout(pollingTimeoutRef.current);
-    };
+    return () => { if (pollingTimeoutRef.current) clearTimeout(pollingTimeoutRef.current); };
   }, [location]);
 
-  const limpiarUrl = () => {
-      window.history.replaceState({}, document.title, window.location.pathname);
-  };
+  const limpiarUrl = () => window.history.replaceState({}, document.title, window.location.pathname);
 
   const verificarEstadoPago = async (transaccionId: number, intentos = 0) => {
       setVerificandoPago(true);
-
       try {
-          const res = await TransaccionService.getMyTransactionById(transaccionId);
-          const transaccion = res.data;
-
-          if (transaccion.estado_transaccion === 'pagado') {
-              // ✅ ÉXITO
+          const { data } = await TransaccionService.getMyTransactionById(transaccionId);
+          if (data.estado_transaccion === 'pagado') {
               setVerificandoPago(false);
               limpiarUrl();
-              pagoExitosoModal.open(); // Hook
+              queryClient.invalidateQueries({ queryKey: ['misInversiones'] });
+              queryClient.invalidateQueries({ queryKey: ['misSuscripciones'] });
+              pagoExitosoModal.open(); 
           } else {
-              // ⏳ PENDIENTE
               if (intentos < 10) { 
-                  pollingTimeoutRef.current = setTimeout(() => {
-                      verificarEstadoPago(transaccionId, intentos + 1);
-                  }, 3000);
+                  pollingTimeoutRef.current = setTimeout(() => verificarEstadoPago(transaccionId, intentos + 1), 3000);
               } else {
                   setVerificandoPago(false);
-                  alert("El pago fue aprobado en Mercado Pago pero aún no impacta en nuestro sistema. Por favor espera unos minutos y verifica en 'Mis Transacciones'.");
+                  alert("Pago aprobado en MP. Espera unos minutos a que impacte en el sistema.");
                   limpiarUrl();
               }
           }
       } catch (error) {
-          console.error("Error verificando pago:", error);
           setVerificandoPago(false);
       }
   };
 
-  // ===========================================================================
-  // 🔗 TRANSICIONES Y HANDLERS
-  // ===========================================================================
-  
+  // ==========================================
+  // 3. HANDLERS (Acciones)
+  // ==========================================
+
   const handleContinuarAFirma = () => {
     pagoExitosoModal.close(); 
-    setTimeout(() => {
+    // Pequeño delay para UX y asegurar que los datos refrescados estén listos
+    setTimeout(() => { 
+        setPuedeFirmar(true); 
         firmaModal.open(); 
-    }, 300);
+    }, 500);
   };
 
-  // ✅ Nueva función: Se ejecuta cuando la firma es exitosa
   const handleFirmaExitosa = () => {
-    setYaFirmo(true); // Cambia el botón a verde
-    firmaModal.close(); // Cierra el modal
-    // No redirigimos para que el usuario vea el cambio visual
+    setYaFirmo(true);
+    firmaModal.close();
+    queryClient.invalidateQueries({ queryKey: ['misContratos'] });
   };
 
-  // 2. MUTATION: Iniciar Inversión
+  // Handler para abrir el contrato ya firmado
+  const handleVerContratoFirmado = () => {
+    if (!misContratos || !proyecto) return;
+    const contrato = misContratos.find(c => c.id_proyecto === proyecto.id && c.estado_firma === 'FIRMADO');
+    
+    if (contrato) {
+        setContratoFirmadoSeleccionado(contrato); // Esto abre el modal automáticamente
+    } else {
+        alert("No se encontró el documento firmado. Por favor recarga la página.");
+    }
+  };
+
   const handleInversion = useMutation({
     mutationFn: async () => {
-      if (!proyecto) throw new Error("Proyecto no cargado.");
-
+      if (!proyecto) throw new Error("Error de proyecto");
       if (proyecto.tipo_inversion === 'mensual') {
          const res = await SuscripcionService.iniciar({ id_proyecto: proyecto.id });
-         return { type: 'suscripcion', data: res.data };
+         return res.data;
       } 
       const res = await InversionService.iniciar({ id_proyecto: proyecto.id });
-      return { type: 'inversion', data: res.data };
+      return res.data;
     },
-    onSuccess: ({ type, data }: any) => {
-      suscribirseModal.close();
-      inversionModal.close();
-
-      if (!data) return;
-
-      // A. Backend pide 2FA
+    onSuccess: (data: any) => {
+      suscribirseModal.close(); inversionModal.close();
       if (data.is2FARequired && data.transaccionId) {
         setPendingTransactionId(data.transaccionId);
         twoFAModal.open();
-        return;
+      } else {
+        manejarRedireccionExito(data);
       }
-      // B. Éxito directo
-      manejarRedireccionExito(data);
     },
     onError: (err: any) => {
-      const msg = err.response?.data?.error || err.message || 'Error al procesar';
-      alert(`Error: ${msg}`);
-      suscribirseModal.close();
-      inversionModal.close();
+      alert(`Error: ${err.response?.data?.error || err.message}`);
+      suscribirseModal.close(); inversionModal.close();
     }
   });
 
-  // 3. MUTATION: Confirmar 2FA
   const confirmar2FAMutation = useMutation({
     mutationFn: async (codigo: string) => {
-      if (!pendingTransactionId) throw new Error("ID de transacción perdido");
-      return (await SuscripcionService.confirmar2FA({ 
-          transaccionId: pendingTransactionId, 
-          codigo_2fa: codigo 
-      })).data;
+      if (!pendingTransactionId) throw new Error("ID perdido");
+      return (await SuscripcionService.confirmar2FA({ transaccionId: pendingTransactionId, codigo_2fa: codigo })).data;
     },
     onSuccess: (data) => {
-      twoFAModal.close();
-      setError2FA(null);
+      twoFAModal.close(); setError2FA(null);
       manejarRedireccionExito(data);
     },
-    onError: (err: any) => {
-      setError2FA(err.response?.data?.message || "Código incorrecto");
-    }
+    onError: (err: any) => setError2FA(err.response?.data?.message || "Código incorrecto")
   });
 
   const manejarRedireccionExito = (data: any) => {
-      if (data.redirectUrl || (data.url_pago_sugerida && data.url_pago_sugerida.startsWith('http'))) {
-        window.location.href = data.redirectUrl || data.url_pago_sugerida;
-        return;
-      } 
-      pagoExitosoModal.open();
+      if (data.redirectUrl) window.location.href = data.redirectUrl;
+      else {
+        // Caso: Pago interno o saldo a favor
+        queryClient.invalidateQueries({ queryKey: ['misInversiones'] });
+        queryClient.invalidateQueries({ queryKey: ['misSuscripciones'] });
+        pagoExitosoModal.open();
+      }
   };
 
   const is2FAMissing = !!(user && !user.is_2fa_enabled);
 
   const handleMainAction = () => {
     if (!user) return navigate('/login', { state: { from: window.location.pathname }});
-    if (is2FAMissing) return; 
-    if (!proyecto) return;
-
-    if (proyecto.tipo_inversion === 'mensual') {
-        suscribirseModal.open();
-    } else {
-        inversionModal.open();
-    }
+    if (proyecto?.tipo_inversion === 'mensual') suscribirseModal.open();
+    else inversionModal.open();
   };
 
   const handleClickFirmar = () => {
@@ -246,137 +285,111 @@ const DetalleProyecto: React.FC = () => {
 
   const handleTabChange = (_: React.SyntheticEvent, newValue: number) => setTabValue(newValue);
 
-  // Helpers visuales
-  const coverImage = proyecto?.imagenes?.[0]
-    ? ImagenService.resolveImageUrl(proyecto.imagenes[0].url)
-    : '/assets/placeholder-project.jpg'; 
-  const porcentaje = (proyecto?.tipo_inversion === 'mensual' && proyecto?.obj_suscripciones > 0)
-    ? (proyecto.suscripciones_actuales / proyecto.obj_suscripciones) * 100 : 0;
+  // ==========================================
+  // 4. RENDER
+  // ==========================================
+  const coverImage = proyecto?.imagenes?.[0] ? ImagenService.resolveImageUrl(proyecto.imagenes[0].url) : '/assets/placeholder-project.jpg'; 
+  const porcentaje = (proyecto?.tipo_inversion === 'mensual' && proyecto?.obj_suscripciones > 0) ? (proyecto.suscripciones_actuales / proyecto.obj_suscripciones) * 100 : 0;
   const mostrarTabLotes = proyecto?.tipo_inversion === 'directo' || (proyecto?.lotes && proyecto.lotes.length > 0);
 
   if (isLoading) return <PageContainer><Skeleton variant="rectangular" height={400} /><Box mt={2}><Skeleton width="60%" /></Box></PageContainer>;
-  if (error || !proyecto) return <PageContainer><Alert severity="error">Proyecto no encontrado</Alert><Button onClick={() => navigate(-1)}>Volver</Button></PageContainer>;
+  if (!proyecto) return <PageContainer><Alert severity="error">Proyecto no encontrado</Alert></PageContainer>;
 
   return (
     <PageContainer maxWidth="xl">
-      {/* ⏳ BACKDROP VERIFICACIÓN */}
-      <Backdrop
-        sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1, flexDirection: 'column', gap: 2 }}
-        open={verificandoPago}
-      >
-        <CircularProgress color="inherit" size={60} />
-        <Typography variant="h6" fontWeight="bold">Verificando acreditación del pago...</Typography>
-        <Typography variant="body2">Por favor no cierres esta ventana.</Typography>
+      <Backdrop sx={{ color: '#fff', zIndex: 9999 }} open={verificandoPago}>
+        <CircularProgress color="inherit" />
       </Backdrop>
 
       {/* HERO SECTION */}
-      <Box sx={{ position: 'relative', height: { xs: 300, md: 450 }, width: '100%', borderRadius: 4, overflow: 'hidden', mb: 4, boxShadow: 3 }}>
+      <Box sx={{ position: 'relative', height: { xs: 300, md: 450 }, borderRadius: 4, overflow: 'hidden', mb: 4 }}>
         <Box component="img" src={coverImage} sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-        <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.85), transparent)', p: { xs: 3, md: 5 }, color: 'white' }}>
+        <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.8), transparent)', p: 4, color: 'white' }}>
           <Stack direction="row" spacing={1} mb={1}>
-            <Chip label={proyecto.tipo_inversion === 'mensual' ? 'Ahorro' : 'Inversión Directa'} color="primary" sx={{ fontWeight: 'bold' }} />
-            <Chip label={proyecto.estado_proyecto} color={proyecto.estado_proyecto === 'En proceso' ? 'success' : 'default'} />
+             <Chip label={proyecto.tipo_inversion === 'mensual' ? 'Ahorro' : 'Inversión Directa'} color="primary" sx={{ fontWeight: 'bold' }} />
+             <Chip label={proyecto.estado_proyecto} color={proyecto.estado_proyecto === 'En proceso' ? 'success' : 'default'} />
           </Stack>
-          <Typography variant="h3" fontWeight={700} sx={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>{proyecto.nombre_proyecto}</Typography>
-          <Box display="flex" alignItems="center" gap={1} mt={1} sx={{ opacity: 0.9 }}>
-            <LocationOn fontSize="small" />
-            <Typography variant="subtitle1">{proyecto.forma_juridica || 'Ubicación no especificada'}</Typography>
-          </Box>
+          <Typography variant="h3" fontWeight={700}>{proyecto.nombre_proyecto}</Typography>
         </Box>
       </Box>
 
       <Box sx={{ display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, gap: 4 }}>
         {/* IZQUIERDA: Tabs */}
         <Box sx={{ flex: 1, minWidth: 0 }}> 
-          <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-            <Tabs value={tabValue} onChange={handleTabChange}>
-              <Tab label="Descripción" />
-              <Tab label="Galería" />
-              <Tab label="Lotes Disponibles" disabled={!mostrarTabLotes} />
-            </Tabs>
-          </Box>
+          <Tabs value={tabValue} onChange={(_, v) => setTabValue(v)} sx={{ borderBottom: 1, borderColor: 'divider' }}>
+            <Tab label="Descripción" />
+            <Tab label="Galería" />
+            <Tab label="Lotes Disponibles" disabled={!mostrarTabLotes} />
+          </Tabs>
           <CustomTabPanel value={tabValue} index={0}>
-            <Typography paragraph color="text.secondary" sx={{ whiteSpace: 'pre-line', lineHeight: 1.8 }}>{proyecto.descripcion}</Typography>
-            <Box mt={4} p={3} bgcolor="grey.50" borderRadius={2}>
-              <Typography variant="subtitle2" gutterBottom>Características</Typography>
-              <Stack direction="row" spacing={4} mt={2} flexWrap="wrap">
-                 <Box><Typography variant="caption" color="text.secondary">TIPO</Typography><Typography fontWeight="bold">{proyecto.tipo_inversion === 'mensual' ? 'Plan de Ahorro' : 'Compra Directa'}</Typography></Box>
-                 <Box><Typography variant="caption" color="text.secondary">ESTADO</Typography><Typography fontWeight="bold">{proyecto.estado_proyecto}</Typography></Box>
-              </Stack>
-            </Box>
+            <Typography paragraph sx={{ whiteSpace: 'pre-line' }}>{proyecto.descripcion}</Typography>
           </CustomTabPanel>
           <CustomTabPanel value={tabValue} index={1}>
              <Box display="grid" gridTemplateColumns="repeat(auto-fill, minmax(200px, 1fr))" gap={2}>
-                {proyecto.imagenes?.map((img) => (
-                  <Box key={img.id} component="img" src={ImagenService.resolveImageUrl(img.url)} sx={{ width: '100%', height: 150, objectFit: 'cover', borderRadius: 2 }} />
-                ))}
+                {proyecto.imagenes?.map((img) => <Box key={img.id} component="img" src={ImagenService.resolveImageUrl(img.url)} sx={{ width: '100%', borderRadius: 2 }} />)}
              </Box>
           </CustomTabPanel>
-          {mostrarTabLotes && (
-            <CustomTabPanel value={tabValue} index={2}>
-              <ListaLotesProyecto idProyecto={Number(id)} />
-            </CustomTabPanel>
-          )}
+          {mostrarTabLotes && <CustomTabPanel value={tabValue} index={2}><ListaLotesProyecto idProyecto={Number(id)} /></CustomTabPanel>}
         </Box>
 
         {/* DERECHA: Sidebar */}
         <Box sx={{ width: { xs: '100%', lg: 380 }, flexShrink: 0 }}>
-          <Paper elevation={3} sx={{ p: 4, borderRadius: 3, position: { lg: 'sticky' }, top: 100 }}>
-            <Typography variant="h5" fontWeight="bold" gutterBottom>Resumen de Inversión</Typography>
+          <Paper elevation={3} sx={{ p: 4, borderRadius: 3, position: 'sticky', top: 100 }}>
+            <Typography variant="h5" fontWeight="bold" gutterBottom>Resumen</Typography>
             <Divider sx={{ my: 2 }} />
             
             <Stack spacing={3}>
-               <Box display="flex" justifyContent="space-between" alignItems="center">
-                  <Typography color="text.secondary">Valor</Typography>
-                  <Typography variant="h5" color="primary.main" fontWeight="bold">{proyecto.moneda} {Number(proyecto.monto_inversion).toLocaleString()}</Typography>
+               <Box display="flex" justifyContent="space-between">
+                  <Typography>Valor</Typography>
+                  <Typography variant="h5" color="primary" fontWeight="bold">{proyecto.moneda} {Number(proyecto.monto_inversion).toLocaleString()}</Typography>
                </Box>
 
                {proyecto.tipo_inversion === 'mensual' && (
                  <Box>
-                    <Box display="flex" justifyContent="space-between" mb={1}><Typography variant="caption">Progreso</Typography><Typography variant="caption">{porcentaje.toFixed(0)}%</Typography></Box>
-                    <LinearProgress variant="determinate" value={porcentaje} sx={{ height: 10, borderRadius: 5 }} />
+                   <Box display="flex" justifyContent="space-between" mb={1}><Typography variant="caption">Progreso</Typography><Typography variant="caption">{porcentaje.toFixed(0)}%</Typography></Box>
+                   <LinearProgress variant="determinate" value={porcentaje} sx={{ height: 10, borderRadius: 5 }} />
                  </Box>
                )}
 
                {is2FAMissing && (
                 <Alert severity="warning" icon={<Security />}>
                   <Typography variant="body2" fontWeight="bold">Seguridad Requerida</Typography>
-                  <Typography variant="caption" display="block">Activa el 2FA para invertir.</Typography>
-                  <Button size="small" color="warning" onClick={() => navigate('/client/MiCuenta/SecuritySettings')}>
-                    Configurar Ahora
-                  </Button>
+                  <Button size="small" color="warning" onClick={() => navigate('/client/MiCuenta/SecuritySettings')}>Configurar 2FA</Button>
                 </Alert>
                )}
 
-               <Tooltip title={is2FAMissing ? "Activa el 2FA en tu perfil" : ""}>
-                 <span>
-                  <Button 
-                    variant="contained" size="large" fullWidth 
-                    disabled={handleInversion.isPending || is2FAMissing}
-                    onClick={handleMainAction}
-                  >
-                    {handleInversion.isPending ? 'Procesando...' : proyecto.tipo_inversion === 'mensual' ? 'Suscribirme' : 'Invertir'}
-                  </Button>
-                 </span>
-               </Tooltip>
+               {/* BOTÓN INVERTIR (Oculto si ya pagó) */}
+               {!yaFirmo && !puedeFirmar && (
+                 <Tooltip title={is2FAMissing ? "Activa 2FA" : ""}>
+                   <span>
+                    <Button 
+                      variant="contained" size="large" fullWidth 
+                      disabled={handleInversion.isPending || is2FAMissing}
+                      onClick={handleMainAction}
+                    >
+                      {handleInversion.isPending ? 'Procesando...' : proyecto.tipo_inversion === 'mensual' ? 'Suscribirme' : 'Invertir'}
+                    </Button>
+                   </span>
+                 </Tooltip>
+               )}
 
-               {/* ✅ LÓGICA DEL BOTÓN DE FIRMA MODIFICADA */}
+               {/* ZONA DE CONTRATOS */}
                {user && proyecto.tipo_inversion === 'mensual' && (
                  <>
                    {yaFirmo ? (
-                     // ESTADO: YA FIRMADO (Botón verde solido)
+                     // ✅ 1. ESTADO: FIRMADO -> Botón verde que abre el modal de visualización
                      <Button 
                        variant="contained" 
                        color="success" 
                        fullWidth 
-                       disabled
                        startIcon={<CheckCircle />}
-                       sx={{ "&.Mui-disabled": { bgcolor: 'success.main', color: 'white', opacity: 0.9 } }}
+                       onClick={handleVerContratoFirmado}
+                       sx={{ bgcolor: 'success.main', '&:hover': { bgcolor: 'success.dark' } }}
                      >
-                       Contrato Firmado
+                       Ver Contrato Firmado
                      </Button>
-                   ) : (
-                     // ESTADO: PENDIENTE
+                   ) : puedeFirmar ? (
+                     // ✅ 2. ESTADO: PAGADO PERO NO FIRMADO -> Botón para firmar
                      <Button 
                        variant="outlined" 
                        color="success" 
@@ -384,13 +397,20 @@ const DetalleProyecto: React.FC = () => {
                        fullWidth 
                        onClick={handleClickFirmar} 
                        disabled={is2FAMissing}
+                       sx={{ borderWidth: 2, '&:hover': { borderWidth: 2 } }}
                      >
-                       Firmar Contrato (Manual)
+                       Firmar Contrato (Pendiente)
                      </Button>
+                   ) : (
+                     // ✅ 3. ESTADO: NO PAGADO -> Mensaje informativo
+                     <Alert severity="info" sx={{ fontSize: '0.8rem' }}>
+                       Debes realizar el pago inicial para habilitar la firma del contrato.
+                     </Alert>
                    )}
 
+                   {/* Ver modelo siempre disponible si no ha firmado */}
                    {!yaFirmo && (
-                      <Button variant="text" fullWidth onClick={contratoModal.open}>Ver Plantilla</Button>
+                      <Button variant="text" fullWidth onClick={contratoModal.open}>Ver Modelo de Contrato</Button>
                    )}
                  </>
                )}
@@ -399,7 +419,7 @@ const DetalleProyecto: React.FC = () => {
         </Box>
       </Box>
 
-      {/* --- SECCIÓN DE MODALES --- */}
+      {/* --- MODALES --- */}
       {user && (
         <>
           <PagoExitosoModal 
@@ -407,7 +427,6 @@ const DetalleProyecto: React.FC = () => {
              onContinuar={handleContinuarAFirma} 
           />
 
-          {/* ✅ ModalFirmaContrato con spread props y el handler nuevo */}
           <ModalFirmaContrato 
              {...firmaModal.modalProps}
              idProyecto={Number(id)} 
@@ -419,6 +438,13 @@ const DetalleProyecto: React.FC = () => {
              {...contratoModal.modalProps}
              idProyecto={Number(id)} 
              nombreProyecto={proyecto.nombre_proyecto} 
+          />
+          
+          {/* ✅ NUEVO MODAL: Ver contrato ya firmado */}
+          <VerContratoFirmadoModal 
+             open={!!contratoFirmadoSeleccionado}
+             onClose={() => setContratoFirmadoSeleccionado(null)}
+             contrato={contratoFirmadoSeleccionado}
           />
           
           <SuscribirseModal 

@@ -6,7 +6,7 @@ import {
 import { Close as CloseIcon, Description as DescriptionIcon } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
 
-// Usa el servicio de plantillas especifico
+// Servicios
 import ContratoPlantillaService from '../../../../Services/contrato-plantilla.service';
 import ImagenService from '../../../../Services/imagen.service';
 import PDFViewerMejorado from './PDFViewerMejorado';
@@ -35,15 +35,25 @@ export const VerContratoModal: React.FC<Props> = ({
     <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth scroll="paper">
       <DialogTitle display="flex" justifyContent="space-between" alignItems="center">
         <Box display="flex" gap={1} alignItems="center">
-            <DescriptionIcon color="primary" /> Contrato: {nombreProyecto}
+            <DescriptionIcon color="primary" /> 
+            <Typography variant="h6">Modelo de Contrato: {nombreProyecto}</Typography>
         </Box>
         <IconButton onClick={onClose}><CloseIcon /></IconButton>
       </DialogTitle>
 
       <DialogContent dividers>
-        {isLoading && <CircularProgress />}
-        {error && <Alert severity="error">Error cargando el contrato.</Alert>}
+        {isLoading && (
+            <Box display="flex" justifyContent="center" p={3}>
+                <CircularProgress />
+            </Box>
+        )}
         
+        {error && <Alert severity="error">Error cargando el modelo de contrato.</Alert>}
+        
+        {!isLoading && !plantilla && (
+            <Alert severity="info">No hay una plantilla de contrato disponible para este proyecto.</Alert>
+        )}
+
         {plantilla && (
           <PDFViewerMejorado
             pdfUrl={ImagenService.resolveImageUrl(plantilla.url_archivo)}
@@ -55,7 +65,9 @@ export const VerContratoModal: React.FC<Props> = ({
       </DialogContent>
 
       <DialogActions>
-        <Button onClick={onClose} variant="contained">Entendido</Button>
+        <Button onClick={onClose} variant="contained" color="primary">
+          Entendido
+        </Button>
       </DialogActions>
     </Dialog>
   );

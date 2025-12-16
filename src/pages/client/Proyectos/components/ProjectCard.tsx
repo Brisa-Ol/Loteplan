@@ -1,5 +1,3 @@
-// src/components/common/ProjectCard/ProjectCard.tsx
-
 import React from "react";
 import {
   Card,
@@ -10,20 +8,19 @@ import {
   Box,
   Button,
 } from "@mui/material";
-import { useNavigate } from "react-router-dom";
+// Eliminamos useNavigate de aquí porque la navegación la controlará el padre
 import { LocationOn as LocationIcon } from "@mui/icons-material";
 import ImagenService from "../../../../Services/imagen.service";
 import type { ProyectoDto } from "../../../../types/dto/proyecto.dto";
 
-
-interface ProjectCardProps {
+export interface ProjectCardProps {
   project: ProyectoDto;
   type: "ahorrista" | "inversionista";
+  onClick?: () => void; // ✅ Prop opcional para manejar el click desde fuera
 }
 
-export const ProjectCard: React.FC<ProjectCardProps> = ({ project, type }) => {
-  const navigate = useNavigate();
-
+export const ProjectCard: React.FC<ProjectCardProps> = ({ project, type, onClick }) => {
+  
   // Lógica de estado visual
   const getStatusConfig = (status: string) => {
     switch(status) {
@@ -38,7 +35,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, type }) => {
   // Usamos el helper del servicio para la imagen
   const imageUrl = project.imagenes && project.imagenes.length > 0
     ? ImagenService.resolveImageUrl(project.imagenes[0].url)
-    : '/assets/placeholder-project.jpg'; // Ruta absoluta a public
+    : '/assets/placeholder-project.jpg'; 
 
   return (
     <Card
@@ -121,7 +118,8 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, type }) => {
             variant="contained"
             fullWidth
             sx={{ mt: 2 }}
-            onClick={() => navigate(`/proyectos/${project.id}`)}
+            // ✅ USAMOS LA PROP ONCLICK
+            onClick={onClick} 
           >
             Ver Detalles
           </Button>

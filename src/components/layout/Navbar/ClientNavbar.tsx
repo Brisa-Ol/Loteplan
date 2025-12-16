@@ -29,6 +29,7 @@ const NavDropdown: React.FC<{ item: NavItem }> = ({ item }) => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
 
+  // Verificar si alguna ruta hija está activa
   const isChildActive = item.submenu?.some(sub =>
     sub.path && location.pathname.startsWith(sub.path)
   );
@@ -98,14 +99,16 @@ const ClientNavbar: React.FC = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuAnchor, setUserMenuAnchor] = useState<null | HTMLElement>(null);
 
+  // Query para mensajes no leídos (Solo si está autenticado)
   const { data: unreadData } = useQuery({
-    queryKey: ['mensajesNoLeidos'], // Clave para invalidar cuando se lea un mensaje
+    queryKey: ['mensajesNoLeidos'],
     queryFn: async () => (await MensajeService.getUnreadCount()).data,
-    refetchInterval: 30000, // Actualiza cada 30 segundos
-    enabled: !!user // Solo si está logueado
+    refetchInterval: 60000, // Cada 1 minuto es suficiente
+    enabled: !!user && isAuthenticated, // ✅ CRÍTICO: Solo ejecuta si hay usuario
+    retry: false // No reintentar si falla (ej: token expirado)
   });
 
-  const unreadCount = unreadData?.cantidad || 0; // Ajusta según tu DTO ({ cantidad: number } o { count: number })
+  const unreadCount = unreadData?.cantidad || 0;
 
   // Handlers
   const handleNavigate = (path: string) => {
@@ -136,10 +139,10 @@ const ClientNavbar: React.FC = () => {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
             <Avatar sx={{ bgcolor: 'primary.main' }}>{user.nombre?.charAt(0)}</Avatar>
             <Box>
-              <Typography variant="subtitle2" fontWeight={600}>
+              <Typography variant="subtitle2" fontWeight={600} noWrap>
                 {user.nombre} {user.apellido}
               </Typography>
-              <Typography variant="caption" color="text.secondary">
+              <Typography variant="caption" color="text.secondary" noWrap>
                 {user.email}
               </Typography>
             </Box>
@@ -200,7 +203,7 @@ const ClientNavbar: React.FC = () => {
           );
         })}
 
-        {/* Menú de Usuario Mobile */}
+        {/* Menú de Usuario Mobile (Logout, Perfil) */}
         {isAuthenticated && userNavItems[0]?.submenu?.map((sub, idx) => {
           if (sub.isDivider) return <Divider key={`u-${idx}`} />;
           const SubIcon = sub.icon;

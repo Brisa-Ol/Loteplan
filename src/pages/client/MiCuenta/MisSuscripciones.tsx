@@ -1,10 +1,10 @@
-// src/pages/MiCuenta/MisSuscripciones.tsx
+// src/pages/client/MiCuenta/MisSuscripciones.tsx
 
 import React, { useState, useEffect } from 'react';
 import { 
   Typography, Paper, Stack, Button, CircularProgress, Alert, Box, Chip,
   Dialog, DialogTitle, DialogContent, DialogActions, DialogContentText,
-  Tabs, Tab, Divider
+  Tabs, Tab
 } from '@mui/material';
 import { 
   Cancel as CancelIcon, 
@@ -17,11 +17,13 @@ import {
 import { useNavigate } from 'react-router-dom';
 
 // --- SERVICIOS Y TIPOS ---
+// Ajusta la ruta de importación según tu estructura real
 import SuscripcionService from '../../../Services/suscripcion.service';
 import type { SuscripcionDto, SuscripcionCanceladaDto } from '../../../types/dto/suscripcion.dto';
 
 // --- COMPONENTES COMUNES ---
-import { PageContainer, PageHeader } from '../../../components/common'; 
+import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
+import { PageHeader } from '../../../components/common/PageHeader/PageHeader';
 import { QueryHandler } from '../../../components/common/QueryHandler/QueryHandler';
 
 const MisSuscripciones: React.FC = () => {
@@ -39,7 +41,6 @@ const MisSuscripciones: React.FC = () => {
   // Estados para cancelar (Modal)
   const [isCancelling, setIsCancelling] = useState(false);
   const [openConfirm, setOpenConfirm] = useState(false);
-  // Guardamos el objeto completo para mostrar info detallada en el modal
   const [subscriptionToCancel, setSubscriptionToCancel] = useState<SuscripcionDto | null>(null);
 
   // --- CARGA DE DATOS ---
@@ -47,7 +48,7 @@ const MisSuscripciones: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
-      // Cargamos ambas listas en paralelo
+      // 🚀 OPTIMIZACIÓN: Carga paralela de ambas listas
       const [resActivas, resCanceladas] = await Promise.all([
         SuscripcionService.getMisSuscripciones(),
         SuscripcionService.getMisCanceladas()
@@ -69,13 +70,11 @@ const MisSuscripciones: React.FC = () => {
 
   // --- LÓGICA DE CANCELACIÓN ---
   
-  // 1. Abrir Modal
   const handleOpenCancelDialog = (suscripcion: SuscripcionDto) => {
     setSubscriptionToCancel(suscripcion);
     setOpenConfirm(true);
   };
 
-  // 2. Cerrar Modal
   const handleCloseDialog = () => {
     if (!isCancelling) {
       setOpenConfirm(false);
@@ -83,7 +82,6 @@ const MisSuscripciones: React.FC = () => {
     }
   };
 
-  // 3. Confirmar Cancelación
   const handleConfirmCancel = async () => {
     if (!subscriptionToCancel) return;
     
@@ -91,16 +89,14 @@ const MisSuscripciones: React.FC = () => {
     try {
       await SuscripcionService.cancelar(subscriptionToCancel.id);
       
-      // Éxito: Recargamos los datos para actualizar ambas listas
-      // (La activa desaparece, la cancelada aparece en el historial)
+      // Recargar datos para reflejar cambios (la activa pasa a cancelada)
       await fetchData(); 
       
       setOpenConfirm(false);
       setSubscriptionToCancel(null);
-      // Aquí podrías poner un toast de éxito si tienes un sistema de notificaciones
     } catch (err: any) {
       console.error("Error al cancelar:", err);
-      // Mejora: Mostrar el mensaje específico del backend
+      // 🛡️ MEJORA: Feedback específico del error del backend
       const mensajeError = err.response?.data?.message || err.response?.data?.error || "Hubo un error al intentar cancelar.";
       alert(`❌ No se pudo cancelar: ${mensajeError}`);
     } finally {
@@ -117,7 +113,7 @@ const MisSuscripciones: React.FC = () => {
         subtitle='Gestiona tus inversiones activas y revisa tu historial de bajas.'
       />
 
-      {/* PESTAÑAS DE NAVEGACIÓN */}
+      {/* PESTAÑAS */}
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
         <Tabs value={tabValue} onChange={(_, v) => setTabValue(v)} aria-label="pestañas suscripciones">
           <Tab label={`Activas (${suscripciones.length})`} />
@@ -172,7 +168,7 @@ const MisSuscripciones: React.FC = () => {
                             size="small" 
                             variant="outlined" 
                           />
-                          {/* Saldo a favor (Feedback visual importante) */}
+                          {/* 💰 Chip de Saldo a Favor (Visualización Clave) */}
                           {Number(susc.saldo_a_favor) > 0 && (
                             <Chip 
                               label={`Saldo a favor: $${Number(susc.saldo_a_favor).toLocaleString()}`} 
@@ -185,7 +181,7 @@ const MisSuscripciones: React.FC = () => {
                         </Stack>
                       </Box>
 
-                      {/* Botones de Acción */}
+                      {/* Botones */}
                       <Stack direction={{ xs: 'row', sm: 'column', md: 'row' }} spacing={1} alignItems="stretch">
                         <Button 
                           variant="outlined" 
@@ -229,7 +225,7 @@ const MisSuscripciones: React.FC = () => {
                     sx={{ 
                       p: 2, 
                       borderRadius: 2,
-                      bgcolor: 'grey.50', // Fondo gris para denotar inactividad
+                      bgcolor: 'grey.50', 
                       border: '1px solid',
                       borderColor: 'divider',
                       opacity: 0.9
@@ -270,7 +266,7 @@ const MisSuscripciones: React.FC = () => {
 
       </QueryHandler>
 
-      {/* --- DIÁLOGO DE CONFIRMACIÓN MEJORADO --- */}
+      {/* --- MODAL DE CONFIRMACIÓN MEJORADO --- */}
       <Dialog
         open={openConfirm}
         onClose={handleCloseDialog}
@@ -289,7 +285,7 @@ const MisSuscripciones: React.FC = () => {
             
             Se detendrán los cobros futuros y perderás tu progreso de antigüedad.
             
-            {/* 💡 MEJORA: Feedback visual de saldo/deuda */}
+            {/* ⚠️ ALERTA CRÍTICA DE SALDO EN EL MODAL */}
             {subscriptionToCancel && Number(subscriptionToCancel.saldo_a_favor) > 0 && (
               <Alert severity="warning" sx={{ mt: 2, fontSize: '0.85rem' }}>
                 Atención: Tienes un saldo a favor de <strong>${Number(subscriptionToCancel.saldo_a_favor).toLocaleString()}</strong>.
