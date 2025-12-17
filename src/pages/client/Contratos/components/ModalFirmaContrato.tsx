@@ -2,10 +2,10 @@ import React, { useState, useRef, useEffect } from 'react';
 import { 
   Dialog, DialogTitle, DialogContent, DialogActions, 
   Button, Typography, Box, TextField, Alert, CircularProgress, 
-  Stepper, Step, StepLabel, Stack, Paper,Fade
+  Stepper, Step, StepLabel, Stack, Paper, Fade
 } from '@mui/material';
 import { 
-  GppGood, Clear, Undo, Save, Lock, LocationOn, VpnKey, CloudUpload, 
+  GppGood, Clear, Save, LocationOn, VpnKey, CloudUpload, 
 } from '@mui/icons-material';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { PDFDocument } from 'pdf-lib';
@@ -156,8 +156,7 @@ const ModalFirmaContrato: React.FC<ModalFirmaContratoProps> = ({
 
       const signedPdfBytes = await pdfDoc.save();
       
-      // ✅ CORRECCIÓN AQUÍ: Casting a 'any' o 'BlobPart'
-      // Esto soluciona el error "Type 'Uint8Array<ArrayBufferLike>' is not assignable to type 'BlobPart'"
+      // ✅ CORRECCIÓN: Casting a 'any' para evitar error de TypeScript con BlobPart
       const signedFile = new File(
         [signedPdfBytes as any], 
         `firmado_${plantillaActual.nombre_archivo}`, 
@@ -201,12 +200,9 @@ const ModalFirmaContrato: React.FC<ModalFirmaContratoProps> = ({
     if (!plantillaActual) return <Alert severity="warning">No hay plantilla disponible.</Alert>;
     
     switch (step) {
-case 0: // Revisión
+      case 0: // Revisión
         return (
           <Box height={400} bgcolor="grey.100" borderRadius={1} overflow="hidden">
-             {/* SOLUCIÓN AL VIOLATION WARNING:
-                Agregamos 'allow="fullscreen"' para dar permiso explícito al visor PDF
-             */}
              <iframe 
                 src={ImagenService.resolveImageUrl(plantillaActual.url_archivo)} 
                 width="100%" 
@@ -217,19 +213,18 @@ case 0: // Revisión
              />
           </Box>
         );
-      case 1: // Dibujar
-       case 1: // Dibujar Firma
+        
+      case 1: // Dibujar Firma (✅ CORREGIDO: Se eliminó el case duplicado)
         return (
           <Stack spacing={2}>
             {/* Componente del Canvas */}
             <SignatureCanvas 
                 onSave={(data) => {
                     setSignatureDataUrl(data);
-                    // Opcional: Podrías hacer scroll automático si fuera móvil
                 }} 
             />
 
-            {/* ✅ AQUÍ ESTÁ EL CARTEL DE CONFIRMACIÓN */}
+            {/* Cartel de confirmación */}
             <Fade in={!!signatureDataUrl}>
                 <Box>
                     {signatureDataUrl && (

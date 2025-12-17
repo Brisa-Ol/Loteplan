@@ -1,6 +1,5 @@
-// src/components/common/FavoritoButton/FavoritoButton.tsx
-import React, { useState } from 'react';
-import { IconButton, Tooltip, CircularProgress } from '@mui/material';
+import React from 'react';
+import { IconButton, Tooltip, CircularProgress, Zoom } from '@mui/material';
 import { Favorite, FavoriteBorder } from '@mui/icons-material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import FavoritoService from '../../../Services/favorito.service';
@@ -20,67 +19,80 @@ export const FavoritoButton: React.FC<FavoritoButtonProps> = ({
   const { isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
 
-  // Consultar estado inicial
-  const { data: favoritoData } = useQuery({
+  // 1. Consultar estado inicial (Solo si está logueado)
+  const { data: favoritoData, isLoading } = useQuery({
     queryKey: ['favorito', loteId],
     queryFn: async () => (await FavoritoService.checkEsFavorito(loteId)).data,
-    enabled: isAuthenticated // Solo si está autenticado
+    enabled: isAuthenticated,
+    staleTime: 1000 * 60 * 5, // 5 minutos de caché
   });
 
   const isFavorito = favoritoData?.es_favorito || false;
 
-  // Mutación para toggle
+  // 2. Mutación para toggle
   const toggleMutation = useMutation({
     mutationFn: () => FavoritoService.toggle(loteId),
-    onSuccess: () => {
-      // Invalidar queries relacionadas
-      queryClient.invalidateQueries({ queryKey: ['favorito', loteId] });
+    onSuccess: (response) => {
+      // El backend devuelve { agregado: boolean, mensaje: string }
+      const { agregado, mensaje } = response.data;
+      
+      // Actualizamos la caché local optimistamente o invalidamos
+      queryClient.setQueryData(['favorito', loteId], { es_favorito: agregado });
+      
+      // Invalidamos la lista general de favoritos
       queryClient.invalidateQueries({ queryKey: ['misFavoritos'] });
+      
+      // Opcional: Podrías usar 'mensaje' para un Toast notification
+      console.log(mensaje); 
     },
     onError: (error: any) => {
-      alert(error.response?.data?.error || 'Error al gestionar favorito');
+      console.error("Error toggle favorito:", error);
+      // Aquí podrías disparar un Toast de error
     }
   });
 
   const handleClick = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Evitar que active navegación del card
+    e.preventDefault(); // Evita navegación si está dentro de un Link/Card
+    e.stopPropagation(); 
+    
     if (!isAuthenticated) {
+      // Manejar redirección al login o abrir modal
       alert('Debes iniciar sesión para guardar favoritos');
       return;
     }
     toggleMutation.mutate();
   };
 
-  if (!isAuthenticated) return null; // No mostrar si no está logueado
+  if (!isAuthenticated) return null;
 
-  const button = (
+  const buttonContent = (
     <IconButton
       onClick={handleClick}
-      disabled={toggleMutation.isPending}
+      disabled={toggleMutation.isPending || isLoading}
       sx={{
-        color: isFavorito ? '#CC6333' : '#CCCCCC',
-        transition: 'all 0.2s',
+        color: isFavorito ? 'error.main' : 'action.disabled',
+        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
         '&:hover': {
-          color: '#CC6333',
-          transform: 'scale(1.1)',
-          bgcolor: 'rgba(204, 99, 51, 0.08)'
+          color: 'error.main',
+          transform: 'scale(1.15)',
+          bgcolor: 'error.lighter' // Asegúrate de tener este color o usa rgba
         }
       }}
       size={size}
     >
       {toggleMutation.isPending ? (
-        <CircularProgress size={size === 'small' ? 16 : 24} sx={{ color: '#CC6333' }} />
-      ) : isFavorito ? (
-        <Favorite />
+        <CircularProgress size={size === 'small' ? 16 : 24} color="inherit" />
       ) : (
-        <FavoriteBorder />
+        <Zoom in={true} key={isFavorito ? 'fav' : 'not-fav'}>
+           {isFavorito ? <Favorite /> : <FavoriteBorder />}
+        </Zoom>
       )}
     </IconButton>
   );
 
   return showTooltip ? (
     <Tooltip title={isFavorito ? 'Quitar de favoritos' : 'Agregar a favoritos'}>
-      {button}
+      {buttonContent}
     </Tooltip>
-  ) : button;
+  ) : buttonContent;
 };

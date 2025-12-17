@@ -4,10 +4,10 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   Box, Card, CardContent, CardMedia, Typography, Button,
-  Chip, Stack, Skeleton, Alert, Fade
+  Chip, Stack, Skeleton, Alert, Fade, Tooltip
 } from '@mui/material';
 import {
-  Gavel, CheckCircle, LockClock, Lock, MonetizationOn
+  Gavel, CheckCircle, Lock, MonetizationOn, AccessTime, CalendarMonth
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 
@@ -30,14 +30,12 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
   const navigate = useNavigate();
   const [selectedLote, setSelectedLote] = useState<LoteDto | null>(null);
 
-  // 1. QUERY LOTS (This fetches lots specific to the project)
   const { data: lotes, isLoading, error } = useQuery<LoteDto[]>({
     queryKey: ['lotesProyecto', idProyecto],
     queryFn: async () => {
-      // We use 'getAllActive' and filter on the frontend because we can't modify the backend API
+      // Obtenemos los lotes activos (que incluyen los "pendientes" si el backend lo permite)
       const res = await LoteService.getAllActive();
       const todosLosLotes = res.data;
-      // Filter to show only lots for this project
       return todosLosLotes.filter(lote => lote.id_proyecto === idProyecto);
     },
     enabled: !!idProyecto && isAuthenticated,
@@ -93,7 +91,6 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
 
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(3, 1fr)' }, gap: 3 }}>
         {lotes.map((lote) => {
-          // Resolve image URL
           const imgUrl = lote.imagenes && lote.imagenes.length > 0
             ? ImagenService.resolveImageUrl(lote.imagenes[0].url)
             : '/assets/placeholder-lote.jpg';
@@ -126,6 +123,8 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
                   <Box position="absolute" top={10} left={10}>
                     {lote.estado_subasta === 'activa' ? (
                       <Chip label="Activo" color="success" size="small" icon={<CheckCircle sx={{ color: 'white !important' }} />} />
+                    ) : lote.estado_subasta === 'pendiente' ? (
+                      <Chip label="Próximamente" color="warning" size="small" icon={<AccessTime sx={{ color: 'white !important' }} />} />
                     ) : (
                       <Chip label={lote.estado_subasta} color="default" size="small" />
                     )}
@@ -145,6 +144,16 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
                     Lote #{lote.id}
                   </Typography>
 
+                  {/* Fecha si está pendiente (Información del Admin) */}
+                  {lote.estado_subasta === 'pendiente' && lote.fecha_inicio && (
+                    <Stack direction="row" spacing={1} alignItems="center" mb={2} sx={{ color: 'warning.main', bgcolor: 'warning.lighter', p: 0.5, borderRadius: 1 }}>
+                      <CalendarMonth fontSize="small" />
+                      <Typography variant="caption" fontWeight="bold">
+                        Inicia: {new Date(lote.fecha_inicio).toLocaleDateString()}
+                      </Typography>
+                    </Stack>
+                  )}
+
                   <Box flexGrow={1} />
 
                   <Box mb={2} p={1.5} bgcolor="primary.50" borderRadius={2}>
@@ -152,11 +161,11 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
                       <MonetizationOn fontSize="inherit" /> PRECIO BASE
                     </Typography>
                     <Typography variant="h6" color="primary.main" fontWeight={800}>
-                      USD {Number(lote.precio_base).toLocaleString()}
+                      {new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(Number(lote.precio_base))}
                     </Typography>
                   </Box>
 
-                  {/* ACTION BUTTON (Styled like ProjectCard) */}
+                  {/* ACTION BUTTON */}
                   {lote.estado_subasta === 'activa' ? (
                     <Button
                       variant="contained"
@@ -169,12 +178,12 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
                     </Button>
                   ) : (
                     <Button
-                      variant="contained" // Changed to contained to match your request
+                      variant="outlined"
                       fullWidth
                       sx={{ borderRadius: 2, fontWeight: 'bold' }}
                       onClick={(e) => {
-                         e.stopPropagation();
-                         navigate(`/lotes/${lote.id}`);
+                        e.stopPropagation();
+                        navigate(`/lotes/${lote.id}`);
                       }}
                     >
                       Ver Detalles

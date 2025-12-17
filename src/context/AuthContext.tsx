@@ -189,7 +189,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setError(null);
 
     // Redirección segura
-    window.location.href = '/login';
+    window.location.href = '/';
   };
 
   const register = async (data: RegisterRequestDto) => {

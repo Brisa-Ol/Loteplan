@@ -34,6 +34,7 @@ import inversionService from '../../../Services/inversion.service';
 import suscripcionService from '../../../Services/suscripcion.service';
 import favoritoService from '../../../Services/favorito.service';
 import { DataTable } from '../../../components/common/DataTable/DataTable';
+import FavoritoService from '../../../Services/favorito.service';
 
 
 // --- MODIFICACIÓN: Se eliminó 'nuevosUsuarios' de la interfaz ---
@@ -507,39 +508,46 @@ const AdminDashboard: React.FC = () => {
         )}
 
         {/* TAB 3: POPULARIDAD */}
+        {/* TAB 3: POPULARIDAD */}
         {activeTab === 3 && (
           <Stack spacing={3}>
             <Paper elevation={2} sx={{ p: 3 }}>
-              <Typography variant="h6" fontWeight="bold" gutterBottom>
-                Top 5 Lotes Más Populares {defaultProyectoId && `(Proyecto #${defaultProyectoId})`}
-              </Typography>
+              <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                 <Typography variant="h6" fontWeight="bold">
+                    Top 5 Lotes Más Populares
+                 </Typography>
+                 {defaultProyectoId && (
+                   <Chip 
+                     label={`Proyecto: ${proyectosActivos.find(p => p.id === defaultProyectoId)?.nombre_proyecto}`} 
+                     variant="outlined" size="small" 
+                   />
+                 )}
+              </Box>
 
-              {!defaultProyectoId && (
-                <Alert severity="warning" sx={{ mb: 2 }}>
-                  No se detectaron proyectos activos para mostrar popularidad.
+              {!defaultProyectoId ? (
+                <Alert severity="warning">
+                  Se requiere al menos un proyecto activo para ver estadísticas de popularidad.
                 </Alert>
-              )}
-
-              {topLotes.length === 0 ? (
-                <Alert severity="info">No hay datos de favoritos disponibles.</Alert>
+              ) : topLotes.length === 0 ? (
+                <Alert severity="info">
+                  Aún no hay lotes marcados como favoritos en este proyecto.
+                </Alert>
               ) : (
                 <Stack spacing={2} sx={{ mt: 2 }}>
                   {topLotes.map((lote, index) => (
                     <Box
                       key={lote.id_lote}
                       sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        p: 2,
-                        bgcolor: index === 0 ? 'action.selected' : 'background.paper',
-                        borderRadius: 1,
-                        border: 1,
-                        borderColor: 'divider'
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        p: 2, borderRadius: 2, border: '1px solid', borderColor: 'divider',
+                        bgcolor: index === 0 ? 'primary.lighter' : 'background.paper'
                       }}
                     >
                       <Stack direction="row" alignItems="center" spacing={2}>
-                        <Avatar sx={{ bgcolor: RECHART_COLORS[index % RECHART_COLORS.length] }}>
+                        <Avatar sx={{ 
+                          bgcolor: index === 0 ? 'warning.main' : 'action.disabledBackground',
+                          color: index === 0 ? 'white' : 'text.secondary'
+                        }}>
                           <StarIcon />
                         </Avatar>
                         <Box>
@@ -547,15 +555,26 @@ const AdminDashboard: React.FC = () => {
                             {lote.nombre_lote}
                           </Typography>
                           <Typography variant="caption" color="text.secondary">
-                            {lote.cantidad_favoritos} usuarios lo marcaron como favorito
+                            ID: {lote.id_lote} • Precio Base: {FavoritoService.formatPrecio(lote.precio_base)}
                           </Typography>
                         </Box>
                       </Stack>
-                      <Chip
-                        label={`${lote.porcentaje_popularidad}%`}
-                        color="primary"
-                        size="small"
-                      />
+
+                      <Box textAlign="right">
+                        <Typography variant="h6" fontWeight="bold" color="primary">
+                          {lote.cantidad_favoritos}
+                        </Typography>
+                        <Typography variant="caption" display="block">votos</Typography>
+                        {/* Barra de progreso visual */}
+                         <Box sx={{ width: 100, height: 4, bgcolor: 'grey.200', borderRadius: 2, mt: 0.5 }}>
+                            <Box sx={{ 
+                              width: `${lote.porcentaje_popularidad}%`, 
+                              height: '100%', 
+                              bgcolor: 'primary.main', 
+                              borderRadius: 2 
+                            }} />
+                         </Box>
+                      </Box>
                     </Box>
                   ))}
                 </Stack>

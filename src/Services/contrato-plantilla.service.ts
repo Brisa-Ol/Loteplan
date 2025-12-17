@@ -7,7 +7,6 @@ import type {
   ContratoActionResponse 
 } from '../types/dto/contrato.dto';
 
-// Ajusta la ruta base según tu backend (en tu router es /contratos/plantillas)
 const ENDPOINT = '/contratos/plantillas';
 
 const ContratoPlantillaService = {
@@ -16,12 +15,10 @@ const ContratoPlantillaService = {
   // 📝 ADMIN (Creación y Edición)
   // =================================================
 
+  // 1. Crear nueva plantilla (POST /upload)
   create: async (data: CreatePlantillaDto): Promise<AxiosResponse<{ message: string, plantilla: ContratoPlantillaDto }>> => {
     const formData = new FormData();
-    
-    // ✅ CRÍTICO: Backend espera uploadPlantilla = pdfUploadBase.single("plantillaFile")
     formData.append('plantillaFile', data.file); 
-    
     formData.append('nombre_archivo', data.nombre_archivo);
     formData.append('version', data.version.toString());
     
@@ -34,9 +31,14 @@ const ContratoPlantillaService = {
     });
   },
 
+  // 2. Actualizar datos (Nombre, Proyecto, Versión) SIN tocar PDF (PUT /:id)
+  update: async (id: number, data: Partial<ContratoPlantillaDto>): Promise<AxiosResponse<{ message: string, plantilla: ContratoPlantillaDto }>> => {
+    return await httpService.put(`${ENDPOINT}/${id}`, data);
+  },
+
+  // 3. Actualizar archivo PDF (POST /update-pdf/:id)
   updatePdf: async (data: UpdatePlantillaPdfDto): Promise<AxiosResponse<{ message: string, plantilla: ContratoPlantillaDto }>> => {
     const formData = new FormData();
-    // ✅ CRÍTICO: Aquí también es 'plantillaFile'
     formData.append('plantillaFile', data.file); 
 
     return await httpService.post(`${ENDPOINT}/update-pdf/${data.id}`, formData, {
@@ -44,6 +46,12 @@ const ContratoPlantillaService = {
     });
   },
 
+  // 4. ✅ CORREGIDO: Activar/Desactivar (Toggle) (PUT /toggle-active/:id)
+  toggleActive: async (id: number, activo: boolean): Promise<AxiosResponse<{ message: string, plantilla: ContratoPlantillaDto }>> => {
+    return await httpService.put(`${ENDPOINT}/toggle-active/${id}`, { activo });
+  },
+
+  // 5. Borrado Lógico (PUT /soft-delete/:id)
   softDelete: async (id: number): Promise<AxiosResponse<ContratoActionResponse>> => {
     return await httpService.put(`${ENDPOINT}/soft-delete/${id}`);
   },
@@ -54,6 +62,10 @@ const ContratoPlantillaService = {
 
   findAll: async (): Promise<AxiosResponse<ContratoPlantillaDto[]>> => {
     return await httpService.get(`${ENDPOINT}/all`);
+  },
+
+  findAllActive: async (): Promise<AxiosResponse<ContratoPlantillaDto[]>> => {
+    return await httpService.get(`${ENDPOINT}/active`);
   },
 
   findUnassociated: async (): Promise<AxiosResponse<ContratoPlantillaDto[]>> => {

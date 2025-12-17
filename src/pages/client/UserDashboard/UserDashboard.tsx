@@ -28,7 +28,7 @@ import InversionService from '../../../Services/inversion.service'; // ✅ MEJOR
 
 // --- Contexto ---
 import { useAuth } from '../../../context/AuthContext';
-import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
+
 import { QueryHandler } from '../../../components/common/QueryHandler/QueryHandler';
 
 // --- DTOs ---
