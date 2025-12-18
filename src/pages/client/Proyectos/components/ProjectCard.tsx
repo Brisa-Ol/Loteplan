@@ -8,7 +8,6 @@ import {
   Box,
   Button,
 } from "@mui/material";
-// Eliminamos useNavigate de aquí porque la navegación la controlará el padre
 import { LocationOn as LocationIcon } from "@mui/icons-material";
 import ImagenService from "../../../../Services/imagen.service";
 import type { ProyectoDto } from "../../../../types/dto/proyecto.dto";
@@ -16,12 +15,11 @@ import type { ProyectoDto } from "../../../../types/dto/proyecto.dto";
 export interface ProjectCardProps {
   project: ProyectoDto;
   type: "ahorrista" | "inversionista";
-  onClick?: () => void; // ✅ Prop opcional para manejar el click desde fuera
+  onClick?: () => void;
 }
 
 export const ProjectCard: React.FC<ProjectCardProps> = ({ project, type, onClick }) => {
   
-  // Lógica de estado visual
   const getStatusConfig = (status: string) => {
     switch(status) {
       case 'En proceso': return { label: 'Activo', color: 'success' as const };
@@ -32,10 +30,18 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, type, onClick
 
   const statusConfig = getStatusConfig(project.estado_proyecto);
 
-  // Usamos el helper del servicio para la imagen
   const imageUrl = project.imagenes && project.imagenes.length > 0
     ? ImagenService.resolveImageUrl(project.imagenes[0].url)
     : '/assets/placeholder-project.jpg'; 
+
+  // Formateador de moneda consistente
+  const formatMoney = (amount: number) => {
+    return new Intl.NumberFormat('es-AR', { 
+        style: 'currency', 
+        currency: project.moneda === 'USD' ? 'USD' : 'ARS', 
+        minimumFractionDigits: 0 
+    }).format(amount);
+  };
 
   return (
     <Card
@@ -81,12 +87,11 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, type, onClick
 
         <Box mt="auto">
           {type === "ahorrista" ? (
-            // VISTA AHORRISTA (Mensual)
             <Box display="flex" justifyContent="space-between">
               <Box>
                 <Typography variant="caption">Cuota Mensual</Typography>
                 <Typography variant="subtitle1" fontWeight="bold" color="primary">
-                  {project.moneda} {Number(project.monto_inversion).toLocaleString()}
+                  {formatMoney(Number(project.monto_inversion))}
                 </Typography>
               </Box>
               <Box textAlign="right">
@@ -97,12 +102,11 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, type, onClick
               </Box>
             </Box>
           ) : (
-            // VISTA INVERSIONISTA (Directo)
             <Box display="flex" justifyContent="space-between">
                <Box>
                 <Typography variant="caption">Inversión Total</Typography>
                 <Typography variant="subtitle1" fontWeight="bold" color="primary">
-                  {project.moneda} {Number(project.monto_inversion).toLocaleString()}
+                  {formatMoney(Number(project.monto_inversion))}
                 </Typography>
               </Box>
               <Box textAlign="right">
@@ -118,7 +122,6 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, type, onClick
             variant="contained"
             fullWidth
             sx={{ mt: 2 }}
-            // ✅ USAMOS LA PROP ONCLICK
             onClick={onClick} 
           >
             Ver Detalles

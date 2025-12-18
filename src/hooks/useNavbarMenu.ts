@@ -1,6 +1,9 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+
+// Hooks
+import { useConfirmDialog } from "./useConfirmDialog"; // 👈 Importamos el hook nuevo
 
 // Iconos
 import PersonIcon from '@mui/icons-material/Person';
@@ -53,19 +56,25 @@ export const useNavbarMenu = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   
-  const [openLogout, setOpenLogout] = useState(false);
+  // 1. Usamos el hook useConfirmDialog en lugar de useState manual
+  const confirmLogout = useConfirmDialog();
 
-  const logoutProps = {
-    open: openLogout,
-    onClose: () => setOpenLogout(false),
+  // 2. Preparamos las props para el ConfirmDialog (que se renderizará en el Navbar)
+  const logoutDialogProps = {
+    controller: confirmLogout,
     onConfirm: () => {
-        setOpenLogout(false);
+        confirmLogout.close();
         logout();
         navigate("/login");
     }
   };
 
   const config: NavbarConfig = useMemo(() => {
+    // Handler común para logout
+    const handleLogoutClick = () => {
+        confirmLogout.confirm('logout'); // 👈 Activamos el diálogo con la acción 'logout'
+    };
+
     // ════════════════════════════════════════════════════════
     // A. ADMINISTRADOR
     // ════════════════════════════════════════════════════════
@@ -130,7 +139,7 @@ export const useNavbarMenu = () => {
             {
               label: "Cerrar Sesión",
               icon: LogoutIcon,
-              action: () => setOpenLogout(true),
+              action: handleLogoutClick, // 👈 Usamos el handler
             },
           ],
         },
@@ -162,7 +171,6 @@ export const useNavbarMenu = () => {
             { label: "Para Inversionistas", path: "/como-funciona/inversionista", icon: AttachMoneyIcon },
           ],
         },
-        // ✅ CAMBIO: Ahora apunta a la página de selección de rol
         { label: "Proyectos", path: "/proyectos/RolSeleccion" },
         {
             label: "Mis Finanzas",
@@ -209,7 +217,7 @@ export const useNavbarMenu = () => {
             {
               label: "Cerrar Sesión",
               icon: LogoutIcon,
-              action: () => setOpenLogout(true),
+              action: handleLogoutClick, // 👈 Usamos el handler
             },
           ],
         },
@@ -240,7 +248,6 @@ export const useNavbarMenu = () => {
             { label: "Para Inversionistas", path: "/como-funciona/inversionista", icon: AttachMoneyIcon },
           ],
         },
-        // ✅ CAMBIO: Para usuarios no logueados también apunta a RolSeleccion
         { label: "Proyectos", path: "/proyectos/RolSeleccion" },
         { label: "Nosotros", path: "/nosotros" },
       ],
@@ -250,7 +257,8 @@ export const useNavbarMenu = () => {
         { label: "Registrarse", variant: "contained", path: "/register" },
       ],
     };
-  }, [user, navigate]);
+  }, [user, navigate, confirmLogout]); // 👈 Añadimos confirmLogout a deps
 
-  return { config, logoutProps };
+  // Retornamos la configuración y las props para el modal
+  return { config, logoutDialogProps };
 };

@@ -21,6 +21,12 @@ export const ConfirmarInversionModal: React.FC<Props> = ({
 }) => {
   if (!proyecto) return null;
 
+  const montoFormateado = new Intl.NumberFormat('es-AR', {
+    style: 'currency',
+    currency: proyecto.moneda === 'USD' ? 'USD' : 'ARS', // Ajuste dinámico
+    minimumFractionDigits: 0
+  }).format(Number(proyecto.monto_inversion));
+
   return (
     <Dialog open={open} onClose={isLoading ? undefined : onClose} maxWidth="sm" fullWidth>
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -51,7 +57,7 @@ export const ConfirmarInversionModal: React.FC<Props> = ({
                 <Typography variant="body1" fontWeight={600}>Monto Total</Typography>
               </Box>
               <Typography variant="h5" fontWeight={700} color="success.main">
-                {proyecto.moneda} {Number(proyecto.monto_inversion).toLocaleString()}
+                {montoFormateado}
               </Typography>
             </Box>
           </Stack>

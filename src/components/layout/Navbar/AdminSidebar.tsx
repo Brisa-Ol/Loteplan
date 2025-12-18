@@ -9,8 +9,9 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../../../context/AuthContext';
 import { useNavbarMenu, NAVBAR_HEIGHT } from '../../../hooks/useNavbarMenu';
+import { ConfirmDialog } from '../../common/ConfirmDialog/ConfirmDialog';
 
-import { LogoutDialog } from '../../common/LogoutDialog/LogoutDialog';
+
 
 const DRAWER_WIDTH = 260;
 const DRAWER_COLLAPSED = 72;
@@ -24,7 +25,8 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ pendingKYC = 0 }) => {
   const location = useLocation();
   const { user } = useAuth();
 
-  const { config: { navItems, userNavItems }, logoutProps } = useNavbarMenu();
+  // ✅ Obtenemos logoutDialogProps en lugar de logoutProps
+  const { config: { navItems, userNavItems }, logoutDialogProps } = useNavbarMenu();
 
   const [collapsed, setCollapsed] = useState(false);
   const [openMenus, setOpenMenus] = useState<string[]>([]);
@@ -47,9 +49,9 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ pendingKYC = 0 }) => {
     if (path) navigate(path);
   };
 
+  // ✅ Usamos la acción definida en el hook (que abre el modal)
   const handleLogoutClick = () => {
     const logoutItem = userNavItems[0]?.submenu?.find(s => s.label === 'Cerrar Sesión');
-
     if (logoutItem?.action) {
       logoutItem.action();
     }
@@ -60,7 +62,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ pendingKYC = 0 }) => {
       const active = isActive(item.path) || isChildActive(item.submenu);
       const hasSubmenu = item.submenu && item.submenu.length > 0;
       const isOpen = openMenus.includes(item.label);
-      const showBadge = item.label === 'Usuarios' && pendingKYC > 0;
+      const showBadge = item.label === 'Gestión de Usuarios' && pendingKYC > 0; // Ajustado el label padre
       const IconComponent = item.icon;
 
       return (
@@ -189,13 +191,11 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ pendingKYC = 0 }) => {
                 <Typography variant="body2" fontWeight={600} noWrap>{user?.nombre}</Typography>
                 <Typography variant="caption" color="text.secondary">Admin</Typography>
               </Box>
-              {/* ✅ CORREGIDO: Usamos handleLogoutClick en lugar de lógica inline compleja */}
               <IconButton size="small" onClick={handleLogoutClick} color="primary">
                 <Logout fontSize="small" />
               </IconButton>
             </Box>
           ) : (
-            // ✅ CORREGIDO: Usamos handleLogoutClick aquí también
             <IconButton
               sx={{ width: '100%' }}
               onClick={handleLogoutClick}
@@ -206,12 +206,8 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ pendingKYC = 0 }) => {
         </Box>
       </Drawer>
 
-      {/* 👇 AQUÍ RENDERIZAMOS EL MODAL PARA EL ADMIN */}
-      <LogoutDialog
-        open={logoutProps.open}
-        onClose={logoutProps.onClose}
-        onConfirm={logoutProps.onConfirm}
-      />
+      {/* 👇 AQUÍ USAMOS EL MODAL GENÉRICO CON PROPS DEL HOOK */}
+      <ConfirmDialog {...logoutDialogProps} />
     </>
   );
 };

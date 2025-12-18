@@ -9,21 +9,44 @@ interface Props {
 
 export const PagoExitosoModal: React.FC<Props> = ({ open, onContinuar }) => {
   return (
-    <Dialog open={open} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3, textAlign: 'center', p: 2 } }}>
-      <DialogContent>
-        <Zoom in={open} style={{ transitionDelay: '200ms' }}>
-          <CheckCircleOutline sx={{ fontSize: 80, color: 'success.main', mb: 2 }} />
-        </Zoom>
+    <Dialog 
+      open={open} 
+      maxWidth="xs" // 👈 Más compacto para mensajes de éxito
+      fullWidth 
+      PaperProps={{ 
+        sx: { borderRadius: 4, textAlign: 'center', p: 1 } 
+      }}
+      // Opcional: Evitar que cierren sin querer si el paso de firma es obligatorio
+      // disableEscapeKeyDown 
+    >
+      <DialogContent sx={{ py: 4 }}>
         
-        <Typography variant="h4" fontWeight="bold" gutterBottom>
+        {/* Icono con fondo sutil */}
+        <Box display="flex" justifyContent="center" mb={2}>
+            <Zoom in={open} style={{ transitionDelay: '200ms' }}>
+                <Box 
+                    sx={{ 
+                        bgcolor: 'rgba(46, 125, 50, 0.08)', // Verde muy suave
+                        borderRadius: '50%',
+                        p: 2,
+                        display: 'inline-flex'
+                    }}
+                >
+                    <CheckCircleOutline sx={{ fontSize: 64, color: 'success.main' }} />
+                </Box>
+            </Zoom>
+        </Box>
+        
+        <Typography variant="h5" fontWeight={800} gutterBottom>
           ¡Pago Acreditado!
         </Typography>
         
-        <Typography variant="body1" color="text.secondary" paragraph>
-          Tu inversión ha sido procesada correctamente. El siguiente y último paso es formalizar la operación.
+        <Typography variant="body2" color="text.secondary" paragraph sx={{ px: 2 }}>
+          Tu inversión ha sido procesada correctamente. <br />
+          El siguiente y último paso es <strong>formalizar la operación</strong>.
         </Typography>
 
-        <Box mt={4}>
+        <Box mt={3}>
           <Button 
             variant="contained" 
             size="large" 
@@ -31,7 +54,7 @@ export const PagoExitosoModal: React.FC<Props> = ({ open, onContinuar }) => {
             color="primary" 
             endIcon={<Description />}
             onClick={onContinuar}
-            sx={{ py: 1.5, fontSize: '1.1rem' }}
+            sx={{ py: 1.5, fontSize: '1rem', fontWeight: 'bold', borderRadius: 2 }}
           >
             Firmar Contrato Ahora
           </Button>

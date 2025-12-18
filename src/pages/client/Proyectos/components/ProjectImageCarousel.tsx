@@ -1,5 +1,4 @@
-// src/components/Proyectos/ProjectImageCarousel.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Box, IconButton, MobileStepper } from '@mui/material';
 import {
   KeyboardArrowLeft,
@@ -7,9 +6,9 @@ import {
 } from '@mui/icons-material';
 
 interface ProjectImageCarouselProps {
-  images: string[]; // Array de URLs de imágenes
-  projectName: string; // Para el alt text
-  height?: { xs: number; md: number }; // Altura responsive
+  images: string[];
+  projectName: string;
+  height?: { xs: number; md: number };
 }
 
 export const ProjectImageCarousel: React.FC<ProjectImageCarouselProps> = ({
@@ -18,7 +17,17 @@ export const ProjectImageCarousel: React.FC<ProjectImageCarouselProps> = ({
   height = { xs: 250, md: 400 },
 }) => {
   const [activeStep, setActiveStep] = useState(0);
-  const maxSteps = images.length;
+  const maxSteps = images?.length || 0;
+
+  // Pre-carga inteligente de imágenes
+  useEffect(() => {
+    if (maxSteps > 1) {
+      // Pre-cargar la siguiente imagen
+      const nextStep = activeStep + 1 < maxSteps ? activeStep + 1 : 0;
+      const img = new Image();
+      img.src = images[nextStep];
+    }
+  }, [activeStep, images, maxSteps]);
 
   const handleNext = () => {
     setActiveStep((prevActiveStep) => prevActiveStep + 1);
@@ -28,12 +37,12 @@ export const ProjectImageCarousel: React.FC<ProjectImageCarouselProps> = ({
     setActiveStep((prevActiveStep) => prevActiveStep - 1);
   };
 
-  // Si no hay imágenes, mostrar placeholder
+  // Case 0: No images
   if (!images || images.length === 0) {
     return (
       <Box
         component="img"
-        src="/images/placeholder.jpg"
+        src="/assets/placeholder-project.jpg" // Asegúrate de tener este placeholder
         alt="Sin imagen"
         sx={{
           width: "100%",
@@ -41,12 +50,13 @@ export const ProjectImageCarousel: React.FC<ProjectImageCarouselProps> = ({
           objectFit: "cover",
           borderRadius: 2,
           mb: 3,
+          bgcolor: 'grey.100'
         }}
       />
     );
   }
 
-  // Si solo hay una imagen, mostrarla sin controles
+  // Case 1: Single image
   if (images.length === 1) {
     return (
       <Box
@@ -64,10 +74,11 @@ export const ProjectImageCarousel: React.FC<ProjectImageCarouselProps> = ({
     );
   }
 
-  // Carrusel completo para múltiples imágenes
+  // Case 2: Multiple images (Carousel)
   return (
-    <Box sx={{ position: 'relative', mb: 3 }}>
-      {/* Imagen principal */}
+    <Box sx={{ position: 'relative', mb: 3, overflow: 'hidden', borderRadius: 2 }}>
+      
+      {/* Imagen Principal */}
       <Box
         component="img"
         src={images[activeStep]}
@@ -76,12 +87,12 @@ export const ProjectImageCarousel: React.FC<ProjectImageCarouselProps> = ({
           width: "100%",
           height: height,
           objectFit: "cover",
-          borderRadius: 2,
           display: 'block',
+          transition: 'opacity 0.3s ease-in-out', // Suavizar cambio
         }}
       />
 
-      {/* Botones de navegación */}
+      {/* Controles de Navegación */}
       <IconButton
         onClick={handleBack}
         disabled={activeStep === 0}
@@ -91,12 +102,8 @@ export const ProjectImageCarousel: React.FC<ProjectImageCarouselProps> = ({
           top: '50%',
           transform: 'translateY(-50%)',
           bgcolor: 'rgba(255, 255, 255, 0.8)',
-          '&:hover': {
-            bgcolor: 'rgba(255, 255, 255, 0.95)',
-          },
-          '&.Mui-disabled': {
-            bgcolor: 'rgba(255, 255, 255, 0.4)',
-          },
+          '&:hover': { bgcolor: 'white' },
+          '&.Mui-disabled': { opacity: 0.5, bgcolor: 'rgba(255, 255, 255, 0.3)' },
         }}
       >
         <KeyboardArrowLeft />
@@ -111,54 +118,53 @@ export const ProjectImageCarousel: React.FC<ProjectImageCarouselProps> = ({
           top: '50%',
           transform: 'translateY(-50%)',
           bgcolor: 'rgba(255, 255, 255, 0.8)',
-          '&:hover': {
-            bgcolor: 'rgba(255, 255, 255, 0.95)',
-          },
-          '&.Mui-disabled': {
-            bgcolor: 'rgba(255, 255, 255, 0.4)',
-          },
+          '&:hover': { bgcolor: 'white' },
+          '&.Mui-disabled': { opacity: 0.5, bgcolor: 'rgba(255, 255, 255, 0.3)' },
         }}
       >
         <KeyboardArrowRight />
       </IconButton>
 
-      {/* Indicadores de posición (dots) */}
-      <MobileStepper
-        steps={maxSteps}
-        position="static"
-        activeStep={activeStep}
-        sx={{
-          position: 'absolute',
-          bottom: 8,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          bgcolor: 'rgba(0, 0, 0, 0.5)',
-          borderRadius: 2,
-          maxWidth: '200px',
-          '& .MuiMobileStepper-dot': {
-            bgcolor: 'rgba(255, 255, 255, 0.5)',
-          },
-          '& .MuiMobileStepper-dotActive': {
-            bgcolor: 'white',
-          },
-        }}
-        nextButton={<Box sx={{ display: 'none' }} />}
-        backButton={<Box sx={{ display: 'none' }} />}
-      />
-
-      {/* Contador de imágenes */}
+      {/* Indicadores (Dots) */}
       <Box
         sx={{
           position: 'absolute',
-          top: 8,
-          right: 8,
+          bottom: 0,
+          left: 0,
+          right: 0,
+          display: 'flex',
+          justifyContent: 'center',
+          pb: 1,
+          background: 'linear-gradient(to top, rgba(0,0,0,0.5), transparent)', // Mejor legibilidad
+        }}
+      >
+        <MobileStepper
+          steps={maxSteps}
+          position="static"
+          activeStep={activeStep}
+          sx={{
+            bgcolor: 'transparent',
+            '& .MuiMobileStepper-dot': { bgcolor: 'rgba(255, 255, 255, 0.5)' },
+            '& .MuiMobileStepper-dotActive': { bgcolor: 'white' },
+          }}
+          nextButton={null}
+          backButton={null}
+        />
+      </Box>
+
+      {/* Contador numérico (Opcional, estilo YouTube) */}
+      <Box
+        sx={{
+          position: 'absolute',
+          top: 12,
+          right: 12,
           bgcolor: 'rgba(0, 0, 0, 0.6)',
           color: 'white',
-          px: 1.5,
-          py: 0.5,
-          borderRadius: 1,
-          fontSize: '0.875rem',
-          fontWeight: 500,
+          px: 1.2,
+          py: 0.4,
+          borderRadius: 4,
+          fontSize: '0.75rem',
+          fontWeight: 600,
         }}
       >
         {activeStep + 1} / {maxSteps}

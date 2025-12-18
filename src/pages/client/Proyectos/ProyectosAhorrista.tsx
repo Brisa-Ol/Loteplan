@@ -1,9 +1,6 @@
 import React, { useState } from "react";
 import { Box, Typography, Paper, Divider, Stack, Tabs, Tab, Avatar } from "@mui/material";
-import { 
-  Savings,    // Icono para cuotas
-  Key         // Icono para adjudicación
-} from "@mui/icons-material";
+import { Savings, Key } from "@mui/icons-material";
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
@@ -14,27 +11,22 @@ import { QueryHandler } from "../../../components/common/QueryHandler/QueryHandl
 import proyectoService from '../../../Services/proyecto.service'; 
 import { ProjectCard } from "./components/ProjectCard";
 
-// --- 🎨 1. COMPONENTE VISUAL: Highlights (Diseño Nuevo) ---
+// --- COMPONENTE VISUAL: Highlights ---
 const ProjectHighlights: React.FC = () => (
   <Paper 
     elevation={0} 
     sx={{ 
-      p: 3, 
-      mb: 4, 
-      borderRadius: 4, // Bordes bien redondeados como la imagen
-      bgcolor: 'grey.100', // Fondo gris claro
-      border: 'none'
+      p: 3, mb: 4, borderRadius: 4, 
+      bgcolor: 'grey.100', border: 'none'
     }}
   >
     <Stack 
       direction={{ xs: 'column', md: 'row' }} 
-      spacing={{ xs: 4, md: 8 }} // Más espacio entre los dos elementos
+      spacing={{ xs: 4, md: 8 }} 
       justifyContent="center"
       alignItems={{ xs: 'flex-start', md: 'center' }}
-      // Línea divisoria vertical gris
       divider={<Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', md: 'block' }, borderColor: 'grey.300' }} />}
     >
-      {/* Elemento 1: Cuotas Fijas */}
       <Box display="flex" alignItems="center" gap={2}>
         <Avatar sx={{ bgcolor: 'success.light', color: 'success.dark', width: 48, height: 48 }}>
           <Savings fontSize="medium" />
@@ -49,7 +41,6 @@ const ProjectHighlights: React.FC = () => (
         </Box>
       </Box>
 
-      {/* Elemento 2: Adjudicación Rápida */}
       <Box display="flex" alignItems="center" gap={2}>
         <Avatar sx={{ bgcolor: 'warning.light', color: 'warning.dark', width: 48, height: 48 }}>
           <Key fontSize="medium" />
@@ -71,10 +62,9 @@ const ProyectosAhorrista: React.FC = () => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   
-  // ✅ Estado para el filtro (Frontend)
+  // Estado para el filtro
   const [tabValue, setTabValue] = useState<'activos' | 'finalizados'>('activos');
 
-  // Pedimos TODOS los proyectos (el backend trae activos + finalizados mientras no estén borrados)
   const { data: todosLosProyectos, isLoading, error } = useQuery({
     queryKey: ['proyectosAhorrista'],
     queryFn: async () => (await proyectoService.getAhorristasActive()).data
@@ -82,7 +72,7 @@ const ProyectosAhorrista: React.FC = () => {
   
   const rawProjects = todosLosProyectos || [];
 
-  // ✅ Lógica de filtrado en el cliente
+  // Lógica de filtrado
   const proyectosFiltrados = rawProjects.filter(project => {
     if (tabValue === 'activos') {
       return project.estado_proyecto !== 'Finalizado';
@@ -114,10 +104,9 @@ const ProyectosAhorrista: React.FC = () => {
         fullHeight={true} 
       >
         <>
-          {/* 1. Highlights (Fondo Gris) */}
           <ProjectHighlights />
 
-          {/* 2. Filtros (Tabs) - DEBAJO de los highlights */}
+          {/* Filtros (Tabs) */}
           <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 4, display: 'flex', justifyContent: 'center' }}>
             <Tabs 
               value={tabValue} 
@@ -132,12 +121,10 @@ const ProyectosAhorrista: React.FC = () => {
             </Tabs>
           </Box>
 
-          {/* 3. Título de la Sección */}
           <SectionTitle>
             {tabValue === 'activos' ? 'Catálogo Disponible' : 'Historial de Éxitos'}
           </SectionTitle>
 
-          {/* 4. Grid de Proyectos o Mensaje Vacío */}
           {proyectosFiltrados.length === 0 ? (
             <Box textAlign="center" py={8} bgcolor="grey.50" borderRadius={4}>
               <Typography variant="h5" color="text.secondary" fontWeight={500}>
@@ -151,7 +138,11 @@ const ProyectosAhorrista: React.FC = () => {
               sx={{
                 display: "grid",
                 gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", md: "repeat(3, 1fr)" },
-                gap: 5, width: "80%", mx: "auto", mb: 9,
+                gap: 4, // Espacio un poco más compacto
+                width: "100%", // Ocupar todo el ancho disponible
+                maxWidth: "1400px", // Limitar el ancho máximo para pantallas gigantes
+                mx: "auto", 
+                mb: 9,
               }}
             >
               {proyectosFiltrados.map((project) => (
@@ -170,4 +161,4 @@ const ProyectosAhorrista: React.FC = () => {
   );
 };
 
-export default ProyectosAhorrista;
+export default ProyectosAhorrista; 

@@ -1,13 +1,11 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Box, Typography, Paper, Card, CardMedia, CardContent, CardActions,
-  Button, IconButton, Chip, Stack, Alert, Tooltip, Dialog,
-  DialogTitle, DialogContent, DialogActions, Skeleton, useTheme
+  Button, IconButton, Chip, Stack, Alert, Tooltip, Skeleton
 } from '@mui/material';
 import {
   Favorite as FavoriteIcon, Visibility as VisibilityIcon,
-  Gavel as GavelIcon, DeleteOutline as DeleteIcon,
-  SentimentDissatisfied, Event as EventIcon
+  Gavel as GavelIcon, SentimentDissatisfied, Event as EventIcon
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -18,19 +16,21 @@ import type { LoteDto } from '../../../types/dto/lote.dto';
 import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
 import { PageHeader } from '../../../components/common/PageHeader/PageHeader';
 
-// --- Card Component (Interno para limpieza) ---
+// 🟢 Importamos el hook y el componente genérico
+import { useConfirmDialog } from '../../../hooks/useConfirmDialog';
+import { ConfirmDialog } from '../../../components/common/ConfirmDialog/ConfirmDialog';
+
+// --- Card Component (Interno) ---
 const LoteFavoritoCard: React.FC<{
   lote: LoteDto;
   onRemove: (id: number) => void;
   onVerDetalle: (id: number) => void;
   isRemoving: boolean;
 }> = ({ lote, onRemove, onVerDetalle, isRemoving }) => {
-  const theme = useTheme();
   
   const imagenPrincipal = lote.imagenes?.find(img => img.es_principal) || lote.imagenes?.[0];
   const imagenUrl = imagenService.resolveImageUrl(imagenPrincipal?.url);
 
-  // Helper visual para estado
   const getBadgeColor = (estado: string) => {
     if (estado === 'activa') return 'success';
     if (estado === 'pendiente') return 'warning';
@@ -45,11 +45,7 @@ const LoteFavoritoCard: React.FC<{
     }}>
       <Box sx={{ position: 'relative', height: 200, overflow: 'hidden' }}>
         <CardMedia
-          component="img"
-          height="100%"
-          image={imagenUrl}
-          alt={lote.nombre_lote}
-          sx={{ objectFit: 'cover' }}
+          component="img" height="100%" image={imagenUrl} alt={lote.nombre_lote} sx={{ objectFit: 'cover' }}
           onError={(e: any) => { e.target.src = '/assets/placeholder-lote.jpg'; }}
         />
         <Chip
@@ -65,7 +61,7 @@ const LoteFavoritoCard: React.FC<{
             size="small"
             sx={{
               position: 'absolute', top: 10, left: 10,
-              bgcolor: 'rgba(255,255,255,0.85)',
+              bgcolor: 'rgba(255, 255, 255, 0.85)',
               '&:hover': { bgcolor: '#fff', color: 'error.main' },
               color: 'error.light'
             }}
@@ -114,35 +110,40 @@ const LoteFavoritoCard: React.FC<{
 const MisFavoritos: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const theme = useTheme();
 
-  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
-  const [loteAEliminar, setLoteAEliminar] = useState<number | null>(null);
+  // 1. Hook unificado de confirmación
+  const confirmDialog = useConfirmDialog();
 
-  // 1. Fetch de Mis Favoritos
+  // 2. Fetch de Mis Favoritos
   const { data: favoritos = [], isLoading, error } = useQuery<LoteDto[]>({
     queryKey: ['misFavoritos'],
     queryFn: async () => (await FavoritoService.getMisFavoritos()).data,
   });
 
-  // 2. Mutación: Eliminar (Toggle)
+  // 3. Mutación: Eliminar (Toggle)
   const removeFavoritoMutation = useMutation({
     mutationFn: (idLote: number) => FavoritoService.toggle(idLote),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['misFavoritos'] });
-      // También invalidamos el estado individual del botón si existe en caché
-      if (loteAEliminar) {
-        queryClient.invalidateQueries({ queryKey: ['favorito', loteAEliminar] });
+      // Si tenemos el dato del modal (el ID), invalidamos también la query individual
+      if (confirmDialog.data) {
+        queryClient.invalidateQueries({ queryKey: ['favorito', confirmDialog.data] });
       }
-      setConfirmDialogOpen(false);
-      setLoteAEliminar(null);
+      confirmDialog.close(); // ✅ Cerramos usando el hook
     },
     onError: () => alert('Error al eliminar favorito')
   });
 
+  // Handler para abrir modal
   const handleRemoveClick = (id: number) => {
-    setLoteAEliminar(id);
-    setConfirmDialogOpen(true);
+    confirmDialog.confirm('remove_favorite', id); // 👈 Pasamos el ID como data
+  };
+
+  // Handler de confirmación
+  const handleConfirmDelete = () => {
+    if (confirmDialog.data) {
+        removeFavoritoMutation.mutate(confirmDialog.data);
+    }
   };
 
   if (isLoading) return (
@@ -192,25 +193,12 @@ const MisFavoritos: React.FC = () => {
         </Box>
       )}
 
-      {/* Diálogo Confirmación */}
-      <Dialog open={confirmDialogOpen} onClose={() => setConfirmDialogOpen(false)}>
-        <DialogTitle display="flex" alignItems="center" gap={1}>
-           <DeleteIcon color="error" /> ¿Quitar de favoritos?
-        </DialogTitle>
-        <DialogContent>
-          <Typography>El lote se eliminará de tu lista de seguimiento.</Typography>
-        </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button onClick={() => setConfirmDialogOpen(false)} color="inherit">Cancelar</Button>
-          <Button 
-            onClick={() => loteAEliminar && removeFavoritoMutation.mutate(loteAEliminar)} 
-            color="error" variant="contained" 
-            disabled={removeFavoritoMutation.isPending}
-          >
-            {removeFavoritoMutation.isPending ? 'Quitando...' : 'Sí, quitar'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      {/* Diálogo Confirmación GENÉRICO */}
+      <ConfirmDialog 
+        controller={confirmDialog}
+        onConfirm={handleConfirmDelete}
+        isLoading={removeFavoritoMutation.isPending}
+      />
     </PageContainer>
   );
 };

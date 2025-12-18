@@ -1,20 +1,26 @@
-// src/pages/Lotes/DetalleLote.tsx
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   Box, Typography, Button, Stack, Chip, Paper, Divider,
-  Card, CardContent, Alert, Skeleton, IconButton, Grid
+  Card, CardContent, Alert, Skeleton, IconButton
 } from '@mui/material';
 import {
   ArrowBack, LocationOn, Gavel, AttachMoney,
   CalendarToday, CheckCircle, AccessTime, Map as MapIcon,
   InfoOutlined
 } from '@mui/icons-material';
+
+// Servicios y Tipos
 import LoteService from '../../../Services/lote.service';
 import type { LoteDto } from '../../../types/dto/lote.dto';
-import { useAuth } from '../../../context/AuthContext';
 import ImagenService from '../../../Services/imagen.service';
+
+// Contextos y Hooks
+import { useAuth } from '../../../context/AuthContext';
+import { useModal } from '../../../hooks/useModal'; // 👈 Importamos el hook
+
+// Componentes
 import { FavoritoButton } from '../../../components/common/BotonFavorito/BotonFavorito';
 import { PujarModal } from '../Proyectos/components/PujarModal';
 
@@ -22,7 +28,10 @@ const DetalleLote: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
-  const [showPujarModal, setShowPujarModal] = useState(false);
+  
+  // 1. Hook useModal para el modal de puja
+  const pujarModal = useModal(); 
+
   // Estado para la imagen seleccionada en la galería
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
@@ -57,7 +66,7 @@ const DetalleLote: React.FC = () => {
     );
   }
 
-  // Configuración visual de estados (Coincide con Admin)
+  // Configuración visual de estados
   const getStatusConfig = () => {
     switch (lote.estado_subasta) {
       case 'activa':
@@ -71,7 +80,7 @@ const DetalleLote: React.FC = () => {
 
   const statusConfig = getStatusConfig();
 
-  // Lógica de Imágenes: Usar la seleccionada o la primera por defecto
+  // Lógica de Imágenes
   const imagenes = lote.imagenes || [];
   const mainImageUrl = imagenes.length > 0
     ? ImagenService.resolveImageUrl(imagenes[selectedImageIndex].url)
@@ -82,6 +91,12 @@ const DetalleLote: React.FC = () => {
     if (lote.latitud && lote.longitud) {
       window.open(`https://www.google.com/maps/search/?api=1&query=${lote.latitud},${lote.longitud}`, '_blank');
     }
+  };
+
+  // Handler para abrir modal de puja
+  const handleOpenPujar = () => {
+    if (!isAuthenticated) return navigate('/login');
+    pujarModal.open(); // Usamos el hook
   };
 
   return (
@@ -116,7 +131,7 @@ const DetalleLote: React.FC = () => {
             </Box>
           </Box>
 
-          {/* Galería de Miniaturas (Muestra lo cargado en Admin) */}
+          {/* Galería de Miniaturas */}
           {imagenes.length > 1 && (
             <Stack direction="row" spacing={2} mb={4} sx={{ overflowX: 'auto', py: 1 }}>
               {imagenes.map((img, idx) => (
@@ -159,7 +174,7 @@ const DetalleLote: React.FC = () => {
             </Typography>
           </Paper>
 
-          {/* Características Geográficas (Datos cargados en Admin) */}
+          {/* Características Geográficas */}
           {(lote.latitud || lote.longitud) && (
             <Paper elevation={2} sx={{ p: 4, borderRadius: 3 }}>
               <Box display="flex" justifyContent="space-between" alignItems="flex-start">
@@ -213,16 +228,13 @@ const DetalleLote: React.FC = () => {
               <Box display="flex" alignItems="center" gap={1}>
                 <AttachMoney sx={{ fontSize: 40, color: 'success.main' }} />
                 <Typography variant="h3" fontWeight="bold" color="primary.main">
-                  {/* 🟢 AHORA: Formato completo moneda ($ 100.000) */}
                   {new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(Number(lote.precio_base))}
                 </Typography>
-
-                {/* 🟢 AHORA: Cambiamos USD por ARS o lo quitamos si prefieres solo el signo $ */}
                 <Typography variant="h5" color="text.secondary">ARS</Typography>
               </Box>
             </Box>
 
-            {/* Panel de Fechas - Muestra info según estado */}
+            {/* Panel de Fechas */}
             <Card variant="outlined" sx={{ mb: 3, bgcolor: lote.estado_subasta === 'activa' ? 'success.50' : 'grey.50' }}>
               <CardContent>
                 <Stack spacing={2}>
@@ -266,11 +278,12 @@ const DetalleLote: React.FC = () => {
             {/* Botón de Acción */}
             {lote.estado_subasta === 'activa' ? (
               <>
-                <Button variant="contained" size="large" fullWidth startIcon={<Gavel />}
-                  onClick={() => {
-                    if (!isAuthenticated) return navigate('/login');
-                    setShowPujarModal(true);
-                  }}
+                <Button 
+                  variant="contained" 
+                  size="large" 
+                  fullWidth 
+                  startIcon={<Gavel />}
+                  onClick={handleOpenPujar} // Usamos el handler con hook
                   sx={{ py: 2, fontSize: '1.1rem', fontWeight: 'bold', mb: 2 }}
                 >
                   Realizar Puja
@@ -292,10 +305,12 @@ const DetalleLote: React.FC = () => {
 
       </Box>
 
-      {/* Modal de Puja */}
-      {showPujarModal && (
-        <PujarModal open={showPujarModal} lote={lote} onClose={() => setShowPujarModal(false)} />
-      )}
+      {/* Modal de Puja (Controlado por el Hook) */}
+      <PujarModal 
+        open={pujarModal.isOpen} 
+        lote={lote} 
+        onClose={pujarModal.close} 
+      />
 
     </Box>
   );

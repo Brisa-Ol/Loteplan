@@ -1,25 +1,29 @@
-// src/components/Proyectos/ListaLotesProyecto.tsx
-
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Box, Card, CardContent, CardMedia, Typography, Button,
-  Chip, Stack, Skeleton, Alert, Fade, Tooltip
+  Chip, Stack, Skeleton, Alert, Fade
 } from '@mui/material';
 import {
   Gavel, CheckCircle, Lock, MonetizationOn, AccessTime, CalendarMonth
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 
-// Services and Context
-import { useAuth } from '../../../context/AuthContext';
+// Servicios
 import LoteService from '../../../Services/lote.service';
+import FavoritoService from '../../../Services/favorito.service';
 import ImagenService from '../../../Services/imagen.service';
+
+// Contexto y Tipos
+import { useAuth } from '../../../context/AuthContext';
 import type { LoteDto } from '../../../types/dto/lote.dto';
 
-// Child Components
-import { PujarModal } from '../Proyectos/components/PujarModal';
+// Hooks y Componentes
+import { useModal } from '../../../hooks/useModal';
+import { useConfirmDialog } from '../../../hooks/useConfirmDialog'; // 👈 Hook nuevo
 import { FavoritoButton } from '../../../components/common/BotonFavorito/BotonFavorito';
+import { PujarModal } from '../Proyectos/components/PujarModal';
+import { ConfirmDialog } from '../../../components/common/ConfirmDialog/ConfirmDialog';
 
 interface Props {
   idProyecto: number;
@@ -28,33 +32,65 @@ interface Props {
 export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  
+  // 1. Hooks de Modales
+  const pujarModal = useModal();
+  const confirmDialog = useConfirmDialog(); // 👈 Reemplaza a useModal manual
+  
+  // 2. Estados
   const [selectedLote, setSelectedLote] = useState<LoteDto | null>(null);
 
   const { data: lotes, isLoading, error } = useQuery<LoteDto[]>({
     queryKey: ['lotesProyecto', idProyecto],
     queryFn: async () => {
-      // Obtenemos los lotes activos (que incluyen los "pendientes" si el backend lo permite)
       const res = await LoteService.getAllActive();
-      const todosLosLotes = res.data;
-      return todosLosLotes.filter(lote => lote.id_proyecto === idProyecto);
+      return res.data.filter(lote => lote.id_proyecto === idProyecto);
     },
     enabled: !!idProyecto && isAuthenticated,
     retry: 1
   });
 
+  // 3. Mutación para eliminar favorito
+  const unfavMutation = useMutation({
+    mutationFn: async (loteId: number) => await FavoritoService.toggle(loteId),
+    onSuccess: (_, loteId) => {
+      // Actualizamos caché del botón específico
+      queryClient.setQueryData(['favorito', loteId], { es_favorito: false });
+      // Refrescamos consultas relacionadas
+      queryClient.invalidateQueries({ queryKey: ['misFavoritos'] });
+      
+      confirmDialog.close(); // 👈 Cerrar con el nuevo hook
+    },
+    onError: () => alert('Error al quitar de favoritos')
+  });
+
+  // Handlers
+  const handlePujarClick = (lote: LoteDto) => {
+    setSelectedLote(lote);
+    pujarModal.open();
+  };
+
+  // Handler para el botón de favorito
+  const handleRemoveRequest = (loteId: number) => {
+    // 👈 Usamos el nuevo hook pasando la acción y el ID como data
+    confirmDialog.confirm('remove_favorite', loteId);
+  };
+
+  const handleConfirmUnfav = () => {
+    // 👈 Usamos data del hook
+    if (confirmDialog.data) unfavMutation.mutate(confirmDialog.data);
+  };
+
+  // --- RENDER ---
+
   if (!isAuthenticated) {
     return (
       <Box mt={4} p={5} textAlign="center" bgcolor="grey.50" borderRadius={3} border="1px dashed" borderColor="grey.300">
         <Lock sx={{ fontSize: 60, color: 'text.secondary', mb: 2, opacity: 0.5 }} />
-        <Typography variant="h6" fontWeight="bold" color="text.primary" gutterBottom>
-          Sección Exclusiva
-        </Typography>
-        <Typography variant="body1" color="text.secondary" mb={3}>
-          Debes iniciar sesión para ver los lotes y participar en la subasta.
-        </Typography>
-        <Button variant="contained" onClick={() => navigate('/login')}>
-          Iniciar Sesión
-        </Button>
+        <Typography variant="h6" fontWeight="bold" color="text.primary" gutterBottom>Sección Exclusiva</Typography>
+        <Typography variant="body1" color="text.secondary" mb={3}>Debes iniciar sesión para ver los lotes.</Typography>
+        <Button variant="contained" onClick={() => navigate('/login')}>Iniciar Sesión</Button>
       </Box>
     );
   }
@@ -63,9 +99,7 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
     return (
       <Box mt={4}>
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={3}>
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} variant="rectangular" height={380} width="100%" sx={{ borderRadius: 3 }} />
-          ))}
+          {[1, 2, 3].map((i) => <Skeleton key={i} variant="rectangular" height={380} width="100%" sx={{ borderRadius: 3 }} />)}
         </Stack>
       </Box>
     );
@@ -76,9 +110,7 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
   if (!lotes || lotes.length === 0) {
     return (
       <Box mt={4} p={4} bgcolor="grey.100" borderRadius={2} textAlign="center">
-        <Typography color="text.secondary">
-          No hay lotes activos asignados a este proyecto actualmente.
-        </Typography>
+        <Typography color="text.secondary">No hay lotes activos asignados a este proyecto actualmente.</Typography>
       </Box>
     );
   }
@@ -106,18 +138,11 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
                 }}
                 onClick={() => navigate(`/lotes/${lote.id}`)}
               >
-                {/* IMAGE AREA */}
+                {/* ZONA DE IMAGEN */}
                 <Box sx={{ position: 'relative', height: 200, borderRadius: '12px 12px 0 0', overflow: 'hidden', bgcolor: 'grey.100' }}>
                   <CardMedia
-                    component="img"
-                    height="200"
-                    image={imgUrl}
-                    alt={lote.nombre_lote}
-                    sx={{ objectFit: 'cover' }}
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.src = '/assets/placeholder-lote.jpg';
-                    }}
+                    component="img" height="200" image={imgUrl} alt={lote.nombre_lote} sx={{ objectFit: 'cover' }}
+                    onError={(e) => { (e.target as HTMLImageElement).src = '/assets/placeholder-lote.jpg'; }}
                   />
 
                   <Box position="absolute" top={10} left={10}>
@@ -130,27 +155,33 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
                     )}
                   </Box>
 
-                  <Box position="absolute" top={5} right={5} onClick={(e) => e.stopPropagation()}>
-                    <FavoritoButton loteId={lote.id} />
+                  {/* BOTÓN FAVORITO */}
+                  <Box 
+                    position="absolute" top={10} right={10} 
+                    onClick={(e) => e.stopPropagation()}
+                    sx={{
+                      bgcolor: 'rgba(255, 255, 255, 0.85)', borderRadius: '50%', width: 40, height: 40,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 1,
+                      transition: '0.2s', '&:hover': { bgcolor: 'white', transform: 'scale(1.1)' }
+                    }}
+                  >
+                    <FavoritoButton 
+                        loteId={lote.id} 
+                        size="small" 
+                        onRemoveRequest={handleRemoveRequest} // 👈 Pasamos el handler conectado al hook
+                    />
                   </Box>
                 </Box>
 
-                {/* CONTENT AREA */}
+                {/* ZONA DE CONTENIDO */}
                 <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', pt: 2 }}>
-                  <Typography variant="h6" fontWeight="bold" lineHeight={1.2} mb={1} noWrap>
-                    {lote.nombre_lote}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" mb={2}>
-                    Lote #{lote.id}
-                  </Typography>
+                  <Typography variant="h6" fontWeight="bold" lineHeight={1.2} mb={1} noWrap>{lote.nombre_lote}</Typography>
+                  <Typography variant="body2" color="text.secondary" mb={2}>Lote #{lote.id}</Typography>
 
-                  {/* Fecha si está pendiente (Información del Admin) */}
                   {lote.estado_subasta === 'pendiente' && lote.fecha_inicio && (
                     <Stack direction="row" spacing={1} alignItems="center" mb={2} sx={{ color: 'warning.main', bgcolor: 'warning.lighter', p: 0.5, borderRadius: 1 }}>
                       <CalendarMonth fontSize="small" />
-                      <Typography variant="caption" fontWeight="bold">
-                        Inicia: {new Date(lote.fecha_inicio).toLocaleDateString()}
-                      </Typography>
+                      <Typography variant="caption" fontWeight="bold">Inicia: {new Date(lote.fecha_inicio).toLocaleDateString()}</Typography>
                     </Stack>
                   )}
 
@@ -165,26 +196,19 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
                     </Typography>
                   </Box>
 
-                  {/* ACTION BUTTON */}
                   {lote.estado_subasta === 'activa' ? (
                     <Button
-                      variant="contained"
-                      fullWidth
-                      startIcon={<Gavel />}
-                      onClick={(e) => { e.stopPropagation(); setSelectedLote(lote); }}
+                      variant="contained" fullWidth startIcon={<Gavel />}
+                      onClick={(e) => { e.stopPropagation(); handlePujarClick(lote); }}
                       sx={{ borderRadius: 2, fontWeight: 'bold' }}
                     >
                       Pujar Ahora
                     </Button>
                   ) : (
                     <Button
-                      variant="outlined"
-                      fullWidth
+                      variant="outlined" fullWidth
                       sx={{ borderRadius: 2, fontWeight: 'bold' }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/lotes/${lote.id}`);
-                      }}
+                      onClick={(e) => { e.stopPropagation(); navigate(`/lotes/${lote.id}`); }}
                     >
                       Ver Detalles
                     </Button>
@@ -196,9 +220,18 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
         })}
       </Box>
 
+      {/* Modal de Puja */}
       {selectedLote && (
-        <PujarModal open={!!selectedLote} lote={selectedLote} onClose={() => setSelectedLote(null)} />
+        <PujarModal open={pujarModal.isOpen} lote={selectedLote} onClose={() => { pujarModal.close(); setSelectedLote(null); }} />
       )}
+
+      {/* 🆕 Diálogo Confirmación GENÉRICO */}
+      <ConfirmDialog 
+        controller={confirmDialog}
+        onConfirm={handleConfirmUnfav}
+        isLoading={unfavMutation.isPending}
+      />
+
     </Box>
   );
 };

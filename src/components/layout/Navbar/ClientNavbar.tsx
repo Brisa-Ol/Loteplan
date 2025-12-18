@@ -17,7 +17,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { useNavbarMenu, NAVBAR_HEIGHT, type NavItem } from '../../../hooks/useNavbarMenu';
 
 // Components & Services
-import { LogoutDialog } from '../../common/LogoutDialog/LogoutDialog';
+import { ConfirmDialog } from '../../../components/common/ConfirmDialog/ConfirmDialog'; // 👈 Componente genérico correcto
 import MensajeService from '../../../Services/mensaje.service';
 
 // =================================================================
@@ -29,7 +29,6 @@ const NavDropdown: React.FC<{ item: NavItem }> = ({ item }) => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
 
-  // Verificar si alguna ruta hija está activa
   const isChildActive = item.submenu?.some(sub =>
     sub.path && location.pathname.startsWith(sub.path)
   );
@@ -85,32 +84,28 @@ const NavDropdown: React.FC<{ item: NavItem }> = ({ item }) => {
 // COMPONENTE PRINCIPAL: CLIENT NAVBAR
 // =================================================================
 const ClientNavbar: React.FC = () => {
-  // Hooks básicos
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const navigate = useNavigate();
   const location = useLocation();
   
-  // Auth y Menu Data
   const { user, isAuthenticated } = useAuth();
-  const { config: { navItems, userNavItems, actionButtons }, logoutProps } = useNavbarMenu();
+  // ✅ Obtenemos logoutDialogProps
+  const { config: { navItems, userNavItems, actionButtons }, logoutDialogProps } = useNavbarMenu();
 
-  // Estado local
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuAnchor, setUserMenuAnchor] = useState<null | HTMLElement>(null);
 
-  // Query para mensajes no leídos (Solo si está autenticado)
   const { data: unreadData } = useQuery({
     queryKey: ['mensajesNoLeidos'],
     queryFn: async () => (await MensajeService.getUnreadCount()).data,
-    refetchInterval: 60000, // Cada 1 minuto es suficiente
-    enabled: !!user && isAuthenticated, // ✅ CRÍTICO: Solo ejecuta si hay usuario
-    retry: false // No reintentar si falla (ej: token expirado)
+    refetchInterval: 60000,
+    enabled: !!user && isAuthenticated,
+    retry: false
   });
 
   const unreadCount = unreadData?.cantidad || 0;
 
-  // Handlers
   const handleNavigate = (path: string) => {
     navigate(path);
     setMobileOpen(false);
@@ -125,7 +120,6 @@ const ClientNavbar: React.FC = () => {
   // --- RENDERIZADO DEL DRAWER MOBILE ---
   const mobileDrawer = (
     <Box sx={{ width: 280, height: '100%', display: 'flex', flexDirection: 'column' }}>
-      {/* Header del Drawer */}
       <Box sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid', borderColor: 'divider' }}>
         <Box component="img" src="/navbar/nav.png" alt="Logo" sx={{ height: 32 }} />
         <IconButton onClick={() => setMobileOpen(false)}>
@@ -133,7 +127,6 @@ const ClientNavbar: React.FC = () => {
         </IconButton>
       </Box>
 
-      {/* Info Usuario Mobile */}
       {isAuthenticated && user && (
         <Box sx={{ p: 2, bgcolor: 'action.hover' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
@@ -150,12 +143,10 @@ const ClientNavbar: React.FC = () => {
         </Box>
       )}
 
-      {/* Lista de Navegación Mobile */}
       <List sx={{ flex: 1, py: 2 }}>
         {navItems.map((item, idx) => {
           const Icon = item.icon;
 
-          // Si tiene submenú (Dropdown Mobile)
           if (item.submenu && !item.path) {
             return (
               <React.Fragment key={idx}>
@@ -188,7 +179,6 @@ const ClientNavbar: React.FC = () => {
             );
           }
 
-          // Item Normal Mobile
           return (
             <ListItem key={idx} disablePadding>
               <ListItemButton onClick={() => handleNavigate(item.path || '')} selected={isActive(item.path)}>
@@ -203,7 +193,6 @@ const ClientNavbar: React.FC = () => {
           );
         })}
 
-        {/* Menú de Usuario Mobile (Logout, Perfil) */}
         {isAuthenticated && userNavItems[0]?.submenu?.map((sub, idx) => {
           if (sub.isDivider) return <Divider key={`u-${idx}`} />;
           const SubIcon = sub.icon;
@@ -231,7 +220,6 @@ const ClientNavbar: React.FC = () => {
         })}
       </List>
 
-      {/* Botones de Acción (Login/Register) Mobile */}
       {!isAuthenticated && (
         <Box sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider', display: 'flex', flexDirection: 'column', gap: 1 }}>
           {actionButtons.map((btn, idx) => (
@@ -249,7 +237,6 @@ const ClientNavbar: React.FC = () => {
     </Box>
   );
 
-  // --- RENDERIZADO PRINCIPAL ---
   return (
     <>
       <AppBar 
@@ -260,12 +247,10 @@ const ClientNavbar: React.FC = () => {
         <Container maxWidth="xl">
           <Toolbar sx={{ px: { xs: 0 }, minHeight: { xs: NAVBAR_HEIGHT.mobile, md: NAVBAR_HEIGHT.desktop } }}>
             
-            {/* Logo */}
             <Box component={RouterLink} to="/" sx={{ display: 'flex', alignItems: 'center', gap: 1, textDecoration: 'none', mr: 4 }}>
               <Box component="img" src="/navbar/nav.png" alt="Logo" sx={{ height: { xs: 28, md: 36 } }} />
             </Box>
 
-            {/* Desktop Nav Items */}
             {!isMobile && (
               <Box sx={{ display: 'flex', gap: 1, flex: 1, justifyContent: 'center' }}>
                 {navItems.map((link) => {
@@ -297,7 +282,6 @@ const ClientNavbar: React.FC = () => {
 
             {isMobile && <Box sx={{ flex: 1 }} />}
 
-            {/* Desktop Actions & User Menu */}
             {!isMobile && (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 {isAuthenticated ? (
@@ -378,7 +362,6 @@ const ClientNavbar: React.FC = () => {
               </Box>
             )}
 
-            {/* Mobile Actions (Menu Toggle + Notif) */}
             {isMobile && (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 {isAuthenticated && (
@@ -410,11 +393,8 @@ const ClientNavbar: React.FC = () => {
         <Outlet />
       </Box>
 
-      <LogoutDialog
-        open={logoutProps.open}
-        onClose={logoutProps.onClose}
-        onConfirm={logoutProps.onConfirm}
-      />
+      {/* ✅ Modal de Confirmación Genérico (incluye Logout) */}
+      <ConfirmDialog {...logoutDialogProps} />
     </>
   );
 };

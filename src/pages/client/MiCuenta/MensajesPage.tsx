@@ -1,12 +1,10 @@
-// src/pages/client/MiCuenta/MensajesPage.tsx
-
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   Box, Typography, Paper, List, ListItem, ListItemText, 
   ListItemAvatar, Avatar, Divider, TextField, IconButton, 
   Badge, Stack, CircularProgress, 
-  ListItemButton, // 👈 IMPORTADO CORRECTAMENTE
+  ListItemButton,
   Button
 } from '@mui/material';
 import { 
@@ -15,13 +13,14 @@ import {
   AdminPanelSettings as SystemIcon,
   MarkEmailRead as ReadIcon
 } from '@mui/icons-material';
-
-import MensajeService from '../../../Services/mensaje.service';
-
-import { useAuth } from '../../../context/AuthContext';
-import { PageContainer, PageHeader } from '../../../components/common';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+
+// Servicios y Contexto
+import MensajeService from '../../../Services/mensaje.service';
+import { useAuth } from '../../../context/AuthContext';
+import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
+import { PageHeader } from '../../../components/common/PageHeader/PageHeader';
 import type { MensajeDto } from '../../../types/dto/mensaje';
 
 // ID del usuario SISTEMA (definido en tu backend como 2)
@@ -30,39 +29,38 @@ const SYSTEM_USER_ID = 2;
 const MensajesPage: React.FC = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const messagesEndRef = useRef<HTMLDivElement>(null); // Ref para auto-scroll
   
-  // Estado para mensaje nuevo
+  // Estados
   const [newMessage, setNewMessage] = useState('');
   const [selectedContactId, setSelectedContactId] = useState<number | null>(null);
 
-  // 1. Cargar todos los mensajes
+  // 1. Cargar mensajes (Polling)
   const { data: mensajes = [], isLoading } = useQuery<MensajeDto[]>({
     queryKey: ['misMensajes'],
     queryFn: async () => (await MensajeService.obtenerMisMensajes()).data,
-    refetchInterval: 10000 // Polling cada 10s para "tiempo real"
+    refetchInterval: 5000 // Polling más rápido (5s) para mejor sensación de chat
   });
 
-  // 2. Agrupar mensajes por contacto (Lógica Frontend para armar la lista de la izquierda)
-  const conversaciones = useMemo(() => {
+  // 2. Agrupar mensajes (Lógica Memoizada)
+  const conversations = useMemo(() => {
     if (!user) return [];
     
     const map = new Map<number, MensajeDto[]>();
     
     mensajes.forEach(msg => {
-      // Identificar quién es el "otro" en la conversación
       const isMeSender = msg.id_remitente === user.id;
       const otherId = isMeSender ? msg.id_receptor : msg.id_remitente;
       
-      if (!map.has(otherId)) {
-        map.set(otherId, []);
-      }
+      if (!map.has(otherId)) map.set(otherId, []);
       map.get(otherId)?.push(msg);
     });
 
-    // Convertir a array y ordenar por fecha del último mensaje
     return Array.from(map.entries()).map(([contactId, msgs]) => {
-      const lastMsg = msgs[msgs.length - 1]; // Asumiendo que vienen ordenados por fecha
-      // Buscar datos del contacto
+      // Ordenar mensajes cronológicamente
+      msgs.sort((a, b) => new Date(a.fecha_envio).getTime() - new Date(b.fecha_envio).getTime());
+      
+      const lastMsg = msgs[msgs.length - 1];
       const contactInfo = contactId === lastMsg.id_remitente ? lastMsg.remitente : lastMsg.receptor;
       const unreadCount = msgs.filter(m => m.id_receptor === user.id && !m.leido).length;
       
@@ -77,14 +75,19 @@ const MensajesPage: React.FC = () => {
 
   }, [mensajes, user]);
 
-  // Efecto para seleccionar automáticamente el primer contacto si no hay selección
+  // Auto-selección inicial
   useEffect(() => {
-    if (!selectedContactId && conversaciones.length > 0) {
-      setSelectedContactId(conversaciones[0].contactId);
+    if (!selectedContactId && conversations.length > 0) {
+      setSelectedContactId(conversations[0].contactId);
     }
-  }, [conversaciones, selectedContactId]);
+  }, [conversations, selectedContactId]);
 
-  // 3. Mutación Enviar Mensaje
+  // Auto-scroll al final del chat
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [selectedContactId, mensajes]);
+
+  // 3. Mutación: Enviar
   const sendMutation = useMutation({
     mutationFn: async () => {
       if (!selectedContactId || !newMessage.trim()) return;
@@ -99,19 +102,19 @@ const MensajesPage: React.FC = () => {
     }
   });
 
-  // 4. Mutación Marcar Leído (Automático al abrir chat)
+  // 4. Mutación: Marcar Leído
   const markReadMutation = useMutation({
     mutationFn: async (msgId: number) => MensajeService.marcarComoLeido(msgId),
     onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ['misMensajes'] });
-        queryClient.invalidateQueries({ queryKey: ['mensajesNoLeidos'] }); // Actualizar badge del navbar
+        queryClient.invalidateQueries({ queryKey: ['mensajesNoLeidos'] });
     }
   });
 
-  // Efecto: Marcar leídos al seleccionar contacto
+  // Efecto Marcar Leído al abrir chat
   useEffect(() => {
     if (selectedContactId && user) {
-      const chat = conversaciones.find(c => c.contactId === selectedContactId);
+      const chat = conversations.find(c => c.contactId === selectedContactId);
       if (chat) {
         chat.allMessages.forEach(msg => {
           if (msg.id_receptor === user.id && !msg.leido) {
@@ -120,16 +123,23 @@ const MensajesPage: React.FC = () => {
         });
       }
     }
-  }, [selectedContactId, conversaciones, user]);
+  }, [selectedContactId, conversations, user]);
 
-  // Renderizado del Chat Activo
-  const activeChat = conversaciones.find(c => c.contactId === selectedContactId);
+  // Manejo inteligente del Enter (Shift+Enter para nueva línea)
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMutation.mutate();
+    }
+  };
+
+  const activeChat = conversations.find(c => c.contactId === selectedContactId);
 
   return (
     <PageContainer maxWidth="xl">
       <PageHeader 
         title="Centro de Mensajes" 
-        subtitle="Comunícate con soporte o revisa notificaciones del sistema." 
+        subtitle="Comunícate con soporte o revisa notificaciones." 
       />
 
       <Paper 
@@ -137,30 +147,30 @@ const MensajesPage: React.FC = () => {
           display: 'flex', 
           height: '75vh', 
           overflow: 'hidden', 
-          borderRadius: 2, 
+          borderRadius: 3, 
           border: '1px solid', 
           borderColor: 'divider' 
         }} 
         elevation={0}
       >
-        {/* === SIDEBAR: LISTA DE CONTACTOS === */}
+        {/* === SIDEBAR === */}
         <Box sx={{ width: 320, borderRight: '1px solid', borderColor: 'divider', display: 'flex', flexDirection: 'column', bgcolor: 'grey.50' }}>
           <Box p={2}>
             <Typography variant="subtitle2" color="text.secondary" fontWeight="bold">
-              CONVERSACIONES ({conversaciones.length})
+              CONVERSACIONES ({conversations.length})
             </Typography>
           </Box>
           <Divider />
           <List sx={{ flex: 1, overflowY: 'auto', p: 0 }}>
             {isLoading ? (
                <Box p={4} textAlign="center"><CircularProgress size={24} /></Box>
-            ) : conversaciones.length === 0 ? (
+            ) : conversations.length === 0 ? (
                <Box p={4} textAlign="center"><Typography variant="body2" color="text.secondary">No tienes mensajes.</Typography></Box>
             ) : (
-              conversaciones.map((chat) => (
+              conversations.map((chat) => (
                 <React.Fragment key={chat.contactId}>
-                  <ListItem disablePadding> {/* ✅ CORRECCIÓN: ListItem solo contenedor */}
-                    <ListItemButton         /* ✅ CORRECCIÓN: ListItemButton es el interactivo */
+                  <ListItem disablePadding>
+                    <ListItemButton 
                       selected={selectedContactId === chat.contactId}
                       onClick={() => setSelectedContactId(chat.contactId)}
                       sx={{ 
@@ -198,8 +208,7 @@ const MensajesPage: React.FC = () => {
               ))
             )}
             
-            {/* Botón flotante para iniciar soporte si no existe chat */}
-            {!conversaciones.find(c => c.contactId === SYSTEM_USER_ID) && (
+            {!conversations.find(c => c.contactId === SYSTEM_USER_ID) && (
                  <Box p={2}>
                     <Button 
                         variant="outlined" fullWidth startIcon={<SystemIcon />}
@@ -212,22 +221,22 @@ const MensajesPage: React.FC = () => {
           </List>
         </Box>
 
-        {/* === AREA DE CHAT === */}
+        {/* === CHAT AREA === */}
         <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', bgcolor: 'background.paper' }}>
           {selectedContactId ? (
             <>
-              {/* Header Chat */}
-              <Box p={2} borderBottom="1px solid" borderColor="divider" display="flex" alignItems="center" gap={2}>
+              {/* Header */}
+              <Box p={2} borderBottom="1px solid" borderColor="divider" display="flex" alignItems="center" gap={2} bgcolor="white">
                  <Avatar sx={{ bgcolor: selectedContactId === SYSTEM_USER_ID ? 'secondary.main' : 'primary.main' }}>
                     {selectedContactId === SYSTEM_USER_ID ? <SystemIcon /> : activeChat?.contactName?.charAt(0)}
                  </Avatar>
-                 <Typography variant="h6">
-                    {selectedContactId === SYSTEM_USER_ID ? 'Soporte / Sistema' : activeChat?.contactName}
+                 <Typography variant="h6" fontWeight="bold">
+                    {selectedContactId === SYSTEM_USER_ID ? 'Soporte / Sistema' : activeChat?.contactName || 'Nuevo Chat'}
                  </Typography>
               </Box>
 
               {/* Mensajes */}
-              <Box sx={{ flex: 1, overflowY: 'auto', p: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <Box sx={{ flex: 1, overflowY: 'auto', p: 3, display: 'flex', flexDirection: 'column', gap: 2, bgcolor: '#fafafa' }}>
                 {activeChat ? (
                     activeChat.allMessages.map((msg) => {
                         const isMe = msg.id_remitente === user?.id;
@@ -243,14 +252,16 @@ const MensajesPage: React.FC = () => {
                                     elevation={0}
                                     sx={{ 
                                         p: 2, 
-                                        bgcolor: isMe ? 'primary.main' : 'grey.100',
+                                        bgcolor: isMe ? 'primary.main' : 'white',
                                         color: isMe ? 'white' : 'text.primary',
                                         borderRadius: 2,
                                         borderTopRightRadius: isMe ? 0 : 2,
-                                        borderTopLeftRadius: isMe ? 2 : 0
+                                        borderTopLeftRadius: isMe ? 2 : 0,
+                                        border: isMe ? 'none' : '1px solid #e0e0e0',
+                                        boxShadow: isMe ? 2 : 0
                                     }}
                                 >
-                                    <Typography variant="body1" sx={{ wordBreak: 'break-word' }}>
+                                    <Typography variant="body1" sx={{ wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>
                                         {msg.contenido}
                                     </Typography>
                                 </Paper>
@@ -265,13 +276,14 @@ const MensajesPage: React.FC = () => {
                     })
                 ) : (
                     <Box textAlign="center" mt={4} color="text.secondary">
-                        <Typography>Inicia una conversación con soporte aquí.</Typography>
+                        <Typography>Escribe tu primer mensaje para iniciar la conversación.</Typography>
                     </Box>
                 )}
+                <div ref={messagesEndRef} />
               </Box>
 
-              {/* Input Area */}
-              <Box p={2} borderTop="1px solid" borderColor="divider" bgcolor="background.default">
+              {/* Input */}
+              <Box p={2} borderTop="1px solid" borderColor="divider" bgcolor="white">
                 <Stack direction="row" spacing={1}>
                     <TextField 
                         fullWidth 
@@ -280,16 +292,18 @@ const MensajesPage: React.FC = () => {
                         variant="outlined"
                         value={newMessage}
                         onChange={(e) => setNewMessage(e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && sendMutation.mutate()}
+                        onKeyDown={handleKeyPress}
                         multiline
                         maxRows={3}
-                        sx={{ bgcolor: 'white' }}
+                        sx={{ 
+                            '& .MuiOutlinedInput-root': { borderRadius: 3 }
+                        }}
                     />
                     <IconButton 
                         color="primary" 
                         onClick={() => sendMutation.mutate()}
                         disabled={!newMessage.trim() || sendMutation.isPending}
-                        sx={{ bgcolor: 'primary.main', color: 'white', '&:hover': { bgcolor: 'primary.dark' }, width: 40, height: 40 }}
+                        sx={{ bgcolor: 'primary.main', color: 'white', '&:hover': { bgcolor: 'primary.dark' }, width: 40, height: 40, alignSelf: 'flex-end' }}
                     >
                         {sendMutation.isPending ? <CircularProgress size={20} color="inherit" /> : <SendIcon fontSize="small" />}
                     </IconButton>
@@ -297,7 +311,8 @@ const MensajesPage: React.FC = () => {
               </Box>
             </>
           ) : (
-            <Box display="flex" alignItems="center" justifyContent="center" height="100%" color="text.secondary">
+            <Box display="flex" alignItems="center" justifyContent="center" height="100%" color="text.secondary" flexDirection="column" gap={2}>
+               <PersonIcon sx={{ fontSize: 60, opacity: 0.2 }} />
                <Typography>Selecciona una conversación para empezar</Typography>
             </Box>
           )}

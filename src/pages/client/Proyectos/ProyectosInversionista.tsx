@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import { Box, Typography, Paper, Divider, Stack, Tabs, Tab, Avatar } from "@mui/material";
 import { 
-  TrendingUp, 
-  Security, 
-  MonetizationOn 
+  TrendingUp,   // Icono Rentabilidad
+  Business,     // Icono Activos Reales
+  MonetizationOn // Icono Dolarizado
 } from "@mui/icons-material";
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from "react-router-dom";
@@ -11,10 +11,11 @@ import { useAuth } from "../../../context/AuthContext";
 
 import { PageContainer, PageHeader, SectionTitle } from "../../../components/common";
 import { QueryHandler } from "../../../components/common/QueryHandler/QueryHandler";
+
 import proyectoService from '../../../Services/proyecto.service'; 
 import { ProjectCard } from "./components/ProjectCard";
 
-// --- 🎨 1. COMPONENTE VISUAL: Highlights (Diseño Nuevo) ---
+// --- 🎨 COMPONENTE VISUAL: Investor Highlights ---
 const InvestorHighlights: React.FC = () => (
   <Paper 
     elevation={0} 
@@ -22,20 +23,21 @@ const InvestorHighlights: React.FC = () => (
       p: 3, 
       mb: 4, 
       borderRadius: 4, 
-      bgcolor: 'grey.100', // Fondo gris claro consistente
+      bgcolor: 'grey.100', 
       border: 'none'
     }}
   >
     <Stack 
-      direction={{ xs: 'column', md: 'row' }} 
+      direction={{ xs: 'column', md: 'row' }} // 📱 Responsive: Columna en móvil, Fila en PC
       spacing={{ xs: 4, md: 8 }} 
       justifyContent="center"
       alignItems={{ xs: 'flex-start', md: 'center' }}
+      // Línea divisoria solo en desktop
       divider={<Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', md: 'block' }, borderColor: 'grey.300' }} />}
     >
-      {/* Elemento 1: Alta Rentabilidad */}
+      {/* Item 1: Rentabilidad */}
       <Box display="flex" alignItems="center" gap={2}>
-        <Avatar sx={{ bgcolor: 'success.light', color: 'success.dark', width: 48, height: 48 }}>
+        <Avatar sx={{ bgcolor: 'primary.light', color: 'primary.dark', width: 48, height: 48 }}>
           <TrendingUp fontSize="medium" />
         </Avatar>
         <Box>
@@ -43,22 +45,37 @@ const InvestorHighlights: React.FC = () => (
             Alta Rentabilidad
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Retornos estimados en USD
+            Retornos estimados superiores al mercado
           </Typography>
         </Box>
       </Box>
 
-      {/* Elemento 2: Respaldo Real */}
+      {/* Item 2: Activos Reales */}
       <Box display="flex" alignItems="center" gap={2}>
         <Avatar sx={{ bgcolor: 'info.light', color: 'info.dark', width: 48, height: 48 }}>
-          <Security fontSize="medium" />
+          <Business fontSize="medium" />
         </Avatar>
         <Box>
           <Typography variant="subtitle1" fontWeight={800} color="text.primary" lineHeight={1.2}>
-            Respaldo Real
+            Respaldo Inmobiliario
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Activos inmobiliarios tangibles
+            Inversión segura en ladrillos y tierra
+          </Typography>
+        </Box>
+      </Box>
+
+      {/* Item 3: Capitalización */}
+      <Box display="flex" alignItems="center" gap={2}>
+        <Avatar sx={{ bgcolor: 'success.light', color: 'success.dark', width: 48, height: 48 }}>
+          <MonetizationOn fontSize="medium" />
+        </Avatar>
+        <Box>
+          <Typography variant="subtitle1" fontWeight={800} color="text.primary" lineHeight={1.2}>
+            Capitalización
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Protege el valor de tu capital en USD
           </Typography>
         </Box>
       </Box>
@@ -70,10 +87,9 @@ const ProyectosInversionista: React.FC = () => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   
-  // ✅ Estado para el filtro (Frontend)
   const [tabValue, setTabValue] = useState<'activos' | 'finalizados'>('activos');
 
-  // Pedimos TODOS los proyectos
+  // Llamada al endpoint de Inversionistas
   const { data: todosLosProyectos, isLoading, error } = useQuery({
     queryKey: ['proyectosInversionista'],
     queryFn: async () => (await proyectoService.getInversionistasActive()).data
@@ -81,7 +97,6 @@ const ProyectosInversionista: React.FC = () => {
   
   const rawProjects = todosLosProyectos || [];
 
-  // ✅ Lógica de filtrado en el cliente
   const proyectosFiltrados = rawProjects.filter(project => {
     if (tabValue === 'activos') {
       return project.estado_proyecto !== 'Finalizado';
@@ -103,25 +118,24 @@ const ProyectosInversionista: React.FC = () => {
     <PageContainer maxWidth="xl">
       <PageHeader
         title="Oportunidades de Inversión"
-        subtitle="Diversificá tu portafolio con proyectos inmobiliarios de alto potencial."
+        subtitle="Maximiza tu capital participando en desarrollos inmobiliarios de alto impacto."
       />
 
       <QueryHandler 
         isLoading={isLoading} 
         error={error as Error | null} 
         loadingMessage="Buscando oportunidades..."
-        fullHeight={true}
+        fullHeight={true} 
       >
         <>
-          {/* 1. Highlights */}
           <InvestorHighlights />
 
-          {/* 2. Filtros (Tabs) */}
+          {/* Filtros */}
           <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 4, display: 'flex', justifyContent: 'center' }}>
             <Tabs 
               value={tabValue} 
               onChange={(_, newVal) => setTabValue(newVal)} 
-              centered
+              centered 
               indicatorColor="primary"
               textColor="primary"
               sx={{ '& .MuiTab-root': { textTransform: 'none', fontSize: '1rem', fontWeight: 500 } }}
@@ -131,39 +145,41 @@ const ProyectosInversionista: React.FC = () => {
             </Tabs>
           </Box>
 
-          {/* 3. Título de Sección */}
           <SectionTitle>
-            {tabValue === 'activos' ? 'Oportunidades Abiertas' : 'Historial de Éxito'}
+            {tabValue === 'activos' ? 'Cartera de Inversión' : 'Track Record'}
           </SectionTitle>
 
-          {/* 4. Grid o Mensaje Vacío */}
+          {/* Grid Responsive */}
           {proyectosFiltrados.length === 0 ? (
             <Box textAlign="center" py={8} bgcolor="grey.50" borderRadius={4}>
-              <MonetizationOn sx={{ fontSize: 60, color: 'text.disabled', mb: 2 }} />
               <Typography variant="h5" color="text.secondary" fontWeight={500}>
                 {tabValue === 'activos' 
-                  ? "No se encontraron oportunidades abiertas." 
-                  : "No hay proyectos completados aún."}
+                  ? "No hay oportunidades de inversión abiertas en este momento." 
+                  : "Aún no hay proyectos finalizados en el historial."}
               </Typography>
-              {tabValue === 'activos' && (
-                <Typography variant="body2" color="text.secondary" mt={1}>
-                  Nuestros expertos están analizando nuevos proyectos.
-                </Typography>
-              )}
             </Box>
           ) : (
             <Box
               sx={{
                 display: "grid",
-                gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", md: "repeat(3, 1fr)" },
-                gap: 5, width: "80%", mx: "auto", mb: 9,
+                // 📱 CONFIGURACIÓN GRID RESPONSIVE
+                gridTemplateColumns: { 
+                    xs: "1fr",              // Móvil: 1 columna
+                    sm: "repeat(2, 1fr)",   // Tablet: 2 columnas
+                    md: "repeat(3, 1fr)"    // Desktop: 3 columnas
+                },
+                gap: 4,
+                width: "100%",
+                maxWidth: "1400px", // Limita el ancho en pantallas gigantes
+                mx: "auto", 
+                mb: 9,
               }}
             >
               {proyectosFiltrados.map((project) => (
                 <ProjectCard
                   key={project.id}
                   project={project}
-                  type="inversionista"
+                  type="inversionista" // 👈 Clave: Cambia el diseño de la tarjeta
                   onClick={() => handleProjectClick(project.id)}
                 />
               ))}

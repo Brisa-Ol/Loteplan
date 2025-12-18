@@ -91,8 +91,10 @@ const UsuarioService = {
    * Eliminar (Soft Delete) cuenta propia
    * Backend Route: DELETE /me
    */
-  softDeleteMe: async (): Promise<AxiosResponse<void>> => {
-    return await httpService.delete(`${ENDPOINT}/me`);
+softDeleteMe: async (twofaCode?: string): Promise<AxiosResponse<void>> => {
+    // Si hay código, enviamos objeto. Si no, enviamos objeto vacío.
+    const payload = twofaCode ? { twofaCode } : {};
+    return await httpService.post(`${ENDPOINT}/me`, payload);
   },
 
   // ===========================================

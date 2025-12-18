@@ -2,10 +2,9 @@ import React from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Box, Typography, Button, CircularProgress, Paper, Stack } from '@mui/material';
-import { CheckCircle, Error, HourglassEmpty } from '@mui/icons-material';
+import { CheckCircle, Error, HourglassEmpty, Refresh } from '@mui/icons-material';
 import MercadoPagoService from '../../../../Services/pagoMercado.service';
 import { PageContainer } from '../../../../components/common/PageContainer/PageContainer';
-
 
 const PagoResult: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -13,59 +12,62 @@ const PagoResult: React.FC = () => {
   
   const transaccionId = searchParams.get('transaccion');
 
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['paymentStatus', transaccionId],
     queryFn: async () => {
       if (!transaccionId) return null;
+      // sync=true fuerza al backend a consultar a MP si es necesario
       return (await MercadoPagoService.getPaymentStatus(Number(transaccionId), true)).data;
     },
     enabled: !!transaccionId,
-    retry: 2
+    retry: 2,
+    // 🔄 POLLING INTELIGENTE:
+    // Seguir consultando cada 4s mientras el estado sea intermedio
+    refetchInterval: (query) => {
+        const estado = query.state.data?.transaccion?.estado;
+        if (estado === 'pendiente' || estado === 'en_proceso') return 4000;
+        return false; 
+    }
   });
 
   const getStatusContent = () => {
-    // Estado General (Transacción)
     const estadoTx = data?.transaccion?.estado;
-    // Estado Detallado (Pasarela) - Opcional, puede ser null
     const estadoPasarela = data?.pagoPasarela?.estado;
 
-    // 1. ÉXITO (Transacción 'pagado')
+    // 1. ÉXITO
     if (estadoTx === 'pagado') {
       return {
         icon: <CheckCircle sx={{ fontSize: 80, color: 'success.main' }} />,
         title: '¡Pago Exitoso!',
         desc: `La transacción #${transaccionId} fue aprobada correctamente.`,
-        color: 'success.main'
+        color: 'success.main',
+        canRetry: false
       };
     }
 
-    // 2. FALLO (Transacción 'fallido', 'reembolsado', etc.)
-    if (
-      estadoTx === 'fallido' || 
-      estadoTx === 'reembolsado' ||
-      estadoTx === 'rechazado_por_capacidad' ||
-      estadoTx === 'rechazado_proyecto_cerrado' ||
-      estadoTx === 'expirado'
-    ) {
-      // Mensaje personalizado si sabemos que la pasarela lo rechazó
+    // 2. FALLO
+    if (['fallido', 'reembolsado', 'rechazado_por_capacidad', 'rechazado_proyecto_cerrado', 'expirado'].includes(estadoTx || '')) {
       const detalle = estadoPasarela === 'rechazado' 
         ? 'El método de pago fue rechazado por la entidad financiera.' 
-        : 'Hubo un problema con el procesamiento. Por favor intenta nuevamente.';
+        : 'Hubo un problema con el procesamiento.';
 
       return {
         icon: <Error sx={{ fontSize: 80, color: 'error.main' }} />,
         title: 'El pago no se completó',
         desc: detalle,
-        color: 'error.main'
+        color: 'error.main',
+        canRetry: true
       };
     }
 
-    // 3. PENDIENTE (Transacción 'pendiente', 'en_proceso')
+    // 3. PENDIENTE (Default)
     return {
       icon: <HourglassEmpty sx={{ fontSize: 80, color: 'warning.main' }} />,
-      title: 'Pago en Proceso',
-      desc: 'Estamos esperando la confirmación final de Mercado Pago.',
-      color: 'warning.main'
+      title: 'Procesando Pago...',
+      desc: 'Estamos esperando la confirmación final de Mercado Pago. Esto puede tardar unos segundos.',
+      color: 'warning.main',
+      canRetry: false,
+      isPending: true
     };
   };
 
@@ -78,7 +80,12 @@ const PagoResult: React.FC = () => {
   return (
     <PageContainer maxWidth="sm">
       <Paper elevation={3} sx={{ p: 5, textAlign: 'center', borderRadius: 4, mt: 4 }}>
-        <Box mb={3}>{content.icon}</Box>
+        <Box mb={3}>
+            {/* Animación de pulso si está pendiente */}
+            <Box sx={{ animation: content.isPending ? 'pulse 2s infinite' : 'none' }}>
+                {content.icon}
+            </Box>
+        </Box>
         
         <Typography variant="h4" fontWeight={800} color={content.color} gutterBottom>
           {content.title}
@@ -87,6 +94,17 @@ const PagoResult: React.FC = () => {
         <Typography variant="body1" color="text.secondary" paragraph>
           {content.desc}
         </Typography>
+
+        {/* Botón de actualización manual si está pendiente */}
+        {content.isPending && (
+            <Button 
+                startIcon={isFetching ? <CircularProgress size={16} /> : <Refresh />}
+                onClick={() => refetch()}
+                sx={{ mb: 3 }}
+            >
+                Actualizar Estado
+            </Button>
+        )}
 
         {data?.pagoPasarela && (
           <Box sx={{ bgcolor: 'background.default', p: 2, borderRadius: 2, mb: 4, textAlign: 'left' }}>
@@ -97,12 +115,12 @@ const PagoResult: React.FC = () => {
               </Box>
               <Box display="flex" justifyContent="space-between">
                 <Typography variant="caption">Referencia MP:</Typography>
-                <Typography variant="body2">{data.pagoPasarela.transaccionIdPasarela}</Typography>
+                {/* ✅ CORRECCIÓN AQUÍ: Usamos transaccionIdPasarela */}
+                <Typography variant="body2">{data.pagoPasarela.transaccionIdPasarela || 'N/A'}</Typography>
               </Box>
               <Box display="flex" justifyContent="space-between">
                 <Typography variant="caption">Estado Pasarela:</Typography>
                 <Typography variant="body2" sx={{textTransform: 'capitalize', fontWeight: 'bold'}}>
-                    {/* Mostramos el estado real de la pasarela: aprobado, rechazado, etc. */}
                     {data.pagoPasarela.estado}
                 </Typography>
               </Box>
@@ -119,6 +137,17 @@ const PagoResult: React.FC = () => {
           </Button>
         </Stack>
       </Paper>
+      
+      {/* Estilo keyframes para la animación simple */}
+      <style>
+        {`
+          @keyframes pulse {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(0.95); }
+            100% { opacity: 1; transform: scale(1); }
+          }
+        `}
+      </style>
     </PageContainer>
   );
 };

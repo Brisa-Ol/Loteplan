@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
   Dialog, DialogTitle, DialogContent, DialogActions, 
-  Button, Box, Typography, Alert 
+  Button, Box, Typography, Alert, useTheme 
 } from '@mui/material';
 import { CloudUpload } from '@mui/icons-material';
 import type { UpdatePlantillaPdfDto, ContratoPlantillaDto } from '../../../../../types/dto/contrato.dto';
@@ -15,6 +15,7 @@ interface Props {
 }
 
 const UpdatePdfModal: React.FC<Props> = ({ open, onClose, plantilla, onSubmit, isLoading }) => {
+  const theme = useTheme(); // 🎨
   const [file, setFile] = useState<File | null>(null);
 
   const handleSubmit = async () => {
@@ -24,51 +25,41 @@ const UpdatePdfModal: React.FC<Props> = ({ open, onClose, plantilla, onSubmit, i
     onClose();
   };
 
+  if (!plantilla) return null;
+
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle fontWeight="bold">
-        Actualizar PDF: Versión {plantilla?.version}
-      </DialogTitle>
+      <DialogTitle variant="h6">Actualizar PDF: v{plantilla.version}</DialogTitle>
       <DialogContent>
-        <Alert severity="warning" sx={{ mb: 2 }}>
-          ⚠️ Estás a punto de reemplazar el archivo físico. Esto generará un nuevo Hash de integridad.
-          Los contratos ya firmados NO se verán afectados.
+        <Alert severity="warning" sx={{ mb: 3, borderRadius: 2 }}>
+          ⚠️ Se reemplazará el archivo físico y cambiará el hash de seguridad.
         </Alert>
 
         <Box 
           sx={{ 
-            border: '2px dashed #ccc', 
+            border: '2px dashed',
+            borderColor: file ? theme.palette.primary.main : theme.palette.grey[400],
             borderRadius: 2, 
             p: 4, 
             textAlign: 'center',
-            bgcolor: file ? 'action.hover' : 'transparent',
-            cursor: 'pointer'
+            bgcolor: file ? `${theme.palette.primary.main}1A` : 'transparent',
+            cursor: 'pointer',
+            transition: 'all 0.3s',
+            '&:hover': { borderColor: theme.palette.primary.main }
           }}
           component="label"
         >
-          <input
-            type="file"
-            hidden
-            accept="application/pdf"
-            onChange={(e) => {
-              if (e.target.files) setFile(e.target.files[0]);
-            }}
-          />
-          <CloudUpload sx={{ fontSize: 40, color: 'warning.main', mb: 1 }} />
-          <Typography variant="body1">
+          <input type="file" hidden accept="application/pdf" onChange={(e) => { if (e.target.files) setFile(e.target.files[0]); }} />
+          <CloudUpload sx={{ fontSize: 48, color: file ? theme.palette.primary.main : theme.palette.text.disabled, mb: 1 }} />
+          <Typography variant="body1" fontWeight={600} color={file ? 'primary' : 'textSecondary'}>
             {file ? file.name : "Seleccionar nuevo PDF"}
           </Typography>
         </Box>
       </DialogContent>
-      <DialogActions sx={{ p: 2 }}>
+      <DialogActions sx={{ p: 3 }}>
         <Button onClick={onClose} color="inherit">Cancelar</Button>
-        <Button 
-          onClick={handleSubmit} 
-          variant="contained" 
-          color="warning"
-          disabled={!file || isLoading}
-        >
-          {isLoading ? 'Actualizando...' : 'Confirmar Actualización'}
+        <Button onClick={handleSubmit} variant="contained" color="warning" disabled={!file || isLoading}>
+          {isLoading ? 'Subiendo...' : 'Reemplazar'}
         </Button>
       </DialogActions>
     </Dialog>

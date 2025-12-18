@@ -12,20 +12,22 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { AxiosError } from 'axios';
 
+// --- Servicios y Tipos ---
 import UsuarioService from '../../../Services/usuario.service';
 import type { CreateUsuarioDto, UpdateUserAdminDto, UsuarioDto } from '../../../types/dto/usuario.dto';
 
+// --- Componentes Comunes ---
 import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
 import { PageHeader } from '../../../components/common/PageHeader/PageHeader';
 import { QueryHandler } from '../../../components/common/QueryHandler/QueryHandler';
+import { DataTable, type DataTableColumn, DataSwitch } from '../../../components/common/DataTable/DataTable';
+import { ConfirmDialog } from '../../../components/common/ConfirmDialog/ConfirmDialog'; // 👈 Importamos el Dialog
 
+// --- Modales y Hooks ---
 import CreateUserModal from './modals/CreateUserModal';
 import EditUserModal from './modals/EditUserModal';
-
 import { useModal } from '../../../hooks/useModal';
-
-// ✅ 1. Importamos DataSwitch (y mantenemos DataTable)
-import { DataTable, type DataTableColumn, DataSwitch } from '../../../components/common/DataTable/DataTable';
+import { useConfirmDialog } from '../../../hooks/useConfirmDialog'; // 👈 Importamos el Hook
 
 const MiniStatCard: React.FC<{ title: string; value: number; icon: React.ReactNode; color: string }> = ({ title, value, icon, color }) => (
   <Paper elevation={0} sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 2, bgcolor: 'background.paper', borderRadius: 2, border: '1px solid #eee' }}>
@@ -42,13 +44,14 @@ const MiniStatCard: React.FC<{ title: string; value: number; icon: React.ReactNo
 const AdminUsuarios: React.FC = () => {
   const queryClient = useQueryClient();
   
+  // Hooks de Modales
+  const createModal = useModal();
+  const editModal = useModal();
+  const confirmDialog = useConfirmDialog(); // 👈 Inicializamos el confirmador
+  
   // Estados de Interfaz
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
-  
-  const createModal = useModal();
-  const editModal = useModal();
-  
   const [editingUser, setEditingUser] = useState<UsuarioDto | null>(null);
 
   const [snackbar, setSnackbar] = useState<{ open: boolean, message: string, severity: 'success'|'error' }>({
@@ -94,6 +97,7 @@ const AdminUsuarios: React.FC = () => {
     onError: (err) => showMessage(`Error al editar: ${getErrorMessage(err)}`, 'error')
   });
 
+  // Mutación de Cambio de Estado (Ban/Reactivar)
   const toggleStatusMutation = useMutation({
     mutationFn: async (usuario: UsuarioDto) => {
       if (usuario.activo) return await UsuarioService.softDelete(usuario.id);
@@ -101,11 +105,16 @@ const AdminUsuarios: React.FC = () => {
     },
     onSuccess: (_, usuario) => {
       queryClient.invalidateQueries({ queryKey: ['adminUsuarios'] });
-      const accion = usuario.activo ? 'desactivado' : 'reactivado';
+      confirmDialog.close(); // ✅ Cerramos el confirmador tras el éxito
+      const accion = usuario.activo ? 'bloqueado' : 'reactivado';
       showMessage(`Usuario ${accion} correctamente`, 'success');
     },
     onError: (err) => showMessage(`Error al cambiar estado: ${getErrorMessage(err)}`, 'error')
   });
+
+  // ==========================================
+  // HANDLERS
+  // ==========================================
 
   const handleEditUser = (user: UsuarioDto) => {
     setEditingUser(user);
@@ -117,8 +126,21 @@ const AdminUsuarios: React.FC = () => {
     setEditingUser(null);
   };
 
-  const handleToggleStatus = (usuario: UsuarioDto) => {
-     toggleStatusMutation.mutate(usuario);
+  // Interceptamos el Toggle para pedir confirmación
+  const handleToggleStatusClick = (usuario: UsuarioDto) => {
+    if (usuario.activo) {
+        // Si lo va a bloquear, PEDIMOS CONFIRMACIÓN
+        confirmDialog.confirm('ban_user', usuario);
+    } else {
+        // Si lo va a reactivar, lo hacemos directo (o también puedes pedir confirmación)
+        toggleStatusMutation.mutate(usuario);
+    }
+  };
+
+  const handleConfirmBan = () => {
+    if (confirmDialog.data) {
+        toggleStatusMutation.mutate(confirmDialog.data);
+    }
   };
 
   const stats = useMemo(() => ({
@@ -144,9 +166,7 @@ const AdminUsuarios: React.FC = () => {
     });
   }, [usuarios, searchTerm, filterStatus]);
 
-  // ========================================================================
-  // 🎨 COLUMNAS LIMPIAS: Ya no necesitamos poner opacity en cada render
-  // ========================================================================
+  // Columnas
   const columns: DataTableColumn<UsuarioDto>[] = [
     { id: 'id', label: 'ID', minWidth: 50 },
     { 
@@ -169,9 +189,7 @@ const AdminUsuarios: React.FC = () => {
         </Stack>
       )
     },
-    { 
-      id: 'email', label: 'Email', minWidth: 200,
-    },
+    { id: 'email', label: 'Email', minWidth: 200 },
     { 
       id: 'rol', label: 'Rol', 
       render: (user) => (
@@ -184,13 +202,12 @@ const AdminUsuarios: React.FC = () => {
         />
       )
     },
-    // ✅ 2. USO DEL COMPONENTE DataSwitch
     { 
       id: 'acceso', label: 'Acceso', 
       render: (user) => (
         <DataSwitch 
             active={user.activo}
-            onChange={() => handleToggleStatus(user)}
+            onChange={() => handleToggleStatusClick(user)} // 👈 Llamamos al handler de confirmación
             activeLabel="Habilitado"
             inactiveLabel="Bloqueado"
             disabled={toggleStatusMutation.isPending && toggleStatusMutation.variables?.id === user.id}
@@ -215,6 +232,7 @@ const AdminUsuarios: React.FC = () => {
     <PageContainer maxWidth="xl">
       <PageHeader title="Gestión de Usuarios" subtitle="Administra el acceso y seguridad." />
 
+      {/* Stats Cards */}
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} mb={4}>
         <Box flex={1}><MiniStatCard title="Total Usuarios" value={stats.total} icon={<GroupIcon />} color="primary" /></Box>
         <Box flex={1}><MiniStatCard title="Activos" value={stats.activos} icon={<CheckCircle />} color="success" /></Box>
@@ -222,6 +240,7 @@ const AdminUsuarios: React.FC = () => {
         <Box flex={1}><MiniStatCard title="Con 2FA Activo" value={stats.con2FA} icon={<Security />} color="warning" /></Box>
       </Stack>
 
+      {/* Filters & Add Button */}
       <Paper sx={{ p: 2, mb: 3, display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center', borderRadius: 2 }} elevation={0} variant="outlined">
         <TextField 
           placeholder="Buscar..." size="small" sx={{ flexGrow: 1, minWidth: 200 }}
@@ -238,25 +257,25 @@ const AdminUsuarios: React.FC = () => {
         </Button>
       </Paper>
 
+      {/* Tabla de Usuarios */}
       <QueryHandler isLoading={isLoading} error={error as Error | null}>
         <DataTable
             columns={columns} 
             data={filteredUsers} 
             getRowKey={(user) => user.id}
-            
-            // ✅ 3. APLICACIÓN GLOBAL DE ESTILOS DE FILA (Opacity/Grayscale)
             getRowSx={(user) => ({
-                opacity: user.activo ? 1 : 0.4,
-                filter: user.activo ? 'none' : 'grayscale(100%)', // Opcional: Esto lo pone en blanco y negro
+                opacity: user.activo ? 1 : 0.5,
+                filter: user.activo ? 'none' : 'grayscale(100%)',
                 transition: 'all 0.3s ease'
             })}
-
             emptyMessage="No se encontraron usuarios." 
             pagination={true} 
             defaultRowsPerPage={10}
         />
       </QueryHandler>
 
+      {/* --- MODALES --- */}
+      
       <CreateUserModal 
         open={createModal.isOpen}
         onClose={createModal.close}
@@ -270,6 +289,13 @@ const AdminUsuarios: React.FC = () => {
         user={editingUser}
         onSubmit={async (id, data) => { await updateMutation.mutateAsync({ id, data }); }}
         isLoading={updateMutation.isPending}
+      />
+
+      {/* ✅ Modal de Confirmación Global */}
+      <ConfirmDialog 
+        controller={confirmDialog}
+        onConfirm={handleConfirmBan}
+        isLoading={toggleStatusMutation.isPending}
       />
 
       <Snackbar 

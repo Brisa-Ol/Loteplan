@@ -1,5 +1,3 @@
-// src/pages/MiCuenta/MisInversiones.tsx
-
 import React, { useState } from 'react';
 import {
   Box, Typography, Paper, Stack, Chip, Alert, Button, Divider
@@ -12,44 +10,46 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 
 // Servicios y Tipos
 import InversionService from '../../../Services/inversion.service';
-
 import type { InversionDto } from '../../../types/dto/inversion.dto';
-
-// Componentes
-import { PageContainer, PageHeader } from '../../../components/common';
-import { QueryHandler } from '../../../components/common/QueryHandler/QueryHandler';
 import MercadoPagoService from '../../../Services/pagoMercado.service';
-import { Auth2FAModal } from './Pagos/Auth2FAModal';
 
+// Componentes Comunes
+import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
+import { PageHeader } from '../../../components/common/PageHeader/PageHeader';
+import { QueryHandler } from '../../../components/common/QueryHandler/QueryHandler';
+import TwoFactorAuthModal from '../../../components/common/TwoFactorAuthModal/TwoFactorAuthModal'; // ✅ Componente correcto
+
+// Hooks
+import { useModal } from '../../../hooks/useModal'; // ✅ Hook useModal
 
 const MisInversiones: React.FC = () => {
   const navigate = useNavigate();
 
-  // Estados para 2FA
-  const [is2FAOpen, setIs2FAOpen] = useState(false);
+  // 1. Hook de Modal y Estados
+  const twoFaModal = useModal();
   const [selectedInversionId, setSelectedInversionId] = useState<number | null>(null);
   const [twoFAError, setTwoFAError] = useState<string | null>(null);
 
-  // 1. Query: Obtener mis inversiones
+  // 2. Query: Obtener mis inversiones
   const { data: inversiones, isLoading, error } = useQuery<InversionDto[]>({
     queryKey: ['misInversiones'],
     queryFn: async () => (await InversionService.getMisInversiones()).data
   });
 
-  // 2. Mutation: Pagar inversión existente (CORREGIDO)
+  // 3. Mutation: Pagar inversión existente
   const payMutation = useMutation({
     mutationFn: async (inversionId: number) => {
-      // 🚀 USAMOS EL SERVICIO DE PAGO, NO EL DE CREAR INVERSIÓN
+      // 🚀 USAMOS EL SERVICIO DE PAGO
       return await MercadoPagoService.iniciarCheckoutModelo('inversion', inversionId);
     },
-    onSuccess: (response) => {
+    onSuccess: (response, inversionId) => {
       const data = response.data;
       
       // Caso A: Requiere 2FA (Status 202 o flag)
       if (response.status === 202 || data.is2FARequired) {
-        setSelectedInversionId(data.inversionId || null);
-        setIs2FAOpen(true);
+        setSelectedInversionId(inversionId); // Guardar ID
         setTwoFAError(null);
+        twoFaModal.open(); // ✅ Abrir con el hook
         return;
       }
 
@@ -63,7 +63,7 @@ const MisInversiones: React.FC = () => {
     }
   });
 
-  // 3. Mutation: Confirmar 2FA
+  // 4. Mutation: Confirmar 2FA
   const confirmar2FAMutation = useMutation({
     mutationFn: async (codigo: string) => {
       if (!selectedInversionId) throw new Error("ID de inversión perdido.");
@@ -77,18 +77,14 @@ const MisInversiones: React.FC = () => {
       if (response.data.redirectUrl) {
         window.location.href = response.data.redirectUrl;
       }
+      twoFaModal.close(); // ✅ Cerrar con el hook
     },
     onError: (err: any) => setTwoFAError(err.response?.data?.error || "Código inválido.")
   });
 
   // Handlers
   const handlePagarClick = (id: number) => {
-    setSelectedInversionId(id); // Guardamos ID por si acaso
     payMutation.mutate(id);
-  };
-
-  const handle2FAConfirm = (code: string) => {
-    confirmar2FAMutation.mutate(code);
   };
 
   const getStatusConfig = (estado: string) => {
@@ -238,12 +234,14 @@ const MisInversiones: React.FC = () => {
       </QueryHandler>
 
       {/* ✅ Modal de 2FA Conectado */}
-      <Auth2FAModal 
-        open={is2FAOpen}
-        onClose={() => setIs2FAOpen(false)}
-        onConfirm={handle2FAConfirm}
-        isLoading={confirmar2FAMutation.isPending}
+      <TwoFactorAuthModal 
+        open={twoFaModal.isOpen} 
+        onClose={() => { twoFaModal.close(); setSelectedInversionId(null); setTwoFAError(null); }} 
+        onSubmit={(code) => confirmar2FAMutation.mutate(code)} 
+        isLoading={confirmar2FAMutation.isPending} 
         error={twoFAError}
+        title="Confirmar Inversión"
+        description="Ingresa el código de 6 dígitos para autorizar esta inversión."
       />
 
     </PageContainer>

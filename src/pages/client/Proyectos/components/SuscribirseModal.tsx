@@ -7,24 +7,26 @@ import {
 import { MonetizationOn, VerifiedUser, Info } from '@mui/icons-material';
 import type { ProyectoDto } from '../../../../types/dto/proyecto.dto';
 
-
 interface Props {
   open: boolean;
   onClose: () => void;
-  onConfirm: () => void; // This will trigger handleInversion.mutate() in parent
+  onConfirm: () => void;
   proyecto: ProyectoDto | null;
   isLoading: boolean;
 }
 
 export const SuscribirseModal: React.FC<Props> = ({ 
-  open, 
-  onClose, 
-  onConfirm, 
-  proyecto, 
-  isLoading 
+  open, onClose, onConfirm, proyecto, isLoading 
 }) => {
   
   if (!proyecto) return null;
+
+  // Formateador de moneda consistente
+  const montoFormateado = new Intl.NumberFormat('es-AR', {
+    style: 'currency',
+    currency: proyecto.moneda === 'USD' ? 'USD' : 'ARS',
+    minimumFractionDigits: 0
+  }).format(Number(proyecto.monto_inversion));
 
   return (
     <Dialog open={open} onClose={isLoading ? undefined : onClose} maxWidth="sm" fullWidth>
@@ -58,18 +60,20 @@ export const SuscribirseModal: React.FC<Props> = ({
                 <Typography variant="body1" fontWeight={600}>Total a Pagar</Typography>
               </Box>
               <Typography variant="h5" fontWeight={700} color="success.main">
-                {proyecto.moneda} {Number(proyecto.monto_inversion).toLocaleString()}
+                {montoFormateado}
               </Typography>
             </Box>
           </Stack>
         </Paper>
 
         <Alert severity="info" icon={<Info />} sx={{ mb: 2 }}>
-          <strong>Paso 1:</strong> Serás redirigido a Mercado Pago para abonar la primera cuota.
-          <br/>
-          <strong>Paso 2:</strong> Al confirmar el pago, tu suscripción se activará automáticamente.
-          <br/>
-          <strong>Paso 3:</strong> Podrás firmar tu contrato digital desde el panel.
+          <Typography variant="body2" component="div">
+            <strong>Paso 1:</strong> Serás redirigido a Mercado Pago para abonar la primera cuota.
+            <br/>
+            <strong>Paso 2:</strong> Al confirmar el pago, tu suscripción se activará automáticamente.
+            <br/>
+            <strong>Paso 3:</strong> Podrás firmar tu contrato digital desde el panel.
+          </Typography>
         </Alert>
       </DialogContent>
 
@@ -83,7 +87,7 @@ export const SuscribirseModal: React.FC<Props> = ({
           disabled={isLoading}
           size="large"
           startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : <MonetizationOn />}
-          sx={{ px: 4 }}
+          sx={{ px: 4, fontWeight: 'bold' }}
         >
           {isLoading ? 'Procesando...' : 'Ir a Pagar'}
         </Button>

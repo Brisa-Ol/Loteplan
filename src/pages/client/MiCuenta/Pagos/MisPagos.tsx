@@ -4,27 +4,32 @@ import {
   Box, Typography, Paper, Stack, Button, Chip, Alert 
 } from '@mui/material';
 import { 
-  EventRepeat, ErrorOutline, Lock, AccountBalanceWallet, CheckCircle 
+  ErrorOutline, Lock, AccountBalanceWallet, CheckCircle
 } from '@mui/icons-material';
 
 // Servicios y Tipos
-
-import { Auth2FAModal } from './Auth2FAModal';
 import PagoService from '../../../../Services/pago.service';
 import SuscripcionService from '../../../../Services/suscripcion.service';
+import MercadoPagoService from '../../../../Services/pagoMercado.service'; // ✅ Importamos el servicio de MP
 import type { SuscripcionDto } from '../../../../types/dto/suscripcion.dto';
+import type { PagoDto } from '../../../../types/dto/pago.dto';
+
+// Componentes Comunes
 import { PageContainer } from '../../../../components/common/PageContainer/PageContainer';
 import { PageHeader } from '../../../../components/common/PageHeader/PageHeader';
-import type { PagoDto } from '../../../../types/dto/pago.dto';
 import { QueryHandler } from '../../../../components/common/QueryHandler/QueryHandler';
+import TwoFactorAuthModal from '../../../../components/common/TwoFactorAuthModal/TwoFactorAuthModal';
+
+// Hooks
+import { useModal } from '../../../../hooks/useModal';
 
 const MisPagos: React.FC = () => {
-  // Estados para 2FA
-  const [is2FAOpen, setIs2FAOpen] = useState(false);
+  // 1. Hook de Modal y Estados
+  const twoFaModal = useModal();
   const [selectedPagoId, setSelectedPagoId] = useState<number | null>(null);
   const [twoFAError, setTwoFAError] = useState<string | null>(null);
 
-  // 1. Cargar Datos
+  // 2. Cargar Datos
   const pagosQuery = useQuery<PagoDto[]>({
     queryKey: ['misPagos'],
     queryFn: async () => (await PagoService.getMyPayments()).data
@@ -44,32 +49,32 @@ const MisPagos: React.FC = () => {
     return sub?.proyectoAsociado?.nombre_proyecto || `Proyecto #${idProyecto}`;
   };
 
-  // 2. Filtro: Solo mostrar pendientes o vencidos (Las pagadas van al historial de transacciones)
+  // 3. Filtro: Solo mostrar pendientes o vencidos
   const cuotasPorPagar = useMemo(() => {
     return pagosQuery.data?.filter(p => 
       p.estado_pago === 'pendiente' || p.estado_pago === 'vencido'
     ).sort((a, b) => new Date(a.fecha_vencimiento).getTime() - new Date(b.fecha_vencimiento).getTime()) || [];
   }, [pagosQuery.data]);
 
-  // 3. Iniciar Pago (Usando MercadoPagoService para la redirección o PagoService para iniciar flujo)
+  // 4. Mutación: Iniciar Pago (CORREGIDO)
   const iniciarPagoMutation = useMutation({
     mutationFn: async (pagoId: number) => {
-      // Usamos iniciarCheckoutModelo del MercadoPagoService o el del PagoService
-      // Según tu back, PagoService.iniciarPagoMensual llama a /pagar-mes/:id que retorna 202 (2FA) o 200 (URL)
-      return await PagoService.iniciarPagoMensual(pagoId);
+      // 🚀 CAMBIO CLAVE: Usamos MercadoPagoService igual que en MisInversiones
+      // 'pago' es el modelo que identifica a las cuotas mensuales en tu backend
+      return await MercadoPagoService.iniciarCheckoutModelo('pago', pagoId);
     },
-    onSuccess: (response) => {
+    onSuccess: (response, pagoId) => {
       const data = response.data;
       
-      // Caso 2FA
+      // CASO A: Requiere 2FA (Status 202)
       if (response.status === 202 || data.is2FARequired) {
-        setSelectedPagoId(data.pagoId || null);
-        setIs2FAOpen(true); 
+        setSelectedPagoId(pagoId);
         setTwoFAError(null);
+        twoFaModal.open();
         return;
       }
 
-      // Caso Directo
+      // CASO B: Redirección Directa (Status 200)
       if (data.redirectUrl) {
         window.location.href = data.redirectUrl;
       }
@@ -77,10 +82,10 @@ const MisPagos: React.FC = () => {
     onError: (err: any) => alert(err.response?.data?.error || "Error al iniciar el pago.")
   });
 
-  // 4. Confirmar 2FA
+  // 5. Mutación: Confirmar con 2FA (Paso 2)
   const confirmar2FAMutation = useMutation({
     mutationFn: async (codigo: string) => {
-      if (!selectedPagoId) throw new Error("ID perdido.");
+      if (!selectedPagoId) throw new Error("ID de pago perdido.");
       return await PagoService.confirmarPago2FA({
         pagoId: selectedPagoId,
         codigo_2fa: codigo
@@ -90,8 +95,9 @@ const MisPagos: React.FC = () => {
       if (response.data.redirectUrl) {
         window.location.href = response.data.redirectUrl;
       }
+      twoFaModal.close();
     },
-    onError: (err: any) => setTwoFAError("Código inválido.")
+    onError: (err: any) => setTwoFAError(err.response?.data?.error || "Código inválido o expirado.")
   });
 
   return (
@@ -115,7 +121,9 @@ const MisPagos: React.FC = () => {
                   borderRadius: 3,
                   borderLeft: isVencido ? '6px solid' : '1px solid',
                   borderLeftColor: isVencido ? 'error.main' : 'divider',
-                  bgcolor: isVencido ? '#fff5f5' : 'background.paper'
+                  bgcolor: isVencido ? '#fff5f5' : 'background.paper',
+                  transition: 'transform 0.2s',
+                  '&:hover': { transform: 'translateY(-2px)', boxShadow: 2 }
                 }}
               >
                 <Box display="flex" justifyContent="space-between" flexWrap="wrap" gap={2}>
@@ -127,14 +135,16 @@ const MisPagos: React.FC = () => {
                       {isVencido && <Chip label="VENCIDO" color="error" size="small" icon={<ErrorOutline />} />}
                     </Stack>
                     
-                    <Typography variant="body1" fontWeight={600}>{nombreProyecto}</Typography>
+                    <Typography variant="body1" fontWeight={600} color="text.secondary" gutterBottom>
+                        {nombreProyecto}
+                    </Typography>
                     
                     <Box mt={2}>
-                      <Typography variant="h4" fontWeight={800} color="text.primary">
-                        ${Number(pago.monto).toLocaleString()}
+                      <Typography variant="h4" fontWeight={800} color="text.primary" sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5 }}>
+                        ${Number(pago.monto).toLocaleString('es-AR')} <Typography variant="caption">ARS</Typography>
                       </Typography>
                       <Typography variant="caption" color={isVencido ? 'error.main' : 'text.secondary'} fontWeight={isVencido ? 700 : 400}>
-                        Vence: {new Date(pago.fecha_vencimiento).toLocaleDateString()}
+                        Vencimiento: {new Date(pago.fecha_vencimiento).toLocaleDateString()}
                       </Typography>
                     </Box>
                   </Box>
@@ -148,11 +158,11 @@ const MisPagos: React.FC = () => {
                         size="large"
                         color={isVencido ? 'error' : 'primary'}
                         disabled={iniciarPagoMutation.isPending}
-                        onClick={() => { setSelectedPagoId(pago.id); iniciarPagoMutation.mutate(pago.id); }}
+                        onClick={() => iniciarPagoMutation.mutate(pago.id)}
                         startIcon={<Lock />}
-                        sx={{ py: 1.5, px: 4 }}
+                        sx={{ py: 1.5, px: 4, borderRadius: 2, fontWeight: 'bold' }}
                       >
-                        {iniciarPagoMutation.isPending ? 'Procesando...' : 'Pagar Ahora'}
+                        {iniciarPagoMutation.isPending && selectedPagoId === pago.id ? 'Procesando...' : 'Pagar Ahora'}
                       </Button>
                     )}
                   </Box>
@@ -160,21 +170,23 @@ const MisPagos: React.FC = () => {
               </Paper>
             );
           }) : (
-            <Paper sx={{ p: 6, textAlign: 'center', bgcolor: 'success.light', color: 'success.dark' }}>
-              <CheckCircle sx={{ fontSize: 60, mb: 2 }} />
-              <Typography variant="h5" fontWeight="bold">¡Estás al día!</Typography>
-              <Typography>No tienes pagos pendientes.</Typography>
+            <Paper sx={{ p: 6, textAlign: 'center', bgcolor: 'success.light', color: 'success.dark', borderRadius: 4 }}>
+              <CheckCircle sx={{ fontSize: 80, mb: 2, opacity: 0.8 }} />
+              <Typography variant="h4" fontWeight="bold" gutterBottom>¡Estás al día!</Typography>
+              <Typography variant="subtitle1">No tienes pagos pendientes por el momento.</Typography>
             </Paper>
           )}
         </Stack>
       </QueryHandler>
 
-      <Auth2FAModal 
-        open={is2FAOpen} 
-        onClose={() => setIs2FAOpen(false)} 
-        onConfirm={(code) => confirmar2FAMutation.mutate(code)} 
+      <TwoFactorAuthModal 
+        open={twoFaModal.isOpen} 
+        onClose={() => { twoFaModal.close(); setSelectedPagoId(null); setTwoFAError(null); }} 
+        onSubmit={(code) => confirmar2FAMutation.mutate(code)} 
         isLoading={confirmar2FAMutation.isPending} 
-        error={twoFAError} 
+        error={twoFAError}
+        title="Confirmar Pago Seguro"
+        description="Ingresa el código de tu aplicación autenticadora para procesar el pago."
       />
     </PageContainer>
   );

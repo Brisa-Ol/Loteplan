@@ -7,7 +7,7 @@ import type {
   ContratoActionResponse 
 } from '../types/dto/contrato.dto';
 
-const ENDPOINT = '/contratos/plantillas';
+const ENDPOINT = '/contratos';
 
 const ContratoPlantillaService = {
 
@@ -15,68 +15,132 @@ const ContratoPlantillaService = {
   // 📝 ADMIN (Creación y Edición)
   // =================================================
 
-  // 1. Crear nueva plantilla (POST /upload)
-  create: async (data: CreatePlantillaDto): Promise<AxiosResponse<{ message: string, plantilla: ContratoPlantillaDto }>> => {
+  /**
+   * Crea una nueva plantilla de contrato.
+   * @returns Respuesta con { message, plantilla }
+   */
+  create: async (data: CreatePlantillaDto): Promise<AxiosResponse<ContratoActionResponse>> => {
     const formData = new FormData();
+    
+    // ✅ Campo coincide con middleware: uploadPlantilla
     formData.append('plantillaFile', data.file); 
     formData.append('nombre_archivo', data.nombre_archivo);
     formData.append('version', data.version.toString());
     
-    if (data.id_proyecto) {
+    // ✅ Solo enviar si tiene valor (undefined = no se envía)
+    if (data.id_proyecto !== undefined && data.id_proyecto !== null) {
       formData.append('id_proyecto', data.id_proyecto.toString());
     }
 
-    return await httpService.post(`${ENDPOINT}/upload`, formData, {
+    return await httpService.post(`${ENDPOINT}/plantillas/upload`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
   },
 
-  // 2. Actualizar datos (Nombre, Proyecto, Versión) SIN tocar PDF (PUT /:id)
-  update: async (id: number, data: Partial<ContratoPlantillaDto>): Promise<AxiosResponse<{ message: string, plantilla: ContratoPlantillaDto }>> => {
-    return await httpService.put(`${ENDPOINT}/${id}`, data);
+  /**
+   * Actualiza los datos de una plantilla (nombre, proyecto, versión).
+   * NO modifica el archivo PDF.
+   * @returns Respuesta con { message, plantilla }
+   */
+  update: async (
+    id: number, 
+    data: Partial<ContratoPlantillaDto>
+  ): Promise<AxiosResponse<ContratoActionResponse>> => {
+    const payload: Record<string, any> = {};
+    
+    // Solo incluir campos que realmente se envían
+    if (data.nombre_archivo !== undefined) {
+      payload.nombre_archivo = data.nombre_archivo;
+    }
+    
+    if (data.version !== undefined) {
+      payload.version = data.version;
+    }
+    
+    // ✅ CRÍTICO: Manejar null explícitamente
+    // El backend acepta: undefined (no cambiar), null (desasignar), number (asignar)
+    if (data.id_proyecto !== undefined) {
+      // Si es null, enviar string vacío (el backend lo convierte a null)
+      payload.id_proyecto = data.id_proyecto === null ? "" : data.id_proyecto;
+    }
+
+    return await httpService.put(`${ENDPOINT}/plantillas/${id}`, payload);
   },
 
-  // 3. Actualizar archivo PDF (POST /update-pdf/:id)
-  updatePdf: async (data: UpdatePlantillaPdfDto): Promise<AxiosResponse<{ message: string, plantilla: ContratoPlantillaDto }>> => {
+  /**
+   * Actualiza solo el archivo PDF de una plantilla.
+   * @returns Respuesta con { message, plantilla }
+   */
+  updatePdf: async (data: UpdatePlantillaPdfDto): Promise<AxiosResponse<ContratoActionResponse>> => {
     const formData = new FormData();
     formData.append('plantillaFile', data.file); 
 
-    return await httpService.post(`${ENDPOINT}/update-pdf/${data.id}`, formData, {
+    return await httpService.post(`${ENDPOINT}/plantillas/update-pdf/${data.id}`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
   },
 
-  // 4. ✅ CORREGIDO: Activar/Desactivar (Toggle) (PUT /toggle-active/:id)
-  toggleActive: async (id: number, activo: boolean): Promise<AxiosResponse<{ message: string, plantilla: ContratoPlantillaDto }>> => {
-    return await httpService.put(`${ENDPOINT}/toggle-active/${id}`, { activo });
+  /**
+   * Activa o desactiva una plantilla.
+   * @returns Respuesta con { message, plantilla }
+   */
+  toggleActive: async (id: number, activo: boolean): Promise<AxiosResponse<ContratoActionResponse>> => {
+    return await httpService.put(`${ENDPOINT}/plantillas/toggle-active/${id}`, { activo });
   },
 
-  // 5. Borrado Lógico (PUT /soft-delete/:id)
-  softDelete: async (id: number): Promise<AxiosResponse<ContratoActionResponse>> => {
-    return await httpService.put(`${ENDPOINT}/soft-delete/${id}`);
+  /**
+   * Realiza el borrado lógico de una plantilla.
+   * @returns Respuesta con { message }
+   */
+  softDelete: async (id: number): Promise<AxiosResponse<{ message: string }>> => {
+    return await httpService.put(`${ENDPOINT}/plantillas/soft-delete/${id}`);
   },
 
   // =================================================
   // 🔍 LECTURA
   // =================================================
 
+  /**
+   * Lista TODAS las plantillas (activas e inactivas).
+   * ⚠️ Respuesta directa: array de plantillas (sin wrapper)
+   */
   findAll: async (): Promise<AxiosResponse<ContratoPlantillaDto[]>> => {
-    return await httpService.get(`${ENDPOINT}/all`);
+    return await httpService.get(`${ENDPOINT}/plantillas/all`);
   },
 
+  /**
+   * Lista solo las plantillas activas.
+   * ⚠️ Respuesta directa: array de plantillas (sin wrapper)
+   */
   findAllActive: async (): Promise<AxiosResponse<ContratoPlantillaDto[]>> => {
-    return await httpService.get(`${ENDPOINT}/active`);
+    return await httpService.get(`${ENDPOINT}/plantillas/active`);
   },
 
+  /**
+   * Lista plantillas activas sin proyecto asignado.
+   * ⚠️ Respuesta directa: array de plantillas (sin wrapper)
+   */
   findUnassociated: async (): Promise<AxiosResponse<ContratoPlantillaDto[]>> => {
-    return await httpService.get(`${ENDPOINT}/unassociated`);
+    return await httpService.get(`${ENDPOINT}/plantillas/unassociated`);
   },
 
+  /**
+   * Lista todas las versiones de plantillas activas para un proyecto.
+   * ⚠️ Respuesta directa: array de plantillas (sin wrapper)
+   */
   findByProject: async (idProyecto: number): Promise<AxiosResponse<ContratoPlantillaDto[]>> => {
-    return await httpService.get(`${ENDPOINT}/project/${idProyecto}`);
+    return await httpService.get(`${ENDPOINT}/plantillas/project/${idProyecto}`);
   },
 
-  getByProjectAndVersion: async (idProyecto: number, version: number): Promise<AxiosResponse<ContratoPlantillaDto>> => {
+  /**
+   * Obtiene una plantilla específica por proyecto y versión.
+   * Incluye verificación de integridad.
+   * ⚠️ Respuesta directa: objeto plantilla (sin wrapper)
+   */
+  getByProjectAndVersion: async (
+    idProyecto: number, 
+    version: number
+  ): Promise<AxiosResponse<ContratoPlantillaDto>> => {
     return await httpService.get(`${ENDPOINT}/plantilla/${idProyecto}/${version}`);
   }
 };

@@ -9,58 +9,62 @@ interface FavoritoButtonProps {
   loteId: number;
   size?: 'small' | 'medium' | 'large';
   showTooltip?: boolean;
+  // 🆕 Nueva prop opcional: Función para manejar la eliminación manualmente (abrir modal)
+  onRemoveRequest?: (loteId: number) => void;
 }
 
 export const FavoritoButton: React.FC<FavoritoButtonProps> = ({ 
   loteId, 
   size = 'medium',
-  showTooltip = true 
+  showTooltip = true,
+  onRemoveRequest // 👈 Recibimos la función
 }) => {
   const { isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
 
-  // 1. Consultar estado inicial (Solo si está logueado)
+  // 1. Consultar estado
   const { data: favoritoData, isLoading } = useQuery({
     queryKey: ['favorito', loteId],
     queryFn: async () => (await FavoritoService.checkEsFavorito(loteId)).data,
     enabled: isAuthenticated,
-    staleTime: 1000 * 60 * 5, // 5 minutos de caché
+    staleTime: 1000 * 60 * 5, 
   });
 
   const isFavorito = favoritoData?.es_favorito || false;
 
-  // 2. Mutación para toggle
+  // 2. Mutación estándar
   const toggleMutation = useMutation({
     mutationFn: () => FavoritoService.toggle(loteId),
     onSuccess: (response) => {
-      // El backend devuelve { agregado: boolean, mensaje: string }
-      const { agregado, mensaje } = response.data;
-      
-      // Actualizamos la caché local optimistamente o invalidamos
+      const { agregado } = response.data;
+      // Actualizamos caché local
       queryClient.setQueryData(['favorito', loteId], { es_favorito: agregado });
-      
-      // Invalidamos la lista general de favoritos
+      // Invalidamos lista general de favoritos y la de proyectos para refrescar UI
       queryClient.invalidateQueries({ queryKey: ['misFavoritos'] });
-      
-      // Opcional: Podrías usar 'mensaje' para un Toast notification
-      console.log(mensaje); 
+      queryClient.invalidateQueries({ queryKey: ['lotesProyecto'] });
     },
     onError: (error: any) => {
       console.error("Error toggle favorito:", error);
-      // Aquí podrías disparar un Toast de error
     }
   });
 
   const handleClick = (e: React.MouseEvent) => {
-    e.preventDefault(); // Evita navegación si está dentro de un Link/Card
+    e.preventDefault(); 
     e.stopPropagation(); 
     
     if (!isAuthenticated) {
-      // Manejar redirección al login o abrir modal
-      alert('Debes iniciar sesión para guardar favoritos');
+      // Aquí podrías redirigir al login si quisieras
       return;
     }
-    toggleMutation.mutate();
+
+    // 🚀 LÓGICA DE INTERCEPCIÓN
+    // Si ya es favorito Y el padre nos dio una función para manejar la eliminación...
+    if (isFavorito && onRemoveRequest) {
+      onRemoveRequest(loteId); // ...llamamos al padre (abrir modal)
+    } else {
+      // Si no es favorito (es agregar) O no hay handler especial, ejecutamos directo
+      toggleMutation.mutate(); 
+    }
   };
 
   if (!isAuthenticated) return null;
@@ -75,7 +79,7 @@ export const FavoritoButton: React.FC<FavoritoButtonProps> = ({
         '&:hover': {
           color: 'error.main',
           transform: 'scale(1.15)',
-          bgcolor: 'error.lighter' // Asegúrate de tener este color o usa rgba
+          bgcolor: 'rgba(211, 47, 47, 0.08)' 
         }
       }}
       size={size}
