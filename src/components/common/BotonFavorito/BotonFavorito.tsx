@@ -1,102 +1,122 @@
 import React from 'react';
-import { IconButton, Tooltip, CircularProgress, Zoom } from '@mui/material';
+import { IconButton, Tooltip, CircularProgress, useTheme } from '@mui/material';
 import { Favorite, FavoriteBorder } from '@mui/icons-material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+
+// Servicios y Tipos
 import FavoritoService from '../../../Services/favorito.service';
+import SuscripcionService from '../../../Services/suscripcion.service';
+import LoteService from '../../../Services/lote.service';
 import { useAuth } from '../../../context/AuthContext';
+import type { CheckFavoritoResponseDto } from '../../../types/dto/favorito.dto';
 
 interface FavoritoButtonProps {
   loteId: number;
   size?: 'small' | 'medium' | 'large';
-  showTooltip?: boolean;
-  // 🆕 Nueva prop opcional: Función para manejar la eliminación manualmente (abrir modal)
-  onRemoveRequest?: (loteId: number) => void;
+  onRemoveRequest?: (id: number) => void;
 }
 
 export const FavoritoButton: React.FC<FavoritoButtonProps> = ({ 
   loteId, 
   size = 'medium',
-  showTooltip = true,
-  onRemoveRequest // 👈 Recibimos la función
+  onRemoveRequest 
 }) => {
-  const { isAuthenticated } = useAuth();
+  const theme = useTheme();
   const queryClient = useQueryClient();
+  const { isAuthenticated } = useAuth();
 
-  // 1. Consultar estado
-  const { data: favoritoData, isLoading } = useQuery({
+  // 1. Estado Actual (Query Key: ['favorito', id])
+  const { data: status, isLoading: loadingStatus } = useQuery<CheckFavoritoResponseDto>({
     queryKey: ['favorito', loteId],
     queryFn: async () => (await FavoritoService.checkEsFavorito(loteId)).data,
     enabled: isAuthenticated,
-    staleTime: 1000 * 60 * 5, 
+    staleTime: 1000 * 60 * 5, // Cache por 5 mins
   });
 
-  const isFavorito = favoritoData?.es_favorito || false;
+  // 2. Datos para validación (Lote y Suscripciones)
+  const { data: lote } = useQuery({
+    queryKey: ['lote', loteId],
+    queryFn: async () => (await LoteService.getByIdActive(loteId)).data,
+    enabled: isAuthenticated && !status?.es_favorito // Solo si vamos a intentar agregar
+  });
 
-  // 2. Mutación estándar
-  const toggleMutation = useMutation({
+  const { data: suscripciones } = useQuery({
+    queryKey: ['misSuscripciones'],
+    queryFn: async () => (await SuscripcionService.getMisSuscripciones()).data,
+    enabled: isAuthenticated && !status?.es_favorito
+  });
+
+  // 3. Mutación
+  const mutation = useMutation({
     mutationFn: () => FavoritoService.toggle(loteId),
     onSuccess: (response) => {
-      const { agregado } = response.data;
-      // Actualizamos caché local
-      queryClient.setQueryData(['favorito', loteId], { es_favorito: agregado });
-      // Invalidamos lista general de favoritos y la de proyectos para refrescar UI
+      // ✅ CORRECCIÓN CLAVE: Mapeamos 'agregado' (del toggle) a 'es_favorito' (de la caché)
+      const nuevoEstado = response.data.agregado;
+      
+      // Actualizamos la caché optimísticamente
+      queryClient.setQueryData(['favorito', loteId], { es_favorito: nuevoEstado });
+      
+      // Invalidamos la lista global
       queryClient.invalidateQueries({ queryKey: ['misFavoritos'] });
-      queryClient.invalidateQueries({ queryKey: ['lotesProyecto'] });
     },
     onError: (error: any) => {
-      console.error("Error toggle favorito:", error);
+      const msg = error.response?.data?.message || 'Error al actualizar favorito';
+      alert(msg); // O usar un snackbar global
     }
   });
 
   const handleClick = (e: React.MouseEvent) => {
-    e.preventDefault(); 
-    e.stopPropagation(); 
-    
-    if (!isAuthenticated) {
-      // Aquí podrías redirigir al login si quisieras
+    e.stopPropagation();
+    if (!isAuthenticated) return; // O redirigir a login
+
+    const esFavoritoActualmente = status?.es_favorito;
+
+    // Si ya es favorito y hay handler de remover (ej: en pantalla MisFavoritos), usalo
+    if (esFavoritoActualmente && onRemoveRequest) {
+      onRemoveRequest(loteId);
       return;
     }
 
-    // 🚀 LÓGICA DE INTERCEPCIÓN
-    // Si ya es favorito Y el padre nos dio una función para manejar la eliminación...
-    if (isFavorito && onRemoveRequest) {
-      onRemoveRequest(loteId); // ...llamamos al padre (abrir modal)
-    } else {
-      // Si no es favorito (es agregar) O no hay handler especial, ejecutamos directo
-      toggleMutation.mutate(); 
+    // Validación de Negocio (Solo al intentar AGREGAR)
+    if (!esFavoritoActualmente && lote && lote.id_proyecto) {
+        const tieneSuscripcion = suscripciones?.some(
+            s => s.id_proyecto === lote.id_proyecto && s.activo
+        );
+        
+        // Usamos el helper del servicio
+        const validacion = FavoritoService.puedeAgregarFavorito(lote, !!tieneSuscripcion);
+        
+        if (!validacion.puede) {
+            alert(`🚫 Acceso Restringido: ${validacion.razon}`);
+            return;
+        }
     }
+
+    // Si pasa validaciones, ejecutamos
+    mutation.mutate();
   };
 
-  if (!isAuthenticated) return null;
+  if (loadingStatus) return <CircularProgress size={20} color="inherit" />;
 
-  const buttonContent = (
-    <IconButton
-      onClick={handleClick}
-      disabled={toggleMutation.isPending || isLoading}
-      sx={{
-        color: isFavorito ? 'error.main' : 'action.disabled',
-        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-        '&:hover': {
-          color: 'error.main',
-          transform: 'scale(1.15)',
-          bgcolor: 'rgba(211, 47, 47, 0.08)' 
-        }
-      }}
-      size={size}
-    >
-      {toggleMutation.isPending ? (
-        <CircularProgress size={size === 'small' ? 16 : 24} color="inherit" />
-      ) : (
-        <Zoom in={true} key={isFavorito ? 'fav' : 'not-fav'}>
-           {isFavorito ? <Favorite /> : <FavoriteBorder />}
-        </Zoom>
-      )}
-    </IconButton>
-  );
+  const isFavorite = status?.es_favorito;
 
-  return showTooltip ? (
-    <Tooltip title={isFavorito ? 'Quitar de favoritos' : 'Agregar a favoritos'}>
-      {buttonContent}
+  return (
+    <Tooltip title={isFavorite ? "Quitar de favoritos" : "Guardar lote"}>
+      <IconButton 
+        onClick={handleClick}
+        disabled={mutation.isPending}
+        size={size}
+        sx={{ 
+          color: isFavorite ? 'error.main' : 'action.disabled',
+          transition: 'transform 0.2s',
+          '&:hover': { 
+            color: isFavorite ? 'error.dark' : 'error.light',
+            transform: 'scale(1.1)' 
+          }
+        }}
+      >
+        {isFavorite ? <Favorite /> : <FavoriteBorder />}
+      </IconButton>
     </Tooltip>
-  ) : buttonContent;
+  );
 };

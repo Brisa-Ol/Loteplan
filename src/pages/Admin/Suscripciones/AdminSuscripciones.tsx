@@ -1,8 +1,7 @@
-// src/pages/Admin/Suscripciones/AdminSuscripciones.tsx
 import React, { useState, useMemo } from 'react';
 import { 
   Box, Typography, Paper, Chip, IconButton, Tooltip, 
-  Stack, TextField, MenuItem, InputAdornment, LinearProgress, Avatar
+  Stack, TextField, MenuItem, InputAdornment, LinearProgress, Avatar, Snackbar, Alert
 } from '@mui/material';
 import { 
   CheckCircle, Cancel, Search, Visibility, 
@@ -16,15 +15,17 @@ import type { SuscripcionDto } from '../../../types/dto/suscripcion.dto';
 import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
 import { QueryHandler } from '../../../components/common/QueryHandler/QueryHandler';
 import { PageHeader } from '../../../components/common/PageHeader/PageHeader';
+import { DataTable, type DataTableColumn } from '../../../components/common/DataTable/DataTable';
 import DetalleSuscripcionModal from './components/DetalleSuscripcionModal';
 
-// 👇 Importamos DataTable
-import { DataTable, type DataTableColumn } from '../../../components/common/DataTable/DataTable';
+// Servicios
 import SuscripcionService from '../../../Services/suscripcion.service';
 import ProyectoService from '../../../Services/proyecto.service';
 
-// ✅ 1. Importamos el hook
+// Hooks
 import { useModal } from '../../../hooks/useModal';
+import { useConfirmDialog } from '../../../hooks/useConfirmDialog'; // ✅ Hook importado
+import { ConfirmDialog } from '../../../components/common/ConfirmDialog/ConfirmDialog'; // ✅ Componente importado
 
 // ... (StatCard se mantiene igual) ...
 const StatCard: React.FC<{ 
@@ -61,11 +62,21 @@ const AdminSuscripciones: React.FC = () => {
   const [filterProject, setFilterProject] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | 'activas' | 'inactivas'>('activas');
   
-  // ✅ 2. Usamos el hook para el modal
+  // Hooks de Modales y Dialogs
   const detailModal = useModal();
+  const confirmDialog = useConfirmDialog(); // ✅
   const [selectedSuscripcion, setSelectedSuscripcion] = useState<SuscripcionDto | null>(null);
 
-  // ... (Queries y cálculos de morosidadStats, cancelacionStats, totalSuscripciones, etc. se mantienen igual) ...
+  // Estado del Snackbar (Feedback Visual)
+  const [snackbar, setSnackbar] = useState<{ open: boolean, message: string, severity: 'success' | 'error' }>({
+    open: false, message: '', severity: 'success'
+  });
+
+  const showMessage = (message: string, severity: 'success' | 'error' = 'success') => {
+    setSnackbar({ open: true, message, severity });
+  };
+
+  // --- QUERIES ---
   const { data: suscripciones = [], isLoading: loadingSuscripciones, error } = useQuery({
     queryKey: ['adminSuscripciones', filterStatus],
     queryFn: async () => {
@@ -99,7 +110,7 @@ const AdminSuscripciones: React.FC = () => {
   const totalCanceladas = cancelacionStats?.total_canceladas || 0;
   const totalActivas = totalSuscripciones - totalCanceladas;
 
-  // Filtrado de la tabla (igual)
+  // Filtrado de la tabla
   const filteredSuscripciones = useMemo(() => {
     return suscripciones.filter(suscripcion => {
       const term = searchTerm.toLowerCase();
@@ -124,29 +135,36 @@ const AdminSuscripciones: React.FC = () => {
     });
   }, [suscripciones, searchTerm, filterProject, filterStatus]);
 
-  // Acciones (cancelar se mantiene igual)
+  // --- MUTACIONES ---
   const cancelarMutation = useMutation({
     mutationFn: async (id: number) => await SuscripcionService.cancelarAdmin(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminSuscripciones'] });
       queryClient.invalidateQueries({ queryKey: ['metricsCancelacionMetrics'] });
       queryClient.invalidateQueries({ queryKey: ['metricsMorosidad'] });
-      alert('✅ Suscripción cancelada correctamente.');
+      confirmDialog.close(); // Cerramos el dialogo
+      showMessage('Suscripción cancelada correctamente.');
     },
     onError: (err: any) => {
       const backendError = err.response?.data?.error || 'Error desconocido';
-      alert(`❌ No se pudo cancelar:\n${backendError}`);
+      confirmDialog.close();
+      showMessage(`No se pudo cancelar: ${backendError}`, 'error');
     }
   });
 
-  const handleCancelar = (suscripcion: SuscripcionDto) => {
+  // --- HANDLERS ---
+  const handleCancelarClick = (suscripcion: SuscripcionDto) => {
     if (!suscripcion.activo) return;
-    if (window.confirm(`¿Confirmar cancelación de la suscripción #${suscripcion.id}? Esto generará una deuda y anulará el acceso al lote.`)) {
-      cancelarMutation.mutate(suscripcion.id);
-    }
+    // ✅ Usamos el hook en lugar de window.confirm
+    confirmDialog.confirm('admin_cancel_subscription', suscripcion);
   };
 
-  // ✅ 3. Handlers para el modal usando el hook
+  const handleConfirmAction = () => {
+      if (confirmDialog.action === 'admin_cancel_subscription' && confirmDialog.data) {
+          cancelarMutation.mutate(confirmDialog.data.id);
+      }
+  };
+
   const handleVerDetalle = (s: SuscripcionDto) => {
     setSelectedSuscripcion(s);
     detailModal.open();
@@ -239,7 +257,6 @@ const AdminSuscripciones: React.FC = () => {
             <Tooltip title="Ver Detalle">
                 <IconButton 
                     color="primary" 
-                    // ✅ Usamos el handler actualizado
                     onClick={() => handleVerDetalle(s)} 
                     size="small"
                 >
@@ -251,7 +268,7 @@ const AdminSuscripciones: React.FC = () => {
                 <Tooltip title="Cancelar Suscripción">
                     <IconButton 
                         color="error" 
-                        onClick={() => handleCancelar(s)}
+                        onClick={() => handleCancelarClick(s)}
                         disabled={cancelarMutation.isPending}
                         size="small"
                     >
@@ -332,12 +349,35 @@ const AdminSuscripciones: React.FC = () => {
         />
       </QueryHandler>
 
-      {/* ========== MODAL CON USEMODAL ========== */}
+      {/* ========== MODALES Y DIALOGS ========== */}
       <DetalleSuscripcionModal 
-        open={detailModal.isOpen} // ✅
-        onClose={handleCerrarModal} // ✅
+        open={detailModal.isOpen} 
+        onClose={handleCerrarModal} 
         suscripcion={selectedSuscripcion}
       />
+
+      {/* ✅ Modal de Confirmación */}
+      <ConfirmDialog 
+        controller={confirmDialog}
+        onConfirm={handleConfirmAction}
+        isLoading={cancelarMutation.isPending}
+      />
+
+      {/* ✅ Snackbar Global */}
+      <Snackbar 
+        open={snackbar.open} 
+        autoHideDuration={6000} 
+        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert 
+          severity={snackbar.severity} 
+          onClose={() => setSnackbar(prev => ({ ...prev, open: false }))} 
+          variant="filled"
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
 
     </PageContainer>
   );

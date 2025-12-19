@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions,
-  Button, Typography, Box, IconButton, Chip, Divider
+  Button, Typography, Box, IconButton, Chip, Divider, useTheme, alpha
 } from '@mui/material';
 import { 
   Close as CloseIcon, 
@@ -9,7 +9,6 @@ import {
   VerifiedUser as VerifiedIcon 
 } from '@mui/icons-material';
 
-// Tipos y Servicios
 import type { ContratoFirmadoDto } from '../../../../types/dto/contrato.dto';
 import ContratoService from '../../../../Services/contrato.service';
 import ImagenService from '../../../../Services/imagen.service';
@@ -24,6 +23,7 @@ interface Props {
 export const VerContratoFirmadoModal: React.FC<Props> = ({
   open, onClose, contrato
 }) => {
+  const theme = useTheme();
 
   if (!contrato) return null;
 
@@ -31,7 +31,6 @@ export const VerContratoFirmadoModal: React.FC<Props> = ({
     ContratoService.downloadAndSave(contrato.id, contrato.nombre_archivo);
   };
 
-  // Resolver URL de forma segura
   const pdfUrl = contrato.url_archivo ? ImagenService.resolveImageUrl(contrato.url_archivo) : '';
 
   return (
@@ -40,14 +39,20 @@ export const VerContratoFirmadoModal: React.FC<Props> = ({
       onClose={onClose} 
       maxWidth="lg" 
       fullWidth 
-      scroll="paper"
-      PaperProps={{ sx: { height: '85vh' } }} // Altura fija para mejor experiencia
+      PaperProps={{ sx: { height: '85vh', borderRadius: 3, overflow: 'hidden' } }}
     >
       {/* HEADER */}
-      <DialogTitle display="flex" justifyContent="space-between" alignItems="center">
-        <Box display="flex" gap={1} alignItems="center" overflow="hidden">
-            <VerifiedIcon color="success" /> 
-            <Typography variant="h6" noWrap>
+      <DialogTitle 
+        display="flex" 
+        justifyContent="space-between" 
+        alignItems="center"
+        sx={{ borderBottom: `1px solid ${theme.palette.divider}`, py: 2 }}
+      >
+        <Box display="flex" gap={1.5} alignItems="center" overflow="hidden">
+            <Box sx={{ p: 0.5, borderRadius: '50%', bgcolor: alpha(theme.palette.success.main, 0.1), display: 'flex' }}>
+                <VerifiedIcon color="success" fontSize="small" /> 
+            </Box>
+            <Typography variant="h6" noWrap fontWeight={700} color="text.primary">
               {contrato.nombre_archivo}
             </Typography>
         </Box>
@@ -56,13 +61,11 @@ export const VerContratoFirmadoModal: React.FC<Props> = ({
         </IconButton>
       </DialogTitle>
 
-      <Divider />
-
-      <DialogContent sx={{ p: 0, bgcolor: '#f5f5f5', display: 'flex', flexDirection: 'column' }}>
+      <DialogContent sx={{ p: 0, bgcolor: 'background.default', display: 'flex', flexDirection: 'column' }}>
         <Box display="flex" flexDirection={{ xs: 'column', md: 'row' }} flex={1} overflow="hidden">
           
           {/* COLUMNA IZQUIERDA: VISOR PDF */}
-          <Box flex={1} p={2} overflow="auto" display="flex" flexDirection="column">
+          <Box flex={1} p={0} overflow="hidden" display="flex" flexDirection="column" bgcolor="grey.100">
             {pdfUrl ? (
                 <PDFViewerMejorado
                   pdfUrl={pdfUrl}
@@ -79,34 +82,33 @@ export const VerContratoFirmadoModal: React.FC<Props> = ({
 
           {/* COLUMNA DERECHA: METADATOS DE AUDITORÍA */}
           <Box 
-            width={{ xs: '100%', md: 320 }} 
-            bgcolor="white" 
-            borderLeft={1} 
-            borderColor="divider" 
+            width={{ xs: '100%', md: 340 }} 
+            bgcolor="background.paper" 
+            borderLeft={`1px solid ${theme.palette.divider}`} 
             p={3}
             display="flex"
             flexDirection="column"
             gap={3}
             overflow="auto"
           >
-            <Typography variant="subtitle2" color="text.secondary" fontWeight="bold" sx={{ letterSpacing: 1 }}>
-              AUDITORÍA DE FIRMA
+            <Typography variant="subtitle2" color="primary.main" fontWeight="800" sx={{ letterSpacing: 1, textTransform: 'uppercase' }}>
+              Auditoría de Firma
             </Typography>
 
             <Box>
-              <Typography variant="caption" color="text.secondary" display="block" mb={0.5}>Estado Actual</Typography>
+              <Typography variant="caption" color="text.secondary" display="block" mb={0.5} fontWeight={600}>ESTADO ACTUAL</Typography>
               <Chip 
                 label={contrato.estado_firma} 
                 color={contrato.estado_firma === 'FIRMADO' ? 'success' : 'error'} 
                 size="small" 
-                variant="filled"
-                sx={{ fontWeight: 'bold' }}
+                variant="filled" // Mantenemos filled para impacto
+                sx={{ fontWeight: 'bold', borderRadius: 1 }}
               />
             </Box>
 
             <Box>
-              <Typography variant="caption" color="text.secondary" display="block">Fecha de Firma</Typography>
-              <Typography variant="body2" fontWeight="600" mt={0.5}>
+              <Typography variant="caption" color="text.secondary" display="block" fontWeight={600}>FECHA DE FIRMA</Typography>
+              <Typography variant="body2" fontWeight="600" mt={0.5} color="text.primary">
                 {new Date(contrato.fecha_firma).toLocaleDateString()}
               </Typography>
               <Typography variant="caption" color="text.secondary">
@@ -115,21 +117,20 @@ export const VerContratoFirmadoModal: React.FC<Props> = ({
             </Box>
 
             <Box>
-              <Typography variant="caption" color="text.secondary" display="block" mb={0.5}>
-                  Hash de Integridad (SHA-256)
+              <Typography variant="caption" color="text.secondary" display="block" mb={0.5} fontWeight={600}>
+                  HASH DE INTEGRIDAD (SHA-256)
               </Typography>
               <Box 
-                bgcolor="grey.100" 
+                bgcolor="action.hover" // Usamos variable del theme
                 p={1.5} 
                 borderRadius={2} 
-                border="1px solid"
-                borderColor="grey.300"
+                border={`1px solid ${theme.palette.divider}`}
                 sx={{ wordBreak: 'break-all', fontFamily: 'monospace', fontSize: '0.75rem', color: 'text.primary' }}
               >
                 {contrato.hash_archivo_firmado}
               </Box>
-              <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.65rem', mt: 0.5, display: 'block' }}>
-                  Este hash garantiza que el documento no ha sido modificado desde su firma.
+              <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.65rem', mt: 0.5, display: 'block', lineHeight: 1.2 }}>
+                  * Este hash único garantiza criptográficamente que el contenido del documento no ha sido alterado post-firma.
               </Typography>
             </Box>
 
@@ -140,6 +141,7 @@ export const VerContratoFirmadoModal: React.FC<Props> = ({
                 startIcon={<DownloadIcon />} 
                 onClick={handleDownload}
                 size="large"
+                sx={{ fontWeight: 700 }}
               >
                 Descargar Copia
               </Button>
@@ -148,7 +150,7 @@ export const VerContratoFirmadoModal: React.FC<Props> = ({
         </Box>
       </DialogContent>
 
-      <DialogActions sx={{ p: 1.5, borderTop: 1, borderColor: 'divider' }}>
+      <DialogActions sx={{ p: 1.5, borderTop: `1px solid ${theme.palette.divider}` }}>
         <Button onClick={onClose} color="inherit">
           Cerrar
         </Button>

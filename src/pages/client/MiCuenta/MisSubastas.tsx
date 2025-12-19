@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import {
-  Box, Typography, Paper, Button, Stack, Chip, Alert, Divider,
-  IconButton, Tooltip
+  Box, Typography, Button, Stack, Chip, Alert, Divider,
+  IconButton, Tooltip, Card, CardContent, CardMedia, CardActions,
+  alpha, useTheme
 } from '@mui/material';
 import {
-  Gavel, Payment, AccessTime, CheckCircle, Cancel, Visibility
+  Gavel, Payment, AccessTime, CheckCircle, Cancel, Visibility,
+  MonetizationOn, CalendarMonth, EmojiEvents
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
@@ -18,13 +20,14 @@ import ImagenService from '../../../Services/imagen.service';
 import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
 import { QueryHandler } from '../../../components/common/QueryHandler/QueryHandler';
 import { PageHeader } from '../../../components/common/PageHeader/PageHeader';
-import TwoFactorAuthModal from '../../../components/common/TwoFactorAuthModal/TwoFactorAuthModal'; // ✅ Componente 2FA
+import TwoFactorAuthModal from '../../../components/common/TwoFactorAuthModal/TwoFactorAuthModal';
 
 // Hooks
-import { useModal } from '../../../hooks/useModal'; // ✅ Hook useModal
+import { useModal } from '../../../hooks/useModal';
 
 const MisSubastas: React.FC = () => {
   const navigate = useNavigate();
+  const theme = useTheme();
   
   // 1. Estados y Hooks para 2FA
   const twoFaModal = useModal();
@@ -37,24 +40,19 @@ const MisSubastas: React.FC = () => {
     queryFn: async () => (await PujaService.getMyPujas()).data
   });
 
-  // 3. Mutación para Pagar (Paso 1: Checkout)
+  // 3. Mutación para Pagar
   const payMutation = useMutation({
     mutationFn: async (pujaId: number) => {
-      // Inicia el pago. El backend dirá si requiere 2FA o da la URL directa.
       return await PujaService.iniciarPagoGanadora(pujaId);
     },
     onSuccess: (response, pujaId) => {
       const data = response.data;
-      
-      // CASO A: Requiere 2FA (Status 202)
       if (response.status === 202 || data.is2FARequired) {
         setSelectedPujaId(pujaId);
         setTwoFAError(null);
-        twoFaModal.open(); // ✅ Abrimos modal con hook
+        twoFaModal.open();
         return;
       } 
-      
-      // CASO B: Redirección directa (Status 200)
       if (data.url_checkout) {
         window.location.href = data.url_checkout;
       }
@@ -64,7 +62,7 @@ const MisSubastas: React.FC = () => {
     }
   });
 
-  // 4. Mutación para Confirmar con 2FA (Paso 2)
+  // 4. Mutación para Confirmar con 2FA
   const confirmar2FAMutation = useMutation({
     mutationFn: async (codigo: string) => {
       if (!selectedPujaId) throw new Error("ID de puja perdido.");
@@ -77,7 +75,7 @@ const MisSubastas: React.FC = () => {
       if (response.data.url_checkout) {
         window.location.href = response.data.url_checkout;
       }
-      twoFaModal.close(); // ✅ Cerramos modal
+      twoFaModal.close();
     },
     onError: (err: any) => setTwoFAError(err.response?.data?.error || "Código inválido.")
   });
@@ -85,154 +83,203 @@ const MisSubastas: React.FC = () => {
   const getStatusConfig = (status: string) => {
     switch (status) {
       case 'activa': return { label: 'En Curso', color: 'info' as const, icon: <AccessTime fontSize="small" /> };
-      case 'ganadora_pendiente': return { label: 'Ganaste - Pagar Ahora', color: 'warning' as const, icon: <Payment fontSize="small" /> };
+      case 'ganadora_pendiente': return { label: 'Ganaste - Pagar Ahora', color: 'warning' as const, icon: <EmojiEvents fontSize="small" /> };
       case 'ganadora_pagada': return { label: 'Adjudicado', color: 'success' as const, icon: <CheckCircle fontSize="small" /> };
       case 'perdedora': return { label: 'Superada', color: 'error' as const, icon: <Cancel fontSize="small" /> };
       default: return { label: status, color: 'default' as const, icon: null };
     }
   };
 
+  const formatCurrency = (val: number) => 
+    new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(val);
+
   return (
-    <PageContainer maxWidth="md">
+    <PageContainer maxWidth="lg">
       
-      <PageHeader title="Mis Subastas" subtitle='Seguimiento de tus ofertas y lotes ganados.'/>
+      <PageHeader 
+        title="Mis Subastas" 
+        subtitle='Seguimiento de tus ofertas y lotes ganados.'
+      />
       
       <QueryHandler isLoading={isLoading} error={error as Error} loadingMessage="Cargando subastas...">
         {pujas && pujas.length > 0 ? (
-          <Stack spacing={2}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 3 }}>
             {pujas.map((puja) => {
-              const statusConfig = getStatusConfig(puja.estado_puja);
+              const status = getStatusConfig(puja.estado_puja);
               const lote = puja.lote;
               const idProyecto = lote?.id_proyecto;
               const imgUrl = lote?.imagenes?.[0]?.url
                 ? ImagenService.resolveImageUrl(lote.imagenes[0].url)
-                : '/images/placeholder-lote.jpg';
+                : undefined;
+
+              const isWinnerPending = puja.estado_puja === 'ganadora_pendiente';
 
               return (
-                <Paper
+                <Card
                   key={puja.id}
+                  elevation={0}
                   sx={{
-                    p: 0,
+                    display: 'flex', flexDirection: 'column',
                     borderRadius: 3,
-                    overflow: 'hidden',
                     border: '1px solid',
-                    borderColor: puja.estado_puja === 'ganadora_pendiente' ? 'warning.main' : 'divider',
-                    transition: 'all 0.2s',
-                    '&:hover': { boxShadow: 3 }
+                    borderColor: isWinnerPending ? 'warning.main' : 'divider',
+                    position: 'relative',
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    '&:hover': { transform: 'translateY(-4px)', boxShadow: theme.shadows[4] }
                   }}
                 >
-                  <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' } }}>
+                  {/* Badge Flotante */}
+                  <Chip
+                    label={status.label}
+                    color={status.color}
+                    size="small"
+                    icon={status.icon as any}
+                    sx={{ 
+                      position: 'absolute', top: 12, right: 12, 
+                      fontWeight: 700, boxShadow: 2, zIndex: 2
+                    }}
+                  />
 
-                    {/* Imagen Lote */}
-                    <Box
-                      sx={{
-                        width: { xs: '100%', sm: 200 },
-                        height: { xs: 150, sm: 'auto' },
-                        backgroundImage: `url(${imgUrl})`,
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center',
-                        flexShrink: 0
-                      }}
-                    />
-
-                    {/* Contenido */}
-                    <Box sx={{ p: 3, flexGrow: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
-
-                      <Box display="flex" justifyContent="space-between" alignItems="flex-start" flexWrap="wrap" gap={1}>
-                        <Box>
-                          <Typography variant="h6" fontWeight={700}>
-                            {lote?.nombre_lote || `Lote #${puja.id_lote}`}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            Proyecto ID: {idProyecto || 'N/A'}
-                          </Typography>
-                        </Box>
-                        <Chip
-                          label={statusConfig.label}
-                          color={statusConfig.color}
-                          icon={statusConfig.icon as any}
-                          sx={{ fontWeight: 600 }}
-                        />
+                  {/* Imagen Header */}
+                  <Box sx={{ position: 'relative', height: 180, bgcolor: 'grey.100' }}>
+                    {imgUrl ? (
+                      <CardMedia
+                        component="img"
+                        height="180"
+                        image={imgUrl}
+                        alt="Imagen Lote"
+                        sx={{ objectFit: 'cover' }}
+                      />
+                    ) : (
+                      <Box sx={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}>
+                         <Gavel sx={{ fontSize: 50, opacity: 0.5 }} />
                       </Box>
-
-                      <Divider />
-
-                      <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
-                        <Box>
-                          <Typography variant="caption" display="block" color="text.secondary">TU OFERTA</Typography>
-                          <Typography variant="h5" fontWeight={700} color="primary.main">
-                            USD {Number(puja.monto_puja).toLocaleString()}
-                          </Typography>
-                        </Box>
-
-                        <Box textAlign={{ xs: 'left', sm: 'right' }}>
-                          <Typography variant="caption" display="block" color="text.secondary">FECHA</Typography>
-                          <Typography variant="body2" fontWeight={500}>
-                            {new Date(puja.fecha_puja).toLocaleDateString()}
-                          </Typography>
-                        </Box>
-                      </Box>
-
-                      {/* Botones de Acción */}
-                      <Box display="flex" justifyContent="flex-end" alignItems="center" gap={2} mt="auto">
-                        <Tooltip title="Ver Proyecto">
-                          <IconButton
-                            onClick={() => idProyecto && navigate(`/proyectos/${idProyecto}`)}
-                            disabled={!idProyecto}
-                          >
-                            <Visibility />
-                          </IconButton>
-                        </Tooltip>
-
-                        {puja.estado_puja === 'ganadora_pendiente' && (
-                          <Button
-                            variant="contained"
-                            color="warning"
-                            startIcon={<Gavel />}
-                            onClick={() => payMutation.mutate(puja.id)}
-                            disabled={payMutation.isPending}
-                            sx={{ boxShadow: 'none' }}
-                          >
-                            {payMutation.isPending ? 'Procesando...' : 'Pagar Lote'}
-                          </Button>
-                        )}
-                      </Box>
-
-                      {puja.estado_puja === 'ganadora_pendiente' && puja.fecha_vencimiento_pago && (
-                        <Alert severity="warning" sx={{ mt: 1, py: 0 }}>
-                          Tienes hasta el {new Date(puja.fecha_vencimiento_pago).toLocaleDateString()} para completar el pago.
-                        </Alert>
-                      )}
-
-                    </Box>
+                    )}
+                    {/* Overlay gradiente */}
+                    <Box sx={{ position: 'absolute', bottom: 0, left: 0, width: '100%', height: '40%', background: 'linear-gradient(to top, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0) 100%)' }} />
                   </Box>
-                </Paper>
+
+                  <CardContent sx={{ flexGrow: 1, p: 2.5 }}>
+                    <Typography variant="h6" fontWeight={700} gutterBottom noWrap title={lote?.nombre_lote}>
+                      {lote?.nombre_lote || `Lote #${puja.id_lote}`}
+                    </Typography>
+                    
+                    <Typography variant="body2" color="text.secondary" mb={2}>
+                       Proyecto ID: {idProyecto || 'N/A'}
+                    </Typography>
+
+                    <Divider sx={{ my: 2, borderStyle: 'dashed' }} />
+
+                    <Stack spacing={1.5}>
+                      <Box display="flex" justifyContent="space-between" alignItems="center">
+                        <Box display="flex" alignItems="center" gap={1} color="text.secondary">
+                           <MonetizationOn fontSize="small" />
+                           <Typography variant="caption" fontWeight={600}>TU OFERTA</Typography>
+                        </Box>
+                        <Typography variant="h6" fontWeight={700} color="primary.main">
+                          {formatCurrency(Number(puja.monto_puja))}
+                        </Typography>
+                      </Box>
+
+                      <Box display="flex" justifyContent="space-between" alignItems="center">
+                        <Box display="flex" alignItems="center" gap={1} color="text.secondary">
+                           <CalendarMonth fontSize="small" />
+                           <Typography variant="caption" fontWeight={600}>FECHA</Typography>
+                        </Box>
+                        <Typography variant="body2" fontWeight={500}>
+                          {new Date(puja.fecha_puja).toLocaleDateString()}
+                        </Typography>
+                      </Box>
+                    </Stack>
+
+                    {isWinnerPending && puja.fecha_vencimiento_pago && (
+                      <Alert severity="warning" sx={{ mt: 2, borderRadius: 2 }}>
+                        <Typography variant="caption" fontWeight={600}>
+                           Vence el: {new Date(puja.fecha_vencimiento_pago).toLocaleDateString()}
+                        </Typography>
+                      </Alert>
+                    )}
+                  </CardContent>
+
+                  <Divider />
+
+                  <CardActions sx={{ p: 2 }}>
+                    <Stack direction="row" spacing={1} width="100%">
+                      <Button
+                        variant="outlined"
+                        fullWidth
+                        startIcon={<Visibility />}
+                        onClick={() => idProyecto && navigate(`/proyectos/${idProyecto}`)}
+                        disabled={!idProyecto}
+                      >
+                        Ver Proyecto
+                      </Button>
+
+                      {isWinnerPending && (
+                        <Button
+                          variant="contained"
+                          color="warning"
+                          fullWidth
+                          startIcon={<Payment />}
+                          onClick={() => payMutation.mutate(puja.id)}
+                          disabled={payMutation.isPending}
+                          sx={{ fontWeight: 700 }}
+                        >
+                          {payMutation.isPending ? '...' : 'Pagar'}
+                        </Button>
+                      )}
+                    </Stack>
+                  </CardActions>
+                </Card>
               );
             })}
-          </Stack>
+          </Box>
         ) : (
-          <Paper sx={{ p: 6, textAlign: 'center', borderRadius: 3 }}>
-            <Gavel sx={{ fontSize: 60, color: 'text.disabled', mb: 2 }} />
-            <Typography variant="h6" color="text.secondary" gutterBottom>No has participado en subastas</Typography>
-            <Typography variant="body2" color="text.secondary" mb={3}>
-              Explora los proyectos de inversión directa y encontrá tu lote ideal.
+          <Card 
+            elevation={0} 
+            sx={{ 
+                p: 8, 
+                textAlign: 'center', 
+                bgcolor: 'background.default', 
+                border: `2px dashed ${theme.palette.divider}`,
+                borderRadius: 4
+            }}
+          >
+            <Box 
+              sx={{ 
+                  width: 80, height: 80, mx: 'auto', mb: 2, borderRadius: '50%',
+                  bgcolor: alpha(theme.palette.text.secondary, 0.1),
+                  display: 'flex', alignItems: 'center', justifyContent: 'center'
+              }}
+            >
+               <Gavel sx={{ fontSize: 40, color: 'text.secondary', opacity: 0.5 }} />
+            </Box>
+            <Typography variant="h5" fontWeight={700} color="text.secondary" gutterBottom>
+              No has participado en subastas
             </Typography>
-            <Button variant="contained" onClick={() => navigate('/client/Proyectos/RoleSelection')}>
+            <Typography variant="body1" color="text.secondary" mb={4}>
+              Explora los proyectos de inversión directa y encuentra tu lote ideal.
+            </Typography>
+            <Button 
+              variant="contained" 
+              size="large"
+              onClick={() => navigate('/proyectos/RolSeleccion')}
+            >
               Ver Oportunidades
             </Button>
-          </Paper>
+          </Card>
         )}
       </QueryHandler>
 
-      {/* ✅ Modal 2FA Conectado */}
+      {/* Modal 2FA */}
       <TwoFactorAuthModal 
         open={twoFaModal.isOpen} 
         onClose={() => { twoFaModal.close(); setSelectedPujaId(null); setTwoFAError(null); }} 
         onSubmit={(code) => confirmar2FAMutation.mutate(code)} 
         isLoading={confirmar2FAMutation.isPending} 
         error={twoFAError}
-        title="Confirmar Pago de Subasta"
-        description="Ingresa el código de 6 dígitos para asegurar tu lote ganado."
+        title="Confirmar Pago"
+        description="Ingresa el código para asegurar tu lote ganado."
       />
 
     </PageContainer>

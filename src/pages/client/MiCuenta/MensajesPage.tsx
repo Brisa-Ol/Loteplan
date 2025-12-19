@@ -3,9 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   Box, Typography, Paper, List, ListItem, ListItemText, 
   ListItemAvatar, Avatar, Divider, TextField, IconButton, 
-  Badge, Stack, CircularProgress, 
-  ListItemButton,
-  Button
+  Badge, Stack, CircularProgress, ListItemButton, Button,
+  useTheme, alpha // Importamos hooks del tema
 } from '@mui/material';
 import { 
   Send as SendIcon, 
@@ -23,43 +22,38 @@ import { PageContainer } from '../../../components/common/PageContainer/PageCont
 import { PageHeader } from '../../../components/common/PageHeader/PageHeader';
 import type { MensajeDto } from '../../../types/dto/mensaje';
 
-// ID del usuario SISTEMA (definido en tu backend como 2)
 const SYSTEM_USER_ID = 2; 
 
 const MensajesPage: React.FC = () => {
   const { user } = useAuth();
+  const theme = useTheme(); // Acceso al tema
   const queryClient = useQueryClient();
-  const messagesEndRef = useRef<HTMLDivElement>(null); // Ref para auto-scroll
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   
-  // Estados
   const [newMessage, setNewMessage] = useState('');
   const [selectedContactId, setSelectedContactId] = useState<number | null>(null);
 
-  // 1. Cargar mensajes (Polling)
+  // 1. Cargar mensajes
   const { data: mensajes = [], isLoading } = useQuery<MensajeDto[]>({
     queryKey: ['misMensajes'],
     queryFn: async () => (await MensajeService.obtenerMisMensajes()).data,
-    refetchInterval: 5000 // Polling más rápido (5s) para mejor sensación de chat
+    refetchInterval: 5000 
   });
 
-  // 2. Agrupar mensajes (Lógica Memoizada)
+  // 2. Agrupar mensajes
   const conversations = useMemo(() => {
     if (!user) return [];
-    
     const map = new Map<number, MensajeDto[]>();
     
     mensajes.forEach(msg => {
       const isMeSender = msg.id_remitente === user.id;
       const otherId = isMeSender ? msg.id_receptor : msg.id_remitente;
-      
       if (!map.has(otherId)) map.set(otherId, []);
       map.get(otherId)?.push(msg);
     });
 
     return Array.from(map.entries()).map(([contactId, msgs]) => {
-      // Ordenar mensajes cronológicamente
       msgs.sort((a, b) => new Date(a.fecha_envio).getTime() - new Date(b.fecha_envio).getTime());
-      
       const lastMsg = msgs[msgs.length - 1];
       const contactInfo = contactId === lastMsg.id_remitente ? lastMsg.remitente : lastMsg.receptor;
       const unreadCount = msgs.filter(m => m.id_receptor === user.id && !m.leido).length;
@@ -75,19 +69,19 @@ const MensajesPage: React.FC = () => {
 
   }, [mensajes, user]);
 
-  // Auto-selección inicial
+  // Auto-selección
   useEffect(() => {
     if (!selectedContactId && conversations.length > 0) {
       setSelectedContactId(conversations[0].contactId);
     }
   }, [conversations, selectedContactId]);
 
-  // Auto-scroll al final del chat
+  // Scroll
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [selectedContactId, mensajes]);
 
-  // 3. Mutación: Enviar
+  // Mutaciones
   const sendMutation = useMutation({
     mutationFn: async () => {
       if (!selectedContactId || !newMessage.trim()) return;
@@ -102,16 +96,15 @@ const MensajesPage: React.FC = () => {
     }
   });
 
-  // 4. Mutación: Marcar Leído
   const markReadMutation = useMutation({
     mutationFn: async (msgId: number) => MensajeService.marcarComoLeido(msgId),
     onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ['misMensajes'] });
-        queryClient.invalidateQueries({ queryKey: ['mensajesNoLeidos'] });
+       queryClient.invalidateQueries({ queryKey: ['misMensajes'] });
+       queryClient.invalidateQueries({ queryKey: ['mensajesNoLeidos'] });
     }
   });
 
-  // Efecto Marcar Leído al abrir chat
+  // Marcar leído
   useEffect(() => {
     if (selectedContactId && user) {
       const chat = conversations.find(c => c.contactId === selectedContactId);
@@ -125,7 +118,6 @@ const MensajesPage: React.FC = () => {
     }
   }, [selectedContactId, conversations, user]);
 
-  // Manejo inteligente del Enter (Shift+Enter para nueva línea)
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -147,14 +139,20 @@ const MensajesPage: React.FC = () => {
           display: 'flex', 
           height: '75vh', 
           overflow: 'hidden', 
-          borderRadius: 3, 
-          border: '1px solid', 
-          borderColor: 'divider' 
+          // Heredamos border radius del theme
+          // Si tu theme define 12px en shape, Paper ya lo tendrá.
+          border: `1px solid ${theme.palette.divider}` 
         }} 
         elevation={0}
       >
         {/* === SIDEBAR === */}
-        <Box sx={{ width: 320, borderRight: '1px solid', borderColor: 'divider', display: 'flex', flexDirection: 'column', bgcolor: 'grey.50' }}>
+        <Box sx={{ 
+          width: 320, 
+          borderRight: `1px solid ${theme.palette.divider}`, 
+          display: 'flex', 
+          flexDirection: 'column', 
+          bgcolor: 'background.default' // Usamos background default (blanco en tu theme)
+        }}>
           <Box p={2}>
             <Typography variant="subtitle2" color="text.secondary" fontWeight="bold">
               CONVERSACIONES ({conversations.length})
@@ -174,21 +172,32 @@ const MensajesPage: React.FC = () => {
                       selected={selectedContactId === chat.contactId}
                       onClick={() => setSelectedContactId(chat.contactId)}
                       sx={{ 
-                        bgcolor: selectedContactId === chat.contactId ? 'action.selected' : 'transparent',
-                        borderLeft: selectedContactId === chat.contactId ? '4px solid' : '4px solid transparent',
-                        borderLeftColor: 'primary.main'
+                        // Color de selección suave basado en el primario
+                        '&.Mui-selected': {
+                          bgcolor: alpha(theme.palette.primary.main, 0.08),
+                          borderLeft: `4px solid ${theme.palette.primary.main}`,
+                          '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.12) }
+                        },
+                        borderLeft: selectedContactId === chat.contactId ? `4px solid ${theme.palette.primary.main}` : '4px solid transparent',
                       }}
                     >
                       <ListItemAvatar>
                         <Badge badgeContent={chat.unreadCount} color="error">
-                          <Avatar sx={{ bgcolor: chat.contactId === SYSTEM_USER_ID ? 'secondary.main' : 'primary.main' }}>
+                          <Avatar sx={{ 
+                            bgcolor: chat.contactId === SYSTEM_USER_ID 
+                              ? theme.palette.secondary.main 
+                              : alpha(theme.palette.primary.main, 0.1),
+                            color: chat.contactId === SYSTEM_USER_ID 
+                              ? 'white' 
+                              : theme.palette.primary.main
+                          }}>
                             {chat.contactId === SYSTEM_USER_ID ? <SystemIcon /> : <PersonIcon />}
                           </Avatar>
                         </Badge>
                       </ListItemAvatar>
                       <ListItemText 
                         primary={
-                          <Typography variant="subtitle2" fontWeight={chat.unreadCount > 0 ? 700 : 400} noWrap>
+                          <Typography variant="subtitle2" fontWeight={chat.unreadCount > 0 ? 700 : 600} noWrap color="text.primary">
                             {chat.contactName}
                           </Typography>
                         }
@@ -199,7 +208,7 @@ const MensajesPage: React.FC = () => {
                         }
                       />
                       <Typography variant="caption" color="text.disabled" sx={{ minWidth: 40, textAlign: 'right' }}>
-                         {format(new Date(chat.lastMessage.fecha_envio), 'HH:mm')}
+                          {format(new Date(chat.lastMessage.fecha_envio), 'HH:mm')}
                       </Typography>
                     </ListItemButton>
                   </ListItem>
@@ -222,21 +231,33 @@ const MensajesPage: React.FC = () => {
         </Box>
 
         {/* === CHAT AREA === */}
-        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', bgcolor: 'background.paper' }}>
+        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', bgcolor: 'background.paper' }}> {/* Usamos el gris claro de tu theme */}
           {selectedContactId ? (
             <>
               {/* Header */}
-              <Box p={2} borderBottom="1px solid" borderColor="divider" display="flex" alignItems="center" gap={2} bgcolor="white">
-                 <Avatar sx={{ bgcolor: selectedContactId === SYSTEM_USER_ID ? 'secondary.main' : 'primary.main' }}>
+              <Box p={2} borderBottom={`1px solid ${theme.palette.divider}`} display="flex" alignItems="center" gap={2} bgcolor="background.default">
+                 <Avatar sx={{ 
+                    bgcolor: selectedContactId === SYSTEM_USER_ID ? theme.palette.secondary.main : theme.palette.primary.main,
+                    color: 'white'
+                 }}>
                     {selectedContactId === SYSTEM_USER_ID ? <SystemIcon /> : activeChat?.contactName?.charAt(0)}
                  </Avatar>
-                 <Typography variant="h6" fontWeight="bold">
+                 <Typography variant="h6" fontWeight="bold" color="text.primary">
                     {selectedContactId === SYSTEM_USER_ID ? 'Soporte / Sistema' : activeChat?.contactName || 'Nuevo Chat'}
                  </Typography>
               </Box>
 
               {/* Mensajes */}
-              <Box sx={{ flex: 1, overflowY: 'auto', p: 3, display: 'flex', flexDirection: 'column', gap: 2, bgcolor: '#fafafa' }}>
+              <Box sx={{ 
+                flex: 1, 
+                overflowY: 'auto', 
+                p: 3, 
+                display: 'flex', 
+                flexDirection: 'column', 
+                gap: 2, 
+                // Usamos el fondo del theme (gris claro #ECECEC según tu definición)
+                bgcolor: 'background.paper' 
+              }}>
                 {activeChat ? (
                     activeChat.allMessages.map((msg) => {
                         const isMe = msg.id_remitente === user?.id;
@@ -252,13 +273,15 @@ const MensajesPage: React.FC = () => {
                                     elevation={0}
                                     sx={{ 
                                         p: 2, 
-                                        bgcolor: isMe ? 'primary.main' : 'white',
-                                        color: isMe ? 'white' : 'text.primary',
+                                        // Mensaje propio: Primario. Ajeno: Blanco.
+                                        bgcolor: isMe ? 'primary.main' : 'background.default',
+                                        color: isMe ? 'primary.contrastText' : 'text.primary',
                                         borderRadius: 2,
                                         borderTopRightRadius: isMe ? 0 : 2,
                                         borderTopLeftRadius: isMe ? 2 : 0,
-                                        border: isMe ? 'none' : '1px solid #e0e0e0',
-                                        boxShadow: isMe ? 2 : 0
+                                        // Borde suave si es ajeno
+                                        border: isMe ? 'none' : `1px solid ${theme.palette.divider}`,
+                                        boxShadow: theme.shadows[1]
                                     }}
                                 >
                                     <Typography variant="body1" sx={{ wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>
@@ -283,7 +306,7 @@ const MensajesPage: React.FC = () => {
               </Box>
 
               {/* Input */}
-              <Box p={2} borderTop="1px solid" borderColor="divider" bgcolor="white">
+              <Box p={2} borderTop={`1px solid ${theme.palette.divider}`} bgcolor="background.default">
                 <Stack direction="row" spacing={1}>
                     <TextField 
                         fullWidth 
@@ -295,15 +318,18 @@ const MensajesPage: React.FC = () => {
                         onKeyDown={handleKeyPress}
                         multiline
                         maxRows={3}
-                        sx={{ 
-                            '& .MuiOutlinedInput-root': { borderRadius: 3 }
-                        }}
+                        // Tu theme ya define bordes redondeados para inputs
                     />
                     <IconButton 
-                        color="primary" 
                         onClick={() => sendMutation.mutate()}
                         disabled={!newMessage.trim() || sendMutation.isPending}
-                        sx={{ bgcolor: 'primary.main', color: 'white', '&:hover': { bgcolor: 'primary.dark' }, width: 40, height: 40, alignSelf: 'flex-end' }}
+                        sx={{ 
+                          bgcolor: 'primary.main', 
+                          color: 'white', 
+                          '&:hover': { bgcolor: 'primary.dark' }, 
+                          width: 40, height: 40, alignSelf: 'flex-end',
+                          '&.Mui-disabled': { bgcolor: 'action.disabledBackground', color: 'action.disabled' }
+                        }}
                     >
                         {sendMutation.isPending ? <CircularProgress size={20} color="inherit" /> : <SendIcon fontSize="small" />}
                     </IconButton>
@@ -311,9 +337,9 @@ const MensajesPage: React.FC = () => {
               </Box>
             </>
           ) : (
-            <Box display="flex" alignItems="center" justifyContent="center" height="100%" color="text.secondary" flexDirection="column" gap={2}>
+            <Box display="flex" alignItems="center" justifyContent="center" height="100%" color="text.disabled" flexDirection="column" gap={2}>
                <PersonIcon sx={{ fontSize: 60, opacity: 0.2 }} />
-               <Typography>Selecciona una conversación para empezar</Typography>
+               <Typography variant="h6" color="text.secondary">Selecciona una conversación</Typography>
             </Box>
           )}
         </Box>

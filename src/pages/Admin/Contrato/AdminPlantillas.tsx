@@ -1,15 +1,13 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
   Box, Typography, Paper, Chip, IconButton, Tooltip, 
-  Stack, Button, TextField, MenuItem, InputAdornment, Divider, useTheme
+  Stack, Button, TextField, MenuItem, InputAdornment, useTheme, Switch, CircularProgress, alpha, Snackbar, Alert
 } from '@mui/material';
 import { 
   Search, Upload as UploadIcon, Add as AddIcon,
-  Edit as EditIcon, Delete as DeleteIcon, 
-  FilterList, 
+  Edit as EditIcon, Delete as DeleteIcon
 } from '@mui/icons-material'; 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import Swal from 'sweetalert2';
 
 // --- DTOs y Servicios ---
 import type { ContratoPlantillaDto, CreatePlantillaDto, UpdatePlantillaPdfDto } from '../../../types/dto/contrato.dto';
@@ -20,8 +18,10 @@ import ProyectoService from '../../../Services/proyecto.service';
 import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
 import { QueryHandler } from '../../../components/common/QueryHandler/QueryHandler';
 import { PageHeader } from '../../../components/common/PageHeader/PageHeader';
-import { DataTable, type DataTableColumn } from '../../../components/common/DataTable/DataTable'; // Ensure DataSwitch is exported from here or adjust import
+import { DataTable, type DataTableColumn } from '../../../components/common/DataTable/DataTable';
 import { useModal } from '../../../hooks/useModal';
+import { useConfirmDialog } from '../../../hooks/useConfirmDialog';
+import { ConfirmDialog } from '../../../components/common/ConfirmDialog/ConfirmDialog';
 
 // --- Modales ---
 import CreatePlantillaModal from './components/modals/CreatePlantillaModal';
@@ -36,11 +36,27 @@ const AdminPlantillas: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterProject, setFilterProject] = useState('all');
   const [plantillaSelected, setPlantillaSelected] = useState<ContratoPlantillaDto | null>(null);
+  
+  // Estado para el efecto Flash
+  const [highlightedId, setHighlightedId] = useState<number | null>(null);
+
+  // Ref para mantener el estado inicial de visibilidad (sticky sort)
+  const initialStatusRef = useRef<Record<number, boolean>>({});
 
   // 2. Modales Hooks
   const createModal = useModal();
   const updatePdfModal = useModal();
   const updateMetaModal = useModal();
+  const confirmDialog = useConfirmDialog();
+
+  // Estado del Snackbar
+  const [snackbar, setSnackbar] = useState<{ open: boolean, message: string, severity: 'success' | 'error' | 'info' }>({
+    open: false, message: '', severity: 'success'
+  });
+
+  const showMessage = (message: string, severity: 'success' | 'error' | 'info' = 'success') => {
+    setSnackbar({ open: true, message, severity });
+  };
 
   // Auto-filtro desde URL
   useEffect(() => {
@@ -62,27 +78,38 @@ const AdminPlantillas: React.FC = () => {
     staleTime: 1000 * 60 * 30 // 30 min cache
   });
 
+  // --- EFECTO PARA CAPTURAR ESTADO INICIAL ---
+  useEffect(() => {
+    if (plantillas.length > 0) {
+      plantillas.forEach(p => {
+        if (initialStatusRef.current[p.id] === undefined) {
+          initialStatusRef.current[p.id] = p.activo;
+        }
+      });
+    }
+  }, [plantillas]);
+
   // 4. Lógica de Filtrado y Stats (Memoized)
-  const assignedProjectIds = useMemo(() => {
-    const ids = new Set<number>();
-    plantillas.forEach(p => { if (p.id_proyecto && p.activo) ids.add(p.id_proyecto); });
-    return ids;
-  }, [plantillas]);
-
-  const stats = useMemo(() => {
-    const total = plantillas.length;
-    const activas = plantillas.filter(p => p.activo).length;
-    const inactivas = total - activas;
-    const comprometidas = plantillas.filter(p => p.integrity_compromised).length;
-    return { total, activas, inactivas, comprometidas };
-  }, [plantillas]);
-
   const filteredPlantillas = useMemo(() => {
     const term = searchTerm.toLowerCase();
-    return plantillas.filter(plantilla => {
+    
+    // 1. Filtrado
+    const filtered = plantillas.filter(plantilla => {
       const matchesSearch = plantilla.nombre_archivo.toLowerCase().includes(term);
       const matchesProject = filterProject === 'all' || plantilla.id_proyecto === Number(filterProject);
       return matchesSearch && matchesProject;
+    });
+
+    // 2. Ordenamiento "Sticky"
+    return filtered.sort((a, b) => {
+      // Usamos el estado guardado en el Ref para ordenar
+      const statusA = initialStatusRef.current[a.id] ?? a.activo;
+      const statusB = initialStatusRef.current[b.id] ?? b.activo;
+
+      if (statusA !== statusB) {
+        return statusA ? -1 : 1;
+      }
+      return a.nombre_archivo.localeCompare(b.nombre_archivo);
     });
   }, [plantillas, searchTerm, filterProject]);
 
@@ -91,27 +118,19 @@ const AdminPlantillas: React.FC = () => {
     queryClient.invalidateQueries({ queryKey: ['adminPlantillas'] });
     if (modalClose) modalClose();
     setPlantillaSelected(null);
-    Swal.fire({
-      title: '¡Éxito!',
-      text: msg,
-      icon: 'success',
-      confirmButtonColor: theme.palette.primary.main
-    });
+    showMessage(msg, 'success');
   };
 
   const handleError = (err: any) => {
     console.error(err);
-    Swal.fire({
-      title: 'Error',
-      text: err.response?.data?.message || 'Ocurrió un error inesperado',
-      icon: 'error',
-      confirmButtonColor: theme.palette.error.main
-    });
+    confirmDialog.close();
+    const msg = err.response?.data?.message || 'Ocurrió un error inesperado';
+    showMessage(msg, 'error');
   };
 
   const createMutation = useMutation({
     mutationFn: ContratoPlantillaService.create,
-    onSuccess: () => handleSuccess('Plantilla creada.', createModal.close),
+    onSuccess: () => handleSuccess('Plantilla creada correctamente.', createModal.close),
     onError: handleError
   });
 
@@ -131,15 +150,47 @@ const AdminPlantillas: React.FC = () => {
   const toggleActiveMutation = useMutation({
     mutationFn: (plantilla: ContratoPlantillaDto) => 
       ContratoPlantillaService.toggleActive(plantilla.id, !plantilla.activo),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['adminPlantillas'] }),
+    onSuccess: (_, plantilla) => {
+      queryClient.invalidateQueries({ queryKey: ['adminPlantillas'] });
+      confirmDialog.close();
+      
+      // Efecto Flash
+      setHighlightedId(plantilla.id);
+      setTimeout(() => setHighlightedId(null), 2500);
+      showMessage(plantilla.activo ? 'Plantilla ocultada' : 'Plantilla activada', 'success');
+    },
     onError: handleError
   });
 
   const softDeleteMutation = useMutation({
     mutationFn: ContratoPlantillaService.softDelete,
-    onSuccess: () => handleSuccess('Plantilla eliminada (papelera).'),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminPlantillas'] });
+      confirmDialog.close();
+      showMessage('Plantilla eliminada (enviada a papelera).', 'success');
+    },
     onError: handleError
   });
+
+  // --- HANDLERS ---
+  const handleToggleActive = (plantilla: ContratoPlantillaDto) => {
+    confirmDialog.confirm('toggle_plantilla_status', plantilla);
+  };
+
+  const handleDelete = (plantilla: ContratoPlantillaDto) => {
+    confirmDialog.confirm('delete_plantilla', plantilla);
+  };
+
+  const handleConfirmAction = () => {
+    if (!confirmDialog.data) return;
+    
+    if (confirmDialog.action === 'toggle_plantilla_status') {
+      toggleActiveMutation.mutate(confirmDialog.data);
+    }
+    else if (confirmDialog.action === 'delete_plantilla') {
+      softDeleteMutation.mutate(confirmDialog.data.id);
+    }
+  };
 
   // UI Open/Close Handlers
   const handleOpenUpdatePdf = (row: ContratoPlantillaDto) => {
@@ -150,18 +201,6 @@ const AdminPlantillas: React.FC = () => {
   const handleOpenUpdateMeta = (row: ContratoPlantillaDto) => {
     setPlantillaSelected(row);
     updateMetaModal.open();
-  };
-
-  const handleDelete = (id: number) => {
-    Swal.fire({
-      title: '¿Estás seguro?',
-      text: "La plantilla dejará de estar disponible.",
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: theme.palette.error.main,
-      cancelButtonColor: theme.palette.grey[500],
-      confirmButtonText: 'Sí, eliminar'
-    }).then((res) => { if (res.isConfirmed) softDeleteMutation.mutate(id); });
   };
 
   // 6. Columnas
@@ -198,59 +237,121 @@ const AdminPlantillas: React.FC = () => {
         <Chip label="Global" size="small" variant="outlined" />
       )
     },
+    {
+      id: 'visibilidad',
+      label: 'Estado',
+      align: 'center',
+      render: (row) => {
+        const isProcessingThis = toggleActiveMutation.isPending && confirmDialog.data?.id === row.id;
 
+        return (
+          <Stack direction="row" alignItems="center" spacing={1} justifyContent="center">
+            {isProcessingThis ? (
+              <CircularProgress size={24} color="inherit" />
+            ) : (
+              <Switch
+                checked={row.activo}
+                onChange={() => handleToggleActive(row)}
+                color="success"
+                size="small"
+                disabled={toggleActiveMutation.isPending || softDeleteMutation.isPending}
+              />
+            )}
+            
+            {!isProcessingThis && (
+              <Typography 
+                variant="caption" 
+                color={row.activo ? 'success.main' : 'text.disabled'}
+                fontWeight={600}
+                sx={{ minWidth: 50 }}
+              >
+                {row.activo ? 'Activa' : 'Inactiva'}
+              </Typography>
+            )}
+          </Stack>
+        );
+      }
+    },
     {
       id: 'actions', label: 'Acciones', align: 'right', minWidth: 150,
       render: (row) => (
         <Stack direction="row" spacing={0} justifyContent="flex-end">
           <Tooltip title="Editar Datos">
-            <IconButton size="small" onClick={() => handleOpenUpdateMeta(row)}>
+            <IconButton 
+              size="small" 
+              onClick={() => handleOpenUpdateMeta(row)}
+              disabled={toggleActiveMutation.isPending || softDeleteMutation.isPending}
+            >
               <EditIcon fontSize="small" />
             </IconButton>
           </Tooltip>
           <Tooltip title="Actualizar PDF">
-            <IconButton size="small" onClick={() => handleOpenUpdatePdf(row)} disabled={!row.activo} sx={{ color: theme.palette.primary.main }}>
+            <IconButton 
+              size="small" 
+              onClick={() => handleOpenUpdatePdf(row)} 
+              disabled={!row.activo || toggleActiveMutation.isPending || softDeleteMutation.isPending} 
+              sx={{ color: theme.palette.primary.main }}
+            >
               <UploadIcon fontSize="small" />
             </IconButton>
           </Tooltip>
           <Tooltip title="Eliminar">
-            <IconButton size="small" onClick={() => handleDelete(row.id)} sx={{ color: theme.palette.error.main }}>
+            <IconButton 
+              size="small" 
+              onClick={() => handleDelete(row)} 
+              disabled={toggleActiveMutation.isPending || softDeleteMutation.isPending}
+              sx={{ color: theme.palette.error.main }}
+            >
               <DeleteIcon fontSize="small" />
             </IconButton>
           </Tooltip>
         </Stack>
       )
     }
-  ], [proyectos, theme]);
+  ], [proyectos, theme, toggleActiveMutation.isPending, softDeleteMutation.isPending, confirmDialog.data]);
 
   return (
     <PageContainer maxWidth="xl">
       <PageHeader title="Gestión de Plantillas" subtitle="Administración de documentos base." />
 
-<Paper sx={{ p: 2, mb: 3, borderRadius: 2 }} elevation={0} variant="outlined">
-      {/* Toolbar */}
-      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="center">
-        <TextField 
-          placeholder="Buscar..." size="small" value={searchTerm} 
-          onChange={(e) => setSearchTerm(e.target.value)} sx={{ flexGrow: 1 }}
-          InputProps={{ startAdornment: (<InputAdornment position="start"><Search color="action" /></InputAdornment>) }}
-        />
-        <TextField
-          select label="Filtrar Proyecto" size="small" value={filterProject}
-          onChange={(e) => setFilterProject(e.target.value)} sx={{ minWidth: 220 }}
-        >
-          <MenuItem value="all"><em>Todos</em></MenuItem>
-          {proyectos.map(p => <MenuItem key={p.id} value={p.id}>{p.nombre_proyecto}</MenuItem>)}
-        </TextField>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={createModal.open}>Nuevo Contrato</Button>
-      </Stack>
-</Paper>
+      <Paper sx={{ p: 2, mb: 3, borderRadius: 2 }} elevation={0} variant="outlined">
+        {/* Toolbar */}
+        <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="center">
+          <TextField 
+            placeholder="Buscar..." size="small" value={searchTerm} 
+            onChange={(e) => setSearchTerm(e.target.value)} sx={{ flexGrow: 1 }}
+            InputProps={{ startAdornment: (<InputAdornment position="start"><Search color="action" /></InputAdornment>) }}
+          />
+          <TextField
+            select label="Filtrar Proyecto" size="small" value={filterProject}
+            onChange={(e) => setFilterProject(e.target.value)} sx={{ minWidth: 220 }}
+          >
+            <MenuItem value="all"><em>Todos</em></MenuItem>
+            {proyectos.map(p => <MenuItem key={p.id} value={p.id}>{p.nombre_proyecto}</MenuItem>)}
+          </TextField>
+          <Button variant="contained" startIcon={<AddIcon />} onClick={createModal.open}>Nuevo Contrato</Button>
+        </Stack>
+      </Paper>
+
       <QueryHandler isLoading={isLoading} error={error as Error | null}>
-        <DataTable columns={columns} data={filteredPlantillas} getRowKey={(row) => row.id} pagination defaultRowsPerPage={10} 
-          getRowSx={(row) => ({ 
-            opacity: row.activo ? 1 : 0.6, 
-            backgroundColor: row.integrity_compromised ? theme.palette.error.light : undefined 
-          })}
+        <DataTable 
+          columns={columns} 
+          data={filteredPlantillas} 
+          getRowKey={(row) => row.id} 
+          pagination 
+          defaultRowsPerPage={10} 
+          getRowSx={(row) => {
+            const isHighlighted = highlightedId === row.id;
+            return { 
+              opacity: row.activo ? 1 : 0.6,
+              transition: 'background-color 0.8s ease, opacity 0.3s ease',
+              bgcolor: isHighlighted 
+                ? (theme) => alpha(theme.palette.success.main, 0.2)
+                : row.integrity_compromised 
+                  ? theme.palette.error.light 
+                  : (row.activo ? 'inherit' : 'action.hover')
+            };
+          }}
         />
       </QueryHandler>
 
@@ -258,7 +359,6 @@ const AdminPlantillas: React.FC = () => {
       <CreatePlantillaModal 
         open={createModal.isOpen} 
         onClose={createModal.close} 
-        // ✅ Corregido: usamos llaves para que la función sea void
         onSubmit={async (data) => { await createMutation.mutateAsync(data); }} 
         isLoading={createMutation.isPending} 
         proyectos={proyectos} 
@@ -274,14 +374,37 @@ const AdminPlantillas: React.FC = () => {
 
       {plantillaSelected && updateMetaModal.isOpen && (
          <UpdateMetadataModal 
-            open={updateMetaModal.isOpen} 
-            onClose={() => { updateMetaModal.close(); setPlantillaSelected(null); }} 
-            plantilla={plantillaSelected} 
-            proyectos={proyectos} 
-            onSubmit={async (values) => { await updateMetaMutation.mutateAsync({ id: plantillaSelected.id, data: values }); }} 
-            isLoading={updateMetaMutation.isPending} 
+           open={updateMetaModal.isOpen} 
+           onClose={() => { updateMetaModal.close(); setPlantillaSelected(null); }} 
+           plantilla={plantillaSelected} 
+           proyectos={proyectos} 
+           onSubmit={async (values) => { await updateMetaMutation.mutateAsync({ id: plantillaSelected.id, data: values }); }} 
+           isLoading={updateMetaMutation.isPending} 
          />
       )}
+
+      {/* Modal de Confirmación */}
+      <ConfirmDialog 
+        controller={confirmDialog}
+        onConfirm={handleConfirmAction}
+        isLoading={toggleActiveMutation.isPending || softDeleteMutation.isPending}
+      />
+
+      {/* Snackbar Global */}
+      <Snackbar 
+        open={snackbar.open} 
+        autoHideDuration={6000} 
+        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert 
+          severity={snackbar.severity} 
+          onClose={() => setSnackbar(prev => ({ ...prev, open: false }))} 
+          variant="filled"
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </PageContainer>
   );
 };

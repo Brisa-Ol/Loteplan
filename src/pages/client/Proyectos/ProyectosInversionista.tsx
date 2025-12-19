@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import { Box, Typography, Paper, Divider, Stack, Tabs, Tab, Avatar } from "@mui/material";
 import { 
-  TrendingUp,   // Icono Rentabilidad
-  Business,     // Icono Activos Reales
-  MonetizationOn // Icono Dolarizado
+  TrendingUp, 
+  Business, 
+  MonetizationOn 
 } from "@mui/icons-material";
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from "react-router-dom";
@@ -28,14 +28,12 @@ const InvestorHighlights: React.FC = () => (
     }}
   >
     <Stack 
-      direction={{ xs: 'column', md: 'row' }} // 📱 Responsive: Columna en móvil, Fila en PC
+      direction={{ xs: 'column', md: 'row' }} 
       spacing={{ xs: 4, md: 8 }} 
       justifyContent="center"
       alignItems={{ xs: 'flex-start', md: 'center' }}
-      // Línea divisoria solo en desktop
       divider={<Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', md: 'block' }, borderColor: 'grey.300' }} />}
     >
-      {/* Item 1: Rentabilidad */}
       <Box display="flex" alignItems="center" gap={2}>
         <Avatar sx={{ bgcolor: 'primary.light', color: 'primary.dark', width: 48, height: 48 }}>
           <TrendingUp fontSize="medium" />
@@ -45,12 +43,11 @@ const InvestorHighlights: React.FC = () => (
             Alta Rentabilidad
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Retornos estimados superiores al mercado
+            Retornos superiores al mercado
           </Typography>
         </Box>
       </Box>
 
-      {/* Item 2: Activos Reales */}
       <Box display="flex" alignItems="center" gap={2}>
         <Avatar sx={{ bgcolor: 'info.light', color: 'info.dark', width: 48, height: 48 }}>
           <Business fontSize="medium" />
@@ -60,12 +57,11 @@ const InvestorHighlights: React.FC = () => (
             Respaldo Inmobiliario
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Inversión segura en ladrillos y tierra
+            Activos reales y tangibles
           </Typography>
         </Box>
       </Box>
 
-      {/* Item 3: Capitalización */}
       <Box display="flex" alignItems="center" gap={2}>
         <Avatar sx={{ bgcolor: 'success.light', color: 'success.dark', width: 48, height: 48 }}>
           <MonetizationOn fontSize="medium" />
@@ -75,7 +71,7 @@ const InvestorHighlights: React.FC = () => (
             Capitalización
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Protege el valor de tu capital en USD
+            Protege tu valor en USD
           </Typography>
         </Box>
       </Box>
@@ -89,7 +85,6 @@ const ProyectosInversionista: React.FC = () => {
   
   const [tabValue, setTabValue] = useState<'activos' | 'finalizados'>('activos');
 
-  // Llamada al endpoint de Inversionistas
   const { data: todosLosProyectos, isLoading, error } = useQuery({
     queryKey: ['proyectosInversionista'],
     queryFn: async () => (await proyectoService.getInversionistasActive()).data
@@ -116,9 +111,10 @@ const ProyectosInversionista: React.FC = () => {
 
   return (
     <PageContainer maxWidth="xl">
+      {/* ✅ HEADER ACTUALIZADO: Persuasivo + Rol */}
       <PageHeader
-        title="Oportunidades de Inversión"
-        subtitle="Maximiza tu capital participando en desarrollos inmobiliarios de alto impacto."
+        title="Cartera de Inversión Estratégica"
+        subtitle="Oportunidades de alto rendimiento para el perfil Inversionista. Maximiza tu capital."
       />
 
       <QueryHandler 
@@ -130,7 +126,6 @@ const ProyectosInversionista: React.FC = () => {
         <>
           <InvestorHighlights />
 
-          {/* Filtros */}
           <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 4, display: 'flex', justifyContent: 'center' }}>
             <Tabs 
               value={tabValue} 
@@ -146,15 +141,14 @@ const ProyectosInversionista: React.FC = () => {
           </Box>
 
           <SectionTitle>
-            {tabValue === 'activos' ? 'Cartera de Inversión' : 'Track Record'}
+            {tabValue === 'activos' ? 'Oportunidades de Inversión' : 'Track Record (Historial)'}
           </SectionTitle>
 
-          {/* Grid Responsive */}
           {proyectosFiltrados.length === 0 ? (
             <Box textAlign="center" py={8} bgcolor="grey.50" borderRadius={4}>
               <Typography variant="h5" color="text.secondary" fontWeight={500}>
                 {tabValue === 'activos' 
-                  ? "No hay oportunidades de inversión abiertas en este momento." 
+                  ? "No hay oportunidades para Inversionistas activas en este momento." 
                   : "Aún no hay proyectos finalizados en el historial."}
               </Typography>
             </Box>
@@ -162,15 +156,14 @@ const ProyectosInversionista: React.FC = () => {
             <Box
               sx={{
                 display: "grid",
-                // 📱 CONFIGURACIÓN GRID RESPONSIVE
                 gridTemplateColumns: { 
-                    xs: "1fr",              // Móvil: 1 columna
-                    sm: "repeat(2, 1fr)",   // Tablet: 2 columnas
-                    md: "repeat(3, 1fr)"    // Desktop: 3 columnas
+                    xs: "1fr",
+                    sm: "repeat(2, 1fr)",
+                    md: "repeat(3, 1fr)"
                 },
                 gap: 4,
                 width: "100%",
-                maxWidth: "1400px", // Limita el ancho en pantallas gigantes
+                maxWidth: "1400px",
                 mx: "auto", 
                 mb: 9,
               }}
@@ -179,7 +172,7 @@ const ProyectosInversionista: React.FC = () => {
                 <ProjectCard
                   key={project.id}
                   project={project}
-                  type="inversionista" // 👈 Clave: Cambia el diseño de la tarjeta
+                  type="inversionista"
                   onClick={() => handleProjectClick(project.id)}
                 />
               ))}

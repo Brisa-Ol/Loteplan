@@ -1,7 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   Box, Typography, Button, Paper, Chip, IconButton, Stack, Tooltip,
-  TextField, MenuItem, InputAdornment, Snackbar, Alert, Switch
+  TextField, MenuItem, InputAdornment, Snackbar, Alert, Switch, CircularProgress,
+  alpha 
 } from '@mui/material';
 import {
   Add, Search, Edit,
@@ -54,6 +55,13 @@ const AdminProyectos: React.FC = () => {
   // Estado de Datos
   const [selectedProject, setSelectedProject] = useState<ProyectoDto | null>(null);
 
+  // Estado para el efecto Flash
+  const [highlightedId, setHighlightedId] = useState<number | null>(null);
+
+  // --- LOGICA STICKY (Congelar Orden) ---
+  // Guardamos el estado "original" de visibilidad para que el orden no salte al editar
+  const initialStatusRef = useRef<Record<number, boolean>>({});
+
   // Filtros
   const [searchTerm, setSearchTerm] = useState('');
   const [filterTipo, setFilterTipo] = useState<TipoInversionFilter>('all');
@@ -69,10 +77,22 @@ const AdminProyectos: React.FC = () => {
 
   // --- QUERIES & MUTATIONS ---
 
-  const { data: proyectos, isLoading, error } = useQuery({
+  const { data: proyectos = [], isLoading, error } = useQuery({
     queryKey: ['adminProyectos'],
     queryFn: async () => (await ProyectoService.getAllAdmin()).data
   });
+
+  // --- EFECTO PARA CAPTURAR ESTADO INICIAL ---
+  // Cada vez que cargan proyectos, guardamos su estado inicial si no lo tenemos ya
+  useEffect(() => {
+    if (proyectos.length > 0) {
+      proyectos.forEach(p => {
+        if (initialStatusRef.current[p.id] === undefined) {
+          initialStatusRef.current[p.id] = p.activo;
+        }
+      });
+    }
+  }, [proyectos]);
 
   const createMutation = useMutation({
     mutationFn: async ({ data, image }: { data: CreateProyectoDto; image: File | null }) => {
@@ -117,9 +137,18 @@ const AdminProyectos: React.FC = () => {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['adminProyectos'] });
-      showSnackbar(variables.activo ? 'Proyecto activado' : 'Proyecto desactivado', 'success');
+      confirmDialog.close();
+      
+      // Efecto Flash
+      setHighlightedId(variables.id);
+      setTimeout(() => setHighlightedId(null), 2500);
+
+      showSnackbar(variables.activo ? 'Proyecto visible' : 'Proyecto ocultado', 'success');
     },
-    onError: (err: any) => showSnackbar(`Error: ${err.response?.data?.error || err.message}`, 'error')
+    onError: (err: any) => {
+      confirmDialog.close();
+      showSnackbar(`Error: ${err.response?.data?.error || err.message}`, 'error');
+    }
   });
 
   // --- HANDLERS ---
@@ -130,24 +159,38 @@ const AdminProyectos: React.FC = () => {
 
   const handleConfirmAction = () => {
     if (!confirmDialog.data) return;
+    
     if (confirmDialog.action === 'start_project_process') {
         startMutation.mutate(confirmDialog.data.id);
     } 
     else if (confirmDialog.action === 'toggle_project_visibility') {
         const { id, activo } = confirmDialog.data;
         toggleActiveMutation.mutate({ id, activo: !activo });
-        confirmDialog.close();
     }
   };
 
   const filteredProyectos = useMemo(() => {
-    if (!proyectos) return [];
-    const term = searchTerm.toLowerCase();
-    return proyectos.filter(p => {
+    // 1. Filtrado
+    const filtered = proyectos.filter(p => {
+      const term = searchTerm.toLowerCase();
       const matchesSearch = p.nombre_proyecto.toLowerCase().includes(term);
       const matchesType = filterTipo === 'all' || p.tipo_inversion === filterTipo;
       return matchesSearch && matchesType;
     });
+
+    // 2. Ordenamiento "Sticky"
+    return filtered.sort((a, b) => {
+      // Usamos el estado guardado en el Ref para ordenar.
+      // Si el ID no existe en el ref (nuevo item), usamos el estado actual.
+      const statusA = initialStatusRef.current[a.id] ?? a.activo;
+      const statusB = initialStatusRef.current[b.id] ?? b.activo;
+
+      if (statusA !== statusB) {
+        return statusA ? -1 : 1;
+      }
+      return a.nombre_proyecto.localeCompare(b.nombre_proyecto);
+    });
+
   }, [proyectos, searchTerm, filterTipo]);
 
   const getStatusColor = (status: string) => {
@@ -205,20 +248,37 @@ const AdminProyectos: React.FC = () => {
     {
       id: 'visibilidad',
       label: 'Visibilidad',
-      render: (p) => (
-        <Stack direction="row" alignItems="center" spacing={1}>
-          <Switch
-            checked={p.activo}
-            onChange={() => confirmDialog.confirm('toggle_project_visibility', p)}
-            color="success"
-            size="small"
-            disabled={toggleActiveMutation.isPending}
-          />
-          <Typography variant="caption" color={p.activo ? 'success.main' : 'text.disabled'}>
-            {p.activo ? 'Visible' : 'Oculto'}
-          </Typography>
-        </Stack>
-      )
+      align: 'center',
+      render: (p) => {
+        const isProcessingThis = toggleActiveMutation.isPending && confirmDialog.data?.id === p.id;
+
+        return (
+          <Stack direction="row" alignItems="center" spacing={1} justifyContent="center">
+            {isProcessingThis ? (
+              <CircularProgress size={24} color="inherit" />
+            ) : (
+              <Switch
+                checked={p.activo}
+                onChange={() => confirmDialog.confirm('toggle_project_visibility', p)}
+                color="success"
+                size="small"
+                disabled={toggleActiveMutation.isPending}
+              />
+            )}
+            
+            {!isProcessingThis && (
+              <Typography 
+                variant="caption" 
+                color={p.activo ? 'success.main' : 'text.disabled'}
+                fontWeight={600}
+                sx={{ minWidth: 50 }}
+              >
+                {p.activo ? 'Visible' : 'Oculto'}
+              </Typography>
+            )}
+          </Stack>
+        );
+      }
     },
     {
       id: 'finanzas',
@@ -236,14 +296,23 @@ const AdminProyectos: React.FC = () => {
       render: (p) => (
         <Stack direction="row" spacing={0.5} justifyContent="flex-end">
           <Tooltip title="Gestionar Imágenes">
-            <IconButton onClick={() => { setSelectedProject(p); imagesModal.open(); }} size="small">
+            <IconButton 
+              onClick={() => { setSelectedProject(p); imagesModal.open(); }} 
+              size="small"
+              disabled={toggleActiveMutation.isPending}
+            >
               <ImageIcon fontSize="small" />
             </IconButton>
           </Tooltip>
 
           {p.tipo_inversion === 'mensual' && (
             <Tooltip title="Configurar Cuota">
-              <IconButton onClick={() => { setSelectedProject(p); cuotasModal.open(); }} size="small" sx={{ color: "#E07A4D" }}>
+              <IconButton 
+                onClick={() => { setSelectedProject(p); cuotasModal.open(); }} 
+                size="small" 
+                sx={{ color: "#E07A4D" }}
+                disabled={toggleActiveMutation.isPending}
+              >
                 <MonetizationOnIcon fontSize="small" />
               </IconButton>
             </Tooltip>
@@ -255,6 +324,7 @@ const AdminProyectos: React.FC = () => {
                 color="success"
                 size="small"
                 onClick={() => handleStartProcessClick(p)}
+                disabled={toggleActiveMutation.isPending}
               >
                 <PlayArrow fontSize="small" />
               </IconButton>
@@ -262,13 +332,23 @@ const AdminProyectos: React.FC = () => {
           )}
 
           <Tooltip title="Editar">
-            <IconButton color="primary" onClick={() => { setSelectedProject(p); editModal.open(); }} size="small">
+            <IconButton 
+              color="primary" 
+              onClick={() => { setSelectedProject(p); editModal.open(); }} 
+              size="small"
+              disabled={toggleActiveMutation.isPending}
+            >
               <Edit fontSize="small" />
             </IconButton>
           </Tooltip>
 
           <Tooltip title="Ver Lotes">
-            <IconButton color="info" onClick={() => { setSelectedProject(p); lotesModal.open(); }} size="small">
+            <IconButton 
+              color="info" 
+              onClick={() => { setSelectedProject(p); lotesModal.open(); }} 
+              size="small"
+              disabled={toggleActiveMutation.isPending}
+            >
               <VisibilityIcon fontSize="small" />
             </IconButton>
           </Tooltip>
@@ -316,6 +396,20 @@ const AdminProyectos: React.FC = () => {
           columns={columns}
           data={filteredProyectos}
           getRowKey={(p) => p.id}
+          // --- ESTILO VISUAL IDÉNTICO A USUARIOS ---
+          getRowSx={(p) => {
+            const isHighlighted = highlightedId === p.id;
+            return {
+               // Opacidad reducida si es inactivo
+               opacity: p.activo ? 1 : 0.6,
+               // Transiciones suaves
+               transition: 'background-color 0.8s ease, opacity 0.3s ease',
+               // Fondo: Verde suave si es flash, gris si inactivo, normal si activo
+               bgcolor: isHighlighted 
+                  ? (theme) => alpha(theme.palette.success.main, 0.2)
+                  : (p.activo ? 'inherit' : 'action.hover')
+            };
+          }}
           emptyMessage="No se encontraron proyectos con los filtros actuales."
           pagination={true}
           defaultRowsPerPage={10}
@@ -323,11 +417,7 @@ const AdminProyectos: React.FC = () => {
       </QueryHandler>
 
       {/* --- MODALES --- */}
-<ConfirmDialog 
-        controller={confirmDialog}
-        onConfirm={handleConfirmAction}
-        isLoading={startMutation.isPending || toggleActiveMutation.isPending}
-      />
+      
       <CreateProyectoModal
         {...createModal.modalProps} 
         onSubmit={async (data, image) => { await createMutation.mutateAsync({ data, image }); }}
@@ -365,10 +455,11 @@ const AdminProyectos: React.FC = () => {
         </>
       )}
 
+      {/* Modal de Confirmación Único */}
       <ConfirmDialog 
         controller={confirmDialog}
         onConfirm={handleConfirmAction}
-        isLoading={startMutation.isPending}
+        isLoading={startMutation.isPending || toggleActiveMutation.isPending}
       />
 
       <Snackbar

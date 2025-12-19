@@ -1,51 +1,47 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Box, Typography, Paper, Button, TextField, Alert, Stack,
+  Box, Typography, Button, TextField, Alert, Stack,
   Dialog, DialogTitle, DialogContent, DialogActions,
   Stepper, Step, StepLabel, CircularProgress, Chip,
-  InputAdornment, IconButton, Divider
+  InputAdornment, IconButton, Divider, Card, CardContent,
+  alpha, useTheme, Avatar,
+  Tooltip
 } from '@mui/material';
 import {
   Security, QrCode2, CheckCircle, Lock, Visibility, VisibilityOff,
-  Shield, Warning, ContentCopy, Close
+  Shield, Warning, ContentCopy, Close, GppGood, GppMaybe
 } from '@mui/icons-material';
 import QRCode from 'qrcode';
 import { useAuth } from '../../../context/AuthContext';
 import { use2FA } from '../../../hooks/use2FA';
 import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
-
-
+import { PageHeader } from '../../../components/common/PageHeader/PageHeader';
 
 const SecuritySettings: React.FC = () => {
   const { user, refetchUser, disable2FA } = useAuth();
+  const theme = useTheme();
   
-  // 1. Hook de Lógica para Activación (Limpia el componente)
+  // 1. Hook de Lógica
   const { 
-    generateSecret, 
-    enable2FA, 
-    isLoading: hookLoading, 
-    error: hookError, 
-    clearError: clearHookError,
-    secret, 
-    qrCodeUrl: otpAuthUrl // Renombramos porque esto es el string 'otpauth://...'
+    generateSecret, enable2FA, isLoading: hookLoading, 
+    error: hookError, clearError: clearHookError,
+    secret, qrCodeUrl: otpAuthUrl 
   } = use2FA();
 
   // Estados de UI
   const [activeStep, setActiveStep] = useState(0);
-  
-  // Estados para Activación
   const [isEnabling, setIsEnabling] = useState(false);
   const [verificationCode, setVerificationCode] = useState('');
   const [qrImage, setQrImage] = useState<string | null>(null);
 
-  // Estados para Desactivación
+  // Estados Desactivación
   const [isDisabling, setIsDisabling] = useState(false);
   const [disablePassword, setDisablePassword] = useState('');
   const [disableCode, setDisableCode] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [disableLoading, setDisableLoading] = useState(false); // Loading local para desactivar
+  const [disableLoading, setDisableLoading] = useState(false);
 
-  // Feedback UI
+  // Feedback
   const [localError, setLocalError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [copiedSecret, setCopiedSecret] = useState(false);
@@ -54,7 +50,7 @@ const SecuritySettings: React.FC = () => {
   const isLoading = hookLoading || disableLoading;
   const displayError = hookError || localError;
 
-  // Limpiar mensajes
+  // Effects
   useEffect(() => {
     if (successMessage) {
       const timer = setTimeout(() => setSuccessMessage(null), 5000);
@@ -62,19 +58,15 @@ const SecuritySettings: React.FC = () => {
     }
   }, [successMessage]);
 
-  // Generar Imagen QR cuando tenemos la URL del protocolo
   useEffect(() => {
     if (otpAuthUrl) {
       QRCode.toDataURL(otpAuthUrl)
         .then(url => setQrImage(url))
-        .catch(err => setLocalError('Error generando imagen QR'));
+        .catch(() => setLocalError('Error generando imagen QR'));
     }
   }, [otpAuthUrl]);
 
-  // ========================================
-  // HANDLERS DE ACTIVACIÓN (Usando use2FA)
-  // ========================================
-
+  // Handlers Activación
   const handleStartEnable = async () => {
     setLocalError(null);
     clearHookError();
@@ -87,11 +79,10 @@ const SecuritySettings: React.FC = () => {
 
   const handleVerifyAndEnable = async () => {
     if (verificationCode.length !== 6) return;
-    
     const success = await enable2FA(verificationCode);
     if (success) {
-      setSuccessMessage('¡Autenticación de dos factores activada exitosamente! 🎉');
-      await refetchUser(); // Actualizar estado del usuario
+      setSuccessMessage('¡Autenticación de dos factores activada exitosamente!');
+      await refetchUser();
       handleCloseEnableDialog();
     }
   };
@@ -105,10 +96,7 @@ const SecuritySettings: React.FC = () => {
     setLocalError(null);
   };
 
-  // ========================================
-  // HANDLERS DE DESACTIVACIÓN (Directo a AuthContext)
-  // ========================================
-
+  // Handlers Desactivación
   const handleStartDisable = () => {
     setIsDisabling(true);
     setLocalError(null);
@@ -119,7 +107,6 @@ const SecuritySettings: React.FC = () => {
       setLocalError('Completa todos los campos correctamente');
       return;
     }
-
     setDisableLoading(true);
     setLocalError(null);
     try {
@@ -128,7 +115,7 @@ const SecuritySettings: React.FC = () => {
       setSuccessMessage('Verificación en dos pasos desactivada.');
       handleCloseDisableDialog();
     } catch (err: any) {
-      setLocalError(err.response?.data?.error || err.message || 'Error al desactivar 2FA');
+      setLocalError(err.response?.data?.error || 'Error al desactivar 2FA');
     } finally {
       setDisableLoading(false);
     }
@@ -142,7 +129,6 @@ const SecuritySettings: React.FC = () => {
     setLocalError(null);
   };
 
-  // Utilidades
   const handleCopySecret = () => {
     if (secret) {
       navigator.clipboard.writeText(secret);
@@ -155,117 +141,134 @@ const SecuritySettings: React.FC = () => {
 
   return (
     <PageContainer maxWidth="md">
-      {/* HEADER */}
-      <Box mb={4}>
-        <Typography variant="h4" fontWeight={700} gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Security sx={{ fontSize: 32, color: 'primary.main' }} />
-          Seguridad de la Cuenta
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Protege tu cuenta con verificación en dos pasos (2FA)
-        </Typography>
-      </Box>
+      <PageHeader 
+        title="Seguridad de la Cuenta" 
+        subtitle="Gestiona la autenticación de dos factores y protege el acceso a tu cuenta."
+      />
 
-      {/* ALERTAS */}
       {successMessage && (
-        <Alert severity="success" onClose={() => setSuccessMessage(null)} sx={{ mb: 3, borderRadius: 3 }}>
+        <Alert severity="success" onClose={() => setSuccessMessage(null)} sx={{ mb: 3 }}>
           {successMessage}
         </Alert>
       )}
 
-      {/* ESTADO ACTUAL */}
-      <Paper
+      {/* --- ESTADO ACTUAL (Estilo Card) --- */}
+      <Card 
         elevation={0}
         sx={{
-          p: 4, mb: 3, borderRadius: 4, border: '2px solid',
-          borderColor: is2FAEnabled ? '#4CAF50' : '#FF9800',
-          bgcolor: is2FAEnabled ? '#E8F5E9' : '#FFF3E0'
+          mb: 4,
+          border: '1px solid',
+          borderColor: is2FAEnabled ? 'success.main' : 'warning.main',
+          bgcolor: is2FAEnabled ? alpha(theme.palette.success.main, 0.05) : alpha(theme.palette.warning.main, 0.05)
         }}
       >
-        <Box display="flex" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={2}>
-          <Box display="flex" alignItems="center" gap={2}>
-            {is2FAEnabled ? (
-              <Shield sx={{ fontSize: 48, color: '#4CAF50' }} />
-            ) : (
-              <Warning sx={{ fontSize: 48, color: '#F57C00' }} />
-            )}
-            <Box>
-              <Typography variant="h6" fontWeight={700} color={is2FAEnabled ? '#2E7D32' : '#E65100'}>
-                {is2FAEnabled ? 'Protección Activada' : 'Protección Desactivada'}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {is2FAEnabled
-                  ? 'Tu cuenta está protegida con verificación en dos pasos'
-                  : 'Activa 2FA para mayor seguridad en tus transacciones'
-                }
-              </Typography>
+        <CardContent sx={{ p: 3 }}>
+          <Box display="flex" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={2}>
+            <Box display="flex" alignItems="center" gap={3}>
+              <Avatar 
+                sx={{ 
+                  width: 56, height: 56,
+                  bgcolor: is2FAEnabled ? alpha(theme.palette.success.main, 0.2) : alpha(theme.palette.warning.main, 0.2),
+                  color: is2FAEnabled ? 'success.main' : 'warning.main'
+                }}
+              >
+                {is2FAEnabled ? <GppGood fontSize="large" /> : <GppMaybe fontSize="large" />}
+              </Avatar>
+              <Box>
+                <Typography variant="h6" fontWeight={700} color={is2FAEnabled ? 'success.main' : 'warning.main'}>
+                  {is2FAEnabled ? 'Protección Activada' : 'Protección Desactivada'}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {is2FAEnabled
+                    ? 'Tu cuenta cuenta con una capa extra de seguridad.'
+                    : 'Te recomendamos activar 2FA para proteger tus inversiones.'
+                  }
+                </Typography>
+              </Box>
             </Box>
+            <Chip
+              label={is2FAEnabled ? 'ACTIVO' : 'INACTIVO'}
+              color={is2FAEnabled ? 'success' : 'warning'}
+              sx={{ fontWeight: 700 }}
+            />
           </Box>
-          <Chip
-            label={is2FAEnabled ? 'ACTIVO' : 'INACTIVO'}
-            color={is2FAEnabled ? 'success' : 'warning'}
-            sx={{ fontWeight: 700, fontSize: '0.875rem', px: 2 }}
-          />
-        </Box>
-      </Paper>
+        </CardContent>
+      </Card>
 
-      {/* ACCIONES */}
-      <Paper elevation={0} sx={{ p: 4, borderRadius: 4, border: '2px solid #ECECEC' }}>
-        <Box display="flex" alignItems="flex-start" gap={2} mb={3}>
-          <Security sx={{ fontSize: 28, color: 'primary.main' }} />
-          <Box>
-            <Typography variant="h6" fontWeight={700} gutterBottom>Autenticación de Dos Factores (2FA)</Typography>
-            <Typography variant="body2" color="text.secondary" paragraph>
-              Añade una capa adicional de seguridad solicitando un código de verificación desde tu aplicación móvil.
-            </Typography>
-          </Box>
-        </Box>
+      {/* --- ACCIONES (Estilo Card General) --- */}
+      <Card 
+        elevation={0} 
+        sx={{ 
+          border: `1px solid ${theme.palette.secondary.dark}`,
+          bgcolor: 'background.default'
+        }}
+      >
+        <CardContent sx={{ p: 4 }}>
+          <Stack direction="row" spacing={2} alignItems="flex-start" mb={3}>
+             <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}>
+                <Security />
+             </Avatar>
+             <Box>
+                <Typography variant="h6" fontWeight={700} gutterBottom>Autenticación de Dos Factores (2FA)</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Añade una capa adicional de seguridad solicitando un código de verificación desde tu aplicación móvil (Google Authenticator, Authy, etc.) al iniciar sesión o realizar transacciones importantes.
+                </Typography>
+             </Box>
+          </Stack>
 
-        <Divider sx={{ my: 3 }} />
+          <Divider sx={{ my: 3, borderColor: 'secondary.dark' }} />
 
-        {!is2FAEnabled ? (
-          <>
-            <Typography variant="subtitle2" fontWeight={600} gutterBottom>¿Por qué activar 2FA?</Typography>
-            <Stack spacing={1.5} mb={4}>
-              {['Protege contra accesos no autorizados', 'Requerido para pagos', 'Estándar de seguridad bancaria'].map((b, i) => (
-                <Box key={i} display="flex" alignItems="center" gap={1.5}>
-                  <CheckCircle sx={{ fontSize: 20, color: '#4CAF50' }} />
-                  <Typography variant="body2">{b}</Typography>
-                </Box>
-              ))}
-            </Stack>
-            <Button
-              variant="contained" size="large" fullWidth startIcon={<QrCode2 />}
-              onClick={handleStartEnable} disabled={isLoading}
-              sx={{ py: 1.5, fontWeight: 700, borderRadius: 3 }}
-            >
-              {isLoading ? <CircularProgress size={24} color="inherit"/> : 'Activar Verificación en Dos Pasos'}
-            </Button>
-          </>
-        ) : (
-          <>
-            <Alert severity="info" sx={{ mb: 3, borderRadius: 2 }}>
-              Para desactivar 2FA, necesitarás tu contraseña y un código actual.
-            </Alert>
-            <Button
-              variant="outlined" color="error" size="large" fullWidth startIcon={<Lock />}
-              onClick={handleStartDisable} disabled={isLoading}
-              sx={{ py: 1.5, fontWeight: 600, borderRadius: 3, borderWidth: 2 }}
-            >
-              Desactivar Verificación
-            </Button>
-          </>
-        )}
-      </Paper>
+          {!is2FAEnabled ? (
+            <Box>
+              <Typography variant="subtitle2" fontWeight={700} gutterBottom sx={{ mb: 2 }}>Beneficios de activarlo:</Typography>
+              <Stack spacing={1.5} mb={4}>
+                {['Protección contra robo de contraseñas', 'Requerido para retiros de fondos', 'Estándar de seguridad bancaria'].map((text, i) => (
+                  <Box key={i} display="flex" alignItems="center" gap={1.5}>
+                    <CheckCircle sx={{ fontSize: 20, color: 'success.main' }} />
+                    <Typography variant="body2">{text}</Typography>
+                  </Box>
+                ))}
+              </Stack>
+              <Button
+                variant="contained" 
+                size="large" 
+                fullWidth 
+                startIcon={<QrCode2 />}
+                onClick={handleStartEnable} 
+                disabled={isLoading}
+              >
+                {isLoading ? <CircularProgress size={24} color="inherit"/> : 'Configurar Verificación en Dos Pasos'}
+              </Button>
+            </Box>
+          ) : (
+            <Box>
+              <Alert severity="info" sx={{ mb: 3, borderRadius: 2 }}>
+                Para desactivar la verificación, necesitarás confirmar tu contraseña y un código 2FA válido.
+              </Alert>
+              <Button
+                variant="outlined" 
+                color="error" 
+                size="large" 
+                fullWidth 
+                startIcon={<Lock />}
+                onClick={handleStartDisable} 
+                disabled={isLoading}
+              >
+                Desactivar Verificación
+              </Button>
+            </Box>
+          )}
+        </CardContent>
+      </Card>
 
-      {/* DIALOG: ACTIVAR 2FA */}
+      {/* --- DIALOG: ACTIVAR --- */}
       <Dialog open={isEnabling} onClose={handleCloseEnableDialog} maxWidth="sm" fullWidth>
-        <DialogTitle display="flex" justifyContent="space-between" alignItems="center">
+        <DialogTitle display="flex" justifyContent="space-between" alignItems="center" sx={{ borderBottom: `1px solid ${theme.palette.divider}` }}>
           Configurar 2FA
           <IconButton onClick={handleCloseEnableDialog} size="small"><Close /></IconButton>
         </DialogTitle>
         <DialogContent>
-          <Stepper activeStep={activeStep} sx={{ mb: 4, mt: 2 }}>
+          <Stepper activeStep={activeStep} sx={{ mb: 4, mt: 3 }} alternativeLabel>
             {steps.map(label => <Step key={label}><StepLabel>{label}</StepLabel></Step>)}
           </Stepper>
 
@@ -273,41 +276,53 @@ const SecuritySettings: React.FC = () => {
 
           {activeStep === 0 && qrImage && (
             <Stack spacing={3} alignItems="center">
-              <Paper elevation={0} sx={{ p: 2, border: '1px solid #eee', borderRadius: 2 }}>
+              <Box p={2} border={`1px solid ${theme.palette.divider}`} borderRadius={2}>
                 <img src={qrImage} alt="QR Code" style={{ width: '100%', maxWidth: 200, display: 'block' }} />
-              </Paper>
+              </Box>
               
               {secret && (
-                <Paper elevation={0} sx={{ p: 2, bgcolor: '#f5f5f5', borderRadius: 2, width: '100%' }}>
-                  <Typography variant="caption" color="text.secondary" display="block" mb={1}>Clave manual:</Typography>
+                <Box sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 2, width: '100%' }}>
+                  <Typography variant="caption" color="text.secondary" display="block" mb={1} fontWeight={600}>
+                    CLAVE DE CONFIGURACIÓN MANUAL
+                  </Typography>
                   <Box display="flex" alignItems="center" gap={1}>
-                    <Typography variant="body2" fontFamily="monospace" sx={{ flex: 1, wordBreak: 'break-all' }}>{secret}</Typography>
-                    <IconButton onClick={handleCopySecret} size="small">
-                      {copiedSecret ? <CheckCircle color="success" /> : <ContentCopy />}
-                    </IconButton>
+                    <Typography variant="body2" fontFamily="monospace" sx={{ flex: 1, wordBreak: 'break-all', fontWeight: 600 }}>
+                      {secret}
+                    </Typography>
+                    <Tooltip title="Copiar código">
+                      <IconButton onClick={handleCopySecret} size="small" color="primary">
+                        {copiedSecret ? <CheckCircle color="success" fontSize="small" /> : <ContentCopy fontSize="small" />}
+                      </IconButton>
+                    </Tooltip>
                   </Box>
-                </Paper>
+                </Box>
               )}
               <Button variant="contained" onClick={() => setActiveStep(1)} fullWidth>Continuar</Button>
             </Stack>
           )}
 
           {activeStep === 1 && (
-            <Stack spacing={3}>
-              <Typography variant="body2">Ingresa el código de 6 dígitos de tu app:</Typography>
+            <Stack spacing={3} mt={2}>
+              <Typography variant="body2" textAlign="center">
+                Abre tu aplicación de autenticación e ingresa el código de 6 dígitos que aparece.
+              </Typography>
               <TextField
-                fullWidth label="Código de Verificación" placeholder="000000"
+                fullWidth 
+                placeholder="000 000"
                 value={verificationCode}
                 onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                inputProps={{ maxLength: 6, style: { textAlign: 'center', letterSpacing: 8, fontSize: '1.5rem' } }}
+                inputProps={{ 
+                  maxLength: 6, 
+                  style: { textAlign: 'center', letterSpacing: 8, fontSize: '1.5rem', fontWeight: 700 } 
+                }}
               />
               <Stack direction="row" spacing={2}>
-                <Button variant="outlined" onClick={() => setActiveStep(0)} fullWidth>Volver</Button>
+                <Button variant="outlined" onClick={() => setActiveStep(0)} fullWidth>Atrás</Button>
                 <Button 
                   variant="contained" onClick={handleVerifyAndEnable} fullWidth 
                   disabled={isLoading || verificationCode.length !== 6}
                 >
-                  {isLoading ? <CircularProgress size={24} /> : 'Activar 2FA'}
+                  {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Verificar y Activar'}
                 </Button>
               </Stack>
             </Stack>
@@ -315,18 +330,22 @@ const SecuritySettings: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* DIALOG: DESACTIVAR 2FA */}
+      {/* --- DIALOG: DESACTIVAR --- */}
       <Dialog open={isDisabling} onClose={handleCloseDisableDialog} maxWidth="xs" fullWidth>
-        <DialogTitle display="flex" justifyContent="space-between" alignItems="center">
+        <DialogTitle display="flex" justifyContent="space-between" alignItems="center" sx={{ borderBottom: `1px solid ${theme.palette.divider}` }}>
           Desactivar 2FA
           <IconButton onClick={handleCloseDisableDialog} size="small"><Close /></IconButton>
         </DialogTitle>
-        <DialogContent>
-          <Alert severity="warning" sx={{ mb: 3 }}>Esto reducirá la seguridad de tu cuenta.</Alert>
+        <DialogContent sx={{ mt: 2 }}>
+          <Alert severity="warning" sx={{ mb: 3 }}>
+            Tu cuenta será más vulnerable a accesos no autorizados.
+          </Alert>
+          
           {localError && <Alert severity="error" sx={{ mb: 2 }}>{localError}</Alert>}
+          
           <Stack spacing={2}>
             <TextField
-              fullWidth type={showPassword ? 'text' : 'password'} label="Tu Contraseña"
+              fullWidth type={showPassword ? 'text' : 'password'} label="Contraseña Actual"
               value={disablePassword} onChange={(e) => setDisablePassword(e.target.value)}
               InputProps={{
                 endAdornment: (
@@ -339,19 +358,19 @@ const SecuritySettings: React.FC = () => {
               }}
             />
             <TextField
-              fullWidth label="Código 2FA Actual" placeholder="000000"
+              fullWidth label="Código 2FA" placeholder="000000"
               value={disableCode} onChange={(e) => setDisableCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-              inputProps={{ maxLength: 6, style: { textAlign: 'center', letterSpacing: 6, fontWeight: 700 } }}
+              inputProps={{ maxLength: 6, style: { textAlign: 'center', letterSpacing: 4, fontWeight: 600 } }}
             />
           </Stack>
         </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button onClick={handleCloseDisableDialog} variant="outlined">Cancelar</Button>
+        <DialogActions sx={{ p: 2, borderTop: `1px solid ${theme.palette.divider}` }}>
+          <Button onClick={handleCloseDisableDialog} color="inherit">Cancelar</Button>
           <Button 
             onClick={handleConfirmDisable} color="error" variant="contained"
             disabled={disableLoading || !disablePassword || disableCode.length !== 6}
           >
-            {disableLoading ? <CircularProgress size={20} /> : 'Desactivar'}
+            {disableLoading ? <CircularProgress size={20} color="inherit" /> : 'Confirmar Desactivación'}
           </Button>
         </DialogActions>
       </Dialog>

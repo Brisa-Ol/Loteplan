@@ -1,184 +1,338 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { 
-  Box, Typography, Paper, Stack, Button, Chip, Alert 
+  Box, 
+  Typography, 
+  Button, 
+  Chip, 
+  Tabs, 
+  Tab, 
+  Badge,
+  Stack
 } from '@mui/material';
 import { 
-  ErrorOutline, Lock, AccountBalanceWallet, CheckCircle
+  Lock, 
+  CheckCircle, 
+  ErrorOutline, 
+  AccountBalanceWallet, 
+  Schedule,
+  ReceiptLong
 } from '@mui/icons-material';
 
-// Servicios y Tipos
+// --- SERVICIOS Y TIPOS ---
 import PagoService from '../../../../Services/pago.service';
 import SuscripcionService from '../../../../Services/suscripcion.service';
-import MercadoPagoService from '../../../../Services/pagoMercado.service'; // ✅ Importamos el servicio de MP
+import MercadoPagoService from '../../../../Services/pagoMercado.service';
 import type { SuscripcionDto } from '../../../../types/dto/suscripcion.dto';
 import type { PagoDto } from '../../../../types/dto/pago.dto';
 
-// Componentes Comunes
+// --- COMPONENTES COMUNES ---
 import { PageContainer } from '../../../../components/common/PageContainer/PageContainer';
 import { PageHeader } from '../../../../components/common/PageHeader/PageHeader';
 import { QueryHandler } from '../../../../components/common/QueryHandler/QueryHandler';
 import TwoFactorAuthModal from '../../../../components/common/TwoFactorAuthModal/TwoFactorAuthModal';
-
-// Hooks
+import { DataTable, type DataTableColumn } from '../../../../components/common/DataTable/DataTable'; // Ajusta la ruta
 import { useModal } from '../../../../hooks/useModal';
+import { HistorialPagosAgrupado } from './components/HistorialAgrupado';
+
+
+
+// ----------------------------------------------------------------------
+// HELPER: Configuración visual de estados
+// ----------------------------------------------------------------------
+const getStatusConfig = (status: string) => {
+  switch (status) {
+    case 'pagado':
+      return { color: 'success', label: 'Pagado', icon: <CheckCircle /> };
+    case 'pendiente':
+      return { color: 'info', label: 'Próximo', icon: <Schedule /> };
+    case 'vencido':
+      return { color: 'error', label: 'Vencido', icon: <ErrorOutline /> };
+    case 'cubierto_por_puja':
+      return { color: 'success', label: 'Cubierto (Puja)', icon: <AccountBalanceWallet /> };
+    default:
+      return { color: 'default', label: status, icon: null };
+  }
+};
 
 const MisPagos: React.FC = () => {
-  // 1. Hook de Modal y Estados
+  // 1. Hooks y Estados
   const twoFaModal = useModal();
   const [selectedPagoId, setSelectedPagoId] = useState<number | null>(null);
   const [twoFAError, setTwoFAError] = useState<string | null>(null);
+  
+  // Tabs: 0 = Por Pagar, 1 = Vencidas, 2 = Historial
+  const [currentTab, setCurrentTab] = useState(0); 
 
-  // 2. Cargar Datos
+  // 2. Carga de Datos
   const pagosQuery = useQuery<PagoDto[]>({
     queryKey: ['misPagos'],
-    queryFn: async () => (await PagoService.getMyPayments()).data
+    queryFn: async () => (await PagoService.getMyPayments()).data,
+    refetchOnWindowFocus: false
   });
 
   const suscripcionesQuery = useQuery<SuscripcionDto[]>({
     queryKey: ['misSuscripciones'],
-    queryFn: async () => (await SuscripcionService.getMisSuscripciones()).data
+    queryFn: async () => (await SuscripcionService.getMisSuscripciones()).data,
+    staleTime: 1000 * 60 * 5 // Cachear 5 min
   });
 
   const isLoading = pagosQuery.isLoading || suscripcionesQuery.isLoading;
   const error = pagosQuery.error || suscripcionesQuery.error;
 
-  // Helper para nombre de proyecto
+  // Helper interno para obtener nombre del proyecto en la tabla
   const getNombreProyecto = (idProyecto: number) => {
     const sub = suscripcionesQuery.data?.find(s => s.id_proyecto === idProyecto);
     return sub?.proyectoAsociado?.nombre_proyecto || `Proyecto #${idProyecto}`;
   };
 
-  // 3. Filtro: Solo mostrar pendientes o vencidos
-  const cuotasPorPagar = useMemo(() => {
-    return pagosQuery.data?.filter(p => 
-      p.estado_pago === 'pendiente' || p.estado_pago === 'vencido'
-    ).sort((a, b) => new Date(a.fecha_vencimiento).getTime() - new Date(b.fecha_vencimiento).getTime()) || [];
-  }, [pagosQuery.data]);
+  // 3. Lógica de Filtrado y Contadores
+  const { filteredData, counts, historialData } = useMemo(() => {
+    const data = pagosQuery.data || [];
+    
+    // Contadores para los Badges (Notificaciones)
+    const counts = {
+      pendientes: data.filter(p => p.estado_pago === 'pendiente').length,
+      vencidas: data.filter(p => p.estado_pago === 'vencido').length,
+      pagadas: data.filter(p => p.estado_pago === 'pagado' || p.estado_pago === 'cubierto_por_puja').length
+    };
 
-  // 4. Mutación: Iniciar Pago (CORREGIDO)
+    // Ordenamiento por fecha de vencimiento
+    const sorted = [...data].sort((a, b) => 
+      new Date(a.fecha_vencimiento).getTime() - new Date(b.fecha_vencimiento).getTime()
+    );
+
+    let filtered: PagoDto[] = [];
+
+    switch (currentTab) {
+      case 0: // Por Pagar
+        filtered = sorted.filter(p => p.estado_pago === 'pendiente');
+        break;
+      case 1: // Vencidas
+        filtered = sorted.filter(p => p.estado_pago === 'vencido');
+        break;
+      case 2: // Historial (Solo para tener la referencia, aunque usaremos historialData)
+        filtered = [];
+        break;
+    }
+
+    // Datos específicos para el componente de Historial (Pagados o Cubiertos)
+    const historialData = sorted.filter(p => 
+        p.estado_pago === 'pagado' || p.estado_pago === 'cubierto_por_puja'
+    );
+
+    return { filteredData: filtered, counts, historialData };
+  }, [pagosQuery.data, currentTab]);
+
+  // 4. Mutaciones (Checkout y 2FA)
   const iniciarPagoMutation = useMutation({
     mutationFn: async (pagoId: number) => {
-      // 🚀 CAMBIO CLAVE: Usamos MercadoPagoService igual que en MisInversiones
-      // 'pago' es el modelo que identifica a las cuotas mensuales en tu backend
+      setSelectedPagoId(pagoId);
       return await MercadoPagoService.iniciarCheckoutModelo('pago', pagoId);
     },
-    onSuccess: (response, pagoId) => {
+    onSuccess: (response) => {
       const data = response.data;
-      
-      // CASO A: Requiere 2FA (Status 202)
+      // Caso: Requiere 2FA
       if (response.status === 202 || data.is2FARequired) {
-        setSelectedPagoId(pagoId);
         setTwoFAError(null);
         twoFaModal.open();
         return;
       }
-
-      // CASO B: Redirección Directa (Status 200)
+      // Caso: Redirección MP
       if (data.redirectUrl) {
         window.location.href = data.redirectUrl;
       }
     },
-    onError: (err: any) => alert(err.response?.data?.error || "Error al iniciar el pago.")
+    onError: (err: any) => {
+      alert(err.response?.data?.error || "Error al iniciar el pago.");
+      setSelectedPagoId(null);
+    }
   });
 
-  // 5. Mutación: Confirmar con 2FA (Paso 2)
   const confirmar2FAMutation = useMutation({
     mutationFn: async (codigo: string) => {
       if (!selectedPagoId) throw new Error("ID de pago perdido.");
-      return await PagoService.confirmarPago2FA({
-        pagoId: selectedPagoId,
-        codigo_2fa: codigo
-      });
+      return await PagoService.confirmarPago2FA({ pagoId: selectedPagoId, codigo_2fa: codigo });
     },
     onSuccess: (response) => {
-      if (response.data.redirectUrl) {
-        window.location.href = response.data.redirectUrl;
-      }
+      if (response.data.redirectUrl) window.location.href = response.data.redirectUrl;
       twoFaModal.close();
     },
-    onError: (err: any) => setTwoFAError(err.response?.data?.error || "Código inválido o expirado.")
+    onError: (err: any) => setTwoFAError(err.response?.data?.error || "Código inválido.")
   });
 
+  // 5. Columnas de la Tabla (Solo para Tabs 0 y 1)
+  const columns: DataTableColumn<PagoDto>[] = useMemo(() => [
+    {
+      id: 'proyecto',
+      label: 'Proyecto',
+      minWidth: 160,
+      render: (row) => (
+        <Stack>
+            <Typography variant="body2" fontWeight="bold">
+            {getNombreProyecto(row.id_proyecto ?? 0)}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+             ID: {row.id_suscripcion}
+            </Typography>
+        </Stack>
+      )
+    },
+    {
+      id: 'mes',
+      label: 'Cuota',
+      minWidth: 90,
+      align: 'center',
+      render: (row) => (
+        <Chip label={`#${row.mes}`} size="small" variant="outlined" />
+      )
+    },
+    {
+      id: 'fecha_vencimiento',
+      label: 'Vencimiento',
+      minWidth: 120,
+      format: (value) => new Date(value).toLocaleDateString()
+    },
+    {
+      id: 'monto',
+      label: 'Monto',
+      minWidth: 130,
+      render: (row) => (
+        <Typography variant="subtitle2" color="primary.main" fontWeight={700}>
+          ${Number(row.monto).toLocaleString('es-AR')}
+        </Typography>
+      )
+    },
+    {
+      id: 'estado_pago',
+      label: 'Estado',
+      minWidth: 130,
+      render: (row) => {
+        const config = getStatusConfig(row.estado_pago);
+        return (
+          <Chip 
+            label={config.label} 
+            color={config.color as any} 
+            size="small" 
+            variant="filled" // Si usas MUI Joy, sino 'filled' u 'outlined'
+            icon={config.icon as any}
+          />
+        );
+      }
+    },
+    {
+      id: 'acciones',
+      label: 'Acción',
+      align: 'right',
+      render: (row) => {
+        const isProcessing = iniciarPagoMutation.isPending && selectedPagoId === row.id;
+
+        return (
+          <Button
+            variant="contained"
+            color={row.estado_pago === 'vencido' ? 'error' : 'primary'}
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation();
+              iniciarPagoMutation.mutate(row.id);
+            }}
+            disabled={iniciarPagoMutation.isPending}
+            startIcon={!isProcessing ? <Lock fontSize="small" /> : null}
+            sx={{ borderRadius: 2, minWidth: 110, textTransform: 'none', fontWeight: 'bold' }}
+          >
+            {isProcessing ? 'Procesando...' : row.estado_pago === 'vencido' ? 'Regularizar' : 'Pagar'}
+          </Button>
+        );
+      }
+    }
+  ], [suscripcionesQuery.data, iniciarPagoMutation.isPending, selectedPagoId]);
+
   return (
-    <PageContainer maxWidth="md">
-      <PageHeader title="Mis Cuotas" subtitle="Gestiona tus pagos mensuales pendientes." />
+    <PageContainer maxWidth="lg">
+      <PageHeader 
+        title="Mis Cuotas" 
+        subtitle="Gestiona tus obligaciones mensuales y visualiza el progreso de tus planes." 
+      />
+
+      {/* --- PESTAÑAS --- */}
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+        <Tabs 
+            value={currentTab} 
+            onChange={(_, val) => setCurrentTab(val)}
+            indicatorColor="primary"
+            textColor="primary"
+        >
+          {/* TAB 0: Por Pagar */}
+          <Tab 
+            icon={<Schedule />} 
+            iconPosition="start"
+            label={
+              <Badge badgeContent={counts.pendientes} color="primary" sx={{ px: 1 }}>
+                Por Pagar
+              </Badge>
+            } 
+          />
+          
+          {/* TAB 1: Vencidas */}
+          <Tab 
+            icon={<ErrorOutline />}
+            iconPosition="start"
+            label={
+              <Badge badgeContent={counts.vencidas} color="error" sx={{ px: 1 }}>
+                Vencidas
+              </Badge>
+            } 
+            sx={{ 
+                color: counts.vencidas > 0 ? 'error.main' : 'inherit',
+                fontWeight: counts.vencidas > 0 ? 'bold' : 'normal'
+            }}
+          />
+
+          {/* TAB 2: Historial */}
+          <Tab 
+            icon={<ReceiptLong />}
+            iconPosition="start"
+            label={`Historial (${counts.pagadas})`} 
+          />
+        </Tabs>
+      </Box>
 
       <QueryHandler isLoading={isLoading} error={error as Error | null}>
-        <Stack spacing={2}>
-          {cuotasPorPagar.length > 0 ? cuotasPorPagar.map(pago => {
-            const isVencido = pago.estado_pago === 'vencido';
-            const isCubierto = pago.estado_pago === 'cubierto_por_puja';
-            const nombreProyecto = getNombreProyecto(pago.id_proyecto ?? 0);
+        
+        {/* --- CONTENIDO CONDICIONAL --- */}
+        {currentTab === 2 ? (
+            
+            // ✅ VISTA DE HISTORIAL AGRUPADO
+            <HistorialPagosAgrupado 
+                pagos={historialData}
+                suscripciones={suscripcionesQuery.data || []}
+            />
 
-            return (
-              <Paper 
-                key={pago.id} 
-                elevation={0} 
-                variant="outlined"
-                sx={{ 
-                  p: 3, 
-                  borderRadius: 3,
-                  borderLeft: isVencido ? '6px solid' : '1px solid',
-                  borderLeftColor: isVencido ? 'error.main' : 'divider',
-                  bgcolor: isVencido ? '#fff5f5' : 'background.paper',
-                  transition: 'transform 0.2s',
-                  '&:hover': { transform: 'translateY(-2px)', boxShadow: 2 }
-                }}
-              >
-                <Box display="flex" justifyContent="space-between" flexWrap="wrap" gap={2}>
-                  <Box>
-                    <Stack direction="row" alignItems="center" spacing={1} mb={1}>
-                      <Typography variant="h6" fontWeight={700} color={isVencido ? 'error.main' : 'text.primary'}>
-                        Cuota Mes #{pago.mes}
-                      </Typography>
-                      {isVencido && <Chip label="VENCIDO" color="error" size="small" icon={<ErrorOutline />} />}
-                    </Stack>
-                    
-                    <Typography variant="body1" fontWeight={600} color="text.secondary" gutterBottom>
-                        {nombreProyecto}
-                    </Typography>
-                    
-                    <Box mt={2}>
-                      <Typography variant="h4" fontWeight={800} color="text.primary" sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5 }}>
-                        ${Number(pago.monto).toLocaleString('es-AR')} <Typography variant="caption">ARS</Typography>
-                      </Typography>
-                      <Typography variant="caption" color={isVencido ? 'error.main' : 'text.secondary'} fontWeight={isVencido ? 700 : 400}>
-                        Vencimiento: {new Date(pago.fecha_vencimiento).toLocaleDateString()}
-                      </Typography>
-                    </Box>
-                  </Box>
+        ) : (
+            
+            // ✅ VISTA DE TABLA (Pendientes y Vencidas)
+            <DataTable
+                columns={columns}
+                data={filteredData}
+                getRowKey={(row) => row.id}
+                pagination={true}
+                defaultRowsPerPage={10}
+                emptyMessage={
+                    currentTab === 0 ? "¡Todo al día! No tienes pagos pendientes." :
+                    "¡Excelente! No tienes cuotas vencidas."
+                }
+                // Resalta filas vencidas en rojo suave
+                getRowSx={(row) => ({
+                    bgcolor: row.estado_pago === 'vencido' ? '#fff5f5' : 'inherit',
+                    transition: 'background-color 0.3s'
+                })}
+            />
 
-                  <Box display="flex" flexDirection="column" justifyContent="center" alignItems="flex-end">
-                    {isCubierto ? (
-                      <Alert severity="info" icon={<AccountBalanceWallet />}>Cubierto con Saldo a Favor</Alert>
-                    ) : (
-                      <Button
-                        variant="contained"
-                        size="large"
-                        color={isVencido ? 'error' : 'primary'}
-                        disabled={iniciarPagoMutation.isPending}
-                        onClick={() => iniciarPagoMutation.mutate(pago.id)}
-                        startIcon={<Lock />}
-                        sx={{ py: 1.5, px: 4, borderRadius: 2, fontWeight: 'bold' }}
-                      >
-                        {iniciarPagoMutation.isPending && selectedPagoId === pago.id ? 'Procesando...' : 'Pagar Ahora'}
-                      </Button>
-                    )}
-                  </Box>
-                </Box>
-              </Paper>
-            );
-          }) : (
-            <Paper sx={{ p: 6, textAlign: 'center', bgcolor: 'success.light', color: 'success.dark', borderRadius: 4 }}>
-              <CheckCircle sx={{ fontSize: 80, mb: 2, opacity: 0.8 }} />
-              <Typography variant="h4" fontWeight="bold" gutterBottom>¡Estás al día!</Typography>
-              <Typography variant="subtitle1">No tienes pagos pendientes por el momento.</Typography>
-            </Paper>
-          )}
-        </Stack>
+        )}
+
       </QueryHandler>
 
+      {/* --- MODAL 2FA --- */}
       <TwoFactorAuthModal 
         open={twoFaModal.isOpen} 
         onClose={() => { twoFaModal.close(); setSelectedPagoId(null); setTwoFAError(null); }} 
@@ -186,7 +340,7 @@ const MisPagos: React.FC = () => {
         isLoading={confirmar2FAMutation.isPending} 
         error={twoFAError}
         title="Confirmar Pago Seguro"
-        description="Ingresa el código de tu aplicación autenticadora para procesar el pago."
+        description="Por seguridad, ingresa el código de tu autenticador para procesar este pago."
       />
     </PageContainer>
   );

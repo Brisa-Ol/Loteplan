@@ -62,7 +62,6 @@ const ProyectosAhorrista: React.FC = () => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   
-  // Estado para el filtro
   const [tabValue, setTabValue] = useState<'activos' | 'finalizados'>('activos');
 
   const { data: todosLosProyectos, isLoading, error } = useQuery({
@@ -72,7 +71,6 @@ const ProyectosAhorrista: React.FC = () => {
   
   const rawProjects = todosLosProyectos || [];
 
-  // Lógica de filtrado
   const proyectosFiltrados = rawProjects.filter(project => {
     if (tabValue === 'activos') {
       return project.estado_proyecto !== 'Finalizado';
@@ -92,9 +90,10 @@ const ProyectosAhorrista: React.FC = () => {
 
   return (
     <PageContainer maxWidth="xl">
+      {/* ✅ HEADER ACTUALIZADO: Persuasivo + Rol */}
       <PageHeader
-        title="Proyectos para Ahorristas"
-        subtitle="Elegí tu lote, pagá en cuotas a tu medida y hacé realidad el sueño de la casa propia."
+        title="Tu Camino a la Casa Propia"
+        subtitle="Catálogo exclusivo para el perfil Ahorrista: Financiación a medida para construir tu futuro."
       />
 
       <QueryHandler 
@@ -106,7 +105,6 @@ const ProyectosAhorrista: React.FC = () => {
         <>
           <ProjectHighlights />
 
-          {/* Filtros (Tabs) */}
           <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 4, display: 'flex', justifyContent: 'center' }}>
             <Tabs 
               value={tabValue} 
@@ -122,14 +120,14 @@ const ProyectosAhorrista: React.FC = () => {
           </Box>
 
           <SectionTitle>
-            {tabValue === 'activos' ? 'Catálogo Disponible' : 'Historial de Éxitos'}
+            {tabValue === 'activos' ? 'Proyectos Financiados Disponibles' : 'Sueños Cumplidos (Historial)'}
           </SectionTitle>
 
           {proyectosFiltrados.length === 0 ? (
             <Box textAlign="center" py={8} bgcolor="grey.50" borderRadius={4}>
               <Typography variant="h5" color="text.secondary" fontWeight={500}>
                 {tabValue === 'activos' 
-                  ? "No hay proyectos activos en este momento." 
+                  ? "No hay proyectos activos para Ahorristas en este momento." 
                   : "Aún no hay proyectos finalizados en el historial."}
               </Typography>
             </Box>
@@ -138,9 +136,9 @@ const ProyectosAhorrista: React.FC = () => {
               sx={{
                 display: "grid",
                 gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", md: "repeat(3, 1fr)" },
-                gap: 4, // Espacio un poco más compacto
-                width: "100%", // Ocupar todo el ancho disponible
-                maxWidth: "1400px", // Limitar el ancho máximo para pantallas gigantes
+                gap: 4,
+                width: "100%",
+                maxWidth: "1400px",
                 mx: "auto", 
                 mb: 9,
               }}
@@ -161,4 +159,4 @@ const ProyectosAhorrista: React.FC = () => {
   );
 };
 
-export default ProyectosAhorrista; 
+export default ProyectosAhorrista;
