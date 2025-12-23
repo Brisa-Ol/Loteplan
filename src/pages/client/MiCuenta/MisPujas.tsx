@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import {
   Box, Typography, Button, Stack, Chip, Alert, Divider,
-  IconButton, Tooltip, Card, CardContent, CardMedia, CardActions,
-  alpha, useTheme
+  Card, CardContent, CardMedia, CardActions,
+  alpha, useTheme, CircularProgress
 } from '@mui/material';
 import {
   Gavel, Payment, AccessTime, CheckCircle, Cancel, Visibility,
@@ -25,11 +25,11 @@ import TwoFactorAuthModal from '../../../components/common/TwoFactorAuthModal/Tw
 // Hooks
 import { useModal } from '../../../hooks/useModal';
 
-const MisSubastas: React.FC = () => {
+const MisPujas: React.FC = () => {
   const navigate = useNavigate();
   const theme = useTheme();
   
-  // 1. Estados y Hooks para 2FA
+  // 1. Estados y Hooks para 2FA y Selección
   const twoFaModal = useModal();
   const [selectedPujaId, setSelectedPujaId] = useState<number | null>(null);
   const [twoFAError, setTwoFAError] = useState<string | null>(null);
@@ -47,18 +47,23 @@ const MisSubastas: React.FC = () => {
     },
     onSuccess: (response, pujaId) => {
       const data = response.data;
+      
+      // Caso A: Requiere 2FA (Status 202 o flag is2FARequired)
       if (response.status === 202 || data.is2FARequired) {
-        setSelectedPujaId(pujaId);
+        // Mantenemos selectedPujaId seteuado para saber cuál confirmar
         setTwoFAError(null);
         twoFaModal.open();
         return;
       } 
+      
+      // Caso B: Redirección directa a Mercado Pago
       if (data.url_checkout) {
         window.location.href = data.url_checkout;
       }
     },
     onError: (err: any) => {
       alert(err.response?.data?.error || 'Error al iniciar el pago');
+      setSelectedPujaId(null); // Limpiamos selección si falla
     }
   });
 
@@ -80,6 +85,7 @@ const MisSubastas: React.FC = () => {
     onError: (err: any) => setTwoFAError(err.response?.data?.error || "Código inválido.")
   });
 
+  // Helper de Configuración Visual de Estados
   const getStatusConfig = (status: string) => {
     switch (status) {
       case 'activa': return { label: 'En Curso', color: 'info' as const, icon: <AccessTime fontSize="small" /> };
@@ -90,8 +96,11 @@ const MisSubastas: React.FC = () => {
     }
   };
 
+  // Helper de Formato de Moneda (ARS)
   const formatCurrency = (val: number) => 
-    new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(val);
+    new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(val);
+
+  // 🚨 CÓDIGO ELIMINADO AQUÍ: El bloque <Button> flotante que causaba el error de sintaxis ha sido removido.
 
   return (
     <PageContainer maxWidth="lg">
@@ -152,7 +161,7 @@ const MisSubastas: React.FC = () => {
                       />
                     ) : (
                       <Box sx={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}>
-                         <Gavel sx={{ fontSize: 50, opacity: 0.5 }} />
+                          <Gavel sx={{ fontSize: 50, opacity: 0.5 }} />
                       </Box>
                     )}
                     {/* Overlay gradiente */}
@@ -165,7 +174,7 @@ const MisSubastas: React.FC = () => {
                     </Typography>
                     
                     <Typography variant="body2" color="text.secondary" mb={2}>
-                       Proyecto ID: {idProyecto || 'N/A'}
+                        Proyecto ID: {idProyecto || 'N/A'}
                     </Typography>
 
                     <Divider sx={{ my: 2, borderStyle: 'dashed' }} />
@@ -220,12 +229,16 @@ const MisSubastas: React.FC = () => {
                           variant="contained"
                           color="warning"
                           fullWidth
-                          startIcon={<Payment />}
-                          onClick={() => payMutation.mutate(puja.id)}
-                          disabled={payMutation.isPending}
+                          // 🟢 CORRECCIÓN: Loading individual por tarjeta
+                          startIcon={payMutation.isPending && selectedPujaId === puja.id ? <CircularProgress size={20} color="inherit" /> : <Payment />}
+                          onClick={() => {
+                            setSelectedPujaId(puja.id); // Marcamos cuál se está pagando
+                            payMutation.mutate(puja.id);
+                          }}
+                          disabled={payMutation.isPending} // Bloqueamos si hay algún pago en curso
                           sx={{ fontWeight: 700 }}
                         >
-                          {payMutation.isPending ? '...' : 'Pagar'}
+                          {payMutation.isPending && selectedPujaId === puja.id ? 'Procesando...' : 'Pagar'}
                         </Button>
                       )}
                     </Stack>
@@ -286,4 +299,4 @@ const MisSubastas: React.FC = () => {
   );
 };
 
-export default MisSubastas;
+export default MisPujas;

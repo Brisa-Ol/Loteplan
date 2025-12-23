@@ -230,7 +230,9 @@ const PujaService = {
     
     return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
   },
-
+getActivePujas: async (): Promise<AxiosResponse<PujaDto[]>> => {
+    return await httpService.get(`${BASE_ENDPOINT}/activas`);
+  },
   /**
    * Helper para formatear monto.
    */

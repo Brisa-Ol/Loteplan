@@ -4,17 +4,17 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Button,
-  TextField,
   Alert,
   CircularProgress,
   Stack,
-  Link as MuiLink,
+  Box,
 } from "@mui/material";
 import { useFormik } from "formik";
 import * as Yup from "yup";
-import AuthFormContainer from "../AuthFormContainer/AuthFormContainer";
-import { PageContainer } from "../../../../components/common/PageContainer/PageContainer";
 import { useAuth } from "../../../../context/AuthContext";
+import { PageContainer } from "../../../../components/common/PageContainer/PageContainer";
+import AuthFormContainer from "../AuthFormContainer/AuthFormContainer";
+import FormTextField from "../FormTextField/FormTextField";
 
 
 const ForgotPasswordPage: React.FC = () => {
@@ -43,6 +43,8 @@ const ForgotPasswordPage: React.FC = () => {
     },
   });
 
+  const isDisabled = isLoading || !!successMessage;
+
   return (
     <PageContainer maxWidth="sm">
       <AuthFormContainer
@@ -60,26 +62,27 @@ const ForgotPasswordPage: React.FC = () => {
         ) : null}
 
         <form onSubmit={formik.handleSubmit}>
-          <Stack spacing={0}>
-            <TextField
+          {/* Usamos spacing={3} para consistencia con Login/Register */}
+          <Stack spacing={3}>
+            
+            {/* Componente optimizado */}
+            <FormTextField
               fullWidth
+              name="email"
               label="Email"
-              margin="normal"
-              {...formik.getFieldProps("email")}
-              error={formik.touched.email && Boolean(formik.errors.email)}
-              helperText={formik.touched.email && formik.errors.email}
-              disabled={isLoading || !!successMessage}
+              formik={formik}
+              disabled={isDisabled}
             />
 
             <Button
               fullWidth
               variant="contained"
               type="submit"
-              disabled={isLoading || !!successMessage}
-              sx={{ mt: 3, py: 1.2 }}
+              size="large" // Toma el padding del theme
+              disabled={isDisabled}
             >
               {isLoading ? (
-                <CircularProgress size={24} sx={{ color: "white" }} />
+                <CircularProgress size={24} color="inherit" />
               ) : (
                 "Enviar Enlace"
               )}
@@ -87,16 +90,17 @@ const ForgotPasswordPage: React.FC = () => {
           </Stack>
         </form>
 
-        <Stack spacing={1} sx={{ mt: 3 }} alignItems="center">
-          <MuiLink
-            component="button"
-            variant="body2"
+        <Box textAlign="center" mt={3}>
+          <Button
             onClick={() => navigate("/login")}
-            sx={{ cursor: "pointer" }}
+            color="primary" // O "inherit" si prefieres gris
+            disabled={isLoading}
+            sx={{ fontWeight: 500 }}
           >
             Volver a Iniciar Sesión
-          </MuiLink>
-        </Stack>
+          </Button>
+        </Box>
+        
       </AuthFormContainer>
     </PageContainer>
   );

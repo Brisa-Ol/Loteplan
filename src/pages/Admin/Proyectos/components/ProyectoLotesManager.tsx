@@ -1,36 +1,48 @@
 import React from 'react';
 import {
   Box, Paper, Typography, Button, Stack, Table, TableBody, TableCell,
-  TableContainer, TableHead, TableRow, Chip, Alert, Tooltip, IconButton
+  TableContainer, TableHead, TableRow, Chip, Alert, Tooltip, IconButton,
+  useTheme, alpha, Avatar
 } from '@mui/material';
 import { 
   Add as AddIcon, 
   Map as MapIcon, 
-  Event as EventIcon 
+  Event as EventIcon,
+  Landscape as LoteIcon,
+  Gavel as SubastaIcon,
+  CheckCircle as WinnerIcon,
+  AccessTime as PendingIcon,
+  PlayCircleOutline as ActiveIcon,
+  StopCircleOutlined as FinishedIcon
 } from '@mui/icons-material';
 
-// Importamos los tipos correctos
 import type { ProyectoDto } from '../../../../types/dto/proyecto.dto';
 import type { LoteDto, EstadoSubasta } from '../../../../types/dto/lote.dto'; 
 
 interface ProyectoLotesManagerProps {
-  // Asumimos que ProyectoDto tiene una propiedad 'lotes' que es un array de LoteDto
-  // Si TS se queja aquí, asegúrate de actualizar tambien ProyectoDto
   proyecto: ProyectoDto; 
   onAssignLotes: () => void;
 }
 
-// Helper para colores de estado
+// 1. HELPER COLORES TEMA
 const getStatusColor = (estado: EstadoSubasta) => {
   switch (estado) {
-    case 'activa': return 'success';     // Verde
-    case 'pendiente': return 'warning';  // Naranja
-    case 'finalizada': return 'default'; // Gris
+    case 'activa': return 'success';
+    case 'pendiente': return 'warning';
+    case 'finalizada': return 'error'; // Cambiado a error (rojo suave) o default (gris) según preferencia
     default: return 'default';
   }
 };
 
-// Helper para formato de fecha corto
+const getStatusIcon = (estado: EstadoSubasta) => {
+    switch (estado) {
+      case 'activa': return <ActiveIcon fontSize="small" />;
+      case 'pendiente': return <PendingIcon fontSize="small" />;
+      case 'finalizada': return <FinishedIcon fontSize="small" />;
+      default: return undefined;
+    }
+  };
+
 const formatDate = (dateStr: string | null) => {
   if (!dateStr) return '-';
   return new Date(dateStr).toLocaleDateString('es-AR', {
@@ -42,138 +54,195 @@ export const ProyectoLotesManager: React.FC<ProyectoLotesManagerProps> = ({
   proyecto,
   onAssignLotes
 }) => {
-  // Casteamos lotes para asegurar a TS que usamos la nueva estructura
+  const theme = useTheme();
   const lotes = (proyecto.lotes || []) as unknown as LoteDto[];
+
+  // Estilos de Cabecera (Consistente)
+  const headerSx = {
+    color: 'text.secondary',
+    fontWeight: 700,
+    fontSize: '0.75rem',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    borderBottom: `1px solid ${theme.palette.divider}`,
+    bgcolor: alpha(theme.palette.background.paper, 0.4),
+    py: 1.5
+  };
 
   return (
     <Box sx={{ px: 3 }}>
       {/* Header */}
       <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
-        <Box>
-          <Typography variant="h6" fontWeight="bold" gutterBottom>
-            Gestión de Lotes / Subastas
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Lotes registrados: {lotes.length}
-          </Typography>
-        </Box>
+        <Stack direction="row" spacing={2} alignItems="center">
+            <Avatar variant="rounded" sx={{ bgcolor: alpha(theme.palette.secondary.main, 0.1), color: 'secondary.main' }}>
+                <LoteIcon />
+            </Avatar>
+            <Box>
+                <Typography variant="h6" fontWeight={800} color="text.primary">
+                    Gestión de Lotes
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                    Total registrados: <strong>{lotes.length}</strong>
+                </Typography>
+            </Box>
+        </Stack>
+        
         <Button
           variant="contained"
           startIcon={<AddIcon />}
           onClick={onAssignLotes}
+          sx={{ borderRadius: 2, fontWeight: 700, boxShadow: theme.shadows[2] }}
         >
-          Crear Lote
+          Nuevo Lote
         </Button>
       </Stack>
 
       {/* Tabla de Lotes */}
       {lotes.length === 0 ? (
-        <Alert severity="info">
-          Este proyecto no tiene lotes asignados aún. Haz clic en "Crear Lote" para comenzar.
+        <Alert severity="info" variant="outlined" sx={{ borderRadius: 2, borderStyle: 'dashed' }}>
+          Este proyecto aún no tiene lotes. Comienza creando el primero.
         </Alert>
       ) : (
-        <TableContainer component={Paper} variant="outlined">
-          <Table size="small">
+        <TableContainer 
+            component={Paper} 
+            elevation={0} 
+            sx={{ 
+                borderRadius: 2, 
+                border: '1px solid', 
+                borderColor: 'divider',
+                maxHeight: 500
+            }}
+        >
+          <Table size="small" stickyHeader>
             <TableHead>
-              <TableRow sx={{ bgcolor: 'primary.main' }}>
-                <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>ID</TableCell>
-                <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Nombre / Lote</TableCell>
-                <TableCell sx={{ color: 'white', fontWeight: 'bold' }} align="right">Precio Base</TableCell>
-                <TableCell sx={{ color: 'white', fontWeight: 'bold' }} align="center">Fechas (Inicio - Fin)</TableCell>
-                <TableCell sx={{ color: 'white', fontWeight: 'bold' }} align="center">Ubicación</TableCell>
-                <TableCell sx={{ color: 'white', fontWeight: 'bold' }} align="center">Estado Subasta</TableCell>
+              <TableRow>
+                <TableCell sx={headerSx}>ID</TableCell>
+                <TableCell sx={headerSx}>Lote</TableCell>
+                <TableCell sx={headerSx}>Precio Base</TableCell>
+                <TableCell sx={headerSx} align="center">Vigencia Subasta</TableCell>
+                <TableCell sx={headerSx} align="center">Ubicación</TableCell>
+                <TableCell sx={headerSx} align="center">Estado</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {lotes.map((lote) => (
-                <TableRow key={lote.id} hover>
-                  <TableCell>{lote.id}</TableCell>
-                  
-                  <TableCell>
-                    <Typography variant="body2" fontWeight={500}>
-                      {lote.nombre_lote}
-                    </Typography>
-                    {lote.activo === false && (
-                       <Typography variant="caption" color="error">Inactivo</Typography>
-                    )}
-                  </TableCell>
+              {lotes.map((lote) => {
+                const statusColor = getStatusColor(lote.estado_subasta);
+                // Tipado seguro para theme palette
+                const colorMain = (theme.palette as any)[statusColor]?.main || theme.palette.text.secondary;
 
-                  <TableCell align="right">
-                    <Typography variant="body2" fontWeight="bold" color="primary">
-                      ${Number(lote.precio_base).toLocaleString()}
-                    </Typography>
-                  </TableCell>
+                return (
+                    <TableRow key={lote.id} hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
+                    <TableCell sx={{ color: 'text.secondary', fontFamily: 'monospace' }}>#{lote.id}</TableCell>
+                    
+                    <TableCell>
+                        <Stack direction="row" alignItems="center" spacing={1}>
+                            <LoteIcon fontSize="small" color="action" />
+                            <Box>
+                                <Typography variant="body2" fontWeight={600} color={lote.activo === false ? 'text.disabled' : 'text.primary'}>
+                                {lote.nombre_lote}
+                                </Typography>
+                                {lote.activo === false && (
+                                    <Chip label="Inactivo" size="small" sx={{ height: 16, fontSize: '0.6rem' }} />
+                                )}
+                            </Box>
+                        </Stack>
+                    </TableCell>
 
-                  <TableCell align="center">
-                    <Stack spacing={0.5} alignItems="center">
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Typography variant="caption" color="success.main">I:</Typography>
-                            <Typography variant="caption">{formatDate(lote.fecha_inicio)}</Typography>
-                        </Box>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Typography variant="caption" color="error.main">F:</Typography>
-                            <Typography variant="caption">{formatDate(lote.fecha_fin)}</Typography>
-                        </Box>
-                    </Stack>
-                  </TableCell>
-
-                  <TableCell align="center">
-                    {lote.latitud && lote.longitud ? (
-                      <Tooltip title={`Lat: ${lote.latitud}, Lng: ${lote.longitud}`}>
-                         <IconButton 
-                            size="small" 
-                            color="primary" 
-                            href={`https://www.google.com/maps/search/?api=1&query=${lote.latitud},${lote.longitud}`}
-                            target="_blank"
-                         >
-                            <MapIcon fontSize="small" />
-                         </IconButton>
-                      </Tooltip>
-                    ) : (
-                      <Typography variant="caption" color="text.secondary">-</Typography>
-                    )}
-                  </TableCell>
-
-                  <TableCell align="center">
-                    <Chip
-                      label={lote.estado_subasta?.toUpperCase()}
-                      size="small"
-                      color={getStatusColor(lote.estado_subasta)}
-                      sx={{ fontWeight: 'bold', minWidth: 85 }}
-                    />
-                    {lote.id_ganador && (
-                        <Typography variant="caption" display="block" color="success.main" sx={{mt: 0.5}}>
-                            ¡Ganador Asignado!
+                    <TableCell>
+                        <Typography variant="body2" fontWeight={700} color="primary.main" sx={{ fontFamily: 'monospace' }}>
+                        ${Number(lote.precio_base).toLocaleString()}
                         </Typography>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
+                    </TableCell>
+
+                    <TableCell align="center">
+                        <Stack spacing={0.5} alignItems="center">
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Typography variant="caption" sx={{ color: 'success.main', fontWeight: 700, fontSize: '0.65rem' }}>INICIO</Typography>
+                                <Typography variant="caption" sx={{ fontFamily: 'monospace' }}>{formatDate(lote.fecha_inicio)}</Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Typography variant="caption" sx={{ color: 'error.main', fontWeight: 700, fontSize: '0.65rem' }}>CIERRE</Typography>
+                                <Typography variant="caption" sx={{ fontFamily: 'monospace' }}>{formatDate(lote.fecha_fin)}</Typography>
+                            </Box>
+                        </Stack>
+                    </TableCell>
+
+                    <TableCell align="center">
+                        {lote.latitud && lote.longitud ? (
+                        <Tooltip title="Ver en Google Maps">
+                            <IconButton 
+                                size="small" 
+                                color="primary" 
+                                href={`https://www.google.com/maps/search/?api=1&query=${lote.latitud},${lote.longitud}`}
+                                target="_blank"
+                                sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1) }}
+                            >
+                                <MapIcon fontSize="small" />
+                            </IconButton>
+                        </Tooltip>
+                        ) : (
+                        <Typography variant="caption" color="text.disabled">-</Typography>
+                        )}
+                    </TableCell>
+
+                    <TableCell align="center">
+                        <Chip
+                            icon={getStatusIcon(lote.estado_subasta)}
+                            label={lote.estado_subasta?.toUpperCase()}
+                            size="small"
+                            sx={{ 
+                                fontWeight: 700, 
+                                minWidth: 100,
+                                bgcolor: alpha(colorMain, 0.1),
+                                color: colorMain,
+                                border: '1px solid',
+                                borderColor: alpha(colorMain, 0.2)
+                            }}
+                        />
+                        {lote.id_ganador && (
+                            <Stack direction="row" alignItems="center" justifyContent="center" spacing={0.5} mt={0.5}>
+                                <WinnerIcon sx={{ fontSize: 12, color: 'warning.main' }} />
+                                <Typography variant="caption" fontWeight={700} color="warning.main" sx={{ fontSize: '0.65rem' }}>
+                                    ADJUDICADO
+                                </Typography>
+                            </Stack>
+                        )}
+                    </TableCell>
+                    </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </TableContainer>
       )}
 
       {/* Info adicional */}
-      <Paper variant="outlined" sx={{ p: 2, mt: 3, bgcolor: 'background.default' }}>
-        <Stack direction="row" spacing={1} alignItems="flex-start">
-            <EventIcon color="info" fontSize="small" sx={{ mt: 0.3 }} />
+      <Alert 
+        severity="info" 
+        icon={<SubastaIcon />} 
+        sx={{ mt: 3, borderRadius: 2, bgcolor: alpha(theme.palette.info.main, 0.05), border: '1px solid', borderColor: alpha(theme.palette.info.main, 0.2) }}
+      >
+        <Typography variant="subtitle2" fontWeight={700} gutterBottom>
+            Estados de Subasta:
+        </Typography>
+        <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
             <Box>
-                <Typography variant="caption" color="text.secondary" display="block">
-                <strong>Estados de Subasta:</strong>
+                <Typography variant="caption" display="block">
+                🟠 <strong>Pendiente:</strong> Aún no inicia (Fecha futura).
                 </Typography>
-                <Typography variant="caption" color="text.secondary" display="block">
-                • <strong>Pendiente:</strong> Aún no ha alcanzado la fecha de inicio.
+            </Box>
+            <Box>
+                <Typography variant="caption" display="block">
+                🟢 <strong>Activa:</strong> En curso (Recibe pujas).
                 </Typography>
-                <Typography variant="caption" color="text.secondary" display="block">
-                • <strong>Activa:</strong> La subasta está en curso y recibe pujas.
-                </Typography>
-                <Typography variant="caption" color="text.secondary" display="block">
-                • <strong>Finalizada:</strong> La fecha de fin ha pasado o se ha cerrado manualmente.
+            </Box>
+            <Box>
+                <Typography variant="caption" display="block">
+                🔴 <strong>Finalizada:</strong> Cierre cumplido o forzado.
                 </Typography>
             </Box>
         </Stack>
-      </Paper>
+      </Alert>
     </Box>
   );
 };

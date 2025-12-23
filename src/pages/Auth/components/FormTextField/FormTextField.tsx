@@ -2,28 +2,46 @@
 
 import React from "react";
 import { TextField, type TextFieldProps } from "@mui/material";
-import type { FormikProps } from "formik";
+import { type FormikProps, getIn } from "formik";
 
-interface FormTextFieldProps extends Omit<TextFieldProps, "error" | "helperText"> {
+// Excluimos las props que maneja Formik para evitar conflictos de tipos
+interface FormTextFieldProps extends Omit<TextFieldProps, "name" | "value" | "error" | "onChange" | "onBlur"> {
   formik: FormikProps<any>;
   name: string;
 }
 
 /**
- * TextField integrado con Formik
- * Maneja automáticamente el estado de error y helper text
+ * TextField integrado con Formik y Material UI Theme.
+ * * Características:
+ * - Soporta nombres anidados (ej: "usuario.direccion") gracias a getIn.
+ * - Gestiona automáticamente el estado 'error' y 'touched'.
+ * - Preserva el helperText original si no hay error (útil para instrucciones).
+ * - Hereda automáticamente los estilos del theme global (bordes redondeados, colores).
  */
-const FormTextField: React.FC<FormTextFieldProps> = ({ formik, name, ...props }) => {
-  const touched = formik.touched[name];
-  const error = formik.errors[name];
+const FormTextField: React.FC<FormTextFieldProps> = ({ 
+  formik, 
+  name, 
+  helperText, 
+  ...props 
+}) => {
+  // Obtenemos las props básicas (onChange, onBlur, value, checked)
+  const field = formik.getFieldProps(name);
+
+  // Usamos getIn para acceder de forma segura a objetos anidados
+  const touched = getIn(formik.touched, name);
+  const error = getIn(formik.errors, name);
+  
   const showError = Boolean(touched && error);
 
   return (
     <TextField
       {...props}
-      {...formik.getFieldProps(name)}
+      {...field}
+      id={name} // Buena práctica para accesibilidad y testing
       error={showError}
-      helperText={showError && typeof error === "string" ? error : undefined}
+      // Si hay error, muestra el error. Si no, muestra el helperText que pasaste como prop (si existe)
+      helperText={showError ? (error as string) : helperText}
+   
     />
   );
 };

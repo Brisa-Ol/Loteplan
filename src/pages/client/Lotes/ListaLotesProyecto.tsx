@@ -22,7 +22,7 @@ import type { LoteDto } from '../../../types/dto/lote.dto';
 import { useModal } from '../../../hooks/useModal';
 import { useConfirmDialog } from '../../../hooks/useConfirmDialog';
 import { FavoritoButton } from '../../../components/common/BotonFavorito/BotonFavorito';
-import { PujarModal } from '../Proyectos/components/PujarModal';
+import { PujarModal } from './components/PujarModal';
 import { ConfirmDialog } from '../../../components/common/ConfirmDialog/ConfirmDialog';
 
 interface Props {
@@ -42,12 +42,13 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
   // 2. Estados
   const [selectedLote, setSelectedLote] = useState<LoteDto | null>(null);
 
-  const { data: lotes, isLoading, error } = useQuery<LoteDto[]>({
-    queryKey: ['lotesProyecto', idProyecto],
-    queryFn: async () => {
-      const res = await LoteService.getAllActive();
-      return res.data.filter(lote => lote.id_proyecto === idProyecto);
-    },
+ const { data: lotes, isLoading, error } = useQuery<LoteDto[]>({
+  queryKey: ['lotesProyecto', idProyecto],
+  queryFn: async () => {
+
+    const res = await LoteService.getAllActive();
+    return res.data.filter(lote => lote.id_proyecto === idProyecto);
+  },
     enabled: !!idProyecto && isAuthenticated,
     retry: 1
   });

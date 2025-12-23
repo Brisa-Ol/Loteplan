@@ -55,7 +55,7 @@ const AuthService = {
   // =================================================
 
   confirmEmail: async (token: string): Promise<AxiosResponse<GenericResponseDto>> => {
-    return await httpService.get(`/usuario/confirmar/${token}`);
+    return await httpService.get(`/auth/confirmar_email/${token}`);
   },
 
   resendConfirmation: async (data: ResendConfirmationDto): Promise<AxiosResponse<GenericResponseDto>> => {

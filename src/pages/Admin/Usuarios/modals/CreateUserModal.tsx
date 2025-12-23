@@ -13,28 +13,33 @@ import {
   IconButton,
   InputAdornment,
   CircularProgress,
-  Alert
+  Alert,
+  Avatar,
+  useTheme,
+  alpha,
+  Divider
 } from '@mui/material';
 import {
   Close as CloseIcon,
   PersonAdd as PersonAddIcon,
   Visibility,
-  VisibilityOff
+  VisibilityOff,
+  BadgeOutlined as BadgeIcon,
+  VpnKeyOutlined as KeyIcon,
+  AdminPanelSettingsOutlined as RoleIcon
 } from '@mui/icons-material';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import type { CreateUsuarioDto } from '../../../../types/dto/usuario.dto';
 
-
-
 // ════════════════════════════════════════════════════════════
-// PROPS CORRECTAS PARA CREAR (Sin 'user', sin 'id')
+// PROPS
 // ════════════════════════════════════════════════════════════
 
 interface CreateUserModalProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (data: CreateUsuarioDto) => Promise<void>; // ✅ Solo recibe data
+  onSubmit: (data: CreateUsuarioDto) => Promise<void>;
   isLoading?: boolean;
 }
 
@@ -66,6 +71,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
   onSubmit, 
   isLoading = false 
 }) => {
+  const theme = useTheme();
   const [showPassword, setShowPassword] = useState(false);
 
   const formik = useFormik<CreateUsuarioDto>({
@@ -82,7 +88,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
     validationSchema: validationSchema,
     onSubmit: async (values, { resetForm }) => {
       try {
-        await onSubmit(values); // ✅ Enviamos solo los valores
+        await onSubmit(values);
         resetForm(); 
       } catch (error) {
         console.error("Error creating user", error);
@@ -90,7 +96,6 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
     },
   });
 
-  // Helper para inputs numéricos
   const handleNumericChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     const numericValue = value.replace(/[^0-9]/g, '');
@@ -102,160 +107,210 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
     onClose();
   };
 
+  // Estilo para que los inputs ocupen espacio igual en filas
+  const flexInputStyle = { flex: 1 };
+  
+  const commonInputSx = {
+    '& .MuiOutlinedInput-root': {
+      borderRadius: 2,
+    }
+  };
+
   return (
     <Dialog 
       open={open} 
       onClose={isLoading ? undefined : handleClose} 
       maxWidth="md" 
       fullWidth
+      PaperProps={{
+        sx: {
+          borderRadius: 3,
+          boxShadow: theme.shadows[10]
+        }
+      }}
     >
-      <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <PersonAddIcon color="primary" />
-          <Typography variant="h6" fontWeight="bold">
-            Crear Nuevo Usuario
-          </Typography>
+      {/* HEADER */}
+      <DialogTitle sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        pb: 2, pt: 3, px: 3,
+        bgcolor: alpha(theme.palette.primary.main, 0.04)
+      }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Avatar variant="rounded" sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}>
+            <PersonAddIcon />
+          </Avatar>
+          <Box>
+            <Typography variant="h6" fontWeight={800} color="text.primary" sx={{ lineHeight: 1.2 }}>
+              Crear Nuevo Usuario
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Complete los datos para registrar un acceso
+            </Typography>
+          </Box>
         </Box>
-        <IconButton onClick={handleClose} size="small" disabled={isLoading}>
+        <IconButton onClick={handleClose} size="small" disabled={isLoading} sx={{ color: 'text.secondary' }}>
           <CloseIcon />
         </IconButton>
       </DialogTitle>
 
+      <Divider />
+
       <form onSubmit={formik.handleSubmit}>
-        <DialogContent dividers>
-          <Stack spacing={3}>
+        <DialogContent sx={{ p: 4 }}>
+          {/* Stack Principal: Separa las secciones verticalmente */}
+          <Stack spacing={4}>
             
             {/* SECCIÓN 1: DATOS PERSONALES */}
             <Box>
-                <Typography variant="subtitle2" color="primary" fontWeight="bold" gutterBottom>
-                    Información Personal
-                </Typography>
-                <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2, mb: 2 }}>
-                    <TextField
-                        fullWidth
-                        id="nombre"
-                        label="Nombre"
-                        {...formik.getFieldProps('nombre')}
-                        error={formik.touched.nombre && Boolean(formik.errors.nombre)}
-                        helperText={formik.touched.nombre && formik.errors.nombre}
-                        disabled={isLoading}
-                    />
-                    <TextField
-                        fullWidth
-                        id="apellido"
-                        label="Apellido"
-                        {...formik.getFieldProps('apellido')}
-                        error={formik.touched.apellido && Boolean(formik.errors.apellido)}
-                        helperText={formik.touched.apellido && formik.errors.apellido}
-                        disabled={isLoading}
-                    />
-                </Box>
-                <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
-                    <TextField
-                        fullWidth
-                        id="dni"
-                        name="dni"
-                        label="DNI"
-                        value={formik.values.dni}
-                        onChange={handleNumericChange}
-                        onBlur={formik.handleBlur}
-                        error={formik.touched.dni && Boolean(formik.errors.dni)}
-                        helperText={formik.touched.dni && formik.errors.dni}
-                        disabled={isLoading}
-                    />
-                    <TextField
-                        fullWidth
-                        id="numero_telefono"
-                        name="numero_telefono"
-                        label="Teléfono"
-                        value={formik.values.numero_telefono}
-                        onChange={handleNumericChange}
-                        onBlur={formik.handleBlur}
-                        error={formik.touched.numero_telefono && Boolean(formik.errors.numero_telefono)}
-                        helperText={formik.touched.numero_telefono && formik.errors.numero_telefono}
-                        disabled={isLoading}
-                    />
-                </Box>
+                <Stack direction="row" alignItems="center" spacing={1} mb={2}>
+                    <BadgeIcon color="action" fontSize="small" />
+                    <Typography variant="subtitle2" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>
+                        Información Personal
+                    </Typography>
+                </Stack>
+                
+                <Stack spacing={2}>
+                    {/* Fila 1: Nombre y Apellido */}
+                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                        <TextField
+                            fullWidth id="nombre" label="Nombre"
+                            {...formik.getFieldProps('nombre')}
+                            error={formik.touched.nombre && Boolean(formik.errors.nombre)}
+                            helperText={formik.touched.nombre && formik.errors.nombre}
+                            disabled={isLoading}
+                            sx={{ ...commonInputSx, ...flexInputStyle }}
+                        />
+                        <TextField
+                            fullWidth id="apellido" label="Apellido"
+                            {...formik.getFieldProps('apellido')}
+                            error={formik.touched.apellido && Boolean(formik.errors.apellido)}
+                            helperText={formik.touched.apellido && formik.errors.apellido}
+                            disabled={isLoading}
+                            sx={{ ...commonInputSx, ...flexInputStyle }}
+                        />
+                    </Stack>
+
+                    {/* Fila 2: DNI y Teléfono */}
+                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                        <TextField
+                            fullWidth id="dni" name="dni" label="DNI"
+                            value={formik.values.dni}
+                            onChange={handleNumericChange}
+                            onBlur={formik.handleBlur}
+                            error={formik.touched.dni && Boolean(formik.errors.dni)}
+                            helperText={formik.touched.dni && formik.errors.dni}
+                            disabled={isLoading}
+                            sx={{ ...commonInputSx, ...flexInputStyle }}
+                        />
+                        <TextField
+                            fullWidth id="numero_telefono" name="numero_telefono" label="Teléfono"
+                            value={formik.values.numero_telefono}
+                            onChange={handleNumericChange}
+                            onBlur={formik.handleBlur}
+                            error={formik.touched.numero_telefono && Boolean(formik.errors.numero_telefono)}
+                            helperText={formik.touched.numero_telefono && formik.errors.numero_telefono}
+                            disabled={isLoading}
+                            sx={{ ...commonInputSx, ...flexInputStyle }}
+                        />
+                    </Stack>
+                </Stack>
             </Box>
 
             {/* SECCIÓN 2: ACCESO */}
             <Box>
-                <Typography variant="subtitle2" color="primary" fontWeight="bold" gutterBottom>
-                    Credenciales de Acceso
-                </Typography>
-                <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2, mb: 2 }}>
+                <Stack direction="row" alignItems="center" spacing={1} mb={2}>
+                    <KeyIcon color="action" fontSize="small" />
+                    <Typography variant="subtitle2" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>
+                        Credenciales de Acceso
+                    </Typography>
+                </Stack>
+
+                <Stack spacing={2}>
+                    {/* Fila 1: Email y Usuario */}
+                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                        <TextField
+                            fullWidth id="email" label="Email" type="email"
+                            {...formik.getFieldProps('email')}
+                            error={formik.touched.email && Boolean(formik.errors.email)}
+                            helperText={formik.touched.email && formik.errors.email}
+                            disabled={isLoading}
+                            sx={{ ...commonInputSx, ...flexInputStyle }}
+                        />
+                        <TextField
+                            fullWidth id="nombre_usuario" label="Usuario"
+                            {...formik.getFieldProps('nombre_usuario')}
+                            error={formik.touched.nombre_usuario && Boolean(formik.errors.nombre_usuario)}
+                            helperText={formik.touched.nombre_usuario && formik.errors.nombre_usuario}
+                            disabled={isLoading}
+                            sx={{ ...commonInputSx, ...flexInputStyle }}
+                        />
+                    </Stack>
+
+                    {/* Fila 2: Contraseña (Ancho completo) */}
                     <TextField
-                        fullWidth
-                        id="email"
-                        label="Email"
-                        type="email"
-                        {...formik.getFieldProps('email')}
-                        error={formik.touched.email && Boolean(formik.errors.email)}
-                        helperText={formik.touched.email && formik.errors.email}
+                        fullWidth id="contraseña" label="Contraseña"
+                        type={showPassword ? 'text' : 'password'}
+                        {...formik.getFieldProps('contraseña')}
+                        error={formik.touched.contraseña && Boolean(formik.errors.contraseña)}
+                        helperText={formik.touched.contraseña && formik.errors.contraseña}
                         disabled={isLoading}
+                        sx={commonInputSx}
+                        InputProps={{
+                            endAdornment: (
+                                <InputAdornment position="end">
+                                    <IconButton
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        edge="end"
+                                        disabled={isLoading}
+                                    >
+                                        {showPassword ? <VisibilityOff /> : <Visibility />}
+                                    </IconButton>
+                                </InputAdornment>
+                            )
+                        }}
                     />
-                    <TextField
-                        fullWidth
-                        id="nombre_usuario"
-                        label="Usuario"
-                        {...formik.getFieldProps('nombre_usuario')}
-                        error={formik.touched.nombre_usuario && Boolean(formik.errors.nombre_usuario)}
-                        helperText={formik.touched.nombre_usuario && formik.errors.nombre_usuario}
-                        disabled={isLoading}
-                    />
-                </Box>
-                <TextField
-                    fullWidth
-                    id="contraseña"
-                    label="Contraseña"
-                    type={showPassword ? 'text' : 'password'}
-                    {...formik.getFieldProps('contraseña')}
-                    error={formik.touched.contraseña && Boolean(formik.errors.contraseña)}
-                    helperText={formik.touched.contraseña && formik.errors.contraseña}
-                    disabled={isLoading}
-                    InputProps={{
-                        endAdornment: (
-                            <InputAdornment position="end">
-                                <IconButton
-                                    onClick={() => setShowPassword(!showPassword)}
-                                    edge="end"
-                                    disabled={isLoading}
-                                >
-                                    {showPassword ? <VisibilityOff /> : <Visibility />}
-                                </IconButton>
-                            </InputAdornment>
-                        )
-                    }}
-                />
+                </Stack>
             </Box>
 
-            {/* SECCIÓN 3: ROL */}
+            {/* SECCIÓN 3: ROL Y AVISO */}
             <Box>
-                <Typography variant="subtitle2" color="primary" fontWeight="bold" gutterBottom>
-                    Rol
-                </Typography>
-                <TextField
-                    fullWidth
-                    select
-                    id="rol"
-                    label="Rol"
-                    {...formik.getFieldProps('rol')}
-                    disabled={isLoading}
-                >
-                    <MenuItem value="cliente">Cliente</MenuItem>
-                    <MenuItem value="admin">Administrador</MenuItem>
-                </TextField>
+                <Stack direction="row" alignItems="center" spacing={1} mb={2}>
+                    <RoleIcon color="action" fontSize="small" />
+                    <Typography variant="subtitle2" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>
+                        Permisos
+                    </Typography>
+                </Stack>
+                
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="stretch">
+                    <TextField
+                        fullWidth select id="rol" label="Rol del Usuario"
+                        {...formik.getFieldProps('rol')}
+                        disabled={isLoading}
+                        sx={{ ...commonInputSx, flex: 1 }}
+                    >
+                        <MenuItem value="cliente">Cliente</MenuItem>
+                        <MenuItem value="admin">Administrador</MenuItem>
+                    </TextField>
+                    
+                    <Alert 
+                        severity="info" 
+                        variant="outlined" 
+                        sx={{ flex: 1, alignItems: 'center', borderRadius: 2 }}
+                    >
+                        El usuario iniciará como "Inactivo".
+                    </Alert>
+                </Stack>
             </Box>
-
-            <Alert severity="info">
-                El usuario se creará como "Inactivo" hasta que confirme su email.
-            </Alert>
 
           </Stack>
         </DialogContent>
 
-        <DialogActions sx={{ p: 3 }}>
-          <Button onClick={handleClose} variant="outlined" color="inherit" disabled={isLoading}>
+        <Divider />
+
+        <DialogActions sx={{ p: 3, bgcolor: alpha(theme.palette.background.default, 0.5) }}>
+          <Button onClick={handleClose} color="inherit" disabled={isLoading} sx={{ borderRadius: 2 }}>
             Cancelar
           </Button>
           <Button 
@@ -264,8 +319,9 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
             color="primary"
             disabled={isLoading || !formik.isValid}
             startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : <PersonAddIcon />}
+            sx={{ px: 4, py: 1, borderRadius: 2, fontWeight: 700 }}
           >
-            {isLoading ? 'Creando...' : 'Crear Usuario'}
+            {isLoading ? 'Creando...' : 'Confirmar Creación'}
           </Button>
         </DialogActions>
       </form>

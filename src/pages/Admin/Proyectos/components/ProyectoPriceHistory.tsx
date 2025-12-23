@@ -1,18 +1,24 @@
 import React from 'react';
 import { 
   Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, 
-  Paper, Alert, CircularProgress 
+  Paper, Alert, CircularProgress, useTheme, alpha, Typography 
 } from '@mui/material';
+import { 
+  History as HistoryIcon, 
+  CalendarToday as DateIcon,
+  AttachMoney as MoneyIcon,
+  Percent as PercentIcon
+} from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
 import type { CuotaMensualDto } from '../../../../types/dto/cuotaMensual.dto';
 import CuotaMensualService from '../../../../Services/cuotaMensual.service';
-
 
 interface Props {
   proyectoId: number;
 }
 
 const ProyectoPriceHistory: React.FC<Props> = ({ proyectoId }) => {
+  const theme = useTheme();
   
   const { data: historial = [], isLoading, error } = useQuery<CuotaMensualDto[]>({
     queryKey: ['cuotasByProyecto', proyectoId],
@@ -21,67 +27,124 @@ const ProyectoPriceHistory: React.FC<Props> = ({ proyectoId }) => {
         const res = await CuotaMensualService.getByProjectId(proyectoId);
         return res.data;
       } catch (err: any) {
-        // ✅ SOLUCIÓN CLAVE:
-        // Si el backend dice "404 Not Found", asumimos que es porque no hay historial todavía.
-        // Retornamos un array vacío en lugar de lanzar error.
         if (err.response && err.response.status === 404) {
           return [];
         }
-        throw err; // Si es otro error (500, 403), dejamos que falle.
+        throw err;
       }
     },
-    retry: false, // Importante: no reintentar 3 veces si ya sabemos que es 404
+    retry: false,
   });
 
-  if (isLoading) return <CircularProgress size={20} sx={{ display: 'block', mx: 'auto', my: 2 }} />;
+  // Estilos de Cabecera (Consistente con ProyectoSuscripciones)
+  const headerSx = {
+    color: 'text.secondary',
+    fontWeight: 700,
+    fontSize: '0.75rem',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    borderBottom: `1px solid ${theme.palette.divider}`,
+    bgcolor: alpha(theme.palette.background.paper, 0.4),
+    py: 1.5
+  };
 
-  // Si hay error real (que no sea 404)
+  if (isLoading) return (
+    <Box display="flex" justifyContent="center" p={3}>
+      <CircularProgress size={24} thickness={4} />
+    </Box>
+  );
+
   if (error) return (
-    <Alert severity="error" sx={{ mt: 2 }}>
+    <Alert severity="error" variant="outlined" sx={{ mt: 2, borderRadius: 2 }}>
       No se pudo cargar el historial.
     </Alert>
   );
 
   if (historial.length === 0) {
     return (
-      <Alert severity="info" sx={{ mt: 2, borderRadius: 2 }}>
-        No hay historial de precios registrado para este proyecto.
-        Configura la primera cuota arriba para comenzar.
+      <Alert severity="info" variant="outlined" sx={{ mt: 2, borderRadius: 2, borderStyle: 'dashed' }}>
+        No hay historial de precios registrado. Configura la primera cuota para comenzar.
       </Alert>
     );
   }
 
   return (
-    <TableContainer component={Paper} variant="outlined" sx={{ mt: 2, maxHeight: 300, borderRadius: 2 }}>
-      <Table size="small" stickyHeader>
-        <TableHead>
-          <TableRow>
-            <TableCell><strong>Fecha</strong></TableCell>
-            <TableCell><strong>Valor Unidad</strong></TableCell>
-            <TableCell><strong>Cuota Final</strong></TableCell>
-            <TableCell align="right"><strong>% Admin</strong></TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {historial.map((cuota) => (
-            <TableRow key={cuota.id} hover>
-              <TableCell>
-                {new Date(cuota.createdAt).toLocaleDateString()}
+    <Box mt={3}>
+      <Typography variant="subtitle2" fontWeight={700} color="text.secondary" mb={1.5} display="flex" alignItems="center" gap={1}>
+        <HistoryIcon fontSize="small" /> HISTORIAL DE ACTUALIZACIONES
+      </Typography>
+
+      <TableContainer 
+        component={Paper} 
+        elevation={0} 
+        sx={{ 
+          maxHeight: 300, 
+          borderRadius: 2, 
+          border: '1px solid', 
+          borderColor: 'divider' 
+        }}
+      >
+        <Table size="small" stickyHeader>
+          <TableHead>
+            <TableRow>
+              <TableCell sx={headerSx}>
+                <Box display="flex" alignItems="center" gap={0.5}>
+                    <DateIcon fontSize="inherit" /> Fecha
+                </Box>
               </TableCell>
-              <TableCell>
-                ${Number(cuota.valor_cemento).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+              <TableCell sx={headerSx}>Valor Unidad</TableCell>
+              <TableCell sx={headerSx}>
+                 <Box display="flex" alignItems="center" gap={0.5}>
+                    <MoneyIcon fontSize="inherit" /> Cuota Final
+                 </Box>
               </TableCell>
-              <TableCell sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-                ${Number(cuota.valor_mensual_final).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-              </TableCell>
-              <TableCell align="right">
-                {cuota.porcentaje_administrativo}%
+              <TableCell align="right" sx={headerSx}>
+                 <Box display="flex" alignItems="center" justifyContent="flex-end" gap={0.5}>
+                    <PercentIcon fontSize="inherit" /> Admin
+                 </Box>
               </TableCell>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </TableContainer>
+          </TableHead>
+          <TableBody>
+            {historial.map((cuota) => (
+              <TableRow 
+                key={cuota.id} 
+                hover 
+                sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
+              >
+                <TableCell sx={{ color: 'text.secondary' }}>
+                  {new Date(cuota.createdAt).toLocaleDateString()}
+                </TableCell>
+                
+                <TableCell sx={{ fontFamily: 'monospace' }}>
+                  ${Number(cuota.valor_cemento).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                </TableCell>
+                
+                <TableCell sx={{ fontWeight: 'bold', color: 'primary.main', fontFamily: 'monospace' }}>
+                  ${Number(cuota.valor_mensual_final).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                </TableCell>
+                
+                <TableCell align="right">
+                  <Box 
+                    component="span" 
+                    sx={{ 
+                        px: 1, py: 0.2, 
+                        bgcolor: alpha(theme.palette.info.main, 0.1), 
+                        color: 'info.main', 
+                        borderRadius: 1, 
+                        fontWeight: 600,
+                        fontSize: '0.75rem'
+                    }}
+                  >
+                    {cuota.porcentaje_administrativo}%
+                  </Box>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </Box>
   );
 };
 

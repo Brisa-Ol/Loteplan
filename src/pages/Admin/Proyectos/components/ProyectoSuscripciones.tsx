@@ -1,56 +1,64 @@
 import React, { useState } from 'react';
 import {
-  Box, Paper, Typography, Button, Stack, Alert, Chip,
-  Table, TableBody, TableCell, TableContainer, TableHead, TableRow
+  Box, Paper, Typography, Stack, Alert, Chip,
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
+  Tabs, Tab, alpha, useTheme, Divider
 } from '@mui/material';
+import {
+  List as ListIcon,
+  CheckCircleOutline as ActiveIcon,
+  CancelOutlined as CancelledIcon,
+  AttachMoney as MoneyIcon,
+  Event as DateIcon,
+  Person as PersonIcon,
+  History as HistoryIcon
+} from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
+
 import type { SuscripcionCanceladaDto, SuscripcionDto } from '../../../../types/dto/suscripcion.dto';
 import SuscripcionService from '../../../../Services/suscripcion.service';
-// Si no tienes el componente QueryHandler, puedes cambiar esto por un loading simple
 import { QueryHandler } from '../../../../components/common/QueryHandler/QueryHandler';
 
 interface ProyectoSuscripcionesProps {
   proyectoId: number;
 }
 
-// Tipo unión para manejar ambas listas en una sola variable
 type SubscriptionItem = SuscripcionDto | SuscripcionCanceladaDto;
+type ViewType = 'all' | 'active' | 'cancelled';
 
-// ✅ Helper para fechas
+// ✅ Helpers
 const formatDate = (dateString: string | Date | undefined) => {
   if (!dateString) return '-';
   return new Date(dateString).toLocaleDateString('es-AR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric'
+    day: '2-digit', month: '2-digit', year: 'numeric'
   });
 };
 
-const ProyectoSuscripciones: React.FC<ProyectoSuscripcionesProps> = ({
-  proyectoId
-}) => {
-  const [view, setView] = useState<'all' | 'active' | 'cancelled'>('all');
+const formatCurrency = (amount: string | number) => {
+  return `$${Number(amount).toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
+};
+
+const ProyectoSuscripciones: React.FC<ProyectoSuscripcionesProps> = ({ proyectoId }) => {
+  const theme = useTheme();
+  const [view, setView] = useState<ViewType>('all');
 
   // ========================================================================
-  // 🔍 QUERIES (Corregidas con los nombres reales del Service)
+  // 🔍 QUERIES
   // ========================================================================
 
-  // 1. TODAS: Usamos 'getAllByProyectoId'
-  const { data: allSuscripciones = [], isLoading: loadingAll, error: errorAll } = useQuery<SuscripcionDto[]>({
+  const { data: allSuscripciones = [], isLoading: loadingAll, error: errorAll } = useQuery({
     queryKey: ['suscripciones', 'all', proyectoId],
     queryFn: async () => (await SuscripcionService.getAllByProyectoId(proyectoId)).data,
     enabled: view === 'all',
   });
 
-  // 2. ACTIVAS: Usamos 'getActiveByProyectoId'
-  const { data: activeSuscripciones = [], isLoading: loadingActive, error: errorActive } = useQuery<SuscripcionDto[]>({
+  const { data: activeSuscripciones = [], isLoading: loadingActive, error: errorActive } = useQuery({
     queryKey: ['suscripciones', 'active', proyectoId],
     queryFn: async () => (await SuscripcionService.getActiveByProyectoId(proyectoId)).data,
     enabled: view === 'active',
   });
 
-  // 3. CANCELADAS: Usamos 'getCanceladasByProyectoId'
-  const { data: cancelledSuscripciones = [], isLoading: loadingCancelled, error: errorCancelled } = useQuery<SuscripcionCanceladaDto[]>({
+  const { data: cancelledSuscripciones = [], isLoading: loadingCancelled, error: errorCancelled } = useQuery({
     queryKey: ['suscripciones', 'cancelled', proyectoId],
     queryFn: async () => (await SuscripcionService.getCanceladasByProyectoId(proyectoId)).data,
     enabled: view === 'cancelled',
@@ -59,105 +67,169 @@ const ProyectoSuscripciones: React.FC<ProyectoSuscripcionesProps> = ({
   const isLoading = loadingAll || loadingActive || loadingCancelled;
   const error = errorAll || errorActive || errorCancelled;
 
-  // Determinar qué datos mostrar
+  // Datos a mostrar
   const dataToShow: SubscriptionItem[] = 
     view === 'all' ? allSuscripciones :
     view === 'active' ? activeSuscripciones :
     cancelledSuscripciones;
 
-  // Type Guard: Verifica si el item es una suscripción cancelada
+  // Type Guard
   const isCancelled = (item: SubscriptionItem): item is SuscripcionCanceladaDto => {
     return (item as SuscripcionCanceladaDto).fecha_cancelacion !== undefined;
   };
 
+  // Estilos de Cabecera de Tabla (Theme Global)
+  const headerSx = {
+    color: 'text.secondary',
+    fontWeight: 700,
+    fontSize: '0.75rem',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    borderBottom: `1px solid ${theme.palette.divider}`,
+    bgcolor: alpha(theme.palette.background.paper, 0.4)
+  };
+
   return (
-    <Box sx={{ px: 3 }}>
-      {/* Header y Botones de Filtro */}
-      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h6" fontWeight="bold">Auditoría de Suscripciones</Typography>
-        <Stack direction="row" spacing={1}>
-          <Button
-            variant={view === 'all' ? 'contained' : 'outlined'}
-            onClick={() => setView('all')}
-            size="small"
-          >
-            Todas
-          </Button>
-          <Button
-            variant={view === 'active' ? 'contained' : 'outlined'}
-            onClick={() => setView('active')}
-            size="small"
-            color="success"
-          >
-            Activas
-          </Button>
-          <Button
-            variant={view === 'cancelled' ? 'contained' : 'outlined'}
-            onClick={() => setView('cancelled')}
-            size="small"
-            color="error"
-          >
-            Canceladas
-          </Button>
+    <Box>
+      {/* Header y Filtros Estilizados */}
+      <Stack spacing={3} mb={3}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center">
+          <Box>
+            <Typography variant="h6" fontWeight={800} color="text.primary">
+              Auditoría de Suscripciones
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Historial financiero y estado de adhesiones del proyecto
+            </Typography>
+          </Box>
         </Stack>
+
+        <Paper 
+          elevation={0} 
+          sx={{ 
+            p: 0.5, 
+            borderRadius: 2, 
+            border: '1px solid', 
+            borderColor: 'divider',
+            bgcolor: alpha(theme.palette.background.paper, 0.6),
+            width: 'fit-content'
+          }}
+        >
+          <Tabs 
+            value={view} 
+            onChange={(_, v) => setView(v)} 
+            variant="scrollable"
+            scrollButtons="auto"
+            sx={{
+               minHeight: 40,
+               '& .MuiTab-root': {
+                 minHeight: 40,
+                 borderRadius: 1.5,
+                 textTransform: 'none',
+                 fontWeight: 600,
+                 px: 2,
+                 mr: 1,
+                 '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.05) },
+                 '&.Mui-selected': { bgcolor: alpha(theme.palette.primary.main, 0.1) }
+               },
+               '& .MuiTabs-indicator': { display: 'none' } // Estilo tipo "Pill" sin linea abajo
+            }}
+          >
+            <Tab icon={<ListIcon fontSize="small" />} iconPosition="start" label="Todas" value="all" />
+            <Tab icon={<ActiveIcon fontSize="small" />} iconPosition="start" label="Activas" value="active" sx={{ color: 'success.main', '&.Mui-selected': { color: 'success.dark', bgcolor: alpha(theme.palette.success.main, 0.1) } }} />
+            <Tab icon={<CancelledIcon fontSize="small" />} iconPosition="start" label="Canceladas" value="cancelled" sx={{ color: 'error.main', '&.Mui-selected': { color: 'error.dark', bgcolor: alpha(theme.palette.error.main, 0.1) } }} />
+          </Tabs>
+        </Paper>
       </Stack>
 
       <QueryHandler isLoading={isLoading} error={error as Error | null}>
         {dataToShow.length === 0 ? (
-          <Alert severity="info">No hay suscripciones para mostrar en esta vista.</Alert>
+          <Alert severity="info" variant="outlined" sx={{ borderRadius: 2 }}>
+            No hay suscripciones registradas en la categoría seleccionada.
+          </Alert>
         ) : (
-          <TableContainer component={Paper} variant="outlined">
+          <TableContainer component={Paper} elevation={0} sx={{ borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
             <Table size="small">
               <TableHead>
-                <TableRow sx={{ bgcolor: 'primary.main' }}>
-                  <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>ID</TableCell>
-                  <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Usuario ID</TableCell>
-                  <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Fecha</TableCell>
-                  <TableCell sx={{ color: 'white', fontWeight: 'bold' }} align="right">
+                <TableRow>
+                  <TableCell sx={headerSx}>ID Ref</TableCell>
+                  <TableCell sx={headerSx}><Stack direction="row" gap={0.5} alignItems="center"><PersonIcon fontSize="inherit"/> Usuario</Stack></TableCell>
+                  <TableCell sx={headerSx}><Stack direction="row" gap={0.5} alignItems="center"><DateIcon fontSize="inherit"/> {view === 'cancelled' ? 'Cancelación' : 'Inicio'}</Stack></TableCell>
+                  <TableCell sx={headerSx} align="right">
                     {view === 'cancelled' ? 'Meses Pagados' : 'Meses Deuda'}
                   </TableCell>
-                  <TableCell sx={{ color: 'white', fontWeight: 'bold' }} align="right">
-                    {view === 'cancelled' ? 'Monto Total' : 'Saldo a Favor'}
+                  <TableCell sx={headerSx} align="right">
+                    <Stack direction="row" gap={0.5} alignItems="center" justifyContent="flex-end"><MoneyIcon fontSize="inherit"/> {view === 'cancelled' ? 'Total Abonado' : 'Saldo a Favor'}</Stack>
                   </TableCell>
-                  <TableCell sx={{ color: 'white', fontWeight: 'bold' }} align="center">Estado</TableCell>
+                  <TableCell sx={headerSx} align="center">Estado</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {dataToShow.map((item) => {
-                  if (isCancelled(item)) {
-                    // --- FILA CANCELADA ---
-                    return (
-                      <TableRow key={`canc-${item.id}`} hover>
-                        {/* Nota: Verifica si tu DTO usa 'id_suscripcion_original' o 'id_suscripcion' */}
-                        <TableCell>{(item as any).id_suscripcion_original || item.id}</TableCell> 
-                        <TableCell>{item.id_usuario}</TableCell>
-                        <TableCell>{formatDate(item.fecha_cancelacion)}</TableCell>
-                        <TableCell align="right">{item.meses_pagados}</TableCell>
-                        <TableCell align="right">${Number(item.monto_pagado_total).toLocaleString()}</TableCell>
-                        <TableCell align="center">
-                           <Chip label="Cancelada" size="small" color="error" />
-                        </TableCell>
-                      </TableRow>
-                    );
-                  } else {
-                    // --- FILA ACTIVA / REGULAR ---
-                    return (
-                      <TableRow key={`subs-${item.id}`} hover>
-                        <TableCell>{item.id}</TableCell>
-                        <TableCell>{item.id_usuario}</TableCell>
-                        <TableCell>{formatDate(item.createdAt)}</TableCell>
-                        <TableCell align="right">{item.meses_a_pagar}</TableCell>
-                        <TableCell align="right">${Number(item.saldo_a_favor).toLocaleString()}</TableCell>
-                        <TableCell align="center">
+                  const isCancelada = isCancelled(item);
+                  
+                  return (
+                    <TableRow 
+                      key={`${isCancelada ? 'c' : 'a'}-${item.id}`} 
+                      hover
+                      sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
+                    >
+                      {/* ID */}
+                      <TableCell sx={{ fontFamily: 'monospace', color: 'text.secondary' }}>
+                        #{isCancelada ? ((item as any).id_suscripcion_original || item.id) : item.id}
+                      </TableCell> 
+                      
+                      {/* Usuario */}
+                      <TableCell sx={{ fontWeight: 600 }}>
+                        ID: {item.id_usuario}
+                      </TableCell>
+                      
+                      {/* Fecha */}
+                      <TableCell>
+                        {formatDate(isCancelada ? item.fecha_cancelacion : item.createdAt)}
+                      </TableCell>
+                      
+                      {/* Métricas Numéricas */}
+                      <TableCell align="right">
+                        {isCancelada ? item.meses_pagados : item.meses_a_pagar}
+                      </TableCell>
+                      
+                      <TableCell align="right" sx={{ fontWeight: 600, color: isCancelada ? 'text.primary' : 'success.main' }}>
+                        {formatCurrency(isCancelada ? item.monto_pagado_total : item.saldo_a_favor)}
+                      </TableCell>
+                      
+                      {/* Estado Chip */}
+                      <TableCell align="center">
+                        {isCancelada ? (
+                           <Chip 
+                             label="Cancelada" 
+                             size="small" 
+                             icon={<HistoryIcon fontSize="small" />}
+                             sx={{ 
+                               bgcolor: alpha(theme.palette.error.main, 0.1), 
+                               color: 'error.main',
+                               fontWeight: 700,
+                               border: '1px solid',
+                               borderColor: alpha(theme.palette.error.main, 0.2)
+                             }} 
+                           />
+                        ) : (
                            <Chip 
                              label={item.activo ? 'Activa' : 'Inactiva'} 
                              size="small" 
-                             color={item.activo ? 'success' : 'default'} 
+                             icon={item.activo ? <ActiveIcon fontSize="small" /> : undefined}
+                             sx={{ 
+                               bgcolor: item.activo ? alpha(theme.palette.success.main, 0.1) : theme.palette.action.hover,
+                               color: item.activo ? 'success.main' : 'text.secondary',
+                               fontWeight: 700,
+                               border: '1px solid',
+                               borderColor: item.activo ? alpha(theme.palette.success.main, 0.2) : theme.palette.divider
+                             }} 
                            />
-                        </TableCell>
-                      </TableRow>
-                    );
-                  }
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
                 })}
               </TableBody>
             </Table>

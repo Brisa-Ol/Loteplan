@@ -14,6 +14,7 @@ import type { LoteDto } from "./lote.dto";
 export interface CreatePujaDto {
   id_lote: number;
   monto_puja: number;
+  id_suscripcion?: number;
 }
 /**
  * DTO para confirmar pago con 2FA.

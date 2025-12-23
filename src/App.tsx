@@ -37,7 +37,7 @@ import SecuritySettings from './pages/client/MiCuenta/SecuritySettings';
 import RoleSelection from './pages/client/Proyectos/RoleSelection';
 import MensajesPage from './pages/client/MiCuenta/MensajesPage';
 
-import MisSubastas from './pages/client/MiCuenta/MisSubastas';
+import MisSubastas from './pages/client/MiCuenta/MisPujas';
 import VerificacionKYC from './pages/client/MiCuenta/VerificacionKYC';
 import DetalleProyecto from './pages/client/Proyectos/DetalleProyecto';
 import MisInversiones from './pages/client/MiCuenta/MisInversiones';
@@ -113,7 +113,7 @@ const AppContent: React.FC = () => {
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
-        <Route path="/confirm-email/:token" element={<ConfirmEmailPage />} />
+        <Route path="/api/auth/confirmar_email/:token" element={<ConfirmEmailPage />} />
         <Route path="/unauthorized" element={<Unauthorized />} />
 
         {/* --- C. RUTAS PROTEGIDAS (SOLO CLIENTES LOGUEADOS) --- */}

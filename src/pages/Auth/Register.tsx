@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Button,
-  TextField,
+  TextField, // Mantenemos este import para DNI/Telefono
   Box,
   InputAdornment,
   IconButton,
@@ -16,6 +16,7 @@ import {
   DialogContentText,
   DialogTitle,
   Stack,
+  Typography,
 } from "@mui/material";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 import { useFormik } from "formik";
@@ -25,18 +26,19 @@ import { PageContainer } from "../../components/common/PageContainer/PageContain
 import { useAuth } from "../../context/AuthContext";
 import AuthFormContainer from "./components/AuthFormContainer/AuthFormContainer";
 import type { RegisterRequestDto } from "../../types/dto/auth.dto";
+import FormTextField from "./components/FormTextField/FormTextField";
+
 
 const Register: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // ✅ 1. Agregamos user, isAuthenticated e isInitializing
-  const { 
-    register, 
-    isLoading, 
-    isInitializing, 
-    error, 
-    clearError, 
+  const {
+    register,
+    isLoading,
+    isInitializing,
+    error,
+    clearError,
     resendConfirmation,
     user,
     isAuthenticated
@@ -44,8 +46,7 @@ const Register: React.FC = () => {
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  
-  // Estado para el modal de éxito
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [registeredEmail, setRegisteredEmail] = useState("");
   const [isResending, setIsResending] = useState(false);
@@ -53,7 +54,6 @@ const Register: React.FC = () => {
 
   const successMessage = location.state?.message;
 
-  // ✅ 2. Redirección si ya está logueado (Igual que en Login)
   useEffect(() => {
     if (!isInitializing && isAuthenticated && user) {
       if (user.rol === 'admin') {
@@ -66,7 +66,6 @@ const Register: React.FC = () => {
     }
   }, [isInitializing, isAuthenticated, user, navigate]);
 
-  // Limpieza de mensajes flash
   useEffect(() => {
     if (successMessage) {
       const timer = setTimeout(() => {
@@ -123,17 +122,14 @@ const Register: React.FC = () => {
           nombre_usuario: values.nombre_usuario,
           numero_telefono: values.numero_telefono,
         };
-        
+
         await register(data);
-        
-        // Si no falla, abrir modal
+
         setRegisteredEmail(values.email);
         setIsModalOpen(true);
         setModalMessage(null);
       } catch (err) {
         console.error("Error registro:", err);
-        // El AuthContext ya setea el error en el estado 'error', 
-        // así que el Alert lo mostrará automáticamente.
       }
     },
   });
@@ -158,11 +154,10 @@ const Register: React.FC = () => {
 
   const isDisabled = isLoading || isInitializing;
 
-  // ✅ 3. Loader Inicial
   if (isInitializing) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" height="100vh">
-        <CircularProgress />
+        <CircularProgress color="primary" />
       </Box>
     );
   }
@@ -177,80 +172,77 @@ const Register: React.FC = () => {
         {error && <Alert severity="error" sx={{ mb: 3 }} onClose={clearError}>{error}</Alert>}
 
         <form onSubmit={formik.handleSubmit}>
-          <Stack spacing={2}>
-            
+          <Stack spacing={3}>
+
             <Box display="flex" gap={2}>
-              <TextField
+              {/* ✅ Usamos FormTextField para campos estándar */}
+              <FormTextField
                 fullWidth
+                name="nombre"
                 label="Nombre"
-                {...formik.getFieldProps("nombre")}
-                error={formik.touched.nombre && Boolean(formik.errors.nombre)}
-                helperText={formik.touched.nombre && formik.errors.nombre}
+                formik={formik}
                 disabled={isDisabled}
               />
-              <TextField
+              <FormTextField
                 fullWidth
+                name="apellido"
                 label="Apellido"
-                {...formik.getFieldProps("apellido")}
-                error={formik.touched.apellido && Boolean(formik.errors.apellido)}
-                helperText={formik.touched.apellido && formik.errors.apellido}
+                formik={formik}
                 disabled={isDisabled}
               />
             </Box>
 
-            <TextField
+            <FormTextField
               fullWidth
+              name="email"
               label="Email"
               type="email"
-              {...formik.getFieldProps("email")}
-              error={formik.touched.email && Boolean(formik.errors.email)}
-              helperText={formik.touched.email && formik.errors.email}
+              formik={formik}
               disabled={isDisabled}
             />
 
             <Box display="flex" gap={2}>
-                <TextField
-                  fullWidth
-                  label="DNI"
-                  {...formik.getFieldProps("dni")}
-                  onChange={(e) => {
-                    const val = e.target.value.replace(/\D/g, '').slice(0, 8);
-                    formik.setFieldValue("dni", val);
-                  }}
-                  error={formik.touched.dni && Boolean(formik.errors.dni)}
-                  helperText={formik.touched.dni && formik.errors.dni}
-                  disabled={isDisabled}
-                />
-                <TextField
-                  fullWidth
-                  label="Teléfono"
-                  {...formik.getFieldProps("numero_telefono")}
-                  onChange={(e) => {
-                    const val = e.target.value.replace(/\D/g, '').slice(0, 15);
-                    formik.setFieldValue("numero_telefono", val);
-                  }}
-                  error={formik.touched.numero_telefono && Boolean(formik.errors.numero_telefono)}
-                  helperText={formik.touched.numero_telefono && formik.errors.numero_telefono}
-                  disabled={isDisabled}
-                />
+              {/* ⚠️ Mantenemos TextField normal para DNI y Teléfono porque tienen lógica custom en onChange */}
+              <TextField
+                fullWidth
+                label="DNI"
+                {...formik.getFieldProps("dni")}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/\D/g, '').slice(0, 8);
+                  formik.setFieldValue("dni", val);
+                }}
+                error={formik.touched.dni && Boolean(formik.errors.dni)}
+                helperText={formik.touched.dni && formik.errors.dni}
+                disabled={isDisabled}
+              />
+              <TextField
+                fullWidth
+                label="Teléfono"
+                {...formik.getFieldProps("numero_telefono")}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/\D/g, '').slice(0, 15);
+                  formik.setFieldValue("numero_telefono", val);
+                }}
+                error={formik.touched.numero_telefono && Boolean(formik.errors.numero_telefono)}
+                helperText={formik.touched.numero_telefono && formik.errors.numero_telefono}
+                disabled={isDisabled}
+              />
             </Box>
 
-            <TextField
+            <FormTextField
               fullWidth
+              name="nombre_usuario"
               label="Nombre de Usuario"
-              {...formik.getFieldProps("nombre_usuario")}
-              error={formik.touched.nombre_usuario && Boolean(formik.errors.nombre_usuario)}
-              helperText={formik.touched.nombre_usuario && formik.errors.nombre_usuario}
+              formik={formik}
               disabled={isDisabled}
             />
 
-            <TextField
+            <FormTextField
               fullWidth
+              name="contraseña"
               label="Contraseña"
               type={showPassword ? "text" : "password"}
-              {...formik.getFieldProps("contraseña")}
-              error={formik.touched.contraseña && Boolean(formik.errors.contraseña)}
-              helperText={formik.touched.contraseña && formik.errors.contraseña}
+              formik={formik}
               disabled={isDisabled}
               InputProps={{
                 endAdornment: (
@@ -263,13 +255,12 @@ const Register: React.FC = () => {
               }}
             />
 
-            <TextField
+            <FormTextField
               fullWidth
+              name="confirmPassword"
               label="Confirmar Contraseña"
               type={showConfirmPassword ? "text" : "password"}
-              {...formik.getFieldProps("confirmPassword")}
-              error={formik.touched.confirmPassword && Boolean(formik.errors.confirmPassword)}
-              helperText={formik.touched.confirmPassword && formik.errors.confirmPassword}
+              formik={formik}
               disabled={isDisabled}
               InputProps={{
                 endAdornment: (
@@ -288,31 +279,40 @@ const Register: React.FC = () => {
               type="submit"
               size="large"
               disabled={isDisabled}
-              sx={{ mt: 2 }}
             >
               {isLoading ? <CircularProgress size={24} color="inherit" /> : "Registrarse"}
             </Button>
 
             <Box textAlign="center">
-                <Button 
-                  onClick={() => navigate("/login")} 
-                  sx={{ textTransform: "none" }}
-                  disabled={isDisabled}
-                >
-                    ¿Ya tienes cuenta? Inicia sesión
-                </Button>
+              <Button
+                onClick={() => navigate("/login")}
+                disabled={isDisabled}
+                color="primary"
+                sx={{ fontWeight: 500 }}
+              >
+                ¿Ya tienes cuenta? Inicia sesión
+              </Button>
             </Box>
           </Stack>
         </form>
       </AuthFormContainer>
 
-      {/* Modal de Confirmación de Registro */}
-      <Dialog open={isModalOpen} onClose={() => {}}>
-        <DialogTitle>¡Registro Exitoso!</DialogTitle>
+      {/* Modal de Confirmación */}
+      <Dialog
+        open={isModalOpen}
+        onClose={() => { }}
+        PaperProps={{ sx: { borderRadius: 3, padding: 1 } }}
+      >
+        <DialogTitle variant="h5" sx={{ textAlign: 'center', fontWeight: 'bold' }}>
+          ¡Registro Exitoso!
+        </DialogTitle>
         <DialogContent>
-          <DialogContentText>
-            Hemos enviado un correo de confirmación a <strong>{registeredEmail}</strong>.
-            <br /><br />
+          <DialogContentText sx={{ textAlign: 'center' }}>
+            Hemos enviado un correo de confirmación a:
+            <br />
+            <Typography component="span" fontWeight="bold" color="text.primary" display="block" my={1}>
+              {registeredEmail}
+            </Typography>
             Por favor, revisa tu bandeja de entrada (y spam) y haz clic en el enlace para activar tu cuenta.
           </DialogContentText>
 
@@ -322,17 +322,17 @@ const Register: React.FC = () => {
             </Alert>
           )}
         </DialogContent>
-        <DialogActions sx={{ p: 3 }}>
-          <Button 
-            onClick={handleResendEmail} 
+        <DialogActions sx={{ justifyContent: 'center', pb: 3, gap: 1 }}>
+          <Button
+            onClick={handleResendEmail}
             disabled={isResending}
-            color="secondary"
+            color="inherit"
           >
             {isResending ? "Enviando..." : "Reenviar Email"}
           </Button>
-          <Button 
-            onClick={handleCloseModal} 
-            variant="contained" 
+          <Button
+            onClick={handleCloseModal}
+            variant="contained"
             autoFocus
           >
             Ir al Login

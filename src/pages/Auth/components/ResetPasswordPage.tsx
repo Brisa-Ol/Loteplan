@@ -2,16 +2,32 @@ import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
-import { Button, TextField, Alert, CircularProgress, Stack } from '@mui/material';
-import AuthService from '../../../Services/auth.service';
-import AuthFormContainer from './AuthFormContainer/AuthFormContainer';
+import { 
+  Button, 
+  TextField, 
+  Alert, 
+  CircularProgress, 
+  Stack, 
+  InputAdornment, 
+  IconButton,
+  Box,
+  Typography
+} from '@mui/material';
+import { Visibility, VisibilityOff } from '@mui/icons-material';
 
+import AuthService from '../../../Services/auth.service';
+import AuthFormContainer from '../components/AuthFormContainer/AuthFormContainer';
+import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
 
 const ResetPasswordPage: React.FC = () => {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
+
+  // Estados para controlar la visibilidad de las contraseñas
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const formik = useFormik({
     initialValues: {
@@ -45,54 +61,95 @@ const ResetPasswordPage: React.FC = () => {
     },
   });
 
-  if (status === 'success') {
-    return (
-      <AuthFormContainer title="¡Éxito!" subtitle="">
-        <Alert severity="success">
-          Tu contraseña ha sido actualizada correctamente. Redirigiendo al login...
-        </Alert>
-      </AuthFormContainer>
-    );
-  }
+  const isDisabled = status === 'loading' || status === 'success';
 
   return (
-    <AuthFormContainer title="Nueva Contraseña" subtitle="Ingresa tu nueva clave de acceso">
-      {status === 'error' && <Alert severity="error" sx={{ mb: 2 }}>{errorMessage}</Alert>}
-      
-      <form onSubmit={formik.handleSubmit}>
-        <Stack spacing={2}>
-          <TextField
-            fullWidth
-            label="Nueva Contraseña"
-            type="password"
-            {...formik.getFieldProps('password')}
-            error={formik.touched.password && Boolean(formik.errors.password)}
-            helperText={formik.touched.password && formik.errors.password}
-            disabled={status === 'loading'}
-          />
-          
-          <TextField
-            fullWidth
-            label="Confirmar Nueva Contraseña"
-            type="password"
-            {...formik.getFieldProps('confirmPassword')}
-            error={formik.touched.confirmPassword && Boolean(formik.errors.confirmPassword)}
-            helperText={formik.touched.confirmPassword && formik.errors.confirmPassword}
-            disabled={status === 'loading'}
-          />
+    <PageContainer maxWidth="sm">
+      <AuthFormContainer 
+        title={status === 'success' ? "¡Contraseña Actualizada!" : "Nueva Contraseña"} 
+        subtitle={status === 'success' ? "" : "Ingresa tu nueva clave de acceso"}
+      >
+        
+        {status === 'success' ? (
+          <Box textAlign="center" py={2}>
+            <Alert severity="success" sx={{ mb: 2 }}>
+              Tu contraseña ha sido actualizada correctamente.
+            </Alert>
+            <Typography variant="body2" color="text.secondary">
+              Serás redirigido al login en unos segundos...
+            </Typography>
+            <Button 
+              variant="outlined" 
+              onClick={() => navigate('/login')} 
+              sx={{ mt: 3 }}
+              fullWidth
+            >
+              Ir al Login ahora
+            </Button>
+          </Box>
+        ) : (
+          <>
+            {status === 'error' && (
+              <Alert severity="error" sx={{ mb: 3 }}>
+                {errorMessage}
+              </Alert>
+            )}
+            
+            <form onSubmit={formik.handleSubmit}>
+              <Stack spacing={3}>
+                <TextField
+                  fullWidth
+                  label="Nueva Contraseña"
+                  type={showPassword ? "text" : "password"}
+                  {...formik.getFieldProps('password')}
+                  error={formik.touched.password && Boolean(formik.errors.password)}
+                  helperText={formik.touched.password && formik.errors.password}
+                  disabled={isDisabled}
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton onClick={() => setShowPassword(!showPassword)} edge="end">
+                          {showPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+                
+                <TextField
+                  fullWidth
+                  label="Confirmar Nueva Contraseña"
+                  type={showConfirmPassword ? "text" : "password"}
+                  {...formik.getFieldProps('confirmPassword')}
+                  error={formik.touched.confirmPassword && Boolean(formik.errors.confirmPassword)}
+                  helperText={formik.touched.confirmPassword && formik.errors.confirmPassword}
+                  disabled={isDisabled}
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton onClick={() => setShowConfirmPassword(!showConfirmPassword)} edge="end">
+                          {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                />
 
-          <Button 
-            fullWidth 
-            variant="contained" 
-            type="submit" 
-            disabled={status === 'loading'}
-            sx={{ mt: 2 }}
-          >
-            {status === 'loading' ? <CircularProgress size={24} /> : 'Cambiar Contraseña'}
-          </Button>
-        </Stack>
-      </form>
-    </AuthFormContainer>
+                <Button 
+                  fullWidth 
+                  variant="contained" 
+                  type="submit" 
+                  size="large"
+                  disabled={isDisabled}
+                >
+                  {status === 'loading' ? <CircularProgress size={24} color="inherit" /> : 'Cambiar Contraseña'}
+                </Button>
+              </Stack>
+            </form>
+          </>
+        )}
+      </AuthFormContainer>
+    </PageContainer>
   );
 };
 

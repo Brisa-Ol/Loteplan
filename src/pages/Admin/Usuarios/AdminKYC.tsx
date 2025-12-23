@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import {
   Box, Typography, Paper, Chip, Button, Stack, Snackbar,
   Dialog, DialogTitle, DialogContent, DialogActions, TextField,
-  Avatar, IconButton, Tabs, Tab, Tooltip, useTheme, Alert
+  Avatar, IconButton, Tabs, Tab, Tooltip, useTheme, Alert, alpha
 } from '@mui/material';
 import {
   Visibility as VisibilityIcon, 
@@ -11,10 +11,10 @@ import {
   PendingActions as PendingIcon,
   CheckCircleOutline as ApprovedIcon, 
   HighlightOff as RejectedIcon,
-  AssignmentInd as KpiIcon 
+  AssignmentInd as KpiIcon,
+  Badge as BadgeIcon
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-
 
 import type { KycDTO } from '../../../types/dto/kyc.dto';
 import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
@@ -42,7 +42,7 @@ const AdminKYC: React.FC = () => {
   const [kycToReject, setKycToReject] = useState<KycDTO | null>(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
 
-  // 📡 QUERIES INTELIGENTES (Solo carga lo que ves)
+  // 📡 QUERIES INTELIGENTES
   const { data: pendingKYCs = [], isLoading: loadingPending, error: errorPending } = useQuery({
     queryKey: ['kycPending'], queryFn: kycService.getPendingVerifications, enabled: currentTab === 'pendiente',
   });
@@ -114,83 +114,173 @@ const AdminKYC: React.FC = () => {
   // COLUMNS DEFINITION
   const columns: DataTableColumn<KycDTO>[] = useMemo(() => [
     {
-      id: 'usuario', label: 'Usuario', minWidth: 250,
+      id: 'usuario', label: 'Solicitante', minWidth: 280,
       render: (kyc) => (
         <Stack direction="row" spacing={2} alignItems="center">
-          <Avatar sx={{ bgcolor: theme.palette.primary.main }}>{kyc.nombre_completo?.[0]}</Avatar>
+          <Avatar sx={{ 
+              bgcolor: alpha(theme.palette.primary.main, 0.1), 
+              color: 'primary.main',
+              fontWeight: 'bold',
+              width: 40, height: 40
+            }}
+          >
+            {kyc.nombre_completo?.[0] || 'U'}
+          </Avatar>
           <Box>
-            <Typography variant="body2" fontWeight={600}>{kyc.nombre_completo}</Typography>
-            <Typography variant="caption">{kyc.usuario?.email || `ID: ${kyc.id_usuario}`}</Typography>
+            <Typography variant="body2" fontWeight={700} color="text.primary">
+              {kyc.nombre_completo}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {kyc.usuario?.email || `ID Usuario: ${kyc.id_usuario}`}
+            </Typography>
           </Box>
         </Stack>
       )
     },
     {
-      id: 'documento', label: 'Documento',
+      id: 'documento', label: 'Documentación',
       render: (kyc) => (
-        <Box>
-          <Typography variant="body2" fontWeight={500}>{kyc.tipo_documento}</Typography>
-          <Typography variant="caption" sx={{ fontFamily: 'monospace' }}>{kyc.numero_documento}</Typography>
-        </Box>
+        <Stack direction="row" alignItems="center" spacing={1}>
+           <BadgeIcon fontSize="small" color="action" />
+           <Box>
+            <Typography variant="body2" fontWeight={600} color="text.primary">{kyc.tipo_documento}</Typography>
+            <Typography variant="caption" sx={{ fontFamily: 'monospace', bgcolor: 'action.hover', px: 0.5, borderRadius: 1 }}>
+                {kyc.numero_documento}
+            </Typography>
+           </Box>
+        </Stack>
       )
     },
     {
-      id: 'fecha', label: 'Fecha',
+      id: 'fecha', label: 'Fecha Solicitud',
       render: (kyc) => (
-        <Typography variant="body2">
-          {kyc.createdAt ? new Date(kyc.createdAt).toLocaleDateString('es-AR') : '-'}
+        <Typography variant="body2" color="text.secondary">
+          {kyc.createdAt ? new Date(kyc.createdAt).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
         </Typography>
       )
     },
     {
-      id: 'estado_verificacion', label: 'Estado',
-      render: (kyc) => (
-        <Chip 
-          label={kyc.estado_verificacion} 
-          size="small" 
-          color={kyc.estado_verificacion === 'APROBADA' ? 'success' : kyc.estado_verificacion === 'RECHAZADA' ? 'error' : 'warning'}
-          variant={kyc.estado_verificacion === 'PENDIENTE' ? 'filled' : 'outlined'}
-          sx={{ fontWeight: 'bold' }}
-        />
-      )
+      id: 'estado_verificacion', label: 'Estado Actual',
+      render: (kyc) => {
+        let color: 'success' | 'error' | 'warning' = 'warning';
+        let icon = <PendingIcon fontSize="small" />;
+        
+        if (kyc.estado_verificacion === 'APROBADA') { color = 'success'; icon = <ApprovedIcon fontSize="small" />; }
+        if (kyc.estado_verificacion === 'RECHAZADA') { color = 'error'; icon = <RejectedIcon fontSize="small" />; }
+
+        return (
+          <Chip 
+            label={kyc.estado_verificacion} 
+            size="small" 
+            icon={icon}
+            color={color} // Para fallback
+            sx={{ 
+                fontWeight: 700,
+                bgcolor: alpha(theme.palette[color].main, 0.1),
+                color: theme.palette[color].main,
+                border: '1px solid',
+                borderColor: alpha(theme.palette[color].main, 0.2),
+                '& .MuiChip-icon': { color: 'inherit' }
+            }}
+          />
+        );
+      }
     },
     {
-      id: 'acciones', label: '', align: 'right',
+      id: 'acciones', label: 'Acciones', align: 'right',
       render: (kyc) => (
-        <Stack direction="row" justifyContent="flex-end">
-          <Tooltip title="Ver Detalles"><IconButton color="primary" onClick={() => handleOpenDetails(kyc)}><VisibilityIcon /></IconButton></Tooltip>
+        <Stack direction="row" justifyContent="flex-end" spacing={0.5}>
+          <Tooltip title="Revisar Documentos">
+            <IconButton 
+                size="small" 
+                onClick={() => handleOpenDetails(kyc)}
+                sx={{ color: 'info.main', bgcolor: alpha(theme.palette.info.main, 0.1), '&:hover': { bgcolor: alpha(theme.palette.info.main, 0.2) } }}
+            >
+                <VisibilityIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          
           {kyc.estado_verificacion === 'PENDIENTE' && (
             <>
-              <Tooltip title="Aprobar"><IconButton color="success" onClick={() => handleApprove(kyc)}><CheckCircleIcon /></IconButton></Tooltip>
-              <Tooltip title="Rechazar"><IconButton color="error" onClick={() => handleOpenRejectInput(kyc)}><CancelIcon /></IconButton></Tooltip>
+              <Tooltip title="Aprobar Verificación">
+                <IconButton 
+                    size="small" 
+                    onClick={() => handleApprove(kyc)}
+                    sx={{ color: 'success.main', bgcolor: alpha(theme.palette.success.main, 0.1), '&:hover': { bgcolor: alpha(theme.palette.success.main, 0.2) } }}
+                >
+                    <CheckCircleIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Rechazar (Solicitar Reenvío)">
+                <IconButton 
+                    size="small" 
+                    onClick={() => handleOpenRejectInput(kyc)}
+                    sx={{ color: 'error.main', bgcolor: alpha(theme.palette.error.main, 0.1), '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.2) } }}
+                >
+                    <CancelIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
             </>
           )}
         </Stack>
       )
     }
-  ], [currentTab]);
+  ], [currentTab, theme]);
 
   return (
-    <PageContainer maxWidth="xl">
-      <PageHeader title="Gestión KYC" subtitle="Validación de identidad de usuarios" />
+    <PageContainer maxWidth="xl" sx={{ py: 3 }}>
+      <PageHeader title="Gestión KYC" subtitle="Validación de identidad y documentación de usuarios" />
       
-      <Paper sx={{ mb: 3, borderRadius: 2, }} elevation={0} variant="outlined">
-        <Tabs value={currentTab} onChange={(_, v) => setCurrentTab(v)} variant="standard" indicatorColor="primary" textColor="primary">
+      {/* Tabs Container Style */}
+      <Paper 
+        elevation={0} 
+        sx={{ 
+            mb: 3, 
+            borderRadius: 2, 
+            border: '1px solid',
+            borderColor: 'divider',
+            bgcolor: alpha(theme.palette.background.paper, 0.6),
+            p: 0.5
+        }} 
+      >
+        <Tabs 
+            value={currentTab} 
+            onChange={(_, v) => setCurrentTab(v)} 
+            variant="standard" 
+            indicatorColor="primary" 
+            textColor="primary"
+            sx={{
+                '& .MuiTab-root': {
+                    minHeight: 48,
+                    borderRadius: 1.5,
+                    mx: 0.5,
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    transition: 'all 0.2s',
+                    '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.05) },
+                    '&.Mui-selected': { bgcolor: alpha(theme.palette.primary.main, 0.1) }
+                }
+            }}
+        >
           <Tab icon={<PendingIcon />} iconPosition="start" label="Pendientes" value="pendiente" />
           <Tab icon={<ApprovedIcon />} iconPosition="start" label="Aprobadas" value="aprobada" />
           <Tab icon={<RejectedIcon />} iconPosition="start" label="Rechazadas" value="rechazada" />
-          <Tab icon={<KpiIcon />} iconPosition="start" label="Historial" value="todas" />
+          <Tab icon={<KpiIcon />} iconPosition="start" label="Historial Completo" value="todas" />
         </Tabs>
       </Paper>
 
       <QueryHandler isLoading={isLoading} error={error as Error}>
-        <DataTable
-            columns={columns}
-            data={currentData}
-            getRowKey={(row) => row.id} // ✅ Importante: row.id viene del BaseDTO
-            emptyMessage={`No hay solicitudes ${currentTab}s.`}
-            pagination defaultRowsPerPage={10}
-        />
+        <Paper elevation={0} sx={{ borderRadius: 2, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
+            <DataTable
+                columns={columns}
+                data={currentData}
+                getRowKey={(row) => row.id} 
+                emptyMessage={`No se encontraron solicitudes con estado: ${currentTab}.`}
+                pagination 
+                defaultRowsPerPage={10}
+                elevation={0}
+            />
+        </Paper>
       </QueryHandler>
 
       <KycDetailModal 
@@ -198,23 +288,60 @@ const AdminKYC: React.FC = () => {
         onApprove={handleApprove} onReject={handleOpenRejectInput}
       />
 
-      <Dialog open={rejectModal.isOpen} onClose={rejectModal.close} maxWidth="sm" fullWidth>
-        <DialogTitle>Rechazar Solicitud</DialogTitle>
+      {/* Modal de Rechazo estandarizado */}
+      <Dialog 
+        open={rejectModal.isOpen} 
+        onClose={rejectModal.close} 
+        maxWidth="sm" 
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 3 } }}
+      >
+        <DialogTitle sx={{ fontWeight: 700 }}>Rechazar Solicitud</DialogTitle>
         <DialogContent>
-          <Alert severity="warning" sx={{ mb: 2 }}>El usuario deberá subir sus documentos nuevamente.</Alert>
+          <Alert severity="warning" variant="outlined" sx={{ mb: 2, borderRadius: 2 }}>
+            El usuario será notificado y deberá subir sus documentos nuevamente.
+          </Alert>
           <TextField 
-            autoFocus fullWidth multiline rows={3} label="Motivo del rechazo" variant="outlined"
-            value={rejectReason} onChange={(e) => setRejectReason(e.target.value)}
+            autoFocus 
+            fullWidth 
+            multiline 
+            rows={3} 
+            label="Motivo del rechazo" 
+            placeholder="Ej: La foto del DNI está borrosa..."
+            variant="outlined"
+            value={rejectReason} 
+            onChange={(e) => setRejectReason(e.target.value)}
+            sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
           />
         </DialogContent>
-        <DialogActions>
-          <Button onClick={rejectModal.close}>Cancelar</Button>
-          <Button variant="contained" color="error" onClick={handleConfirmReject} disabled={!rejectReason.trim()}>Confirmar Rechazo</Button>
+        <DialogActions sx={{ p: 2.5 }}>
+          <Button onClick={rejectModal.close} color="inherit" sx={{ borderRadius: 2 }}>Cancelar</Button>
+          <Button 
+            variant="contained" 
+            color="error" 
+            onClick={handleConfirmReject} 
+            disabled={!rejectReason.trim()}
+            sx={{ borderRadius: 2, px: 3 }}
+          >
+            Confirmar Rechazo
+          </Button>
         </DialogActions>
       </Dialog>
 
-      <Snackbar open={snackbar.open} autoHideDuration={4000} onClose={() => setSnackbar(s => ({...s, open: false}))}>
-        <Alert severity={snackbar.severity} variant="filled">{snackbar.message}</Alert>
+      <Snackbar 
+        open={snackbar.open} 
+        autoHideDuration={4000} 
+        onClose={() => setSnackbar(s => ({...s, open: false}))}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert 
+            severity={snackbar.severity} 
+            variant="filled" 
+            sx={{ width: '100%', boxShadow: theme.shadows[4] }}
+            onClose={() => setSnackbar(s => ({...s, open: false}))}
+        >
+            {snackbar.message}
+        </Alert>
       </Snackbar>
     </PageContainer>
   );

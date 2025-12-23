@@ -1,35 +1,39 @@
 // src/pages/Admin/Subastas/SalaControlPujas.tsx
+
 import React, { useMemo, useState } from 'react';
 import { 
   Box, Typography, Paper, Card, CardContent, CardActions, 
   Button, Chip, Stack, Avatar, Alert, LinearProgress,
   useTheme, Tabs, Tab, Dialog, DialogTitle, DialogContent, 
-  DialogActions, TextField, IconButton, Tooltip
+  DialogActions, TextField, IconButton, Tooltip, CircularProgress
 } from '@mui/material';
 import { 
   Gavel, Timer, StopCircle, ReceiptLong, 
   MonetizationOn, Warning, Person, Email,
-  ContentCopy, ErrorOutline, Image as ImageIcon
+  ContentCopy, ErrorOutline, Image as ImageIcon,
+  Block // 🟢 Icono para la acción de anular/incumplimiento
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
+// Componentes Comunes
 import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
 import { QueryHandler } from '../../../components/common/QueryHandler/QueryHandler';
 import { PageHeader } from '../../../components/common/PageHeader/PageHeader';
-
-// 👇 Importamos DataTable
 import { DataTable, type DataTableColumn } from '../../../components/common/DataTable/DataTable';
 
+// Servicios y Tipos
 import type { LoteDto } from '../../../types/dto/lote.dto';
 import type { PujaDto } from '../../../types/dto/puja.dto';
 import PujaService from '../../../Services/puja.service';
 import LoteService from '../../../Services/lote.service';
 import imagenService from '../../../Services/imagen.service';
 
-// ✅ 1. Importamos el hook
+// Hooks
 import { useModal } from '../../../hooks/useModal';
 
-// --- SUB-COMPONENTES ---
+// =============================================================================
+// SUB-COMPONENTES (Tarjetas y Modales)
+// =============================================================================
 
 const StatCard: React.FC<{ 
   title: string; 
@@ -107,7 +111,9 @@ const ContactarGanadorModal: React.FC<{
   );
 };
 
-// --- PANTALLA PRINCIPAL ---
+// =============================================================================
+// COMPONENTE PRINCIPAL
+// =============================================================================
 
 const SalaControlPujas: React.FC = () => {
   const queryClient = useQueryClient();
@@ -115,15 +121,15 @@ const SalaControlPujas: React.FC = () => {
   
   const [tabValue, setTabValue] = useState(0);
   
-  // ✅ 2. Usamos el hook
+  // Hooks de UI
   const contactarModal = useModal();
   const [loteSeleccionado, setLoteSeleccionado] = useState<LoteDto | null>(null);
 
-  // Queries
+  // --- QUERIES ---
   const { data: lotes = [], isLoading: loadingLotes, error: errorLotes } = useQuery<LoteDto[]>({
     queryKey: ['adminLotes'],
     queryFn: async () => (await LoteService.findAllAdmin()).data,
-    refetchInterval: 10000, 
+    refetchInterval: 10000, // Refresco cada 10s para ver pujas en vivo
   });
 
   const { data: pujas = [], isLoading: loadingPujas } = useQuery<PujaDto[]>({
@@ -132,7 +138,7 @@ const SalaControlPujas: React.FC = () => {
     refetchInterval: 15000,
   });
 
-  // Analytics & Filtering
+  // --- ANALYTICS ---
   const analytics = useMemo(() => {
     const activos = lotes.filter(l => l.estado_subasta === 'activa');
     const pendientesPago = lotes.filter(l => 
@@ -145,7 +151,9 @@ const SalaControlPujas: React.FC = () => {
     return { activos, pendientesPago, lotesEnRiesgo, dineroEnJuego, totalPujas: pujasActivas.length };
   }, [lotes, pujas]);
 
-  // Mutations
+  // --- MUTATIONS ---
+
+  // 1. Finalizar Subasta (Cierre normal)
   const endAuctionMutation = useMutation({
     mutationFn: (id: number) => LoteService.endAuction(id),
     onSuccess: (res) => {
@@ -155,14 +163,33 @@ const SalaControlPujas: React.FC = () => {
     onError: (err: any) => alert(`❌ Error: ${err.message}`)
   });
 
-  // Helpers
+  // 2. 🟢 Ejecutar Incumplimiento Manual (Cierre forzoso por impago)
+  const forceDefaultMutation = useMutation({
+    mutationFn: async (lote: LoteDto) => {
+      // Necesitamos el ID de la puja para cancelarla. El lote lo tiene.
+      if (!lote.id_puja_mas_alta) throw new Error("No se encontró la puja ganadora asociada.");
+      
+      // Llamamos al updateAdmin para forzar el estado a 'ganadora_incumplimiento'
+      return await PujaService.updateAdmin(lote.id_puja_mas_alta, {
+        estado_puja: 'ganadora_incumplimiento'
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminLotes'] });
+      queryClient.invalidateQueries({ queryKey: ['adminPujas'] });
+      alert("✅ Puja marcada como incumplida. El token se gestionará según políticas.");
+    },
+    onError: (err: any) => alert(`Error al declarar incumplimiento: ${err.message}`)
+  });
+
+  // --- HELPERS ---
   const getLoteImage = (lote: LoteDto) => 
     lote.imagenes?.[0] ? imagenService.resolveImageUrl(lote.imagenes[0].url) : undefined;
 
   const getPujasDelLote = (loteId: number) => 
     pujas.filter(p => p.id_lote === loteId && p.estado_puja === 'activa');
 
-  // ✅ Handler para abrir modal
+  // Handlers
   const handleContactar = (lote: LoteDto) => {
     setLoteSeleccionado(lote);
     contactarModal.open();
@@ -174,7 +201,7 @@ const SalaControlPujas: React.FC = () => {
   };
 
   // ========================================================================
-  // ⚙️ DEFINICIÓN DE COLUMNAS PARA TAB 1: GESTIÓN DE COBROS
+  // ⚙️ COLUMNAS: GESTIÓN DE COBROS (TAB 1)
   // ========================================================================
   const columnsCobros: DataTableColumn<LoteDto>[] = [
     {
@@ -207,7 +234,6 @@ const SalaControlPujas: React.FC = () => {
       render: (lote) => (
         <Button 
             variant="contained" color="primary" size="small" startIcon={<Email />} 
-            // ✅ Usamos el handler
             onClick={() => handleContactar(lote)}
         >
             Contactar
@@ -217,7 +243,7 @@ const SalaControlPujas: React.FC = () => {
   ];
 
   // ========================================================================
-  // ⚙️ DEFINICIÓN DE COLUMNAS PARA TAB 2: MONITOREO IMPAGOS
+  // ⚙️ COLUMNAS: MONITOREO IMPAGOS (TAB 2) - Con botón de anulación
   // ========================================================================
   const columnsImpagos: DataTableColumn<LoteDto>[] = [
     {
@@ -263,23 +289,52 @@ const SalaControlPujas: React.FC = () => {
       }
     },
     {
-      id: 'acciones', label: 'Acciones', align: 'right',
+      id: 'acciones', label: 'Acciones', align: 'right', minWidth: 120,
       render: (lote) => {
         const isCritical = (lote.intentos_fallidos_pago || 0) >= 3;
+        // Identificamos si esta fila específica se está procesando
+        const isProcessing = forceDefaultMutation.isPending && forceDefaultMutation.variables?.id === lote.id;
+
         return (
-            <Tooltip title="Contactar Ganador">
-                <IconButton 
-                    color={isCritical ? 'error' : 'warning'}
-                    // ✅ Usamos el handler
-                    onClick={() => handleContactar(lote)}
-                >
-                    <Email />
-                </IconButton>
-            </Tooltip>
+            <Stack direction="row" justifyContent="flex-end" spacing={1}>
+                <Tooltip title="Contactar Ganador">
+                    <IconButton 
+                        size="small"
+                        color={isCritical ? 'error' : 'warning'}
+                        onClick={() => handleContactar(lote)}
+                    >
+                        <Email fontSize="small" />
+                    </IconButton>
+                </Tooltip>
+
+                {/* 🟢 BOTÓN: Ejecutar Incumplimiento Manual */}
+                <Tooltip title="Ejecutar Incumplimiento Manual (Anular Adjudicación)">
+                    <IconButton 
+                        size="small"
+                        color="error"
+                        disabled={forceDefaultMutation.isPending}
+                        onClick={() => {
+                            if (window.confirm(`⚠️ ACCIÓN DESTRUCTIVA\n\n¿Estás seguro de declarar INCUMPLIMIENTO para el Lote ${lote.id}?\n\n- La puja ganadora se anulará.\n- Se gestionará el token del usuario.\n- El lote quedará libre o pasará al siguiente.`)) {
+                                forceDefaultMutation.mutate(lote);
+                            }
+                        }}
+                        sx={{ 
+                            bgcolor: 'error.lighter', 
+                            '&:hover': { bgcolor: 'error.light', color: 'white' } 
+                        }}
+                    >
+                        {isProcessing ? <CircularProgress size={20} color="inherit" /> : <Block fontSize="small" />}
+                    </IconButton>
+                </Tooltip>
+            </Stack>
         );
       }
     }
   ];
+
+  // ========================================================================
+  // RENDER
+  // ========================================================================
 
   return (
     <PageContainer maxWidth="xl">
@@ -375,7 +430,7 @@ const SalaControlPujas: React.FC = () => {
 
       </QueryHandler>
 
-      {/* ✅ Modal Controlado por Hook */}
+      {/* Modales */}
       <ContactarGanadorModal 
         open={contactarModal.isOpen} 
         onClose={handleCerrarModal} 

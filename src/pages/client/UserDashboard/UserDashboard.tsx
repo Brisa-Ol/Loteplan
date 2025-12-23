@@ -5,7 +5,7 @@ import {
 } from '@mui/material';
 import { 
   AccountBalanceWallet, Warning, TrendingUp, Description, Gavel,
-  NotificationsActive, ChevronRight, CheckCircle, Schedule, ReceiptLong, Assessment 
+  NotificationsActive, ChevronRight, CheckCircle, Schedule, ReceiptLong, Assessment, EmojiEvents
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -16,11 +16,12 @@ import PagoService from '../../../Services/pago.service';
 import SuscripcionService from '../../../Services/suscripcion.service';
 import ResumenCuentaService from '../../../Services/resumenCuenta.service';
 import InversionService from '../../../Services/inversion.service';
+import PujaService from '../../../Services/puja.service'; // ✅ IMPORTADO
 
 // Context & Hooks
 import { useAuth } from '../../../context/AuthContext';
 import { QueryHandler } from '../../../components/common/QueryHandler/QueryHandler';
-import { useDashboardStats } from '../../../hooks/useDashboardStats'; // ✅ IMPORTAMOS EL HOOK
+import { useDashboardStats } from '../../../hooks/useDashboardStats'; 
 
 // DTOs
 import type { PagoDto } from '../../../types/dto/pago.dto';
@@ -54,11 +55,17 @@ const UserDashboard: React.FC = () => {
     queryKey: ['mensajesNoLeidos'], queryFn: async () => (await MensajeService.getUnreadCount()).data
   });
 
-  // Calculamos loading general (opcional, QueryHandler maneja errores/loading internos si se usa bien)
+  // ✅ NUEVA QUERY: Chequear si ganó subastas
+  const { data: misPujas } = useQuery({
+    queryKey: ['misPujasCheck'], 
+    queryFn: async () => (await PujaService.getMyPujas()).data,
+    staleTime: 60000 
+  });
+
+  // Calculamos loading general
   const isLoading = !resumenes || !suscripciones || !inversiones || !pagos || loadingMensajes;
 
   // ========== 2. LÓGICA CENTRALIZADA ========== 
-  // Aquí ocurre la magia ✨
   const stats = useDashboardStats({
     resumenes,
     suscripciones,
@@ -67,6 +74,9 @@ const UserDashboard: React.FC = () => {
   });
   
   const mensajesSinLeer = mensajesData?.conteo || 0;
+
+  // Calcular si hay ganadoras pendientes
+  const cantidadGanadas = misPujas?.filter(p => p.estado_puja === 'ganadora_pendiente').length || 0;
 
   return (
     <Box sx={{ bgcolor: 'background.default', minHeight: '100vh', pb: 8 }}>
@@ -86,8 +96,37 @@ const UserDashboard: React.FC = () => {
       <Box maxWidth="1400px" mx="auto" px={{ xs: 2, sm: 3, md: 4 }} mt={-2}>
         
         {/* ALERTAS CRÍTICAS */}
-        {(stats.cantidadPagosVencidos > 0 || mensajesSinLeer > 0) && (
+        {(stats.cantidadPagosVencidos > 0 || mensajesSinLeer > 0 || cantidadGanadas > 0) && (
           <Stack spacing={2} mb={4}>
+            
+            {/* 🟢 NUEVA ALERTA DE SUBASTA GANADA */}
+            {cantidadGanadas > 0 && (
+               <Alert 
+                severity="success" 
+                variant="filled"
+                icon={<EmojiEvents sx={{ fontSize: 28 }} />}
+                action={
+                  <Button 
+                    variant="contained" 
+                    color="warning" 
+                    size="small" 
+                    onClick={() => navigate('/client/subastas')} // Cambia la ruta según tu router
+                    sx={{ boxShadow: 'none', fontWeight: 'bold' }}
+                  >
+                    Pagar Ahora
+                  </Button>
+                }
+                sx={{ py: 2, px: 3, bgcolor: 'success.main', color: 'white' }}
+              >
+                <Typography variant="body1" fontWeight={700}>
+                  ¡Felicitaciones! Ganaste {cantidadGanadas} subasta{cantidadGanadas > 1 ? 's' : ''}
+                </Typography>
+                <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                  Tienes adjudicaciones pendientes de pago. Asegura tu lote antes del vencimiento.
+                </Typography>
+              </Alert>
+            )}
+
             {stats.cantidadPagosVencidos > 0 && (
               <Alert 
                 severity="error" icon={<Warning sx={{ fontSize: 28 }} />}
@@ -205,7 +244,7 @@ const UserDashboard: React.FC = () => {
                 </Paper>
               </Box>
 
-              {/* LISTADO DE PROYECTOS (Solo Visualización, lógica de renderizado se mantiene aquí) */}
+              {/* LISTADO DE PROYECTOS */}
               <Box mb={3} display="flex" justifyContent="space-between" alignItems="center">
                 <Typography variant="h5" fontWeight={700} color="text.primary">Mis Suscripciones Activas</Typography>
                 <Button variant="text" endIcon={<ChevronRight />} onClick={() => navigate('/client/suscripciones')} sx={{ color: 'primary.main' }}>
@@ -216,7 +255,6 @@ const UserDashboard: React.FC = () => {
               {resumenes && resumenes.length > 0 ? (
                 <Stack spacing={3}>
                   {resumenes.map((resumen) => {
-                    // Lógica específica de UI para encontrar ID de suscripción y saldos individuales
                     const suscripcionAsociada = suscripciones?.find(s => s.id === resumen.id_suscripcion);
                     const idProyectoReal = suscripcionAsociada?.id_proyecto;
                     const saldoProyecto = Number(suscripcionAsociada?.saldo_a_favor || 0);

@@ -24,7 +24,10 @@ export interface LoteDto {
   // 2. Datos básicos
   nombre_lote: string;
   precio_base: number; // En BD es DECIMAL, Sequelize lo devuelve como string, pero en TS lo tipamos number para operar
-
+ultima_puja?: {
+     monto: number;
+     id_usuario: number; // Para saber si voy ganando yo
+  };
   // 3. Estado y Tiempos
   estado_subasta: EstadoSubasta;
   fecha_inicio: string | null; // DataTypes.DATE devuelve string ISO

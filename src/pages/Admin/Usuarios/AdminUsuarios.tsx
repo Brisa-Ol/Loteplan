@@ -2,12 +2,14 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { 
   Box, Typography, Paper, Chip, IconButton, Tooltip, 
   Stack, Button, TextField, MenuItem, InputAdornment, 
-  Snackbar, Alert, Switch, CircularProgress, alpha
+  Snackbar, Alert, Switch, CircularProgress, alpha, 
+  Avatar, useTheme, Divider 
 } from '@mui/material';
 import { 
   PersonAdd, Search, Group as GroupIcon, MarkEmailRead, 
   Security, Edit as EditIcon, VerifiedUser as VerifiedUserIcon,
-  PhonelinkLock as TwoFaIcon, CheckCircle, Close as CloseIcon
+  PhonelinkLock as TwoFaIcon, CheckCircle, Close as CloseIcon,
+  Block as BlockIcon
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { AxiosError } from 'axios';
@@ -29,19 +31,54 @@ import EditUserModal from './modals/EditUserModal';
 import { useModal } from '../../../hooks/useModal';
 import { useConfirmDialog } from '../../../hooks/useConfirmDialog';
 
-const MiniStatCard: React.FC<{ title: string; value: number; icon: React.ReactNode; color: string }> = ({ title, value, icon, color }) => (
-  <Paper elevation={0} sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 2, bgcolor: 'background.paper', borderRadius: 2, border: '1px solid #eee' }}>
-    <Box sx={{ bgcolor: `${color}.light`, color: `${color}.main`, p: 1, borderRadius: '50%', display: 'flex' }}>
-      {icon}
-    </Box>
-    <Box>
-      <Typography variant="h5" fontWeight="bold">{value}</Typography>
-      <Typography variant="caption" color="text.secondary">{title}</Typography>
-    </Box>
-  </Paper>
-);
+// --- COMPONENTE MINI STAT CARD (THEMED) ---
+const MiniStatCard: React.FC<{ title: string; value: number; icon: React.ReactNode; color: string }> = ({ title, value, icon, color }) => {
+  const theme = useTheme();
+  // Mapeo seguro de colores del theme
+  const themeColor = (theme.palette as any)[color] || theme.palette.primary;
+
+  return (
+    <Paper 
+      elevation={0} 
+      sx={{ 
+        p: 2, 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: 2, 
+        borderRadius: 3, 
+        border: '1px solid',
+        borderColor: 'divider',
+        transition: 'transform 0.2s, box-shadow 0.2s',
+        '&:hover': {
+          transform: 'translateY(-2px)',
+          boxShadow: theme.shadows[2],
+          borderColor: themeColor.main
+        }
+      }}
+    >
+      <Avatar 
+        variant="rounded" 
+        sx={{ 
+          bgcolor: alpha(themeColor.main, 0.1), 
+          color: themeColor.main,
+          width: 48, 
+          height: 48 
+        }}
+      >
+        {icon}
+      </Avatar>
+      <Box>
+        <Typography variant="h5" fontWeight={700} color="text.primary">{value}</Typography>
+        <Typography variant="caption" fontWeight={600} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
+          {title}
+        </Typography>
+      </Box>
+    </Paper>
+  );
+};
 
 const AdminUsuarios: React.FC = () => {
+  const theme = useTheme();
   const queryClient = useQueryClient();
   
   // Hooks de Modales
@@ -58,7 +95,6 @@ const AdminUsuarios: React.FC = () => {
   const [highlightedUserId, setHighlightedUserId] = useState<number | null>(null);
 
   // --- LOGICA STICKY (Congelar Orden) ---
-  // Guardamos el estado "original" de cada usuario para que el orden no cambie al editar
   const initialStatusRef = useRef<Record<number, boolean>>({});
 
   const [snackbar, setSnackbar] = useState<{ open: boolean, message: string, severity: 'success'|'error' }>({
@@ -84,12 +120,9 @@ const AdminUsuarios: React.FC = () => {
   });
 
   // --- EFECTO PARA CAPTURAR ESTADO INICIAL ---
-  // Cada vez que llegan usuarios nuevos (carga inicial o creación), guardamos su estado
   useEffect(() => {
     if (usuarios.length > 0) {
       usuarios.forEach(u => {
-        // Solo guardamos si NO lo tenemos registrado ya. 
-        // Esto preserva el estado "antiguo" de los que ya existían.
         if (initialStatusRef.current[u.id] === undefined) {
           initialStatusRef.current[u.id] = u.activo;
         }
@@ -196,16 +229,12 @@ const AdminUsuarios: React.FC = () => {
 
     // --- ORDENAMIENTO "STICKY" ---
     return filtered.sort((a, b) => {
-      // Usamos el estado guardado en el Ref (el estado "original" de la sesión).
-      // Si por alguna razón es nuevo y no tiene ref, usamos el actual.
       const statusA = initialStatusRef.current[a.id] ?? a.activo;
       const statusB = initialStatusRef.current[b.id] ?? b.activo;
 
-      // Prioridad: Estado (Activos primero)
       if (statusA !== statusB) {
         return statusA ? -1 : 1;
       }
-      // Secundaria: Nombre
       return a.nombre_usuario.localeCompare(b.nombre_usuario);
     });
   }, [usuarios, searchTerm, filterStatus]);
@@ -215,29 +244,41 @@ const AdminUsuarios: React.FC = () => {
     { id: 'id', label: 'ID', minWidth: 50 },
     { 
       id: 'usuario', 
-      label: 'Usuario / Info', 
+      label: 'Usuario', 
       minWidth: 250,
       render: (user) => (
-        <Stack direction="row" alignItems="center" spacing={1}>
+        <Stack direction="row" alignItems="center" spacing={2}>
+           {/* Avatar con Inicial */}
+           <Avatar sx={{ 
+              width: 40, 
+              height: 40, 
+              bgcolor: user.activo ? alpha(theme.palette.primary.main, 0.1) : theme.palette.action.disabledBackground,
+              color: user.activo ? 'primary.main' : 'text.disabled',
+              fontSize: '1rem',
+              fontWeight: 'bold'
+           }}>
+             {user.nombre_usuario.charAt(0).toUpperCase()}
+           </Avatar>
           <Box>
-            <Typography variant="body2" fontWeight={600}>
-              {user.nombre_usuario}
-              {!user.activo}
-            </Typography>
+            <Stack direction="row" alignItems="center" spacing={1}>
+              <Typography variant="body2" fontWeight={600} color={user.activo ? 'text.primary' : 'text.disabled'}>
+                {user.nombre_usuario}
+              </Typography>
+              {user.confirmado_email && (
+                <Tooltip title="Email Verificado">
+                  <VerifiedUserIcon color="success" sx={{ fontSize: 16 }} />
+                </Tooltip>
+              )}
+              {user.is_2fa_enabled && (
+                <Tooltip title="2FA Activo">
+                  <TwoFaIcon color="info" sx={{ fontSize: 16 }} />
+                </Tooltip>
+              )}
+            </Stack>
             <Typography variant="caption" color="text.secondary">
               {user.nombre} {user.apellido}
             </Typography>
           </Box>
-          {user.confirmado_email && (
-            <Tooltip title="Email Verificado">
-              <VerifiedUserIcon color="success" sx={{ fontSize: 16 }} />
-            </Tooltip>
-          )}
-          {user.is_2fa_enabled && (
-            <Tooltip title="2FA Activo">
-              <TwoFaIcon color="info" sx={{ fontSize: 16 }} />
-            </Tooltip>
-          )}
         </Stack>
       )
     },
@@ -245,19 +286,27 @@ const AdminUsuarios: React.FC = () => {
     { 
       id: 'rol', 
       label: 'Rol', 
-      render: (user) => (
-        <Chip 
-          label={user.rol} 
-          size="small" 
-          color={user.rol === 'admin' ? 'primary' : 'default'} 
-          variant={user.rol === 'admin' ? 'filled' : 'outlined'} 
-          sx={{ textTransform: 'capitalize' }} 
-        />
-      )
+      render: (user) => {
+        const isAdmin = user.rol === 'admin';
+        return (
+          <Chip 
+            label={user.rol} 
+            size="small" 
+            sx={{ 
+              textTransform: 'capitalize',
+              fontWeight: 600,
+              bgcolor: isAdmin ? alpha(theme.palette.primary.main, 0.1) : alpha(theme.palette.info.main, 0.1),
+              color: isAdmin ? 'primary.main' : 'info.main',
+              border: '1px solid',
+              borderColor: isAdmin ? alpha(theme.palette.primary.main, 0.2) : alpha(theme.palette.info.main, 0.2)
+            }} 
+          />
+        );
+      }
     },
     { 
       id: 'acceso', 
-      label: 'Acceso',
+      label: 'Estado y Acceso',
       align: 'center',
       render: (user) => {
         const isAdminAndActive = user.rol === 'admin' && user.activo;
@@ -266,32 +315,43 @@ const AdminUsuarios: React.FC = () => {
         return (
           <Stack direction="row" alignItems="center" spacing={1} justifyContent="center">
             {isProcessingThisUser ? (
-              <CircularProgress size={24} color="inherit" />
+              <CircularProgress size={20} color="inherit" />
             ) : (
               <Tooltip 
-                title={isAdminAndActive ? 'No se puede bloquear a un administrador' : user.activo ? 'Click para bloquear' : 'Click para reactivar'}
+                title={isAdminAndActive ? 'No se puede bloquear a un administrador' : user.activo ? 'Bloquear Acceso' : 'Reactivar Acceso'}
               >
-                <span>
-                  <Switch
-                    checked={user.activo}
-                    onChange={() => handleToggleStatusClick(user)}
-                    color={user.activo ? 'success' : 'error'}
-                    size="small"
-                    disabled={toggleStatusMutation.isPending || isAdminAndActive}
-                  />
-                </span>
+                <Switch
+                  checked={user.activo}
+                  onChange={() => handleToggleStatusClick(user)}
+                  size="small"
+                  disabled={toggleStatusMutation.isPending || isAdminAndActive}
+                  sx={{
+                    '& .MuiSwitch-switchBase.Mui-checked': {
+                      color: theme.palette.success.main,
+                      '&:hover': { backgroundColor: alpha(theme.palette.success.main, 0.1) },
+                    },
+                    '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                      backgroundColor: theme.palette.success.main,
+                    },
+                  }}
+                />
               </Tooltip>
             )}
             
             {!isProcessingThisUser && (
-              <Typography 
-                variant="caption" 
-                color={user.activo ? 'success.main' : 'error.main'}
-                fontWeight={600}
-                sx={{ minWidth: 60 }}
-              >
-                {user.activo ? 'Activo' : 'Inactivo'}
-              </Typography>
+              <Chip 
+                label={user.activo ? 'Activo' : 'Inactivo'}
+                size="small"
+                variant="outlined"
+                icon={user.activo ? <CheckCircle sx={{ fontSize: '14px !important' }} /> : <BlockIcon sx={{ fontSize: '14px !important' }} />}
+                color={user.activo ? 'success' : 'default'}
+                sx={{ 
+                  height: 24, 
+                  border: 'none', 
+                  bgcolor: user.activo ? alpha(theme.palette.success.main, 0.1) : theme.palette.action.hover,
+                  '& .MuiChip-label': { px: 1, fontSize: '0.75rem', fontWeight: 600 }
+                }}
+              />
             )}
           </Stack>
         );
@@ -305,10 +365,13 @@ const AdminUsuarios: React.FC = () => {
         <Stack direction="row" justifyContent="flex-end">
           <Tooltip title="Editar Usuario">
             <IconButton 
-              color="primary" 
               onClick={() => handleEditUser(user)} 
               size="small"
               disabled={toggleStatusMutation.isPending}
+              sx={{ 
+                color: theme.palette.text.secondary,
+                '&:hover': { color: theme.palette.primary.main, bgcolor: alpha(theme.palette.primary.main, 0.1) }
+              }}
             >
               <EditIcon fontSize="small" />
             </IconButton>
@@ -319,29 +382,38 @@ const AdminUsuarios: React.FC = () => {
   ];
 
   return (
-    <PageContainer maxWidth="xl">
-      <PageHeader title="Gestión de Usuarios" subtitle="Administra el acceso y seguridad." />
+    <PageContainer maxWidth="xl" sx={{ py: 3 }}>
+      <PageHeader 
+        title="Gestión de Usuarios" 
+        subtitle="Administra los permisos, roles y estado de seguridad de la plataforma." 
+      />
 
       {/* Stats Cards */}
-      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} mb={4}>
-        <Box flex={1}>
-          <MiniStatCard title="Total Usuarios" value={stats.total} icon={<GroupIcon />} color="primary" />
-        </Box>
-        <Box flex={1}>
-          <MiniStatCard title="Activo" value={stats.activos} icon={<CheckCircle />} color="success" />
-        </Box>
-        <Box flex={1}>
-          <MiniStatCard title="Email Confirmado" value={stats.confirmados} icon={<MarkEmailRead />} color="info" />
-        </Box>
-        <Box flex={1}>
-          <MiniStatCard title="Con 2FA Activo" value={stats.con2FA} icon={<Security />} color="warning" />
-        </Box>
-      </Stack>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', lg: 'repeat(4, 1fr)' }, gap: 3, mb: 4 }}>
+        <MiniStatCard title="Total Usuarios" value={stats.total} icon={<GroupIcon />} color="primary" />
+        <MiniStatCard title="Usuarios Activos" value={stats.activos} icon={<CheckCircle />} color="success" />
+        <MiniStatCard title="Emails Verificados" value={stats.confirmados} icon={<MarkEmailRead />} color="info" />
+        <MiniStatCard title="Seguridad 2FA" value={stats.con2FA} icon={<Security />} color="warning" />
+      </Box>
 
       {/* Filters & Add Button */}
-      <Paper sx={{ p: 2, mb: 3, display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center', borderRadius: 2 }} elevation={0} variant="outlined">
+      <Paper 
+        elevation={0} 
+        sx={{ 
+          p: 2, 
+          mb: 3, 
+          display: 'flex', 
+          flexWrap: 'wrap', 
+          gap: 2, 
+          alignItems: 'center', 
+          borderRadius: 2,
+          border: '1px solid',
+          borderColor: 'divider',
+          bgcolor: alpha(theme.palette.background.paper, 0.6)
+        }} 
+      >
         <TextField 
-          placeholder="Buscar usuario..." 
+          placeholder="Buscar por nombre, email o usuario..." 
           size="small" 
           sx={{ flexGrow: 1, minWidth: 200 }}
           value={searchTerm} 
@@ -349,9 +421,10 @@ const AdminUsuarios: React.FC = () => {
           InputProps={{ 
             startAdornment: (
               <InputAdornment position="start">
-                <Search />
+                <Search color="action" />
               </InputAdornment>
-            ) 
+            ),
+            sx: { borderRadius: 2 }
           }}
         />
         <TextField 
@@ -360,17 +433,25 @@ const AdminUsuarios: React.FC = () => {
           size="small" 
           value={filterStatus} 
           onChange={(e) => setFilterStatus(e.target.value)} 
-          sx={{ minWidth: 150 }}
+          sx={{ minWidth: 150, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
         >
           <MenuItem value="all">Todos</MenuItem>
           <MenuItem value="active">Activos</MenuItem>
           <MenuItem value="inactive">Inactivos</MenuItem>
         </TextField>
+        
+        <Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', md: 'block' }, mx: 1 }} />
+        
         <Button 
           variant="contained" 
           startIcon={<PersonAdd />} 
-          color="primary" 
           onClick={createModal.open}
+          sx={{ 
+            borderRadius: 2, 
+            textTransform: 'none', 
+            fontWeight: 600,
+            boxShadow: theme.shadows[2]
+          }}
         >
           Nuevo Usuario
         </Button>
@@ -378,29 +459,36 @@ const AdminUsuarios: React.FC = () => {
 
       {/* Tabla de Usuarios */}
       <QueryHandler isLoading={isLoading} error={error as Error | null}>
-        <DataTable
-          columns={columns} 
-          data={filteredUsers} 
-          getRowKey={(user) => user.id}
-          // Estilo condicional: Flash Verde
-          getRowSx={(user) => {
-            const isHighlighted = highlightedUserId === user.id;
-            return {
-               opacity: user.activo ? 1 : 0.6,
-               transition: 'background-color 0.8s ease, opacity 0.3s ease',
-               bgcolor: isHighlighted 
-                  ? (theme) => alpha(theme.palette.success.main, 0.2)
-                  : (user.activo ? 'inherit' : 'action.hover')
-            };
-          }}
-          emptyMessage="No se encontraron usuarios." 
-          pagination={true} 
-          defaultRowsPerPage={10}
-        />
+        <Paper elevation={0} sx={{ borderRadius: 2, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
+            <DataTable
+            columns={columns} 
+            data={filteredUsers} 
+            getRowKey={(user) => user.id}
+            elevation={0}
+            // Estilo condicional: Flash Verde refinado
+            getRowSx={(user) => {
+                const isHighlighted = highlightedUserId === user.id;
+                return {
+                opacity: user.activo ? 1 : 0.6,
+                transition: 'background-color 0.8s ease, opacity 0.3s ease',
+                bgcolor: isHighlighted 
+                    ? alpha(theme.palette.success.main, 0.15)
+                    : (user.activo ? 'inherit' : alpha(theme.palette.action.hover, 0.5)),
+                '&:hover': {
+                    bgcolor: isHighlighted 
+                    ? alpha(theme.palette.success.main, 0.2)
+                    : alpha(theme.palette.action.hover, 0.8)
+                }
+                };
+            }}
+            emptyMessage="No se encontraron usuarios registrados." 
+            pagination={true} 
+            defaultRowsPerPage={10}
+            />
+        </Paper>
       </QueryHandler>
 
       {/* --- MODALES --- */}
-      
       <CreateUserModal 
         open={createModal.isOpen}
         onClose={createModal.close}
@@ -425,7 +513,7 @@ const AdminUsuarios: React.FC = () => {
 
       <Snackbar 
         open={snackbar.open} 
-        autoHideDuration={6000} 
+        autoHideDuration={4000} 
         onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
@@ -433,6 +521,7 @@ const AdminUsuarios: React.FC = () => {
           severity={snackbar.severity} 
           onClose={() => setSnackbar(prev => ({ ...prev, open: false }))} 
           variant="filled"
+          sx={{ width: '100%', boxShadow: theme.shadows[4] }}
         >
           {snackbar.message}
         </Alert>
