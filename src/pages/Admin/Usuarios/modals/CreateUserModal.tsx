@@ -1,23 +1,10 @@
+// src/pages/Admin/Usuarios/modals/CreateUserModal.tsx
+
 import React, { useState } from 'react';
 import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  TextField,
-  MenuItem,
-  Stack,
-  Box,
-  Typography,
-  IconButton,
-  InputAdornment,
-  CircularProgress,
-  Alert,
-  Avatar,
-  useTheme,
-  alpha,
-  Divider
+  Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField,
+  MenuItem, Stack, Box, Typography, IconButton, InputAdornment,
+  CircularProgress, Alert, Avatar, useTheme, alpha, Divider
 } from '@mui/material';
 import {
   Close as CloseIcon,
@@ -66,23 +53,15 @@ const validationSchema = Yup.object({
 // ════════════════════════════════════════════════════════════
 
 const CreateUserModal: React.FC<CreateUserModalProps> = ({ 
-  open, 
-  onClose, 
-  onSubmit, 
-  isLoading = false 
+  open, onClose, onSubmit, isLoading = false 
 }) => {
   const theme = useTheme();
   const [showPassword, setShowPassword] = useState(false);
 
   const formik = useFormik<CreateUsuarioDto>({
     initialValues: {
-      nombre: '',
-      apellido: '',
-      email: '',
-      dni: '',
-      nombre_usuario: '',
-      numero_telefono: '',
-      contraseña: '',
+      nombre: '', apellido: '', email: '', dni: '',
+      nombre_usuario: '', numero_telefono: '', contraseña: '',
       rol: 'cliente', 
     },
     validationSchema: validationSchema,
@@ -107,13 +86,11 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
     onClose();
   };
 
-  // Estilo para que los inputs ocupen espacio igual en filas
-  const flexInputStyle = { flex: 1 };
-  
-  const commonInputSx = {
-    '& .MuiOutlinedInput-root': {
-      borderRadius: 2,
-    }
+  // Estilos reutilizables
+  const commonInputSx = { '& .MuiOutlinedInput-root': { borderRadius: 2 } };
+  const sectionTitleSx = { 
+      textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700, 
+      color: 'text.secondary', fontSize: '0.75rem', mb: 1 
   };
 
   return (
@@ -122,20 +99,12 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
       onClose={isLoading ? undefined : handleClose} 
       maxWidth="md" 
       fullWidth
-      PaperProps={{
-        sx: {
-          borderRadius: 3,
-          boxShadow: theme.shadows[10]
-        }
-      }}
+      PaperProps={{ sx: { borderRadius: 3, boxShadow: theme.shadows[10] } }}
     >
       {/* HEADER */}
       <DialogTitle sx={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        pb: 2, pt: 3, px: 3,
-        bgcolor: alpha(theme.palette.primary.main, 0.04)
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
+        pb: 2, pt: 3, px: 3, bgcolor: alpha(theme.palette.primary.main, 0.04)
       }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Avatar variant="rounded" sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}>
@@ -159,40 +128,33 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
 
       <form onSubmit={formik.handleSubmit}>
         <DialogContent sx={{ p: 4 }}>
-          {/* Stack Principal: Separa las secciones verticalmente */}
           <Stack spacing={4}>
             
             {/* SECCIÓN 1: DATOS PERSONALES */}
             <Box>
-                <Stack direction="row" alignItems="center" spacing={1} mb={2}>
+                <Stack direction="row" alignItems="center" spacing={1} mb={1}>
                     <BadgeIcon color="action" fontSize="small" />
-                    <Typography variant="subtitle2" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>
-                        Información Personal
-                    </Typography>
+                    <Typography sx={sectionTitleSx}>Información Personal</Typography>
                 </Stack>
                 
                 <Stack spacing={2}>
-                    {/* Fila 1: Nombre y Apellido */}
                     <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
                         <TextField
                             fullWidth id="nombre" label="Nombre"
                             {...formik.getFieldProps('nombre')}
                             error={formik.touched.nombre && Boolean(formik.errors.nombre)}
                             helperText={formik.touched.nombre && formik.errors.nombre}
-                            disabled={isLoading}
-                            sx={{ ...commonInputSx, ...flexInputStyle }}
+                            disabled={isLoading} sx={commonInputSx}
                         />
                         <TextField
                             fullWidth id="apellido" label="Apellido"
                             {...formik.getFieldProps('apellido')}
                             error={formik.touched.apellido && Boolean(formik.errors.apellido)}
                             helperText={formik.touched.apellido && formik.errors.apellido}
-                            disabled={isLoading}
-                            sx={{ ...commonInputSx, ...flexInputStyle }}
+                            disabled={isLoading} sx={commonInputSx}
                         />
                     </Stack>
 
-                    {/* Fila 2: DNI y Teléfono */}
                     <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
                         <TextField
                             fullWidth id="dni" name="dni" label="DNI"
@@ -201,8 +163,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
                             onBlur={formik.handleBlur}
                             error={formik.touched.dni && Boolean(formik.errors.dni)}
                             helperText={formik.touched.dni && formik.errors.dni}
-                            disabled={isLoading}
-                            sx={{ ...commonInputSx, ...flexInputStyle }}
+                            disabled={isLoading} sx={commonInputSx}
                         />
                         <TextField
                             fullWidth id="numero_telefono" name="numero_telefono" label="Teléfono"
@@ -211,8 +172,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
                             onBlur={formik.handleBlur}
                             error={formik.touched.numero_telefono && Boolean(formik.errors.numero_telefono)}
                             helperText={formik.touched.numero_telefono && formik.errors.numero_telefono}
-                            disabled={isLoading}
-                            sx={{ ...commonInputSx, ...flexInputStyle }}
+                            disabled={isLoading} sx={commonInputSx}
                         />
                     </Stack>
                 </Stack>
@@ -220,50 +180,42 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
 
             {/* SECCIÓN 2: ACCESO */}
             <Box>
-                <Stack direction="row" alignItems="center" spacing={1} mb={2}>
+                <Stack direction="row" alignItems="center" spacing={1} mb={1}>
                     <KeyIcon color="action" fontSize="small" />
-                    <Typography variant="subtitle2" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>
-                        Credenciales de Acceso
-                    </Typography>
+                    <Typography sx={sectionTitleSx}>Credenciales de Acceso</Typography>
                 </Stack>
 
                 <Stack spacing={2}>
-                    {/* Fila 1: Email y Usuario */}
                     <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
                         <TextField
                             fullWidth id="email" label="Email" type="email"
                             {...formik.getFieldProps('email')}
                             error={formik.touched.email && Boolean(formik.errors.email)}
                             helperText={formik.touched.email && formik.errors.email}
-                            disabled={isLoading}
-                            sx={{ ...commonInputSx, ...flexInputStyle }}
+                            disabled={isLoading} sx={commonInputSx}
                         />
                         <TextField
                             fullWidth id="nombre_usuario" label="Usuario"
                             {...formik.getFieldProps('nombre_usuario')}
                             error={formik.touched.nombre_usuario && Boolean(formik.errors.nombre_usuario)}
                             helperText={formik.touched.nombre_usuario && formik.errors.nombre_usuario}
-                            disabled={isLoading}
-                            sx={{ ...commonInputSx, ...flexInputStyle }}
+                            disabled={isLoading} sx={commonInputSx}
                         />
                     </Stack>
 
-                    {/* Fila 2: Contraseña (Ancho completo) */}
                     <TextField
                         fullWidth id="contraseña" label="Contraseña"
                         type={showPassword ? 'text' : 'password'}
                         {...formik.getFieldProps('contraseña')}
                         error={formik.touched.contraseña && Boolean(formik.errors.contraseña)}
                         helperText={formik.touched.contraseña && formik.errors.contraseña}
-                        disabled={isLoading}
-                        sx={commonInputSx}
+                        disabled={isLoading} sx={commonInputSx}
                         InputProps={{
                             endAdornment: (
                                 <InputAdornment position="end">
                                     <IconButton
                                         onClick={() => setShowPassword(!showPassword)}
-                                        edge="end"
-                                        disabled={isLoading}
+                                        edge="end" disabled={isLoading}
                                     >
                                         {showPassword ? <VisibilityOff /> : <Visibility />}
                                     </IconButton>
@@ -276,27 +228,23 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
 
             {/* SECCIÓN 3: ROL Y AVISO */}
             <Box>
-                <Stack direction="row" alignItems="center" spacing={1} mb={2}>
+                <Stack direction="row" alignItems="center" spacing={1} mb={1}>
                     <RoleIcon color="action" fontSize="small" />
-                    <Typography variant="subtitle2" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>
-                        Permisos
-                    </Typography>
+                    <Typography sx={sectionTitleSx}>Permisos</Typography>
                 </Stack>
                 
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="stretch">
                     <TextField
                         fullWidth select id="rol" label="Rol del Usuario"
                         {...formik.getFieldProps('rol')}
-                        disabled={isLoading}
-                        sx={{ ...commonInputSx, flex: 1 }}
+                        disabled={isLoading} sx={{ ...commonInputSx, flex: 1 }}
                     >
                         <MenuItem value="cliente">Cliente</MenuItem>
                         <MenuItem value="admin">Administrador</MenuItem>
                     </TextField>
                     
                     <Alert 
-                        severity="info" 
-                        variant="outlined" 
+                        severity="info" variant="outlined" 
                         sx={{ flex: 1, alignItems: 'center', borderRadius: 2 }}
                     >
                         El usuario iniciará como "Inactivo".

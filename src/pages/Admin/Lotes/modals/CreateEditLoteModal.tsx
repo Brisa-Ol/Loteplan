@@ -1,44 +1,58 @@
-import React, { useEffect, useState } from 'react'; // ✅ Importar useState
+// src/pages/Admin/Inventario/modals/CreateEditLoteModal.tsx
+
+import React, { useEffect, useState } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button,
   TextField, Stack, Box, Typography, IconButton,
-  CircularProgress, MenuItem, Alert, Divider, Chip
+  CircularProgress, MenuItem, Alert, Divider, Chip, Avatar, useTheme, alpha
 } from '@mui/material';
-import { Close as CloseIcon, Save as SaveIcon, Edit as EditIcon, Image as ImageIcon } from '@mui/icons-material';
+import { 
+    Close as CloseIcon, 
+    Save as SaveIcon, 
+    Edit as EditIcon,
+    Inventory as InventoryIcon,
+    Link as LinkIcon,
+    AccessTime as TimeIcon,
+    LocationOn as LocationIcon,
+    Image as ImageIcon
+} from '@mui/icons-material';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
-
+import { useQuery } from '@tanstack/react-query';
 import type { CreateLoteDto, LoteDto, UpdateLoteDto } from '../../../../types/dto/lote.dto';
 import type { ProyectoDto } from '../../../../types/dto/proyecto.dto';
-
-import { useQuery } from '@tanstack/react-query';
 import ProyectoService from '../../../../Services/proyecto.service';
-
-// ✅ Importar el componente de subida (Ajusta la ruta si es necesario)
 import ImageUploadZone from '../../../../components/common/ImageUploadZone/ImageUploadZone';
 
 interface CreateEditLoteModalProps {
   open: boolean;
   onClose: () => void;
-  // ✅ Actualizamos la firma para aceptar archivos opcionales
+  // Actualizamos la firma para aceptar archivos opcionales
   onSubmit: (data: CreateLoteDto | UpdateLoteDto, id?: number, files?: File[]) => Promise<void>;
   loteToEdit?: LoteDto | null;
   isLoading?: boolean;
 }
 
-// ... (El validationSchema y getStatusColor se mantienen IGUALES) ...
+// Validación
 const validationSchema = Yup.object({
   nombre_lote: Yup.string().min(3, 'Mínimo 3 caracteres').required('El nombre es requerido'),
   precio_base: Yup.number().min(0, 'Debe ser positivo').required('El precio base es requerido'),
   id_proyecto: Yup.mixed().nullable(),
   fecha_inicio: Yup.string().nullable(),
   fecha_fin: Yup.string().nullable(), 
-  // ... validaciones de fechas y coordenadas igual que antes ...
   latitud: Yup.number().min(-90).max(90).nullable(),
   longitud: Yup.number().min(-180).max(180).nullable(),
 });
 
-const getStatusColor = (estado: string) => { /* ... igual ... */ return 'default' };
+// Helper visual para estado
+const getStatusColor = (estado: string) => {
+  switch (estado) {
+    case 'activa': return 'success';
+    case 'finalizada': return 'info';
+    case 'pendiente': return 'warning';
+    default: return 'default';
+  }
+};
 
 const CreateEditLoteModal: React.FC<CreateEditLoteModalProps> = ({
   open,
@@ -47,10 +61,12 @@ const CreateEditLoteModal: React.FC<CreateEditLoteModalProps> = ({
   loteToEdit,
   isLoading = false,
 }) => {
+  const theme = useTheme();
   
-  // ✅ Estado local para las imágenes (solo creación)
+  // Estado local para las imágenes (solo creación)
   const [files, setFiles] = useState<File[]>([]);
 
+  // Cargar Proyectos
   const { data: proyectos = [], isLoading: loadingProyectos } = useQuery<ProyectoDto[]>({
     queryKey: ['adminProyectosSelect'],
     queryFn: async () => (await ProyectoService.getAllAdmin()).data,
@@ -82,15 +98,15 @@ const CreateEditLoteModal: React.FC<CreateEditLoteModalProps> = ({
         ...(values.longitud !== null && values.longitud !== 0 && { longitud: values.longitud }),
       };
 
-      // ✅ Pasamos los files al padre junto con el payload
+      // Pasamos los files al padre junto con el payload
       await onSubmit(payload, loteToEdit?.id, files);
     },
   });
 
+  // Cargar datos al abrir
   useEffect(() => {
     if (open) {
       if (loteToEdit) {
-        // ... (Lógica de setValues igual que antes) ...
         formik.setValues({
            nombre_lote: loteToEdit.nombre_lote,
            precio_base: Number(loteToEdit.precio_base),
@@ -100,10 +116,10 @@ const CreateEditLoteModal: React.FC<CreateEditLoteModalProps> = ({
            latitud: loteToEdit.latitud || null,
            longitud: loteToEdit.longitud || null,
         });
-        setFiles([]); // En edición no usamos este campo, usamos el modal de imágenes
+        setFiles([]); // En edición no usamos este campo
       } else {
         formik.resetForm();
-        setFiles([]); // ✅ Limpiar imágenes al abrir para crear
+        setFiles([]); // Limpiar imágenes al abrir para crear
       }
     }
   }, [open, loteToEdit]);
@@ -117,91 +133,190 @@ const CreateEditLoteModal: React.FC<CreateEditLoteModalProps> = ({
   };
 
   const esEdicion = !!loteToEdit;
-  // ... (flags de edición iguales) ...
   const subastaActiva = loteToEdit?.estado_subasta === 'activa';
   const subastaFinalizada = loteToEdit?.estado_subasta === 'finalizada';
   const puedeEditarPrecios = !subastaActiva && !subastaFinalizada;
   const puedeEditarProyecto = !esEdicion || loteToEdit?.estado_subasta === 'pendiente';
 
+  // Estilos reutilizables
+  const commonInputSx = { '& .MuiOutlinedInput-root': { borderRadius: 2 } };
+  const sectionTitleSx = { 
+      textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700, 
+      color: 'text.secondary', fontSize: '0.75rem', mb: 1, 
+      display: 'flex', alignItems: 'center', gap: 1
+  };
+
   return (
-    <Dialog open={open} onClose={isLoading ? undefined : handleClose} maxWidth="md" fullWidth>
-      <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          {esEdicion ? <EditIcon color="primary" /> : <SaveIcon color="primary" />}
-          <Typography variant="h6" fontWeight="bold">
-            {esEdicion ? `Editar Lote #${loteToEdit.id}` : 'Crear Nuevo Lote'}
-          </Typography>
+    <Dialog 
+        open={open} 
+        onClose={isLoading ? undefined : handleClose} 
+        maxWidth="md" 
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 3, boxShadow: theme.shadows[10] } }}
+    >
+
+      {/* HEADER */}
+      <DialogTitle sx={{ 
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
+        pb: 2, pt: 3, px: 3,
+        bgcolor: alpha(theme.palette.primary.main, 0.04)
+      }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Avatar variant="rounded" sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}>
+            {esEdicion ? <EditIcon /> : <SaveIcon />}
+          </Avatar>
+          <Box>
+            <Typography variant="h6" fontWeight={800} color="text.primary" sx={{ lineHeight: 1.2 }}>
+                {esEdicion ? `Editar Lote #${loteToEdit.id}` : 'Crear Nuevo Lote'}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+                {esEdicion ? 'Modifique la información del lote' : 'Complete los datos para registrar un lote'}
+            </Typography>
+          </Box>
         </Box>
-        <IconButton onClick={handleClose} size="small" disabled={isLoading}>
+        <IconButton onClick={handleClose} size="small" disabled={isLoading} sx={{ color: 'text.secondary' }}>
           <CloseIcon />
         </IconButton>
       </DialogTitle>
 
-      <form onSubmit={formik.handleSubmit}>
-        <DialogContent dividers>
-          <Stack spacing={3}>
-             {/* ... (Sección Badge de Estado igual) ... */}
-             {esEdicion && (
-                // ... (código existente del badge) ...
-                <Box sx={{ p: 2, bgcolor: 'action.hover', borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
-                   {/* ... contenido del badge ... */}
-                   <Typography variant="body2">ID: {loteToEdit.id} - {loteToEdit.estado_subasta}</Typography>
-                </Box>
-             )}
+      <Divider />
 
-            {/* ... (Inputs de Texto igual que antes) ... */}
+      <form onSubmit={formik.handleSubmit}>
+        <DialogContent sx={{ p: 4 }}>
+          <Stack spacing={4}>
+
+            {/* Estado (Solo Edición) */}
+            {esEdicion && (
+                <Box sx={{ 
+                    p: 2, borderRadius: 2, 
+                    border: '1px solid', borderColor: 'divider',
+                    bgcolor: alpha(theme.palette.action.active, 0.04)
+                }}>
+                <Stack direction="row" spacing={2} alignItems="center">
+                    <Typography variant="body2" color="text.secondary"><strong>ID:</strong> {loteToEdit.id}</Typography>
+                    <Chip
+                    label={loteToEdit.estado_subasta.toUpperCase()}
+                    size="small"
+                    color={getStatusColor(loteToEdit.estado_subasta) as any}
+                    variant="outlined"
+                    sx={{ fontWeight: 800, border: '2px solid' }}
+                    />
+                    {loteToEdit.id_ganador && (
+                    <Typography variant="body2" color="success.main" fontWeight="bold">
+                        Ganador ID: {loteToEdit.id_ganador}
+                    </Typography>
+                    )}
+                </Stack>
+                </Box>
+            )}
+
+            {/* Info Básica */}
             <Box>
-                {/* ... Inputs Nombre y Precio ... */}
-                 <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
-                    <TextField 
-                        fullWidth label="Nombre del Lote" 
-                        {...formik.getFieldProps('nombre_lote')} 
-                        error={formik.touched.nombre_lote && Boolean(formik.errors.nombre_lote)}
-                        helperText={formik.touched.nombre_lote && formik.errors.nombre_lote}
-                        disabled={isLoading}
-                    />
-                    <TextField 
-                        fullWidth label="Precio Base" type="number" 
-                        {...formik.getFieldProps('precio_base')} 
-                        error={formik.touched.precio_base && Boolean(formik.errors.precio_base)}
-                        helperText={formik.touched.precio_base && formik.errors.precio_base}
-                        disabled={isLoading || !puedeEditarPrecios}
-                    />
-                 </Box>
+                <Typography sx={sectionTitleSx}><InventoryIcon fontSize="small" color="action"/> Información Básica</Typography>
+                <Stack spacing={2}>
+                    <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
+                        <TextField
+                            fullWidth label="Nombre del Lote"
+                            {...formik.getFieldProps('nombre_lote')}
+                            error={formik.touched.nombre_lote && Boolean(formik.errors.nombre_lote)}
+                            helperText={formik.touched.nombre_lote && formik.errors.nombre_lote}
+                            disabled={isLoading} sx={commonInputSx}
+                        />
+                        <TextField
+                            fullWidth type="number" label="Precio Base"
+                            {...formik.getFieldProps('precio_base')}
+                            disabled={isLoading || !puedeEditarPrecios}
+                            InputProps={{ startAdornment: <Typography sx={{ mr: 1, color: 'text.secondary' }}>$</Typography> }}
+                            sx={commonInputSx}
+                        />
+                    </Box>
+                    {subastaActiva && (
+                        <Alert severity="warning" variant="outlined" sx={{ borderRadius: 2 }}>
+                            No se puede modificar el precio base de una subasta activa.
+                        </Alert>
+                    )}
+                </Stack>
             </Box>
 
             <Divider />
 
-            {/* ... (Inputs de Proyecto y Fechas igual que antes) ... */}
-            <TextField 
-                select fullWidth label="Proyecto Asociado" 
-                {...formik.getFieldProps('id_proyecto')} 
-                value={formik.values.id_proyecto ?? ''}
-                disabled={isLoading || loadingProyectos || !puedeEditarProyecto}
-            >
-                 <MenuItem value=""><em>Sin Asignar</em></MenuItem>
-                 {proyectos.map((p) => <MenuItem key={p.id} value={p.id}>{p.nombre_proyecto}</MenuItem>)}
-            </TextField>
-
-            <Box sx={{ display: 'flex', gap: 2 }}>
-                <TextField fullWidth type="datetime-local" label="Fecha Inicio" InputLabelProps={{ shrink: true }} {...formik.getFieldProps('fecha_inicio')} disabled={isLoading || subastaActiva} />
-                <TextField fullWidth type="datetime-local" label="Fecha Fin" InputLabelProps={{ shrink: true }} {...formik.getFieldProps('fecha_fin')} disabled={isLoading || subastaFinalizada} />
+            {/* Proyecto */}
+            <Box>
+                <Typography sx={sectionTitleSx}><LinkIcon fontSize="small" color="action"/> Asociación</Typography>
+                <Stack spacing={1}>
+                    <TextField
+                        select fullWidth label="Proyecto Asociado"
+                        {...formik.getFieldProps('id_proyecto')}
+                        value={formik.values.id_proyecto ?? ''}
+                        disabled={isLoading || loadingProyectos || !puedeEditarProyecto}
+                        sx={commonInputSx}
+                    >
+                        <MenuItem value=""><em>Sin Asignar (Huérfano)</em></MenuItem>
+                        {proyectos.map((p) => (
+                        <MenuItem key={p.id} value={p.id}>{p.nombre_proyecto}</MenuItem>
+                        ))}
+                    </TextField>
+                    {!puedeEditarProyecto && (
+                        <Alert severity="info" variant="outlined" sx={{ borderRadius: 2 }}>
+                            Solo se puede cambiar el proyecto de lotes en estado "pendiente".
+                        </Alert>
+                    )}
+                </Stack>
             </Box>
 
-            <Box sx={{ display: 'flex', gap: 2 }}>
-                <TextField fullWidth label="Latitud" type="number" inputProps={{step: 'any'}} {...formik.getFieldProps('latitud')} disabled={isLoading} />
-                <TextField fullWidth label="Longitud" type="number" inputProps={{step: 'any'}} {...formik.getFieldProps('longitud')} disabled={isLoading} />
+            <Divider />
+
+            {/* Fechas */}
+            <Box>
+                <Typography sx={sectionTitleSx}><TimeIcon fontSize="small" color="action"/> Tiempos de Subasta</Typography>
+                <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
+                    <TextField
+                        fullWidth type="datetime-local" label="Inicio"
+                        InputLabelProps={{ shrink: true }}
+                        {...formik.getFieldProps('fecha_inicio')}
+                        disabled={isLoading || subastaActiva}
+                        sx={commonInputSx}
+                    />
+                    <TextField
+                        fullWidth type="datetime-local" label="Fin"
+                        InputLabelProps={{ shrink: true }}
+                        {...formik.getFieldProps('fecha_fin')}
+                        disabled={isLoading || subastaFinalizada}
+                        sx={commonInputSx}
+                    />
+                </Box>
             </Box>
 
-            {/* ✅ NUEVA SECCIÓN: IMÁGENES (Solo visible al crear) */}
+            <Divider />
+
+            {/* Ubicación */}
+            <Box>
+                <Typography sx={sectionTitleSx}><LocationIcon fontSize="small" color="action"/> Ubicación Geográfica</Typography>
+                <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
+                    <TextField
+                        fullWidth type="number" label="Latitud"
+                        {...formik.getFieldProps('latitud')}
+                        disabled={isLoading}
+                        inputProps={{ step: 'any' }}
+                        sx={commonInputSx}
+                    />
+                    <TextField
+                        fullWidth type="number" label="Longitud"
+                        {...formik.getFieldProps('longitud')}
+                        disabled={isLoading}
+                        inputProps={{ step: 'any' }}
+                        sx={commonInputSx}
+                    />
+                </Box>
+            </Box>
+
+            {/* ✅ SECCIÓN: IMÁGENES (Solo visible al crear) */}
             {!esEdicion && (
                 <>
                     <Divider />
                     <Box>
-                        <Typography variant="subtitle2" color="primary" gutterBottom fontWeight="bold" display="flex" alignItems="center" gap={1}>
-                            <ImageIcon fontSize="small"/> Imágenes Iniciales
-                        </Typography>
-                        <Alert severity="info" sx={{ mb: 2 }}>
+                        <Typography sx={sectionTitleSx}><ImageIcon fontSize="small" color="action"/> Imágenes Iniciales</Typography>
+                        <Alert severity="info" variant="filled" sx={{ mb: 2, borderRadius: 2, bgcolor: alpha(theme.palette.info.main, 0.1), color: theme.palette.info.dark }}>
                            Puedes subir imágenes ahora o gestionarlas después desde el listado.
                         </Alert>
                         
@@ -209,7 +324,7 @@ const CreateEditLoteModal: React.FC<CreateEditLoteModalProps> = ({
                             images={files} 
                             onChange={setFiles} 
                             maxFiles={5} 
-                            disabled={isLoading}
+                            disabled={isLoading} 
                         />
                     </Box>
                 </>
@@ -218,17 +333,18 @@ const CreateEditLoteModal: React.FC<CreateEditLoteModalProps> = ({
           </Stack>
         </DialogContent>
 
-        <DialogActions sx={{ p: 3 }}>
-          <Button onClick={handleClose} variant="outlined" color="inherit" disabled={isLoading}>
-            Cancelar
-          </Button>
+        <Divider />
+
+        <DialogActions sx={{ p: 3, bgcolor: alpha(theme.palette.background.default, 0.5) }}>
+          <Button onClick={handleClose} disabled={isLoading} color="inherit" sx={{ borderRadius: 2 }}>Cancelar</Button>
           <Button
             type="submit"
             variant="contained"
             disabled={isLoading || !formik.isValid}
             startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
+            sx={{ px: 4, borderRadius: 2, fontWeight: 700 }}
           >
-            {isLoading ? 'Procesando...' : esEdicion ? 'Guardar Cambios' : 'Crear Lote'}
+            {isLoading ? 'Guardando...' : esEdicion ? 'Guardar Cambios' : 'Crear Lote'}
           </Button>
         </DialogActions>
       </form>

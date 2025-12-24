@@ -2,8 +2,8 @@ import { useState, useCallback } from 'react';
 
 // 1. Definimos todas las acciones posibles en la app
 export type ConfirmAction =
-  | 'cancel_subscription'// Usuario cancela
-  | 'admin_cancel_subscription' // Admin cancela (NUEVO)
+  | 'cancel_subscription'
+  | 'admin_cancel_subscription'
   | 'remove_favorite'
   | 'delete_account'
   | 'logout'
@@ -15,13 +15,14 @@ export type ConfirmAction =
   | 'end_auction'
   | 'delete_plantilla'
   | 'toggle_plantilla_status'
+  | 'approve_kyc' // ✅ NUEVO: Acción para aprobar KYC
   | null;
 
 interface ConfirmConfig {
   title: string;
   description: string;
   confirmText: string;
-  severity: 'error' | 'warning' | 'info';
+  severity: 'error' | 'warning' | 'info' | 'success'; // Agregué 'success' por si acaso, aunque MUI usa info/success similares en alerts
 }
 
 // 2. Configuración centralizada de textos y colores
@@ -58,19 +59,19 @@ const CONFIRM_CONFIGS: Record<NonNullable<ConfirmAction>, ConfirmConfig> = {
   },
   toggle_project_visibility: {
     title: '¿Cambiar visibilidad del proyecto?',
-    description: '', // Se construye dinámicamente
+    description: '', 
     confirmText: 'Confirmar',
     severity: 'warning',
   },
   toggle_user_status: {
     title: '¿Cambiar estado del usuario?',
-    description: '', // Se construye dinámicamente
+    description: '', 
     confirmText: 'Confirmar',
     severity: 'warning',
   },
   toggle_lote_visibility: {
     title: '¿Cambiar visibilidad del lote?',
-    description: '', // Se construye dinámicamente
+    description: '', 
     confirmText: 'Confirmar',
     severity: 'warning',
   },
@@ -82,27 +83,34 @@ const CONFIRM_CONFIGS: Record<NonNullable<ConfirmAction>, ConfirmConfig> = {
   },
   start_auction: {
     title: '¿Iniciar subasta del lote?',
-    description: '', // Se construye dinámicamente
+    description: '', 
     confirmText: 'Sí, iniciar subasta',
     severity: 'warning',
   },
   end_auction: {
     title: '¿Finalizar subasta del lote?',
-    description: '', // Se construye dinámicamente
+    description: '', 
     confirmText: 'Sí, finalizar subasta',
     severity: 'error',
   },
   delete_plantilla: {
     title: '¿Eliminar plantilla?',
-    description: '', // Se construye dinámicamente
+    description: '', 
     confirmText: 'Sí, eliminar',
     severity: 'error',
   },
   toggle_plantilla_status: {
     title: '¿Cambiar estado de la plantilla?',
-    description: '', // Se construye dinámicamente
+    description: '', 
     confirmText: 'Confirmar',
     severity: 'warning',
+  },
+  // ✅ Configuración base para KYC
+  approve_kyc: {
+    title: '¿Aprobar verificación?',
+    description: 'El usuario será habilitado para operar.',
+    confirmText: 'Sí, Aprobar',
+    severity: 'info', 
   },
 };
 
@@ -131,6 +139,19 @@ export const useConfirmDialog = () => {
     if (!state.action) return null;
 
     const baseConfig = CONFIRM_CONFIGS[state.action];
+
+    // --- CASOS DINÁMICOS ---
+
+    // Caso especial: approve_kyc (NUEVO)
+    if (state.action === 'approve_kyc' && state.data) {
+        const userName = state.data.nombre_completo || 'el usuario';
+        return {
+            title: `¿Aprobar verificación KYC?`,
+            description: `Estás a punto de validar la identidad de ${userName}. El usuario recibirá una notificación y quedará habilitado para operar en la plataforma.`,
+            confirmText: 'Sí, Aprobar Verificación',
+            severity: 'info', // O 'success' si tu ConfirmDialog lo soporta
+        };
+    }
 
     // Caso especial: toggle_project_visibility
     if (state.action === 'toggle_project_visibility' && state.data) {
@@ -225,7 +246,8 @@ export const useConfirmDialog = () => {
         severity: isActive ? 'warning' : 'info',
       };
     }
-// NUEVO CASO: Admin cancela suscripción
+
+    // Caso especial: Admin cancela suscripción
     if (state.action === 'admin_cancel_subscription' && state.data) {
       const userName = `${state.data.usuario?.nombre} ${state.data.usuario?.apellido}`;
       const lote = state.data.nombre_lote || `ID ${state.data.id}`;
@@ -237,6 +259,7 @@ export const useConfirmDialog = () => {
         severity: 'error',
       };
     }
+
     return baseConfig;
   };
 

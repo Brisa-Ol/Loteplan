@@ -1,39 +1,41 @@
+// src/pages/Admin/ResumenesCuenta/AdminResumenesCuenta.tsx
+
 import React, { useState, useMemo } from 'react';
 import {
   Box, Typography, Paper, TextField, MenuItem,
-  InputAdornment, Chip, IconButton, Tooltip, LinearProgress
+  InputAdornment, Chip, IconButton, Tooltip, LinearProgress, useTheme, alpha
 } from '@mui/material';
 import {
   Search, Visibility, CheckCircle, AccessTime
 } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
 
+// --- SERVICIOS ---
+import ResumenCuentaService from '../../../Services/resumenCuenta.service';
 import type { ResumenCuentaDto } from '../../../types/dto/resumenCuenta.dto';
 
 // --- COMPONENTES ---
 import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
 import { QueryHandler } from '../../../components/common/QueryHandler/QueryHandler';
-import { DataTable, type DataTableColumn } from '../../../components/common/DataTable/DataTable'; 
-
 import { PageHeader } from '../../../components/common/PageHeader/PageHeader';
+import { DataTable, type DataTableColumn } from '../../../components/common/DataTable/DataTable';
 
-// ✅ 1. Importar Hook
+// Hooks y Modales
 import { useModal } from '../../../hooks/useModal';
-import ResumenCuentaService from '../../../Services/resumenCuenta.service';
 import DetalleResumenModal from './modals/DetalleResumenModal';
 
 const AdminResumenesCuenta: React.FC = () => {
+  const theme = useTheme();
 
   // --- ESTADOS DE FILTRO ---
   const [searchTerm, setSearchTerm] = useState('');
   const [filterState, setFilterState] = useState<'all' | 'active' | 'completed' | 'overdue'>('all');
 
-  // ✅ 2. Hook useModal
+  // Hooks
   const detalleModal = useModal();
-  // Estado de Datos
   const [selectedResumen, setSelectedResumen] = useState<ResumenCuentaDto | null>(null);
 
-  // --- QUERY: Obtener todos los resúmenes (Admin) ---
+  // --- QUERY ---
   const { data: resumenes = [], isLoading, error } = useQuery({
     queryKey: ['adminResumenes'],
     queryFn: async () => {
@@ -42,7 +44,7 @@ const AdminResumenesCuenta: React.FC = () => {
     },
   });
 
-  // --- FILTRADO ---
+  // --- FILTRADO (Memoized) ---
   const filteredResumenes = useMemo(() => {
     return resumenes.filter(resumen => {
       const term = searchTerm.toLowerCase();
@@ -64,7 +66,7 @@ const AdminResumenesCuenta: React.FC = () => {
     });
   }, [resumenes, searchTerm, filterState]);
 
-  // ✅ 3. Handlers
+  // Handlers
   const handleVerDetalle = (resumen: ResumenCuentaDto) => {
     setSelectedResumen(resumen);
     detalleModal.open();
@@ -72,17 +74,19 @@ const AdminResumenesCuenta: React.FC = () => {
 
   const handleCloseModal = () => {
     detalleModal.close();
-    setSelectedResumen(null);
+    // Timeout para limpieza suave
+    setTimeout(() => setSelectedResumen(null), 300);
   };
 
-  // --- COLUMNAS DE LA TABLA ---
-  const columns: DataTableColumn<ResumenCuentaDto>[] = [
+  // --- COLUMNAS (Memoized) ---
+  const columns = useMemo<DataTableColumn<ResumenCuentaDto>[]>(() => [
     {
       id: 'id',
       label: 'ID',
+      minWidth: 80,
       render: (resumen) => (
         <Box>
-          <Typography variant="body2" fontWeight={600}>#{resumen.id}</Typography>
+          <Typography variant="body2" fontWeight={700}>#{resumen.id}</Typography>
           <Typography variant="caption" color="text.secondary">
             Susc. {resumen.id_suscripcion}
           </Typography>
@@ -92,20 +96,22 @@ const AdminResumenesCuenta: React.FC = () => {
     {
       id: 'proyecto',
       label: 'Proyecto',
+      minWidth: 200,
       render: (resumen) => (
         <Box>
-          <Typography variant="body2" fontWeight={500}>
+          <Typography variant="body2" fontWeight={600} color="text.primary">
             {resumen.nombre_proyecto}
           </Typography>
           <Typography variant="caption" color="text.secondary">
-            {resumen.meses_proyecto} meses
+            Plan de {resumen.meses_proyecto} meses
           </Typography>
         </Box>
       )
     },
     {
       id: 'cuotas',
-      label: 'Cuotas Pagadas',
+      label: 'Progreso Cuotas',
+      minWidth: 150,
       render: (resumen) => (
         <Box>
           <Typography variant="body2" fontWeight={600}>
@@ -113,10 +119,11 @@ const AdminResumenesCuenta: React.FC = () => {
           </Typography>
           {resumen.cuotas_vencidas > 0 && (
             <Chip
-              label={`${resumen.cuotas_vencidas} vencidas`}
+              label={`${resumen.cuotas_vencidas} vencida(s)`}
               color="error"
               size="small"
-              sx={{ mt: 0.5 }}
+              variant="outlined"
+              sx={{ mt: 0.5, fontWeight: 700, fontSize: '0.65rem', height: 20 }}
             />
           )}
         </Box>
@@ -124,20 +131,27 @@ const AdminResumenesCuenta: React.FC = () => {
     },
     {
       id: 'progreso',
-      label: 'Progreso',
+      label: 'Avance',
+      minWidth: 140,
       render: (resumen) => (
-        <Box sx={{ minWidth: 120 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-            <LinearProgress
-              variant="determinate"
-              value={resumen.porcentaje_pagado}
-              sx={{ flex: 1, height: 8, borderRadius: 4 }}
-              color={resumen.porcentaje_pagado >= 100 ? 'success' : 'primary'}
-            />
-            <Typography variant="caption" fontWeight="bold">
-              {resumen.porcentaje_pagado.toFixed(1)}%
+        <Box sx={{ width: '100%', mr: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
+            <Typography variant="caption" fontWeight="bold" color="text.secondary">
+               {resumen.porcentaje_pagado.toFixed(0)}%
             </Typography>
           </Box>
+          <LinearProgress
+            variant="determinate"
+            value={Math.min(resumen.porcentaje_pagado, 100)}
+            sx={{ 
+                height: 6, 
+                borderRadius: 3,
+                bgcolor: alpha(theme.palette.primary.main, 0.1),
+                '& .MuiLinearProgress-bar': {
+                    bgcolor: resumen.porcentaje_pagado >= 100 ? theme.palette.success.main : theme.palette.primary.main
+                }
+            }}
+          />
         </Box>
       )
     },
@@ -150,19 +164,21 @@ const AdminResumenesCuenta: React.FC = () => {
 
         return (
           <Chip
-            label={isCompleted ? 'Completado' : hasOverdue ? 'Con Vencidas' : 'Activo'}
+            label={isCompleted ? 'Completado' : hasOverdue ? 'Con Deuda' : 'Al Día'}
             color={isCompleted ? 'success' : hasOverdue ? 'error' : 'info'}
             size="small"
-            icon={isCompleted ? <CheckCircle fontSize="small" /> : hasOverdue ? <AccessTime fontSize="small" /> : undefined}
+            variant={isCompleted ? 'filled' : 'outlined'}
+            icon={isCompleted ? <CheckCircle sx={{ fontSize: '14px !important' }} /> : hasOverdue ? <AccessTime sx={{ fontSize: '14px !important' }} /> : undefined}
+            sx={{ fontWeight: 600 }}
           />
         );
       }
     },
     {
       id: 'cuota_mensual',
-      label: 'Cuota Mensual',
+      label: 'Valor Cuota',
       render: (resumen) => (
-        <Typography variant="body2" fontWeight={600} color="primary">
+        <Typography variant="body2" fontWeight={700} color="primary.main" sx={{ fontFamily: 'monospace' }}>
           ${resumen.detalle_cuota.valor_mensual_final.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
         </Typography>
       )
@@ -172,19 +188,22 @@ const AdminResumenesCuenta: React.FC = () => {
       label: 'Acciones',
       align: 'right',
       render: (resumen) => (
-        <Tooltip title="Ver Detalle">
+        <Tooltip title="Ver Detalle Completo">
           <IconButton
             size="small"
-            // ✅ Usar handler
             onClick={() => handleVerDetalle(resumen)}
-            color="primary"
+            sx={{ 
+                color: 'primary.main', 
+                bgcolor: alpha(theme.palette.primary.main, 0.1),
+                '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) }
+            }}
           >
             <Visibility fontSize="small" />
           </IconButton>
         </Tooltip>
       )
     }
-  ];
+  ], [theme]);
 
   return (
     <PageContainer maxWidth="xl">
@@ -195,8 +214,15 @@ const AdminResumenesCuenta: React.FC = () => {
       />
 
       {/* Barra de Filtros */}
-      <Paper sx={{ p: 2, mb: 3, display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center', borderRadius: 2 }} elevation={0} variant="outlined">
-
+      <Paper 
+        elevation={0} 
+        sx={{ 
+            p: 2, mb: 3, borderRadius: 2, 
+            border: '1px solid', borderColor: 'divider', 
+            bgcolor: alpha(theme.palette.background.paper, 0.6),
+            display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center'
+        }} 
+      >
         <TextField
           placeholder="Buscar por proyecto, ID resumen o ID suscripción..."
           size="small"
@@ -204,28 +230,25 @@ const AdminResumenesCuenta: React.FC = () => {
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <Search />
-              </InputAdornment>
-            )
+            startAdornment: <InputAdornment position="start"><Search color="action"/></InputAdornment>,
+            sx: { borderRadius: 2 }
           }}
         />
 
         <TextField
           select
-          label="Estado"
+          label="Filtrar por Estado"
           size="small"
           value={filterState}
           onChange={(e) => setFilterState(e.target.value as any)}
-          sx={{ minWidth: 180 }}
+          sx={{ minWidth: 200 }}
+          InputProps={{ sx: { borderRadius: 2 } }}
         >
-          <MenuItem value="all">Todos</MenuItem>
-          <MenuItem value="active">Activos</MenuItem>
-          <MenuItem value="completed">Completados</MenuItem>
+          <MenuItem value="all">Todos los Estados</MenuItem>
+          <MenuItem value="active">Activos (Al día)</MenuItem>
           <MenuItem value="overdue">Con Vencidas</MenuItem>
+          <MenuItem value="completed">Completados</MenuItem>
         </TextField>
-
       </Paper>
 
       {/* Tabla */}
@@ -233,18 +256,17 @@ const AdminResumenesCuenta: React.FC = () => {
         <DataTable
           columns={columns}
           data={filteredResumenes}
-          // ✅ CORRECCIÓN AQUÍ: Agregamos getRowKey
           getRowKey={(row) => row.id} 
-          emptyMessage="No se encontraron resúmenes de cuenta."
+          emptyMessage="No se encontraron resúmenes de cuenta con los filtros actuales."
           pagination={true}
           defaultRowsPerPage={10}
         />
       </QueryHandler>
 
-      {/* ✅ Modal con Hook */}
+      {/* Modal Detalle */}
       <DetalleResumenModal
-        open={detalleModal.isOpen} // ✅
-        onClose={handleCloseModal} // ✅
+        open={detalleModal.isOpen}
+        onClose={handleCloseModal}
         resumen={selectedResumen}
       />
     </PageContainer>

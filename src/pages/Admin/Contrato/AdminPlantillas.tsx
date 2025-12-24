@@ -1,16 +1,19 @@
+// src/pages/Admin/Plantillas/AdminPlantillas.tsx
+
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
   Box, Typography, Paper, Chip, IconButton, Tooltip, 
-  Stack, Button, TextField, MenuItem, InputAdornment, useTheme, Switch, CircularProgress, alpha, Snackbar, Alert
+  Stack, Button, TextField, MenuItem, InputAdornment, useTheme, Switch, CircularProgress, alpha, Snackbar, Alert, Divider
 } from '@mui/material';
 import { 
   Search, Upload as UploadIcon, Add as AddIcon,
-  Edit as EditIcon, Delete as DeleteIcon
+  Edit as EditIcon, Delete as DeleteIcon,
+  Description as FileIcon
 } from '@mui/icons-material'; 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 // --- DTOs y Servicios ---
-import type { ContratoPlantillaDto, CreatePlantillaDto, UpdatePlantillaPdfDto } from '../../../types/dto/contrato.dto';
+import type { ContratoPlantillaDto } from '../../../types/dto/contrato.dto';
 import ContratoPlantillaService from '../../../Services/contrato-plantilla.service';
 import ProyectoService from '../../../Services/proyecto.service';
 
@@ -36,11 +39,7 @@ const AdminPlantillas: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterProject, setFilterProject] = useState('all');
   const [plantillaSelected, setPlantillaSelected] = useState<ContratoPlantillaDto | null>(null);
-  
-  // Estado para el efecto Flash
   const [highlightedId, setHighlightedId] = useState<number | null>(null);
-
-  // Ref para mantener el estado inicial de visibilidad (sticky sort)
   const initialStatusRef = useRef<Record<number, boolean>>({});
 
   // 2. Modales Hooks
@@ -49,7 +48,6 @@ const AdminPlantillas: React.FC = () => {
   const updateMetaModal = useModal();
   const confirmDialog = useConfirmDialog();
 
-  // Estado del Snackbar
   const [snackbar, setSnackbar] = useState<{ open: boolean, message: string, severity: 'success' | 'error' | 'info' }>({
     open: false, message: '', severity: 'success'
   });
@@ -58,7 +56,6 @@ const AdminPlantillas: React.FC = () => {
     setSnackbar({ open: true, message, severity });
   };
 
-  // Auto-filtro desde URL
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const proyectoId = params.get('proyecto');
@@ -78,7 +75,6 @@ const AdminPlantillas: React.FC = () => {
     staleTime: 1000 * 60 * 30 // 30 min cache
   });
 
-  // --- EFECTO PARA CAPTURAR ESTADO INICIAL ---
   useEffect(() => {
     if (plantillas.length > 0) {
       plantillas.forEach(p => {
@@ -89,20 +85,17 @@ const AdminPlantillas: React.FC = () => {
     }
   }, [plantillas]);
 
-  // 4. Lógica de Filtrado y Stats (Memoized)
+  // 4. Lógica de Filtrado (Memoized)
   const filteredPlantillas = useMemo(() => {
     const term = searchTerm.toLowerCase();
     
-    // 1. Filtrado
     const filtered = plantillas.filter(plantilla => {
       const matchesSearch = plantilla.nombre_archivo.toLowerCase().includes(term);
       const matchesProject = filterProject === 'all' || plantilla.id_proyecto === Number(filterProject);
       return matchesSearch && matchesProject;
     });
 
-    // 2. Ordenamiento "Sticky"
     return filtered.sort((a, b) => {
-      // Usamos el estado guardado en el Ref para ordenar
       const statusA = initialStatusRef.current[a.id] ?? a.activo;
       const statusB = initialStatusRef.current[b.id] ?? b.activo;
 
@@ -153,8 +146,6 @@ const AdminPlantillas: React.FC = () => {
     onSuccess: (_, plantilla) => {
       queryClient.invalidateQueries({ queryKey: ['adminPlantillas'] });
       confirmDialog.close();
-      
-      // Efecto Flash
       setHighlightedId(plantilla.id);
       setTimeout(() => setHighlightedId(null), 2500);
       showMessage(plantilla.activo ? 'Plantilla ocultada' : 'Plantilla activada', 'success');
@@ -172,7 +163,7 @@ const AdminPlantillas: React.FC = () => {
     onError: handleError
   });
 
-  // --- HANDLERS ---
+  // Handlers
   const handleToggleActive = (plantilla: ContratoPlantillaDto) => {
     confirmDialog.confirm('toggle_plantilla_status', plantilla);
   };
@@ -192,7 +183,6 @@ const AdminPlantillas: React.FC = () => {
     }
   };
 
-  // UI Open/Close Handlers
   const handleOpenUpdatePdf = (row: ContratoPlantillaDto) => {
     setPlantillaSelected(row);
     updatePdfModal.open(); 
@@ -203,38 +193,43 @@ const AdminPlantillas: React.FC = () => {
     updateMetaModal.open();
   };
 
-  // 6. Columnas
+  // 6. Columnas (Memoized)
   const columns = useMemo<DataTableColumn<ContratoPlantillaDto>[]>(() => [
     { id: 'id', label: 'ID', minWidth: 50 },
     { 
       id: 'nombre_archivo', label: 'Nombre / Archivo', minWidth: 250,
       render: (row) => (
-        <Box>
-          <Typography variant="body2" fontWeight={600} color={row.activo ? 'text.primary' : 'text.disabled'}>
-            {row.nombre_archivo}
-          </Typography>
-          <Tooltip title={row.hash_archivo_original}>
-            <Typography variant="caption" sx={{ fontFamily: 'monospace', color: theme.palette.text.secondary }}>
-               {row.hash_archivo_original?.substring(0, 10)}...
+        <Stack direction="row" spacing={2} alignItems="center">
+            <FileIcon color={row.activo ? 'action' : 'disabled'} />
+            <Box>
+            <Typography variant="body2" fontWeight={600} color={row.activo ? 'text.primary' : 'text.disabled'}>
+                {row.nombre_archivo}
             </Typography>
-          </Tooltip>
-        </Box>
+            <Tooltip title={row.hash_archivo_original}>
+                <Typography variant="caption" sx={{ fontFamily: 'monospace', color: theme.palette.text.secondary }}>
+                Hash: {row.hash_archivo_original?.substring(0, 8)}...
+                </Typography>
+            </Tooltip>
+            </Box>
+        </Stack>
       )
     },
     { 
-      id: 'version', label: 'Ver.', align: 'center',
-      render: (row) => <Chip label={`v${row.version}`} size="small" variant="outlined" sx={{ borderColor: theme.palette.divider }} />
+      id: 'version', label: 'Versión', align: 'center',
+      render: (row) => <Chip label={`v${row.version}`} size="small" variant="outlined" sx={{ fontWeight: 600 }} />
     },
     { 
-      id: 'id_proyecto', label: 'Proyecto', minWidth: 180,
+      id: 'id_proyecto', label: 'Proyecto Asignado', minWidth: 180,
       render: (row) => row.id_proyecto ? (
         <Chip 
           label={proyectos.find(p => p.id === row.id_proyecto)?.nombre_proyecto || `ID: ${row.id_proyecto}`} 
           color="primary" 
+          variant="outlined"
           size="small" 
+          sx={{ fontWeight: 600, border: '1px solid' }}
         />
       ) : (
-        <Chip label="Global" size="small" variant="outlined" />
+        <Chip label="Global" size="small" variant="outlined" color="default" />
       )
     },
     {
@@ -247,15 +242,26 @@ const AdminPlantillas: React.FC = () => {
         return (
           <Stack direction="row" alignItems="center" spacing={1} justifyContent="center">
             {isProcessingThis ? (
-              <CircularProgress size={24} color="inherit" />
+              <CircularProgress size={20} color="inherit" />
             ) : (
-              <Switch
-                checked={row.activo}
-                onChange={() => handleToggleActive(row)}
-                color="success"
-                size="small"
-                disabled={toggleActiveMutation.isPending || softDeleteMutation.isPending}
-              />
+                <Tooltip title={row.activo ? 'Desactivar Plantilla' : 'Activar Plantilla'}>
+                    <Switch
+                        checked={row.activo}
+                        onChange={() => handleToggleActive(row)}
+                        color="success"
+                        size="small"
+                        disabled={toggleActiveMutation.isPending || softDeleteMutation.isPending}
+                        sx={{
+                            '& .MuiSwitch-switchBase.Mui-checked': {
+                                color: theme.palette.success.main,
+                                '&:hover': { backgroundColor: alpha(theme.palette.success.main, 0.1) },
+                            },
+                            '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                                backgroundColor: theme.palette.success.main,
+                            },
+                        }}
+                    />
+                </Tooltip>
             )}
             
             {!isProcessingThis && (
@@ -281,6 +287,7 @@ const AdminPlantillas: React.FC = () => {
               size="small" 
               onClick={() => handleOpenUpdateMeta(row)}
               disabled={toggleActiveMutation.isPending || softDeleteMutation.isPending}
+              sx={{ '&:hover': { color: theme.palette.primary.main } }}
             >
               <EditIcon fontSize="small" />
             </IconButton>
@@ -290,7 +297,7 @@ const AdminPlantillas: React.FC = () => {
               size="small" 
               onClick={() => handleOpenUpdatePdf(row)} 
               disabled={!row.activo || toggleActiveMutation.isPending || softDeleteMutation.isPending} 
-              sx={{ color: theme.palette.primary.main }}
+              sx={{ color: theme.palette.info.main, '&:hover': { bgcolor: alpha(theme.palette.info.main, 0.1) } }}
             >
               <UploadIcon fontSize="small" />
             </IconButton>
@@ -300,7 +307,7 @@ const AdminPlantillas: React.FC = () => {
               size="small" 
               onClick={() => handleDelete(row)} 
               disabled={toggleActiveMutation.isPending || softDeleteMutation.isPending}
-              sx={{ color: theme.palette.error.main }}
+              sx={{ color: theme.palette.error.main, '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.1) } }}
             >
               <DeleteIcon fontSize="small" />
             </IconButton>
@@ -312,24 +319,44 @@ const AdminPlantillas: React.FC = () => {
 
   return (
     <PageContainer maxWidth="xl">
-      <PageHeader title="Gestión de Plantillas" subtitle="Administración de documentos base." />
+      <PageHeader title="Gestión de Plantillas" subtitle="Administración de documentos base y contratos legales." />
 
-      <Paper sx={{ p: 2, mb: 3, borderRadius: 2 }} elevation={0} variant="outlined">
-        {/* Toolbar */}
+      <Paper 
+        elevation={0} 
+        sx={{ 
+            p: 2, mb: 3, borderRadius: 2, 
+            border: '1px solid', borderColor: 'divider', 
+            bgcolor: alpha(theme.palette.background.paper, 0.6)
+        }} 
+      >
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="center">
           <TextField 
-            placeholder="Buscar..." size="small" value={searchTerm} 
+            placeholder="Buscar por nombre de archivo..." size="small" value={searchTerm} 
             onChange={(e) => setSearchTerm(e.target.value)} sx={{ flexGrow: 1 }}
-            InputProps={{ startAdornment: (<InputAdornment position="start"><Search color="action" /></InputAdornment>) }}
+            InputProps={{ 
+                startAdornment: <InputAdornment position="start"><Search color="action" /></InputAdornment>,
+                sx: { borderRadius: 2 }
+            }}
           />
           <TextField
-            select label="Filtrar Proyecto" size="small" value={filterProject}
+            select label="Filtrar por Proyecto" size="small" value={filterProject}
             onChange={(e) => setFilterProject(e.target.value)} sx={{ minWidth: 220 }}
+            InputProps={{ sx: { borderRadius: 2 } }}
           >
-            <MenuItem value="all"><em>Todos</em></MenuItem>
+            <MenuItem value="all"><em>Todos los Proyectos</em></MenuItem>
             {proyectos.map(p => <MenuItem key={p.id} value={p.id}>{p.nombre_proyecto}</MenuItem>)}
           </TextField>
-          <Button variant="contained" startIcon={<AddIcon />} onClick={createModal.open}>Nuevo Contrato</Button>
+          
+          <Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', md: 'block' }, mx: 1 }} />
+
+          <Button 
+            variant="contained" 
+            startIcon={<AddIcon />} 
+            onClick={createModal.open}
+            sx={{ borderRadius: 2, fontWeight: 700, boxShadow: theme.shadows[2] }}
+          >
+            Nuevo Contrato
+          </Button>
         </Stack>
       </Paper>
 
@@ -340,16 +367,22 @@ const AdminPlantillas: React.FC = () => {
           getRowKey={(row) => row.id} 
           pagination 
           defaultRowsPerPage={10} 
+          emptyMessage="No se encontraron plantillas con los filtros actuales."
           getRowSx={(row) => {
             const isHighlighted = highlightedId === row.id;
             return { 
               opacity: row.activo ? 1 : 0.6,
               transition: 'background-color 0.8s ease, opacity 0.3s ease',
               bgcolor: isHighlighted 
-                ? (theme) => alpha(theme.palette.success.main, 0.2)
+                ? alpha(theme.palette.success.main, 0.15)
                 : row.integrity_compromised 
-                  ? theme.palette.error.light 
-                  : (row.activo ? 'inherit' : 'action.hover')
+                  ? alpha(theme.palette.error.main, 0.1) 
+                  : (row.activo ? 'inherit' : alpha(theme.palette.action.hover, 0.5)),
+              '&:hover': {
+                bgcolor: isHighlighted 
+                  ? alpha(theme.palette.success.main, 0.2)
+                  : alpha(theme.palette.action.hover, 0.8)
+              }
             };
           }}
         />
@@ -401,6 +434,7 @@ const AdminPlantillas: React.FC = () => {
           severity={snackbar.severity} 
           onClose={() => setSnackbar(prev => ({ ...prev, open: false }))} 
           variant="filled"
+          sx={{ boxShadow: theme.shadows[4] }}
         >
           {snackbar.message}
         </Alert>

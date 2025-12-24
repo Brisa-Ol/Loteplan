@@ -1,16 +1,18 @@
 // src/pages/Admin/Suscripciones/modals/DetalleSuscripcionModal.tsx
+
 import React from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button,
-  Box, Typography, Chip, Stack, Paper, Alert,
-  IconButton, Divider
+  Box, Typography, Chip, Stack, Paper, IconButton, Divider,
+  useTheme, alpha
 } from '@mui/material';
 import { 
   Close as CloseIcon,
   Person,
   AccountBalance,
   MonetizationOn,
-  Token
+  Token,
+  CalendarToday
 } from '@mui/icons-material';
 import type { SuscripcionDto } from '../../../../types/dto/suscripcion.dto';
 
@@ -21,159 +23,234 @@ interface Props {
 }
 
 const DetalleSuscripcionModal: React.FC<Props> = ({ open, onClose, suscripcion }) => {
+  const theme = useTheme();
 
   if (!suscripcion) return null;
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+    <Dialog 
+      open={open} 
+      onClose={onClose} 
+      maxWidth="md" 
+      fullWidth
+      PaperProps={{
+        sx: { borderRadius: 3, boxShadow: theme.shadows[10] }
+      }}
+    >
+      {/* HEADER */}
       <DialogTitle sx={{ 
         display: 'flex', 
         justifyContent: 'space-between', 
         alignItems: 'center',
-        pb: 2 
+        bgcolor: alpha(theme.palette.primary.main, 0.04),
+        pb: 2, pt: 3, px: 3
       }}>
-        <Stack direction="row" alignItems="center" spacing={1}>
-          <AccountBalance color="primary" />
-          <Typography variant="h6" fontWeight="bold">
-            Detalle de Suscripción #{suscripcion.id}
-          </Typography>
+        <Stack direction="row" alignItems="center" spacing={1.5}>
+          <Box sx={{ 
+            bgcolor: alpha(theme.palette.primary.main, 0.1), 
+            p: 1, borderRadius: '50%', display: 'flex' 
+          }}>
+            <AccountBalance color="primary" fontSize="small" />
+          </Box>
+          <Box>
+            <Typography variant="h6" fontWeight="bold" lineHeight={1.2}>
+              Detalle de Suscripción
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              ID: #{suscripcion.id}
+            </Typography>
+          </Box>
         </Stack>
-        <IconButton onClick={onClose} size="small">
+        <IconButton onClick={onClose} size="small" sx={{ color: 'text.secondary' }}>
           <CloseIcon />
         </IconButton>
       </DialogTitle>
+      
+      <Divider />
 
-      <DialogContent dividers>
-        <Stack spacing={3} sx={{ mt: 1 }}>
+      <DialogContent sx={{ bgcolor: alpha(theme.palette.background.default, 0.4), p: 4 }}>
+        <Stack spacing={3}>
           
-          {/* 1. Información General (Campos de SuscripcionDto + BaseDTO) */}
-          <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
-            <Typography variant="subtitle2" color="primary.main" fontWeight="bold" gutterBottom>
-              Información General
-            </Typography>
-            <Stack spacing={1} mt={2}>
-              <Stack direction="row" justifyContent="space-between">
-                <Typography variant="body2" color="text.secondary">Estado:</Typography>
+          {/* 1. Información General */}
+          <Paper 
+            elevation={0} 
+            sx={{ 
+              p: 2.5, borderRadius: 2, 
+              border: '1px solid', borderColor: 'divider' 
+            }}
+          >
+            <Stack direction="row" spacing={1} alignItems="center" mb={2}>
+                <CalendarToday fontSize="small" color="action" />
+                <Typography variant="subtitle2" fontWeight={800} color="text.primary">
+                    INFORMACIÓN GENERAL
+                </Typography>
+            </Stack>
+
+            <Stack spacing={1.5}>
+              <Stack direction="row" justifyContent="space-between" alignItems="center">
+                <Typography variant="body2" color="text.secondary">Estado Actual:</Typography>
                 <Chip 
-                  label={suscripcion.activo ? 'Activa' : 'Cancelada'} 
+                  label={suscripcion.activo ? 'ACTIVA' : 'CANCELADA'} 
                   size="small" 
                   color={suscripcion.activo ? 'success' : 'default'}
+                  variant={suscripcion.activo ? 'filled' : 'outlined'}
+                  sx={{ fontWeight: 700, fontSize: '0.7rem' }}
                 />
               </Stack>
+              <Divider sx={{ borderStyle: 'dashed' }} />
               <Stack direction="row" justifyContent="space-between">
-                <Typography variant="body2" color="text.secondary">Fecha:</Typography>
+                <Typography variant="body2" color="text.secondary">Fecha de Alta:</Typography>
                 <Typography variant="body2" fontWeight={600}>
-                  {/* Se asume createdAt por BaseDTO, si no existe en tu BaseDTO, quitar esta línea */}
                   {suscripcion.createdAt 
-                    ? new Date(suscripcion.createdAt).toLocaleDateString('es-AR') 
+                    ? new Date(suscripcion.createdAt).toLocaleDateString('es-AR', {
+                        day: '2-digit', month: 'long', year: 'numeric'
+                      }) 
                     : '-'}
                 </Typography>
               </Stack>
             </Stack>
           </Paper>
 
-          {/* 2. Usuario (suscripcion.usuario) */}
-          <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
-            <Stack direction="row" alignItems="center" spacing={1} mb={2}>
-              <Person color="action" />
-              <Typography variant="subtitle2" fontWeight="bold">Usuario</Typography>
-            </Stack>
-            <Stack spacing={1}>
-              <Stack direction="row" justifyContent="space-between">
-                <Typography variant="body2" color="text.secondary">Nombre:</Typography>
-                <Typography variant="body2" fontWeight={600}>
-                  {suscripcion.usuario?.nombre} {suscripcion.usuario?.apellido}
-                </Typography>
-              </Stack>
-              <Stack direction="row" justifyContent="space-between">
-                <Typography variant="body2" color="text.secondary">Email:</Typography>
-                <Typography variant="body2" fontWeight={600}>
-                  {suscripcion.usuario?.email}
-                </Typography>
-              </Stack>
-            </Stack>
-          </Paper>
+          {/* 2. Usuario y Proyecto (Grid 2 columnas) */}
+          <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+            
+            {/* Usuario */}
+            <Paper 
+                elevation={0}
+                sx={{ 
+                    flex: 1, p: 2.5, borderRadius: 2, 
+                    border: '1px solid', borderColor: 'divider' 
+                }}
+            >
+                <Stack direction="row" alignItems="center" spacing={1} mb={2}>
+                    <Person color="primary" fontSize="small" />
+                    <Typography variant="subtitle2" fontWeight={800}>USUARIO</Typography>
+                </Stack>
+                <Stack spacing={1}>
+                    <Box>
+                        <Typography variant="caption" color="text.secondary">Nombre Completo</Typography>
+                        <Typography variant="body2" fontWeight={600}>
+                            {suscripcion.usuario?.nombre} {suscripcion.usuario?.apellido}
+                        </Typography>
+                    </Box>
+                    <Box>
+                        <Typography variant="caption" color="text.secondary">Email</Typography>
+                        <Typography variant="body2" fontWeight={500} sx={{ wordBreak: 'break-all' }}>
+                            {suscripcion.usuario?.email}
+                        </Typography>
+                    </Box>
+                </Stack>
+            </Paper>
 
-          {/* 3. Proyecto (suscripcion.proyectoAsociado) */}
-          <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
-            <Stack direction="row" alignItems="center" spacing={1} mb={2}>
-              <AccountBalance color="action" />
-              <Typography variant="subtitle2" fontWeight="bold">Proyecto</Typography>
-            </Stack>
-            <Stack spacing={1}>
-              <Stack direction="row" justifyContent="space-between">
-                <Typography variant="body2" color="text.secondary">Nombre:</Typography>
-                <Typography variant="body2" fontWeight={600}>
-                  {suscripcion.proyectoAsociado?.nombre_proyecto}
-                </Typography>
-              </Stack>
-              {/* Solo mostramos estado si está en tu ProyectoDto */}
-              <Stack direction="row" justifyContent="space-between">
-                <Typography variant="body2" color="text.secondary">Estado:</Typography>
-                <Chip 
-                  label={suscripcion.proyectoAsociado?.estado_proyecto || 'N/A'} 
-                  size="small" 
-                />
-              </Stack>
-            </Stack>
-          </Paper>
+            {/* Proyecto */}
+            <Paper 
+                elevation={0}
+                sx={{ 
+                    flex: 1, p: 2.5, borderRadius: 2, 
+                    border: '1px solid', borderColor: 'divider' 
+                }}
+            >
+                <Stack direction="row" alignItems="center" spacing={1} mb={2}>
+                    <AccountBalance color="primary" fontSize="small" />
+                    <Typography variant="subtitle2" fontWeight={800}>PROYECTO</Typography>
+                </Stack>
+                <Stack spacing={1}>
+                    <Box>
+                        <Typography variant="caption" color="text.secondary">Nombre del Proyecto</Typography>
+                        <Typography variant="body2" fontWeight={600}>
+                            {suscripcion.proyectoAsociado?.nombre_proyecto}
+                        </Typography>
+                    </Box>
+                    <Box>
+                        <Typography variant="caption" color="text.secondary">Estado del Proyecto</Typography>
+                        <Box mt={0.5}>
+                             <Chip 
+                                label={suscripcion.proyectoAsociado?.estado_proyecto || 'N/A'} 
+                                size="small" 
+                                variant="outlined"
+                                sx={{ height: 20, fontSize: '0.7rem' }}
+                            />
+                        </Box>
+                    </Box>
+                </Stack>
+            </Paper>
+          </Stack>
 
-          {/* 4. Financiero (Campos propios de SuscripcionDto) */}
-          <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, bgcolor: 'rgba(2, 136, 209, 0.08)' }}>
+          {/* 3. Finanzas */}
+          <Paper 
+            elevation={0}
+            sx={{ 
+                p: 2.5, borderRadius: 2, 
+                border: '1px solid', 
+                borderColor: alpha(theme.palette.info.main, 0.3),
+                bgcolor: alpha(theme.palette.info.main, 0.04) 
+            }}
+          >
             <Stack direction="row" alignItems="center" spacing={1} mb={2}>
-              <MonetizationOn color="primary" />
-              <Typography variant="subtitle2" fontWeight="bold" color="primary.main">
-                Finanzas
+              <MonetizationOn color="info" fontSize="small" />
+              <Typography variant="subtitle2" fontWeight={800} color="info.main">
+                RESUMEN FINANCIERO
               </Typography>
             </Stack>
-            <Stack spacing={1.5}>
-              <Stack direction="row" justifyContent="space-between">
-                <Typography variant="body2" color="text.secondary">Monto Total Pagado:</Typography>
-                <Typography variant="h6" fontWeight={700} color="primary.main">
-                  ${Number(suscripcion.monto_total_pagado).toLocaleString('es-AR')}
-                </Typography>
-              </Stack>
-              <Divider />
-              <Stack direction="row" justifyContent="space-between" alignItems="center">
-                <Typography variant="body2" color="text.secondary">Cuotas Restantes:</Typography>
-                <Chip 
-                  label={suscripcion.meses_a_pagar} 
-                  size="small" 
-                  color={suscripcion.meses_a_pagar > 0 ? 'warning' : 'success'}
-                />
-              </Stack>
-              <Stack direction="row" justifyContent="space-between">
-                <Typography variant="body2" color="text.secondary">Saldo a Favor:</Typography>
-                <Typography variant="body2" fontWeight={600} color="success.main">
-                  ${Number(suscripcion.saldo_a_favor).toLocaleString('es-AR')}
-                </Typography>
-              </Stack>
-            </Stack>
-          </Paper>
-
-          {/* 5. Tokens (Campo tokens_disponibles) */}
-          <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
-            <Stack direction="row" alignItems="center" spacing={1} mb={2}>
-              <Token color="warning" />
-              <Typography variant="subtitle2" fontWeight="bold">Tokens</Typography>
-            </Stack>
-            <Stack direction="row" justifyContent="space-between" alignItems="center">
-              <Typography variant="body2" color="text.secondary">
-                Disponibles:
-              </Typography>
-              <Chip 
-                label={suscripcion.tokens_disponibles} 
-                size="medium" 
-                color={suscripcion.tokens_disponibles > 0 ? 'warning' : 'default'}
-              />
+            
+            <Stack spacing={2}>
+                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Typography variant="body2" color="text.secondary">Monto Total Pagado:</Typography>
+                    <Typography variant="h5" fontWeight={700} color="text.primary" sx={{ fontFamily: 'monospace' }}>
+                        ${Number(suscripcion.monto_total_pagado).toLocaleString('es-AR')}
+                    </Typography>
+                </Stack>
+                
+                <Divider />
+                
+                <Stack direction="row" spacing={4}>
+                    <Box flex={1}>
+                        <Typography variant="caption" color="text.secondary">Cuotas Pendientes</Typography>
+                        <Stack direction="row" alignItems="center" spacing={1} mt={0.5}>
+                             <Typography variant="body1" fontWeight={700}>
+                                {suscripcion.meses_a_pagar}
+                             </Typography>
+                             <Chip 
+                                label={suscripcion.meses_a_pagar > 0 ? 'Con Deuda' : 'Al Día'} 
+                                size="small" 
+                                color={suscripcion.meses_a_pagar > 0 ? 'warning' : 'success'}
+                                sx={{ height: 20, fontSize: '0.65rem' }}
+                            />
+                        </Stack>
+                    </Box>
+                    
+                    <Box flex={1}>
+                        <Typography variant="caption" color="text.secondary">Saldo a Favor</Typography>
+                        <Typography variant="body1" fontWeight={700} color="success.main">
+                            ${Number(suscripcion.saldo_a_favor).toLocaleString('es-AR')}
+                        </Typography>
+                    </Box>
+                    
+                    <Box flex={1}>
+                        <Typography variant="caption" color="text.secondary">Tokens Disponibles</Typography>
+                        <Stack direction="row" alignItems="center" spacing={1} mt={0.5}>
+                             <Token color="warning" sx={{ fontSize: 16 }} />
+                             <Typography variant="body1" fontWeight={700}>
+                                {suscripcion.tokens_disponibles}
+                             </Typography>
+                        </Stack>
+                    </Box>
+                </Stack>
             </Stack>
           </Paper>
 
         </Stack>
       </DialogContent>
 
-      <DialogActions sx={{ p: 2.5 }}>
-        <Button onClick={onClose} variant="outlined" color="inherit">
+      <Divider />
+
+      <DialogActions sx={{ p: 3, bgcolor: alpha(theme.palette.background.default, 0.5) }}>
+        <Button 
+            onClick={onClose} 
+            variant="contained" 
+            color="inherit" 
+            sx={{ borderRadius: 2, px: 4, bgcolor: theme.palette.grey[800], color: 'white', '&:hover': { bgcolor: theme.palette.grey[900] } }}
+        >
           Cerrar
         </Button>
       </DialogActions>

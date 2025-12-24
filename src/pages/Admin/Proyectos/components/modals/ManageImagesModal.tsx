@@ -11,8 +11,7 @@ import {
   Delete as DeleteIcon, 
   Collections as GalleryIcon,
   Close as CloseIcon,
-  CloudUpload as UploadIcon,
-  Image as ImageIcon
+  CloudUpload as UploadIcon
 } from '@mui/icons-material';
 
 import imagenService from '../../../../../Services/imagen.service';
@@ -24,7 +23,6 @@ import type { ProyectoDto } from '../../../../../types/dto/proyecto.dto';
 // Constante para validación
 const MAX_FILE_SIZE = 15 * 1024 * 1024; // 15MB
 
-// ✅ INTERFAZ CORRECTA: Debe incluir open y onClose
 interface ManageImagesModalProps {
   open: boolean;
   onClose: () => void;
@@ -38,7 +36,7 @@ const ManageImagesModal: React.FC<ManageImagesModalProps> = ({
   onClose,
   proyecto
 }) => {
-  const theme = useTheme();
+  const theme = useTheme(); // Hook para acceder a tus variables (colores, espaciado)
   const queryClient = useQueryClient();
   const queryKey = getQueryKey(proyecto.id);
 
@@ -64,7 +62,7 @@ const ManageImagesModal: React.FC<ManageImagesModalProps> = ({
     onMutate: (imagenId) => { setDeletingImageId(imagenId); },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKey });
-      queryClient.invalidateQueries({ queryKey: ['adminProyectos'] }); // Actualizar avatar en tabla principal
+      queryClient.invalidateQueries({ queryKey: ['adminProyectos'] });
       setDeletingImageId(null);
     },
     onError: (err: any) => {
@@ -170,52 +168,67 @@ const ManageImagesModal: React.FC<ManageImagesModalProps> = ({
         onClose={handleCloseModal} 
         maxWidth="md" 
         fullWidth
-        PaperProps={{ sx: { borderRadius: 3, boxShadow: theme.shadows[10] } }}
+        // El tema ya define borderRadius para MuiPaper, pero Dialog a veces necesita refuerzo
+        PaperProps={{ 
+            elevation: 0,
+            sx: { 
+                borderRadius: 3, // Usamos un radio un poco más amplio para el modal (24px aprox)
+                boxShadow: theme.shadows[10],
+                overflow: 'hidden'
+            } 
+        }}
     >
-      {/* HEADER ESTILIZADO */}
+      {/* HEADER: Fondo sutil con el color primario */}
       <DialogTitle sx={{ 
           display: 'flex', 
           justifyContent: 'space-between', 
           alignItems: 'center', 
-          pb: 2, pt: 3, px: 3,
-          bgcolor: alpha(theme.palette.primary.main, 0.04)
+          py: 2.5, px: 3,
+          bgcolor: alpha(theme.palette.primary.main, 0.04), // Naranja muy suave
+          borderBottom: `1px solid ${theme.palette.divider}`
       }}>
         <Stack direction="row" alignItems="center" spacing={2}>
-          <Avatar variant="rounded" sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}>
+          <Avatar 
+            variant="rounded" 
+            sx={{ 
+                bgcolor: alpha(theme.palette.primary.main, 0.1), 
+                color: theme.palette.primary.main,
+                width: 40, height: 40
+            }}
+          >
             <GalleryIcon />
           </Avatar>
           <Box>
-            <Typography variant="h6" fontWeight={800} color="text.primary" sx={{ lineHeight: 1.2 }}>
+            <Typography variant="h6" color="text.primary">
               Galería de Imágenes
             </Typography>
-            <Typography variant="caption" color="text.secondary">
-              Proyecto: <strong>{proyecto.nombre_proyecto}</strong>
+            <Typography variant="body2" color="text.secondary">
+              Proyecto: <Box component="span" sx={{ color: 'primary.main', fontWeight: 600 }}>{proyecto.nombre_proyecto}</Box>
             </Typography>
           </Box>
         </Stack>
-        <IconButton onClick={handleCloseModal} size="small" disabled={isUploading} sx={{ color: 'text.secondary' }}>
+        <IconButton onClick={handleCloseModal} size="small" disabled={isUploading}>
           <CloseIcon />
         </IconButton>
       </DialogTitle>
       
-      <Divider />
-
-      <DialogContent sx={{ p: 4 }}>
-        <Stack spacing={4}>
+      <DialogContent sx={{ p: 0 }}>
+        <Stack spacing={0}>
             
             {/* SECCIÓN 1: IMÁGENES EXISTENTES */}
-            <Box>
-                <Typography variant="subtitle2" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', mb: 2 }}>
-                    IMÁGENES ACTUALES ({imagenes.length})
-                </Typography>
+            <Box sx={{ p: 3, bgcolor: 'background.default' }}>
+                <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'text.secondary', letterSpacing: 0.5 }}>
+                        IMÁGENES ACTUALES ({imagenes.length})
+                    </Typography>
+                </Stack>
                 
                 <QueryHandler isLoading={isLoading} error={error as Error | null}>
                     {imagenes.length === 0 ? (
-                        <Alert severity="info" variant="outlined" sx={{ borderRadius: 2 }}>
+                        <Alert severity="info" variant="outlined" sx={{ bgcolor: 'background.paper' }}>
                             La galería está vacía. Sube imágenes para destacar este proyecto.
                         </Alert>
                     ) : (
-                        // Grid Layout Personalizado con Flexbox (Sin usar componente Grid)
                         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
                             {imagenes.map((img) => (
                                 <Box 
@@ -224,12 +237,16 @@ const ManageImagesModal: React.FC<ManageImagesModalProps> = ({
                                         width: { xs: '100%', sm: 'calc(50% - 8px)', md: 'calc(33.33% - 11px)' },
                                         position: 'relative',
                                         borderRadius: 2,
-                                        border: '1px solid',
-                                        borderColor: 'divider',
                                         overflow: 'hidden',
                                         bgcolor: 'background.paper',
-                                        transition: 'box-shadow 0.2s',
-                                        '&:hover': { boxShadow: theme.shadows[3] }
+                                        boxShadow: theme.shadows[1],
+                                        border: `1px solid ${theme.palette.divider}`,
+                                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                        '&:hover': { 
+                                            boxShadow: theme.shadows[8],
+                                            borderColor: theme.palette.primary.main,
+                                            transform: 'translateY(-4px)'
+                                        }
                                     }}
                                 >
                                     {/* Imagen */}
@@ -239,9 +256,10 @@ const ManageImagesModal: React.FC<ManageImagesModalProps> = ({
                                         alt="Preview"
                                         sx={{ 
                                             width: '100%', 
-                                            height: 140, 
+                                            height: 160, 
                                             objectFit: 'cover',
-                                            display: 'block' 
+                                            display: 'block',
+                                            bgcolor: 'grey.100'
                                         }}
                                     />
                                     
@@ -250,24 +268,30 @@ const ManageImagesModal: React.FC<ManageImagesModalProps> = ({
                                         direction="row" 
                                         justifyContent="space-between" 
                                         alignItems="center" 
-                                        sx={{ p: 1, bgcolor: alpha(theme.palette.background.default, 0.5) }}
+                                        sx={{ 
+                                            p: 1.5, 
+                                            borderTop: `1px solid ${theme.palette.divider}`,
+                                            bgcolor: 'background.paper'
+                                        }}
                                     >
-                                        <Typography variant="caption" color="text.secondary" noWrap sx={{ maxWidth: '70%' }}>
+                                        <Typography variant="caption" color="text.secondary" noWrap sx={{ maxWidth: '75%' }}>
                                             {img.descripcion || `ID: ${img.id}`}
                                         </Typography>
                                         
-                                        <Tooltip title="Eliminar">
+                                        <Tooltip title="Eliminar imagen">
                                             <IconButton 
                                                 size="small" 
-                                                color="error"
                                                 onClick={() => handleDeleteClick(img.id)}
                                                 disabled={deletingImageId === img.id || isUploading}
                                                 sx={{ 
-                                                    bgcolor: alpha(theme.palette.error.main, 0.1), 
-                                                    '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.2) } 
+                                                    color: 'text.disabled',
+                                                    '&:hover': { 
+                                                        color: 'error.main',
+                                                        bgcolor: alpha(theme.palette.error.main, 0.1) 
+                                                    } 
                                                 }}
                                             >
-                                                {deletingImageId === img.id ? <CircularProgress size={16} color="inherit" /> : <DeleteIcon fontSize="small" />}
+                                                {deletingImageId === img.id ? <CircularProgress size={16} /> : <DeleteIcon fontSize="small" />}
                                             </IconButton>
                                         </Tooltip>
                                     </Stack>
@@ -281,72 +305,91 @@ const ManageImagesModal: React.FC<ManageImagesModalProps> = ({
             <Divider />
 
             {/* SECCIÓN 2: ZONA DE SUBIDA */}
-            <Box>
-                <Typography variant="subtitle2" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', mb: 2 }}>
+            <Box sx={{ p: 3, bgcolor: 'background.paper' }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'text.secondary', letterSpacing: 0.5, mb: 2 }}>
                     AÑADIR NUEVAS IMÁGENES
                 </Typography>
                 
+                {/* El contenedor de subida ahora usa el borde primario discontinuo 
+                   para llamar la atención como zona de acción 
+                */}
                 <Paper 
                     elevation={0} 
                     sx={{ 
-                        p: 3, 
-                        border: `1px dashed ${theme.palette.divider}`, 
+                        p: 0, 
+                        border: `2px dashed ${alpha(theme.palette.primary.main, 0.3)}`, 
                         borderRadius: 3,
-                        bgcolor: alpha(theme.palette.primary.main, 0.02) 
+                        bgcolor: alpha(theme.palette.primary.main, 0.01),
+                        overflow: 'hidden',
+                        transition: 'border-color 0.2s',
+                        '&:hover': {
+                           borderColor: theme.palette.primary.main 
+                        }
                     }}
                 >
-                    <ImageUploadZone
-                        images={stagedFiles}
-                        onChange={handleFilesChange}
-                        maxFiles={10}
-                        disabled={isUploading}
-                    />
-                    
-                    {/* Barra de Progreso */}
-                    {isUploading && uploadProgress && (
-                        <Box sx={{ mt: 2 }}>
-                            <Stack direction="row" justifyContent="space-between" mb={0.5}>
-                                <Typography variant="caption" color="primary.main" fontWeight={600}>
-                                    Subiendo imágenes...
-                                </Typography>
-                                <Typography variant="caption" color="text.secondary">
-                                    {uploadProgress.current} / {uploadProgress.total}
-                                </Typography>
+                    <Box sx={{ p: 3 }}>
+                        <ImageUploadZone
+                            images={stagedFiles}
+                            onChange={handleFilesChange}
+                            maxFiles={10}
+                            disabled={isUploading}
+                        />
+                    </Box>
+
+                    {/* Barra de Progreso y Footer de subida */}
+                    {(stagedFiles.length > 0 || isUploading) && (
+                        <Box sx={{ 
+                            p: 2, 
+                            bgcolor: alpha(theme.palette.primary.main, 0.05),
+                            borderTop: `1px dashed ${alpha(theme.palette.primary.main, 0.3)}`
+                        }}>
+                             {isUploading && uploadProgress && (
+                                <Box sx={{ mb: 2 }}>
+                                    <Stack direction="row" justifyContent="space-between" mb={0.5}>
+                                        <Typography variant="caption" color="primary.main" fontWeight={600}>
+                                            Subiendo...
+                                        </Typography>
+                                        <Typography variant="caption" color="text.secondary">
+                                            {uploadProgress.current} / {uploadProgress.total}
+                                        </Typography>
+                                    </Stack>
+                                    <LinearProgress 
+                                        variant="determinate" 
+                                        value={(uploadProgress.current / uploadProgress.total) * 100} 
+                                        sx={{ borderRadius: 1, height: 6 }}
+                                    />
+                                </Box>
+                            )}
+
+                            <Stack direction="row" justifyContent="flex-end" alignItems="center" spacing={2}>
+                                {uploadError && (
+                                    <Typography variant="caption" color="error" fontWeight={600}>
+                                        ⚠️ {uploadError}
+                                    </Typography>
+                                )}
+                                
+                                {/* NOTA: No es necesario pasar estilos manuales al botón 'contained', 
+                                    el theme/index.ts ya maneja el color naranja, el shadow y el padding.
+                                */}
+                                <Button
+                                    variant="contained"
+                                    onClick={handleUploadSubmit}
+                                    disabled={stagedFiles.length === 0 || isUploading}
+                                    startIcon={isUploading ? <CircularProgress size={16} color="inherit" /> : <UploadIcon />}
+                                >
+                                    {isUploading ? 'Procesando...' : `Subir ${stagedFiles.length > 0 ? `(${stagedFiles.length})` : ''}`}
+                                </Button>
                             </Stack>
-                            <LinearProgress 
-                                variant="determinate" 
-                                value={(uploadProgress.current / uploadProgress.total) * 100} 
-                                sx={{ borderRadius: 1, height: 6 }}
-                            />
                         </Box>
                     )}
-
-                    {/* Botón de Acción */}
-                    <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end', gap: 2, alignItems: 'center' }}>
-                        {uploadError && (
-                            <Typography variant="caption" color="error" fontWeight={600} sx={{ mr: 'auto' }}>
-                                ⚠️ {uploadError}
-                            </Typography>
-                        )}
-                        
-                        <Button
-                            variant="contained"
-                            onClick={handleUploadSubmit}
-                            disabled={stagedFiles.length === 0 || isUploading}
-                            startIcon={isUploading ? <CircularProgress size={16} color="inherit" /> : <UploadIcon />}
-                            sx={{ borderRadius: 2, fontWeight: 700, px: 3 }}
-                        >
-                            {isUploading ? 'Procesando...' : `Subir ${stagedFiles.length > 0 ? stagedFiles.length : ''} Imágenes`}
-                        </Button>
-                    </Box>
                 </Paper>
             </Box>
 
         </Stack>
       </DialogContent>
       
-      <DialogActions sx={{ p: 3, bgcolor: alpha(theme.palette.background.default, 0.5) }}>
-        <Button onClick={handleCloseModal} color="inherit" disabled={isUploading} sx={{ borderRadius: 2 }}>
+      <DialogActions sx={{ p: 2, borderTop: `1px solid ${theme.palette.divider}` }}>
+        <Button onClick={handleCloseModal} color="inherit" disabled={isUploading}>
           Cerrar
         </Button>
       </DialogActions>

@@ -1,257 +1,223 @@
+// src/pages/Admin/Contratos/AdminContratosFirmados.tsx
+
 import React, { useState, useMemo } from 'react';
-import {
-  Box, Typography, Paper, TextField, MenuItem,
-  InputAdornment, Chip, IconButton, Tooltip, LinearProgress
+import { 
+  Box, Typography, Paper, Chip, IconButton, Tooltip, 
+  TextField, InputAdornment, Stack, useTheme, alpha, Avatar, 
+  CircularProgress
 } from '@mui/material';
-import {
-  Search, Visibility, CheckCircle, AccessTime
+import { 
+  Search, 
+  Download as DownloadIcon, 
+  Fingerprint, 
+  Business, 
+  Person,
+  Description as ContractIcon,
 } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
 
-// --- SERVICIOS ---
-import ResumenCuentaService from '../../../Services/resumenCuenta.service';
-import type { ResumenCuentaDto } from '../../../types/dto/resumenCuenta.dto';
+// Utils
+import { format } from 'date-fns'; 
+import { es } from 'date-fns/locale'; 
 
-// --- COMPONENTES ---
+// Servicios y Tipos
+// ✅ IMPORTAMOS EL SERVICIO CORRECTO (ContratoService que tiene findAllSigned y downloadAndSave)
+import ContratoService from '../../../Services/contrato.service'; 
+import type { ContratoFirmadoDto } from '../../../types/dto/contrato.dto';
+
+// Componentes Comunes
 import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
-import { QueryHandler } from '../../../components/common/QueryHandler/QueryHandler';
 import { PageHeader } from '../../../components/common/PageHeader/PageHeader';
-
-// 👇 Importamos DataTable sin modificar su código fuente
+import { QueryHandler } from '../../../components/common/QueryHandler/QueryHandler';
 import { DataTable, type DataTableColumn } from '../../../components/common/DataTable/DataTable';
 
-
-
-// ✅ 1. Importar Hook
-import { useModal } from '../../../hooks/useModal';
-import DetalleResumenModal from '../ResumenesCuenta/modals/DetalleResumenModal';
-
-const AdminResumenesCuenta: React.FC = () => {
-
-  // --- ESTADOS DE FILTRO ---
+const AdminContratosFirmados: React.FC = () => {
+  const theme = useTheme();
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterState, setFilterState] = useState<'all' | 'active' | 'completed' | 'overdue'>('all');
+  const [downloadingId, setDownloadingId] = useState<number | null>(null);
 
-  // ✅ 2. Hook useModal
-  const detalleModal = useModal();
-  // Estado de Datos
-  const [selectedResumen, setSelectedResumen] = useState<ResumenCuentaDto | null>(null);
-
-  // --- QUERY: Obtener todos los resúmenes (Admin) ---
-  const { data: resumenes = [], isLoading, error } = useQuery({
-    queryKey: ['adminResumenes'],
+  // 1. Query: Obtener TODOS los contratos firmados
+  const { data: contratos = [], isLoading, error } = useQuery<ContratoFirmadoDto[]>({
+    queryKey: ['adminContratosFirmados'],
     queryFn: async () => {
-      const response = await ResumenCuentaService.findAll();
-      return response.data;
-    },
+        // ✅ Usamos ContratoService aquí
+        const res = await ContratoService.findAllSigned();
+        return res.data; 
+    }
   });
 
-  // --- FILTRADO ---
-  const filteredResumenes = useMemo(() => {
-    return resumenes.filter(resumen => {
-      const term = searchTerm.toLowerCase();
-      const matchesSearch =
-        resumen.nombre_proyecto.toLowerCase().includes(term) ||
-        resumen.id.toString().includes(term) ||
-        resumen.id_suscripcion.toString().includes(term);
+  // 2. Filtrado en Cliente
+  const filteredContratos = useMemo(() => {
+    const term = searchTerm.toLowerCase();
+    return contratos.filter(c => 
+      c.nombre_archivo.toLowerCase().includes(term) ||
+      c.id_usuario_firmante.toString().includes(term) ||
+      c.id_proyecto.toString().includes(term)
+    );
+  }, [contratos, searchTerm]);
 
-      let matchesState = true;
-      if (filterState === 'active') {
-        matchesState = resumen.porcentaje_pagado < 100 && resumen.cuotas_vencidas === 0;
-      } else if (filterState === 'completed') {
-        matchesState = resumen.porcentaje_pagado >= 100;
-      } else if (filterState === 'overdue') {
-        matchesState = resumen.cuotas_vencidas > 0;
+  // 3. Manejo de Descarga
+  const handleDownload = async (contrato: ContratoFirmadoDto) => {
+    try {
+      setDownloadingId(contrato.id);
+      // ✅ Usamos ContratoService aquí también
+      await ContratoService.downloadAndSave(contrato.id, contrato.nombre_archivo);
+    } catch (error) {
+      alert("Error al descargar el archivo. Verifica tu conexión.");
+    } finally {
+      setDownloadingId(null);
+    }
+  };
+
+  // 4. Definición de Columnas
+  const columns = useMemo<DataTableColumn<ContratoFirmadoDto>[]>(() => [
+    { 
+      id: 'id', 
+      label: 'ID', 
+      minWidth: 60,
+      render: (row) => <Typography variant="body2" fontWeight={700}>#{row.id}</Typography>
+    },
+    { 
+      id: 'usuario', 
+      label: 'Usuario Firmante', 
+      minWidth: 200,
+      render: (row) => (
+        <Stack direction="row" alignItems="center" spacing={2}>
+            <Avatar sx={{ width: 32, height: 32, bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}>
+                <Person fontSize="small" />
+            </Avatar>
+            <Box>
+                <Typography variant="body2" fontWeight={600}>Usuario #{row.id_usuario_firmante}</Typography>
+                <Typography variant="caption" color="text.secondary">Firmante</Typography>
+            </Box>
+        </Stack>
+      )
+    },
+    { 
+      id: 'proyecto', 
+      label: 'Proyecto', 
+      minWidth: 150,
+      render: (row) => (
+        <Stack direction="row" alignItems="center" spacing={1}>
+            <Business color="action" fontSize="small" />
+            <Typography variant="body2">Proyecto #{row.id_proyecto}</Typography>
+        </Stack>
+      )
+    },
+    { 
+      id: 'tipo', 
+      label: 'Tipo Autorización', 
+      render: (row) => {
+        if (row.id_inversion_asociada) {
+            return <Chip label={`Inversión #${row.id_inversion_asociada}`} color="primary" size="small" variant="outlined" sx={{ fontWeight: 600 }} />;
+        }
+        if (row.id_suscripcion_asociada) {
+            return <Chip label={`Suscripción #${row.id_suscripcion_asociada}`} color="secondary" size="small" variant="outlined" sx={{ fontWeight: 600 }} />;
+        }
+        return <Chip label="General" size="small" />;
       }
-
-      return matchesSearch && matchesState;
-    });
-  }, [resumenes, searchTerm, filterState]);
-
-  // ✅ 3. Handlers
-  const handleVerDetalle = (resumen: ResumenCuentaDto) => {
-    setSelectedResumen(resumen);
-    detalleModal.open();
-  };
-
-  const handleCloseModal = () => {
-    detalleModal.close();
-    setSelectedResumen(null);
-  };
-
-  // --- COLUMNAS DE LA TABLA ---
-  const columns: DataTableColumn<ResumenCuentaDto>[] = [
-    {
-      id: 'id',
-      label: 'ID',
-      render: (resumen) => (
-        <Box>
-          <Typography variant="body2" fontWeight={600}>#{resumen.id}</Typography>
-          <Typography variant="caption" color="text.secondary">
-            Susc. {resumen.id_suscripcion}
-          </Typography>
-        </Box>
-      )
     },
-    {
-      id: 'proyecto',
-      label: 'Proyecto',
-      render: (resumen) => (
+    { 
+      id: 'fecha', 
+      label: 'Fecha Firma', 
+      render: (row) => (
         <Box>
-          <Typography variant="body2" fontWeight={500}>
-            {resumen.nombre_proyecto}
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            {resumen.meses_proyecto} meses
-          </Typography>
-        </Box>
-      )
-    },
-    {
-      id: 'cuotas',
-      label: 'Cuotas Pagadas',
-      render: (resumen) => (
-        <Box>
-          <Typography variant="body2" fontWeight={600}>
-            {resumen.cuotas_pagadas} / {resumen.meses_proyecto}
-          </Typography>
-          {resumen.cuotas_vencidas > 0 && (
-            <Chip
-              label={`${resumen.cuotas_vencidas} vencidas`}
-              color="error"
-              size="small"
-              sx={{ mt: 0.5 }}
-            />
-          )}
-        </Box>
-      )
-    },
-    {
-      id: 'progreso',
-      label: 'Progreso',
-      render: (resumen) => (
-        <Box sx={{ minWidth: 120 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-            <LinearProgress
-              variant="determinate"
-              value={resumen.porcentaje_pagado}
-              sx={{ flex: 1, height: 8, borderRadius: 4 }}
-              color={resumen.porcentaje_pagado >= 100 ? 'success' : 'primary'}
-            />
-            <Typography variant="caption" fontWeight="bold">
-              {resumen.porcentaje_pagado.toFixed(1)}%
+            <Typography variant="body2" fontWeight={600}>
+                {row.fecha_firma ? format(new Date(row.fecha_firma), 'dd MMM yyyy', { locale: es }) : '-'}
             </Typography>
-          </Box>
+            <Typography variant="caption" color="text.secondary">
+                {row.fecha_firma ? format(new Date(row.fecha_firma), 'HH:mm', { locale: es }) + ' hs' : ''}
+            </Typography>
         </Box>
       )
     },
-    {
-      id: 'estado',
-      label: 'Estado',
-      render: (resumen) => {
-        const isCompleted = resumen.porcentaje_pagado >= 100;
-        const hasOverdue = resumen.cuotas_vencidas > 0;
-
-        return (
-          <Chip
-            label={isCompleted ? 'Completado' : hasOverdue ? 'Con Vencidas' : 'Activo'}
-            color={isCompleted ? 'success' : hasOverdue ? 'error' : 'info'}
-            size="small"
-            icon={isCompleted ? <CheckCircle fontSize="small" /> : hasOverdue ? <AccessTime fontSize="small" /> : undefined}
-          />
-        );
-      }
-    },
-    {
-      id: 'cuota_mensual',
-      label: 'Cuota Mensual',
-      render: (resumen) => (
-        <Typography variant="body2" fontWeight={600} color="primary">
-          ${resumen.detalle_cuota.valor_mensual_final.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-        </Typography>
+    { 
+      id: 'hash', 
+      label: 'Integridad', 
+      render: (row) => (
+        <Tooltip title={`Hash SHA-256: ${row.hash_archivo_firmado}`}>
+            <Stack direction="row" alignItems="center" spacing={1} sx={{ cursor: 'help', width: 'fit-content' }}>
+                <Fingerprint color="success" fontSize="small" />
+                <Typography variant="caption" sx={{ fontFamily: 'monospace', color: 'text.secondary', bgcolor: alpha(theme.palette.success.main, 0.05), px: 1, borderRadius: 1 }}>
+                    {row.hash_archivo_firmado ? row.hash_archivo_firmado.substring(0, 8) + '...' : 'Generando...'}
+                </Typography>
+            </Stack>
+        </Tooltip>
       )
     },
-    {
-      id: 'acciones',
-      label: 'Acciones',
+    { 
+      id: 'acciones', 
+      label: 'Descargar', 
       align: 'right',
-      render: (resumen) => (
-        <Tooltip title="Ver Detalle">
-          <IconButton
-            size="small"
-            onClick={() => handleVerDetalle(resumen)}
-            color="primary"
-          >
-            <Visibility fontSize="small" />
-          </IconButton>
+      render: (row) => (
+        <Tooltip title="Descargar PDF Firmado">
+            <span>
+                <IconButton 
+                    color="primary" 
+                    onClick={() => handleDownload(row)}
+                    disabled={downloadingId === row.id}
+                    size="small"
+                    sx={{ 
+                        bgcolor: alpha(theme.palette.primary.main, 0.1), 
+                        '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) } 
+                    }}
+                >
+                    {downloadingId === row.id ? <CircularProgress size={20} /> : <DownloadIcon fontSize="small" />}
+                </IconButton>
+            </span>
         </Tooltip>
       )
     }
-  ];
+  ], [theme, downloadingId]);
 
   return (
     <PageContainer maxWidth="xl">
 
       <PageHeader
-        title="Resúmenes de Cuenta"
-        subtitle="Visualiza el estado de todos los planes de pago y suscripciones activas."
+        title="Auditoría de Contratos"
+        subtitle="Visualiza y descarga los contratos legalizados por los usuarios."
       />
 
-      {/* Barra de Filtros */}
-      <Paper sx={{ p: 2, mb: 3, display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center', borderRadius: 2 }} elevation={0} variant="outlined">
-
-        <TextField
-          placeholder="Buscar por proyecto, ID resumen o ID suscripción..."
-          size="small"
-          sx={{ flexGrow: 1, minWidth: 300 }}
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <Search />
-              </InputAdornment>
-            )
-          }}
-        />
-
-        <TextField
-          select
-          label="Estado"
-          size="small"
-          value={filterState}
-          onChange={(e) => setFilterState(e.target.value as any)}
-          sx={{ minWidth: 180 }}
-        >
-          <MenuItem value="all">Todos</MenuItem>
-          <MenuItem value="active">Activos</MenuItem>
-          <MenuItem value="completed">Completados</MenuItem>
-          <MenuItem value="overdue">Con Vencidas</MenuItem>
-        </TextField>
-
+      {/* Toolbar */}
+      <Paper 
+        elevation={0} 
+        sx={{ 
+            p: 2, mb: 3, 
+            borderRadius: 2, 
+            border: '1px solid', borderColor: 'divider',
+            bgcolor: alpha(theme.palette.background.paper, 0.6)
+        }} 
+      >
+        <Stack direction="row" alignItems="center" spacing={2}>
+            <ContractIcon color="action" />
+            <TextField 
+              placeholder="Buscar por archivo, ID usuario o ID proyecto..." 
+              size="small" 
+              sx={{ flexGrow: 1 }}
+              value={searchTerm} 
+              onChange={(e) => setSearchTerm(e.target.value)}
+              InputProps={{ 
+                  startAdornment: <InputAdornment position="start"><Search color="action" /></InputAdornment>,
+                  sx: { borderRadius: 2 }
+              }}
+            />
+        </Stack>
       </Paper>
 
-      {/* Tabla */}
-      <QueryHandler isLoading={isLoading} error={error as Error}>
+      {/* DataTable */}
+      <QueryHandler isLoading={isLoading} error={error as Error | null}>
         <DataTable
-          columns={columns}
-          data={filteredResumenes}
-          // ✅ CORRECCIÓN: Se agrega la prop obligatoria getRowKey
-          getRowKey={(row) => row.id} 
-          emptyMessage="No se encontraron resúmenes de cuenta."
-          pagination={true}
-          defaultRowsPerPage={10}
+            columns={columns}
+            data={filteredContratos}
+            getRowKey={(row) => row.id}
+            emptyMessage="No se encontraron contratos firmados."
+            pagination={true}
+            defaultRowsPerPage={10}
         />
       </QueryHandler>
 
-      {/* ✅ Modal con Hook */}
-      <DetalleResumenModal
-        open={detalleModal.isOpen}
-        onClose={handleCloseModal}
-        resumen={selectedResumen}
-      />
     </PageContainer>
   );
 };
 
-export default AdminResumenesCuenta;
+export default AdminContratosFirmados;

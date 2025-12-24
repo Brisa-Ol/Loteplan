@@ -1,22 +1,27 @@
-// src/components/Admin/Lotes/EditLoteModal.tsx
+// src/pages/Admin/Inventario/modals/EditLoteModal.tsx
 
 import React, { useEffect } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button,
   TextField, Stack, Box, Typography, IconButton,
   CircularProgress, MenuItem, Alert, Divider,
-  Chip
+  Chip, Avatar, useTheme, alpha
 } from '@mui/material';
-import { Close as CloseIcon, Save as SaveIcon, Edit as EditIcon } from '@mui/icons-material';
+import { 
+    Close as CloseIcon, 
+    Save as SaveIcon, 
+    Edit as EditIcon,
+    Inventory as InventoryIcon,
+    Link as LinkIcon,
+    AccessTime as TimeIcon,
+    LocationOn as LocationIcon
+} from '@mui/icons-material';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { useQuery } from '@tanstack/react-query';
 import type { LoteDto, UpdateLoteDto } from '../../../../types/dto/lote.dto';
-
 import type { ProyectoDto } from '../../../../types/dto/proyecto.dto';
 import ProyectoService from '../../../../Services/proyecto.service';
-
-
 
 interface EditLoteModalProps {
   open: boolean;
@@ -32,7 +37,6 @@ const validationSchema = Yup.object({
   precio_base: Yup.number().min(0, 'Debe ser positivo').required('Requerido'),
   fecha_inicio: Yup.string().nullable(),
   fecha_fin: Yup.string().nullable(),
-  // Usamos mixed para permitir string vacio temporalmente en el formulario
   id_proyecto: Yup.mixed().nullable(),
   latitud: Yup.number().min(-90).max(90).nullable(),
   longitud: Yup.number().min(-180).max(180).nullable(),
@@ -55,6 +59,7 @@ const EditLoteModal: React.FC<EditLoteModalProps> = ({
   lote,
   isLoading = false,
 }) => {
+  const theme = useTheme();
 
   // 1. Cargar Proyectos
   const { data: proyectos = [], isLoading: isLoadingProyectos } = useQuery<ProyectoDto[]>({
@@ -77,20 +82,13 @@ const EditLoteModal: React.FC<EditLoteModalProps> = ({
     onSubmit: async (values) => {
       if (!lote) return;
 
-      // 🛠️ CORRECCIÓN DEL ERROR TS2367
-      // Convertimos a 'unknown' para poder comparar con string vacío sin que TS se queje
       const rawId = values.id_proyecto as unknown;
 
       const dataToSend: UpdateLoteDto = {
         ...values,
-        // ✅ datetime-local ya está en formato correcto, solo agregamos si tiene valor
         fecha_inicio: values.fecha_inicio || undefined,
         fecha_fin: values.fecha_fin || undefined,
-
-        // Lógica segura: Si es '' o null -> null. Si no, Number().
         id_proyecto: (rawId === '' || rawId === null) ? null : Number(rawId),
-
-        // Coordenadas (null si no hay valor)
         latitud: values.latitud ?? null,
         longitud: values.longitud ?? null
       };
@@ -118,7 +116,6 @@ const EditLoteModal: React.FC<EditLoteModalProps> = ({
         longitud: lote.longitud,
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lote, open]);
 
   if (!lote) return null;
@@ -128,32 +125,66 @@ const EditLoteModal: React.FC<EditLoteModalProps> = ({
     onClose();
   };
 
-  return (
-    <Dialog open={open} onClose={isLoading ? undefined : handleClose} maxWidth="md" fullWidth>
+  // Estilos reutilizables
+  const commonInputSx = { '& .MuiOutlinedInput-root': { borderRadius: 2 } };
+  const sectionTitleSx = { 
+      textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700, 
+      color: 'text.secondary', fontSize: '0.75rem', mb: 1 
+  };
 
-      <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <EditIcon color="primary" />
-          <Typography variant="h6" fontWeight="bold">Editar Lote #{lote.id}</Typography>
+  return (
+    <Dialog 
+        open={open} 
+        onClose={isLoading ? undefined : handleClose} 
+        maxWidth="md" 
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 3, boxShadow: theme.shadows[10] } }}
+    >
+
+      {/* HEADER */}
+      <DialogTitle sx={{ 
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
+        pb: 2, pt: 3, px: 3,
+        bgcolor: alpha(theme.palette.primary.main, 0.04)
+      }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Avatar variant="rounded" sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}>
+            <EditIcon />
+          </Avatar>
+          <Box>
+            <Typography variant="h6" fontWeight={800} color="text.primary" sx={{ lineHeight: 1.2 }}>
+                Editar Lote #{lote.id}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+                Modifique la información del lote existente
+            </Typography>
+          </Box>
         </Box>
-        <IconButton onClick={handleClose} size="small" disabled={isLoading}>
+        <IconButton onClick={handleClose} size="small" disabled={isLoading} sx={{ color: 'text.secondary' }}>
           <CloseIcon />
         </IconButton>
       </DialogTitle>
 
+      <Divider />
+
       <form onSubmit={formik.handleSubmit}>
-        <DialogContent dividers>
-          <Stack spacing={3}>
+        <DialogContent sx={{ p: 4 }}>
+          <Stack spacing={4}>
 
             {/* Estado */}
-            <Box sx={{ p: 2, bgcolor: 'action.hover', borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
+            <Box sx={{ 
+                p: 2, borderRadius: 2, 
+                border: '1px solid', borderColor: 'divider',
+                bgcolor: alpha(theme.palette.action.active, 0.04)
+            }}>
               <Stack direction="row" spacing={2} alignItems="center">
                 <Typography variant="body2" color="text.secondary"><strong>ID:</strong> {lote.id}</Typography>
                 <Chip
                   label={lote.estado_subasta.toUpperCase()}
                   size="small"
                   color={getStatusColor(lote.estado_subasta) as any}
-                  sx={{ fontWeight: 'bold' }}
+                  variant="outlined"
+                  sx={{ fontWeight: 800, border: '2px solid' }}
                 />
                 {lote.id_ganador && (
                   <Typography variant="body2" color="success.main" fontWeight="bold">
@@ -165,114 +196,124 @@ const EditLoteModal: React.FC<EditLoteModalProps> = ({
 
             {/* Info Básica */}
             <Box>
-              <Typography variant="subtitle2" color="primary" gutterBottom fontWeight="bold">Información Básica</Typography>
-              <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2, mb: 2 }}>
-                <TextField
-                  fullWidth
-                  label="Nombre del Lote"
-                  {...formik.getFieldProps('nombre_lote')}
-                  error={formik.touched.nombre_lote && Boolean(formik.errors.nombre_lote)}
-                  helperText={formik.touched.nombre_lote && formik.errors.nombre_lote}
-                  disabled={isLoading}
-                />
-                <TextField
-                  fullWidth
-                  type="number"
-                  label="Precio Base"
-                  {...formik.getFieldProps('precio_base')}
-                  disabled={isLoading || lote.estado_subasta === 'activa'}
-                  InputProps={{ startAdornment: <Typography sx={{ mr: 1 }}>$</Typography> }}
-                />
-              </Box>
-              {lote.estado_subasta === 'activa' && (
-                <Alert severity="warning" sx={{ mt: 1 }}>No se puede modificar el precio base de una subasta activa.</Alert>
-              )}
+                <Stack direction="row" alignItems="center" spacing={1} mb={1}>
+                    <InventoryIcon color="action" fontSize="small" />
+                    <Typography sx={sectionTitleSx}>Información Básica</Typography>
+                </Stack>
+                <Stack spacing={2}>
+                    <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
+                        <TextField
+                            fullWidth label="Nombre del Lote"
+                            {...formik.getFieldProps('nombre_lote')}
+                            error={formik.touched.nombre_lote && Boolean(formik.errors.nombre_lote)}
+                            helperText={formik.touched.nombre_lote && formik.errors.nombre_lote}
+                            disabled={isLoading} sx={commonInputSx}
+                        />
+                        <TextField
+                            fullWidth type="number" label="Precio Base"
+                            {...formik.getFieldProps('precio_base')}
+                            disabled={isLoading || lote.estado_subasta === 'activa'}
+                            InputProps={{ startAdornment: <Typography sx={{ mr: 1, color: 'text.secondary' }}>$</Typography> }}
+                            sx={commonInputSx}
+                        />
+                    </Box>
+                    {lote.estado_subasta === 'activa' && (
+                        <Alert severity="warning" variant="outlined" sx={{ borderRadius: 2 }}>
+                            No se puede modificar el precio base de una subasta activa.
+                        </Alert>
+                    )}
+                </Stack>
             </Box>
-
-            <Divider />
 
             {/* Proyecto */}
             <Box>
-              <Typography variant="subtitle2" color="primary" gutterBottom fontWeight="bold">Asociación</Typography>
-              <TextField
-                select
-                fullWidth
-                label="Proyecto Asociado"
-                {...formik.getFieldProps('id_proyecto')}
-                // ✅ Usamos ?? '' para manejar el null en el Select de MUI
-                value={formik.values.id_proyecto ?? ''}
-                disabled={isLoading || isLoadingProyectos || lote.estado_subasta !== 'pendiente'}
-              >
-                <MenuItem value=""><em>Sin Asignar (Huérfano)</em></MenuItem>
-                {proyectos.map((p) => (
-                  <MenuItem key={p.id} value={p.id}>{p.nombre_proyecto}</MenuItem>
-                ))}
-              </TextField>
-              {lote.estado_subasta !== 'pendiente' && (
-                <Alert severity="info" sx={{ mt: 1 }}>Solo se puede cambiar el proyecto de lotes en estado "pendiente".</Alert>
-              )}
+                <Stack direction="row" alignItems="center" spacing={1} mb={1}>
+                    <LinkIcon color="action" fontSize="small" />
+                    <Typography sx={sectionTitleSx}>Asociación</Typography>
+                </Stack>
+                <Stack spacing={1}>
+                    <TextField
+                        select fullWidth label="Proyecto Asociado"
+                        {...formik.getFieldProps('id_proyecto')}
+                        // ✅ Usamos ?? '' para manejar el null en el Select de MUI
+                        value={formik.values.id_proyecto ?? ''}
+                        disabled={isLoading || isLoadingProyectos || lote.estado_subasta !== 'pendiente'}
+                        sx={commonInputSx}
+                    >
+                        <MenuItem value=""><em>Sin Asignar (Huérfano)</em></MenuItem>
+                        {proyectos.map((p) => (
+                        <MenuItem key={p.id} value={p.id}>{p.nombre_proyecto}</MenuItem>
+                        ))}
+                    </TextField>
+                    {lote.estado_subasta !== 'pendiente' && (
+                        <Alert severity="info" variant="outlined" sx={{ borderRadius: 2 }}>
+                            Solo se puede cambiar el proyecto de lotes en estado "pendiente".
+                        </Alert>
+                    )}
+                </Stack>
             </Box>
-
-            <Divider />
 
             {/* Fechas */}
             <Box>
-              <Typography variant="subtitle2" color="primary" gutterBottom fontWeight="bold">Tiempos de Subasta</Typography>
-              <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
-                <TextField
-                  fullWidth
-                  type="datetime-local"
-                  label="Inicio"
-                  InputLabelProps={{ shrink: true }}
-                  {...formik.getFieldProps('fecha_inicio')}
-                  disabled={isLoading || lote.estado_subasta !== 'pendiente'}
-                />
-                <TextField
-                  fullWidth
-                  type="datetime-local"
-                  label="Fin"
-                  InputLabelProps={{ shrink: true }}
-                  {...formik.getFieldProps('fecha_fin')}
-                  disabled={isLoading || lote.estado_subasta === 'finalizada'}
-                />
-              </Box>
+                <Stack direction="row" alignItems="center" spacing={1} mb={1}>
+                    <TimeIcon color="action" fontSize="small" />
+                    <Typography sx={sectionTitleSx}>Tiempos de Subasta</Typography>
+                </Stack>
+                <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
+                    <TextField
+                        fullWidth type="datetime-local" label="Inicio"
+                        InputLabelProps={{ shrink: true }}
+                        {...formik.getFieldProps('fecha_inicio')}
+                        disabled={isLoading || lote.estado_subasta !== 'pendiente'}
+                        sx={commonInputSx}
+                    />
+                    <TextField
+                        fullWidth type="datetime-local" label="Fin"
+                        InputLabelProps={{ shrink: true }}
+                        {...formik.getFieldProps('fecha_fin')}
+                        disabled={isLoading || lote.estado_subasta === 'finalizada'}
+                        sx={commonInputSx}
+                    />
+                </Box>
             </Box>
-
-            <Divider />
 
             {/* Ubicación */}
             <Box>
-              <Typography variant="subtitle2" color="primary" gutterBottom fontWeight="bold">Ubicación Geográfica</Typography>
-              <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
-                <TextField
-                  fullWidth
-                  type="number"
-                  label="Latitud"
-                  {...formik.getFieldProps('latitud')}
-                  disabled={isLoading}
-                  inputProps={{ step: 'any' }}
-                />
-                <TextField
-                  fullWidth
-                  type="number"
-                  label="Longitud"
-                  {...formik.getFieldProps('longitud')}
-                  disabled={isLoading}
-                  inputProps={{ step: 'any' }}
-                />
-              </Box>
+                <Stack direction="row" alignItems="center" spacing={1} mb={1}>
+                    <LocationIcon color="action" fontSize="small" />
+                    <Typography sx={sectionTitleSx}>Ubicación Geográfica</Typography>
+                </Stack>
+                <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
+                    <TextField
+                        fullWidth type="number" label="Latitud"
+                        {...formik.getFieldProps('latitud')}
+                        disabled={isLoading}
+                        inputProps={{ step: 'any' }}
+                        sx={commonInputSx}
+                    />
+                    <TextField
+                        fullWidth type="number" label="Longitud"
+                        {...formik.getFieldProps('longitud')}
+                        disabled={isLoading}
+                        inputProps={{ step: 'any' }}
+                        sx={commonInputSx}
+                    />
+                </Box>
             </Box>
 
           </Stack>
         </DialogContent>
 
-        <DialogActions sx={{ p: 2.5 }}>
-          <Button onClick={handleClose} disabled={isLoading} color="inherit">Cancelar</Button>
+        <Divider />
+
+        <DialogActions sx={{ p: 3, bgcolor: alpha(theme.palette.background.default, 0.5) }}>
+          <Button onClick={handleClose} disabled={isLoading} color="inherit" sx={{ borderRadius: 2 }}>Cancelar</Button>
           <Button
             type="submit"
             variant="contained"
             disabled={isLoading || !formik.isValid}
             startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
+            sx={{ px: 4, borderRadius: 2, fontWeight: 700 }}
           >
             {isLoading ? 'Guardando...' : 'Guardar Cambios'}
           </Button>

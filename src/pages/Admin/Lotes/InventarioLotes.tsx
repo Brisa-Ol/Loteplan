@@ -1,10 +1,12 @@
+// src/pages/Admin/Inventario/InventarioLotes.tsx
+
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
-  Box, Typography, Button, Paper, Chip, IconButton, Stack, Tooltip, TextField, MenuItem, Divider, InputAdornment, LinearProgress, Switch, CircularProgress, alpha, Snackbar, Alert
+  Box, Typography, Button, Paper, Chip, IconButton, Stack, Tooltip, TextField, MenuItem, Divider, InputAdornment, LinearProgress, Switch, CircularProgress, alpha, Snackbar, Alert, useTheme, Avatar
 } from '@mui/material';
 import { 
   Add, Edit, PlayCircleFilled, StopCircle, Warning, Collections, 
-  Search, Inventory, Gavel, AssignmentLate, CheckCircle, Person
+  Search, Inventory, Gavel, AssignmentLate, CheckCircle, Person, Block
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { AxiosError } from 'axios';
@@ -17,8 +19,9 @@ import { PageContainer } from '../../../components/common/PageContainer/PageCont
 import { QueryHandler } from '../../../components/common/QueryHandler/QueryHandler';
 import { PageHeader } from '../../../components/common/PageHeader/PageHeader';
 import { DataTable, type DataTableColumn } from '../../../components/common/DataTable/DataTable';
+import { ConfirmDialog } from '../../../components/common/ConfirmDialog/ConfirmDialog';
 
-// Modales
+// Modales y Servicios
 import ManageLoteImagesModal from './modals/ManageLoteImagesModal';
 import CreateEditLoteModal from './modals/CreateEditLoteModal';
 import ProyectoService from '../../../Services/proyecto.service';
@@ -27,7 +30,6 @@ import LoteService from '../../../Services/lote.service';
 // Hooks
 import { useModal } from '../../../hooks/useModal';
 import { useConfirmDialog } from '../../../hooks/useConfirmDialog';
-import { ConfirmDialog } from '../../../components/common/ConfirmDialog/ConfirmDialog';
 
 interface ApiErrorResponse {
   mensaje?: string;
@@ -35,54 +37,74 @@ interface ApiErrorResponse {
   error?: string;
 }
 
-// --- COMPONENTE DE TARJETA KPI ---
+// --- COMPONENTE DE TARJETA KPI (Estilo Unificado) ---
 const StatCard: React.FC<{ 
   title: string; 
   value: number; 
   icon: React.ReactNode; 
   color: string;
   loading?: boolean;
-}> = ({ title, value, icon, color, loading }) => (
-  <Paper elevation={0} sx={{ 
-    p: 2, display: 'flex', alignItems: 'center', gap: 2, 
-    bgcolor: 'background.paper', borderRadius: 2, border: '1px solid', borderColor: 'divider',
-    flex: 1, minWidth: 0
-  }}>
-    <Box sx={{ bgcolor: `${color}.light`, color: `${color}.main`, p: 1.5, borderRadius: '50%', display: 'flex' }}>
-      {icon}
-    </Box>
-    <Box sx={{ width: '100%' }}>
-      {loading ? <LinearProgress color="inherit" sx={{ width: '60%', mb: 1 }} /> : <Typography variant="h5" fontWeight="bold">{value}</Typography>}
-      <Typography variant="caption" color="text.secondary" fontWeight={600}>{title}</Typography>
-    </Box>
-  </Paper>
-);
+}> = ({ title, value, icon, color, loading }) => {
+  const theme = useTheme();
+  // Mapeo seguro de colores
+  const paletteColor = (theme.palette as any)[color] || theme.palette.primary;
+
+  return (
+    <Paper 
+      elevation={0} 
+      sx={{ 
+        p: 2, 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: 2, 
+        borderRadius: 2, 
+        border: '1px solid', 
+        borderColor: 'divider',
+        flex: 1, 
+        minWidth: 0,
+        transition: 'all 0.2s ease',
+        '&:hover': {
+            borderColor: paletteColor.main,
+            transform: 'translateY(-2px)'
+        }
+      }}
+    >
+      <Box sx={{ bgcolor: alpha(paletteColor.main, 0.1), color: paletteColor.main, p: 1.5, borderRadius: '50%', display: 'flex' }}>
+        {icon}
+      </Box>
+      <Box sx={{ width: '100%' }}>
+        {loading ? (
+            <LinearProgress color="inherit" sx={{ width: '60%', mb: 1 }} />
+        ) : (
+            <Typography variant="h5" fontWeight="bold" color="text.primary">{value}</Typography>
+        )}
+        <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ textTransform: 'uppercase' }}>
+            {title}
+        </Typography>
+      </Box>
+    </Paper>
+  );
+};
 
 const InventarioLotes: React.FC = () => {
+  const theme = useTheme();
   const queryClient = useQueryClient();
   
-  // Hooks de Modal
+  // Hooks
   const createEditModal = useModal();
   const imagesModal = useModal();
   const confirmDialog = useConfirmDialog();
 
-  // Estado de Datos
+  // Estados
   const [selectedLote, setSelectedLote] = useState<LoteDto | null>(null);
-  
-  // Estado para el efecto Flash
   const [highlightedId, setHighlightedId] = useState<number | null>(null);
-
-  // Ref para mantener el estado inicial de visibilidad (sticky sort)
-  const initialStatusRef = useRef<Record<number, boolean>>({});
-  
-  // Filtros
   const [searchTerm, setSearchTerm] = useState('');
   const [filterProject, setFilterProject] = useState<string>('all');
-
-  // Estado del Snackbar
   const [snackbar, setSnackbar] = useState<{ open: boolean, message: string, severity: 'success' | 'error' }>({
     open: false, message: '', severity: 'success'
   });
+
+  const initialStatusRef = useRef<Record<number, boolean>>({});
 
   const showMessage = (message: string, severity: 'success' | 'error' = 'success') => {
     setSnackbar({ open: true, message, severity });
@@ -109,7 +131,6 @@ const InventarioLotes: React.FC = () => {
     staleTime: 60000,
   });
 
-  // --- EFECTO PARA CAPTURAR ESTADO INICIAL ---
   useEffect(() => {
     if (lotes.length > 0) {
       lotes.forEach(l => {
@@ -128,9 +149,8 @@ const InventarioLotes: React.FC = () => {
     huerfanos: lotes.filter(l => !l.id_proyecto).length
   }), [lotes]);
 
-  // --- FILTRADO CON ORDENAMIENTO STICKY ---
+  // --- FILTRADO ---
   const filteredLotes = useMemo(() => {
-    // 1. Filtrado
     const filtered = lotes.filter(lote => {
       const term = searchTerm.toLowerCase();
       const matchesSearch = lote.nombre_lote.toLowerCase().includes(term) || lote.id.toString().includes(term);
@@ -140,22 +160,18 @@ const InventarioLotes: React.FC = () => {
       return matchesSearch && matchesProject;
     });
 
-    // 2. Ordenamiento "Sticky"
     return filtered.sort((a, b) => {
       const statusA = initialStatusRef.current[a.id] ?? a.activo;
       const statusB = initialStatusRef.current[b.id] ?? b.activo;
-
-      if (statusA !== statusB) {
-        return statusA ? -1 : 1;
-      }
+      if (statusA !== statusB) return statusA ? -1 : 1;
       return a.nombre_lote.localeCompare(b.nombre_lote);
     });
   }, [lotes, searchTerm, filterProject]);
 
   const getErrorMessage = (error: unknown): string => {
-    if (error instanceof Error) {
-      const axiosError = error as AxiosError<ApiErrorResponse>;
-      return axiosError.response?.data?.mensaje || axiosError.response?.data?.message || axiosError.response?.data?.error || axiosError.message || 'Error desconocido';
+    if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as AxiosError<ApiErrorResponse>;
+        return axiosError.response?.data?.mensaje || axiosError.response?.data?.message || axiosError.message;
     }
     return String(error);
   };
@@ -182,8 +198,6 @@ const InventarioLotes: React.FC = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['adminLotes'] });
       confirmDialog.close();
-      
-      // Efecto Flash
       setHighlightedId(variables.id);
       setTimeout(() => setHighlightedId(null), 2500);
       showMessage(variables.activo ? 'Lote visible' : 'Lote ocultado');
@@ -229,17 +243,9 @@ const InventarioLotes: React.FC = () => {
   };
 
   // --- HANDLERS ---
-  const handleToggleActive = (lote: LoteDto) => {
-    confirmDialog.confirm('toggle_lote_visibility', lote);
-  };
-
-  const handleStartAuction = (lote: LoteDto) => {
-    confirmDialog.confirm('start_auction', lote);
-  };
-
-  const handleEndAuction = (lote: LoteDto) => {
-    confirmDialog.confirm('end_auction', lote);
-  };
+  const handleToggleActive = (lote: LoteDto) => confirmDialog.confirm('toggle_lote_visibility', lote);
+  const handleStartAuction = (lote: LoteDto) => confirmDialog.confirm('start_auction', lote);
+  const handleEndAuction = (lote: LoteDto) => confirmDialog.confirm('end_auction', lote);
 
   const handleConfirmAction = () => {
     if (!confirmDialog.data) return;
@@ -256,38 +262,22 @@ const InventarioLotes: React.FC = () => {
     }
   };
 
-  const handleOpenCreate = () => {
-    setSelectedLote(null);
-    createEditModal.open();
-  };
-
-  const handleOpenEdit = (lote: LoteDto) => {
-    setSelectedLote(lote);
-    createEditModal.open();
-  };
-
-  const handleManageImages = (lote: LoteDto) => {
-    setSelectedLote(lote);
-    imagesModal.open();
-  };
-
-  const handleCloseModals = () => {
-    createEditModal.close();
-    imagesModal.close();
-    setSelectedLote(null);
-  };
+  const handleOpenCreate = () => { setSelectedLote(null); createEditModal.open(); };
+  const handleOpenEdit = (lote: LoteDto) => { setSelectedLote(lote); createEditModal.open(); };
+  const handleManageImages = (lote: LoteDto) => { setSelectedLote(lote); imagesModal.open(); };
+  const handleCloseModals = () => { createEditModal.close(); imagesModal.close(); setTimeout(() => setSelectedLote(null), 300); };
 
   // ========================================================================
-  // ⚙️ DEFINICIÓN DE COLUMNAS
+  // ⚙️ DEFINICIÓN DE COLUMNAS (MEMOIZED)
   // ========================================================================
-  const columns: DataTableColumn<LoteDto>[] = [
+  const columns = useMemo<DataTableColumn<LoteDto>[]>(() => [
     {
       id: 'lote',
       label: 'Lote / ID',
       minWidth: 200,
       render: (lote) => (
         <Box>
-          <Typography fontWeight={600} variant="body2">{lote.nombre_lote}</Typography>
+          <Typography fontWeight={700} variant="body2" color="text.primary">{lote.nombre_lote}</Typography>
           <Typography variant="caption" color="text.secondary">ID: {lote.id}</Typography>
         </Box>
       )
@@ -300,10 +290,10 @@ const InventarioLotes: React.FC = () => {
         lote.id_proyecto ? (
           <Chip 
             label={proyectos.find(p => p.id === lote.id_proyecto)?.nombre_proyecto || `Proy. ${lote.id_proyecto}`} 
-            size="small" variant="outlined" color="primary" sx={{ fontWeight: 500 }}
+            size="small" variant="outlined" color="primary" sx={{ fontWeight: 600, border: '1px solid' }}
           />
         ) : (
-          <Chip label="Huérfano" size="small" color="warning" icon={<Warning />} />
+          <Chip label="Huérfano" size="small" color="warning" icon={<Warning sx={{ fontSize: '14px !important' }} />} variant="outlined" />
         )
       )
     },
@@ -311,7 +301,7 @@ const InventarioLotes: React.FC = () => {
       id: 'precio',
       label: 'Precio Base',
       render: (lote) => (
-        <Typography variant="body2" fontWeight={700} sx={{ fontFamily: 'monospace' }}>
+        <Typography variant="body2" fontWeight={700} sx={{ fontFamily: 'monospace', color: 'primary.main' }}>
           ${Number(lote.precio_base).toLocaleString('es-AR')}
         </Typography>
       )
@@ -325,7 +315,7 @@ const InventarioLotes: React.FC = () => {
           color={getStatusColor(lote.estado_subasta)} 
           size="small" 
           variant={lote.estado_subasta === 'pendiente' ? 'outlined' : 'filled'}
-          sx={{ fontWeight: 600 }}
+          sx={{ fontWeight: 700 }}
         />
       )
     },
@@ -334,31 +324,46 @@ const InventarioLotes: React.FC = () => {
       label: 'Visibilidad',
       align: 'center',
       render: (lote) => {
+        // 🔥 IMPLEMENTACIÓN IGUAL A PROYECTOS (ICONO + TEXTO)
         const isProcessingThis = toggleActiveMutation.isPending && confirmDialog.data?.id === lote.id;
 
         return (
           <Stack direction="row" alignItems="center" spacing={1} justifyContent="center">
             {isProcessingThis ? (
-              <CircularProgress size={24} color="inherit" />
+              <CircularProgress size={20} color="inherit" />
             ) : (
-              <Switch
-                checked={lote.activo}
-                onChange={() => handleToggleActive(lote)}
-                color="success"
-                size="small"
-                disabled={toggleActiveMutation.isPending}
-              />
+                <Tooltip title={lote.activo ? 'Ocultar Lote' : 'Hacer Visible'}>
+                    <Switch
+                        checked={lote.activo}
+                        onChange={() => handleToggleActive(lote)}
+                        color="success"
+                        size="small"
+                        disabled={toggleActiveMutation.isPending}
+                        sx={{
+                            '& .MuiSwitch-switchBase.Mui-checked': {
+                                color: theme.palette.success.main,
+                                '&:hover': { backgroundColor: alpha(theme.palette.success.main, 0.1) },
+                            },
+                            '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                                backgroundColor: theme.palette.success.main,
+                            },
+                        }}
+                    />
+                </Tooltip>
             )}
             
             {!isProcessingThis && (
-              <Typography 
-                variant="caption" 
-                color={lote.activo ? 'success.main' : 'text.disabled'}
-                fontWeight={600}
-                sx={{ minWidth: 50 }}
-              >
-                {lote.activo ? 'Visible' : 'Oculto'}
-              </Typography>
+               <Box display="flex" alignItems="center" gap={0.5}>
+                 {lote.activo ? <CheckCircle fontSize="inherit" color="success" sx={{ fontSize: 14 }} /> : <Block fontSize="inherit" color="disabled" sx={{ fontSize: 14 }} />}
+                 <Typography 
+                   variant="caption" 
+                   color={lote.activo ? 'success.main' : 'text.disabled'}
+                   fontWeight={600}
+                   sx={{ minWidth: 50 }}
+                 >
+                   {lote.activo ? 'Visible' : 'Oculto'}
+                 </Typography>
+               </Box>
             )}
           </Stack>
         );
@@ -371,7 +376,8 @@ const InventarioLotes: React.FC = () => {
         lote.id_ganador ? (
           <Stack direction="row" alignItems="center" spacing={1}>
             <Chip 
-              icon={<Person />} label={`Usuario ${lote.id_ganador}`} 
+              icon={<Person sx={{ fontSize: '14px !important' }} />} 
+              label={`Usuario ${lote.id_ganador}`} 
               size="small" color="success" variant="outlined"
             />
             {lote.intentos_fallidos_pago > 0 && (
@@ -388,13 +394,14 @@ const InventarioLotes: React.FC = () => {
       label: 'Subasta',
       align: 'right',
       render: (lote) => (
-        <>
+        <Stack direction="row" justifyContent="flex-end">
           {lote.estado_subasta === 'pendiente' && lote.id_proyecto && (
             <Tooltip title="Iniciar Subasta">
               <IconButton 
-                color="success" size="small"
+                size="small"
                 onClick={() => handleStartAuction(lote)}
                 disabled={toggleActiveMutation.isPending || startAuction.isPending || endAuction.isPending}
+                sx={{ color: 'success.main', '&:hover': { bgcolor: alpha(theme.palette.success.main, 0.1) } }}
               >
                 <PlayCircleFilled />
               </IconButton>
@@ -403,15 +410,16 @@ const InventarioLotes: React.FC = () => {
           {lote.estado_subasta === 'activa' && (
             <Tooltip title="Finalizar Subasta">
               <IconButton 
-                color="error" size="small"
+                size="small"
                 onClick={() => handleEndAuction(lote)}
                 disabled={toggleActiveMutation.isPending || startAuction.isPending || endAuction.isPending}
+                sx={{ color: 'error.main', '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.1) } }}
               >
                 <StopCircle />
               </IconButton>
             </Tooltip>
           )}
-        </>
+        </Stack>
       )
     },
     {
@@ -424,8 +432,8 @@ const InventarioLotes: React.FC = () => {
             <IconButton 
               onClick={() => handleManageImages(lote)} 
               size="small" 
-              color="primary"
               disabled={toggleActiveMutation.isPending}
+              sx={{ color: 'primary.main', '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.1) } }}
             >
               <Collections fontSize="small" />
             </IconButton>
@@ -435,6 +443,7 @@ const InventarioLotes: React.FC = () => {
               size="small" 
               onClick={() => handleOpenEdit(lote)}
               disabled={toggleActiveMutation.isPending}
+              sx={{ color: 'text.secondary', '&:hover': { color: 'primary.main' } }}
             >
               <Edit fontSize="small" />
             </IconButton>
@@ -442,33 +451,50 @@ const InventarioLotes: React.FC = () => {
         </Stack>
       )
     }
-  ];
+  ], [proyectos, theme, toggleActiveMutation.isPending, startAuction.isPending, endAuction.isPending, confirmDialog.data]);
 
   return (
-    <PageContainer maxWidth="xl">
+    <PageContainer maxWidth="xl" sx={{ py: 3 }}>
       <PageHeader
         title="Gestión de Lotes"
         subtitle="Inventario, asignación de proyectos y control de subastas."
       />
 
-      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} mb={4}>
+      {/* Grid de KPIs */}
+      <Box sx={{ 
+        display: 'grid', 
+        gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', lg: 'repeat(4, 1fr)' }, 
+        gap: 2, mb: 4 
+      }}>
         <StatCard title="Total Lotes" value={stats.total} icon={<Inventory />} color="primary" loading={loadingLotes} />
         <StatCard title="En Subasta" value={stats.enSubasta} icon={<Gavel />} color="success" loading={loadingLotes} />
         <StatCard title="Finalizados" value={stats.finalizados} icon={<CheckCircle />} color="info" loading={loadingLotes} />
         <StatCard title="Huérfanos" value={stats.huerfanos} icon={<AssignmentLate />} color="warning" loading={loadingLotes} />
-      </Stack>
+      </Box>
 
-      <Paper sx={{ p: 2, mb: 3, borderRadius: 2 }} elevation={0} variant="outlined">
+      {/* Barra de Filtros */}
+      <Paper 
+        elevation={0} 
+        sx={{ 
+            p: 2, mb: 3, borderRadius: 2, 
+            border: '1px solid', borderColor: 'divider', 
+            bgcolor: alpha(theme.palette.background.paper, 0.6)
+        }} 
+      >
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="center">
           <TextField 
             placeholder="Buscar por nombre o ID..." size="small" sx={{ flexGrow: 1 }}
             value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
-            InputProps={{ startAdornment: <InputAdornment position="start"><Search color="action"/></InputAdornment> }}
+            InputProps={{ 
+                startAdornment: <InputAdornment position="start"><Search color="action"/></InputAdornment>,
+                sx: { borderRadius: 2 }
+            }}
           />
           <TextField
             select label="Filtrar por Proyecto" size="small" sx={{ minWidth: 250 }}
             value={filterProject} onChange={(e) => setFilterProject(e.target.value)}
             disabled={loadingProyectos}
+            InputProps={{ sx: { borderRadius: 2 } }}
           >
             <MenuItem value="all">Todos los Lotes</MenuItem>
             <MenuItem value="huerfano" sx={{ color: 'warning.main' }}>⚠️ Sin Proyecto</MenuItem>
@@ -480,6 +506,7 @@ const InventarioLotes: React.FC = () => {
           <Button 
             variant="contained" startIcon={<Add />} color="primary"
             onClick={handleOpenCreate}
+            sx={{ borderRadius: 2, fontWeight: 700, boxShadow: theme.shadows[2] }}
           >
             Nuevo Lote
           </Button>
@@ -497,8 +524,13 @@ const InventarioLotes: React.FC = () => {
               opacity: lote.activo ? 1 : 0.6,
               transition: 'background-color 0.8s ease, opacity 0.3s ease',
               bgcolor: isHighlighted 
-                ? (theme) => alpha(theme.palette.success.main, 0.2)
-                : (lote.activo ? 'inherit' : 'action.hover')
+                ? alpha(theme.palette.success.main, 0.15)
+                : (lote.activo ? 'inherit' : alpha(theme.palette.action.hover, 0.5)),
+              '&:hover': {
+                bgcolor: isHighlighted 
+                  ? alpha(theme.palette.success.main, 0.2)
+                  : alpha(theme.palette.action.hover, 0.8)
+              }
             };
           }}
           emptyMessage="No se encontraron lotes con los filtros actuales."
@@ -542,6 +574,7 @@ const InventarioLotes: React.FC = () => {
           severity={snackbar.severity} 
           onClose={() => setSnackbar(prev => ({ ...prev, open: false }))} 
           variant="filled"
+          sx={{ boxShadow: theme.shadows[4] }}
         >
           {snackbar.message}
         </Alert>

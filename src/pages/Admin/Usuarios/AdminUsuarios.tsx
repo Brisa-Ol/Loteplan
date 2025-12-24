@@ -1,3 +1,5 @@
+// src/pages/Admin/Usuarios/AdminUsuarios.tsx
+
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { 
   Box, Typography, Paper, Chip, IconButton, Tooltip, 
@@ -8,8 +10,7 @@ import {
 import { 
   PersonAdd, Search, Group as GroupIcon, MarkEmailRead, 
   Security, Edit as EditIcon, VerifiedUser as VerifiedUserIcon,
-  PhonelinkLock as TwoFaIcon, CheckCircle, Close as CloseIcon,
-  Block as BlockIcon
+  PhonelinkLock as TwoFaIcon, CheckCircle, Block as BlockIcon
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { AxiosError } from 'axios';
@@ -31,11 +32,11 @@ import EditUserModal from './modals/EditUserModal';
 import { useModal } from '../../../hooks/useModal';
 import { useConfirmDialog } from '../../../hooks/useConfirmDialog';
 
-// --- COMPONENTE MINI STAT CARD (THEMED) ---
+// --- COMPONENTE MINI STAT CARD (Estandarizado) ---
 const MiniStatCard: React.FC<{ title: string; value: number; icon: React.ReactNode; color: string }> = ({ title, value, icon, color }) => {
   const theme = useTheme();
-  // Mapeo seguro de colores del theme
-  const themeColor = (theme.palette as any)[color] || theme.palette.primary;
+  // Obtener color del theme de forma segura
+  const paletteColor = (theme.palette as any)[color] || theme.palette.primary;
 
   return (
     <Paper 
@@ -48,19 +49,18 @@ const MiniStatCard: React.FC<{ title: string; value: number; icon: React.ReactNo
         borderRadius: 3, 
         border: '1px solid',
         borderColor: 'divider',
-        transition: 'transform 0.2s, box-shadow 0.2s',
+        transition: 'all 0.2s ease',
         '&:hover': {
-          transform: 'translateY(-2px)',
-          boxShadow: theme.shadows[2],
-          borderColor: themeColor.main
+          borderColor: paletteColor.main,
+          transform: 'translateY(-2px)'
         }
       }}
     >
       <Avatar 
         variant="rounded" 
         sx={{ 
-          bgcolor: alpha(themeColor.main, 0.1), 
-          color: themeColor.main,
+          bgcolor: alpha(paletteColor.main, 0.1), 
+          color: paletteColor.main,
           width: 48, 
           height: 48 
         }}
@@ -239,8 +239,8 @@ const AdminUsuarios: React.FC = () => {
     });
   }, [usuarios, searchTerm, filterStatus]);
 
-  // Columnas
-  const columns: DataTableColumn<UsuarioDto>[] = [
+  // Columnas (Memoizadas)
+  const columns = useMemo<DataTableColumn<UsuarioDto>[]>(() => [
     { id: 'id', label: 'ID', minWidth: 50 },
     { 
       id: 'usuario', 
@@ -250,12 +250,12 @@ const AdminUsuarios: React.FC = () => {
         <Stack direction="row" alignItems="center" spacing={2}>
            {/* Avatar con Inicial */}
            <Avatar sx={{ 
-              width: 40, 
-              height: 40, 
-              bgcolor: user.activo ? alpha(theme.palette.primary.main, 0.1) : theme.palette.action.disabledBackground,
-              color: user.activo ? 'primary.main' : 'text.disabled',
-              fontSize: '1rem',
-              fontWeight: 'bold'
+             width: 40, 
+             height: 40, 
+             bgcolor: user.activo ? alpha(theme.palette.primary.main, 0.1) : theme.palette.action.disabledBackground,
+             color: user.activo ? 'primary.main' : 'text.disabled',
+             fontSize: '1rem',
+             fontWeight: 'bold'
            }}>
              {user.nombre_usuario.charAt(0).toUpperCase()}
            </Avatar>
@@ -379,7 +379,7 @@ const AdminUsuarios: React.FC = () => {
         </Stack>
       )
     }
-  ];
+  ], [theme, toggleStatusMutation.isPending, confirmDialog.data]);
 
   return (
     <PageContainer maxWidth="xl" sx={{ py: 3 }}>
@@ -400,15 +400,8 @@ const AdminUsuarios: React.FC = () => {
       <Paper 
         elevation={0} 
         sx={{ 
-          p: 2, 
-          mb: 3, 
-          display: 'flex', 
-          flexWrap: 'wrap', 
-          gap: 2, 
-          alignItems: 'center', 
-          borderRadius: 2,
-          border: '1px solid',
-          borderColor: 'divider',
+          p: 2, mb: 3, display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center', 
+          borderRadius: 2, border: '1px solid', borderColor: 'divider', 
           bgcolor: alpha(theme.palette.background.paper, 0.6)
         }} 
       >
@@ -419,20 +412,13 @@ const AdminUsuarios: React.FC = () => {
           value={searchTerm} 
           onChange={(e) => setSearchTerm(e.target.value)}
           InputProps={{ 
-            startAdornment: (
-              <InputAdornment position="start">
-                <Search color="action" />
-              </InputAdornment>
-            ),
+            startAdornment: (<InputAdornment position="start"><Search color="action" /></InputAdornment>),
             sx: { borderRadius: 2 }
           }}
         />
         <TextField 
-          select 
-          label="Estado" 
-          size="small" 
-          value={filterStatus} 
-          onChange={(e) => setFilterStatus(e.target.value)} 
+          select label="Estado" size="small" 
+          value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} 
           sx={{ minWidth: 150, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
         >
           <MenuItem value="all">Todos</MenuItem>
@@ -447,9 +433,7 @@ const AdminUsuarios: React.FC = () => {
           startIcon={<PersonAdd />} 
           onClick={createModal.open}
           sx={{ 
-            borderRadius: 2, 
-            textTransform: 'none', 
-            fontWeight: 600,
+            borderRadius: 2, textTransform: 'none', fontWeight: 600,
             boxShadow: theme.shadows[2]
           }}
         >
@@ -459,33 +443,30 @@ const AdminUsuarios: React.FC = () => {
 
       {/* Tabla de Usuarios */}
       <QueryHandler isLoading={isLoading} error={error as Error | null}>
-        <Paper elevation={0} sx={{ borderRadius: 2, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
-            <DataTable
+          {/* Eliminado el Paper envolvente redundante */}
+          <DataTable
             columns={columns} 
             data={filteredUsers} 
             getRowKey={(user) => user.id}
-            elevation={0}
-            // Estilo condicional: Flash Verde refinado
             getRowSx={(user) => {
-                const isHighlighted = highlightedUserId === user.id;
-                return {
+              const isHighlighted = highlightedUserId === user.id;
+              return {
                 opacity: user.activo ? 1 : 0.6,
                 transition: 'background-color 0.8s ease, opacity 0.3s ease',
                 bgcolor: isHighlighted 
-                    ? alpha(theme.palette.success.main, 0.15)
-                    : (user.activo ? 'inherit' : alpha(theme.palette.action.hover, 0.5)),
+                  ? alpha(theme.palette.success.main, 0.15)
+                  : (user.activo ? 'inherit' : alpha(theme.palette.action.hover, 0.5)),
                 '&:hover': {
-                    bgcolor: isHighlighted 
+                  bgcolor: isHighlighted 
                     ? alpha(theme.palette.success.main, 0.2)
                     : alpha(theme.palette.action.hover, 0.8)
                 }
-                };
+              };
             }}
             emptyMessage="No se encontraron usuarios registrados." 
             pagination={true} 
             defaultRowsPerPage={10}
-            />
-        </Paper>
+          />
       </QueryHandler>
 
       {/* --- MODALES --- */}

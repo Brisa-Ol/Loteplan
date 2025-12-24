@@ -5,13 +5,14 @@ import {
   Box, Typography, Paper, Card, CardContent, CardActions, 
   Button, Chip, Stack, Avatar, Alert, LinearProgress,
   useTheme, Tabs, Tab, Dialog, DialogTitle, DialogContent, 
-  DialogActions, TextField, IconButton, Tooltip, CircularProgress
+  DialogActions, TextField, IconButton, Tooltip, CircularProgress,
+  alpha, Divider
 } from '@mui/material';
 import { 
   Gavel, Timer, StopCircle, ReceiptLong, 
   MonetizationOn, Warning, Person, Email,
   ContentCopy, ErrorOutline, Image as ImageIcon,
-  Block // 🟢 Icono para la acción de anular/incumplimiento
+  Block
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -35,36 +36,61 @@ import { useModal } from '../../../hooks/useModal';
 // SUB-COMPONENTES (Tarjetas y Modales)
 // =============================================================================
 
+// --- STAT CARD ESTANDARIZADA ---
 const StatCard: React.FC<{ 
   title: string; 
   value: string | number; 
   icon: React.ReactNode; 
   color: string; 
   loading?: boolean;
-}> = ({ title, value, icon, color, loading }) => (
-  <Paper elevation={0} sx={{ 
-    p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2, 
-    flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 2 
-  }}>
-    <Box sx={{ bgcolor: `${color}.light`, color: `${color}.main`, p: 1.5, borderRadius: '50%', display: 'flex' }}>
-      {icon}
-    </Box>
-    <Box sx={{ width: '100%' }}>
-      {loading ? (
-        <LinearProgress color="inherit" sx={{ width: '60%', mb: 1 }} />
-      ) : (
-        <Typography variant="h5" fontWeight="bold" color="text.primary">{value}</Typography>
-      )}
-      <Typography variant="body2" color="text.secondary" fontWeight={600}>{title}</Typography>
-    </Box>
-  </Paper>
-);
+}> = ({ title, value, icon, color, loading }) => {
+  const theme = useTheme();
+  const paletteColor = (theme.palette as any)[color] || theme.palette.primary;
 
+  return (
+    <Paper 
+      elevation={0} 
+      sx={{ 
+        p: 2, 
+        border: '1px solid', 
+        borderColor: 'divider', 
+        borderRadius: 2, 
+        flex: 1, 
+        minWidth: 0, 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: 2,
+        transition: 'all 0.2s ease',
+        '&:hover': {
+            borderColor: paletteColor.main,
+            transform: 'translateY(-2px)'
+        }
+      }}
+    >
+      <Box sx={{ bgcolor: alpha(paletteColor.main, 0.1), color: paletteColor.main, p: 1.5, borderRadius: '50%', display: 'flex' }}>
+        {icon}
+      </Box>
+      <Box sx={{ width: '100%' }}>
+        {loading ? (
+            <LinearProgress color="inherit" sx={{ width: '60%', mb: 1 }} />
+        ) : (
+            <Typography variant="h5" fontWeight="bold" color="text.primary">{value}</Typography>
+        )}
+        <Typography variant="body2" color="text.secondary" fontWeight={600} sx={{ textTransform: 'uppercase', fontSize: '0.75rem' }}>
+            {title}
+        </Typography>
+      </Box>
+    </Paper>
+  );
+};
+
+// --- MODAL DE CONTACTO ---
 const ContactarGanadorModal: React.FC<{
   open: boolean;
   onClose: () => void;
   lote: LoteDto | null;
 }> = ({ open, onClose, lote }) => {
+  const theme = useTheme();
   const [mensajePersonalizado, setMensajePersonalizado] = useState('');
 
   if (!lote) return null;
@@ -77,12 +103,20 @@ const ContactarGanadorModal: React.FC<{
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Contactar Ganador - Lote #{lote.id}</DialogTitle>
-      <DialogContent>
-        <Stack spacing={2} mt={1}>
-          <Alert severity="info">
-            <Typography variant="body2" fontWeight={600}>
+    <Dialog 
+        open={open} 
+        onClose={onClose} 
+        maxWidth="sm" 
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 3, boxShadow: theme.shadows[10] } }}
+    >
+      <DialogTitle sx={{ bgcolor: alpha(theme.palette.primary.main, 0.05), pb: 2 }}>
+        Contactar Ganador - Lote #{lote.id}
+      </DialogTitle>
+      <DialogContent sx={{ mt: 2 }}>
+        <Stack spacing={2}>
+          <Alert severity="info" variant="outlined" sx={{ borderRadius: 2 }}>
+            <Typography variant="body2" fontWeight={700}>
               Usuario #{lote.id_ganador}
             </Typography>
             <Typography variant="caption">
@@ -97,15 +131,16 @@ const ContactarGanadorModal: React.FC<{
             onChange={(e) => setMensajePersonalizado(e.target.value)}
             placeholder={mensajeBase}
             helperText="Deja vacío para usar el mensaje predeterminado"
+            sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
           />
 
-          <Button variant="outlined" startIcon={<ContentCopy />} onClick={handleCopiar} fullWidth>
+          <Button variant="outlined" startIcon={<ContentCopy />} onClick={handleCopiar} fullWidth sx={{ borderRadius: 2 }}>
             Copiar Mensaje
           </Button>
         </Stack>
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Cerrar</Button>
+      <DialogActions sx={{ p: 2 }}>
+        <Button onClick={onClose} color="inherit">Cerrar</Button>
       </DialogActions>
     </Dialog>
   );
@@ -129,7 +164,7 @@ const SalaControlPujas: React.FC = () => {
   const { data: lotes = [], isLoading: loadingLotes, error: errorLotes } = useQuery<LoteDto[]>({
     queryKey: ['adminLotes'],
     queryFn: async () => (await LoteService.findAllAdmin()).data,
-    refetchInterval: 10000, // Refresco cada 10s para ver pujas en vivo
+    refetchInterval: 10000,
   });
 
   const { data: pujas = [], isLoading: loadingPujas } = useQuery<PujaDto[]>({
@@ -152,8 +187,6 @@ const SalaControlPujas: React.FC = () => {
   }, [lotes, pujas]);
 
   // --- MUTATIONS ---
-
-  // 1. Finalizar Subasta (Cierre normal)
   const endAuctionMutation = useMutation({
     mutationFn: (id: number) => LoteService.endAuction(id),
     onSuccess: (res) => {
@@ -163,13 +196,9 @@ const SalaControlPujas: React.FC = () => {
     onError: (err: any) => alert(`❌ Error: ${err.message}`)
   });
 
-  // 2. 🟢 Ejecutar Incumplimiento Manual (Cierre forzoso por impago)
   const forceDefaultMutation = useMutation({
     mutationFn: async (lote: LoteDto) => {
-      // Necesitamos el ID de la puja para cancelarla. El lote lo tiene.
       if (!lote.id_puja_mas_alta) throw new Error("No se encontró la puja ganadora asociada.");
-      
-      // Llamamos al updateAdmin para forzar el estado a 'ganadora_incumplimiento'
       return await PujaService.updateAdmin(lote.id_puja_mas_alta, {
         estado_puja: 'ganadora_incumplimiento'
       });
@@ -203,14 +232,20 @@ const SalaControlPujas: React.FC = () => {
   // ========================================================================
   // ⚙️ COLUMNAS: GESTIÓN DE COBROS (TAB 1)
   // ========================================================================
-  const columnsCobros: DataTableColumn<LoteDto>[] = [
+  const columnsCobros: DataTableColumn<LoteDto>[] = useMemo(() => [
     {
       id: 'lote', label: 'Lote / ID', minWidth: 200,
       render: (lote) => (
         <Stack direction="row" spacing={2} alignItems="center">
-            <Avatar src={getLoteImage(lote)} variant="rounded" sx={{ width: 40, height: 40 }}><ImageIcon /></Avatar>
+            <Avatar 
+                src={getLoteImage(lote)} 
+                variant="rounded" 
+                sx={{ width: 40, height: 40, bgcolor: alpha(theme.palette.primary.main, 0.1) }}
+            >
+                <ImageIcon color="primary" />
+            </Avatar>
             <Box>
-                <Typography fontWeight={600} variant="body2">{lote.nombre_lote}</Typography>
+                <Typography fontWeight={700} variant="body2">{lote.nombre_lote}</Typography>
                 <Typography variant="caption" color="text.secondary">ID: {lote.id}</Typography>
             </Box>
         </Stack>
@@ -220,14 +255,16 @@ const SalaControlPujas: React.FC = () => {
       id: 'ganador', label: 'Ganador',
       render: (lote) => (
         <Stack direction="row" alignItems="center" spacing={1}>
-            <Avatar sx={{ width: 24, height: 24, fontSize: 12, bgcolor: 'primary.light' }}><Person fontSize="inherit"/></Avatar>
-            <Typography variant="body2">Usuario #{lote.id_ganador}</Typography>
+            <Avatar sx={{ width: 24, height: 24, fontSize: 12, bgcolor: alpha(theme.palette.primary.main, 0.2), color: 'primary.main' }}>
+                <Person fontSize="inherit"/>
+            </Avatar>
+            <Typography variant="body2" fontWeight={500}>Usuario #{lote.id_ganador}</Typography>
         </Stack>
       )
     },
     {
       id: 'estado', label: 'Estado',
-      render: () => <Chip label="Pendiente Pago" color="warning" size="small" variant="outlined" />
+      render: () => <Chip label="Pendiente Pago" color="warning" size="small" variant="outlined" sx={{ fontWeight: 600 }} />
     },
     {
       id: 'acciones', label: 'Acciones', align: 'right',
@@ -235,22 +272,23 @@ const SalaControlPujas: React.FC = () => {
         <Button 
             variant="contained" color="primary" size="small" startIcon={<Email />} 
             onClick={() => handleContactar(lote)}
+            sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700 }}
         >
             Contactar
         </Button>
       )
     }
-  ];
+  ], [theme]);
 
   // ========================================================================
-  // ⚙️ COLUMNAS: MONITOREO IMPAGOS (TAB 2) - Con botón de anulación
+  // ⚙️ COLUMNAS: MONITOREO IMPAGOS (TAB 2)
   // ========================================================================
-  const columnsImpagos: DataTableColumn<LoteDto>[] = [
+  const columnsImpagos: DataTableColumn<LoteDto>[] = useMemo(() => [
     {
       id: 'lote', label: 'Lote / ID', minWidth: 200,
       render: (lote) => (
         <Box>
-            <Typography fontWeight={600} variant="body2">{lote.nombre_lote}</Typography>
+            <Typography fontWeight={700} variant="body2">{lote.nombre_lote}</Typography>
             <Typography variant="caption" color="text.secondary">ID: {lote.id}</Typography>
         </Box>
       )
@@ -270,7 +308,8 @@ const SalaControlPujas: React.FC = () => {
                 </Stack>
                 <LinearProgress 
                     variant="determinate" value={(intentos / 3) * 100} 
-                    color={isCritical ? 'error' : 'warning'} sx={{ height: 6, borderRadius: 3 }}
+                    color={isCritical ? 'error' : 'warning'} 
+                    sx={{ height: 6, borderRadius: 3, bgcolor: alpha(theme.palette.grey[400], 0.3) }}
                 />
             </Stack>
         );
@@ -282,8 +321,11 @@ const SalaControlPujas: React.FC = () => {
         const isCritical = (lote.intentos_fallidos_pago || 0) >= 3;
         return (
             <Chip 
-                icon={<Person />} label={`Usuario #${lote.id_ganador}`} variant="outlined" size="small"
+                icon={<Person sx={{ fontSize: '14px !important' }} />} 
+                label={`Usuario #${lote.id_ganador}`} 
+                variant="outlined" size="small"
                 color={isCritical ? 'error' : 'default'} 
+                sx={{ fontWeight: 500 }}
             />
         );
       }
@@ -292,7 +334,6 @@ const SalaControlPujas: React.FC = () => {
       id: 'acciones', label: 'Acciones', align: 'right', minWidth: 120,
       render: (lote) => {
         const isCritical = (lote.intentos_fallidos_pago || 0) >= 3;
-        // Identificamos si esta fila específica se está procesando
         const isProcessing = forceDefaultMutation.isPending && forceDefaultMutation.variables?.id === lote.id;
 
         return (
@@ -300,15 +341,18 @@ const SalaControlPujas: React.FC = () => {
                 <Tooltip title="Contactar Ganador">
                     <IconButton 
                         size="small"
-                        color={isCritical ? 'error' : 'warning'}
+                        sx={{ 
+                            color: isCritical ? 'error.main' : 'warning.main',
+                            bgcolor: isCritical ? alpha(theme.palette.error.main, 0.1) : alpha(theme.palette.warning.main, 0.1),
+                            '&:hover': { bgcolor: isCritical ? alpha(theme.palette.error.main, 0.2) : alpha(theme.palette.warning.main, 0.2) }
+                        }}
                         onClick={() => handleContactar(lote)}
                     >
                         <Email fontSize="small" />
                     </IconButton>
                 </Tooltip>
 
-                {/* 🟢 BOTÓN: Ejecutar Incumplimiento Manual */}
-                <Tooltip title="Ejecutar Incumplimiento Manual (Anular Adjudicación)">
+                <Tooltip title="Ejecutar Incumplimiento Manual">
                     <IconButton 
                         size="small"
                         color="error"
@@ -319,8 +363,8 @@ const SalaControlPujas: React.FC = () => {
                             }
                         }}
                         sx={{ 
-                            bgcolor: 'error.lighter', 
-                            '&:hover': { bgcolor: 'error.light', color: 'white' } 
+                            bgcolor: alpha(theme.palette.error.main, 0.1), 
+                            '&:hover': { bgcolor: theme.palette.error.main, color: 'white' } 
                         }}
                     >
                         {isProcessing ? <CircularProgress size={20} color="inherit" /> : <Block fontSize="small" />}
@@ -330,11 +374,7 @@ const SalaControlPujas: React.FC = () => {
         );
       }
     }
-  ];
-
-  // ========================================================================
-  // RENDER
-  // ========================================================================
+  ], [theme, forceDefaultMutation.isPending]);
 
   return (
     <PageContainer maxWidth="xl">
@@ -353,8 +393,36 @@ const SalaControlPujas: React.FC = () => {
       </Box>
 
       {/* Tabs */}
-      <Paper elevation={0} variant="outlined" sx={{ mb: 3, borderRadius: 2 }}>
-        <Tabs value={tabValue} onChange={(_, v) => setTabValue(v)} indicatorColor="primary" textColor="primary" variant="standard" sx={{ borderBottom: 1, borderColor: 'divider' }}>
+      <Paper 
+        elevation={0} 
+        sx={{ 
+            mb: 3, 
+            borderRadius: 2, 
+            border: '1px solid',
+            borderColor: 'divider',
+            bgcolor: alpha(theme.palette.background.paper, 0.6),
+            p: 0.5
+        }} 
+      >
+        <Tabs 
+            value={tabValue} 
+            onChange={(_, v) => setTabValue(v)} 
+            indicatorColor="primary" 
+            textColor="primary" 
+            variant="standard"
+            sx={{
+                '& .MuiTab-root': {
+                    minHeight: 48,
+                    borderRadius: 1.5,
+                    mx: 0.5,
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    transition: 'all 0.2s',
+                    '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.05) },
+                    '&.Mui-selected': { bgcolor: alpha(theme.palette.primary.main, 0.1) }
+                }
+            }}
+        >
           <Tab icon={<Timer />} label="EN VIVO" iconPosition="start" />
           <Tab icon={<ReceiptLong />} label="Gestión de Cobros" iconPosition="start" />
           <Tab icon={<Warning />} label={`Monitoreo Impagos (${analytics.lotesEnRiesgo.length})`} iconPosition="start" />
@@ -367,8 +435,8 @@ const SalaControlPujas: React.FC = () => {
         {tabValue === 0 && (
           <Box display="grid" gridTemplateColumns={{ xs: '1fr', md: 'repeat(3, 1fr)' }} gap={3}>
             {analytics.activos.length === 0 && (
-                <Paper sx={{ p: 4, gridColumn: '1 / -1', textAlign: 'center' }} variant="outlined">
-                    <Typography color="text.secondary">No hay subastas activas en este momento.</Typography>
+                <Paper sx={{ p: 4, gridColumn: '1 / -1', textAlign: 'center', borderRadius: 2, border: '1px dashed', borderColor: 'divider' }} elevation={0}>
+                    <Typography color="text.secondary" fontWeight={500}>No hay subastas activas en este momento.</Typography>
                 </Paper>
             )}
             {analytics.activos.map(lote => {
@@ -376,25 +444,50 @@ const SalaControlPujas: React.FC = () => {
               const maxPuja = pujasLote.length > 0 ? Math.max(...pujasLote.map(p => Number(p.monto_puja))) : Number(lote.precio_base);
               
               return (
-                <Card key={lote.id} sx={{ border: '2px solid', borderColor: 'success.main', position: 'relative', borderRadius: 2 }}>
-                  <Chip label="EN VIVO" color="success" sx={{ position: 'absolute', top: 10, right: 10, fontWeight: 'bold' }} />
+                <Card key={lote.id} sx={{ border: `1px solid ${theme.palette.success.main}`, position: 'relative', borderRadius: 2, boxShadow: theme.shadows[3] }}>
+                  <Chip 
+                    label="EN VIVO" 
+                    color="success" 
+                    size="small"
+                    sx={{ position: 'absolute', top: 10, right: 10, fontWeight: 'bold' }} 
+                  />
                   <CardContent>
                     <Stack direction="row" spacing={2} alignItems="center" mb={2}>
-                      <Avatar src={getLoteImage(lote)} variant="rounded" sx={{ width: 60, height: 60 }}><Gavel/></Avatar>
+                      <Avatar 
+                        src={getLoteImage(lote)} 
+                        variant="rounded" 
+                        sx={{ width: 60, height: 60, bgcolor: alpha(theme.palette.success.main, 0.1) }}
+                      >
+                        <Gavel color="success"/>
+                      </Avatar>
                       <Box>
-                        <Typography fontWeight={700} variant="h6">{lote.nombre_lote}</Typography>
+                        <Typography fontWeight={700} variant="h6" lineHeight={1.2}>{lote.nombre_lote}</Typography>
                         <Typography variant="body2" color="text.secondary">ID: {lote.id}</Typography>
                       </Box>
                     </Stack>
-                    <Box textAlign="center" bgcolor="success.lighter" color="success.dark" p={2} borderRadius={2} border="1px solid" borderColor="success.light">
-                      <Typography variant="caption" fontWeight={700}>OFERTA ACTUAL</Typography>
+                    <Box 
+                        textAlign="center" 
+                        bgcolor={alpha(theme.palette.success.main, 0.08)} 
+                        color="success.dark" 
+                        p={2} borderRadius={2} 
+                        border="1px solid" 
+                        borderColor={alpha(theme.palette.success.main, 0.2)}
+                    >
+                      <Typography variant="caption" fontWeight={800} letterSpacing={1}>OFERTA ACTUAL</Typography>
                       <Typography variant="h4" fontWeight={700}>${maxPuja.toLocaleString()}</Typography>
                     </Box>
                   </CardContent>
                   <CardActions sx={{ p: 2, pt: 0 }}>
-                    <Button fullWidth variant="contained" color="error" startIcon={<StopCircle />} onClick={() => {
-                        if(confirm('¿Finalizar subasta?')) endAuctionMutation.mutate(lote.id);
-                    }}>
+                    <Button 
+                        fullWidth 
+                        variant="contained" 
+                        color="error" 
+                        startIcon={<StopCircle />} 
+                        onClick={() => {
+                            if(confirm('¿Finalizar subasta?')) endAuctionMutation.mutate(lote.id);
+                        }}
+                        sx={{ borderRadius: 2, fontWeight: 700 }}
+                    >
                       Finalizar Subasta
                     </Button>
                   </CardActions>

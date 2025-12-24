@@ -114,6 +114,7 @@ const typography = {
 
 // ========== COMPONENTES ==========
 const components: Components<Theme> = {
+  // --- BOTONES ---
   MuiButton: {
     styleOverrides: {
       root: {
@@ -149,6 +150,49 @@ const components: Components<Theme> = {
       },
     },
   },
+  // --- TABLAS (NUEVO) ---
+  MuiTableContainer: {
+    styleOverrides: {
+      root: {
+        borderRadius: 16, // Bordes redondeados consistentes
+        border: `1px solid ${colors.secondary.main}`, // Usa el color #ECECEC
+        boxShadow: "none", // Sin sombra para un look flat/moderno
+        backgroundImage: "none",
+        backgroundColor: colors.background.default, // Fondo blanco
+      },
+    },
+  },
+  MuiTableHead: {
+    styleOverrides: {
+      root: {
+        // Fondo gris muy suave para la cabecera (#F6F6F6)
+        backgroundColor: colors.secondary.light, 
+      },
+    },
+  },
+  MuiTableCell: {
+    styleOverrides: {
+      head: {
+        color: colors.text.secondary, // Texto gris oscuro (#333333)
+        fontWeight: 700, // Negrita para títulos
+        fontSize: "0.875rem",
+        borderBottom: `1px solid ${colors.secondary.main}`,
+      },
+      root: {
+        // Bordes de filas
+        borderBottom: `1px solid ${colors.secondary.main}`, // #ECECEC
+        padding: "16px", // Espaciado cómodo
+      },
+    },
+  },
+  MuiTablePagination: {
+    styleOverrides: {
+      root: {
+        borderTop: `1px solid ${colors.secondary.main}`, // Línea separadora
+      },
+    },
+  },
+  // --- TARJETAS & PAPER ---
   MuiCard: {
     styleOverrides: {
       root: {
@@ -169,6 +213,7 @@ const components: Components<Theme> = {
       },
     },
   },
+  // --- INPUTS ---
   MuiTextField: {
     styleOverrides: {
       root: {
@@ -181,6 +226,7 @@ const components: Components<Theme> = {
       },
     },
   },
+  // --- OTROS ELEMENTOS ---
   MuiChip: {
     styleOverrides: {
       root: {
@@ -246,22 +292,3 @@ export const theme = createTheme({
 });
 
 export default theme;
-
-// ==========================================
-// CÓMO USAR EN TU APP
-// ==========================================
-/*
-// App.tsx
-import { ThemeProvider } from '@mui/material/styles';
-import { CssBaseline } from '@mui/material';
-import { theme } from './theme';
-
-function App() {
-  return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <YourComponent />
-    </ThemeProvider>
-  );
-}
-*/

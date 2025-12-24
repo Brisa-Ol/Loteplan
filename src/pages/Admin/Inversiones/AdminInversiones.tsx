@@ -1,7 +1,9 @@
+// src/pages/Admin/Inversiones/AdminInversiones.tsx
+
 import React, { useState, useMemo } from 'react';
 import { 
   Box, Typography, Paper, TextField, MenuItem, 
-  InputAdornment, Stack, Divider, Avatar, LinearProgress, IconButton, Tooltip, Chip
+  InputAdornment, Stack, Divider, Avatar, LinearProgress, IconButton, Tooltip, Chip, useTheme, alpha
 } from '@mui/material';
 import { 
   Search, Visibility, MonetizationOn, ShowChart, 
@@ -20,18 +22,18 @@ import type { InversionDto } from '../../../types/dto/inversion.dto';
 import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
 import { QueryHandler } from '../../../components/common/QueryHandler/QueryHandler';
 import { PageHeader } from '../../../components/common/PageHeader/PageHeader';
+import { DataTable, type DataTableColumn } from '../../../components/common/DataTable/DataTable';
 import DetalleInversionModal from './components/DetalleInversionModal';
 
-// 👇 Import DataTable
-import { DataTable, type DataTableColumn } from '../../../components/common/DataTable/DataTable';
+// Servicios
 import InversionService from '../../../Services/inversion.service';
 import UsuarioService from '../../../Services/usuario.service';
 import ProyectoService from '../../../Services/proyecto.service';
 
-// ✅ 1. Import Hook
+// Hooks
 import { useModal } from '../../../hooks/useModal';
 
-// --- KPI COMPONENT ---
+// --- KPI COMPONENT (Estandarizado) ---
 const StatCard: React.FC<{ 
   title: string; 
   value: string; 
@@ -39,27 +41,50 @@ const StatCard: React.FC<{
   color: string; 
   icon: React.ReactNode; 
   loading?: boolean;
-}> = ({ title, value, sub, color, icon, loading }) => (
-  <Paper elevation={0} sx={{ 
-    p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2, 
-    flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 2 
-  }}>
-    <Box sx={{ bgcolor: `${color}.light`, color: `${color}.main`, p: 1.5, borderRadius: '50%', display: 'flex' }}>
-      {icon}
-    </Box>
-    <Box sx={{ width: '100%' }}>
-      {loading ? (
-        <LinearProgress color="inherit" sx={{ width: '60%', mb: 1 }} />
-      ) : (
-        <Typography variant="h5" fontWeight="bold" color="text.primary">{value}</Typography>
-      )}
-      <Typography variant="body2" color="text.secondary" fontWeight={600}>{title}</Typography>
-      {sub && <Typography variant="caption" color={color + '.main'} fontWeight="bold">{sub}</Typography>}
-    </Box>
-  </Paper>
-);
+}> = ({ title, value, sub, color, icon, loading }) => {
+  const theme = useTheme();
+  // Obtener color del theme de forma segura
+  const paletteColor = (theme.palette as any)[color] || theme.palette.primary;
+
+  return (
+    <Paper 
+      elevation={0} 
+      sx={{ 
+        p: 2, 
+        border: '1px solid', 
+        borderColor: 'divider', 
+        borderRadius: 2, 
+        flex: 1, 
+        minWidth: 0, 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: 2,
+        transition: 'all 0.2s ease',
+        '&:hover': {
+            borderColor: paletteColor.main,
+            transform: 'translateY(-2px)'
+        }
+      }}
+    >
+      <Box sx={{ bgcolor: alpha(paletteColor.main, 0.1), color: paletteColor.main, p: 1.5, borderRadius: '50%', display: 'flex' }}>
+        {icon}
+      </Box>
+      <Box sx={{ width: '100%' }}>
+        {loading ? (
+          <LinearProgress color="inherit" sx={{ width: '60%', mb: 1 }} />
+        ) : (
+          <Typography variant="h5" fontWeight="bold" color="text.primary">{value}</Typography>
+        )}
+        <Typography variant="body2" color="text.secondary" fontWeight={600}>{title}</Typography>
+        {sub && <Typography variant="caption" color={paletteColor.main} fontWeight="bold">{sub}</Typography>}
+      </Box>
+    </Paper>
+  );
+};
 
 const AdminInversiones: React.FC = () => {
+  const theme = useTheme();
+
   // --- FILTER STATES ---
   const [searchTerm, setSearchTerm] = useState('');
   const [filterProject, setFilterProject] = useState('all');
@@ -67,9 +92,8 @@ const AdminInversiones: React.FC = () => {
   const [dateStart, setDateStart] = useState('');
   const [dateEnd, setDateEnd] = useState('');
   
-  // ✅ 2. Hook useModal
+  // Hooks
   const detailModal = useModal();
-  // Separate data state
   const [selectedInversion, setSelectedInversion] = useState<InversionDto | null>(null);
 
   // --- QUERIES ---
@@ -150,7 +174,7 @@ const AdminInversiones: React.FC = () => {
     });
   }, [inversiones, searchTerm, filterProject, filterStatus, dateStart, dateEnd, usuarios, proyectos]);
 
-  // ✅ 3. Handlers
+  // Handlers
   const handleViewDetails = (inv: InversionDto) => {
     setSelectedInversion(inv);
     detailModal.open();
@@ -158,28 +182,27 @@ const AdminInversiones: React.FC = () => {
 
   const handleCloseModal = () => {
     detailModal.close();
-    setSelectedInversion(null);
+    // Timeout para limpieza suave
+    setTimeout(() => setSelectedInversion(null), 300);
   };
 
-  // ========================================================================
-  // ⚙️ COLUMNS DEFINITION
-  // ========================================================================
-  const columns: DataTableColumn<InversionDto>[] = [
+  // Columns Definition (Memoized)
+  const columns = useMemo<DataTableColumn<InversionDto>[]>(() => [
     {
       id: 'id',
       label: 'ID',
-      minWidth: 50,
-      render: (inv) => <Typography variant="body2" color="text.secondary">#{inv.id}</Typography>
+      minWidth: 60,
+      render: (inv) => <Typography variant="body2" fontWeight={700}>#{inv.id}</Typography>
     },
     {
       id: 'usuario',
       label: 'Inversor',
-      minWidth: 200,
+      minWidth: 220,
       render: (inv) => {
         const user = getUserInfo(inv.id_usuario);
         return (
             <Stack direction="row" spacing={2} alignItems="center">
-                <Avatar sx={{ bgcolor: 'primary.light', width: 36, height: 36, fontSize: 14 }}>
+                <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main', width: 36, height: 36, fontSize: 14, fontWeight: 'bold' }}>
                     {user.name.charAt(0) || <PersonIcon />}
                 </Avatar>
                 <Box>
@@ -242,16 +265,21 @@ const AdminInversiones: React.FC = () => {
       align: 'right',
       render: (inv) => (
         <Tooltip title="Ver Detalle">
-            <IconButton color="primary" onClick={() => handleViewDetails(inv)} size="small">
-                <Visibility />
+            <IconButton 
+                color="primary" 
+                onClick={() => handleViewDetails(inv)} 
+                size="small"
+                sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) } }}
+            >
+                <Visibility fontSize="small" />
             </IconButton>
         </Tooltip>
       )
     }
-  ];
+  ], [theme]);
 
   return (
-    <PageContainer maxWidth="xl">
+    <PageContainer maxWidth="xl" sx={{ py: 3 }}>
 
       <PageHeader
         title="Inversiones Directas"
@@ -298,21 +326,27 @@ const AdminInversiones: React.FC = () => {
         
         {/* Left: Chart */}
         <Box sx={{ flex: 2, minWidth: 0 }}> 
-          <Paper sx={{ p: 3, borderRadius: 2, height: 420 }} variant="outlined">
+          <Paper 
+            sx={{ 
+                p: 3, borderRadius: 2, height: 420, 
+                border: '1px solid', borderColor: 'divider' 
+            }} 
+            elevation={0}
+          >
             <Typography variant="h6" fontWeight="bold" mb={2} color="text.primary">Top 10 Inversores (Acumulado)</Typography>
             {chartData.length > 0 ? (
               <ResponsiveContainer width="100%" height="90%">
                 <BarChart data={chartData} layout="vertical" margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
-                  <XAxis type="number" tickFormatter={(val) => `$${val/1000}k`} />
-                  <YAxis type="category" dataKey="name" width={100} style={{ fontSize: '12px', fontWeight: 500 }} />
+                  <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke={theme.palette.divider} />
+                  <XAxis type="number" tickFormatter={(val) => `$${val/1000}k`} tick={{ fill: theme.palette.text.secondary }} />
+                  <YAxis type="category" dataKey="name" width={100} style={{ fontSize: '12px', fontWeight: 500, fill: theme.palette.text.secondary }} />
                   <RechartsTooltip 
                     formatter={(value: number) => [`$${value.toLocaleString('es-AR')}`, 'Total Invertido']}
-                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: theme.shadows[4] }}
                   />
                   <Bar dataKey="monto" radius={[0, 4, 4, 0]} barSize={20}>
-                    {chartData.map((entry, index) => (
-                       <Cell key={`cell-${index}`} fill={index < 3 ? '#E07A4D' : '#1976d2'} />
+                    {chartData.map((_, index) => (
+                       <Cell key={`cell-${index}`} fill={index < 3 ? theme.palette.warning.main : theme.palette.primary.main} />
                     ))}
                   </Bar>
                 </BarChart>
@@ -327,7 +361,15 @@ const AdminInversiones: React.FC = () => {
 
         {/* Right: Filters */}
         <Box sx={{ flex: 1 }}>
-          <Paper sx={{ p: 3, borderRadius: 2, height: '100%', display: 'flex', flexDirection: 'column', gap: 2 }} variant="outlined">
+          <Paper 
+            elevation={0}
+            sx={{ 
+                p: 3, borderRadius: 2, height: '100%', 
+                display: 'flex', flexDirection: 'column', gap: 2,
+                border: '1px solid', borderColor: 'divider',
+                bgcolor: alpha(theme.palette.background.paper, 0.6)
+            }} 
+          >
             <Stack direction="row" alignItems="center" gap={1} mb={1}>
                 <Search color="action" />
                 <Typography variant="h6" fontWeight="bold">Filtros Avanzados</Typography>
@@ -336,11 +378,13 @@ const AdminInversiones: React.FC = () => {
             <TextField 
               placeholder="Buscar (Usuario, ID...)" size="small" fullWidth
               value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
+              InputProps={{ sx: { borderRadius: 2 } }}
             />
             
             <TextField
               select label="Estado" size="small" fullWidth
               value={filterStatus} onChange={(e) => setFilterStatus(e.target.value as any)}
+              InputProps={{ sx: { borderRadius: 2 } }}
             >
               <MenuItem value="all">Todos</MenuItem>
               <MenuItem value="pendiente">Pendiente</MenuItem>
@@ -351,6 +395,7 @@ const AdminInversiones: React.FC = () => {
             <TextField
               select label="Proyecto" size="small" fullWidth
               value={filterProject} onChange={(e) => setFilterProject(e.target.value)}
+              InputProps={{ sx: { borderRadius: 2 } }}
             >
               <MenuItem value="all">Todos los proyectos</MenuItem>
               {proyectos.map(p => (
@@ -365,8 +410,8 @@ const AdminInversiones: React.FC = () => {
                 <Typography variant="caption" fontWeight="bold">Rango de Fechas</Typography>
             </Stack>
             <Stack direction="row" spacing={1}>
-              <TextField type="date" size="small" fullWidth value={dateStart} onChange={(e) => setDateStart(e.target.value)} />
-              <TextField type="date" size="small" fullWidth value={dateEnd} onChange={(e) => setDateEnd(e.target.value)} />
+              <TextField type="date" size="small" fullWidth value={dateStart} onChange={(e) => setDateStart(e.target.value)} InputProps={{ sx: { borderRadius: 2 } }} />
+              <TextField type="date" size="small" fullWidth value={dateEnd} onChange={(e) => setDateEnd(e.target.value)} InputProps={{ sx: { borderRadius: 2 } }} />
             </Stack>
           </Paper>
         </Box>
@@ -387,8 +432,8 @@ const AdminInversiones: React.FC = () => {
 
       {/* ========== MODAL CON HOOK ========== */}
       <DetalleInversionModal 
-        open={detailModal.isOpen} // ✅
-        onClose={handleCloseModal} // ✅
+        open={detailModal.isOpen} 
+        onClose={handleCloseModal} 
         inversion={selectedInversion}
         userName={selectedInversion ? getUserInfo(selectedInversion.id_usuario).name : ''}
         userEmail={selectedInversion ? getUserInfo(selectedInversion.id_usuario).email : ''}

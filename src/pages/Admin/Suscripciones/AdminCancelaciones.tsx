@@ -1,8 +1,9 @@
 // src/pages/Admin/Cancelaciones/AdminCancelaciones.tsx
+
 import React, { useState, useMemo } from 'react';
 import { 
   Box, Typography, Paper, TextField, InputAdornment, 
-  Chip, IconButton, Tooltip, Stack, Avatar, LinearProgress 
+  Chip, IconButton, Tooltip, Stack, Avatar, LinearProgress, Divider
 } from '@mui/material';
 import { 
   Search, Visibility, TrendingDown, MoneyOff, Cancel,
@@ -11,22 +12,21 @@ import {
 } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
 
+// DTOs y Servicios
 import type { SuscripcionCanceladaDto } from '../../../types/dto/suscripcion.dto';
+import SuscripcionService from '../../../Services/suscripcion.service';
 
-// --- COMPONENTES COMUNES ---
+// Componentes Comunes
 import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
 import { QueryHandler } from '../../../components/common/QueryHandler/QueryHandler';
 import { PageHeader } from '../../../components/common/PageHeader/PageHeader';
+import { DataTable, type DataTableColumn } from '../../../components/common/DataTable/DataTable';
 import DetalleCancelacionModal from './components/DetalleCancelacionModal';
 
-// 👇 Importamos DataTable
-import { DataTable, type DataTableColumn } from '../../../components/common/DataTable/DataTable';
-import SuscripcionService from '../../../Services/suscripcion.service';
-
-// ✅ 1. Importamos el hook
+// Hooks
 import { useModal } from '../../../hooks/useModal';
 
-// ... (StatCard se mantiene igual) ...
+// --- SUBCOMPONENTE: StatCard (Simplificado) ---
 const StatCard: React.FC<{ 
   title: string; 
   value: string; 
@@ -35,11 +35,18 @@ const StatCard: React.FC<{
   icon: React.ReactNode;
   loading?: boolean; 
 }> = ({ title, value, sub, color, icon, loading }) => (
-  <Paper elevation={0} sx={{ 
-    p: 2, display: 'flex', alignItems: 'center', gap: 2, 
-    bgcolor: 'background.paper', borderRadius: 2, border: '1px solid', borderColor: 'divider',
-    flex: 1, minWidth: 0
-  }}>
+  <Paper 
+    elevation={0} 
+    sx={{ 
+      p: 2, 
+      display: 'flex', 
+      alignItems: 'center', 
+      gap: 2, 
+      border: '1px solid', 
+      borderColor: 'divider',
+      flex: 1
+    }}
+  >
     <Box sx={{ bgcolor: `${color}.light`, color: `${color}.main`, p: 1.5, borderRadius: '50%', display: 'flex' }}>
       {icon}
     </Box>
@@ -59,17 +66,18 @@ const StatCard: React.FC<{
   </Paper>
 );
 
+// --- COMPONENTE PRINCIPAL ---
 const AdminCancelaciones: React.FC = () => {
-  // --- ESTADOS ---
+  // 1. Estados de Filtro
   const [searchTerm, setSearchTerm] = useState('');
   const [dateStart, setDateStart] = useState('');
   const [dateEnd, setDateEnd] = useState('');
   
-  // ✅ 2. Usamos el hook y mantenemos el estado de datos separado
+  // 2. Estado de Modal y Selección
   const detailModal = useModal();
   const [selectedCancelacion, setSelectedCancelacion] = useState<SuscripcionCanceladaDto | null>(null);
 
-  // --- QUERIES --- (Igual que antes)
+  // 3. Queries
   const { data: cancelaciones = [], isLoading, error } = useQuery({
     queryKey: ['adminCancelaciones'],
     queryFn: async () => (await SuscripcionService.getAllCanceladas()).data,
@@ -80,7 +88,7 @@ const AdminCancelaciones: React.FC = () => {
     queryFn: async () => (await SuscripcionService.getCancellationMetrics()).data,
   });
 
-  // --- CÁLCULOS --- (Igual que antes)
+  // 4. Cálculos (Memos)
   const totalMontoLiquidado = useMemo(() => {
     return cancelaciones.reduce((acc, curr) => acc + Number(curr.monto_pagado_total), 0);
   }, [cancelaciones]);
@@ -114,7 +122,7 @@ const AdminCancelaciones: React.FC = () => {
     });
   }, [cancelaciones, searchTerm, dateStart, dateEnd]);
 
-  // ✅ 3. Handler para ver detalle
+  // 5. Handlers
   const handleVerDetalle = (item: SuscripcionCanceladaDto) => {
     setSelectedCancelacion(item);
     detailModal.open();
@@ -122,20 +130,19 @@ const AdminCancelaciones: React.FC = () => {
 
   const handleCerrarModal = () => {
     detailModal.close();
-    setSelectedCancelacion(null);
+    // Limpieza suave
+    setTimeout(() => setSelectedCancelacion(null), 300);
   };
 
-  // ========================================================================
-  // ⚙️ DEFINICIÓN DE COLUMNAS PARA DATATABLE
-  // ========================================================================
-  const columns: DataTableColumn<SuscripcionCanceladaDto>[] = [
+  // 6. Columnas (Memoizadas para rendimiento)
+  const columns = useMemo<DataTableColumn<SuscripcionCanceladaDto>[]>(() => [
     {
       id: 'id',
-      label: 'ID / Fecha Baja',
-      minWidth: 150,
+      label: 'ID / Fecha',
+      minWidth: 140,
       render: (item) => (
         <Box>
-            <Typography variant="body2" fontWeight={600}>#{item.id}</Typography>
+            <Typography variant="body2" fontWeight={700}>#{item.id}</Typography>
             <Stack direction="row" alignItems="center" spacing={0.5}>
                 <DateIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
                 <Typography variant="caption" color="text.secondary">
@@ -148,17 +155,17 @@ const AdminCancelaciones: React.FC = () => {
     {
       id: 'usuario',
       label: 'Ex-Usuario',
-      minWidth: 200,
+      minWidth: 220,
       render: (item) => (
         <Stack direction="row" spacing={2} alignItems="center">
-            <Avatar sx={{ width: 36, height: 36, bgcolor: 'error.light', color: 'error.main', fontSize: 14 }}>
+            <Avatar sx={{ width: 32, height: 32, bgcolor: 'error.light', color: 'error.main', fontSize: 14 }}>
                 {item.usuario?.nombre?.charAt(0) || <PersonIcon />}
             </Avatar>
             <Box>
                 <Typography variant="body2" fontWeight={600}>
                     {item.usuario ? `${item.usuario.nombre} ${item.usuario.apellido}` : 'Usuario eliminado'}
                 </Typography>
-                <Typography variant="caption" color="text.secondary">
+                <Typography variant="caption" color="text.secondary" noWrap display="block" sx={{ maxWidth: 180 }}>
                     {item.usuario?.email || `ID Original: ${item.id_usuario}`}
                 </Typography>
             </Box>
@@ -176,19 +183,19 @@ const AdminCancelaciones: React.FC = () => {
     },
     {
       id: 'meses',
-      label: 'Pagado',
+      label: 'Permanencia',
       render: (item) => (
         <Chip 
-            label={`${item.meses_pagados} cuotas`} 
+            label={`${item.meses_pagados} Meses`} 
             size="small" 
             variant="outlined" 
-            color="default"
+            sx={{ fontWeight: 600, borderColor: 'divider' }}
         />
       )
     },
     {
       id: 'monto',
-      label: 'Monto Liq.',
+      label: 'Liquidado',
       render: (item) => (
         <Typography variant="body2" fontWeight={700} color="error.main" sx={{ fontFamily: 'monospace' }}>
             ${Number(item.monto_pagado_total).toLocaleString('es-AR')}
@@ -200,19 +207,18 @@ const AdminCancelaciones: React.FC = () => {
       label: 'Acciones',
       align: 'right',
       render: (item) => (
-        <Tooltip title="Ver Detalle de Cancelación">
+        <Tooltip title="Ver Detalle">
             <IconButton 
-            size="small" 
-            color="primary" 
-            // ✅ Usamos el handler actualizado
-            onClick={() => handleVerDetalle(item)}
+              size="small" 
+              color="primary" 
+              onClick={() => handleVerDetalle(item)}
             >
-            <Visibility />
+              <Visibility fontSize="small" />
             </IconButton>
         </Tooltip>
       )
     }
-  ];
+  ], []); // Dependencias vacías porque handleVerDetalle es estable, pero si usara props, agrégalas.
 
   return (
     <PageContainer maxWidth="xl">
@@ -249,11 +255,11 @@ const AdminCancelaciones: React.FC = () => {
         />
       </Box>
 
-      {/* ========== 2. FILTROS (Toolbar) ========== */}
-      <Paper sx={{ p: 2, mb: 3, borderRadius: 2 }} elevation={0} variant="outlined">
+      {/* ========== 2. FILTROS ========== */}
+      <Paper sx={{ p: 2, mb: 3 }} elevation={0} variant="outlined">
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="center">
           <TextField 
-            placeholder="Buscar (Usuario, Proyecto, ID...)" 
+            placeholder="Buscar por usuario, email o proyecto..." 
             size="small" 
             sx={{ flex: 2 }}
             value={searchTerm} 
@@ -261,6 +267,8 @@ const AdminCancelaciones: React.FC = () => {
             InputProps={{ startAdornment: <InputAdornment position="start"><Search color="action" /></InputAdornment> }}
           />
           
+          <Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', md: 'block' } }} />
+
           <Stack direction="row" spacing={2} alignItems="center" sx={{ flex: 1, width: '100%' }}>
             <TextField 
               type="date" size="small" fullWidth 
@@ -276,7 +284,7 @@ const AdminCancelaciones: React.FC = () => {
         </Stack>
       </Paper>
 
-      {/* ========== 3. TABLA (Datatable) ========== */}
+      {/* ========== 3. TABLA OPTIMIZADA ========== */}
       <QueryHandler isLoading={isLoading} error={error as Error | null}>
         <DataTable
             columns={columns}
@@ -285,15 +293,17 @@ const AdminCancelaciones: React.FC = () => {
             emptyMessage="No se encontraron cancelaciones con los filtros actuales."
             pagination={true}
             defaultRowsPerPage={10}
+            // Ya no pasamos elevation ni sx manuales innecesarios
         />
       </QueryHandler>
 
-      {/* ========== MODAL CON USEMODAL ========== */}
+      {/* ========== MODAL ========== */}
       <DetalleCancelacionModal 
-        open={detailModal.isOpen} // ✅ Usamos isOpen del hook
-        onClose={handleCerrarModal} // ✅ Función que cierra y limpia
+        open={detailModal.isOpen}
+        onClose={handleCerrarModal}
         cancelacion={selectedCancelacion}
       />
+
     </PageContainer>
   );
 };

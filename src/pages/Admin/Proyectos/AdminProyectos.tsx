@@ -1,4 +1,6 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+// src/components/Admin/Proyectos/AdminProyectos.tsx
+
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import {
   Box, Typography, Button, Paper, Chip, IconButton, Stack, Tooltip,
   TextField, MenuItem, InputAdornment, Snackbar, Alert, Switch, CircularProgress,
@@ -37,8 +39,6 @@ import { ConfirmDialog } from '../../../components/common/ConfirmDialog/ConfirmD
 import { useConfirmDialog } from '../../../hooks/useConfirmDialog';
 
 type TipoInversionFilter = 'all' | 'mensual' | 'directo';
-
-// 1. DEFINIMOS LOS COLORES VÁLIDOS DE MUI QUE TIENEN .main
 type AppColor = 'primary' | 'secondary' | 'error' | 'warning' | 'info' | 'success';
 
 interface SnackbarState {
@@ -88,7 +88,6 @@ const AdminProyectos: React.FC = () => {
     queryFn: async () => (await ProyectoService.getAllAdmin()).data
   });
 
-  // --- EFECTO PARA CAPTURAR ESTADO INICIAL ---
   useEffect(() => {
     if (proyectos.length > 0) {
       proyectos.forEach(p => {
@@ -119,8 +118,8 @@ const AdminProyectos: React.FC = () => {
       showSnackbar('Proyecto iniciado. Cobros activados.', 'success');
     },
     onError: (err: any) => {
-        confirmDialog.close();
-        showSnackbar(`Error al iniciar: ${err.response?.data?.error || err.message}`, 'error');
+      confirmDialog.close();
+      showSnackbar(`Error al iniciar: ${err.response?.data?.error || err.message}`, 'error');
     }
   });
 
@@ -129,8 +128,7 @@ const AdminProyectos: React.FC = () => {
       ProyectoService.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminProyectos'] });
-      editModal.close();
-      setSelectedProject(null);
+      editModal.close(); 
       showSnackbar('Proyecto actualizado correctamente', 'success');
     },
     onError: (err: any) => showSnackbar(`Error al editar: ${err.response?.data?.error || err.message}`, 'error')
@@ -144,7 +142,6 @@ const AdminProyectos: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['adminProyectos'] });
       confirmDialog.close();
       
-      // Efecto Flash
       setHighlightedId(variables.id);
       setTimeout(() => setHighlightedId(null), 2500);
 
@@ -158,24 +155,32 @@ const AdminProyectos: React.FC = () => {
 
   // --- HANDLERS ---
 
+  const handleOpenModal = useCallback((proyecto: ProyectoDto, modalOpenFn: () => void) => {
+    setSelectedProject(proyecto);
+    modalOpenFn();
+  }, []);
+
+  const handleCloseModal = useCallback((modalCloseFn: () => void) => {
+    modalCloseFn();
+  }, []);
+
   const handleStartProcessClick = (proyecto: ProyectoDto) => {
     confirmDialog.confirm('start_project_process', proyecto);
   };
 
   const handleConfirmAction = () => {
     if (!confirmDialog.data) return;
+    const projectData = confirmDialog.data as ProyectoDto;
     
     if (confirmDialog.action === 'start_project_process') {
-        startMutation.mutate(confirmDialog.data.id);
+      startMutation.mutate(projectData.id);
     } 
     else if (confirmDialog.action === 'toggle_project_visibility') {
-        const { id, activo } = confirmDialog.data;
-        toggleActiveMutation.mutate({ id, activo: !activo });
+      toggleActiveMutation.mutate({ id: projectData.id, activo: !projectData.activo });
     }
   };
 
   const filteredProyectos = useMemo(() => {
-    // 1. Filtrado
     const filtered = proyectos.filter(p => {
       const term = searchTerm.toLowerCase();
       const matchesSearch = p.nombre_proyecto.toLowerCase().includes(term);
@@ -183,59 +188,46 @@ const AdminProyectos: React.FC = () => {
       return matchesSearch && matchesType;
     });
 
-    // 2. Ordenamiento "Sticky"
     return filtered.sort((a, b) => {
       const statusA = initialStatusRef.current[a.id] ?? a.activo;
       const statusB = initialStatusRef.current[b.id] ?? b.activo;
-
-      if (statusA !== statusB) {
-        return statusA ? -1 : 1;
-      }
+      if (statusA !== statusB) return statusA ? -1 : 1;
       return a.nombre_proyecto.localeCompare(b.nombre_proyecto);
     });
-
   }, [proyectos, searchTerm, filterTipo]);
 
-  // 2. ACTUALIZAMOS LA FUNCIÓN PARA DEVOLVER EL TIPO CORRECTO
-  // Nota: Cambié 'default' por 'info' o 'secondary' porque theme.palette.default NO existe.
   const getStatusColor = (status: string): AppColor => {
     switch (status) {
       case 'En proceso': return 'success';
-      case 'Finalizado': return 'info'; // 'default' no existe en theme.palette, usamos info o secondary
+      case 'Finalizado': return 'info';
       case 'En Espera': return 'warning';
       case 'Cancelado': return 'error';
       default: return 'primary';
     }
   };
 
-  const closeAndClear = (modalCloseFn: () => void) => {
-    modalCloseFn();
-    setSelectedProject(null);
-  };
-
-  // --- COLUMNAS ---
-  const columns: DataTableColumn<ProyectoDto>[] = [
+  const columns = useMemo<DataTableColumn<ProyectoDto>[]>(() => [
     {
       id: 'proyecto',
       label: 'Proyecto / ID',
       minWidth: 250,
       render: (p) => (
         <Stack direction="row" alignItems="center" spacing={2}>
-           <Avatar variant="rounded" sx={{ 
-              bgcolor: p.activo ? alpha(theme.palette.primary.main, 0.1) : theme.palette.action.disabledBackground, 
-              color: p.activo ? 'primary.main' : 'text.disabled',
-              width: 40, height: 40
-           }}>
-             <ApartmentIcon />
-           </Avatar>
-           <Box>
-             <Typography variant="body2" fontWeight={700} color={p.activo ? 'text.primary' : 'text.disabled'}>
-               {p.nombre_proyecto}
-             </Typography>
-             <Typography variant="caption" color="text.secondary">
-               ID: {p.id}
-             </Typography>
-           </Box>
+          <Avatar variant="rounded" sx={{ 
+            bgcolor: p.activo ? alpha(theme.palette.primary.main, 0.1) : theme.palette.action.disabledBackground, 
+            color: p.activo ? 'primary.main' : 'text.disabled',
+            width: 40, height: 40
+          }}>
+            <ApartmentIcon />
+          </Avatar>
+          <Box>
+            <Typography variant="body2" fontWeight={700} color={p.activo ? 'text.primary' : 'text.disabled'}>
+              {p.nombre_proyecto}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              ID: {p.id}
+            </Typography>
+          </Box>
         </Stack>
       )
     },
@@ -259,16 +251,12 @@ const AdminProyectos: React.FC = () => {
       id: 'estado',
       label: 'Estado',
       render: (p) => {
-        // 3. USO SEGURO DEL COLOR
         const colorKey = getStatusColor(p.estado_proyecto);
-        // Ahora podemos acceder a theme.palette[colorKey] sin errores de TS
         const colorMain = theme.palette[colorKey].main;
-
         return (
           <Chip
             label={p.estado_proyecto}
             size="small"
-            // El Chip acepta estos strings directamente
             color={colorKey} 
             sx={{ 
               fontWeight: 600, 
@@ -295,44 +283,49 @@ const AdminProyectos: React.FC = () => {
       label: 'Visibilidad',
       align: 'center',
       render: (p) => {
-        const isProcessingThis = toggleActiveMutation.isPending && confirmDialog.data?.id === p.id;
+        const currentId = confirmDialog.data ? (confirmDialog.data as ProyectoDto).id : null;
+        const isProcessingThis = toggleActiveMutation.isPending && currentId === p.id;
 
         return (
           <Stack direction="row" alignItems="center" spacing={1} justifyContent="center">
             {isProcessingThis ? (
               <CircularProgress size={20} color="inherit" />
             ) : (
-                <Tooltip title={p.activo ? 'Ocultar Proyecto' : 'Hacer Visible'}>
-                    <Switch
-                        checked={p.activo}
-                        onChange={() => confirmDialog.confirm('toggle_project_visibility', p)}
-                        color="success"
-                        size="small"
-                        disabled={toggleActiveMutation.isPending}
-                        sx={{
-                            '& .MuiSwitch-switchBase.Mui-checked': {
-                                color: theme.palette.success.main,
-                                '&:hover': { backgroundColor: alpha(theme.palette.success.main, 0.1) },
-                            },
-                            '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                                backgroundColor: theme.palette.success.main,
-                            },
-                        }}
-                    />
-                </Tooltip>
+              <Tooltip title={p.activo ? 'Ocultar Proyecto' : 'Hacer Visible'}>
+                <Switch
+                  checked={p.activo}
+                  onChange={() => confirmDialog.confirm('toggle_project_visibility', p)}
+                  color="success"
+                  size="small"
+                  disabled={toggleActiveMutation.isPending}
+                  sx={{
+                    '& .MuiSwitch-switchBase.Mui-checked': {
+                      color: theme.palette.success.main,
+                      '&:hover': { backgroundColor: alpha(theme.palette.success.main, 0.1) },
+                    },
+                    '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                      backgroundColor: theme.palette.success.main,
+                    },
+                  }}
+                />
+              </Tooltip>
             )}
             
             {!isProcessingThis && (
-               <Box display="flex" alignItems="center" gap={0.5}>
-                 {p.activo ? <CheckCircle fontSize="inherit" color="success" sx={{ fontSize: 14 }} /> : <Block fontSize="inherit" color="disabled" sx={{ fontSize: 14 }} />}
-                 <Typography 
-                    variant="caption" 
-                    color={p.activo ? 'success.main' : 'text.disabled'}
-                    fontWeight={600}
-                 >
-                    {p.activo ? 'Visible' : 'Oculto'}
-                 </Typography>
-               </Box>
+              <Box display="flex" alignItems="center" gap={0.5}>
+                {p.activo ? (
+                  <CheckCircle fontSize="inherit" color="success" sx={{ fontSize: 14 }} />
+                ) : (
+                  <Block fontSize="inherit" color="disabled" sx={{ fontSize: 14 }} />
+                )}
+                <Typography 
+                  variant="caption" 
+                  color={p.activo ? 'success.main' : 'text.disabled'}
+                  fontWeight={600}
+                >
+                  {p.activo ? 'Visible' : 'Oculto'}
+                </Typography>
+              </Box>
             )}
           </Stack>
         );
@@ -346,7 +339,7 @@ const AdminProyectos: React.FC = () => {
         <Stack direction="row" spacing={0.5} justifyContent="flex-end">
           <Tooltip title="Gestionar Imágenes">
             <IconButton 
-              onClick={() => { setSelectedProject(p); imagesModal.open(); }} 
+              onClick={(e) => { e.stopPropagation(); handleOpenModal(p, imagesModal.open); }} 
               size="small"
               disabled={toggleActiveMutation.isPending}
               sx={{ color: 'text.secondary', '&:hover': { color: 'primary.main', bgcolor: alpha(theme.palette.primary.main, 0.1) } }}
@@ -358,7 +351,7 @@ const AdminProyectos: React.FC = () => {
           {p.tipo_inversion === 'mensual' && (
             <Tooltip title="Configurar Cuota">
               <IconButton 
-                onClick={() => { setSelectedProject(p); cuotasModal.open(); }} 
+                onClick={(e) => { e.stopPropagation(); handleOpenModal(p, cuotasModal.open); }} 
                 size="small" 
                 disabled={toggleActiveMutation.isPending}
                 sx={{ color: "#E07A4D", '&:hover': { bgcolor: alpha("#E07A4D", 0.1) } }}
@@ -372,7 +365,7 @@ const AdminProyectos: React.FC = () => {
             <Tooltip title="Iniciar Proceso (Activar Cobros)">
               <IconButton
                 size="small"
-                onClick={() => handleStartProcessClick(p)}
+                onClick={(e) => { e.stopPropagation(); handleStartProcessClick(p); }}
                 disabled={toggleActiveMutation.isPending}
                 sx={{ color: "success.main", '&:hover': { bgcolor: alpha(theme.palette.success.main, 0.1) } }}
               >
@@ -383,7 +376,7 @@ const AdminProyectos: React.FC = () => {
 
           <Tooltip title="Editar">
             <IconButton 
-              onClick={() => { setSelectedProject(p); editModal.open(); }} 
+              onClick={(e) => { e.stopPropagation(); handleOpenModal(p, editModal.open); }} 
               size="small"
               disabled={toggleActiveMutation.isPending}
               sx={{ color: 'primary.main', '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.1) } }}
@@ -394,7 +387,7 @@ const AdminProyectos: React.FC = () => {
 
           <Tooltip title="Ver Lotes">
             <IconButton 
-              onClick={() => { setSelectedProject(p); lotesModal.open(); }} 
+              onClick={(e) => { e.stopPropagation(); handleOpenModal(p, lotesModal.open); }} 
               size="small"
               disabled={toggleActiveMutation.isPending}
               sx={{ color: 'info.main', '&:hover': { bgcolor: alpha(theme.palette.info.main, 0.1) } }}
@@ -405,7 +398,7 @@ const AdminProyectos: React.FC = () => {
         </Stack>
       )
     }
-  ];
+  ], [theme, toggleActiveMutation.isPending, confirmDialog, handleOpenModal, imagesModal, cuotasModal, editModal, lotesModal]);
 
   return (
     <PageContainer maxWidth="xl" sx={{ py: 3 }}>
@@ -414,20 +407,13 @@ const AdminProyectos: React.FC = () => {
         subtitle="Administra el catálogo de inversiones, estados y configuración financiera."
       />
 
-      {/* Barra de Filtros Estilizada */}
+      {/* Barra de Filtros */}
       <Paper 
         elevation={0} 
         sx={{ 
-            p: 2, 
-            mb: 3, 
-            display: 'flex', 
-            flexWrap: 'wrap', 
-            gap: 2, 
-            alignItems: 'center', 
-            borderRadius: 2,
-            border: '1px solid',
-            borderColor: 'divider',
-            bgcolor: alpha(theme.palette.background.paper, 0.6)
+          p: 2, mb: 3, display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center', 
+          borderRadius: 2, border: '1px solid', borderColor: 'divider', 
+          bgcolor: alpha(theme.palette.background.paper, 0.6)
         }} 
       >
         <TextField
@@ -437,8 +423,8 @@ const AdminProyectos: React.FC = () => {
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           InputProps={{ 
-              startAdornment: (<InputAdornment position="start"><Search color="action" /></InputAdornment>),
-              sx: { borderRadius: 2 }
+            startAdornment: (<InputAdornment position="start"><Search color="action" /></InputAdornment>),
+            sx: { borderRadius: 2 }
           }}
         />
         <TextField
@@ -457,46 +443,43 @@ const AdminProyectos: React.FC = () => {
         <Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', md: 'block' }, mx: 1 }} />
 
         <Button 
-            variant="contained" 
-            startIcon={<Add />} 
-            onClick={createModal.open}
-            sx={{ borderRadius: 2, fontWeight: 600, boxShadow: theme.shadows[2] }}
+          variant="contained" 
+          startIcon={<Add />} 
+          onClick={createModal.open}
+          sx={{ borderRadius: 2, fontWeight: 600, boxShadow: theme.shadows[2] }}
         >
           Nuevo Proyecto
         </Button>
       </Paper>
 
       <QueryHandler isLoading={isLoading} error={error as Error}>
-        <Paper elevation={0} sx={{ borderRadius: 2, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
-            <DataTable
+         {/* AQUI ESTABA EL ERROR: Se eliminó el Paper envolvente redundante */}
+          <DataTable
             columns={columns}
             data={filteredProyectos}
             getRowKey={(p) => p.id}
-            elevation={0}
             getRowSx={(p) => {
-                const isHighlighted = highlightedId === p.id;
-                return {
+              const isHighlighted = highlightedId === p.id;
+              return {
                 opacity: p.activo ? 1 : 0.6,
                 transition: 'background-color 0.8s ease, opacity 0.3s ease',
                 bgcolor: isHighlighted 
-                    ? alpha(theme.palette.success.main, 0.15)
-                    : (p.activo ? 'inherit' : alpha(theme.palette.action.hover, 0.5)),
+                  ? alpha(theme.palette.success.main, 0.15)
+                  : (p.activo ? 'inherit' : alpha(theme.palette.action.hover, 0.5)),
                 '&:hover': {
-                    bgcolor: isHighlighted 
+                  bgcolor: isHighlighted 
                     ? alpha(theme.palette.success.main, 0.2)
                     : alpha(theme.palette.action.hover, 0.8)
                 }
-                };
+              };
             }}
             emptyMessage="No se encontraron proyectos con los filtros actuales."
             pagination={true}
             defaultRowsPerPage={10}
-            />
-        </Paper>
+          />
       </QueryHandler>
 
       {/* --- MODALES --- */}
-      
       <CreateProyectoModal
         {...createModal.modalProps} 
         onSubmit={async (data, image) => { await createMutation.mutateAsync({ data, image }); }}
@@ -506,34 +489,33 @@ const AdminProyectos: React.FC = () => {
       {selectedProject && (
         <>
           <ConfigCuotasModal
-            open={cuotasModal.isOpen}
-            onClose={() => closeAndClear(cuotasModal.close)}
+            open={cuotasModal.modalProps.open}
+            onClose={() => handleCloseModal(cuotasModal.close)}
             proyecto={selectedProject}
           />
 
           <EditProyectoModal
-            open={editModal.isOpen}
-            onClose={() => closeAndClear(editModal.close)}
+            open={editModal.modalProps.open}
+            onClose={() => handleCloseModal(editModal.close)}
             proyecto={selectedProject}
             onSubmit={async (id, data) => { await updateMutation.mutateAsync({ id, data }); }}
             isLoading={updateMutation.isPending}
           />
 
           <ProjectLotesModal
-            open={lotesModal.isOpen}
-            onClose={() => closeAndClear(lotesModal.close)}
+            open={lotesModal.modalProps.open}
+            onClose={() => handleCloseModal(lotesModal.close)}
             proyecto={selectedProject}
           />
 
           <ManageImagesModal
-            open={imagesModal.isOpen}
-            onClose={() => closeAndClear(imagesModal.close)}
+            open={imagesModal.modalProps.open}
+            onClose={() => handleCloseModal(imagesModal.close)}
             proyecto={selectedProject}
           />
         </>
       )}
 
-      {/* Modal de Confirmación Único */}
       <ConfirmDialog 
         controller={confirmDialog}
         onConfirm={handleConfirmAction}
@@ -547,10 +529,10 @@ const AdminProyectos: React.FC = () => {
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
         <Alert 
-            severity={snackbar.severity} 
-            variant="filled" 
-            onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
-            sx={{ boxShadow: theme.shadows[4] }}
+          severity={snackbar.severity} 
+          variant="filled" 
+          onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+          sx={{ boxShadow: theme.shadows[4] }}
         >
           {snackbar.message}
         </Alert>

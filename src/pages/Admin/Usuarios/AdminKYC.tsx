@@ -1,3 +1,5 @@
+// src/pages/Admin/KYC/AdminKYC.tsx
+
 import React, { useState, useMemo } from 'react';
 import {
   Box, Typography, Paper, Chip, Button, Stack, Snackbar,
@@ -22,6 +24,9 @@ import { PageHeader } from '../../../components/common/PageHeader/PageHeader';
 import { QueryHandler } from '../../../components/common/QueryHandler/QueryHandler';
 import { DataTable, type DataTableColumn } from '../../../components/common/DataTable/DataTable';
 import { useModal } from '../../../hooks/useModal';
+import { useConfirmDialog } from '../../../hooks/useConfirmDialog'; // ✅ Hook
+import { ConfirmDialog } from '../../../components/common/ConfirmDialog/ConfirmDialog'; // ✅ Componente
+
 import KycDetailModal from './modals/KycDetailModal';
 import kycService from '../../../Services/kyc.service';
 
@@ -32,9 +37,10 @@ const AdminKYC: React.FC = () => {
   const queryClient = useQueryClient();
   const [currentTab, setCurrentTab] = useState<TabValue>('pendiente');
   
-  // Modales
+  // Modales y Dialogs
   const detailsModal = useModal();
   const rejectModal = useModal();
+  const confirmDialog = useConfirmDialog(); // ✅ Para aprobaciones
 
   // Estados Locales
   const [selectedKyc, setSelectedKyc] = useState<KycDTO | null>(null);
@@ -77,9 +83,13 @@ const AdminKYC: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['kycApproved'] });
       queryClient.invalidateQueries({ queryKey: ['kycAll'] });
       setSnackbar({ open: true, message: '✅ Verificación aprobada', severity: 'success' });
+      confirmDialog.close();
       detailsModal.close();
     },
-    onError: (err: any) => setSnackbar({ open: true, message: err.response?.data?.mensaje || 'Error al aprobar', severity: 'error' }),
+    onError: (err: any) => {
+        confirmDialog.close();
+        setSnackbar({ open: true, message: err.response?.data?.mensaje || 'Error al aprobar', severity: 'error' });
+    },
   });
 
   const rejectMutation = useMutation({
@@ -100,8 +110,15 @@ const AdminKYC: React.FC = () => {
   // HANDLERS
   const handleOpenDetails = (kyc: KycDTO) => { setSelectedKyc(kyc); detailsModal.open(); };
   
-  const handleApprove = (kyc: KycDTO) => {
-    if (window.confirm(`¿Aprobar a ${kyc.nombre_completo}?`)) approveMutation.mutate(kyc.id_usuario);
+  // ✅ Usamos ConfirmDialog en lugar de window.confirm
+  const handleApproveClick = (kyc: KycDTO) => {
+    confirmDialog.confirm('approve_kyc', kyc);
+  };
+
+  const handleConfirmAction = () => {
+      if (confirmDialog.action === 'approve_kyc' && confirmDialog.data) {
+          approveMutation.mutate(confirmDialog.data.id_usuario);
+      }
   };
 
   const handleOpenRejectInput = (kyc: KycDTO) => { setKycToReject(kyc); setRejectReason(''); rejectModal.open(); };
@@ -205,7 +222,8 @@ const AdminKYC: React.FC = () => {
               <Tooltip title="Aprobar Verificación">
                 <IconButton 
                     size="small" 
-                    onClick={() => handleApprove(kyc)}
+                    onClick={() => handleApproveClick(kyc)}
+                    disabled={approveMutation.isPending}
                     sx={{ color: 'success.main', bgcolor: alpha(theme.palette.success.main, 0.1), '&:hover': { bgcolor: alpha(theme.palette.success.main, 0.2) } }}
                 >
                     <CheckCircleIcon fontSize="small" />
@@ -225,7 +243,7 @@ const AdminKYC: React.FC = () => {
         </Stack>
       )
     }
-  ], [currentTab, theme]);
+  ], [currentTab, theme, approveMutation.isPending]);
 
   return (
     <PageContainer maxWidth="xl" sx={{ py: 3 }}>
@@ -270,25 +288,30 @@ const AdminKYC: React.FC = () => {
       </Paper>
 
       <QueryHandler isLoading={isLoading} error={error as Error}>
-        <Paper elevation={0} sx={{ borderRadius: 2, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
-            <DataTable
-                columns={columns}
-                data={currentData}
-                getRowKey={(row) => row.id} 
-                emptyMessage={`No se encontraron solicitudes con estado: ${currentTab}.`}
-                pagination 
-                defaultRowsPerPage={10}
-                elevation={0}
-            />
-        </Paper>
+        {/* ✅ DataTable sin Paper envolvente extra */}
+        <DataTable
+            columns={columns}
+            data={currentData}
+            getRowKey={(row) => row.id} 
+            emptyMessage={`No se encontraron solicitudes con estado: ${currentTab}.`}
+            pagination 
+            defaultRowsPerPage={10}
+        />
       </QueryHandler>
 
       <KycDetailModal 
         open={detailsModal.isOpen} onClose={detailsModal.close} kyc={selectedKyc}
-        onApprove={handleApprove} onReject={handleOpenRejectInput}
+        onApprove={handleApproveClick} onReject={handleOpenRejectInput}
       />
 
-      {/* Modal de Rechazo estandarizado */}
+      {/* ✅ Modal de Confirmación Genérico (Para Aprobación) */}
+      <ConfirmDialog 
+        controller={confirmDialog}
+        onConfirm={handleConfirmAction}
+        isLoading={approveMutation.isPending}
+      />
+
+      {/* Modal de Rechazo (Específico porque requiere input de texto) */}
       <Dialog 
         open={rejectModal.isOpen} 
         onClose={rejectModal.close} 
@@ -320,10 +343,10 @@ const AdminKYC: React.FC = () => {
             variant="contained" 
             color="error" 
             onClick={handleConfirmReject} 
-            disabled={!rejectReason.trim()}
+            disabled={!rejectReason.trim() || rejectMutation.isPending}
             sx={{ borderRadius: 2, px: 3 }}
           >
-            Confirmar Rechazo
+            {rejectMutation.isPending ? 'Procesando...' : 'Confirmar Rechazo'}
           </Button>
         </DialogActions>
       </Dialog>

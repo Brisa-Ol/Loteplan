@@ -1,7 +1,9 @@
+// src/pages/Admin/Suscripciones/AdminSuscripciones.tsx
+
 import React, { useState, useMemo } from 'react';
 import { 
   Box, Typography, Paper, Chip, IconButton, Tooltip, 
-  Stack, TextField, MenuItem, InputAdornment, LinearProgress, Avatar, Snackbar, Alert
+  Stack, TextField, MenuItem, InputAdornment, LinearProgress, Avatar, Snackbar, Alert, Divider
 } from '@mui/material';
 import { 
   CheckCircle, Cancel, Search, Visibility, 
@@ -24,10 +26,10 @@ import ProyectoService from '../../../Services/proyecto.service';
 
 // Hooks
 import { useModal } from '../../../hooks/useModal';
-import { useConfirmDialog } from '../../../hooks/useConfirmDialog'; // ✅ Hook importado
-import { ConfirmDialog } from '../../../components/common/ConfirmDialog/ConfirmDialog'; // ✅ Componente importado
+import { useConfirmDialog } from '../../../hooks/useConfirmDialog';
+import { ConfirmDialog } from '../../../components/common/ConfirmDialog/ConfirmDialog';
 
-// ... (StatCard se mantiene igual) ...
+// --- SUBCOMPONENTE: StatCard (Estandarizado) ---
 const StatCard: React.FC<{ 
   title: string; 
   value: number | string; 
@@ -35,11 +37,19 @@ const StatCard: React.FC<{
   color: string;
   loading?: boolean;
 }> = ({ title, value, icon, color, loading }) => (
-  <Paper elevation={0} sx={{ 
-    p: 2, display: 'flex', alignItems: 'center', gap: 2, 
-    bgcolor: 'background.paper', borderRadius: 2, border: '1px solid', borderColor: 'divider',
-    flex: 1, minWidth: 0
-  }}>
+  <Paper 
+    elevation={0} 
+    sx={{ 
+      p: 2, 
+      display: 'flex', 
+      alignItems: 'center', 
+      gap: 2, 
+      border: '1px solid', 
+      borderColor: 'divider',
+      flex: 1, 
+      minWidth: 0
+    }}
+  >
     <Box sx={{ bgcolor: `${color}.light`, color: `${color}.main`, p: 1.5, borderRadius: '50%', display: 'flex' }}>
       {icon}
     </Box>
@@ -47,7 +57,7 @@ const StatCard: React.FC<{
       {loading ? (
         <LinearProgress color="inherit" sx={{ width: '60%', mb: 1 }} />
       ) : (
-        <Typography variant="h5" fontWeight="bold">{value}</Typography>
+        <Typography variant="h5" fontWeight="bold" color="text.primary">{value}</Typography>
       )}
       <Typography variant="caption" color="text.secondary" fontWeight={600}>{title}</Typography>
     </Box>
@@ -57,17 +67,17 @@ const StatCard: React.FC<{
 const AdminSuscripciones: React.FC = () => {
   const queryClient = useQueryClient();
 
-  // Estados de Filtros
+  // 1. Estados de Filtros
   const [searchTerm, setSearchTerm] = useState('');
   const [filterProject, setFilterProject] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | 'activas' | 'inactivas'>('activas');
   
-  // Hooks de Modales y Dialogs
+  // 2. Hooks de Modales y Dialogs
   const detailModal = useModal();
-  const confirmDialog = useConfirmDialog(); // ✅
+  const confirmDialog = useConfirmDialog();
   const [selectedSuscripcion, setSelectedSuscripcion] = useState<SuscripcionDto | null>(null);
 
-  // Estado del Snackbar (Feedback Visual)
+  // 3. Feedback Visual
   const [snackbar, setSnackbar] = useState<{ open: boolean, message: string, severity: 'success' | 'error' }>({
     open: false, message: '', severity: 'success'
   });
@@ -76,7 +86,7 @@ const AdminSuscripciones: React.FC = () => {
     setSnackbar({ open: true, message, severity });
   };
 
-  // --- QUERIES ---
+  // 4. Queries
   const { data: suscripciones = [], isLoading: loadingSuscripciones, error } = useQuery({
     queryKey: ['adminSuscripciones', filterStatus],
     queryFn: async () => {
@@ -110,7 +120,7 @@ const AdminSuscripciones: React.FC = () => {
   const totalCanceladas = cancelacionStats?.total_canceladas || 0;
   const totalActivas = totalSuscripciones - totalCanceladas;
 
-  // Filtrado de la tabla
+  // 5. Filtrado (Memoizado)
   const filteredSuscripciones = useMemo(() => {
     return suscripciones.filter(suscripcion => {
       const term = searchTerm.toLowerCase();
@@ -135,14 +145,14 @@ const AdminSuscripciones: React.FC = () => {
     });
   }, [suscripciones, searchTerm, filterProject, filterStatus]);
 
-  // --- MUTACIONES ---
+  // 6. Mutaciones
   const cancelarMutation = useMutation({
     mutationFn: async (id: number) => await SuscripcionService.cancelarAdmin(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminSuscripciones'] });
       queryClient.invalidateQueries({ queryKey: ['metricsCancelacionMetrics'] });
       queryClient.invalidateQueries({ queryKey: ['metricsMorosidad'] });
-      confirmDialog.close(); // Cerramos el dialogo
+      confirmDialog.close();
       showMessage('Suscripción cancelada correctamente.');
     },
     onError: (err: any) => {
@@ -152,10 +162,9 @@ const AdminSuscripciones: React.FC = () => {
     }
   });
 
-  // --- HANDLERS ---
+  // 7. Handlers
   const handleCancelarClick = (suscripcion: SuscripcionDto) => {
     if (!suscripcion.activo) return;
-    // ✅ Usamos el hook en lugar de window.confirm
     confirmDialog.confirm('admin_cancel_subscription', suscripcion);
   };
 
@@ -172,20 +181,19 @@ const AdminSuscripciones: React.FC = () => {
 
   const handleCerrarModal = () => {
     detailModal.close();
-    setSelectedSuscripcion(null);
+    // Timeout para limpiar el estado después de la animación de cierre
+    setTimeout(() => setSelectedSuscripcion(null), 300);
   };
 
-  // ========================================================================
-  // ⚙️ DEFINICIÓN DE COLUMNAS PARA DATATABLE
-  // ========================================================================
-  const columns: DataTableColumn<SuscripcionDto>[] = [
+  // 8. Definición de Columnas (Memoizadas)
+  const columns = useMemo<DataTableColumn<SuscripcionDto>[]>(() => [
     {
       id: 'usuario',
       label: 'ID / Usuario',
-      minWidth: 250,
+      minWidth: 240,
       render: (s) => (
         <Stack direction="row" spacing={2} alignItems="center">
-            <Avatar sx={{ width: 36, height: 36, bgcolor: 'primary.light', fontSize: 14 }}>
+            <Avatar sx={{ width: 36, height: 36, bgcolor: 'primary.light', color: 'primary.main', fontSize: 14 }}>
                 {s.usuario?.nombre?.charAt(0) || '#'}
             </Avatar>
             <Box>
@@ -218,7 +226,7 @@ const AdminSuscripciones: React.FC = () => {
             size="small"
             color={s.meses_a_pagar > 0 ? 'warning' : 'success'}
             variant={s.meses_a_pagar > 0 ? 'filled' : 'outlined'}
-            sx={{ fontWeight: 600 }}
+            sx={{ fontWeight: 600, borderColor: 'divider' }}
         />
       )
     },
@@ -245,6 +253,7 @@ const AdminSuscripciones: React.FC = () => {
             size="small" 
             color={s.activo ? 'success' : 'default'}
             variant={s.activo ? 'filled' : 'outlined'}
+            sx={{ fontWeight: 600 }}
         />
       )
     },
@@ -260,7 +269,7 @@ const AdminSuscripciones: React.FC = () => {
                     onClick={() => handleVerDetalle(s)} 
                     size="small"
                 >
-                    <Visibility />
+                    <Visibility fontSize="small"/>
                 </IconButton>
             </Tooltip>
 
@@ -272,14 +281,14 @@ const AdminSuscripciones: React.FC = () => {
                         disabled={cancelarMutation.isPending}
                         size="small"
                     >
-                        <Cancel />
+                        <Cancel fontSize="small"/>
                     </IconButton>
                 </Tooltip>
             )}
         </Stack>
       )
     }
-  ];
+  ], [cancelarMutation.isPending]); // Dependencia necesaria para deshabilitar botones
 
   return (
     <PageContainer maxWidth="xl">
@@ -306,8 +315,8 @@ const AdminSuscripciones: React.FC = () => {
         </Stack>
       </Stack>
 
-      {/* ========== FILTROS (Toolbar) ========== */}
-      <Paper sx={{ p: 2, mb: 3, borderRadius: 2 }} elevation={0} variant="outlined">
+      {/* ========== FILTROS ========== */}
+      <Paper sx={{ p: 2, mb: 3 }} elevation={0} variant="outlined">
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="center">
           <TextField 
             placeholder="Buscar por usuario o ID..." 
@@ -315,6 +324,9 @@ const AdminSuscripciones: React.FC = () => {
             value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
             InputProps={{ startAdornment: (<InputAdornment position="start"><Search color="action"/></InputAdornment>) }}
           />
+          
+          <Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', md: 'block' } }} />
+
           <TextField
             select label="Proyecto" size="small"
             value={filterProject} onChange={(e) => setFilterProject(e.target.value)}
@@ -325,6 +337,7 @@ const AdminSuscripciones: React.FC = () => {
               <MenuItem key={p.id} value={p.id}>{p.nombre_proyecto}</MenuItem>
             ))}
           </TextField>
+          
           <TextField
             select label="Estado" size="small"
             value={filterStatus} onChange={(e) => setFilterStatus(e.target.value as any)}
@@ -337,7 +350,7 @@ const AdminSuscripciones: React.FC = () => {
         </Stack>
       </Paper>
 
-      {/* ========== TABLA (Datatable) ========== */}
+      {/* ========== TABLA ========== */}
       <QueryHandler isLoading={loadingSuscripciones} error={error as Error | null}>
         <DataTable
             columns={columns}
@@ -346,24 +359,23 @@ const AdminSuscripciones: React.FC = () => {
             emptyMessage="No se encontraron suscripciones con los filtros actuales."
             pagination={true}
             defaultRowsPerPage={10}
+            // Sin styles manuales, todo via Theme
         />
       </QueryHandler>
 
-      {/* ========== MODALES Y DIALOGS ========== */}
+      {/* ========== MODALES ========== */}
       <DetalleSuscripcionModal 
         open={detailModal.isOpen} 
         onClose={handleCerrarModal} 
         suscripcion={selectedSuscripcion}
       />
 
-      {/* ✅ Modal de Confirmación */}
       <ConfirmDialog 
         controller={confirmDialog}
         onConfirm={handleConfirmAction}
         isLoading={cancelarMutation.isPending}
       />
 
-      {/* ✅ Snackbar Global */}
       <Snackbar 
         open={snackbar.open} 
         autoHideDuration={6000} 
@@ -374,6 +386,7 @@ const AdminSuscripciones: React.FC = () => {
           severity={snackbar.severity} 
           onClose={() => setSnackbar(prev => ({ ...prev, open: false }))} 
           variant="filled"
+          sx={{ boxShadow: 4 }}
         >
           {snackbar.message}
         </Alert>

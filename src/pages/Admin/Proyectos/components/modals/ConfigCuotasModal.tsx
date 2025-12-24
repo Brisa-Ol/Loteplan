@@ -1,14 +1,18 @@
-import React, { useState, useEffect } from 'react';
+// src/components/Admin/Proyectos/Components/modals/ConfigCuotasModal.tsx
+
+import React, { useState } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button,
   TextField, Stack, Box, Typography, IconButton, CircularProgress,
-  Alert,
+  Alert, useTheme, alpha, Avatar, Paper, InputAdornment
 } from '@mui/material';
 import { 
   Close as CloseIcon, 
   CreditCard as CuotaIcon,
   Add as AddIcon,
-  History as HistoryIcon
+  History as HistoryIcon,
+  Calculate as CalculateIcon,
+  Description as DescriptionIcon
 } from '@mui/icons-material';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
@@ -20,7 +24,6 @@ import type { ProyectoDto } from '../../../../../types/dto/proyecto.dto';
 import CuotaMensualService from '../../../../../Services/cuotaMensual.service';
 import ProyectoPriceHistory from '../ProyectoPriceHistory'; 
 
-// Las props deben coincidir con lo que envía el hook useModal (open, onClose)
 interface ConfigCuotasModalProps {
   open: boolean;
   onClose: () => void;
@@ -38,9 +41,10 @@ const validationSchema = Yup.object({
 
 const ConfigCuotasModal: React.FC<ConfigCuotasModalProps> = ({ 
   open, 
-  onClose, // Esta función viene del hook useModal del padre
+  onClose, 
   proyecto 
 }) => {
+  const theme = useTheme();
   const queryClient = useQueryClient();
   const [showHistory, setShowHistory] = useState(false);
 
@@ -94,28 +98,34 @@ const ConfigCuotasModal: React.FC<ConfigCuotasModalProps> = ({
     },
   });
 
-  // Lógica INTERNA de cierre (Limpieza)
   const handleClose = () => {
     formik.resetForm();
     setShowHistory(false);
-    // IMPORTANTE: Aquí llamamos a la función del hook que nos pasó el padre
     onClose(); 
   };
 
-  // Protección temprana: si no hay proyecto, no renderizamos nada
   if (!proyecto) return null;
 
-  // Renderizado condicional si el tipo de inversión no es mensual
   if (proyecto.tipo_inversion !== 'mensual') {
     return (
-      <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-        <DialogTitle>Configuración No Disponible</DialogTitle>
-        <DialogContent>
-          <Alert severity="warning">
+      <Dialog 
+        open={open} 
+        onClose={handleClose} 
+        maxWidth="sm" 
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 3, boxShadow: theme.shadows[10] } }}
+      >
+        <DialogTitle sx={{ bgcolor: alpha(theme.palette.warning.main, 0.1), color: 'warning.main', display: 'flex', alignItems: 'center', gap: 1 }}>
+            ⚠️ Configuración No Disponible
+        </DialogTitle>
+        <DialogContent sx={{ mt: 2 }}>
+          <Typography>
             Este proyecto es de tipo <strong>Inversión (Directo)</strong> y no requiere configuración de cuotas mensuales.
-          </Alert>
+          </Typography>
         </DialogContent>
-        <DialogActions><Button onClick={handleClose}>Cerrar</Button></DialogActions>
+        <DialogActions sx={{ p: 2 }}>
+            <Button onClick={handleClose} color="inherit">Cerrar</Button>
+        </DialogActions>
       </Dialog>
     );
   }
@@ -123,7 +133,6 @@ const ConfigCuotasModal: React.FC<ConfigCuotasModalProps> = ({
   // Cálculos visuales
   const valorMovil = formik.values.valor_cemento_unidades * formik.values.valor_cemento;
   const totalDelPlan = valorMovil * (formik.values.porcentaje_plan / 100);
-  // Evitar división por cero
   const valorMensual = totalDelPlan / (proyecto.plazo_inversion || 1); 
   const cargaAdministrativa = valorMovil * (formik.values.porcentaje_administrativo / 100);
   const ivaCarga = cargaAdministrativa * (formik.values.porcentaje_iva / 100);
@@ -132,120 +141,217 @@ const ConfigCuotasModal: React.FC<ConfigCuotasModalProps> = ({
   return (
     <Dialog 
         open={open} 
-        onClose={handleClose} // Usamos nuestro handleClose interno para limpiar antes de cerrar
+        onClose={handleClose} 
         maxWidth="md" 
         fullWidth
+        scroll="paper"
+        PaperProps={{ 
+            elevation: 0,
+            sx: { 
+                borderRadius: 3, 
+                boxShadow: theme.shadows[10],
+                overflow: 'hidden',
+                maxHeight: '90vh'
+            } 
+        }}
     >
-      <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <CuotaIcon color="primary" />
-          <Typography variant="h6" fontWeight="bold">Configurar Cuota Mensual</Typography>
-        </Box>
-        <IconButton onClick={handleClose} size="small"><CloseIcon /></IconButton>
+      {/* HEADER ESTILIZADO */}
+      <DialogTitle sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          py: 2.5, px: 3,
+          bgcolor: alpha(theme.palette.primary.main, 0.04),
+          borderBottom: `1px solid ${theme.palette.divider}`
+      }}>
+        <Stack direction="row" alignItems="center" spacing={2}>
+          <Avatar 
+            variant="rounded" 
+            sx={{ 
+                bgcolor: alpha(theme.palette.primary.main, 0.1), 
+                color: theme.palette.primary.main,
+                width: 40, height: 40
+            }}
+          >
+            <CuotaIcon />
+          </Avatar>
+          <Box>
+            <Typography variant="h6" color="text.primary" fontWeight={700}>
+              Configurar Cuota Mensual
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Defina los valores base para el cálculo automático de cuotas
+            </Typography>
+          </Box>
+        </Stack>
+        <IconButton onClick={handleClose} size="small">
+          <CloseIcon />
+        </IconButton>
       </DialogTitle>
 
-      <form onSubmit={formik.handleSubmit}>
-        <DialogContent dividers>
-          <Stack spacing={3}>
+      <form onSubmit={formik.handleSubmit} style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <DialogContent dividers sx={{ p: 3 }}>
+          <Stack spacing={4}>
             
-            <Box sx={{ p: 2, bgcolor: 'primary.light', borderRadius: 1, opacity: 0.9 }}>
-              <Typography variant="subtitle1" fontWeight="bold" color="primary.contrastText">{proyecto.nombre_proyecto}</Typography>
-              <Typography variant="body2" color="primary.contrastText">Plazo: {proyecto.plazo_inversion} meses</Typography>
-            </Box>
-
-            {/* ... Resto de los campos (sin cambios) ... */}
-            
-            <Box>
-              <Typography variant="subtitle2" color="text.secondary" gutterBottom fontWeight="medium">
-                Datos de Configuración
-              </Typography>
-              
-              <TextField
-                fullWidth
-                id="nombre_cemento_cemento"
-                label="Nombre del Cemento (Opcional)"
-                {...formik.getFieldProps('nombre_cemento_cemento')}
-                disabled={createMutation.isPending}
-                sx={{ mb: 2 }}
-              />
-
-              <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-                <TextField
-                  fullWidth
-                  id="valor_cemento_unidades"
-                  label="Cantidad de Unidades"
-                  type="number"
-                  {...formik.getFieldProps('valor_cemento_unidades')}
-                  error={formik.touched.valor_cemento_unidades && Boolean(formik.errors.valor_cemento_unidades)}
-                  helperText={formik.touched.valor_cemento_unidades && formik.errors.valor_cemento_unidades}
-                  disabled={createMutation.isPending}
-                />
-                <TextField
-                  fullWidth
-                  id="valor_cemento"
-                  label="Precio por Unidad ($)"
-                  type="number"
-                  {...formik.getFieldProps('valor_cemento')}
-                  error={formik.touched.valor_cemento && Boolean(formik.errors.valor_cemento)}
-                  helperText={formik.touched.valor_cemento && formik.errors.valor_cemento}
-                  disabled={createMutation.isPending}
-                />
-              </Box>
-            </Box>
-
-            <Box>
-              <Typography variant="subtitle2" color="text.secondary" gutterBottom fontWeight="medium">
-                Porcentajes de Cálculo
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 2 }}>
-                <TextField
-                  fullWidth
-                  id="porcentaje_plan"
-                  label="% Plan"
-                  type="number"
-                  {...formik.getFieldProps('porcentaje_plan')}
-                  error={formik.touched.porcentaje_plan && Boolean(formik.errors.porcentaje_plan)}
-                  disabled={createMutation.isPending}
-                />
-                <TextField
-                  fullWidth
-                  id="porcentaje_administrativo"
-                  label="% Administrativo"
-                  type="number"
-                  {...formik.getFieldProps('porcentaje_administrativo')}
-                  error={formik.touched.porcentaje_administrativo && Boolean(formik.errors.porcentaje_administrativo)}
-                  disabled={createMutation.isPending}
-                />
-                <TextField
-                  fullWidth
-                  id="porcentaje_iva"
-                  label="% IVA"
-                  type="number"
-                  {...formik.getFieldProps('porcentaje_iva')}
-                  error={formik.touched.porcentaje_iva && Boolean(formik.errors.porcentaje_iva)}
-                  disabled={createMutation.isPending}
-                />
-              </Box>
-            </Box>
-
-            <Alert severity="info" icon={false} sx={{ '& .MuiAlert-message': { width: '100%' } }}>
+            {/* RESUMEN DEL PROYECTO */}
+            <Paper 
+                elevation={0} 
+                sx={{ 
+                    p: 2, 
+                    bgcolor: alpha(theme.palette.primary.main, 0.08), 
+                    borderRadius: 2,
+                    border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`
+                }}
+            >
                 <Stack direction="row" justifyContent="space-between" alignItems="center">
-                    <Typography variant="body2">Nueva Cuota Estimada:</Typography>
-                    <Typography variant="h6" fontWeight="bold" color="primary.main">
-                        ${valorMensualFinal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {proyecto.moneda}
+                    <Box>
+                        <Typography variant="subtitle2" color="primary.main" fontWeight={700} textTransform="uppercase" gutterBottom>
+                            PROYECTO SELECCIONADO
+                        </Typography>
+                        <Typography variant="h6" fontWeight={800} color="text.primary">
+                            {proyecto.nombre_proyecto}
+                        </Typography>
+                    </Box>
+                    <Box sx={{ textAlign: 'right' }}>
+                        <Typography variant="caption" color="text.secondary" display="block">
+                            Plazo Total
+                        </Typography>
+                        <Typography variant="h6" fontWeight={700} color="text.primary">
+                            {proyecto.plazo_inversion} Meses
+                        </Typography>
+                    </Box>
+                </Stack>
+            </Paper>
+
+            {/* 1. DATOS DE CONFIGURACIÓN */}
+            <Box>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <DescriptionIcon fontSize="small" /> Datos Base
+                </Typography>
+                
+                <Stack spacing={2}>
+                    <TextField
+                        fullWidth
+                        id="nombre_cemento_cemento"
+                        label="Referencia del Valor (Opcional)"
+                        placeholder="Ej: Bolsa de Cemento Avellaneda 50kg"
+                        {...formik.getFieldProps('nombre_cemento_cemento')}
+                        disabled={createMutation.isPending}
+                    />
+
+                    <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+                        <Box sx={{ flex: 1 }}>
+                            <TextField
+                                fullWidth
+                                id="valor_cemento_unidades"
+                                label="Cantidad de Unidades"
+                                type="number"
+                                {...formik.getFieldProps('valor_cemento_unidades')}
+                                error={formik.touched.valor_cemento_unidades && Boolean(formik.errors.valor_cemento_unidades)}
+                                helperText={formik.touched.valor_cemento_unidades && formik.errors.valor_cemento_unidades}
+                                disabled={createMutation.isPending}
+                            />
+                        </Box>
+                        <Box sx={{ flex: 1 }}>
+                            <TextField
+                                fullWidth
+                                id="valor_cemento"
+                                label="Precio por Unidad"
+                                type="number"
+                                InputProps={{
+                                    startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                                }}
+                                {...formik.getFieldProps('valor_cemento')}
+                                error={formik.touched.valor_cemento && Boolean(formik.errors.valor_cemento)}
+                                helperText={formik.touched.valor_cemento && formik.errors.valor_cemento}
+                                disabled={createMutation.isPending}
+                            />
+                        </Box>
+                    </Stack>
+                </Stack>
+            </Box>
+            
+            {/* 2. PORCENTAJES DE CÁLCULO */}
+            <Box>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <CalculateIcon fontSize="small" /> Porcentajes de Cálculo
+                </Typography>
+                <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+                    <TextField
+                        fullWidth
+                        id="porcentaje_plan"
+                        label="% Plan"
+                        type="number"
+                        InputProps={{
+                            endAdornment: <InputAdornment position="end">%</InputAdornment>,
+                        }}
+                        {...formik.getFieldProps('porcentaje_plan')}
+                        error={formik.touched.porcentaje_plan && Boolean(formik.errors.porcentaje_plan)}
+                        disabled={createMutation.isPending}
+                    />
+                    <TextField
+                        fullWidth
+                        id="porcentaje_administrativo"
+                        label="% Administrativo"
+                        type="number"
+                        InputProps={{
+                            endAdornment: <InputAdornment position="end">%</InputAdornment>,
+                        }}
+                        {...formik.getFieldProps('porcentaje_administrativo')}
+                        error={formik.touched.porcentaje_administrativo && Boolean(formik.errors.porcentaje_administrativo)}
+                        disabled={createMutation.isPending}
+                    />
+                    <TextField
+                        fullWidth
+                        id="porcentaje_iva"
+                        label="% IVA"
+                        type="number"
+                        InputProps={{
+                            endAdornment: <InputAdornment position="end">%</InputAdornment>,
+                        }}
+                        {...formik.getFieldProps('porcentaje_iva')}
+                        error={formik.touched.porcentaje_iva && Boolean(formik.errors.porcentaje_iva)}
+                        disabled={createMutation.isPending}
+                    />
+                </Stack>
+            </Box>
+
+            {/* 3. RESULTADO PRELIMINAR */}
+            <Alert 
+                severity="info" 
+                icon={false} 
+                sx={{ 
+                    bgcolor: alpha(theme.palette.info.main, 0.05),
+                    border: `1px solid ${alpha(theme.palette.info.main, 0.2)}`,
+                    '& .MuiAlert-message': { width: '100%' } 
+                }}
+            >
+                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Box>
+                        <Typography variant="body2" color="info.main" fontWeight={600}>
+                            NUEVA CUOTA ESTIMADA
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                            Basado en los valores ingresados
+                        </Typography>
+                    </Box>
+                    <Typography variant="h5" fontWeight={800} color="primary.main">
+                        ${valorMensualFinal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <Typography component="span" variant="caption" color="text.secondary">{proyecto.moneda}</Typography>
                     </Typography>
                 </Stack>
             </Alert>
 
             {createMutation.isError && (
-              <Alert severity="error">
+              <Alert severity="error" variant="filled" sx={{ borderRadius: 2 }}>
                 ❌ Error: {(createMutation.error as any).response?.data?.error || (createMutation.error as Error).message}
               </Alert>
             )}
 
             {showHistory && (
-               <Box mt={2}>
-                  <Typography variant="h6" gutterBottom>Historial</Typography>
+               <Box sx={{ mt: 2, pt: 2, borderTop: `1px dashed ${theme.palette.divider}` }}>
+                  <Typography variant="subtitle2" color="text.secondary" fontWeight={700} gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <HistoryIcon fontSize="small" /> HISTORIAL DE VALORES
+                  </Typography>
                   <ProyectoPriceHistory proyectoId={proyecto.id} />
                </Box>
             )}
@@ -253,16 +359,18 @@ const ConfigCuotasModal: React.FC<ConfigCuotasModalProps> = ({
           </Stack>
         </DialogContent>
 
-        <DialogActions sx={{ p: 2.5, gap: 1 }}>
+        <DialogActions sx={{ p: 3, borderTop: `1px solid ${theme.palette.divider}`, bgcolor: alpha(theme.palette.background.default, 0.5) }}>
           <Button 
             onClick={() => setShowHistory(!showHistory)} 
             startIcon={<HistoryIcon />}
+            color="inherit"
             disabled={createMutation.isPending}
+            sx={{ mr: 'auto', borderRadius: 2 }} 
           >
             {showHistory ? 'Ocultar' : 'Ver'} Historial
           </Button>
-          <Box sx={{ flex: 1 }} />
-          <Button onClick={handleClose} variant="outlined" disabled={createMutation.isPending}>
+          
+          <Button onClick={handleClose} color="inherit" disabled={createMutation.isPending} sx={{ borderRadius: 2 }}>
             Cancelar
           </Button>
           <Button
@@ -270,6 +378,7 @@ const ConfigCuotasModal: React.FC<ConfigCuotasModalProps> = ({
             variant="contained"
             disabled={createMutation.isPending || !formik.isValid}
             startIcon={createMutation.isPending ? <CircularProgress size={20} color="inherit" /> : <AddIcon />}
+            sx={{ px: 3 }}
           >
             {createMutation.isPending ? 'Guardando...' : 'Guardar Configuración'}
           </Button>

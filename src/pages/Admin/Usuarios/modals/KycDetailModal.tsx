@@ -1,3 +1,5 @@
+// src/pages/Admin/KYC/modals/KycDetailModal.tsx
+
 import React from 'react';
 import {
   Dialog,
@@ -28,7 +30,8 @@ import {
   EventAvailable as DateIcon,
   Badge as BadgeIcon,
   Fingerprint as FingerprintIcon,
-  OpenInNew as OpenIcon
+  OpenInNew as OpenIcon,
+  Close as CloseIcon
 } from '@mui/icons-material';
 import type { KycDTO } from '../../../../types/dto/kyc.dto';
 
@@ -40,7 +43,7 @@ interface KycDetailModalProps {
   onReject: (kyc: KycDTO) => void;
 }
 
-// 🔧 HELPER ROBUSTO PARA IMÁGENES
+// 🔧 HELPER PARA IMÁGENES
 const getImageUrl = (path: string | null) => {
   if (!path) return '';
   const cleanPath = path.replace(/\\/g, '/');
@@ -54,24 +57,6 @@ const KycDetailModal: React.FC<KycDetailModalProps> = ({
   const theme = useTheme();
 
   if (!kyc) return null;
-
-  // Estilos reutilizables
-  const labelStyle = {
-    fontSize: '0.75rem',
-    fontWeight: 700,
-    color: 'text.secondary',
-    letterSpacing: 0.5,
-    textTransform: 'uppercase' as const,
-    mb: 0.5,
-    display: 'flex',
-    alignItems: 'center',
-    gap: 0.5
-  };
-
-  const valueStyle = {
-    fontWeight: 600,
-    color: 'text.primary'
-  };
 
   return (
     <Dialog 
@@ -109,7 +94,7 @@ const KycDetailModal: React.FC<KycDetailModalProps> = ({
           </Box>
         </Stack>
         <IconButton onClick={onClose} size="small" sx={{ color: 'text.secondary' }}>
-          <CancelIcon />
+          <CloseIcon />
         </IconButton>
       </DialogTitle>
       
@@ -121,18 +106,27 @@ const KycDetailModal: React.FC<KycDetailModalProps> = ({
           
           {/* 🟢 COLUMNA IZQUIERDA: DATOS Y ESTADO */}
           <Box sx={{ flex: 1, p: 3 }}>
-            <Stack spacing={4}>
+            <Stack spacing={3}>
             
               {/* 1. Datos del Solicitante */}
               <Box>
-                <Typography sx={labelStyle}><PersonIcon fontSize="inherit" /> Solicitante</Typography>
-                <Paper elevation={0} sx={{ p: 2, bgcolor: alpha(theme.palette.background.default, 0.5), border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+                <Label text="Solicitante" icon={<PersonIcon fontSize="inherit" />} />
+                <Paper 
+                    elevation={0} 
+                    sx={{ 
+                        p: 2, 
+                        borderRadius: 2,
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        bgcolor: alpha(theme.palette.background.paper, 0.5)
+                    }}
+                >
                   <Stack direction="row" spacing={2} alignItems="center">
-                    <Avatar sx={{ bgcolor: theme.palette.primary.main, width: 48, height: 48, fontSize: '1.2rem' }}>
+                    <Avatar sx={{ bgcolor: theme.palette.primary.main, width: 48, height: 48, fontSize: '1.2rem', fontWeight: 700 }}>
                         {kyc.nombre_completo.charAt(0).toUpperCase()}
                     </Avatar>
                     <Box>
-                        <Typography variant="h6" sx={valueStyle} lineHeight={1.2}>
+                        <Typography variant="h6" fontWeight={700} lineHeight={1.2}>
                           {kyc.nombre_completo}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
@@ -146,26 +140,26 @@ const KycDetailModal: React.FC<KycDetailModalProps> = ({
               {/* 2. Documento y Estado */}
               <Stack direction="row" spacing={2}>
                  <Box flex={1}>
-                    <Typography sx={labelStyle}><FingerprintIcon fontSize="inherit" /> Documento ({kyc.tipo_documento})</Typography>
-                    <Typography variant="h6" sx={{ ...valueStyle, fontFamily: 'monospace', letterSpacing: 1 }}>
+                    <Label text={`Documento (${kyc.tipo_documento})`} icon={<FingerprintIcon fontSize="inherit" />} />
+                    <Typography variant="h6" sx={{ fontWeight: 600, fontFamily: 'monospace', letterSpacing: 1 }}>
                         {kyc.numero_documento}
                     </Typography>
                  </Box>
                  <Box flex={1}>
-                    <Typography sx={labelStyle}><CheckCircleIcon fontSize="inherit" /> Estado</Typography>
+                    <Label text="Estado" icon={<CheckCircleIcon fontSize="inherit" />} />
                     <Chip 
                         label={kyc.estado_verificacion} 
                         color={kyc.estado_verificacion === 'APROBADA' ? 'success' : kyc.estado_verificacion === 'RECHAZADA' ? 'error' : 'warning'} 
                         size="small"
                         variant="outlined"
-                        sx={{ fontWeight: 800, border: '1px solid', borderWidth: 2 }} 
+                        sx={{ fontWeight: 800, border: '2px solid' }} 
                     />
                  </Box>
               </Stack>
 
               {/* 3. AUDITORÍA (Solo si no es pendiente) */}
               {kyc.estado_verificacion !== 'PENDIENTE' && (
-                <Box sx={{ position: 'relative' }}>
+                <Box>
                     <Divider sx={{ mb: 2 }}><Chip label="Auditoría" size="small" /></Divider>
                     <Box sx={{ 
                         p: 2, 
@@ -174,7 +168,7 @@ const KycDetailModal: React.FC<KycDetailModalProps> = ({
                         border: '1px dashed',
                         borderColor: theme.palette.divider
                     }}>
-                        <Typography sx={labelStyle}><AdminIcon fontSize="inherit" /> Revisado Por</Typography>
+                        <Label text="Revisado Por" icon={<AdminIcon fontSize="inherit" />} />
                         
                         {kyc.verificador ? (
                             <Stack direction="row" spacing={1.5} alignItems="center" mt={1}>
@@ -198,7 +192,7 @@ const KycDetailModal: React.FC<KycDetailModalProps> = ({
 
                         {kyc.fecha_verificacion && (
                             <Box mt={2}>
-                                <Typography sx={labelStyle}><DateIcon fontSize="inherit" /> Fecha Resolución</Typography>
+                                <Label text="Fecha Resolución" icon={<DateIcon fontSize="inherit" />} />
                                 <Typography variant="body2" fontWeight={500}>
                                     {new Date(kyc.fecha_verificacion).toLocaleDateString()} a las {new Date(kyc.fecha_verificacion).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                                 </Typography>
@@ -211,7 +205,7 @@ const KycDetailModal: React.FC<KycDetailModalProps> = ({
               {/* 4. Geolocalización */}
               {(kyc.latitud_verificacion && kyc.longitud_verificacion) && (
                 <Box>
-                    <Typography sx={labelStyle}><LocationIcon fontSize="inherit" /> Ubicación de envío</Typography>
+                    <Label text="Ubicación de envío" icon={<LocationIcon fontSize="inherit" />} />
                     <Alert severity="info" variant="outlined" sx={{ py: 0, borderStyle: 'dashed' }}>
                         <Typography variant="caption" sx={{ fontFamily: 'monospace' }}>
                         Lat: {kyc.latitud_verificacion} • Lon: {kyc.longitud_verificacion}
@@ -223,7 +217,7 @@ const KycDetailModal: React.FC<KycDetailModalProps> = ({
               {/* 5. Rechazo */}
               {kyc.motivo_rechazo && (
                 <Box>
-                    <Typography sx={{ ...labelStyle, color: 'error.main' }}><HighlightOffIcon fontSize="inherit" /> Motivo Rechazo</Typography>
+                    <Label text="Motivo Rechazo" icon={<RejectIcon fontSize="inherit" />} color="error.main" />
                     <Alert severity="error" variant="filled" sx={{ borderRadius: 2 }}>
                         {kyc.motivo_rechazo}
                     </Alert>
@@ -234,8 +228,8 @@ const KycDetailModal: React.FC<KycDetailModalProps> = ({
 
           {/* 🟣 COLUMNA DERECHA: EVIDENCIA (FOTOS) */}
           <Box sx={{ flex: 1.3, p: 3, bgcolor: alpha(theme.palette.background.default, 0.4) }}>
-            <Typography variant="subtitle2" fontWeight={700} color="text.primary" mb={2}>
-                EVIDENCIA DOCUMENTAL
+            <Typography variant="subtitle2" fontWeight={700} color="text.primary" mb={2} sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>
+                Evidencia Documental
             </Typography>
             
             <Stack spacing={3}>
@@ -262,7 +256,7 @@ const KycDetailModal: React.FC<KycDetailModalProps> = ({
               color="error" 
               startIcon={<RejectIcon />}
               onClick={() => onReject(kyc)}
-              sx={{ borderRadius: 2, px: 3 }}
+              sx={{ borderRadius: 2, px: 3, fontWeight: 600 }}
             >
               Rechazar
             </Button>
@@ -271,7 +265,7 @@ const KycDetailModal: React.FC<KycDetailModalProps> = ({
               color="success" 
               startIcon={<CheckCircleIcon />}
               onClick={() => onApprove(kyc)}
-              sx={{ borderRadius: 2, px: 3, fontWeight: 700, color: 'white' }}
+              sx={{ borderRadius: 2, px: 3, fontWeight: 700, color: 'white', boxShadow: theme.shadows[4] }}
             >
               Aprobar Verificación
             </Button>
@@ -282,7 +276,26 @@ const KycDetailModal: React.FC<KycDetailModalProps> = ({
   );
 };
 
-// --- SUBCOMPONENTE DE IMAGEN ---
+// --- COMPONENTES AUXILIARES ---
+
+const Label = ({ text, icon, color = 'text.secondary' }: { text: string, icon: React.ReactNode, color?: string }) => (
+    <Typography 
+        variant="caption" 
+        sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: 0.5, 
+            fontWeight: 700, 
+            textTransform: 'uppercase', 
+            letterSpacing: 0.5,
+            mb: 0.5,
+            color: color
+        }}
+    >
+        {icon} {text}
+    </Typography>
+);
+
 const EvidenceImage = ({ title, src }: { title: string, src: string | null }) => {
   if (!src) return null;
   const theme = useTheme();
@@ -304,10 +317,11 @@ const EvidenceImage = ({ title, src }: { title: string, src: string | null }) =>
         sx={{ 
           position: 'relative',
           width: '100%', 
-          height: 200, // Altura fija para consistencia
+          height: 200, 
           borderRadius: 2, 
-          border: `1px solid ${theme.palette.divider}`, 
-          bgcolor: theme.palette.background.paper,
+          border: '1px solid',
+          borderColor: 'divider',
+          bgcolor: 'background.paper',
           overflow: 'hidden',
           transition: 'all 0.3s ease',
           cursor: 'zoom-in',
@@ -326,7 +340,7 @@ const EvidenceImage = ({ title, src }: { title: string, src: string | null }) =>
             sx={{
                 width: '100%',
                 height: '100%',
-                objectFit: 'cover', // Cover para que se vea bonito en la miniatura
+                objectFit: 'cover', 
                 transition: 'transform 0.5s ease',
             }}
         />
@@ -334,8 +348,5 @@ const EvidenceImage = ({ title, src }: { title: string, src: string | null }) =>
     </Box>
   );
 };
-
-// Helper Icon import (por si falta arriba)
-import HighlightOffIcon from '@mui/icons-material/HighlightOff';
 
 export default KycDetailModal;

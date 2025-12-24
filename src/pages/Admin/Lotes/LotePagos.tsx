@@ -1,8 +1,9 @@
 // src/pages/Admin/Lotes/ControlPagos.tsx
+
 import React, { useMemo } from 'react';
 import {
   Box, Typography, Paper, Stack, Chip, LinearProgress, Alert, Divider,
-  Avatar, IconButton, Tooltip
+  Avatar, IconButton, Tooltip, useTheme, alpha
 } from '@mui/material';
 import { 
   Warning, ErrorOutline, CheckCircle, Person,
@@ -13,57 +14,68 @@ import { useQuery } from '@tanstack/react-query';
 import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
 import { QueryHandler } from '../../../components/common/QueryHandler/QueryHandler';
 import { PageHeader } from '../../../components/common/PageHeader/PageHeader';
-
-// 👇 Importamos DataTable
 import { DataTable, type DataTableColumn } from '../../../components/common/DataTable/DataTable';
 
 import type { LoteDto } from '../../../types/dto/lote.dto';
 import LoteService from '../../../Services/lote.service';
 import imagenService from '../../../Services/imagen.service';
 
-
-// --- COMPONENTE KPI ---
+// --- COMPONENTE KPI (Estandarizado) ---
 const StatCard: React.FC<{
   title: string;
   value: string | number;
   icon: React.ReactNode;
   color: 'success' | 'warning' | 'error' | 'info';
   description?: string;
-}> = ({ title, value, icon, color, description }) => (
-  <Paper elevation={0} sx={{ 
-    p: 2, 
-    border: '1px solid', 
-    borderColor: 'divider', 
-    borderRadius: 2, 
-    height: '100%', 
-    display: 'flex', 
-    alignItems: 'center', 
-    gap: 2 
-  }}>
-    <Box sx={{ 
-      bgcolor: `${color}.light`, 
-      color: `${color}.main`, 
-      p: 1.5, 
-      borderRadius: '50%', 
-      display: 'flex' 
-    }}>
-      {icon}
-    </Box>
-    <Box flex={1}>
-      <Typography variant="h5" fontWeight={700} color="text.primary">
-        {value}
-      </Typography>
-      <Typography variant="body2" color="text.secondary" fontWeight={600}>
-        {title}
-      </Typography>
-      {description && (
-        <Typography variant="caption" color={`${color}.main`} fontWeight="bold">
-          {description}
+}> = ({ title, value, icon, color, description }) => {
+  const theme = useTheme();
+  // Mapeo seguro
+  const paletteColor = theme.palette[color];
+
+  return (
+    <Paper 
+      elevation={0} 
+      sx={{ 
+        p: 2, 
+        border: '1px solid', 
+        borderColor: 'divider', 
+        borderRadius: 2, 
+        height: '100%', 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: 2,
+        transition: 'all 0.2s ease',
+        '&:hover': {
+            borderColor: paletteColor.main,
+            transform: 'translateY(-2px)'
+        }
+      }}
+    >
+      <Box sx={{ 
+        bgcolor: alpha(paletteColor.main, 0.1), 
+        color: paletteColor.main, 
+        p: 1.5, 
+        borderRadius: '50%', 
+        display: 'flex' 
+      }}>
+        {icon}
+      </Box>
+      <Box flex={1}>
+        <Typography variant="h5" fontWeight={700} color="text.primary">
+          {value}
         </Typography>
-      )}
-    </Box>
-  </Paper>
-);
+        <Typography variant="body2" color="text.secondary" fontWeight={600} sx={{ textTransform: 'uppercase' }}>
+          {title}
+        </Typography>
+        {description && (
+          <Typography variant="caption" color={paletteColor.main} fontWeight={700}>
+            {description}
+          </Typography>
+        )}
+      </Box>
+    </Paper>
+  );
+};
 
 // Helper: 90 días desde fecha_fin
 const calcularDiasRestantes = (lote: LoteDto): number => {
@@ -76,6 +88,7 @@ const calcularDiasRestantes = (lote: LoteDto): number => {
 };
 
 const LotePagos: React.FC = () => {
+  const theme = useTheme();
   
   const { data: lotes = [], isLoading, error } = useQuery<LoteDto[]>({
     queryKey: ['adminLotes'],
@@ -114,22 +127,26 @@ const LotePagos: React.FC = () => {
   // ========================================================================
   // ⚙️ DEFINICIÓN DE COLUMNAS PARA DATATABLE
   // ========================================================================
-  const columns: DataTableColumn<LoteDto>[] = [
+  const columns: DataTableColumn<LoteDto>[] = useMemo(() => [
     {
       id: 'lote',
       label: 'Lote / ID',
-      minWidth: 200,
+      minWidth: 220,
       render: (lote) => (
         <Stack direction="row" spacing={2} alignItems="center">
             <Avatar 
                 src={getLoteImage(lote)} 
                 variant="rounded" 
-                sx={{ width: 48, height: 48, bgcolor: 'grey.200' }}
+                sx={{ 
+                    width: 48, height: 48, 
+                    bgcolor: alpha(theme.palette.primary.main, 0.1),
+                    color: theme.palette.primary.main
+                }}
             >
-                <ImageIcon color="action" />
+                <ImageIcon fontSize="small" />
             </Avatar>
             <Box>
-                <Typography variant="body2" fontWeight={600}>{lote.nombre_lote}</Typography>
+                <Typography variant="body2" fontWeight={700} color="text.primary">{lote.nombre_lote}</Typography>
                 <Typography variant="caption" color="text.secondary">
                 ID: {lote.id}
                 </Typography>
@@ -142,10 +159,10 @@ const LotePagos: React.FC = () => {
       label: 'Ganador Actual',
       render: (lote) => (
         <Stack direction="row" spacing={1} alignItems="center">
-            <Avatar sx={{ width: 24, height: 24, bgcolor: 'primary.light', fontSize: 12 }}>
+            <Avatar sx={{ width: 24, height: 24, bgcolor: alpha(theme.palette.primary.main, 0.2), color: 'primary.main', fontSize: 12 }}>
                 <Person fontSize="inherit" />
             </Avatar>
-            <Typography variant="body2">
+            <Typography variant="body2" fontWeight={500}>
                 Usuario #{lote.id_ganador}
             </Typography>
         </Stack>
@@ -163,12 +180,12 @@ const LotePagos: React.FC = () => {
     {
       id: 'intentos',
       label: 'Intentos Fallidos',
-      minWidth: 150,
+      minWidth: 160,
       render: (lote) => {
         const intentos = lote.intentos_fallidos_pago || 0;
         const esRiesgoCritico = intentos >= 2;
         return (
-            <Stack spacing={0.5} width={120}>
+            <Stack spacing={0.5} width="100%">
                 <Stack direction="row" justifyContent="space-between">
                     <Typography variant="caption" fontWeight={700} color={esRiesgoCritico ? 'error.main' : 'text.secondary'}>
                         {intentos}/3
@@ -179,7 +196,7 @@ const LotePagos: React.FC = () => {
                     variant="determinate" 
                     value={(intentos / 3) * 100}
                     color={intentos === 1 ? 'warning' : 'error'}
-                    sx={{ height: 6, borderRadius: 3 }}
+                    sx={{ height: 6, borderRadius: 3, bgcolor: alpha(theme.palette.grey[300], 0.5) }}
                 />
             </Stack>
         );
@@ -211,7 +228,9 @@ const LotePagos: React.FC = () => {
                 label="CRÍTICO" 
                 size="small" 
                 color="error" 
-                icon={<ErrorOutline />}
+                variant="filled"
+                icon={<ErrorOutline sx={{ fontSize: '14px !important' }} />}
+                sx={{ fontWeight: 700 }}
             />
         ) : (
             <Chip 
@@ -219,6 +238,7 @@ const LotePagos: React.FC = () => {
                 size="small" 
                 color="warning"
                 variant="outlined"
+                sx={{ fontWeight: 600 }}
             />
         );
       }
@@ -237,17 +257,17 @@ const LotePagos: React.FC = () => {
                     : "El sistema monitoreará el vencimiento y actuará automáticamente."
                 }
             >
-                <IconButton size="small" color="info">
+                <IconButton size="small" color="info" sx={{ bgcolor: alpha(theme.palette.info.main, 0.1), '&:hover': { bgcolor: alpha(theme.palette.info.main, 0.2) } }}>
                     <Info fontSize="small" />
                 </IconButton>
             </Tooltip>
         );
       }
     }
-  ];
+  ], [theme]);
 
   return (
-    <PageContainer maxWidth="xl">
+    <PageContainer maxWidth="xl" sx={{ py: 3 }}>
     
       <PageHeader
         title="Gestión de Pagos"
@@ -255,7 +275,11 @@ const LotePagos: React.FC = () => {
       />
 
       {/* Alerta informativa */}
-      <Alert severity="info" icon={<Info />} sx={{ mb: 3, borderRadius: 2 }}>
+      <Alert 
+        severity="info" 
+        icon={<Info />} 
+        sx={{ mb: 3, borderRadius: 2, border: '1px solid', borderColor: 'info.light' }}
+      >
         <Typography variant="body2" fontWeight={600}>
           🤖 Sistema Automático Activo
         </Typography>
@@ -279,7 +303,7 @@ const LotePagos: React.FC = () => {
 
       {/* Alertas críticas */}
       {analytics.riesgoCritico > 0 && (
-        <Alert severity="error" variant="filled" sx={{ mb: 3, borderRadius: 2 }}>
+        <Alert severity="error" variant="filled" sx={{ mb: 3, borderRadius: 2, boxShadow: theme.shadows[2] }}>
           <Typography variant="body2" fontWeight={700}>
             ⚠️ ATENCIÓN: {analytics.riesgoCritico} lote{analytics.riesgoCritico > 1 ? 's' : ''} en riesgo crítico
           </Typography>
@@ -290,16 +314,16 @@ const LotePagos: React.FC = () => {
       )}
 
       {analytics.proximosVencer > 0 && (
-        <Alert severity="warning" variant="filled" sx={{ mb: 3, borderRadius: 2 }}>
+        <Alert severity="warning" variant="filled" sx={{ mb: 3, borderRadius: 2, boxShadow: theme.shadows[2] }}>
           <Typography variant="body2" fontWeight={700}>
             ⏰ {analytics.proximosVencer} lote{analytics.proximosVencer > 1 ? 's' : ''} con menos de 10 días de plazo
           </Typography>
         </Alert>
       )}
 
-      {/* ✅ USO DEL COMPONENTE DATATABLE (Limpio, sin wrapper extra) */}
+      {/* ✅ USO DEL COMPONENTE DATATABLE (Limpio) */}
       <Box sx={{ mt: 4 }}>
-        <Typography variant="h6" fontWeight="bold" gutterBottom sx={{ mb: 2 }}>
+        <Typography variant="h6" fontWeight="bold" gutterBottom sx={{ mb: 2, color: 'text.primary' }}>
             Lotes Pendientes de Pago (Seguimiento)
         </Typography>
         <QueryHandler isLoading={isLoading} error={error as Error}>
@@ -315,8 +339,8 @@ const LotePagos: React.FC = () => {
       </Box>
 
       {/* Explicación del flujo automático */}
-      <Paper sx={{ p: 3, mt: 4, bgcolor: 'grey.50', borderRadius: 2 }} variant="outlined">
-        <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+      <Paper sx={{ p: 3, mt: 4, bgcolor: alpha(theme.palette.background.paper, 0.5), borderRadius: 2, border: '1px solid', borderColor: 'divider' }} elevation={0}>
+        <Typography variant="subtitle1" fontWeight={800} gutterBottom sx={{ textTransform: 'uppercase', letterSpacing: 1, fontSize: '0.85rem', color: 'text.secondary' }}>
           🔄 Flujo Automático de Reasignación
         </Typography>
         <Divider sx={{ mb: 2 }} />

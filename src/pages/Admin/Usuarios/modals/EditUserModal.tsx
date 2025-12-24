@@ -1,3 +1,5 @@
+// src/pages/Admin/Usuarios/modals/EditUserModal.tsx
+
 import React, { useEffect, useState } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField,
@@ -22,18 +24,31 @@ const Disable2FADialog: React.FC<{
   open: boolean; onClose: () => void; onConfirm: (justificacion: string) => void;
   isLoading: boolean; userName: string;
 }> = ({ open, onClose, onConfirm, isLoading, userName }) => {
+  const theme = useTheme();
   const [justificacion, setJustificacion] = useState('');
+  
   const handleSubmit = () => {
     if (justificacion.trim().length < 10) return alert('La justificación debe tener al menos 10 caracteres');
     onConfirm(justificacion); setJustificacion('');
   };
+
   return (
-    <Dialog open={open} onClose={isLoading ? undefined : onClose} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
-      <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 2, bgcolor: 'warning.light', color: 'warning.contrastText' }}>
+    <Dialog 
+      open={open} 
+      onClose={isLoading ? undefined : onClose} 
+      maxWidth="sm" 
+      fullWidth 
+      PaperProps={{ sx: { borderRadius: 3 } }}
+    >
+      <DialogTitle sx={{ 
+        display: 'flex', alignItems: 'center', gap: 2, 
+        bgcolor: alpha(theme.palette.warning.main, 0.1), 
+        color: theme.palette.warning.main 
+      }}>
         <WarningIcon /> <Typography variant="h6" fontWeight="bold">Confirmar Desactivación 2FA</Typography>
       </DialogTitle>
-      <DialogContent sx={{ mt: 2 }}>
-        <Alert severity="warning" variant="outlined" sx={{ mb: 2, borderRadius: 2 }}>
+      <DialogContent sx={{ mt: 3 }}>
+        <Alert severity="warning" variant="outlined" sx={{ mb: 3, borderRadius: 2 }}>
             Esta acción reducirá la seguridad de la cuenta de <strong>{userName}</strong>.
         </Alert>
         <TextField 
@@ -46,9 +61,17 @@ const Disable2FADialog: React.FC<{
             sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
         />
       </DialogContent>
-      <DialogActions sx={{ p: 2 }}>
-        <Button onClick={onClose} disabled={isLoading} color="inherit">Cancelar</Button>
-        <Button variant="contained" color="warning" onClick={handleSubmit} disabled={isLoading}>Confirmar Desactivación</Button>
+      <DialogActions sx={{ p: 2.5 }}>
+        <Button onClick={onClose} disabled={isLoading} color="inherit" sx={{ borderRadius: 2 }}>Cancelar</Button>
+        <Button 
+            variant="contained" 
+            color="warning" 
+            onClick={handleSubmit} 
+            disabled={isLoading}
+            sx={{ borderRadius: 2, fontWeight: 700 }}
+        >
+            Confirmar Desactivación
+        </Button>
       </DialogActions>
     </Dialog>
   );
@@ -132,7 +155,10 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ open, onClose, user, onSu
   if (!user) return null;
 
   // Estilos comunes
-  const commonInputSx = { '& .MuiOutlinedInput-root': { borderRadius: 2 } };
+  const commonInputSx = { 
+      '& .MuiOutlinedInput-root': { borderRadius: 2 } 
+  };
+  
   const sectionTitleSx = { 
       textTransform: 'uppercase', 
       letterSpacing: 1, 
@@ -295,7 +321,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ open, onClose, user, onSu
                     onClick={() => setShowDisable2FADialog(true)} 
                     fullWidth 
                     size="small"
-                    sx={{ mt: 1, borderColor: 'warning.light', color: 'warning.dark' }}
+                    sx={{ mt: 1, borderColor: 'warning.light', color: 'warning.dark', borderRadius: 2 }}
                   >
                     Resetear Autenticación de Dos Pasos
                   </Button>

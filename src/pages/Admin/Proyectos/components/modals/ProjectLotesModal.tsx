@@ -33,7 +33,6 @@ import type { ProyectoDto } from '../../../../../types/dto/proyecto.dto';
 import type { LoteDto } from '../../../../../types/dto/lote.dto';
 import type { ContratoPlantillaDto } from '../../../../../types/dto/contrato.dto';
 
-// ✅ INTERFAZ CORRECTA PARA UN MODAL
 interface ProjectLotesModalProps {
   open: boolean;
   onClose: () => void;
@@ -155,11 +154,13 @@ const ProjectLotesModal: React.FC<ProjectLotesModalProps> = ({
          row.latitud && row.longitud ? (
            <Tooltip title={`Lat: ${row.latitud}, Lng: ${row.longitud}`}>
              <IconButton 
-                size="small" 
-                color="primary" 
-                href={`https://www.google.com/maps/search/?api=1&query=${row.latitud},${row.longitud}`}
-                target="_blank"
-                sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1) }}
+               size="small" 
+               color="primary" 
+               // CORRECCIÓN DE SINTAXIS DE URL
+               href={`https://www.google.com/maps/search/?api=1&query=${row.latitud},${row.longitud}`}
+               target="_blank"
+               rel="noopener noreferrer"
+               sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1) }}
              >
                <MapIcon fontSize="small" />
              </IconButton>
@@ -173,13 +174,18 @@ const ProjectLotesModal: React.FC<ProjectLotesModalProps> = ({
       align: 'center',
       render: (row) => {
         const estado = row.estado_subasta?.toLowerCase() || 'n/a';
-        let colorKey = 'default';
-        if (estado === 'activa') colorKey = 'success';
-        if (estado === 'pendiente') colorKey = 'warning';
         
-        // Obtener el color real del tema de forma segura
-        const themeColor = (theme.palette as any)[colorKey]?.main || theme.palette.text.secondary;
+        let colorKey: 'default' | 'success' | 'warning' = 'default';
+        let colorMain = theme.palette.text.secondary;
 
+        if (estado === 'activa') {
+            colorKey = 'success';
+            colorMain = theme.palette.success.main;
+        } else if (estado === 'pendiente') {
+            colorKey = 'warning';
+            colorMain = theme.palette.warning.main;
+        }
+        
         return (
             <Chip 
                 label={estado.toUpperCase()} 
@@ -188,10 +194,10 @@ const ProjectLotesModal: React.FC<ProjectLotesModalProps> = ({
                 sx={{ 
                     fontWeight: 700, 
                     fontSize: '0.7rem',
-                    bgcolor: alpha(themeColor, 0.1),
-                    color: themeColor,
+                    bgcolor: alpha(colorMain, 0.1),
+                    color: colorMain,
                     border: '1px solid',
-                    borderColor: alpha(themeColor, 0.2)
+                    borderColor: alpha(colorMain, 0.2)
                 }}
             />
         );
@@ -390,7 +396,7 @@ const ProjectLotesModal: React.FC<ProjectLotesModalProps> = ({
                             defaultRowsPerPage={5}
                             rowsPerPageOptions={[5, 10]} 
                             emptyMessage="No se encontraron lotes asociados a este proyecto."
-                            elevation={0}
+                            // elevation={0} -> ELIMINADO PORQUE YA NO EXISTE EN LA INTERFAZ NUEVA
                         />
                     </Box>
                 )}
