@@ -1,8 +1,11 @@
+// src/components/layout/AdminSidebar/AdminSidebar.tsx
+
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Box, Drawer, List, ListItemButton, ListItemIcon, ListItemText,
-  Collapse, Typography, Divider, Avatar, IconButton, Tooltip, Badge
+  Collapse, Typography, Divider, Avatar, IconButton, Tooltip, Badge,
+  useTheme, alpha
 } from '@mui/material';
 import {
   ExpandLess, ExpandMore, ChevronLeft, ChevronRight, Logout
@@ -10,8 +13,6 @@ import {
 import { useAuth } from '../../../context/AuthContext';
 import { useNavbarMenu, NAVBAR_HEIGHT } from '../../../hooks/useNavbarMenu';
 import { ConfirmDialog } from '../../common/ConfirmDialog/ConfirmDialog';
-
-
 
 const DRAWER_WIDTH = 260;
 const DRAWER_COLLAPSED = 72;
@@ -21,11 +22,12 @@ interface AdminSidebarProps {
 }
 
 const AdminSidebar: React.FC<AdminSidebarProps> = ({ pendingKYC = 0 }) => {
+  const theme = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
 
-  // ✅ Obtenemos logoutDialogProps en lugar de logoutProps
+  // Obtenemos logoutDialogProps en lugar de logoutProps
   const { config: { navItems, userNavItems }, logoutDialogProps } = useNavbarMenu();
 
   const [collapsed, setCollapsed] = useState(false);
@@ -49,7 +51,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ pendingKYC = 0 }) => {
     if (path) navigate(path);
   };
 
-  // ✅ Usamos la acción definida en el hook (que abre el modal)
+  // Usamos la acción definida en el hook (que abre el modal)
   const handleLogoutClick = () => {
     const logoutItem = userNavItems[0]?.submenu?.find(s => s.label === 'Cerrar Sesión');
     if (logoutItem?.action) {
@@ -62,7 +64,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ pendingKYC = 0 }) => {
       const active = isActive(item.path) || isChildActive(item.submenu);
       const hasSubmenu = item.submenu && item.submenu.length > 0;
       const isOpen = openMenus.includes(item.label);
-      const showBadge = item.label === 'Gestión de Usuarios' && pendingKYC > 0; // Ajustado el label padre
+      const showBadge = item.label === 'Gestión de Usuarios' && pendingKYC > 0;
       const IconComponent = item.icon;
 
       return (
@@ -70,12 +72,14 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ pendingKYC = 0 }) => {
           <Tooltip title={collapsed ? item.label : ''} placement="right">
             <ListItemButton
               onClick={() => hasSubmenu && !collapsed ? handleToggleMenu(item.label) : handleNavigate(item.path)}
+              selected={active}
               sx={{
                 mx: 1,
                 borderRadius: 2,
                 mb: 0.5,
-                bgcolor: active ? 'rgba(204, 99, 51, 0.08)' : 'transparent',
-                '&:hover': { bgcolor: 'secondary.light' }
+                borderLeft: active ? `4px solid ${theme.palette.primary.main}` : '4px solid transparent',
+                '&.Mui-selected': { bgcolor: alpha(theme.palette.primary.main, 0.08) },
+                '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.04) }
               }}
             >
               <ListItemIcon sx={{
@@ -94,7 +98,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ pendingKYC = 0 }) => {
                     primary={item.label}
                     primaryTypographyProps={{
                       variant: 'body2',
-                      fontWeight: active ? 600 : 400,
+                      fontWeight: active ? 700 : 500,
                       color: active ? 'primary.main' : 'text.primary'
                     }}
                   />
@@ -116,13 +120,14 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ pendingKYC = 0 }) => {
                     <ListItemButton
                       key={subItem.label || subIndex}
                       onClick={() => subItem.action ? subItem.action() : handleNavigate(subItem.path)}
+                      selected={isSubActive}
                       sx={{
                         pl: 6,
                         py: 0.75,
                         mx: 1,
                         borderRadius: 2,
-                        bgcolor: isSubActive ? 'rgba(204, 99, 51, 0.12)' : 'transparent',
-                        '&:hover': { bgcolor: 'secondary.light' }
+                        '&.Mui-selected': { bgcolor: alpha(theme.palette.primary.main, 0.12) },
+                        '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.04) }
                       }}
                     >
                       {SubIcon && (
@@ -160,11 +165,22 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ pendingKYC = 0 }) => {
             width: collapsed ? DRAWER_COLLAPSED : DRAWER_WIDTH,
             boxSizing: 'border-box',
             transition: 'width 0.2s ease-in-out',
-            overflowX: 'hidden'
+            overflowX: 'hidden',
+            borderRight: '1px solid',
+            borderColor: 'divider',
+            bgcolor: 'background.paper'
           }
         }}
       >
-        <Box sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: collapsed ? 'center' : 'space-between', minHeight: NAVBAR_HEIGHT.desktop }}>
+        <Box sx={{ 
+            p: 2, 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: collapsed ? 'center' : 'space-between', 
+            minHeight: NAVBAR_HEIGHT.desktop,
+            borderBottom: '1px solid',
+            borderColor: 'divider'
+        }}>
           {!collapsed && (
             <Box component="img" src="/navbar/nav.png" alt="Logo" sx={{ height: 32 }} />
           )}
@@ -183,30 +199,40 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ pendingKYC = 0 }) => {
 
         <Box sx={{ p: 2 }}>
           {!collapsed ? (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, p: 1.5, borderRadius: 2, bgcolor: 'secondary.light' }}>
-              <Avatar sx={{ width: 36, height: 36, bgcolor: 'primary.main' }}>
+            <Box sx={{ 
+                display: 'flex', alignItems: 'center', gap: 1.5, p: 1.5, 
+                borderRadius: 2, 
+                bgcolor: alpha(theme.palette.primary.main, 0.05),
+                border: '1px solid',
+                borderColor: alpha(theme.palette.primary.main, 0.1)
+            }}>
+              <Avatar sx={{ width: 36, height: 36, bgcolor: 'primary.main', fontWeight: 700 }}>
                 {user?.nombre?.charAt(0) || 'A'}
               </Avatar>
               <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Typography variant="body2" fontWeight={600} noWrap>{user?.nombre}</Typography>
-                <Typography variant="caption" color="text.secondary">Admin</Typography>
+                <Typography variant="body2" fontWeight={700} noWrap>{user?.nombre}</Typography>
+                <Typography variant="caption" color="text.secondary">Administrador</Typography>
               </Box>
-              <IconButton size="small" onClick={handleLogoutClick} color="primary">
-                <Logout fontSize="small" />
-              </IconButton>
+              <Tooltip title="Cerrar Sesión">
+                <IconButton size="small" onClick={handleLogoutClick} sx={{ color: 'error.main' }}>
+                    <Logout fontSize="small" />
+                </IconButton>
+              </Tooltip>
             </Box>
           ) : (
-            <IconButton
-              sx={{ width: '100%' }}
-              onClick={handleLogoutClick}
-            >
-              <Logout />
-            </IconButton>
+            <Tooltip title="Cerrar Sesión">
+                <IconButton
+                sx={{ width: '100%', color: 'error.main' }}
+                onClick={handleLogoutClick}
+                >
+                <Logout />
+                </IconButton>
+            </Tooltip>
           )}
         </Box>
       </Drawer>
 
-      {/* 👇 AQUÍ USAMOS EL MODAL GENÉRICO CON PROPS DEL HOOK */}
+      {/* Modal de Confirmación Genérico (incluye Logout) */}
       <ConfirmDialog {...logoutDialogProps} />
     </>
   );

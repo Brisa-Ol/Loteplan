@@ -23,12 +23,12 @@ const RoleSelection: React.FC = () => {
     {
       key: "ahorrista",
       // Título enfocado en el objetivo final, no en el método
-      title: "Quiero mi Lote Propio", 
+      title: "Quiero mi lote propio", 
       // Copy persuasivo: Ataca el dolor (alquilar) y ofrece la solución (ser dueño)
       description: "Deja de esperar y empieza a ser dueño. Financia tu terreno 100% en pesos y cuotas a tu medida. El primer paso hacia la casa de tus sueños.",
       icon: <HomeIcon fontSize="large" />,
       route: "/proyectos/ahorrista",
-      isPrimary: false,
+      isPrimary: true,
     },
     {
       key: "inversionista",

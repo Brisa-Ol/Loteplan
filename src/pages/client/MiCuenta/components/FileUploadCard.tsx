@@ -31,38 +31,41 @@ export const FileUploadCard: React.FC<FileUploadCardProps> = ({
       sx={{ 
         p: 3, 
         textAlign: 'center', 
-        borderStyle: 'dashed', 
+        borderStyle: file ? 'solid' : 'dashed', // Sólido si hay archivo
         borderWidth: 2,
-        borderRadius: 3, // Bordes más redondeados (coherencia con el resto)
-        borderColor: file ? 'success.main' : 'divider',
+        borderRadius: 3, // Coherencia con el resto de la UI
+        borderColor: file ? theme.palette.success.main : theme.palette.divider,
         bgcolor: file 
           ? alpha(theme.palette.success.main, 0.04) 
-          : 'background.default',
+          : 'background.paper',
         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center',
         alignItems: 'center',
-        minHeight: 200,
-        // Efecto Hover solo si no hay archivo (para invitar a subir)
+        minHeight: 220,
+        position: 'relative',
+        // Efecto Hover solo si no hay archivo
         ...(!file && {
           '&:hover': {
-            borderColor: 'primary.main',
+            borderColor: theme.palette.primary.main,
             bgcolor: alpha(theme.palette.primary.main, 0.02),
-            transform: 'translateY(-2px)'
+            transform: 'translateY(-2px)',
+            boxShadow: theme.shadows[2]
           }
         })
       }}
     >
       {file ? (
         // === ESTADO: ARCHIVO CARGADO ===
-        <Stack spacing={2} alignItems="center" width="100%">
+        <Stack spacing={2} alignItems="center" width="100%" sx={{ animation: 'fadeIn 0.5s ease' }}>
           <Box 
             sx={{ 
-              width: 60, height: 60, borderRadius: '50%', 
+              width: 64, height: 64, borderRadius: '50%', 
               bgcolor: alpha(theme.palette.success.main, 0.1),
-              color: 'success.main',
-              display: 'flex', alignItems: 'center', justifyContent: 'center'
+              color: theme.palette.success.main,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: `0 0 0 8px ${alpha(theme.palette.success.main, 0.05)}`
             }}
           >
             <CheckCircle fontSize="large" />
@@ -72,9 +75,9 @@ export const FileUploadCard: React.FC<FileUploadCardProps> = ({
             <Typography variant="subtitle1" fontWeight={700} color="text.primary">
               ¡Archivo Listo!
             </Typography>
-            <Stack direction="row" spacing={1} alignItems="center" justifyContent="center" mt={0.5}>
-               <InsertDriveFile fontSize="small" color="action" />
-               <Typography variant="body2" color="text.secondary" noWrap sx={{ maxWidth: 180 }}>
+            <Stack direction="row" spacing={1} alignItems="center" justifyContent="center" mt={0.5} sx={{ bgcolor: 'background.paper', px: 1.5, py: 0.5, borderRadius: 1, border: `1px solid ${theme.palette.divider}` }}>
+               <InsertDriveFile fontSize="small" color="action" sx={{ fontSize: 16 }} />
+               <Typography variant="caption" color="text.secondary" noWrap sx={{ maxWidth: 140, fontWeight: 600 }}>
                  {file.name}
                </Typography>
             </Stack>
@@ -83,46 +86,58 @@ export const FileUploadCard: React.FC<FileUploadCardProps> = ({
           <Button 
             size="small" 
             color="error" 
-            variant="outlined"
-            startIcon={<Delete />} 
+            variant="text"
+            startIcon={<Delete fontSize="small" />} 
             onClick={onRemove}
-            sx={{ mt: 1, borderRadius: 2 }}
+            sx={{ 
+                mt: 1, borderRadius: 2, 
+                fontWeight: 600,
+                '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.1) } 
+            }}
           >
-            Eliminar y Cambiar
+            Eliminar
           </Button>
         </Stack>
       ) : (
         // === ESTADO: VACÍO (SUBIR) ===
-        <Stack spacing={1} alignItems="center" width="100%">
+        <Stack spacing={1.5} alignItems="center" width="100%">
           <Box 
             sx={{ 
               mb: 1, color: 'text.secondary',
-              p: 2, borderRadius: '50%', bgcolor: 'action.hover'
+              width: 56, height: 56, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              borderRadius: '50%', bgcolor: alpha(theme.palette.action.active, 0.05)
             }}
           >
-            <CloudUpload fontSize="large" />
+            <CloudUpload fontSize="medium" />
           </Box>
           
-          <Typography variant="subtitle1" fontWeight={700}>
+          <Typography variant="subtitle1" fontWeight={700} color="text.primary">
             {title}
           </Typography>
           
-          <Typography variant="body2" color="text.secondary" sx={{ px: 2, mb: 2 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ px: 2, mb: 2, fontSize: '0.85rem' }}>
             {description}
           </Typography>
 
           <Button
             component="label"
-            variant="contained" // Contained llama más la atención
+            variant="contained" 
+            color="primary"
             size="small"
             disableElevation
-            sx={{ borderRadius: 2, px: 3 }}
+            startIcon={<CloudUpload fontSize="small" />}
+            sx={{ borderRadius: 2, px: 3, fontWeight: 600 }}
           >
-            Seleccionar Archivo
+            Seleccionar
             <input type="file" hidden accept={accept} onChange={handleChange} />
           </Button>
         </Stack>
       )}
+      
+      {/* Keyframes para animación suave de entrada */}
+      <style>
+        {`@keyframes fadeIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }`}
+      </style>
     </Paper>
   );
 };

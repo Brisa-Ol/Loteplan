@@ -1,16 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
-  Typography, Paper, Stack, Button, Box, Chip,
-  Tabs, Tab, Table, TableBody, TableCell, TableContainer, 
-  TableHead, TableRow, Skeleton, alpha, useTheme,
-  IconButton, Tooltip, Divider, Card
+  Box, Typography, Button, Stack, Chip,
+  Tabs, Tab, Card, Avatar, Divider, 
+  useTheme, alpha, Paper, Tooltip
 } from '@mui/material';
 import { 
   Cancel as CancelIcon, Visibility as VisibilityIcon,
   Token as TokenIcon, EventRepeat as MesesIcon,
   History as HistoryIcon, MonetizationOn, CheckCircle,
-  EventBusy, PlayCircleFilled, ErrorOutline,
-  Visibility
+  EventBusy, PlayCircleFilled, Refresh
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
@@ -22,6 +20,8 @@ import type { SuscripcionDto } from '../../../types/dto/suscripcion.dto';
 // --- COMPONENTES Y HOOKS ---
 import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
 import { PageHeader } from '../../../components/common/PageHeader/PageHeader';
+import { QueryHandler } from '../../../components/common/QueryHandler/QueryHandler';
+import { DataTable, type DataTableColumn } from '../../../components/common/DataTable/DataTable';
 import { useConfirmDialog } from '../../../hooks/useConfirmDialog';
 import { ConfirmDialog } from '../../../components/common/ConfirmDialog/ConfirmDialog';
 
@@ -34,7 +34,7 @@ const MisSuscripciones: React.FC = () => {
   const [tabValue, setTabValue] = useState(0); 
 
   // --- QUERIES ---
-  const { data, isLoading, refetch, isError } = useQuery({
+  const { data, isLoading, refetch, error } = useQuery({
     queryKey: ['misSuscripcionesFull'],
     queryFn: async () => {
       const [resActivas, resCanceladas] = await Promise.all([
@@ -81,11 +81,179 @@ const MisSuscripciones: React.FC = () => {
     new Date(dateString).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
   // Stats
-  const stats = {
+  const stats = useMemo(() => ({
     activas: suscripciones.length,
     canceladas: canceladas.length,
     totalPagado: suscripciones.reduce((acc, s) => acc + Number(s.monto_total_pagado || 0), 0)
-  };
+  }), [suscripciones, canceladas]);
+
+  // --- DEFINICIÓN DE COLUMNAS (Activas) ---
+  const columnsActivas = useMemo<DataTableColumn<SuscripcionDto>[]>(() => [
+    {
+      id: 'proyecto',
+      label: 'Proyecto',
+      minWidth: 200,
+      render: (row) => (
+        <Box>
+            <Typography variant="body2" fontWeight={700} color="text.primary">
+                {row.proyectoAsociado?.nombre_proyecto || `Proyecto #${row.id_proyecto}`}
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
+                ID: {row.id}
+            </Typography>
+        </Box>
+      )
+    },
+    {
+      id: 'tokens',
+      label: 'Tokens',
+      minWidth: 120,
+      render: (row) => (
+        <Chip 
+            icon={<TokenIcon sx={{ fontSize: '14px !important' }} />} 
+            label={row.tokens_disponibles ?? 0} 
+            size="small" 
+            variant="outlined" 
+            sx={{ 
+                borderColor: theme.palette.info.main, 
+                color: theme.palette.info.main,
+                bgcolor: alpha(theme.palette.info.main, 0.05),
+                fontWeight: 600
+            }} 
+        />
+      )
+    },
+    {
+      id: 'progreso',
+      label: 'Progreso',
+      minWidth: 150,
+      render: (row) => (
+        <Stack direction="row" alignItems="center" spacing={1}>
+            <MesesIcon fontSize="small" color="action" />
+            <Typography variant="body2" color="text.secondary">
+                {row.meses_a_pagar} pendientes
+            </Typography>
+        </Stack>
+      )
+    },
+    {
+      id: 'total_pagado',
+      label: 'Total Pagado',
+      minWidth: 150,
+      render: (row) => (
+        <Box>
+            <Typography variant="body2" fontWeight={700} color="primary.main">
+                {formatCurrency(Number(row.monto_total_pagado))}
+            </Typography>
+            {Number(row.saldo_a_favor) > 0 && (
+                <Typography variant="caption" display="block" color="success.main" fontWeight={600}>
+                    +{formatCurrency(Number(row.saldo_a_favor))} favor
+                </Typography>
+            )}
+        </Box>
+      )
+    },
+    {
+        id: 'estado',
+        label: 'Estado',
+        minWidth: 100,
+        render: () => (
+            <Chip label="Activa" color="success" size="small" variant="filled" sx={{ fontWeight: 600 }} />
+        )
+    },
+    {
+        id: 'acciones',
+        label: 'Acciones',
+        align: 'right',
+        minWidth: 180,
+        render: (row) => (
+            <Stack direction="row" justifyContent="flex-end" spacing={1}>
+                <Tooltip title="Ver detalle">
+                    <Button
+                        variant="outlined"
+                        color="inherit" // Neutro para "Ver"
+                        size="small"
+                        onClick={() => navigate(`/proyectos/${row.id_proyecto}`)}
+                        sx={{ minWidth: 40, p: 1, borderColor: theme.palette.divider, color: 'text.secondary' }}
+                    >
+                        <VisibilityIcon fontSize="small" />
+                    </Button>
+                </Tooltip>
+                
+                <Tooltip title="Cancelar suscripción">
+                    <Button
+                        variant="outlined"
+                        color="error"
+                        size="small"
+                        startIcon={<CancelIcon fontSize="small" />}
+                        onClick={() => handleOpenCancelDialog(row)}
+                        sx={{ fontWeight: 600, textTransform: 'none' }}
+                    >
+                        Cancelar
+                    </Button>
+                </Tooltip>
+            </Stack>
+        )
+    }
+  ], [theme, navigate]);
+
+  // --- DEFINICIÓN DE COLUMNAS (Canceladas) ---
+  // Nota: Usamos any o un tipo específico para canceladas si difiere mucho de SuscripcionDto
+  const columnsCanceladas = useMemo<DataTableColumn<any>[]>(() => [
+    {
+        id: 'proyecto',
+        label: 'Proyecto',
+        minWidth: 200,
+        render: (row) => (
+            <Typography variant="body2" fontWeight={600} color="text.secondary">
+                {row.proyecto?.nombre_proyecto || `Proyecto #${row.id_proyecto}`}
+            </Typography>
+        )
+    },
+    {
+        id: 'fecha_cancelacion',
+        label: 'Fecha Baja',
+        minWidth: 120,
+        render: (row) => (
+            <Typography variant="body2">{formatDate(row.fecha_cancelacion)}</Typography>
+        )
+    },
+    {
+        id: 'meses_pagados',
+        label: 'Meses Pagados',
+        minWidth: 120,
+        render: (row) => (
+            <Typography variant="body2">{row.meses_pagados} meses</Typography>
+        )
+    },
+    {
+        id: 'total_liquidado',
+        label: 'Liquidado Total',
+        minWidth: 150,
+        render: (row) => (
+            <Typography variant="body2" fontWeight={600}>
+                {formatCurrency(Number(row.monto_pagado_total))}
+            </Typography>
+        )
+    },
+    {
+        id: 'estado',
+        label: 'Estado',
+        minWidth: 100,
+        render: () => (
+            <Chip 
+                label="Cancelada" 
+                size="small" 
+                variant="outlined" 
+                sx={{ 
+                    borderColor: theme.palette.text.disabled, 
+                    color: theme.palette.text.disabled,
+                    fontWeight: 500
+                }} 
+            />
+        )
+    }
+  ], [theme]);
 
   return (
     <PageContainer maxWidth="lg">
@@ -94,56 +262,57 @@ const MisSuscripciones: React.FC = () => {
         subtitle='Gestiona tus pagos recurrentes y visualiza tu historial.'
       />
 
-      {/* --- KPI SECTION (Adaptado al Theme) --- */}
-      <Box display="flex" justifyContent="center" mb={4} width="100%">
+      {/* --- KPI SECTION --- */}
+      <Box mb={4} display="flex" justifyContent="center">
         <Card 
-          elevation={0} // El theme ya aplica sombra por defecto en MuiCard
+          elevation={0}
           sx={{ 
-            display: 'inline-flex', 
+            display: 'flex', 
+            flexDirection: { xs: 'column', md: 'row' },
             alignItems: 'center', 
-            gap: 4, 
-            px: 4, 
-            py: 2,
+            p: 2,
             width: 'fit-content',
-            // Forzamos fondo blanco para contraste sobre el gris de fondo
-            bgcolor: 'background.default', 
-            border: `1px solid ${theme.palette.secondary.dark}`
+            bgcolor: 'background.paper', 
+            border: `1px solid ${theme.palette.divider}`,
+            borderRadius: 3
           }}
         >
           {/* Activas */}
-          <Stack direction="row" spacing={2} alignItems="center">
-            <Box sx={{ p: 1, borderRadius: '50%', bgcolor: alpha(theme.palette.success.main, 0.1), color: 'success.main', display: 'flex' }}>
-              <PlayCircleFilled fontSize="small" />
-            </Box>
+          <Stack direction="row" spacing={2} alignItems="center" sx={{ p: 2 }}>
+            <Avatar variant="rounded" sx={{ bgcolor: alpha(theme.palette.success.main, 0.1), color: 'success.main' }}>
+              <PlayCircleFilled />
+            </Avatar>
             <Box>
               <Typography variant="caption" color="text.secondary" fontWeight={700}>ACTIVAS</Typography>
-              <Typography variant="h6" fontWeight={800} color="text.primary">{stats.activas}</Typography>
+              <Typography variant="h5" fontWeight={800} color="text.primary">{stats.activas}</Typography>
             </Box>
           </Stack>
 
-          <Divider orientation="vertical" flexItem sx={{ mx: 1, borderColor: 'secondary.dark', display: { xs: 'none', sm: 'block'} }} />
+          <Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', md: 'block' }, mx: 2 }} />
+          <Divider flexItem sx={{ display: { xs: 'block', md: 'none' }, width: '100%', my: 1 }} />
 
           {/* Pagado */}
-          <Stack direction="row" spacing={2} alignItems="center">
-            <Box sx={{ p: 1, borderRadius: '50%', bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main', display: 'flex' }}>
-              <MonetizationOn fontSize="small" />
-            </Box>
+          <Stack direction="row" spacing={2} alignItems="center" sx={{ p: 2 }}>
+            <Avatar variant="rounded" sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}>
+              <MonetizationOn />
+            </Avatar>
             <Box>
-              <Typography variant="caption" color="text.secondary" fontWeight={700}>PAGADO</Typography>
-              <Typography variant="h6" fontWeight={800} color="text.primary">{formatCurrency(stats.totalPagado)}</Typography>
+              <Typography variant="caption" color="text.secondary" fontWeight={700}>TOTAL PAGADO</Typography>
+              <Typography variant="h5" fontWeight={800} color="text.primary">{formatCurrency(stats.totalPagado)}</Typography>
             </Box>
           </Stack>
 
-          <Divider orientation="vertical" flexItem sx={{ mx: 1, borderColor: 'secondary.dark', display: { xs: 'none', sm: 'block'} }} />
+          <Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', md: 'block' }, mx: 2 }} />
+          <Divider flexItem sx={{ display: { xs: 'block', md: 'none' }, width: '100%', my: 1 }} />
 
-          {/* Historial */}
-          <Stack direction="row" spacing={2} alignItems="center">
-            <Box sx={{ p: 1, borderRadius: '50%', bgcolor: alpha(theme.palette.error.main, 0.1), color: 'error.main', display: 'flex' }}>
-              <EventBusy fontSize="small" />
-            </Box>
+          {/* Canceladas */}
+          <Stack direction="row" spacing={2} alignItems="center" sx={{ p: 2 }}>
+            <Avatar variant="rounded" sx={{ bgcolor: alpha(theme.palette.error.main, 0.1), color: 'error.main' }}>
+              <EventBusy />
+            </Avatar>
             <Box>
               <Typography variant="caption" color="text.secondary" fontWeight={700}>BAJAS</Typography>
-              <Typography variant="h6" fontWeight={800} color="text.primary">{stats.canceladas}</Typography>
+              <Typography variant="h5" fontWeight={800} color="text.primary">{stats.canceladas}</Typography>
             </Box>
           </Stack>
         </Card>
@@ -157,236 +326,46 @@ const MisSuscripciones: React.FC = () => {
         </Tabs>
       </Box>
 
-      {/* --- CONTENIDO --- */}
-      {isLoading ? (
-        <Stack spacing={2}>
-           {[1,2,3].map(n => <Skeleton key={n} variant="rectangular" height={80} sx={{ borderRadius: 2 }} />)}
-        </Stack>
-      ) : isError ? (
-        <Paper sx={{ p: 4, textAlign: 'center', bgcolor: alpha(theme.palette.error.main, 0.05) }}>
-          <ErrorOutline color="error" sx={{ fontSize: 40, mb: 1 }} />
-          <Typography color="error">Error al cargar datos.</Typography>
-        </Paper>
-      ) : (
-        <>
-{/* === TABLA ACTIVAS === */}
-          <div role="tabpanel" hidden={tabValue !== 0}>
+      <QueryHandler isLoading={isLoading} error={error as Error | null}>
+        <Paper 
+            elevation={0}
+            sx={{
+                border: `1px solid ${theme.palette.divider}`,
+                borderRadius: 3,
+                overflow: 'hidden',
+                boxShadow: theme.shadows[1]
+            }}
+        >
             {tabValue === 0 && (
-              <TableContainer 
-                component={Paper} 
-                elevation={0} 
-                sx={{ 
-                  bgcolor: 'background.default',
-                  border: `1px solid ${theme.palette.secondary.dark}`
-                }}
-              >
-                <Table>
-                  <TableHead sx={{ bgcolor: 'secondary.light' }}>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Proyecto</TableCell>
-                      <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Tokens</TableCell>
-                      <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Progreso</TableCell>
-                      <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Total Pagado</TableCell>
-                      <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Estado</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 600, color: 'text.secondary' }}>Acciones</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {suscripciones.length > 0 ? suscripciones.map((susc) => {
-                       const nombre = susc.proyectoAsociado?.nombre_proyecto || `Proyecto #${susc.id_proyecto}`;
-
-                       return (
-                        <TableRow key={susc.id} hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
-                          {/* Proyecto */}
-                          <TableCell>
-                            <Box>
-                              <Typography variant="body2" fontWeight={700} color="text.primary">
-                                {nombre}
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                ID: {susc.id}
-                              </Typography>
-                            </Box>
-                          </TableCell>
-                          
-                          {/* Tokens */}
-                          <TableCell>
-                            <Chip 
-                              icon={<TokenIcon sx={{ fontSize: '14px !important' }} />} 
-                              label={susc.tokens_disponibles ?? 0} 
-                              size="small" 
-                              variant="outlined" 
-                              sx={{ 
-                                borderColor: theme.palette.info.main, 
-                                color: theme.palette.info.main,
-                                bgcolor: alpha(theme.palette.info.main, 0.05)
-                              }} 
-                            />
-                          </TableCell>
-
-                          {/* Progreso */}
-                          <TableCell>
-                            <Stack direction="row" alignItems="center" spacing={1}>
-                               <MesesIcon fontSize="small" color="action" />
-                               <Typography variant="body2">{susc.meses_a_pagar} pendientes</Typography>
-                            </Stack>
-                          </TableCell>
-
-                          {/* Pagado */}
-                          <TableCell>
-                            <Typography variant="body2" fontWeight={700} color="primary.main">
-                              {formatCurrency(Number(susc.monto_total_pagado))}
-                            </Typography>
-                            {Number(susc.saldo_a_favor) > 0 && (
-                              <Typography variant="caption" display="block" color="success.main" fontWeight={600}>
-                                +{formatCurrency(Number(susc.saldo_a_favor))} favor
-                              </Typography>
-                            )}
-                          </TableCell>
-
-                          {/* Estado */}
-                          <TableCell>
-                            <Chip 
-                              label="Activa" 
-                              color="success" 
-                              size="small" 
-                              variant="outlined" 
-                            />
-                          </TableCell>
-
-                          {/* ✅ COLUMNA DE ACCIONES ACTUALIZADA */}
-                          <TableCell align="right">
-                            <Stack direction="row" justifyContent="flex-end" spacing={1}>
-                              
-                              {/* 1. Botón Ver (Igual que en Inversiones) */}
-                              <Tooltip title="Ver detalle del proyecto">
-                                <Button
-                                  variant="outlined"
-                                  color="primary"
-                                  size="small"
-                                  startIcon={<Visibility fontSize="small" />}
-                                  onClick={() => navigate(`/proyectos/${susc.id_proyecto}`)}
-                                  sx={{ fontWeight: 600 }}
-                                >
-                                  Ver
-                                </Button>
-                              </Tooltip>
-
-                              {/* 2. Botón Cancelar (Formato Botón, Outlined Error) */}
-                              <Tooltip title="Dar de baja suscripción">
-                                <Button
-                                  variant="outlined" // Outlined para que sea limpio pero claro
-                                  color="error"
-                                  size="small"
-                                  startIcon={<CancelIcon fontSize="small" />}
-                                  onClick={() => handleOpenCancelDialog(susc)}
-                                  sx={{ fontWeight: 600 }}
-                                >
-                                  Cancelar
-                                </Button>
-                              </Tooltip>
-                              
-                            </Stack>
-                          </TableCell>
-                        </TableRow>
-                       );
-                    }) : (
-                      <TableRow>
-                        <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
-                          <Typography color="text.secondary">No tienes suscripciones activas.</Typography>
-                          <Button 
-                            variant="outlined"
-                            size="small" 
-                            sx={{ mt: 2 }} 
-                            onClick={() => navigate('/client/Proyectos/RoleSelection')}
-                          >
-                             Explorar Proyectos
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+                <DataTable
+                    columns={columnsActivas}
+                    data={suscripciones}
+                    getRowKey={(row) => row.id}
+                    pagination
+                    emptyMessage="No tienes suscripciones activas."
+                />
             )}
-          </div>
 
-          {/* === TABLA CANCELADAS === */}
-          <div role="tabpanel" hidden={tabValue !== 1}>
             {tabValue === 1 && (
-              <TableContainer 
-                component={Paper} 
-                elevation={0} 
-                sx={{ 
-                  bgcolor: 'background.default',
-                  border: `1px solid ${theme.palette.secondary.dark}`
-                }}
-              >
-                <Table>
-                  <TableHead sx={{ bgcolor: 'secondary.light' }}>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Proyecto</TableCell>
-                      <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Fecha Baja</TableCell>
-                      <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Meses Pagados</TableCell>
-                      <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Liquidado Total</TableCell>
-                      <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Estado</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {canceladas.length > 0 ? canceladas.map((cancelada) => {
-                       const nombre = cancelada.proyecto?.nombre_proyecto || `Proyecto #${cancelada.id_proyecto}`;
-                       
-                       return (
-                        <TableRow key={cancelada.id} hover sx={{ opacity: 0.7 }}>
-                          <TableCell>
-                             <Typography variant="body2" fontWeight={600} color="text.secondary">
-                               {nombre}
-                             </Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Typography variant="body2">{formatDate(cancelada.fecha_cancelacion)}</Typography>
-                          </TableCell>
-                          <TableCell>
-                             <Typography variant="body2">{cancelada.meses_pagados} meses</Typography>
-                          </TableCell>
-                          <TableCell>
-                             <Typography variant="body2" fontWeight={600}>
-                               {formatCurrency(Number(cancelada.monto_pagado_total))}
-                             </Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Chip 
-                              label="Cancelada" 
-                              size="small" 
-                              variant="outlined" 
-                              sx={{ 
-                                borderColor: theme.palette.text.disabled, 
-                                color: theme.palette.text.disabled 
-                              }} 
-                            />
-                          </TableCell>
-                        </TableRow>
-                       );
-                    }) : (
-                      <TableRow>
-                        <TableCell colSpan={5} align="center" sx={{ py: 6 }}>
-                          <Typography color="text.secondary">No tienes historial de cancelaciones.</Typography>
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+                <DataTable
+                    columns={columnsCanceladas}
+                    data={canceladas}
+                    getRowKey={(row) => row.id}
+                    pagination
+                    emptyMessage="No tienes historial de cancelaciones."
+                    getRowSx={() => ({ opacity: 0.8 })}
+                />
             )}
-          </div>
-        </>
-      )}
+        </Paper>
+      </QueryHandler>
 
       {/* MODAL CONFIRMACIÓN */}
       <ConfirmDialog 
         controller={confirmDialog}
         onConfirm={handleConfirmCancel}
         isLoading={cancelMutation.isPending}
+        title="¿Cancelar suscripción?"
+        description="Esta acción detendrá los pagos automáticos. Podrás reactivarla o invertir manualmente en el futuro si hay cupo."
       />
     </PageContainer>
   );

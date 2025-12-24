@@ -1,11 +1,13 @@
 import React from 'react';
 import { 
   Box, Typography, Paper, Button, Alert, Stack, LinearProgress, 
-  Card, CardContent, Divider, Chip, useTheme, IconButton, Tooltip
+  Card, CardContent, Divider, Chip, useTheme, IconButton, Tooltip, Avatar
 } from '@mui/material';
 import { 
   AccountBalanceWallet, Warning, TrendingUp, Description, Gavel,
-  NotificationsActive, ChevronRight, CheckCircle, Schedule, ReceiptLong, Assessment, EmojiEvents
+  NotificationsActive, ChevronRight, CheckCircle, Schedule, ReceiptLong, Assessment, EmojiEvents,
+  AccountCircle, HelpOutline, Security,
+  MonetizationOn
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -16,12 +18,13 @@ import PagoService from '../../../Services/pago.service';
 import SuscripcionService from '../../../Services/suscripcion.service';
 import ResumenCuentaService from '../../../Services/resumenCuenta.service';
 import InversionService from '../../../Services/inversion.service';
-import PujaService from '../../../Services/puja.service'; // ✅ IMPORTADO
+import PujaService from '../../../Services/puja.service';
 
 // Context & Hooks
 import { useAuth } from '../../../context/AuthContext';
 import { QueryHandler } from '../../../components/common/QueryHandler/QueryHandler';
 import { useDashboardStats } from '../../../hooks/useDashboardStats'; 
+import { alpha } from '@mui/material/styles';
 
 // DTOs
 import type { PagoDto } from '../../../types/dto/pago.dto';
@@ -55,307 +58,264 @@ const UserDashboard: React.FC = () => {
     queryKey: ['mensajesNoLeidos'], queryFn: async () => (await MensajeService.getUnreadCount()).data
   });
 
-  // ✅ NUEVA QUERY: Chequear si ganó subastas
   const { data: misPujas } = useQuery({
     queryKey: ['misPujasCheck'], 
     queryFn: async () => (await PujaService.getMyPujas()).data,
     staleTime: 60000 
   });
 
-  // Calculamos loading general
   const isLoading = !resumenes || !suscripciones || !inversiones || !pagos || loadingMensajes;
 
   // ========== 2. LÓGICA CENTRALIZADA ========== 
-  const stats = useDashboardStats({
-    resumenes,
-    suscripciones,
-    inversiones,
-    pagos
-  });
-  
+  const stats = useDashboardStats({ resumenes, suscripciones, inversiones, pagos });
   const mensajesSinLeer = mensajesData?.conteo || 0;
-
-  // Calcular si hay ganadoras pendientes
   const cantidadGanadas = misPujas?.filter(p => p.estado_puja === 'ganadora_pendiente').length || 0;
 
   return (
     <Box sx={{ bgcolor: 'background.default', minHeight: '100vh', pb: 8 }}>
       
-      {/* HEADER */}
-      <Box sx={{ bgcolor: 'background.paper', pt: { xs: 4, md: 6 }, pb: { xs: 3, md: 4 }, px: { xs: 2, sm: 3, md: 4 } }}>
-        <Box maxWidth="1400px" mx="auto">
-          <Typography variant="h3" sx={{ color: 'text.primary', mb: 1, fontSize: { xs: '1.75rem', md: '2.5rem' } }}>
-            Hola, {user?.nombre} 👋
-          </Typography>
-          <Typography variant="body1" color="text.secondary" sx={{ fontSize: { xs: '0.95rem', md: '1.05rem' } }}>
-            Aquí está el resumen de tu actividad financiera
-          </Typography>
+      {/* HEADER DINÁMICO */}
+      <Box sx={{ 
+        bgcolor: 'background.paper', 
+        pt: { xs: 4, md: 8 }, 
+        pb: { xs: 6, md: 10 }, 
+        px: { xs: 2, sm: 4 },
+        borderBottom: `1px solid ${theme.palette.divider}`,
+        backgroundImage: `radial-gradient(at top right, ${alpha(theme.palette.primary.main, 0.05)} 0%, transparent 70%)`
+      }}>
+        <Box maxWidth="1400px" mx="auto" display="flex" justifyContent="space-between" alignItems="center">
+          <Box>
+            <Typography variant="h3" fontWeight={800} sx={{ color: 'text.primary', mb: 1, letterSpacing: -1 }}>
+              Hola, {user?.nombre} 👋
+            </Typography>
+            <Typography variant="h6" color="text.secondary" fontWeight={400} sx={{ opacity: 0.8 }}>
+              Bienvenido a tu panel de control financiero.
+            </Typography>
+          </Box>
+          <Avatar 
+            sx={{ 
+              width: 64, height: 64, 
+              bgcolor: alpha(theme.palette.primary.main, 0.1),
+              color: 'primary.main',
+              border: `2px solid ${theme.palette.divider}`,
+              display: { xs: 'none', md: 'flex' }
+            }}
+          >
+            <AccountCircle fontSize="large" />
+          </Avatar>
         </Box>
       </Box>
 
-      <Box maxWidth="1400px" mx="auto" px={{ xs: 2, sm: 3, md: 4 }} mt={-2}>
+      <Box maxWidth="1400px" mx="auto" px={{ xs: 2, sm: 4 }} mt={-6}>
         
         {/* ALERTAS CRÍTICAS */}
         {(stats.cantidadPagosVencidos > 0 || mensajesSinLeer > 0 || cantidadGanadas > 0) && (
-          <Stack spacing={2} mb={4}>
-            
-            {/* 🟢 NUEVA ALERTA DE SUBASTA GANADA */}
+          <Stack spacing={2} mb={5}>
             {cantidadGanadas > 0 && (
                <Alert 
                 severity="success" 
                 variant="filled"
-                icon={<EmojiEvents sx={{ fontSize: 28 }} />}
+                icon={<EmojiEvents fontSize="large" />}
                 action={
-                  <Button 
-                    variant="contained" 
-                    color="warning" 
-                    size="small" 
-                    onClick={() => navigate('/client/subastas')} // Cambia la ruta según tu router
-                    sx={{ boxShadow: 'none', fontWeight: 'bold' }}
-                  >
+                  <Button variant="contained" color="warning" size="small" onClick={() => navigate('/client/subastas')} sx={{ fontWeight: 800 }}>
                     Pagar Ahora
                   </Button>
                 }
-                sx={{ py: 2, px: 3, bgcolor: 'success.main', color: 'white' }}
+                sx={{ borderRadius: 3, py: 2, px: 3, boxShadow: theme.shadows[4] }}
               >
-                <Typography variant="body1" fontWeight={700}>
-                  ¡Felicitaciones! Ganaste {cantidadGanadas} subasta{cantidadGanadas > 1 ? 's' : ''}
-                </Typography>
-                <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                  Tienes adjudicaciones pendientes de pago. Asegura tu lote antes del vencimiento.
-                </Typography>
+                <Typography variant="subtitle1" fontWeight={700}>¡Felicitaciones! Ganaste {cantidadGanadas} subasta{cantidadGanadas > 1 ? 's' : ''}</Typography>
+                <Typography variant="body2">Asegura tu adjudicación completando el pago hoy.</Typography>
               </Alert>
             )}
 
             {stats.cantidadPagosVencidos > 0 && (
               <Alert 
-                severity="error" icon={<Warning sx={{ fontSize: 28 }} />}
+                severity="error" 
+                variant="outlined"
+                icon={<Warning fontSize="large" />}
                 action={
-                  <Button size="medium" onClick={() => navigate('/pagos')} sx={{ color: 'error.main', '&:hover': { bgcolor: 'error.light' } }}>
+                  <Button variant="contained" color="error" onClick={() => navigate('/pagos')} sx={{ fontWeight: 500 }}>
                     Regularizar
                   </Button>
                 }
-                sx={{ border: '2px solid', borderColor: 'error.main', py: 2, px: 3 }}
+                sx={{ borderRadius: 3, bgcolor: alpha(theme.palette.error.main, 0.08), border: `1.8px solid ${theme.palette.error.main}`, py: 2 }}
               >
-                <Typography variant="body1" fontWeight={600}>Tienes {stats.cantidadPagosVencidos} pago(s) vencido(s)</Typography>
-                <Typography variant="body2" color="text.secondary">Regulariza tu situación para evitar recargos</Typography>
-              </Alert>
-            )}
-
-            {mensajesSinLeer > 0 && (
-              <Alert 
-                severity="info" icon={<NotificationsActive sx={{ fontSize: 24 }} />}
-                action={
-                  <Button size="small" onClick={() => navigate('/client/mensajes')} sx={{ color: 'info.main' }}>Leer</Button>
-                }
-                sx={{ bgcolor: 'secondary.light', border: '1px solid', borderColor: 'secondary.dark' }}
-              >
-                <Typography variant="body2">Tienes <strong>{mensajesSinLeer} mensajes nuevos</strong> en tu buzón</Typography>
+                <Typography variant="subtitle1" fontWeight={700}>Tienes {stats.cantidadPagosVencidos} cuotas vencidas</Typography>
+                <Typography variant="body2" color="text.secondary">Evita cargos adicionales regularizando tu cuenta.</Typography>
               </Alert>
             )}
           </Stack>
         )}
 
-        <QueryHandler isLoading={isLoading} error={null} loadingMessage="Cargando tu resumen...">
+        <QueryHandler isLoading={isLoading} error={null} loadingMessage="Generando tu resumen financiero...">
           
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '2.5fr 1fr' }, gap: 4, alignItems: 'start' }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 340px' }, gap: 4, alignItems: 'start' }}>
             
             {/* ===== COLUMNA IZQUIERDA (MAIN) ===== */}
             <Box>
               
-              {/* HERO KPIs */}
-              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 3, mb: 4 }}>
-                
-                {/* KPI 1: Saldo a Favor */}
-                <Card elevation={0} sx={{ background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.light} 100%)`, color: 'primary.contrastText', overflow: 'hidden' }}>
-                  <CardContent sx={{ p: 3 }}>
+              {/* KPIs HERO */}
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 3, mb: 5 }}>
+                <Card elevation={0} sx={{ 
+                  background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`, 
+                  color: '#fff', borderRadius: 4, boxShadow: `0 8px 24px ${alpha(theme.palette.primary.main, 0.25)}` 
+                }}>
+                  <CardContent sx={{ p: 4 }}>
                     <Stack spacing={2}>
-                      <Box display="flex" alignItems="center" gap={1}>
-                        <AccountBalanceWallet sx={{ fontSize: 24, opacity: 0.9 }} />
-                        <Typography variant="caption" sx={{ textTransform: 'uppercase', letterSpacing: 1.5, fontWeight: 700, opacity: 0.95 }}>
-                          Saldo a Favor
-                        </Typography>
+                      <Box display="flex" alignItems="center" gap={1.5}>
+                        <Avatar sx={{ bgcolor: alpha('#fff', 0.2), color: '#fff' }}><AccountBalanceWallet /></Avatar>
+                        <Typography variant="overline" sx={{ fontWeight: 800, letterSpacing: 2, opacity: 0.9 }}>Saldo a Favor</Typography>
                       </Box>
-                      <Typography variant="h3" sx={{ fontWeight: 800, fontSize: { xs: '2rem', sm: '2.5rem' }, lineHeight: 1 }}>
+                      <Typography variant="h2" fontWeight={800} sx={{ fontSize: { xs: '2.2rem', md: '3rem' } }}>
                         ${stats.saldoTotalAFavor.toLocaleString()}
                       </Typography>
-                      <Typography variant="body2" sx={{ opacity: 0.9, fontSize: '0.9rem' }}>
-                        Disponible para cubrir futuras cuotas
-                      </Typography>
+                      <Typography variant="body2" sx={{ opacity: 0.8 }}>Crédito disponible para futuras cuotas.</Typography>
                     </Stack>
                   </CardContent>
                 </Card>
 
-                {/* KPI 2: Próximo Vencimiento */}
-                <Card elevation={0} sx={{ border: '2px solid', borderColor: 'secondary.main', bgcolor: 'background.default' }}>
-                  <CardContent sx={{ p: 3 }}>
+                <Card elevation={0} sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 4, bgcolor: 'background.paper' }}>
+                  <CardContent sx={{ p: 4 }}>
                     <Stack spacing={2}>
                       <Box display="flex" alignItems="center" gap={1}>
-                        <Schedule sx={{ fontSize: 24, color: 'primary.main' }} />
-                        <Typography variant="caption" sx={{ textTransform: 'uppercase', letterSpacing: 1.2, fontWeight: 700, color: 'text.secondary' }}>
-                          Próximo Vencimiento
-                        </Typography>
+                        <Avatar sx={{ bgcolor: alpha('#CC6333', 0.9), color: '#fff' }}><Schedule /></Avatar>
+                        <Typography variant="overline" sx={{ fontWeight: 800, letterSpacing: 2, color: '#333333' }}>Próximo Pago</Typography>
                       </Box>
-                      
                       {stats.proximoVencimiento ? (
                         <>
-                          <Typography variant="h4" sx={{ fontWeight: 700, color: 'text.primary', fontSize: { xs: '1.75rem', sm: '2rem' } }}>
+                          <Typography variant="h3" fontWeight={800} color="text.primary">
                             ${Number(stats.proximoVencimiento.monto).toLocaleString()}
                           </Typography>
                           <Chip 
-                            label={`Vence: ${new Date(stats.proximoVencimiento.fecha_vencimiento).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}`}
-                            size="small"
-                            sx={{ bgcolor: 'secondary.light', fontWeight: 600, fontSize: '0.8rem', width: 'fit-content' }}
+                            label={`Vence: ${new Date(stats.proximoVencimiento.fecha_vencimiento).toLocaleDateString()}`}
+                            variant="outlined" sx={{ fontWeight: 700, borderRadius: 1.5, width: 'fit-content' }}
                           />
                         </>
                       ) : (
-                        <>
-                          <Box display="flex" alignItems="center" gap={1.5}>
-                            <CheckCircle sx={{ color: 'success.main', fontSize: 32 }} />
-                            <Typography variant="h5" fontWeight={700} color="success.main">Al día</Typography>
-                          </Box>
-                          <Typography variant="body2" color="text.secondary">No tienes pagos pendientes</Typography>
-                        </>
+                        <Box display="flex" alignItems="center" gap={2} py={1}>
+                          <CheckCircle color="success" sx={{ fontSize: 40 }} />
+                          <Typography variant="h5" fontWeight={700} color="success.main">Al día</Typography>
+                        </Box>
                       )}
                     </Stack>
                   </CardContent>
                 </Card>
               </Box>
 
-              {/* ESTADÍSTICAS RÁPIDAS */}
-              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', sm: 'repeat(3, 1fr)' }, gap: 2, mb: 5 }}>
-                <Paper elevation={0} sx={{ p: 2.5, border: '1px solid', borderColor: 'secondary.main', textAlign: 'center' }}>
-                  <Typography variant="h4" fontWeight={700} color="primary.main" gutterBottom>
-                    {stats.totalProyectos}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary" fontWeight={600}>Total Proyectos</Typography>
-                </Paper>
-                <Paper elevation={0} sx={{ p: 2.5, border: '1px solid', borderColor: 'secondary.main', textAlign: 'center' }}>
-                  <Typography variant="h4" fontWeight={700} color="text.primary" gutterBottom>
-                    {stats.totalCuotasPagadas}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary" fontWeight={600}>Cuotas Pagadas</Typography>
-                </Paper>
-                <Paper elevation={0} sx={{ p: 2.5, border: '1px solid', borderColor: 'secondary.main', textAlign: 'center', gridColumn: { xs: 'span 2', sm: 'auto' } }}>
-                  <Typography variant="h4" fontWeight={700} color="text.primary" gutterBottom>
-                    ${stats.granTotalInvertido.toLocaleString()}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary" fontWeight={600}>Patrimonio Total</Typography>
-                </Paper>
+              {/* MINI STATS */}
+              <Box sx={{ 
+                display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(3, 1fr)' }, 
+                gap: 2, mb: 6, p: 2, borderRadius: 4, bgcolor: alpha(theme.palette.action.hover, 0.04), border: `1px dashed ${theme.palette.divider}` 
+              }}>
+                {[
+                  { label: 'Proyectos', val: stats.totalProyectos, icon: <TrendingUp color="primary"/> },
+                  { label: 'Cuotas Pagas', val: stats.totalCuotasPagadas, icon: <CheckCircle color="success"/> },
+                  { label: 'Patrimonio', val: `$${stats.granTotalInvertido.toLocaleString()}`, icon: <MonetizationOn color="warning"/>, full: true }
+                ].map((s, i) => (
+                  <Box key={i} sx={{ textAlign: 'center', p: 2, gridColumn: { xs: s.full ? 'span 2' : 'auto', sm: 'auto' } }}>
+                    <Typography variant="h5" fontWeight={800} color="text.primary">{s.val}</Typography>
+                    <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ textTransform: 'uppercase' }}>{s.label}</Typography>
+                  </Box>
+                ))}
               </Box>
 
               {/* LISTADO DE PROYECTOS */}
               <Box mb={3} display="flex" justifyContent="space-between" alignItems="center">
-                <Typography variant="h5" fontWeight={700} color="text.primary">Mis Suscripciones Activas</Typography>
-                <Button variant="text" endIcon={<ChevronRight />} onClick={() => navigate('/client/suscripciones')} sx={{ color: 'primary.main' }}>
-                  Ver todas
+                <Typography variant="h5" fontWeight={800} color="text.primary">Mis Inversiones Activas</Typography>
+                <Button variant="text" endIcon={<ChevronRight />} onClick={() => navigate('/client/suscripciones')} sx={{ fontWeight: 700 }}>
+                  Ver historial
                 </Button>
               </Box>
 
-              {resumenes && resumenes.length > 0 ? (
-                <Stack spacing={3}>
-                  {resumenes.map((resumen) => {
-                    const suscripcionAsociada = suscripciones?.find(s => s.id === resumen.id_suscripcion);
-                    const idProyectoReal = suscripcionAsociada?.id_proyecto;
-                    const saldoProyecto = Number(suscripcionAsociada?.saldo_a_favor || 0);
-                    
-                    return (
-                      <Paper key={resumen.id} elevation={0} sx={{ p: 3, border: '2px solid', borderColor: 'secondary.main', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', '&:hover': { borderColor: 'primary.main', boxShadow: theme.shadows[4], transform: 'translateY(-4px)' } }}>
-                        <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={3} flexWrap="wrap" gap={2}>
-                          <Box flex={1}>
-                            <Typography variant="h6" fontWeight={700} color="text.primary" gutterBottom>
-                              {resumen.nombre_proyecto}
-                            </Typography>
-                            <Stack direction="row" spacing={2} flexWrap="wrap" gap={1}>
-                              <Chip label={`${resumen.meses_proyecto} cuotas`} size="small" sx={{ bgcolor: 'secondary.light', fontWeight: 600, fontSize: '0.8rem' }} />
-                              {saldoProyecto > 0 && (
-                                <Chip label={`+$${saldoProyecto.toLocaleString()} a favor`} size="small" sx={{ bgcolor: 'success.light', color: 'success.dark', fontWeight: 700, fontSize: '0.8rem' }} />
-                              )}
+              <Stack spacing={3}>
+                {resumenes?.map((resumen) => {
+                  const saldoProyecto = Number(suscripciones?.find(s => s.id === resumen.id_suscripcion)?.saldo_a_favor || 0);
+                  return (
+                    <Card key={resumen.id} elevation={0} sx={{ 
+                      borderRadius: 4, border: `1px solid ${theme.palette.divider}`,
+                      transition: 'all 0.2s', '&:hover': { transform: 'translateY(-4px)', boxShadow: theme.shadows[6], borderColor: theme.palette.primary.main }
+                    }}>
+                      <CardContent sx={{ p: 4 }}>
+                        <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={4}>
+                          <Box>
+                            <Typography variant="h6" fontWeight={800} gutterBottom>{resumen.nombre_proyecto}</Typography>
+                            <Stack direction="row" spacing={1}>
+                              <Chip label={`${resumen.meses_proyecto} cuotas`} size="small" variant="outlined" sx={{ fontWeight: 600 }} />
+                              {saldoProyecto > 0 && <Chip label={`+$${saldoProyecto} a favor`} color="success" size="small" sx={{ fontWeight: 800 }} />}
                             </Stack>
                           </Box>
-                          
-                          <Stack direction="row" spacing={1}>
-                            <Tooltip title="Ver detalle de costos y composición de cuota">
-                                <IconButton size="small" color="primary" onClick={() => navigate('/MisResumenes')}>
-                                    <Assessment />
-                                </IconButton>
-                            </Tooltip>
-                            <Button variant="outlined" size="small" endIcon={<ChevronRight />} onClick={() => idProyectoReal ? navigate(`/proyectos/${idProyectoReal}`) : navigate('/client/suscripciones')} sx={{ minWidth: { xs: '100%', sm: 'auto' } }}>
-                                Ver proyecto
-                            </Button>
-                          </Stack>
+                          <IconButton onClick={() => navigate('/MisResumenes')} color="primary"><Assessment /></IconButton>
                         </Box>
 
                         <Box>
-                          <Box display="flex" justifyContent="space-between" mb={1.5}>
-                            <Typography variant="body2" fontWeight={600} color="text.secondary">Progreso del plan</Typography>
-                            <Typography variant="body2" fontWeight={800} sx={{ color: 'primary.main', fontSize: '1rem' }}>
-                              {resumen.porcentaje_pagado.toFixed(0)}%
-                            </Typography>
+                          <Box display="flex" justifyContent="space-between" mb={1.5} alignItems="flex-end">
+                            <Typography variant="body2" fontWeight={700} color="text.secondary">Avance del plan</Typography>
+                            <Typography variant="h5" fontWeight={900} color="primary.main">{resumen.porcentaje_pagado.toFixed(0)}%</Typography>
                           </Box>
-                          <LinearProgress variant="determinate" value={resumen.porcentaje_pagado} sx={{ height: 12, borderRadius: 6, bgcolor: 'secondary.main', '& .MuiLinearProgress-bar': { borderRadius: 6, background: `linear-gradient(90deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.light} 100%)` } }} />
-                          <Typography variant="caption" color="text.secondary" display="block" mt={1} fontWeight={500}>
-                            {resumen.cuotas_pagadas} de {resumen.meses_proyecto} cuotas pagadas
+                          <LinearProgress 
+                            variant="determinate" 
+                            value={resumen.porcentaje_pagado} 
+                            sx={{ height: 12, borderRadius: 6, bgcolor: alpha(theme.palette.primary.main, 0.1), '& .MuiLinearProgress-bar': { borderRadius: 6 } }} 
+                          />
+                          <Typography variant="caption" color="text.secondary" display="block" mt={1.5} fontWeight={600}>
+                            {resumen.cuotas_pagadas} de {resumen.meses_proyecto} cuotas acreditadas
                           </Typography>
                         </Box>
-                      </Paper>
-                    );
-                  })}
-                </Stack>
-              ) : (
-                <Paper elevation={0} sx={{ p: 6, textAlign: 'center', bgcolor: 'secondary.light', border: '2px dashed', borderColor: 'secondary.dark' }}>
-                  <TrendingUp sx={{ fontSize: 64, color: 'text.disabled', mb: 2 }} />
-                  <Typography variant="h6" color="text.secondary" gutterBottom fontWeight={600}>Tu portafolio está vacío</Typography>
-                  <Typography variant="body2" color="text.secondary" mb={3}>Explora nuestros proyectos y comienza a construir tu futuro</Typography>
-                  <Button variant="contained" size="large" onClick={() => navigate('/client/Proyectos/RoleSelection')} sx={{ px: 4 }}>
-                    Explorar Proyectos
-                  </Button>
-                </Paper>
-              )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </Stack>
             </Box>
 
             {/* ===== COLUMNA DERECHA (SIDEBAR) ===== */}
-            <Box sx={{ position: { lg: 'sticky' }, top: { lg: 24 } }}>
-              <Paper elevation={0} sx={{ p: 4, border: '2px solid', borderColor: 'secondary.main', bgcolor: 'background.default' }}>
-                <Typography variant="h6" gutterBottom fontWeight={700} mb={3} color="text.primary">Acciones Rápidas</Typography>
-                
-                <Stack spacing={2}>
-                  <Button variant="contained" size="large" fullWidth startIcon={<AccountBalanceWallet />} onClick={() => navigate('/pagos')} sx={{ justifyContent: 'flex-start', fontSize: '1rem', boxShadow: theme.shadows[4] }}>
-                    Pagar Cuotas
-                  </Button>
-                  <Button variant="outlined" size="large" fullWidth startIcon={<ReceiptLong />} onClick={() => navigate('/client/transacciones')} sx={{ justifyContent: 'flex-start' }}>
-                    Historial y Recibos
-                  </Button>
-                  <Button variant="outlined" size="large" fullWidth startIcon={<Gavel />} onClick={() => navigate('/client/subastas')} sx={{ justifyContent: 'flex-start' }}>
-                    Mis Subastas
-                  </Button>
-                  <Button variant="outlined" size="large" fullWidth startIcon={<Description />} onClick={() => navigate('/client/contratos')} sx={{ justifyContent: 'flex-start' }}>
-                    Mis Contratos
-                  </Button>
+            <Box sx={{ position: { lg: 'sticky' }, top: 24 }}>
+              <Paper elevation={0} sx={{ p: 4, border: `1px solid ${theme.palette.divider}`, borderRadius: 4 }}>
+                <Typography variant="h6" fontWeight={800} mb={3}>Acceso Rápido</Typography>
+                <Stack spacing={1.5}>
+                  {[
+                    { l: 'Pagar Cuotas', i: <AccountBalanceWallet />, r: '/pagos', v: 'contained', c: 'primary' },
+                    { l: 'Transacciones', i: <ReceiptLong />, r: '/client/transacciones' },
+                    { l: 'Subastas', i: <Gavel />, r: '/client/subastas' },
+                    { l: 'Contratos', i: <Description />, r: '/client/contratos' }
+                  ].map((btn, idx) => (
+                    <Button 
+                      key={idx} variant={btn.v as any || 'outlined'} fullWidth size="large" 
+                      startIcon={btn.i} onClick={() => navigate(btn.r)}
+                      sx={{ justifyContent: 'flex-start', py: 1.5, borderRadius: 2, fontWeight: 700 }}
+                    >
+                      {btn.l}
+                    </Button>
+                  ))}
                 </Stack>
                 
                 <Divider sx={{ my: 4 }} />
                 
-                {/* 2FA Widget */}
-                <Box sx={{ bgcolor: user?.is_2fa_enabled ? 'success.light' : 'warning.light', p: 3, borderRadius: 3, textAlign: 'center', border: '2px solid', borderColor: user?.is_2fa_enabled ? 'success.main' : 'warning.main', mb: 3 }}>
-                  {user?.is_2fa_enabled ? (
-                    <>
-                      <CheckCircle sx={{ fontSize: 40, color: 'success.main', mb: 1 }} />
-                      <Typography variant="subtitle2" gutterBottom fontWeight={700} color="success.dark">Cuenta Protegida</Typography>
-                      <Button variant="outlined" size="small" onClick={() => navigate('/client/seguridad')} sx={{ borderColor: 'success.main', color: 'success.dark' }}>Gestionar</Button>
-                    </>
-                  ) : (
-                    <>
-                      <Warning sx={{ fontSize: 40, color: 'warning.main', mb: 1 }} />
-                      <Typography variant="subtitle2" gutterBottom fontWeight={700} color="warning.dark">Protege tu cuenta</Typography>
-                      <Button variant="contained" size="small" onClick={() => navigate('/client/seguridad')} color="warning">Activar Ahora</Button>
-                    </>
-                  )}
-                </Box>
+                <Card elevation={0} sx={{ 
+                  bgcolor: user?.is_2fa_enabled ? alpha(theme.palette.success.main, 0.05) : alpha(theme.palette.warning.main, 0.05),
+                  border: `1px solid ${user?.is_2fa_enabled ? theme.palette.success.main : theme.palette.warning.main}`,
+                  borderRadius: 3, p: 2, textAlign: 'center'
+                }}>
+                  <Avatar sx={{ 
+                    mx: 'auto', mb: 1, 
+                    bgcolor: user?.is_2fa_enabled ? 'success.main' : 'warning.main' 
+                  }}>
+                    {user?.is_2fa_enabled ? <CheckCircle /> : <Security />}
+                  </Avatar>
+                  <Typography variant="subtitle2" fontWeight={800} color={user?.is_2fa_enabled ? 'success.dark' : 'warning.dark'}>
+                    {user?.is_2fa_enabled ? 'Cuenta Protegida' : 'Seguridad Recomendada'}
+                  </Typography>
+                  <Button 
+                    size="small" variant="text" fullWidth sx={{ mt: 1, fontWeight: 800 }}
+                    onClick={() => navigate('/client/seguridad')}
+                  >
+                    {user?.is_2fa_enabled ? 'Ver ajustes' : 'Activar 2FA'}
+                  </Button>
+                </Card>
 
-                <Box sx={{ bgcolor: 'secondary.light', p: 3, borderRadius: 3, textAlign: 'center' }}>
-                  <Typography variant="subtitle2" gutterBottom fontWeight={700} color="text.primary">¿Necesitas ayuda?</Typography>
-                  <Button variant="outlined" size="medium" fullWidth onClick={() => navigate('/client/mensajes')}>Contactar Soporte</Button>
+                <Box mt={3} sx={{ bgcolor: alpha(theme.palette.secondary.main, 0.1), p: 2, borderRadius: 3, textAlign: 'center' }}>
+                  <Typography variant="caption" fontWeight={700} color="text.secondary" display="block" mb={1}>¿Necesitas soporte?</Typography>
+                  <Button startIcon={<HelpOutline />} fullWidth size="small" onClick={() => navigate('/client/mensajes')}>Centro de Ayuda</Button>
                 </Box>
               </Paper>
             </Box>

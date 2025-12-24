@@ -8,7 +8,13 @@ import {
   Tabs, 
   Tab, 
   Badge,
-  Stack
+  Stack,
+  Card,
+  Avatar,
+  Divider,
+  useTheme,
+  alpha,
+  Paper
 } from '@mui/material';
 import { 
   Lock, 
@@ -16,7 +22,10 @@ import {
   ErrorOutline, 
   AccountBalanceWallet, 
   Schedule,
-  ReceiptLong
+  ReceiptLong,
+  MonetizationOn,
+  Refresh,
+  Warning
 } from '@mui/icons-material';
 
 // --- SERVICIOS Y TIPOS ---
@@ -31,11 +40,9 @@ import { PageContainer } from '../../../../components/common/PageContainer/PageC
 import { PageHeader } from '../../../../components/common/PageHeader/PageHeader';
 import { QueryHandler } from '../../../../components/common/QueryHandler/QueryHandler';
 import TwoFactorAuthModal from '../../../../components/common/TwoFactorAuthModal/TwoFactorAuthModal';
-import { DataTable, type DataTableColumn } from '../../../../components/common/DataTable/DataTable'; // Ajusta la ruta
+import { DataTable, type DataTableColumn } from '../../../../components/common/DataTable/DataTable'; 
 import { useModal } from '../../../../hooks/useModal';
 import { HistorialPagosAgrupado } from './components/HistorialAgrupado';
-
-
 
 // ----------------------------------------------------------------------
 // HELPER: Configuración visual de estados
@@ -56,6 +63,8 @@ const getStatusConfig = (status: string) => {
 };
 
 const MisPagos: React.FC = () => {
+  const theme = useTheme();
+  
   // 1. Hooks y Estados
   const twoFaModal = useModal();
   const [selectedPagoId, setSelectedPagoId] = useState<number | null>(null);
@@ -80,24 +89,33 @@ const MisPagos: React.FC = () => {
   const isLoading = pagosQuery.isLoading || suscripcionesQuery.isLoading;
   const error = pagosQuery.error || suscripcionesQuery.error;
 
-  // Helper interno para obtener nombre del proyecto en la tabla
+  // Helper interno
   const getNombreProyecto = (idProyecto: number) => {
     const sub = suscripcionesQuery.data?.find(s => s.id_proyecto === idProyecto);
     return sub?.proyectoAsociado?.nombre_proyecto || `Proyecto #${idProyecto}`;
   };
 
+  const formatCurrency = (val: number) => 
+    new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(val);
+
   // 3. Lógica de Filtrado y Contadores
-  const { filteredData, counts, historialData } = useMemo(() => {
+  const { filteredData, counts, historialData, stats } = useMemo(() => {
     const data = pagosQuery.data || [];
     
-    // Contadores para los Badges (Notificaciones)
+    // Contadores
     const counts = {
       pendientes: data.filter(p => p.estado_pago === 'pendiente').length,
       vencidas: data.filter(p => p.estado_pago === 'vencido').length,
       pagadas: data.filter(p => p.estado_pago === 'pagado' || p.estado_pago === 'cubierto_por_puja').length
     };
 
-    // Ordenamiento por fecha de vencimiento
+    // Montos totales para KPI
+    const stats = {
+        deudaVencida: data.filter(p => p.estado_pago === 'vencido').reduce((acc, curr) => acc + Number(curr.monto), 0),
+        proximosVencimientos: data.filter(p => p.estado_pago === 'pendiente').reduce((acc, curr) => acc + Number(curr.monto), 0)
+    };
+
+    // Ordenamiento
     const sorted = [...data].sort((a, b) => 
       new Date(a.fecha_vencimiento).getTime() - new Date(b.fecha_vencimiento).getTime()
     );
@@ -111,20 +129,19 @@ const MisPagos: React.FC = () => {
       case 1: // Vencidas
         filtered = sorted.filter(p => p.estado_pago === 'vencido');
         break;
-      case 2: // Historial (Solo para tener la referencia, aunque usaremos historialData)
+      case 2: // Historial
         filtered = [];
         break;
     }
 
-    // Datos específicos para el componente de Historial (Pagados o Cubiertos)
     const historialData = sorted.filter(p => 
         p.estado_pago === 'pagado' || p.estado_pago === 'cubierto_por_puja'
     );
 
-    return { filteredData: filtered, counts, historialData };
+    return { filteredData: filtered, counts, historialData, stats };
   }, [pagosQuery.data, currentTab]);
 
-  // 4. Mutaciones (Checkout y 2FA)
+  // 4. Mutaciones
   const iniciarPagoMutation = useMutation({
     mutationFn: async (pagoId: number) => {
       setSelectedPagoId(pagoId);
@@ -132,13 +149,11 @@ const MisPagos: React.FC = () => {
     },
     onSuccess: (response) => {
       const data = response.data;
-      // Caso: Requiere 2FA
       if (response.status === 202 || data.is2FARequired) {
         setTwoFAError(null);
         twoFaModal.open();
         return;
       }
-      // Caso: Redirección MP
       if (data.redirectUrl) {
         window.location.href = data.redirectUrl;
       }
@@ -161,19 +176,19 @@ const MisPagos: React.FC = () => {
     onError: (err: any) => setTwoFAError(err.response?.data?.error || "Código inválido.")
   });
 
-  // 5. Columnas de la Tabla (Solo para Tabs 0 y 1)
+  // 5. Columnas
   const columns: DataTableColumn<PagoDto>[] = useMemo(() => [
     {
       id: 'proyecto',
       label: 'Proyecto',
-      minWidth: 160,
+      minWidth: 180,
       render: (row) => (
-        <Stack>
-            <Typography variant="body2" fontWeight="bold">
+        <Stack spacing={0.5}>
+            <Typography variant="body2" fontWeight="bold" color="text.primary">
             {getNombreProyecto(row.id_proyecto ?? 0)}
             </Typography>
-            <Typography variant="caption" color="text.secondary">
-             ID: {row.id_suscripcion}
+            <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
+             ID Suscripción: #{row.id_suscripcion}
             </Typography>
         </Stack>
       )
@@ -181,10 +196,15 @@ const MisPagos: React.FC = () => {
     {
       id: 'mes',
       label: 'Cuota',
-      minWidth: 90,
+      minWidth: 100,
       align: 'center',
       render: (row) => (
-        <Chip label={`#${row.mes}`} size="small" variant="outlined" />
+        <Chip 
+            label={`Cuota ${row.mes}`} 
+            size="small" 
+            variant="outlined" 
+            sx={{ fontWeight: 600, borderColor: theme.palette.divider }}
+        />
       )
     },
     {
@@ -196,17 +216,17 @@ const MisPagos: React.FC = () => {
     {
       id: 'monto',
       label: 'Monto',
-      minWidth: 130,
+      minWidth: 140,
       render: (row) => (
-        <Typography variant="subtitle2" color="primary.main" fontWeight={700}>
-          ${Number(row.monto).toLocaleString('es-AR')}
+        <Typography variant="subtitle2" color="primary.main" fontWeight={800}>
+          {formatCurrency(Number(row.monto))}
         </Typography>
       )
     },
     {
       id: 'estado_pago',
       label: 'Estado',
-      minWidth: 130,
+      minWidth: 140,
       render: (row) => {
         const config = getStatusConfig(row.estado_pago);
         return (
@@ -214,8 +234,9 @@ const MisPagos: React.FC = () => {
             label={config.label} 
             color={config.color as any} 
             size="small" 
-            variant="filled" // Si usas MUI Joy, sino 'filled' u 'outlined'
+            variant="filled" // O "soft" si lo tienes configurado
             icon={config.icon as any}
+            sx={{ fontWeight: 600 }}
           />
         );
       }
@@ -238,42 +259,107 @@ const MisPagos: React.FC = () => {
             }}
             disabled={iniciarPagoMutation.isPending}
             startIcon={!isProcessing ? <Lock fontSize="small" /> : null}
-            sx={{ borderRadius: 2, minWidth: 110, textTransform: 'none', fontWeight: 'bold' }}
+            disableElevation
+            sx={{ 
+                borderRadius: 2, 
+                minWidth: 120, 
+                fontWeight: 700,
+                boxShadow: theme.shadows[2]
+            }}
           >
-            {isProcessing ? 'Procesando...' : row.estado_pago === 'vencido' ? 'Regularizar' : 'Pagar'}
+            {isProcessing ? '...' : row.estado_pago === 'vencido' ? 'Regularizar' : 'Pagar'}
           </Button>
         );
       }
     }
-  ], [suscripcionesQuery.data, iniciarPagoMutation.isPending, selectedPagoId]);
+  ], [suscripcionesQuery.data, iniciarPagoMutation.isPending, selectedPagoId, theme]);
 
   return (
     <PageContainer maxWidth="lg">
       <PageHeader 
         title="Mis Cuotas" 
-        subtitle="Gestiona tus obligaciones mensuales y visualiza el progreso de tus planes." 
+        subtitle="Gestiona tus obligaciones mensuales y visualiza el progreso de tus planes."
+
       />
 
-      {/* --- PESTAÑAS --- */}
+      {/* --- KPI SUMMARY (Estilo MisInversiones) --- */}
+      <Box mb={4} display="flex" justifyContent="center">
+        <Card
+          elevation={0}
+          sx={{
+            p: 3,
+            border: `1px solid ${theme.palette.divider}`,
+            borderRadius: 3,
+            bgcolor: 'background.paper',
+            minWidth: { xs: '100%', md: '80%' }
+          }}
+        >
+          <Stack 
+            direction={{ xs: 'column', sm: 'row' }} 
+            divider={<Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', sm: 'block' }, mx: 2 }} />}
+            spacing={{ xs: 4, sm: 4 }}
+            justifyContent="center"
+            alignItems="center"
+          >
+            {/* KPI 1: Próximos Pagos */}
+            <Stack direction="row" spacing={2} alignItems="center">
+              <Avatar variant="rounded" sx={{ bgcolor: alpha(theme.palette.info.main, 0.1), color: 'info.main', width: 56, height: 56 }}>
+                <Schedule fontSize="large" />
+              </Avatar>
+              <Box>
+                <Typography variant="caption" color="text.secondary" fontWeight={700}>
+                  PRÓXIMOS A VENCER
+                </Typography>
+                <Typography variant="h5" fontWeight={700} color="text.primary">
+                  {formatCurrency(stats.proximosVencimientos)}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                   {counts.pendientes} cuotas pendientes
+                </Typography>
+              </Box>
+            </Stack>
+
+            {/* KPI 2: Deuda Vencida */}
+            <Stack direction="row" spacing={2} alignItems="center">
+              <Avatar variant="rounded" sx={{ bgcolor: alpha(theme.palette.error.main, 0.1), color: 'error.main', width: 56, height: 56 }}>
+                <Warning fontSize="large" />
+              </Avatar>
+              <Box>
+                <Typography variant="caption" color="text.secondary" fontWeight={700}>
+                  DEUDA VENCIDA
+                </Typography>
+                <Typography variant="h5" fontWeight={700} color="error.main">
+                  {formatCurrency(stats.deudaVencida)}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                    {counts.vencidas} cuotas vencidas
+                </Typography>
+              </Box>
+            </Stack>
+          </Stack>
+        </Card>
+      </Box>
+
+      {/* --- TABS --- */}
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
         <Tabs 
             value={currentTab} 
             onChange={(_, val) => setCurrentTab(val)}
             indicatorColor="primary"
             textColor="primary"
+            variant="scrollable"
+            scrollButtons="auto"
         >
-          {/* TAB 0: Por Pagar */}
           <Tab 
             icon={<Schedule />} 
             iconPosition="start"
             label={
-              <Badge badgeContent={counts.pendientes} color="primary" sx={{ px: 1 }}>
+              <Badge badgeContent={counts.pendientes} color="info" sx={{ px: 1 }}>
                 Por Pagar
               </Badge>
             } 
           />
           
-          {/* TAB 1: Vencidas */}
           <Tab 
             icon={<ErrorOutline />}
             iconPosition="start"
@@ -288,7 +374,6 @@ const MisPagos: React.FC = () => {
             }}
           />
 
-          {/* TAB 2: Historial */}
           <Tab 
             icon={<ReceiptLong />}
             iconPosition="start"
@@ -299,36 +384,46 @@ const MisPagos: React.FC = () => {
 
       <QueryHandler isLoading={isLoading} error={error as Error | null}>
         
-        {/* --- CONTENIDO CONDICIONAL --- */}
-        {currentTab === 2 ? (
-            
-            // ✅ VISTA DE HISTORIAL AGRUPADO
-            <HistorialPagosAgrupado 
-                pagos={historialData}
-                suscripciones={suscripcionesQuery.data || []}
-            />
-
-        ) : (
-            
-            // ✅ VISTA DE TABLA (Pendientes y Vencidas)
-            <DataTable
-                columns={columns}
-                data={filteredData}
-                getRowKey={(row) => row.id}
-                pagination={true}
-                defaultRowsPerPage={10}
-                emptyMessage={
-                    currentTab === 0 ? "¡Todo al día! No tienes pagos pendientes." :
-                    "¡Excelente! No tienes cuotas vencidas."
-                }
-                // Resalta filas vencidas en rojo suave
-                getRowSx={(row) => ({
-                    bgcolor: row.estado_pago === 'vencido' ? '#fff5f5' : 'inherit',
-                    transition: 'background-color 0.3s'
-                })}
-            />
-
-        )}
+        {/* --- CONTENIDO --- */}
+        <Box>
+            {currentTab === 2 ? (
+                // Vista Historial (Agrupado)
+                <HistorialPagosAgrupado 
+                    pagos={historialData}
+                    suscripciones={suscripcionesQuery.data || []}
+                />
+            ) : (
+                // Vista Tabla (Pendientes / Vencidas)
+                <Paper 
+                    elevation={0}
+                    sx={{
+                        border: `1px solid ${theme.palette.divider}`,
+                        borderRadius: 3,
+                        overflow: 'hidden',
+                        boxShadow: theme.shadows[1]
+                    }}
+                >
+                    <DataTable
+                        columns={columns}
+                        data={filteredData}
+                        getRowKey={(row) => row.id}
+                        pagination={true}
+                        defaultRowsPerPage={10}
+                        emptyMessage={
+                            currentTab === 0 ? "¡Todo al día! No tienes pagos pendientes." :
+                            "¡Excelente! No tienes cuotas vencidas."
+                        }
+                        getRowSx={(row) => ({
+                            bgcolor: row.estado_pago === 'vencido' ? alpha(theme.palette.error.main, 0.05) : 'inherit',
+                            transition: 'background-color 0.3s',
+                            '&:hover': {
+                                bgcolor: row.estado_pago === 'vencido' ? alpha(theme.palette.error.main, 0.1) : alpha(theme.palette.action.hover, 0.05)
+                            }
+                        })}
+                    />
+                </Paper>
+            )}
+        </Box>
 
       </QueryHandler>
 

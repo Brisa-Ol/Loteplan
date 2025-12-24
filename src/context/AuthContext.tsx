@@ -23,43 +23,28 @@ import UsuarioService from "../Services/usuario.service";
 import AuthService from "../Services/auth.service";
 import Auth2faService from "../Services/auth2fa.service";
 
-// Tipos de Error (Importado de tu httpService)
+// Tipos de Error
 import type { ApiError } from "../Services/httpService";
 
 interface AuthContextType {
-  // Estado del Usuario
   user: UserDto | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   isInitializing: boolean;
-  
-  // Estado 2FA (Login)
   requires2FA: boolean;
   twoFaToken: string | null;
-  
-  // Manejo de Errores Global
   error: string | null;
-  
-  // Métodos de Autenticación
   login: (credentials: LoginRequestDto) => Promise<LoginResponseDto>;
   verify2FA: (code: string) => Promise<LoginSuccessResponse>;
   register: (data: RegisterRequestDto) => Promise<void>;
   logout: () => void;
   refetchUser: () => Promise<void>;
-  
-  // Métodos de Configuración de Seguridad (Perfil)
   generate2FASecret: () => Promise<Generate2faSecretResponse>;
   enable2FA: (code: string) => Promise<void>;
   disable2FA: (password: string, code: string) => Promise<void>;
-  
-  // 🆕 Método de Desactivación de Cuenta
   deleteAccount: (twofaCode?: string) => Promise<void>;
-  
-  // Métodos de Recuperación
   resendConfirmation: (email: string) => Promise<void>;
   forgotPassword: (email: string) => Promise<void>;
-  
-  // Utilidades
   clearError: () => void;
 }
 
@@ -84,39 +69,37 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const handleServiceError = (err: unknown, defaultMsg: string) => {
     let msg = defaultMsg;
 
-    // 1. Error Personalizado (ApiError desde httpService)
-    // Verificamos si tiene la estructura de ApiError
-    if (err && typeof err === 'object' && 'type' in err) {
-      const apiErr = err as ApiError;
-      
-      // Personalizamos el mensaje según el tipo
-      if (apiErr.type === 'SECURITY_ACTION') {
-        msg = `🔐 Requisito de seguridad: ${apiErr.message}`;
-      } else if (apiErr.type === 'ROLE_RESTRICTION') {
-        msg = `⛔ Permiso denegado: ${apiErr.message}`;
-      } else if (apiErr.type === 'RATE_LIMIT') {
-        msg = `⏳ ${apiErr.message}`;
-      } else {
-        msg = apiErr.message;
-      }
+    // Verificamos si es nuestro error personalizado (ApiError)
+    if (err && typeof err === 'object') {
+       // Casteamos de forma segura chequeando propiedades
+       const apiErr = err as ApiError;
+       
+       if (apiErr.type === 'SECURITY_ACTION') {
+         msg = `🔐 Requisito de seguridad: ${apiErr.message}`;
+       } else if (apiErr.type === 'ROLE_RESTRICTION') {
+         msg = `⛔ Permiso denegado: ${apiErr.message}`;
+       } else if (apiErr.type === 'RATE_LIMIT') {
+         msg = `⏳ ${apiErr.message}`;
+       } else if ('message' in apiErr) {
+         // Si el interceptor ya puso un mensaje (ej: "Sesión expirada"), lo tomamos
+         // PERO: Esto es lo que queremos evitar en el login.
+         msg = apiErr.message;
+       }
     }
-    // 2. Error de Axios Estándar (si se escapó del interceptor o estructura diferente)
+    // Error de Axios estándar (por si el interceptor falló o es otro tipo)
     else if (err instanceof AxiosError && err.response?.data?.error) {
       msg = err.response.data.error;
     } 
-    // 3. Error genérico JS
     else if (err instanceof Error) {
       msg = err.message;
     }
 
     setError(msg);
-    // Relanzamos el error para que el componente (ej: Modal) pueda manejar lógica específica
-    // como cerrar el modal o limpiar inputs si es necesario.
     throw err;
   };
 
   // ==========================================
-  // 🔄 CARGA INICIAL (Persistencia de Sesión)
+  // 🔄 CARGA INICIAL
   // ==========================================
   const loadUser = useCallback(async () => {
     const token = localStorage.getItem("auth_token");
@@ -131,7 +114,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setUser(data);
     } catch (err) {
       console.error("Sesión inválida o expirada", err);
-      // Si falla getMe, limpiamos todo porque el token no sirve
       localStorage.removeItem("auth_token");
       setUser(null);
     } finally {
@@ -144,7 +126,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [loadUser]);
 
   // ==========================================
-  // 🔐 LOGIN Y VERIFICACIÓN
+  // 🔐 LOGIN (AQUÍ ESTÁ LA CORRECCIÓN)
   // ==========================================
   const login = async (credentials: LoginRequestDto): Promise<LoginResponseDto> => {
     setIsLoading(true);
@@ -152,19 +134,31 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       const { data } = await AuthService.login(credentials);
 
-      // CASO A: Backend requiere 2FA (Paso intermedio)
       if ('is2FARequired' in data && data.is2FARequired) {
         setRequires2FA(true);
         setTwoFaToken(data.twoFaToken);
       } 
-      // CASO B: Login directo exitoso
       else if ('token' in data) {
         localStorage.setItem("auth_token", data.token);
         await loadUser();
       }
 
       return data;
-    } catch (err) {
+    } catch (err: any) {
+      // ⚠️ CORRECCIÓN ESPECÍFICA PARA LOGIN
+      // El interceptor convierte el 401 en "Sesión expirada".
+      // Aquí detectamos si es un 401 y forzamos el mensaje correcto.
+      
+      const is401 = err?.status === 401 || err?.response?.status === 401;
+
+      if (is401) {
+        const msg = "Usuario o contraseña incorrectos";
+        setError(msg);
+        // Lanzamos el error para detener la ejecución, pero el estado ya tiene el mensaje correcto
+        throw err;
+      }
+      
+      // Si no es 401 (ej: error 500, error de red), usamos el manejador normal
       handleServiceError(err, "Error al iniciar sesión");
       throw err;
     } finally {
@@ -184,11 +178,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
 
       localStorage.setItem("auth_token", data.token);
-      
-      // Limpiar estados temporales
       setRequires2FA(false);
       setTwoFaToken(null);
-      
       await loadUser();
 
       return data;
@@ -205,16 +196,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // ==========================================
   const logout = () => {
     AuthService.logout().catch(console.error);
-
-    localStorage.clear(); // Limpia token y datos
+    localStorage.clear();
     sessionStorage.clear();
-
     setUser(null);
     setRequires2FA(false);
     setTwoFaToken(null);
     setError(null);
-
-    // Redirección forzada para limpiar estados de memoria de la app
     window.location.href = '/';
   };
 
@@ -234,7 +221,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   // ==========================================
-  // 🛡️ GESTIÓN DE SEGURIDAD (Perfil)
+  // 🛡️ GESTIÓN DE SEGURIDAD
   // ==========================================
   const generate2FASecret = async () => {
     try {
@@ -249,7 +236,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const enable2FA = async (code: string) => {
     try {
       await Auth2faService.enable({ token: code });
-      await loadUser(); // Recargar usuario para que is_2fa_enabled sea true
+      await loadUser();
     } catch (err) {
       handleServiceError(err, "Error activando 2FA");
       throw err;
@@ -259,28 +246,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const disable2FA = async (password: string, code: string) => {
     try {
       await Auth2faService.disable({ contraseña: password, token: code });
-      await loadUser(); // Recargar usuario para que is_2fa_enabled sea false
+      await loadUser();
     } catch (err) {
       handleServiceError(err, "Error desactivando 2FA");
       throw err;
     }
   };
 
-  // ==========================================
-  // 💀 DESACTIVACIÓN DE CUENTA (Soft Delete)
-  // ==========================================
   const deleteAccount = async (twofaCode?: string) => {
     setIsLoading(true);
     setError(null);
     try {
-      // Llamamos al servicio pasando el código 2FA si existe
       await UsuarioService.softDeleteMe(twofaCode);
-      
-      // Si la desactivación es exitosa, cerramos sesión
       logout();
     } catch (err) {
-      // El backend puede devolver 403 si el código 2FA es incorrecto o falta
-      // O 409 si hay suscripciones activas.
       handleServiceError(err, "Error al desactivar la cuenta");
       throw err;
     } finally {
@@ -319,21 +298,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         requires2FA,
         twoFaToken,
         error,
-        
         login,
         verify2FA,
         register,
         logout,
         refetchUser: loadUser,
-        
         generate2FASecret,
         enable2FA,
         disable2FA,
-        deleteAccount, // ✅ Agregado correctamente
-        
+        deleteAccount,
         resendConfirmation,
         forgotPassword,
-        
         clearError: () => setError(null),
       }}
     >

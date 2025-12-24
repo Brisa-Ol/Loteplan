@@ -8,10 +8,9 @@ import {
   Favorite as FavoriteIcon, 
   Visibility as VisibilityIcon,
   Gavel as GavelIcon, 
-  SentimentDissatisfied, 
   Event as EventIcon,
   LocationOn,
-  DeleteOutline // Usaremos un icono más claro para la acción de "Borrar" del favorito si se prefiere, o mantenemos el corazón
+  DeleteOutline
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -22,11 +21,11 @@ import type { LoteDto } from '../../../types/dto/lote.dto';
 import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
 import { PageHeader } from '../../../components/common/PageHeader/PageHeader';
 
-// 🟢 Importamos el hook y el componente genérico
+// Hooks y Componentes
 import { useConfirmDialog } from '../../../hooks/useConfirmDialog';
 import { ConfirmDialog } from '../../../components/common/ConfirmDialog/ConfirmDialog';
 
-// --- Card Component (Interno - Estilizado) ---
+// --- Card Component (Estilizado con Theme) ---
 const LoteFavoritoCard: React.FC<{
   lote: LoteDto;
   onRemove: (id: number) => void;
@@ -39,31 +38,35 @@ const LoteFavoritoCard: React.FC<{
   const imagenUrl = imagenService.resolveImageUrl(imagenPrincipal?.url);
 
   const getBadgeColor = (estado: string) => {
-    if (estado === 'activa') return 'success';
-    if (estado === 'pendiente') return 'warning';
-    return 'default';
+    switch (estado) {
+        case 'activa': return 'success';
+        case 'pendiente': return 'warning';
+        case 'finalizada': return 'error';
+        default: return 'default';
+    }
   };
 
   return (
     <Card 
-      elevation={0} // Empezamos plano
+      elevation={0}
       sx={{ 
         height: '100%', 
         display: 'flex', 
         flexDirection: 'column', 
         position: 'relative',
-        borderRadius: 3, // 12px según tu theme
+        borderRadius: 3, // Consistente con el theme (aprox 12px)
         border: `1px solid ${theme.palette.divider}`,
         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        bgcolor: 'background.paper',
         '&:hover': { 
           transform: 'translateY(-4px)', 
-          boxShadow: '0 12px 24px rgba(0,0,0,0.1)',
-          borderColor: 'primary.main'
+          boxShadow: theme.shadows[4],
+          borderColor: theme.palette.primary.main
         }
       }}
     >
       {/* Imagen Header */}
-      <Box sx={{ position: 'relative', height: 220, overflow: 'hidden' }}>
+      <Box sx={{ position: 'relative', height: 200, overflow: 'hidden', bgcolor: 'grey.100' }}>
         <CardMedia
           component="img" 
           height="100%" 
@@ -73,10 +76,10 @@ const LoteFavoritoCard: React.FC<{
           onError={(e: any) => { e.target.src = '/assets/placeholder-lote.jpg'; }}
         />
         
-        {/* Overlay Gradiente para mejorar lectura de textos sobre imagen */}
+        {/* Overlay Gradiente */}
         <Box sx={{
           position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
-          background: 'linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0) 40%, rgba(0,0,0,0) 100%)',
+          background: 'linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0) 50%)',
           pointerEvents: 'none'
         }} />
 
@@ -85,29 +88,35 @@ const LoteFavoritoCard: React.FC<{
           label={lote.estado_subasta.toUpperCase()}
           color={getBadgeColor(lote.estado_subasta) as any}
           size="small"
+          // Usamos 'filled' para que resalte sobre la imagen
+          variant="filled"
           sx={{ 
             position: 'absolute', top: 12, right: 12, 
-            fontWeight: 700, boxShadow: 2 
+            fontWeight: 700, boxShadow: 2,
+            height: 24
           }}
         />
 
-        {/* Botón Favorito (Toggle) */}
+        {/* Botón Eliminar Favorito */}
         <Tooltip title="Quitar de favoritos">
           <IconButton
             onClick={() => onRemove(lote.id)}
             disabled={isRemoving}
+            size="small"
             sx={{
               position: 'absolute', top: 12, left: 12,
-              bgcolor: 'background.paper',
-              color: 'error.main', // Rojo porque YA es favorito
+              bgcolor: 'background.paper', // Fondo sólido para contraste
+              color: 'error.main',
               boxShadow: 2,
               '&:hover': { 
                 bgcolor: 'error.main', 
-                color: 'white' 
-              }
+                color: 'common.white' 
+              },
+              // Si está cargando/eliminando, reducimos opacidad
+              opacity: isRemoving ? 0.5 : 1
             }}
           >
-            <FavoriteIcon fontSize="small" />
+            {isRemoving ? <DeleteOutline fontSize="small" /> : <FavoriteIcon fontSize="small" />}
           </IconButton>
         </Tooltip>
       </Box>
@@ -120,29 +129,44 @@ const LoteFavoritoCard: React.FC<{
           {lote.nombre_lote}
         </Typography>
 
-        {/* Ubicación (Simulada o real si la tienes en el DTO) */}
+        {/* Ubicación */}
         <Stack direction="row" spacing={0.5} alignItems="center" mb={2} color="text.secondary">
-           <LocationOn fontSize="small" sx={{ fontSize: 16 }} />
+           <LocationOn fontSize="small" sx={{ fontSize: 18, color: 'text.disabled' }} />
            <Typography variant="body2" noWrap>
-             Ubicación del Lote {/* Reemplazar con lote.ubicacion si existe */}
+             {/* Fallback si no hay ubicación en el DTO aun */}
+             Ubicación del Lote
            </Typography>
         </Stack>
         
-        <Divider sx={{ my: 1.5, borderStyle: 'dashed' }} />
+        <Divider sx={{ my: 2, borderStyle: 'dashed', borderColor: theme.palette.divider }} />
 
         {/* Precio */}
-        <Box>
-           <Typography variant="caption" color="text.secondary" fontWeight={600} letterSpacing={0.5}>
-             PRECIO BASE
-           </Typography>
-           <Typography variant="h5" color="primary.main" fontWeight={800}>
-             {FavoritoService.formatPrecio(Number(lote.precio_base))}
-           </Typography>
+        <Box display="flex" justifyContent="space-between" alignItems="flex-end">
+            <Box>
+                <Typography variant="caption" color="text.secondary" fontWeight={700} letterSpacing={0.5}>
+                  PRECIO BASE
+                </Typography>
+                <Typography variant="h6" color="primary.main" fontWeight={800}>
+                  {FavoritoService.formatPrecio(Number(lote.precio_base))}
+                </Typography>
+            </Box>
         </Box>
 
-        {/* Fecha (si pendiente) */}
+        {/* Fecha (Solo si pendiente) */}
         {lote.estado_subasta === 'pendiente' && lote.fecha_inicio && (
-          <Stack direction="row" spacing={1} alignItems="center" mt={1} sx={{ bgcolor: 'warning.lighter', p: 1, borderRadius: 1, color: 'warning.dark' }}>
+          <Stack 
+            direction="row" 
+            spacing={1} 
+            alignItems="center" 
+            mt={2} 
+            sx={{ 
+                bgcolor: alpha(theme.palette.warning.main, 0.1), 
+                p: 1, 
+                borderRadius: 1, 
+                color: 'warning.dark',
+                border: `1px solid ${alpha(theme.palette.warning.main, 0.2)}`
+            }}
+          >
             <EventIcon fontSize="small" />
             <Typography variant="caption" fontWeight={700}>
                Inicia: {new Date(lote.fecha_inicio).toLocaleDateString()}
@@ -152,14 +176,23 @@ const LoteFavoritoCard: React.FC<{
       </CardContent>
 
       {/* Acciones */}
-      <CardActions sx={{ p: 2.5, pt: 0 }}>
+      <CardActions sx={{ p: 2, pt: 0 }}>
         <Button 
           fullWidth 
-          variant="outlined" // Outlined queda elegante aquí
-          color="primary"
+          variant="outlined" 
+          color="inherit"
           startIcon={<VisibilityIcon />} 
           onClick={() => onVerDetalle(lote.id)}
-          sx={{ fontWeight: 600, borderWidth: 2, '&:hover': { borderWidth: 2 } }}
+          sx={{ 
+            borderColor: theme.palette.divider, 
+            color: 'text.secondary',
+            fontWeight: 600,
+            '&:hover': {
+                borderColor: theme.palette.primary.main,
+                color: theme.palette.primary.main,
+                bgcolor: alpha(theme.palette.primary.main, 0.05)
+            }
+          }}
         >
           Ver Detalle
         </Button>
@@ -188,7 +221,6 @@ const MisFavoritos: React.FC = () => {
     mutationFn: (idLote: number) => FavoritoService.toggle(idLote),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['misFavoritos'] });
-      // Si tenemos el dato del modal (el ID), invalidamos también la query individual
       if (confirmDialog.data) {
         queryClient.invalidateQueries({ queryKey: ['favorito', confirmDialog.data] });
       }
@@ -213,14 +245,18 @@ const MisFavoritos: React.FC = () => {
     <PageContainer maxWidth="xl">
       <PageHeader title="Mis Favoritos" subtitle="Cargando tus lotes guardados..." />
       <Box display="grid" gridTemplateColumns="repeat(auto-fill, minmax(280px, 1fr))" gap={3}>
-        {[1,2,3,4].map(n => <Skeleton key={n} variant="rectangular" height={380} sx={{ borderRadius: 3 }} />)}
+        {[1,2,3,4].map(n => (
+            <Skeleton key={n} variant="rectangular" height={380} sx={{ borderRadius: 3 }} />
+        ))}
       </Box>
     </PageContainer>
   );
 
   if (error) return (
     <PageContainer maxWidth="xl">
-      <Alert severity="error">No se pudieron cargar tus favoritos.</Alert>
+      <Alert severity="error" sx={{ borderRadius: 2 }}>
+        No se pudieron cargar tus favoritos. Por favor, intenta nuevamente más tarde.
+      </Alert>
     </PageContainer>
   );
 
@@ -231,21 +267,25 @@ const MisFavoritos: React.FC = () => {
         subtitle="Gestiona los lotes que estás siguiendo." 
       />
       
-      {/* Contador flotante (opcional, estilo chip) */}
+      {/* Contador flotante */}
       {favoritos.length > 0 && (
-        <Box mb={4}>
+        <Box mb={4} display="flex" alignItems="center" gap={1}>
             <Chip 
                 label={`${favoritos.length} lotes guardados`} 
                 color="primary" 
                 variant="outlined"
                 icon={<FavoriteIcon />} 
-                sx={{ fontWeight: 700, bgcolor: alpha(theme.palette.primary.main, 0.05) }}
+                sx={{ 
+                    fontWeight: 700, 
+                    bgcolor: alpha(theme.palette.primary.main, 0.05),
+                    border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`
+                }}
             />
         </Box>
       )}
 
       {favoritos.length === 0 ? (
-        // Empty State consistente con otras pantallas
+        // Empty State
         <Card 
             elevation={0} 
             sx={{ 
@@ -274,8 +314,9 @@ const MisFavoritos: React.FC = () => {
           <Button 
             variant="contained" 
             size="large"
-            onClick={() => navigate('/lotes')} 
+            onClick={() => navigate('/client/Proyectos/RoleSelection')} 
             startIcon={<GavelIcon />}
+            disableElevation
           >
             Explorar Subastas
           </Button>
@@ -300,11 +341,13 @@ const MisFavoritos: React.FC = () => {
         </Box>
       )}
 
-      {/* Diálogo Confirmación GENÉRICO */}
+      {/* Diálogo Confirmación */}
       <ConfirmDialog 
         controller={confirmDialog}
         onConfirm={handleConfirmDelete}
         isLoading={removeFavoritoMutation.isPending}
+        title="¿Quitar de favoritos?"
+        description="Este lote ya no aparecerá en tu lista de seguimiento."
       />
     </PageContainer>
   );

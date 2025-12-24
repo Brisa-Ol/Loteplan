@@ -1,12 +1,19 @@
 import React from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Box, Typography, Button, CircularProgress, Paper, Stack } from '@mui/material';
-import { CheckCircle, Error, HourglassEmpty, Refresh } from '@mui/icons-material';
+import { 
+  Box, Typography, Button, CircularProgress, 
+  Stack, Card, Avatar, Divider, useTheme, alpha 
+} from '@mui/material';
+import { 
+  CheckCircle, Error, HourglassEmpty, Refresh, 
+  Home, History, ReceiptLong 
+} from '@mui/icons-material';
 import MercadoPagoService from '../../../../Services/pagoMercado.service';
 import { PageContainer } from '../../../../components/common/PageContainer/PageContainer';
 
 const PagoResult: React.FC = () => {
+  const theme = useTheme();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   
@@ -37,11 +44,12 @@ const PagoResult: React.FC = () => {
     // 1. ÉXITO
     if (estadoTx === 'pagado') {
       return {
-        icon: <CheckCircle sx={{ fontSize: 80, color: 'success.main' }} />,
+        icon: <CheckCircle sx={{ fontSize: 60 }} />,
         title: '¡Pago Exitoso!',
         desc: `La transacción #${transaccionId} fue aprobada correctamente.`,
-        color: 'success.main',
-        canRetry: false
+        color: 'success', // Usamos string para mapear al theme
+        canRetry: false,
+        isPending: false
       };
     }
 
@@ -52,102 +60,182 @@ const PagoResult: React.FC = () => {
         : 'Hubo un problema con el procesamiento.';
 
       return {
-        icon: <Error sx={{ fontSize: 80, color: 'error.main' }} />,
+        icon: <Error sx={{ fontSize: 60 }} />,
         title: 'El pago no se completó',
         desc: detalle,
-        color: 'error.main',
-        canRetry: true
+        color: 'error',
+        canRetry: true,
+        isPending: false
       };
     }
 
     // 3. PENDIENTE (Default)
     return {
-      icon: <HourglassEmpty sx={{ fontSize: 80, color: 'warning.main' }} />,
+      icon: <HourglassEmpty sx={{ fontSize: 60 }} />,
       title: 'Procesando Pago...',
       desc: 'Estamos esperando la confirmación final de Mercado Pago. Esto puede tardar unos segundos.',
-      color: 'warning.main',
+      color: 'warning',
       canRetry: false,
       isPending: true
     };
   };
 
-  if (!transaccionId) return <Box p={4}><Typography>Falta ID de transacción</Typography></Box>;
-  if (isLoading) return <Box height="50vh" display="flex" justifyContent="center" alignItems="center"><CircularProgress /></Box>;
-  if (isError) return <Box p={4}><Typography color="error">Error al consultar el estado del pago.</Typography></Box>;
+  if (!transaccionId) return <Box p={4} textAlign="center"><Typography>Falta ID de transacción</Typography></Box>;
+  
+  if (isLoading) return (
+    <Box height="60vh" display="flex" flexDirection="column" justifyContent="center" alignItems="center" gap={2}>
+        <CircularProgress size={60} thickness={4} />
+        <Typography color="text.secondary" fontWeight={500}>Verificando estado del pago...</Typography>
+    </Box>
+  );
+
+  if (isError) return <Box p={4} textAlign="center"><Typography color="error">Error al consultar el estado del pago.</Typography></Box>;
 
   const content = getStatusContent();
+  const themeColor = theme.palette[content.color as 'success' | 'error' | 'warning'];
 
   return (
     <PageContainer maxWidth="sm">
-      <Paper elevation={3} sx={{ p: 5, textAlign: 'center', borderRadius: 4, mt: 4 }}>
-        <Box mb={3}>
-            {/* Animación de pulso si está pendiente */}
-            <Box sx={{ animation: content.isPending ? 'pulse 2s infinite' : 'none' }}>
+      <Card 
+        elevation={0} 
+        sx={{ 
+          p: { xs: 3, md: 5 }, 
+          textAlign: 'center', 
+          borderRadius: 4, 
+          mt: 4,
+          border: `1px solid ${alpha(themeColor.main, 0.3)}`,
+          bgcolor: alpha(themeColor.main, 0.02),
+          boxShadow: theme.shadows[3]
+        }}
+      >
+        {/* ICONO CON ANIMACIÓN */}
+        <Box mb={3} display="flex" justifyContent="center">
+            <Avatar 
+                sx={{ 
+                    width: 100, 
+                    height: 100, 
+                    bgcolor: alpha(themeColor.main, 0.1), 
+                    color: themeColor.main,
+                    mb: 1,
+                    // Animación de pulso si está pendiente
+                    animation: content.isPending ? 'pulse 2s infinite ease-in-out' : 'none',
+                    '@keyframes pulse': {
+                        '0%': { transform: 'scale(1)', boxShadow: `0 0 0 0 ${alpha(themeColor.main, 0.4)}` },
+                        '70%': { transform: 'scale(1.05)', boxShadow: `0 0 0 15px ${alpha(themeColor.main, 0)}` },
+                        '100%': { transform: 'scale(1)', boxShadow: `0 0 0 0 ${alpha(themeColor.main, 0)}` },
+                    }
+                }}
+            >
                 {content.icon}
-            </Box>
+            </Avatar>
         </Box>
         
-        <Typography variant="h4" fontWeight={800} color={content.color} gutterBottom>
+        <Typography variant="h4" fontWeight={800} color={themeColor.main} gutterBottom>
           {content.title}
         </Typography>
         
-        <Typography variant="body1" color="text.secondary" paragraph>
+        <Typography variant="body1" color="text.secondary" paragraph sx={{ maxWidth: '400px', mx: 'auto', mb: 3 }}>
           {content.desc}
         </Typography>
 
         {/* Botón de actualización manual si está pendiente */}
         {content.isPending && (
             <Button 
-                startIcon={isFetching ? <CircularProgress size={16} /> : <Refresh />}
+                startIcon={isFetching ? <CircularProgress size={16} color="inherit" /> : <Refresh />}
                 onClick={() => refetch()}
-                sx={{ mb: 3 }}
+                variant="outlined"
+                color="warning"
+                sx={{ mb: 4, borderRadius: 2 }}
             >
                 Actualizar Estado
             </Button>
         )}
 
+        {/* DETALLES DE LA TRANSACCIÓN (Estilo Ticket) */}
         {data?.pagoPasarela && (
-          <Box sx={{ bgcolor: 'background.default', p: 2, borderRadius: 2, mb: 4, textAlign: 'left' }}>
-            <Stack spacing={1}>
-              <Box display="flex" justifyContent="space-between">
-                <Typography variant="caption">Monto:</Typography>
-                <Typography variant="body2" fontWeight={700}>${Number(data.pagoPasarela.monto).toLocaleString()}</Typography>
-              </Box>
-              <Box display="flex" justifyContent="space-between">
-                <Typography variant="caption">Referencia MP:</Typography>
-                {/* ✅ CORRECCIÓN AQUÍ: Usamos transaccionIdPasarela */}
-                <Typography variant="body2">{data.pagoPasarela.transaccionIdPasarela || 'N/A'}</Typography>
-              </Box>
-              <Box display="flex" justifyContent="space-between">
-                <Typography variant="caption">Estado Pasarela:</Typography>
-                <Typography variant="body2" sx={{textTransform: 'capitalize', fontWeight: 'bold'}}>
-                    {data.pagoPasarela.estado}
+          <Box 
+            sx={{ 
+                bgcolor: 'background.paper', 
+                p: 3, 
+                borderRadius: 3, 
+                mb: 4, 
+                textAlign: 'left',
+                border: `1px dashed ${theme.palette.divider}`,
+                position: 'relative',
+                overflow: 'hidden'
+            }}
+          >
+            <Stack spacing={2}>
+              <Box display="flex" justifyContent="space-between" alignItems="center">
+                <Stack direction="row" spacing={1} alignItems="center" color="text.secondary">
+                    <ReceiptLong fontSize="small" />
+                    <Typography variant="body2" fontWeight={600}>Monto Total</Typography>
+                </Stack>
+                <Typography variant="h6" fontWeight={700} color="text.primary">
+                    ${Number(data.pagoPasarela.monto).toLocaleString('es-AR')}
                 </Typography>
+              </Box>
+
+              <Divider />
+
+              <Box display="flex" justifyContent="space-between">
+                <Typography variant="caption" color="text.secondary">Referencia MP:</Typography>
+                <Typography variant="caption" fontWeight={600} fontFamily="monospace">
+                    {data.pagoPasarela.transaccionIdPasarela || 'N/A'}
+                </Typography>
+              </Box>
+
+              <Box display="flex" justifyContent="space-between" alignItems="center">
+                <Typography variant="caption" color="text.secondary">Estado Pasarela:</Typography>
+                <Box 
+                    sx={{ 
+                        textTransform: 'uppercase', 
+                        fontWeight: 'bold', 
+                        fontSize: '0.7rem',
+                        bgcolor: alpha(themeColor.main, 0.1),
+                        color: themeColor.main,
+                        px: 1, py: 0.5, borderRadius: 1
+                    }}
+                >
+                    {data.pagoPasarela.estado}
+                </Box>
               </Box>
             </Stack>
           </Box>
         )}
 
-        <Stack direction="row" spacing={2} justifyContent="center">
-          <Button variant="outlined" onClick={() => navigate('/client/MiCuenta/MisTransacciones')}>
+        {/* ACCIONES */}
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="center">
+          <Button 
+            variant="outlined" 
+            size="large"
+            startIcon={<History />}
+            onClick={() => navigate('/client/MiCuenta/MisTransacciones')}
+            sx={{ 
+                borderRadius: 2,
+                color: 'text.secondary',
+                borderColor: theme.palette.divider
+            }}
+          >
             Ver Historial
           </Button>
-          <Button variant="contained" onClick={() => navigate('/')}>
+          <Button 
+            variant="contained" 
+            size="large"
+            startIcon={<Home />}
+            onClick={() => navigate('/')}
+            disableElevation
+            sx={{ 
+                borderRadius: 2,
+                bgcolor: themeColor.main,
+                '&:hover': { bgcolor: themeColor.dark }
+            }}
+          >
             Ir al Inicio
           </Button>
         </Stack>
-      </Paper>
+      </Card>
       
-      {/* Estilo keyframes para la animación simple */}
-      <style>
-        {`
-          @keyframes pulse {
-            0% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.6; transform: scale(0.95); }
-            100% { opacity: 1; transform: scale(1); }
-          }
-        `}
-      </style>
     </PageContainer>
   );
 };

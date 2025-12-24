@@ -58,14 +58,15 @@ import AdminUsuarios from './pages/Admin/Usuarios/AdminUsuarios';
 import AdminSuscripciones from './pages/Admin/Suscripciones/AdminSuscripciones';
 import AdminInversiones from './pages/Admin/Inversiones/AdminInversiones';
 import AdminCancelaciones from './pages/Admin/Suscripciones/AdminCancelaciones';
-import AdminPagos from './pages/Admin/Pagos/AdminPagos';
+import AdminPagos from './pages/Admin/Finanzas/Pagos/AdminPagos';
 import LotePagos from './pages/Admin/Lotes/LotePagos';
 import AdminPlantillas from './pages/Admin/Contrato/AdminPlantillas';
-import AdminTransacciones from './pages/Admin/Transacciones/AdminTransacciones';
+import AdminTransacciones from './pages/Admin/Finanzas/Transacciones/AdminTransacciones';
 import AdminContratosFirmados from './pages/Admin/Contrato/AdminContratosFirmados';
-import AdminResumenesCuenta from './pages/Admin/ResumenesCuenta/AdminResumenesCuenta';
+
 import Unauthorized from './pages/Auth/Unauthorized';
 import HistorialContratos from './pages/client/Contratos/Historialcontratos';
+import AdminResumenesCuenta from './pages/Admin/Finanzas/ResumenesCuenta/AdminResumenesCuenta';
 
 const queryClient = new QueryClient({
   defaultOptions: {

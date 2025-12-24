@@ -1,8 +1,10 @@
+// src/pages/Admin/Pagos/AdminPagos.tsx
+
 import React, { useState, useMemo } from 'react';
 import { 
   Box, Typography, Paper, TextField, MenuItem, 
   InputAdornment, Chip, IconButton, Tooltip, Stack, 
-  Alert, AlertTitle, LinearProgress, Avatar
+  Alert, AlertTitle, LinearProgress, Avatar, useTheme, alpha
 } from '@mui/material';
 import { 
   Search, Visibility, AttachMoney, TrendingDown, 
@@ -10,41 +12,69 @@ import {
 } from '@mui/icons-material';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
-import type { PagoDto } from '../../../types/dto/pago.dto';
+import type { PagoDto } from '../../../../types/dto/pago.dto';
 
 // --- COMPONENTES ---
-import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
-import { QueryHandler } from '../../../components/common/QueryHandler/QueryHandler';
+import { PageContainer } from '../../../../components/common/PageContainer/PageContainer';
+import { QueryHandler } from '../../../../components/common/QueryHandler/QueryHandler';
 import DetallePagoModal from './components/DetallePagoModal';
-import { PageHeader } from '../../../components/common/PageHeader/PageHeader';
+import { PageHeader } from '../../../../components/common/PageHeader/PageHeader';
+import { DataTable, type DataTableColumn } from '../../../../components/common/DataTable/DataTable';
 
-// 👇 Importamos DataTable
-import { DataTable, type DataTableColumn } from '../../../components/common/DataTable/DataTable';
-import UsuarioService from '../../../Services/usuario.service';
-import PagoService from '../../../Services/pago.service';
-import ProyectoService from '../../../Services/proyecto.service';
+// Servicios
+import UsuarioService from '../../../../Services/usuario.service';
+import PagoService from '../../../../Services/pago.service';
+import ProyectoService from '../../../../Services/proyecto.service';
 
-// ✅ 1. Importamos el hook
-import { useModal } from '../../../hooks/useModal';
+// Hooks
+import { useModal } from '../../../../hooks/useModal';
 
-// --- COMPONENTE KPI ---
-const StatCard: React.FC<{ title: string; value: string; sub?: string; color: string; icon: React.ReactNode }> = ({ title, value, sub, color, icon }) => (
-  <Paper elevation={0} sx={{ 
-    p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2, 
-    flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 2 
-  }}>
-    <Box sx={{ bgcolor: `${color}.light`, color: `${color}.main`, p: 1.5, borderRadius: '50%', display: 'flex' }}>
-      {icon}
-    </Box>
-    <Box>
-      <Typography variant="h5" fontWeight="bold" color="text.primary">{value}</Typography>
-      <Typography variant="body2" color="text.secondary" fontWeight={500}>{title}</Typography>
-      {sub && <Typography variant="caption" color={color + '.main'} fontWeight="bold">{sub}</Typography>}
-    </Box>
-  </Paper>
-);
+// --- COMPONENTE KPI (Estandarizado) ---
+const StatCard: React.FC<{ 
+  title: string; 
+  value: string; 
+  sub?: string; 
+  color: string; 
+  icon: React.ReactNode; 
+}> = ({ title, value, sub, color, icon }) => {
+  const theme = useTheme();
+  // Obtener color del theme de forma segura
+  const paletteColor = (theme.palette as any)[color] || theme.palette.primary;
+
+  return (
+    <Paper 
+      elevation={0} 
+      sx={{ 
+        p: 2, 
+        border: '1px solid', 
+        borderColor: 'divider', 
+        borderRadius: 2, 
+        flex: 1, 
+        minWidth: 0, 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: 2,
+        transition: 'all 0.2s ease',
+        '&:hover': {
+            borderColor: paletteColor.main,
+            transform: 'translateY(-2px)'
+        }
+      }}
+    >
+      <Box sx={{ bgcolor: alpha(paletteColor.main, 0.1), color: paletteColor.main, p: 1.5, borderRadius: '50%', display: 'flex' }}>
+        {icon}
+      </Box>
+      <Box>
+        <Typography variant="h5" fontWeight="bold" color="text.primary">{value}</Typography>
+        <Typography variant="body2" color="text.secondary" fontWeight={500}>{title}</Typography>
+        {sub && <Typography variant="caption" color={paletteColor.main} fontWeight="bold">{sub}</Typography>}
+      </Box>
+    </Paper>
+  );
+};
 
 const AdminPagos: React.FC = () => {
+  const theme = useTheme();
   const queryClient = useQueryClient();
 
   // --- ESTADOS DE FILTRO ---
@@ -53,9 +83,8 @@ const AdminPagos: React.FC = () => {
   const [dateStart, setDateStart] = useState('');
   const [dateEnd, setDateEnd] = useState('');
   
-  // ✅ 2. Hook useModal
+  // Hooks
   const detalleModal = useModal();
-  // Mantenemos el estado de DATOS separado de la visibilidad
   const [selectedPago, setSelectedPago] = useState<PagoDto | null>(null);
 
   // --- QUERIES ---
@@ -124,7 +153,7 @@ const AdminPagos: React.FC = () => {
     return { totalPendiente };
   }, [pagos]);
 
-  // Filtro Principal
+  // Filtro Principal (Memoized)
   const filteredPagos = useMemo(() => {
     return pagos.filter(pago => {
       const uName = getUserName(pago.id_usuario).toLowerCase();
@@ -158,7 +187,7 @@ const AdminPagos: React.FC = () => {
     queryClient.invalidateQueries({ queryKey: ['adminPagosMetrics'] });
   };
 
-  // ✅ 3. Handlers para el Modal
+  // Handlers Modal
   const handleVerDetalle = (pago: PagoDto) => {
     setSelectedPago(pago);
     detalleModal.open();
@@ -166,13 +195,14 @@ const AdminPagos: React.FC = () => {
 
   const handleCloseDetalle = () => {
     detalleModal.close();
-    setSelectedPago(null);
+    // Timeout para limpiar data suavemente
+    setTimeout(() => setSelectedPago(null), 300);
   };
 
   // ========================================================================
-  // ⚙️ DEFINICIÓN DE COLUMNAS PARA DATATABLE
+  // ⚙️ DEFINICIÓN DE COLUMNAS (Memoized)
   // ========================================================================
-  const columns: DataTableColumn<PagoDto>[] = [
+  const columns = useMemo<DataTableColumn<PagoDto>[]>(() => [
     { 
       id: 'id', 
       label: 'ID', 
@@ -185,7 +215,7 @@ const AdminPagos: React.FC = () => {
       minWidth: 200,
       render: (p) => (
         <Stack direction="row" spacing={1.5} alignItems="center">
-            <Avatar sx={{ width: 28, height: 28, bgcolor: 'primary.light', fontSize: 12 }}>
+            <Avatar sx={{ width: 28, height: 28, bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main', fontSize: 12 }}>
                 <PersonIcon fontSize="small" />
             </Avatar>
             <Typography variant="body2" fontWeight={600}>
@@ -199,19 +229,19 @@ const AdminPagos: React.FC = () => {
       label: 'Proyecto', 
       minWidth: 150,
       render: (p) => (
-        <Typography variant="body2">{getProjectName(p.id_proyecto)}</Typography>
+        <Typography variant="body2" fontWeight={500}>{getProjectName(p.id_proyecto)}</Typography>
       )
     },
     { 
       id: 'mes', 
       label: 'Cuota', 
-      render: (p) => <Typography variant="body2">Mes {p.mes}</Typography>
+      render: (p) => <Chip label={`Mes ${p.mes}`} size="small" variant="outlined" />
     },
     { 
       id: 'monto', 
       label: 'Monto', 
       render: (p) => (
-        <Typography variant="body2" fontWeight={600}>
+        <Typography variant="body2" fontWeight={700} color="primary.main" sx={{ fontFamily: 'monospace' }}>
             ${Number(p.monto).toLocaleString('es-AR')}
         </Typography>
       )
@@ -237,7 +267,8 @@ const AdminPagos: React.FC = () => {
                 p.estado_pago === 'vencido' ? 'error' : 
                 p.estado_pago === 'pendiente' ? 'warning' : 'default'
             } 
-            sx={{ textTransform: 'capitalize', fontWeight: 500 }}
+            variant={p.estado_pago === 'pagado' ? 'filled' : 'outlined'}
+            sx={{ textTransform: 'capitalize', fontWeight: 600 }}
         />
       )
     },
@@ -250,15 +281,15 @@ const AdminPagos: React.FC = () => {
             <IconButton 
                 size="small" 
                 color="primary" 
-                // ✅ Usar el handler
                 onClick={() => handleVerDetalle(p)}
+                sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) } }}
             >
-                <Visibility />
+                <Visibility fontSize="small" />
             </IconButton>
         </Tooltip>
       )
     }
-  ];
+  ], [theme, usuarios, proyectos]);
 
   return (
     <PageContainer maxWidth="xl">
@@ -270,13 +301,13 @@ const AdminPagos: React.FC = () => {
       {/* ========== 1. ALERTAS ========== */}
       <Stack spacing={2} mb={4}>
         {alerts.veryOverdue.length > 0 && (
-          <Alert severity="error" icon={<Warning />}>
-            <AlertTitle>Atención: Alta Morosidad</AlertTitle>
+          <Alert severity="error" icon={<Warning />} sx={{ borderRadius: 2 }}>
+            <AlertTitle sx={{ fontWeight: 700 }}>Atención: Alta Morosidad</AlertTitle>
             Hay <strong>{alerts.veryOverdue.length} pagos</strong> vencidos hace más de 30 días. Revise los filtros.
           </Alert>
         )}
         {alerts.dueSoon.length > 0 && (
-          <Alert severity="info" icon={<AccessTime />}>
+          <Alert severity="info" icon={<AccessTime />} sx={{ borderRadius: 2 }}>
             Hay <strong>{alerts.dueSoon.length} pagos</strong> próximos a vencer en los siguientes 7 días.
           </Alert>
         )}
@@ -313,19 +344,31 @@ const AdminPagos: React.FC = () => {
       </Box>
 
       {/* ========== 3. FILTROS ========== */}
-      <Paper sx={{ p: 2, mb: 3, borderRadius: 2 }} variant="outlined">
+      <Paper 
+        elevation={0} 
+        sx={{ 
+            p: 2, mb: 3, 
+            borderRadius: 2, 
+            border: '1px solid', borderColor: 'divider',
+            bgcolor: alpha(theme.palette.background.paper, 0.6)
+        }} 
+      >
         <Stack direction={{ xs: 'column', lg: 'row' }} spacing={2}>
           <TextField 
             placeholder="Buscar (Usuario, Proyecto, ID...)" size="small" 
             sx={{ flex: 2 }}
             value={searchTerm} 
             onChange={(e) => setSearchTerm(e.target.value)} 
-            InputProps={{ startAdornment: <InputAdornment position="start"><Search color="action"/></InputAdornment> }}
+            InputProps={{ 
+                startAdornment: <InputAdornment position="start"><Search color="action"/></InputAdornment>,
+                sx: { borderRadius: 2 }
+            }}
           />
           <TextField
             select label="Estado" size="small" sx={{ flex: 1 }}
             value={filterState} 
             onChange={(e) => setFilterState(e.target.value)} 
+            InputProps={{ sx: { borderRadius: 2 } }}
           >
             <MenuItem value="all">Todos</MenuItem>
             <MenuItem value="pendiente">Pendiente</MenuItem>
@@ -340,10 +383,12 @@ const AdminPagos: React.FC = () => {
             <TextField 
               type="date" size="small" fullWidth 
               value={dateStart} onChange={(e) => setDateStart(e.target.value)} 
+              InputProps={{ sx: { borderRadius: 2 } }}
             />
             <TextField 
               type="date" size="small" fullWidth 
               value={dateEnd} onChange={(e) => setDateEnd(e.target.value)} 
+              InputProps={{ sx: { borderRadius: 2 } }}
             />
           </Stack>
         </Stack>
@@ -363,8 +408,8 @@ const AdminPagos: React.FC = () => {
 
       {/* ========== MODAL CON USEMODAL ========== */}
       <DetallePagoModal 
-        open={detalleModal.isOpen} // ✅
-        onClose={handleCloseDetalle} // ✅
+        open={detalleModal.isOpen} 
+        onClose={handleCloseDetalle} 
         pago={selectedPago}
         userName={selectedPago ? getUserName(selectedPago.id_usuario) : ''}
         projectName={selectedPago ? getProjectName(selectedPago.id_proyecto) : ''}

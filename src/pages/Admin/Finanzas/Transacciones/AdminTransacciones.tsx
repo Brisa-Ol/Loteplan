@@ -1,8 +1,9 @@
 // src/pages/Admin/Transacciones/AdminTransacciones.tsx
+
 import React, { useState, useMemo } from 'react';
 import { 
   Box, Typography, Paper, Chip, IconButton, Tooltip, 
-  TextField, MenuItem, InputAdornment, Avatar, Stack
+  TextField, MenuItem, InputAdornment, Avatar, Stack, useTheme, alpha
 } from '@mui/material';
 import { 
   Search, Visibility, ErrorOutline, Bolt, Person 
@@ -11,18 +12,18 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
-import type { TransaccionDto } from '../../../types/dto/transaccion.dto';
-import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
-import { QueryHandler } from '../../../components/common/QueryHandler/QueryHandler';
-import { PageHeader } from '../../../components/common/PageHeader/PageHeader';
+import type { TransaccionDto } from '../../../../types/dto/transaccion.dto';
+import { PageContainer } from '../../../../components/common/PageContainer/PageContainer';
+import { QueryHandler } from '../../../../components/common/QueryHandler/QueryHandler';
+import { PageHeader } from '../../../../components/common/PageHeader/PageHeader';
 import ModalDetalleTransaccion from './modal/ModalDetalleTransaccion';
 
-// 👇 Import DataTable
-import { DataTable, type DataTableColumn } from '../../../components/common/DataTable/DataTable';
-import TransaccionService from '../../../Services/transaccion.service';
+// Import DataTable
+import { DataTable, type DataTableColumn } from '../../../../components/common/DataTable/DataTable';
+import TransaccionService from '../../../../Services/transaccion.service';
 
-// ✅ 1. Import Hook
-import { useModal } from '../../../hooks/useModal';
+// Import Hook
+import { useModal } from '../../../../hooks/useModal';
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -38,15 +39,15 @@ const getStatusColor = (status: string) => {
 };
 
 const AdminTransacciones: React.FC = () => {
+  const theme = useTheme();
   const queryClient = useQueryClient();
   
   // Filters State
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
 
-  // ✅ 2. Use hook for Modal visibility
+  // Modal Hooks
   const detailModal = useModal();
-  // We keep this state to store DATA, not visibility
   const [selectedTransaccion, setSelectedTransaccion] = useState<TransaccionDto | null>(null);
 
   // --- QUERIES ---
@@ -65,7 +66,6 @@ const AdminTransacciones: React.FC = () => {
     onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ['adminTransacciones'] });
       alert(`✅ Éxito: ${response.data.mensaje}`);
-      // Close modal if it was open with this transaction
       if (detailModal.isOpen) {
         handleCloseModal();
       }
@@ -97,14 +97,12 @@ const AdminTransacciones: React.FC = () => {
   }, [transacciones, searchTerm, filterStatus]);
 
   // --- HANDLERS ---
-
   const handleForceConfirm = (id: number) => {
     if (window.confirm(`⚠️ ¿Forzar confirmación de transacción #${id}?`)) {
       confirmMutation.mutate(id);
     }
   };
 
-  // ✅ 3. Updated Handlers for Modal
   const handleViewDetails = (row: TransaccionDto) => {
     setSelectedTransaccion(row);
     detailModal.open();
@@ -112,13 +110,13 @@ const AdminTransacciones: React.FC = () => {
 
   const handleCloseModal = () => {
     detailModal.close();
-    setSelectedTransaccion(null);
+    setTimeout(() => setSelectedTransaccion(null), 300);
   };
 
   // ========================================================================
   // ⚙️ COLUMNS DEFINITION
   // ========================================================================
-  const columns: DataTableColumn<TransaccionDto>[] = [
+  const columns = useMemo<DataTableColumn<TransaccionDto>[]>(() => [
     {
       id: 'id',
       label: 'ID',
@@ -128,10 +126,10 @@ const AdminTransacciones: React.FC = () => {
     {
       id: 'usuario',
       label: 'Usuario',
-      minWidth: 200,
+      minWidth: 220,
       render: (row) => (
         <Stack direction="row" alignItems="center" spacing={1.5}>
-            <Avatar sx={{ width: 28, height: 28, fontSize: '0.8rem', bgcolor: 'primary.main' }}>
+            <Avatar sx={{ width: 28, height: 28, fontSize: '0.8rem', bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}>
                 {row.usuario?.nombre?.[0]?.toUpperCase() || <Person fontSize="small" />}
             </Avatar>
             <Box>
@@ -173,7 +171,7 @@ const AdminTransacciones: React.FC = () => {
       id: 'monto',
       label: 'Monto',
       render: (row) => (
-        <Typography fontWeight="bold" color="success.main">
+        <Typography fontWeight={700} color="success.main" sx={{ fontFamily: 'monospace' }}>
             ${Number(row.monto).toLocaleString()}
         </Typography>
       )
@@ -187,7 +185,8 @@ const AdminTransacciones: React.FC = () => {
                 label={row.estado_transaccion} 
                 color={getStatusColor(row.estado_transaccion) as any} 
                 size="small" 
-                sx={{ textTransform: 'capitalize' }}
+                variant={row.estado_transaccion === 'pagado' ? 'filled' : 'outlined'}
+                sx={{ textTransform: 'capitalize', fontWeight: 600 }}
             />
             {row.error_detalle && (
                 <Tooltip title={row.error_detalle}>
@@ -201,7 +200,7 @@ const AdminTransacciones: React.FC = () => {
       id: 'fecha',
       label: 'Fecha',
       render: (row) => (
-        <Typography variant="caption">
+        <Typography variant="caption" color="text.secondary">
             {row.fecha_transaccion ? format(new Date(row.fecha_transaccion), 'dd/MM HH:mm', { locale: es }) : '-'}
         </Typography>
       )
@@ -214,10 +213,9 @@ const AdminTransacciones: React.FC = () => {
         <Stack direction="row" spacing={1} justifyContent="flex-end">
             <Tooltip title="Ver Detalles">
                 <IconButton 
-                    color="primary" 
-                    // ✅ Use new handler
-                    onClick={() => handleViewDetails(row)} 
                     size="small"
+                    onClick={() => handleViewDetails(row)} 
+                    sx={{ color: 'primary.main', bgcolor: alpha(theme.palette.primary.main, 0.1), '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) } }}
                 >
                     <Visibility fontSize="small" />
                 </IconButton>
@@ -225,7 +223,11 @@ const AdminTransacciones: React.FC = () => {
 
             {(row.estado_transaccion === 'pendiente' || row.estado_transaccion === 'fallido') && (
                 <Tooltip title="Forzar Confirmación">
-                    <IconButton color="warning" onClick={() => handleForceConfirm(row.id)} size="small">
+                    <IconButton 
+                        size="small"
+                        onClick={() => handleForceConfirm(row.id)} 
+                        sx={{ color: 'warning.main', bgcolor: alpha(theme.palette.warning.main, 0.1), '&:hover': { bgcolor: alpha(theme.palette.warning.main, 0.2) } }}
+                    >
                         <Bolt fontSize="small" />
                     </IconButton>
                 </Tooltip>
@@ -233,7 +235,7 @@ const AdminTransacciones: React.FC = () => {
         </Stack>
       )
     }
-  ];
+  ], [theme]);
 
   return (
     <PageContainer maxWidth="xl">
@@ -243,18 +245,31 @@ const AdminTransacciones: React.FC = () => {
       />
 
       {/* Toolbar */}
-      <Paper sx={{ p: 2, mb: 3, display: 'flex', gap: 2, alignItems: 'center' }} elevation={0} variant="outlined">
+      <Paper 
+        elevation={0} 
+        sx={{ 
+            p: 2, mb: 3, 
+            display: 'flex', gap: 2, alignItems: 'center',
+            borderRadius: 2, 
+            border: '1px solid', borderColor: 'divider',
+            bgcolor: alpha(theme.palette.background.paper, 0.6)
+        }} 
+      >
         <TextField 
           placeholder="Buscar por Usuario, Proyecto, ID o Pasarela..." 
           size="small" 
           sx={{ flexGrow: 1 }}
           value={searchTerm} 
           onChange={(e) => setSearchTerm(e.target.value)}
-          InputProps={{ startAdornment: <InputAdornment position="start"><Search color="action" /></InputAdornment> }}
+          InputProps={{ 
+              startAdornment: <InputAdornment position="start"><Search color="action" /></InputAdornment>,
+              sx: { borderRadius: 2 }
+          }}
         />
         <TextField
           select label="Estado" size="small" value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)} sx={{ minWidth: 150 }}
+          onChange={(e) => setFilterStatus(e.target.value)} sx={{ minWidth: 180 }}
+          InputProps={{ sx: { borderRadius: 2 } }}
         >
           <MenuItem value="all">Todos</MenuItem>
           <MenuItem value="pagado">Pagados</MenuItem>
@@ -274,7 +289,7 @@ const AdminTransacciones: React.FC = () => {
         />
       </QueryHandler>
 
-      {/* ✅ Modal Controlled by Hook */}
+      {/* Modal */}
       <ModalDetalleTransaccion 
         open={detailModal.isOpen}
         transaccion={selectedTransaccion}

@@ -1,9 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import {
   Box, Typography, Button, Stack, TextField, Alert, Snackbar,
-  Divider, Avatar, Chip, Card, CardContent, alpha, useTheme, AlertTitle
+  Divider, Avatar, Chip, Card, CardContent, alpha, useTheme, AlertTitle, Grid
 } from '@mui/material';
-// ... tus imports de iconos (EditIcon, DeleteIcon, etc.)
 import { 
   Edit as EditIcon, 
   DeleteForever as DeleteIcon,
@@ -18,7 +17,8 @@ import {
   Email,
   AccountCircle,
   MoneyOff, 
-  Description 
+  Description,
+  CameraAlt
 } from '@mui/icons-material';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
@@ -33,7 +33,7 @@ import SuscripcionService from '../../../Services/suscripcion.service';
 import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
 import type { UpdateUserMeDto } from '../../../types/dto/usuario.dto';
 
-// 🟢 1. Importamos el Hook de Confirmación
+// Hook de Confirmación
 import { useConfirmDialog } from '../../../hooks/useConfirmDialog';
 
 // Componentes
@@ -45,7 +45,7 @@ const Perfil: React.FC = () => {
   const navigate = useNavigate();
   const theme = useTheme();
   
-  // 🟢 2. Instanciamos el Hook (reemplaza a useModal)
+  // Hook de Confirmación
   const confirmController = useConfirmDialog();
 
   // Estados UI y Formulario
@@ -117,7 +117,6 @@ const Perfil: React.FC = () => {
     }
   };
 
-  // 🟢 3. Handler para abrir el diálogo usando el hook
   const handleDeleteClick = () => {
     confirmController.confirm('delete_account');
   };
@@ -126,34 +125,95 @@ const Perfil: React.FC = () => {
     <PageContainer maxWidth="md">
       <Stack spacing={4}>
         
-        {/* ... (HEADER, DATOS PERSONALES, KYC, SEGURIDAD - IGUAL QUE ANTES) ... */}
-        {/* Aquí va todo el código de las secciones anteriores, no cambia nada visualmente */}
-        
-        {/* HEADER CARD */}
-        <Card elevation={0} sx={{ border: `1px solid ${theme.palette.secondary.dark}`, overflow: 'visible', mt: 4 }}>
-           {/* ... contenido del header ... */}
-           {/* Para ahorrar espacio aquí, asumo que mantienes el código del header que te pasé antes */}
-           <Box sx={{ height: 120, background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`, borderRadius: '12px 12px 0 0' }} />
+        {/* === HEADER PROFILE === */}
+        <Card 
+            elevation={0} 
+            sx={{ 
+                border: `1px solid ${theme.palette.divider}`, 
+                overflow: 'visible', 
+                mt: 4,
+                borderRadius: 4
+            }}
+        >
+           <Box 
+                sx={{ 
+                    height: 140, 
+                    background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`, 
+                    borderRadius: '16px 16px 0 0',
+                    position: 'relative'
+                }} 
+           />
            <CardContent sx={{ pt: 0, pb: 4, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-             <Avatar sx={{ width: 100, height: 100, mt: -6, mb: 2, bgcolor: 'background.default', color: 'primary.main', fontSize: '2.5rem', border: `4px solid ${theme.palette.background.default}`, boxShadow: 2 }}>{user?.nombre?.charAt(0).toUpperCase()}</Avatar>
-             <Typography variant="h4" fontWeight={800} color="text.primary">{user?.nombre} {user?.apellido}</Typography>
-             <Typography variant="body1" color="text.secondary" gutterBottom>@{user?.nombre_usuario}</Typography>
-             <Stack direction="row" spacing={1} mt={1}>
-                <Chip label={user?.rol === 'admin' ? 'Administrador' : 'Cliente'} color="primary" size="small" variant="outlined" sx={{ fontWeight: 700, bgcolor: alpha(theme.palette.primary.main, 0.05) }} />
-                {user?.confirmado_email && <Chip icon={<VerifiedUser fontSize="small" />} label="Email Verificado" color="success" size="small" variant="outlined" sx={{ fontWeight: 700, bgcolor: alpha(theme.palette.success.main, 0.05) }} />}
+             <Box sx={{ position: 'relative', mt: -7, mb: 2 }}>
+                <Avatar 
+                    sx={{ 
+                        width: 120, height: 120, 
+                        bgcolor: 'background.paper', 
+                        color: 'primary.main', 
+                        fontSize: '3rem', 
+                        border: `4px solid ${theme.palette.background.paper}`, 
+                        boxShadow: theme.shadows[3] 
+                    }}
+                >
+                    {user?.nombre?.charAt(0).toUpperCase()}
+                </Avatar>
+                {/* Botón flotante para editar foto (simulado) */}
+                <Box 
+                    sx={{
+                        position: 'absolute', bottom: 0, right: 0,
+                        bgcolor: 'background.paper', borderRadius: '50%',
+                        border: `1px solid ${theme.palette.divider}`,
+                        p: 0.5, cursor: 'pointer',
+                        '&:hover': { bgcolor: 'action.hover' }
+                    }}
+                >
+                    <CameraAlt color="action" fontSize="small" />
+                </Box>
+             </Box>
+             
+             <Typography variant="h4" fontWeight={800} color="text.primary" textAlign="center">
+                {user?.nombre} {user?.apellido}
+             </Typography>
+             <Typography variant="body1" color="text.secondary" gutterBottom textAlign="center">
+                @{user?.nombre_usuario}
+             </Typography>
+             
+             <Stack direction="row" spacing={1} mt={1} flexWrap="wrap" justifyContent="center" gap={1}>
+                <Chip 
+                    label={user?.rol === 'admin' ? 'Administrador' : 'Cliente'} 
+                    color="primary" 
+                    size="small" 
+                    variant="filled" // Filled para destacar rol principal
+                    sx={{ fontWeight: 700 }} 
+                />
+                {user?.confirmado_email && (
+                    <Chip 
+                        icon={<VerifiedUser sx={{ fontSize: '16px !important' }} />} 
+                        label="Verificado" 
+                        color="success" 
+                        size="small" 
+                        variant="outlined" // Outlined para estado secundario
+                        sx={{ 
+                            fontWeight: 700, 
+                            bgcolor: alpha(theme.palette.success.main, 0.05),
+                            borderColor: alpha(theme.palette.success.main, 0.3)
+                        }} 
+                    />
+                )}
              </Stack>
            </CardContent>
         </Card>
 
-        {/* DATOS PERSONALES */}
-        <Card elevation={0} sx={{ border: `1px solid ${theme.palette.secondary.dark}` }}>
+        {/* === DATOS PERSONALES === */}
+        <Card elevation={0} sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 3 }}>
            <CardContent sx={{ p: 4 }}>
-             {/* ... formulario formik ... */}
              <form onSubmit={formik.handleSubmit}>
                {/* Header form */}
                <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
                  <Stack direction="row" spacing={2} alignItems="center">
-                    <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}><Person /></Avatar>
+                    <Avatar variant="rounded" sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}>
+                        <Person />
+                    </Avatar>
                     <Typography variant="h6" fontWeight={700}>Datos Personales</Typography>
                  </Stack>
                  {!isEditing ? (
@@ -165,116 +225,246 @@ const Perfil: React.FC = () => {
                    </Stack>
                  )}
                </Box>
-               <Divider sx={{ mb: 3 }} />
-               {/* Inputs */}
-               <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 3 }}>
-                 <TextField fullWidth label="Nombre" name="nombre" value={formik.values.nombre} onChange={formik.handleChange} disabled={!isEditing} variant="outlined" InputProps={{ readOnly: !isEditing }} />
-                 <TextField fullWidth label="Apellido" name="apellido" value={formik.values.apellido} onChange={formik.handleChange} disabled={!isEditing} variant="outlined" InputProps={{ readOnly: !isEditing }} />
-                 <Box sx={{ gridColumn: '1 / -1' }}>
-                    <TextField fullWidth label="DNI" value={user?.dni || ''} disabled sx={{ bgcolor: 'action.hover', borderRadius: 1 }} />
+               
+               <Divider sx={{ mb: 4 }} />
+               
+               {serverError && (
+                   <Alert severity="error" sx={{ mb: 3 }}>{serverError}</Alert>
+               )}
+
+               {/* Inputs con Grid CSS */}
+               <Box display="grid" gridTemplateColumns={{ xs: '1fr', md: '1fr 1fr' }} gap={3}>
+                 <TextField 
+                    fullWidth label="Nombre" name="nombre" 
+                    value={formik.values.nombre} onChange={formik.handleChange} 
+                    disabled={!isEditing} 
+                    variant="outlined" // O "filled" si prefieres ese estilo en inputs
+                 />
+                 <TextField 
+                    fullWidth label="Apellido" name="apellido" 
+                    value={formik.values.apellido} onChange={formik.handleChange} 
+                    disabled={!isEditing} 
+                 />
+                 
+                 {/* DNI full width */}
+                 <Box sx={{ gridColumn: { md: '1 / -1' } }}>
+                    <TextField 
+                        fullWidth label="Documento de Identidad (DNI)" 
+                        value={user?.dni || ''} disabled 
+                       
+                    />
                  </Box>
-                 <TextField fullWidth label="Usuario" name="nombre_usuario" value={formik.values.nombre_usuario} onChange={formik.handleChange} disabled={!isEditing} variant="outlined" InputProps={{ readOnly: !isEditing, startAdornment: <AccountCircle color="action" sx={{ mr: 1 }} /> }} />
-                 <TextField fullWidth label="Email" name="email" value={formik.values.email} onChange={formik.handleChange} disabled={!isEditing} variant="outlined" InputProps={{ readOnly: !isEditing, startAdornment: <Email color="action" sx={{ mr: 1 }} /> }} />
-                 <Box sx={{ gridColumn: '1 / -1' }}>
-                   <TextField fullWidth label="Teléfono" name="numero_telefono" value={formik.values.numero_telefono} onChange={formik.handleChange} disabled={!isEditing} variant="outlined" InputProps={{ readOnly: !isEditing, startAdornment: <Phone color="action" sx={{ mr: 1 }} /> }} />
+
+                 <TextField 
+                    fullWidth label="Usuario" name="nombre_usuario" 
+                    value={formik.values.nombre_usuario} onChange={formik.handleChange} 
+                    disabled={!isEditing} 
+                    InputProps={{ 
+                        startAdornment: <AccountCircle color="action" sx={{ mr: 1 }} /> 
+                    }} 
+                 />
+                 <TextField 
+                    fullWidth label="Email" name="email" 
+                    value={formik.values.email} onChange={formik.handleChange} 
+                    disabled={!isEditing} 
+                    InputProps={{ 
+                        startAdornment: <Email color="action" sx={{ mr: 1 }} /> 
+                    }} 
+                 />
+                 
+                 <Box sx={{ gridColumn: { md: '1 / -1' } }}>
+                   <TextField 
+                        fullWidth label="Teléfono" name="numero_telefono" 
+                        value={formik.values.numero_telefono} onChange={formik.handleChange} 
+                        disabled={!isEditing} 
+                        InputProps={{ 
+                            startAdornment: <Phone color="action" sx={{ mr: 1 }} /> 
+                        }} 
+                    />
                  </Box>
                </Box>
              </form>
            </CardContent>
         </Card>
 
-        {/* KYC */}
-        <Card elevation={0} sx={{ border: `1px solid ${theme.palette.secondary.dark}` }}>
+        {/* === KYC STATUS === */}
+        <Card elevation={0} sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 3 }}>
            <CardContent sx={{ p: 4 }}>
-             <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems="center" spacing={2}>
+             <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems="center" spacing={3}>
                <Stack direction="row" spacing={2} alignItems="center" width="100%">
-                 <Avatar sx={{ bgcolor: kycStatus?.estado_verificacion === 'APROBADA' ? alpha(theme.palette.success.main, 0.1) : alpha(theme.palette.warning.main, 0.1), color: kycStatus?.estado_verificacion === 'APROBADA' ? 'success.main' : 'warning.main', width: 50, height: 50 }}><BadgeIcon fontSize="medium" /></Avatar>
+                 <Avatar 
+                    variant="rounded"
+                    sx={{ 
+                        bgcolor: kycStatus?.estado_verificacion === 'APROBADA' 
+                            ? alpha(theme.palette.success.main, 0.1) 
+                            : alpha(theme.palette.warning.main, 0.1), 
+                        color: kycStatus?.estado_verificacion === 'APROBADA' 
+                            ? 'success.main' 
+                            : 'warning.main', 
+                        width: 56, height: 56 
+                    }}
+                 >
+                    <BadgeIcon fontSize="large" />
+                 </Avatar>
                  <Box>
                    <Typography variant="h6" fontWeight={700}>Verificación de Identidad</Typography>
-                   <Stack direction="row" spacing={1} alignItems="center">
-                     <Typography variant="body2" color="text.secondary">Estado:</Typography>
-                     <Chip label={kycStatus?.estado_verificacion || 'NO INICIADO'} color={getKycColor(kycStatus?.estado_verificacion) as any} size="small" variant="outlined" sx={{ fontWeight: 700 }} />
+                   <Stack direction="row" spacing={1} alignItems="center" mt={0.5}>
+                     <Typography variant="body2" color="text.secondary">Estado actual:</Typography>
+                     <Chip 
+                        label={kycStatus?.estado_verificacion || 'NO INICIADO'} 
+                        color={getKycColor(kycStatus?.estado_verificacion) as any} 
+                        size="small" 
+                        variant="filled" // Filled para resaltar estado
+                        sx={{ fontWeight: 700 }} 
+                     />
                    </Stack>
                  </Box>
                </Stack>
+               
                {kycStatus?.estado_verificacion !== 'APROBADA' ? (
-                 <Button variant="contained" color="warning" onClick={() => navigate('/kyc')} sx={{ minWidth: 150 }}>{kycStatus?.estado_verificacion === 'PENDIENTE' ? 'Ver Estado' : 'Iniciar KYC'}</Button>
+                 <Button 
+                    variant="contained" 
+                    color="warning" 
+                    onClick={() => navigate('/kyc')} 
+                    sx={{ minWidth: 160, borderRadius: 2 }}
+                    disableElevation
+                 >
+                    {kycStatus?.estado_verificacion === 'PENDIENTE' ? 'Ver Estado' : 'Iniciar KYC'}
+                 </Button>
                ) : (
-                 <Box display="flex" alignItems="center" color="success.main" gap={1}><VerifiedUser /><Typography variant="body2" fontWeight={700}>Verificado</Typography></Box>
+                 <Box 
+                    display="flex" 
+                    alignItems="center" 
+                    gap={1} 
+                    sx={{ 
+                        color: 'success.main', 
+                        bgcolor: alpha(theme.palette.success.main, 0.1),
+                        px: 2, py: 1, borderRadius: 2
+                    }}
+                 >
+                    <VerifiedUser />
+                    <Typography variant="body2" fontWeight={700}>Identidad Verificada</Typography>
+                 </Box>
                )}
              </Stack>
            </CardContent>
         </Card>
 
-        {/* SEGURIDAD */}
-        <Card elevation={0} sx={{ border: `1px solid ${theme.palette.secondary.dark}` }}>
+        {/* === SEGURIDAD === */}
+        <Card elevation={0} sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 3 }}>
            <CardContent sx={{ p: 4 }}>
-             <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems="center" spacing={2}>
+             <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems="center" spacing={3}>
                <Stack direction="row" spacing={2} alignItems="center" width="100%">
-                 <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main', width: 50, height: 50 }}><SecurityIcon /></Avatar>
+                 <Avatar 
+                    variant="rounded"
+                    sx={{ 
+                        bgcolor: alpha(theme.palette.primary.main, 0.1), 
+                        color: 'primary.main', 
+                        width: 56, height: 56 
+                    }}
+                 >
+                    <SecurityIcon fontSize="large" />
+                 </Avatar>
                  <Box>
                    <Typography variant="h6" fontWeight={700}>Seguridad de la Cuenta</Typography>
-                   <Typography variant="body2" color="text.secondary">{user?.is_2fa_enabled ? 'Autenticación de dos factores (2FA) activada.' : 'Protege tu cuenta activando la verificación en dos pasos.'}</Typography>
+                   <Typography variant="body2" color="text.secondary">
+                    {user?.is_2fa_enabled 
+                        ? 'Autenticación de dos factores (2FA) activada.' 
+                        : 'Protege tu cuenta activando la verificación en dos pasos.'}
+                   </Typography>
                  </Box>
                </Stack>
-               <Button variant="outlined" color="primary" onClick={() => setShowSecuritySection(!showSecuritySection)} sx={{ minWidth: 120 }}>{showSecuritySection ? 'Ocultar' : 'Configurar'}</Button>
+               <Button 
+                    variant="outlined" 
+                    color="primary" 
+                    onClick={() => setShowSecuritySection(!showSecuritySection)} 
+                    sx={{ minWidth: 140, borderRadius: 2 }}
+                >
+                    {showSecuritySection ? 'Ocultar' : 'Configurar'}
+               </Button>
              </Stack>
-             {showSecuritySection && <Box mt={4}><Divider sx={{ mb: 4 }} /><SecuritySettings /></Box>}
+             
+             {showSecuritySection && (
+                <Box mt={4}>
+                    <Divider sx={{ mb: 4 }} />
+                    <SecuritySettings />
+                </Box>
+             )}
            </CardContent>
         </Card>
 
-        {/* === SECTION 4: DANGER ZONE (Actualizado con Hook) === */}
+        {/* === ZONA DE PELIGRO === */}
         <Card 
           elevation={0} 
           sx={{ 
             border: `1px solid ${deudaActiva ? theme.palette.warning.light : theme.palette.error.light}`, 
-            bgcolor: deudaActiva ? alpha(theme.palette.warning.main, 0.05) : alpha(theme.palette.error.main, 0.02) 
+            bgcolor: deudaActiva ? alpha(theme.palette.warning.main, 0.02) : alpha(theme.palette.error.main, 0.02),
+            borderRadius: 3
           }}
         >
           <CardContent sx={{ p: 4 }}>
             <Stack spacing={3}>
               <Stack direction="row" spacing={2} alignItems="center">
-                 <Avatar sx={{ bgcolor: alpha(theme.palette.error.main, 0.1), color: 'error.main' }}>
+                  <Avatar sx={{ bgcolor: alpha(theme.palette.error.main, 0.1), color: 'error.main' }}>
                     <Warning />
-                 </Avatar>
-                 <Box>
+                  </Avatar>
+                  <Box>
                     <Typography variant="h6" fontWeight={700} color="error.main">Zona de Peligro</Typography>
                     <Typography variant="body2" color="text.secondary">
                       Acciones irreversibles sobre tu cuenta.
                     </Typography>
-                 </Box>
+                  </Box>
               </Stack>
 
-              {/* ALERTAS (Deuda / Documentos) */}
               {deudaActiva ? (
-                <Alert severity="warning" icon={<MoneyOff fontSize="inherit" />} sx={{ border: `1px solid ${theme.palette.warning.main}` }}>
+                <Alert 
+                    severity="warning" 
+                    icon={<MoneyOff fontSize="inherit" />} 
+                    variant="outlined"
+                    sx={{ 
+                        border: `1px solid ${theme.palette.warning.main}`, 
+                        bgcolor: 'background.paper',
+                        borderRadius: 2
+                    }}
+                >
                   <AlertTitle fontWeight={700}>Acción Bloqueada: Deudas Pendientes</AlertTitle>
                   <Typography variant="body2" paragraph>
                     No puedes desactivar tu cuenta mientras tengas <strong>suscripciones con pagos pendientes</strong>. Debes regularizar tu situación primero.
                   </Typography>
-                  <Button size="small" color="warning" variant="outlined" onClick={() => navigate('/client/suscripciones')} sx={{ fontWeight: 700 }}>
+                  <Button size="small" color="warning" variant="contained" onClick={() => navigate('/client/suscripciones')} sx={{ fontWeight: 700, borderRadius: 2 }}>
                     Ir a pagar suscripciones
                   </Button>
                 </Alert>
               ) : (
-                <Alert severity="info" icon={<Description fontSize="inherit" />} sx={{ border: `1px solid ${theme.palette.info.main}`, bgcolor: alpha(theme.palette.info.main, 0.05) }}>
+                <Alert 
+                    severity="info" 
+                    icon={<Description fontSize="inherit" />} 
+                    variant="outlined"
+                    sx={{ 
+                        border: `1px solid ${theme.palette.info.main}`, 
+                        bgcolor: alpha(theme.palette.info.main, 0.05),
+                        borderRadius: 2
+                    }}
+                >
                   <AlertTitle fontWeight={700}>Importante: Respalda tu información</AlertTitle>
                   <Typography variant="body2" paragraph>
                     Al desactivar tu cuenta, <strong>perderás el acceso a la plataforma</strong> y no podrás descargar tus contratos firmados posteriormente. Te recomendamos descargarlos ahora.
                   </Typography>
-                  <Button size="small" color="info" variant="outlined" onClick={() => navigate('/client/contratos')} sx={{ fontWeight: 700 }}>
+                  <Button size="small" color="info" variant="contained" onClick={() => navigate('/client/contratos')} sx={{ fontWeight: 700, borderRadius: 2 }} disableElevation>
                     Ir a Mis Documentos
                   </Button>
                 </Alert>
               )}
 
-              <Box display="flex" justifyContent="flex-end" pt={2}>
+              <Box display="flex" justifyContent="flex-end" pt={1}>
                 <Button 
                   variant="contained" 
                   color="error" 
                   startIcon={<DeleteIcon />}
-                  onClick={handleDeleteClick} // 🟢 4. Usamos el nuevo handler que llama al hook
+                  onClick={handleDeleteClick}
                   disabled={deudaActiva || loadingDeudas}
+                  disableElevation
+                  sx={{ borderRadius: 2, fontWeight: 700 }}
                 >
                   Desactivar Cuenta
                 </Button>
@@ -286,13 +476,12 @@ const Perfil: React.FC = () => {
       </Stack>
 
       <Snackbar open={successOpen} autoHideDuration={3000} onClose={() => setSuccessOpen(false)}>
-        <Alert onClose={() => setSuccessOpen(false)} severity="success" variant="filled" sx={{ width: '100%' }}>
+        <Alert onClose={() => setSuccessOpen(false)} severity="success" variant="filled" sx={{ width: '100%', borderRadius: 2 }}>
           ¡Perfil actualizado correctamente!
         </Alert>  
       </Snackbar>
 
-      {/* 🟢 5. Modal conectado al hook */}
-      {/* Pasamos los textos del config del hook para mantener consistencia */}
+      {/* Modal conectado al hook */}
       <DeleteAccountModal 
         open={confirmController.open} 
         onClose={confirmController.close} 

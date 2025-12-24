@@ -4,11 +4,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   Box, Typography, Button, Stack, Chip, LinearProgress, 
   Paper, Divider, Tabs, Tab, Skeleton, Alert, Tooltip,
-  Backdrop, CircularProgress, useTheme, alpha 
+  Backdrop, CircularProgress, useTheme, alpha, Card, CardContent
 } from '@mui/material';
 import { 
   GppGood, Security, CheckCircle, MonetizationOn, Description, 
-  ArrowForward 
+  ArrowForward, InsertPhoto, ViewList, Info
 } from '@mui/icons-material';
 
 // --- SERVICIOS ---
@@ -37,13 +37,17 @@ import { VerContratoModal } from '../Contratos/components/VerContratoModal';
 import { ListaLotesProyecto } from '../Lotes/ListaLotesProyecto';
 import { PagoExitosoModal } from './components/PagoExitosoModal'; 
 import { VerContratoFirmadoModal } from './components/VerContratoFirmadoModal';
-import { SuscribirseModal } from './components/SuscribirseModal';       // ✅ Usamos el específico
-import { ConfirmarInversionModal } from './components/ConfirmarInversionModal'; // ✅ Usamos el específico
+import { SuscribirseModal } from './components/SuscribirseModal';
+import { ConfirmarInversionModal } from './components/ConfirmarInversionModal';
 
 // Helper de Tabs (Estilizado)
 interface TabPanelProps { children?: React.ReactNode; index: number; value: number; }
 function CustomTabPanel({ children, value, index, ...other }: TabPanelProps) {
-  return <div role="tabpanel" hidden={value !== index} {...other}>{value === index && <Box sx={{ py: 3 }}>{children}</Box>}</div>;
+  return (
+    <div role="tabpanel" hidden={value !== index} {...other} style={{ width: '100%' }}>
+        {value === index && <Box sx={{ py: 3, animation: 'fadeIn 0.5s ease' }}>{children}</Box>}
+    </div>
+  );
 }
 
 const DetalleProyecto: React.FC = () => {
@@ -52,7 +56,7 @@ const DetalleProyecto: React.FC = () => {
   const location = useLocation(); 
   const { user } = useAuth(); 
   const queryClient = useQueryClient();
-  const theme = useTheme(); // 🟢 Acceso al Theme Global
+  const theme = useTheme();
   
   // --- ESTADOS DE UI ---
   const [tabValue, setTabValue] = useState(0);
@@ -60,12 +64,12 @@ const DetalleProyecto: React.FC = () => {
   const [puedeFirmar, setPuedeFirmar] = useState(false);
   const [contratoFirmadoSeleccionado, setContratoFirmadoSeleccionado] = useState<ContratoFirmadoDto | null>(null);
   
-  // --- HOOKS DE MODALES (Uno para cada acción específica) ---
+  // --- HOOKS DE MODALES ---
   const firmaModal = useModal();
   const contratoModal = useModal();     
-  const firmadoModal = useModal();      
-  const suscribirseModal = useModal();  // ✅ Modal Específico Ahorrista
-  const inversionModal = useModal();    // ✅ Modal Específico Inversionista
+  const firmadoModal = useModal();       
+  const suscribirseModal = useModal();  
+  const inversionModal = useModal();    
   const pagoExitosoModal = useModal();
   const twoFAModal = useModal();
   
@@ -129,7 +133,7 @@ const DetalleProyecto: React.FC = () => {
     setPuedeFirmar(tienePermiso);
   }, [proyecto, user, misInversiones, misSuscripciones]);
 
-  // Polling de Mercado Pago (Al volver de la pasarela)
+  // Polling de Mercado Pago
   useEffect(() => {
     const query = new URLSearchParams(location.search);
     const status = query.get('status');
@@ -171,7 +175,7 @@ const DetalleProyecto: React.FC = () => {
   };
 
   // ==========================================
-  // 3. MUTACIONES (INVERSIÓN Y PAGO)
+  // 3. MUTACIONES
   // ==========================================
 
   const handleInversion = useMutation({
@@ -181,7 +185,6 @@ const DetalleProyecto: React.FC = () => {
       let initResponse: any;
       let modelType: 'pago' | 'inversion';
       
-      // 1. Crear registro en backend
       if (proyecto.tipo_inversion === 'mensual') {
          const res = await SuscripcionService.iniciar({ id_proyecto: proyecto.id });
          initResponse = res.data;
@@ -192,7 +195,6 @@ const DetalleProyecto: React.FC = () => {
          modelType = 'inversion';
       }
 
-      // 2. Obtener link de pago
       if (initResponse.redirectUrl) return initResponse;
 
       const idParaCheckout = initResponse.pagoId || initResponse.inversionId || initResponse.id;
@@ -205,20 +207,17 @@ const DetalleProyecto: React.FC = () => {
       suscribirseModal.close(); 
       inversionModal.close();
       
-      // Caso 2FA
       if (data.is2FARequired && data.transaccionId) {
         setPendingTransactionId(data.transaccionId);
         twoFAModal.open();
         return;
       } 
       
-      // Caso Redirect MP
       if (data.redirectUrl) {
         window.location.href = data.redirectUrl;
         return;
       } 
       
-      // Caso Exito Directo
       manejarRedireccionExito(data);
     },
     onError: (err: any) => {
@@ -274,7 +273,6 @@ const DetalleProyecto: React.FC = () => {
 
   const is2FAMissing = !!(user && !user.is_2fa_enabled);
 
-  // 🟢 Abre el modal ESPECÍFICO según el tipo de proyecto
   const handleMainAction = () => {
     if (!user) return navigate('/login', { state: { from: window.location.pathname }});
     
@@ -298,24 +296,61 @@ const DetalleProyecto: React.FC = () => {
   const porcentaje = (proyecto?.tipo_inversion === 'mensual' && proyecto?.obj_suscripciones > 0) ? (proyecto.suscripciones_actuales / proyecto.obj_suscripciones) * 100 : 0;
   const mostrarTabLotes = proyecto?.tipo_inversion === 'directo' || (proyecto?.lotes && proyecto.lotes.length > 0);
 
-  if (isLoading) return <PageContainer><Skeleton variant="rectangular" height={400} sx={{ borderRadius: 4 }} /><Box mt={2}><Skeleton width="60%" /></Box></PageContainer>;
+  if (isLoading) return (
+    <PageContainer>
+        <Skeleton variant="rectangular" height={400} sx={{ borderRadius: 4 }} />
+        <Box mt={4}><Skeleton width="60%" height={40} /><Skeleton width="40%" /></Box>
+    </PageContainer>
+  );
+  
   if (!proyecto) return <PageContainer><Alert severity="error">Proyecto no encontrado</Alert></PageContainer>;
 
   return (
     <PageContainer maxWidth="xl">
       <Backdrop sx={{ color: '#fff', zIndex: 9999 }} open={verificandoPago}>
-        <CircularProgress color="inherit" />
+        <Stack alignItems="center" spacing={2}>
+            <CircularProgress color="inherit" />
+            <Typography>Verificando pago...</Typography>
+        </Stack>
       </Backdrop>
 
       {/* --- HERO IMAGE (Premium) --- */}
-      <Box sx={{ position: 'relative', height: { xs: 300, md: 450 }, borderRadius: 4, overflow: 'hidden', mb: 4, boxShadow: theme.shadows[4] }}>
+      <Box 
+        sx={{ 
+            position: 'relative', 
+            height: { xs: 300, md: 450 }, 
+            borderRadius: 4, 
+            overflow: 'hidden', 
+            mb: 4, 
+            boxShadow: theme.shadows[6] 
+        }}
+      >
         <Box component="img" src={coverImage} sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-        <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.9), transparent)', p: { xs: 3, md: 5 }, color: 'white' }}>
+        <Box 
+            sx={{ 
+                position: 'absolute', bottom: 0, left: 0, right: 0, 
+                background: 'linear-gradient(to top, rgba(0,0,0,0.9), transparent)', 
+                p: { xs: 3, md: 5 }, 
+                color: 'white' 
+            }}
+        >
           <Stack direction="row" spacing={1} mb={2}>
-             <Chip label={proyecto.tipo_inversion === 'mensual' ? 'Ahorro' : 'Inversión Directa'} color="primary" sx={{ fontWeight: 700 }} />
-             <Chip label={proyecto.estado_proyecto} color={proyecto.estado_proyecto === 'En proceso' ? 'success' : 'default'} sx={{ fontWeight: 600, bgcolor: 'rgba(255,255,255,0.2)', color: 'white' }} />
+             <Chip 
+                label={proyecto.tipo_inversion === 'mensual' ? 'Plan de Ahorro' : 'Inversión Directa'} 
+                color="primary" 
+                sx={{ fontWeight: 700, borderRadius: 1 }} 
+             />
+             <Chip 
+                label={proyecto.estado_proyecto} 
+                sx={{ 
+                    fontWeight: 600, borderRadius: 1,
+                    bgcolor: 'rgba(255,255,255,0.2)', color: 'white', backdropFilter: 'blur(4px)'
+                }} 
+             />
           </Stack>
-          <Typography variant="h3" fontWeight={800} sx={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>{proyecto.nombre_proyecto}</Typography>
+          <Typography variant="h3" fontWeight={800} sx={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)', fontSize: { xs: '2rem', md: '3rem' } }}>
+            {proyecto.nombre_proyecto}
+          </Typography>
         </Box>
       </Box>
 
@@ -324,51 +359,84 @@ const DetalleProyecto: React.FC = () => {
         
         {/* COLUMNA IZQUIERDA: Tabs de Información */}
         <Box sx={{ flex: 1, minWidth: 0 }}> 
-          <Paper elevation={0} sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 3, overflow: 'hidden' }}>
+          <Card elevation={0} sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 3, overflow: 'hidden' }}>
               <Tabs 
                 value={tabValue} 
                 onChange={(_, v) => setTabValue(v)} 
-                sx={{ borderBottom: 1, borderColor: 'divider', bgcolor: 'background.default' }}
+                sx={{ borderBottom: 1, borderColor: 'divider', bgcolor: 'background.paper' }}
                 indicatorColor="primary"
                 textColor="primary"
+                variant="scrollable"
+                scrollButtons="auto"
               >
-                <Tab label="Descripción" sx={{ fontWeight: 600 }} />
-                <Tab label="Galería" sx={{ fontWeight: 600 }} />
-                <Tab label="Lotes Disponibles" disabled={!mostrarTabLotes} sx={{ fontWeight: 600 }} />
+                <Tab icon={<Info fontSize="small" />} iconPosition="start" label="Descripción" sx={{ fontWeight: 600 }} />
+                <Tab icon={<InsertPhoto fontSize="small" />} iconPosition="start" label="Galería" sx={{ fontWeight: 600 }} />
+                <Tab icon={<ViewList fontSize="small" />} iconPosition="start" label="Lotes Disponibles" disabled={!mostrarTabLotes} sx={{ fontWeight: 600 }} />
               </Tabs>
               
-              <Box p={3}>
+              <CardContent sx={{ p: { xs: 2, md: 4 } }}>
                   <CustomTabPanel value={tabValue} index={0}>
-                    <Typography paragraph sx={{ whiteSpace: 'pre-line', lineHeight: 1.8, color: 'text.secondary' }}>{proyecto.descripcion}</Typography>
+                    <Typography paragraph sx={{ whiteSpace: 'pre-line', lineHeight: 1.8, color: 'text.secondary', fontSize: '1rem' }}>
+                        {proyecto.descripcion}
+                    </Typography>
                   </CustomTabPanel>
+                  
                   <CustomTabPanel value={tabValue} index={1}>
-                      <Box display="grid" gridTemplateColumns="repeat(auto-fill, minmax(200px, 1fr))" gap={2}>
+                      <Box display="grid" gridTemplateColumns="repeat(auto-fill, minmax(240px, 1fr))" gap={2}>
                         {proyecto.imagenes?.map((img) => (
-                            <Box key={img.id} component="img" src={ImagenService.resolveImageUrl(img.url)} sx={{ width: '100%', borderRadius: 2, cursor: 'pointer', transition: 'transform 0.2s', '&:hover': { transform: 'scale(1.02)' } }} />
+                            <Box 
+                                key={img.id} 
+                                component="img" 
+                                src={ImagenService.resolveImageUrl(img.url)} 
+                                sx={{ 
+                                    width: '100%', aspectRatio: '16/9', objectFit: 'cover',
+                                    borderRadius: 2, cursor: 'pointer', 
+                                    transition: 'transform 0.2s', '&:hover': { transform: 'scale(1.02)' } 
+                                }} 
+                            />
                         ))}
                       </Box>
                   </CustomTabPanel>
-                  {mostrarTabLotes && <CustomTabPanel value={tabValue} index={2}><ListaLotesProyecto idProyecto={Number(id)} /></CustomTabPanel>}
-              </Box>
-          </Paper>
+                  
+                  {mostrarTabLotes && (
+                    <CustomTabPanel value={tabValue} index={2}>
+                        <ListaLotesProyecto idProyecto={Number(id)} />
+                    </CustomTabPanel>
+                  )}
+              </CardContent>
+          </Card>
         </Box>
 
         {/* COLUMNA DERECHA: Sidebar Sticky (Inversión) */}
         <Box sx={{ width: { xs: '100%', lg: 380 }, flexShrink: 0 }}>
-          <Paper elevation={0} sx={{ p: 4, borderRadius: 3, position: 'sticky', top: 100, border: `1px solid ${theme.palette.divider}` }}>
+          <Card 
+            elevation={0} 
+            sx={{ 
+                p: 3, 
+                borderRadius: 3, 
+                position: { lg: 'sticky' }, top: { lg: 100 }, 
+                border: `1px solid ${theme.palette.divider}`,
+                boxShadow: theme.shadows[2]
+            }}
+          >
             <Typography variant="h6" fontWeight="bold" gutterBottom>Resumen de Inversión</Typography>
             <Divider sx={{ my: 2 }} />
             
             <Stack spacing={3}>
                {/* Monto */}
-               <Box display="flex" justifyContent="space-between" alignItems="center">
-                  <Stack direction="row" spacing={1} alignItems="center" color="text.secondary">
-                      <MonetizationOn color="action" />
-                      <Typography variant="body2">Valor Total</Typography>
-                  </Stack>
-                  <Typography variant="h5" color="primary.main" fontWeight={800}>
-                      {proyecto.moneda} {Number(proyecto.monto_inversion).toLocaleString()}
-                  </Typography>
+               <Box 
+                 sx={{ 
+                    bgcolor: alpha(theme.palette.primary.main, 0.05), 
+                    p: 2, borderRadius: 2, border: `1px dashed ${alpha(theme.palette.primary.main, 0.2)}`
+                 }}
+               >
+                 <Stack direction="row" spacing={1} alignItems="center" color="text.secondary" mb={0.5}>
+                     <MonetizationOn color="primary" fontSize="small" />
+                     <Typography variant="body2" fontWeight={600}>Valor Total del Proyecto</Typography>
+                 </Stack>
+                 <Typography variant="h4" color="primary.main" fontWeight={800}>
+                     {proyecto.moneda} {Number(proyecto.monto_inversion).toLocaleString()}
+                 </Typography>
                </Box>
 
                {/* Barra de Progreso (Solo Suscripciones) */}
@@ -378,15 +446,23 @@ const DetalleProyecto: React.FC = () => {
                        <Typography variant="caption" fontWeight="bold" color="text.secondary">PROGRESO DE FONDEO</Typography>
                        <Typography variant="caption" fontWeight="bold" color="primary">{porcentaje.toFixed(0)}%</Typography>
                    </Box>
-                   <LinearProgress variant="determinate" value={porcentaje} sx={{ height: 8, borderRadius: 4, bgcolor: alpha(theme.palette.primary.main, 0.1) }} />
+                   <LinearProgress 
+                        variant="determinate" 
+                        value={porcentaje} 
+                        sx={{ 
+                            height: 10, borderRadius: 5, 
+                            bgcolor: alpha(theme.palette.primary.main, 0.1),
+                            '& .MuiLinearProgress-bar': { borderRadius: 5 }
+                        }} 
+                   />
                  </Box>
                )}
 
                {/* Alerta Seguridad */}
-               {is2FAMissing && (
+               {is2FAMissing && user && (
                 <Alert severity="warning" icon={<Security fontSize="inherit" />} sx={{ borderRadius: 2 }}>
                   <Typography variant="body2" fontWeight="bold">Seguridad Requerida</Typography>
-                  <Button size="small" color="warning" onClick={() => navigate('/client/MiCuenta/SecuritySettings')} sx={{ mt: 1, textTransform: 'none' }}>
+                  <Button size="small" color="warning" onClick={() => navigate('/client/MiCuenta/SecuritySettings')} sx={{ mt: 1, textTransform: 'none', fontWeight: 600 }}>
                       Configurar 2FA ahora
                   </Button>
                 </Alert>
@@ -394,16 +470,16 @@ const DetalleProyecto: React.FC = () => {
 
                {/* === BOTÓN PRINCIPAL DE ACCIÓN === */}
                {!yaFirmo && !puedeFirmar && (
-                 <Tooltip title={is2FAMissing ? "Activa 2FA para continuar" : ""}>
-                   <Box> {/* Wrapper para tooltip si button disabled */}
+                 <Tooltip title={is2FAMissing && user ? "Activa 2FA para continuar" : ""}>
+                   <Box> 
                     <Button 
                       variant="contained" 
                       size="large" 
                       fullWidth 
-                      disabled={handleInversion.isPending || is2FAMissing}
-                      onClick={handleMainAction} // 🟢 Abre modal específico
+                      disabled={handleInversion.isPending || (is2FAMissing && !!user)}
+                      onClick={handleMainAction} 
                       endIcon={!handleInversion.isPending && <ArrowForward />}
-                      sx={{ py: 1.5, fontSize: '1rem', fontWeight: 700, boxShadow: theme.shadows[4] }}
+                      sx={{ py: 1.5, fontSize: '1rem', fontWeight: 700, borderRadius: 2, boxShadow: theme.shadows[4] }}
                     >
                       {handleInversion.isPending ? 'Procesando...' : proyecto.tipo_inversion === 'mensual' ? 'Suscribirme Ahora' : 'Invertir Ahora'}
                     </Button>
@@ -413,12 +489,12 @@ const DetalleProyecto: React.FC = () => {
 
                {/* ZONA DE CONTRATOS (Si ya pagó) */}
                {user && proyecto.tipo_inversion === 'mensual' && (
-                 <>
+                 <Stack spacing={2}>
                    {yaFirmo ? (
                      <Button 
                        variant="contained" color="success" fullWidth startIcon={<CheckCircle />}
                        onClick={handleVerContratoFirmado}
-                       sx={{ fontWeight: 700 }}
+                       sx={{ fontWeight: 700, borderRadius: 2 }}
                      >
                        Ver Contrato Firmado
                      </Button>
@@ -426,7 +502,7 @@ const DetalleProyecto: React.FC = () => {
                      <Button 
                        variant="outlined" color="success" startIcon={<GppGood />} fullWidth 
                        onClick={handleClickFirmar} disabled={is2FAMissing}
-                       sx={{ borderWidth: 2, fontWeight: 700, '&:hover': { borderWidth: 2 } }}
+                       sx={{ borderWidth: 2, fontWeight: 700, borderRadius: 2, '&:hover': { borderWidth: 2 } }}
                      >
                        Firmar Contrato (Pendiente)
                      </Button>
@@ -437,14 +513,14 @@ const DetalleProyecto: React.FC = () => {
                    )}
 
                    {!yaFirmo && (
-                      <Button variant="text" fullWidth startIcon={<Description />} onClick={contratoModal.open} sx={{ color: 'text.secondary' }}>
+                      <Button variant="text" fullWidth startIcon={<Description />} onClick={contratoModal.open} sx={{ color: 'text.secondary', borderRadius: 2 }}>
                           Ver Modelo de Contrato
                       </Button>
                    )}
-                 </>
+                 </Stack>
                )}
             </Stack>
-          </Paper>
+          </Card>
         </Box>
       </Box>
 
@@ -456,35 +532,33 @@ const DetalleProyecto: React.FC = () => {
           <VerContratoModal {...contratoModal.modalProps} idProyecto={Number(id)} nombreProyecto={proyecto.nombre_proyecto} />
           
           <VerContratoFirmadoModal 
-             open={firmadoModal.isOpen}
-             onClose={() => { firmadoModal.close(); setTimeout(() => setContratoFirmadoSeleccionado(null), 300); }}
-             contrato={contratoFirmadoSeleccionado}
+              open={firmadoModal.isOpen}
+              onClose={() => { firmadoModal.close(); setTimeout(() => setContratoFirmadoSeleccionado(null), 300); }}
+              contrato={contratoFirmadoSeleccionado}
           />
           
-          {/* ✅ Modal Específico para Ahorristas */}
           <SuscribirseModal 
-             {...suscribirseModal.modalProps}
-             proyecto={proyecto}
-             isLoading={handleInversion.isPending}
-             onConfirm={() => handleInversion.mutate()}
+              {...suscribirseModal.modalProps}
+              proyecto={proyecto}
+              isLoading={handleInversion.isPending}
+              onConfirm={() => handleInversion.mutate()}
           />
 
-          {/* ✅ Modal Específico para Inversionistas */}
           <ConfirmarInversionModal
-             {...inversionModal.modalProps}
-             proyecto={proyecto}
-             isLoading={handleInversion.isPending}
-             onConfirm={() => handleInversion.mutate()}
+              {...inversionModal.modalProps}
+              proyecto={proyecto}
+              isLoading={handleInversion.isPending}
+              onConfirm={() => handleInversion.mutate()}
           />
           
           <TwoFactorAuthModal 
-             open={twoFAModal.isOpen}
-             onClose={() => { twoFAModal.close(); setError2FA(null); }}
-             onSubmit={(code) => confirmar2FAMutation.mutate(code)}
-             isLoading={confirmar2FAMutation.isPending}
-             error={error2FA}
-             title="Confirmar Transacción"
-             description="Ingresa el código de seguridad para autorizar el pago."
+              open={twoFAModal.isOpen} 
+              onClose={() => { twoFAModal.close(); setError2FA(null); }} 
+              onSubmit={(code) => confirmar2FAMutation.mutate(code)} 
+              isLoading={confirmar2FAMutation.isPending} 
+              error={error2FA}
+              title="Confirmar Transacción"
+              description="Ingresa el código de seguridad para autorizar el pago."
           />
         </>
       )}

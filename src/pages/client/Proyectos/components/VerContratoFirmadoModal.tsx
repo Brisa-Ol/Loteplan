@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions,
-  Button, Typography, Box, IconButton, Chip, Divider, useTheme, alpha
+  Button, Typography, Box, IconButton, Chip, useTheme, alpha
 } from '@mui/material';
 import { 
   Close as CloseIcon, 
@@ -39,14 +39,21 @@ export const VerContratoFirmadoModal: React.FC<Props> = ({
       onClose={onClose} 
       maxWidth="lg" 
       fullWidth 
-      PaperProps={{ sx: { height: '85vh', borderRadius: 3, overflow: 'hidden' } }}
+      PaperProps={{ 
+          sx: { 
+              height: '85vh', 
+              borderRadius: 3, 
+              overflow: 'hidden',
+              boxShadow: theme.shadows[10] 
+          } 
+      }}
     >
       {/* HEADER */}
       <DialogTitle 
         display="flex" 
         justifyContent="space-between" 
         alignItems="center"
-        sx={{ borderBottom: `1px solid ${theme.palette.divider}`, py: 2 }}
+        sx={{ borderBottom: `1px solid ${theme.palette.divider}`, py: 2, bgcolor: 'background.paper' }}
       >
         <Box display="flex" gap={1.5} alignItems="center" overflow="hidden">
             <Box sx={{ p: 0.5, borderRadius: '50%', bgcolor: alpha(theme.palette.success.main, 0.1), display: 'flex' }}>
@@ -65,7 +72,7 @@ export const VerContratoFirmadoModal: React.FC<Props> = ({
         <Box display="flex" flexDirection={{ xs: 'column', md: 'row' }} flex={1} overflow="hidden">
           
           {/* COLUMNA IZQUIERDA: VISOR PDF */}
-          <Box flex={1} p={0} overflow="hidden" display="flex" flexDirection="column" bgcolor="grey.100">
+          <Box flex={1} p={0} overflow="hidden" display="flex" flexDirection="column" bgcolor="action.hover">
             {pdfUrl ? (
                 <PDFViewerMejorado
                   pdfUrl={pdfUrl}
@@ -90,6 +97,7 @@ export const VerContratoFirmadoModal: React.FC<Props> = ({
             flexDirection="column"
             gap={3}
             overflow="auto"
+            sx={{ boxShadow: { xs: 'none', md: `-4px 0 16px ${alpha(theme.palette.common.black, 0.05)}` } }}
           >
             <Typography variant="subtitle2" color="primary.main" fontWeight="800" sx={{ letterSpacing: 1, textTransform: 'uppercase' }}>
               Auditoría de Firma
@@ -101,7 +109,7 @@ export const VerContratoFirmadoModal: React.FC<Props> = ({
                 label={contrato.estado_firma} 
                 color={contrato.estado_firma === 'FIRMADO' ? 'success' : 'error'} 
                 size="small" 
-                variant="filled" // Mantenemos filled para impacto
+                variant="filled" // Mantenemos filled para impacto visual
                 sx={{ fontWeight: 'bold', borderRadius: 1 }}
               />
             </Box>
@@ -121,7 +129,7 @@ export const VerContratoFirmadoModal: React.FC<Props> = ({
                   HASH DE INTEGRIDAD (SHA-256)
               </Typography>
               <Box 
-                bgcolor="action.hover" // Usamos variable del theme
+                bgcolor={alpha(theme.palette.action.active, 0.05)}
                 p={1.5} 
                 borderRadius={2} 
                 border={`1px solid ${theme.palette.divider}`}
@@ -141,7 +149,8 @@ export const VerContratoFirmadoModal: React.FC<Props> = ({
                 startIcon={<DownloadIcon />} 
                 onClick={handleDownload}
                 size="large"
-                sx={{ fontWeight: 700 }}
+                disableElevation
+                sx={{ fontWeight: 700, borderRadius: 2 }}
               >
                 Descargar Copia
               </Button>
@@ -150,8 +159,8 @@ export const VerContratoFirmadoModal: React.FC<Props> = ({
         </Box>
       </DialogContent>
 
-      <DialogActions sx={{ p: 1.5, borderTop: `1px solid ${theme.palette.divider}` }}>
-        <Button onClick={onClose} color="inherit">
+      <DialogActions sx={{ p: 1.5, borderTop: `1px solid ${theme.palette.divider}`, bgcolor: 'background.paper' }}>
+        <Button onClick={onClose} color="inherit" sx={{ fontWeight: 600 }}>
           Cerrar
         </Button>
       </DialogActions>

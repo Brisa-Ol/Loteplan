@@ -1,3 +1,5 @@
+// src/components/layout/ClientNavbar/ClientNavbar.tsx
+
 import React, { useState } from 'react';
 import { useNavigate, useLocation, Link as RouterLink, Outlet } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -6,7 +8,7 @@ import { useQuery } from '@tanstack/react-query';
 import {
   AppBar, Toolbar, Box, Button, IconButton, Drawer, List, ListItem,
   ListItemButton, ListItemText, ListItemIcon, Typography, Avatar,
-  Menu, MenuItem, Divider, Badge, useMediaQuery, useTheme, Container
+  Menu, MenuItem, Divider, Badge, useMediaQuery, useTheme, Container, alpha
 } from '@mui/material';
 import {
   Menu as MenuIcon, Close, Notifications, ExpandMore, CheckCircle
@@ -17,8 +19,9 @@ import { useAuth } from '../../../context/AuthContext';
 import { useNavbarMenu, NAVBAR_HEIGHT, type NavItem } from '../../../hooks/useNavbarMenu';
 
 // Components & Services
-import { ConfirmDialog } from '../../../components/common/ConfirmDialog/ConfirmDialog'; // 👈 Componente genérico correcto
+import { ConfirmDialog } from '../../../components/common/ConfirmDialog/ConfirmDialog'; 
 import MensajeService from '../../../Services/mensaje.service';
+import Footer from '../../layout/Footer/Footer'; // 👈 1. IMPORTAR FOOTER
 
 // =================================================================
 // SUB-COMPONENTE: NAV DROPDOWN (Escritorio)
@@ -26,6 +29,7 @@ import MensajeService from '../../../Services/mensaje.service';
 const NavDropdown: React.FC<{ item: NavItem }> = ({ item }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const theme = useTheme();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
 
@@ -48,8 +52,10 @@ const NavDropdown: React.FC<{ item: NavItem }> = ({ item }) => {
         endIcon={<ExpandMore />}
         sx={{
           color: isChildActive ? 'primary.main' : 'text.secondary',
-          fontWeight: isChildActive ? 600 : 400,
-          '&:hover': { color: 'primary.main', bgcolor: 'transparent' }
+          fontWeight: isChildActive ? 700 : 500,
+          textTransform: 'none',
+          fontSize: '0.95rem',
+          '&:hover': { color: 'primary.main', bgcolor: alpha(theme.palette.primary.main, 0.05) }
         }}
       >
         {item.label}
@@ -58,20 +64,33 @@ const NavDropdown: React.FC<{ item: NavItem }> = ({ item }) => {
         anchorEl={anchorEl}
         open={open}
         onClose={handleClose}
-        PaperProps={{ elevation: 2, sx: { mt: 1, minWidth: 180 } }}
+        PaperProps={{ 
+            elevation: 3, 
+            sx: { mt: 1.5, minWidth: 180, borderRadius: 2, overflow: 'hidden' } 
+        }}
       >
         {item.submenu?.map((sub, idx) => {
           if (sub.isDivider) return <Divider key={`div-${idx}`} />;
           
           const Icon = sub.icon;
+          const isSelected = sub.path ? location.pathname === sub.path : false;
+
           return (
             <MenuItem
               key={`item-${idx}`}
               onClick={() => handleItemClick(sub.path, sub.action)}
-              selected={sub.path ? location.pathname === sub.path : false}
+              selected={isSelected}
+              sx={{
+                py: 1.5,
+                color: isSelected ? 'primary.main' : 'text.primary',
+                '&.Mui-selected': { bgcolor: alpha(theme.palette.primary.main, 0.08) },
+                '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.04) }
+              }}
             >
-              {Icon && <ListItemIcon><Icon fontSize="small" /></ListItemIcon>}
-              {sub.label}
+              {Icon && <ListItemIcon sx={{ color: isSelected ? 'primary.main' : 'inherit' }}><Icon fontSize="small" /></ListItemIcon>}
+              <Typography variant="body2" fontWeight={isSelected ? 600 : 400}>
+                {sub.label}
+              </Typography>
             </MenuItem>
           );
         })}
@@ -90,7 +109,6 @@ const ClientNavbar: React.FC = () => {
   const location = useLocation();
   
   const { user, isAuthenticated } = useAuth();
-  // ✅ Obtenemos logoutDialogProps
   const { config: { navItems, userNavItems, actionButtons }, logoutDialogProps } = useNavbarMenu();
 
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -117,9 +135,9 @@ const ClientNavbar: React.FC = () => {
     return path === '/' ? location.pathname === '/' : location.pathname.startsWith(path);
   };
 
-  // --- RENDERIZADO DEL DRAWER MOBILE ---
+  // --- DRAWER MOBILE ---
   const mobileDrawer = (
-    <Box sx={{ width: 280, height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <Box sx={{ width: 280, height: '100%', display: 'flex', flexDirection: 'column', bgcolor: 'background.paper' }}>
       <Box sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid', borderColor: 'divider' }}>
         <Box component="img" src="/navbar/nav.png" alt="Logo" sx={{ height: 32 }} />
         <IconButton onClick={() => setMobileOpen(false)}>
@@ -128,11 +146,11 @@ const ClientNavbar: React.FC = () => {
       </Box>
 
       {isAuthenticated && user && (
-        <Box sx={{ p: 2, bgcolor: 'action.hover' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <Avatar sx={{ bgcolor: 'primary.main' }}>{user.nombre?.charAt(0)}</Avatar>
+        <Box sx={{ p: 3, bgcolor: alpha(theme.palette.primary.main, 0.05) }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Avatar sx={{ bgcolor: 'primary.main', fontWeight: 700 }}>{user.nombre?.charAt(0)}</Avatar>
             <Box>
-              <Typography variant="subtitle2" fontWeight={600} noWrap>
+              <Typography variant="subtitle1" fontWeight={700} noWrap>
                 {user.nombre} {user.apellido}
               </Typography>
               <Typography variant="caption" color="text.secondary" noWrap>
@@ -153,12 +171,14 @@ const ClientNavbar: React.FC = () => {
                 <ListItem>
                   <ListItemText 
                     primary={item.label} 
-                    primaryTypographyProps={{ fontWeight: 'bold', color: 'text.primary' }} 
+                    primaryTypographyProps={{ fontWeight: 800, color: 'text.secondary', fontSize: '0.75rem', letterSpacing: 1, textTransform: 'uppercase' }} 
                   />
                 </ListItem>
                 {item.submenu.map((sub, sIdx) => {
                   if (sub.isDivider) return null;
                   const SubIcon = sub.icon;
+                  const active = isActive(sub.path);
+                  
                   return (
                     <ListItemButton
                       key={sIdx}
@@ -166,11 +186,18 @@ const ClientNavbar: React.FC = () => {
                         setMobileOpen(false);
                         sub.action ? sub.action() : sub.path && handleNavigate(sub.path);
                       }}
-                      sx={{ pl: 4 }}
-                      selected={isActive(sub.path)}
+                      selected={active}
+                      sx={{ 
+                          pl: 3, 
+                          borderLeft: active ? `4px solid ${theme.palette.primary.main}` : '4px solid transparent',
+                          '&.Mui-selected': { bgcolor: alpha(theme.palette.primary.main, 0.08) }
+                      }}
                     >
-                      {SubIcon && <ListItemIcon><SubIcon /></ListItemIcon>}
-                      <ListItemText primary={sub.label} />
+                      {SubIcon && <ListItemIcon sx={{ color: active ? 'primary.main' : 'inherit', minWidth: 40 }}><SubIcon /></ListItemIcon>}
+                      <ListItemText 
+                        primary={sub.label} 
+                        primaryTypographyProps={{ fontWeight: active ? 600 : 400, color: active ? 'primary.main' : 'text.primary' }}
+                      />
                     </ListItemButton>
                   );
                 })}
@@ -179,15 +206,26 @@ const ClientNavbar: React.FC = () => {
             );
           }
 
+          const active = isActive(item.path);
           return (
             <ListItem key={idx} disablePadding>
-              <ListItemButton onClick={() => handleNavigate(item.path || '')} selected={isActive(item.path)}>
+              <ListItemButton 
+                onClick={() => handleNavigate(item.path || '')} 
+                selected={active}
+                sx={{ 
+                    borderLeft: active ? `4px solid ${theme.palette.primary.main}` : '4px solid transparent',
+                    '&.Mui-selected': { bgcolor: alpha(theme.palette.primary.main, 0.08) }
+                }}
+              >
                 {Icon && (
-                  <ListItemIcon sx={{ color: isActive(item.path) ? 'primary.main' : 'inherit' }}>
+                  <ListItemIcon sx={{ color: active ? 'primary.main' : 'inherit', minWidth: 40 }}>
                     <Icon />
                   </ListItemIcon>
                 )}
-                <ListItemText primary={item.label} />
+                <ListItemText 
+                    primary={item.label} 
+                    primaryTypographyProps={{ fontWeight: active ? 600 : 400, color: active ? 'primary.main' : 'text.primary' }}
+                />
               </ListItemButton>
             </ListItem>
           );
@@ -205,15 +243,16 @@ const ClientNavbar: React.FC = () => {
                 setMobileOpen(false);
                 sub.action ? sub.action() : sub.path && handleNavigate(sub.path);
               }}
+              sx={{ color: isLogout ? 'error.main' : 'inherit' }}
             >
               {SubIcon && (
-                <ListItemIcon sx={{ color: isLogout ? 'error.main' : 'inherit' }}>
+                <ListItemIcon sx={{ color: isLogout ? 'error.main' : 'inherit', minWidth: 40 }}>
                   <SubIcon />
                 </ListItemIcon>
               )}
               <ListItemText 
                 primary={sub.label} 
-                sx={{ color: isLogout ? 'error.main' : 'inherit' }} 
+                primaryTypographyProps={{ fontWeight: 500 }}
               />
             </ListItemButton>
           );
@@ -221,13 +260,15 @@ const ClientNavbar: React.FC = () => {
       </List>
 
       {!isAuthenticated && (
-        <Box sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider', display: 'flex', flexDirection: 'column', gap: 1 }}>
+        <Box sx={{ p: 3, borderTop: '1px solid', borderColor: 'divider', display: 'flex', flexDirection: 'column', gap: 2 }}>
           {actionButtons.map((btn, idx) => (
             <Button
               key={idx}
               variant={btn.variant || 'outlined'}
               fullWidth
+              color={btn.variant === 'contained' ? 'primary' : 'inherit'}
               onClick={() => handleNavigate(btn.path || '')}
+              sx={{ py: 1.5, borderRadius: 2, fontWeight: 700 }}
             >
               {btn.label}
             </Button>
@@ -238,11 +279,18 @@ const ClientNavbar: React.FC = () => {
   );
 
   return (
-    <>
+    // 2. 🟢 AQUI ESTÁ LA ESTRUCTURA FLEX COLUMN QUE EMPUJA EL FOOTER AL FINAL
+    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: 'background.default' }}>
+      
       <AppBar 
         position="sticky" 
         elevation={0} 
-        sx={{ bgcolor: 'background.paper', borderBottom: '1px solid', borderColor: 'divider' }}
+        sx={{ 
+            bgcolor: 'background.paper', 
+            borderBottom: '1px solid', 
+            borderColor: 'divider',
+            color: 'text.primary'
+        }}
       >
         <Container maxWidth="xl">
           <Toolbar sx={{ px: { xs: 0 }, minHeight: { xs: NAVBAR_HEIGHT.mobile, md: NAVBAR_HEIGHT.desktop } }}>
@@ -257,20 +305,23 @@ const ClientNavbar: React.FC = () => {
                   if (link.submenu && !link.path) {
                     return <NavDropdown key={link.label} item={link} />;
                   }
+                  const active = isActive(link.path);
                   return (
                     <Button
                       key={link.label}
                       onClick={() => handleNavigate(link.path || '')}
                       sx={{
-                        color: isActive(link.path) ? 'primary.main' : 'text.secondary',
-                        fontWeight: isActive(link.path) ? 600 : 400,
+                        color: active ? 'primary.main' : 'text.secondary',
+                        fontWeight: active ? 700 : 500,
+                        textTransform: 'none',
+                        fontSize: '0.95rem',
                         position: 'relative',
-                        '&::after': isActive(link.path) ? {
+                        '&::after': active ? {
                           content: '""', position: 'absolute', bottom: 0, left: '50%',
                           transform: 'translateX(-50%)', width: '60%', height: 3,
                           bgcolor: 'primary.main', borderRadius: '3px 3px 0 0'
                         } : {},
-                        '&:hover': { color: 'primary.main', bgcolor: 'transparent' }
+                        '&:hover': { color: 'primary.main', bgcolor: alpha(theme.palette.primary.main, 0.05) }
                       }}
                     >
                       {link.label}
@@ -283,7 +334,7 @@ const ClientNavbar: React.FC = () => {
             {isMobile && <Box sx={{ flex: 1 }} />}
 
             {!isMobile && (
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                 {isAuthenticated ? (
                   <>
                     <IconButton onClick={() => handleNavigate('/client/mensajes')} sx={{ color: 'text.secondary' }}>
@@ -294,32 +345,46 @@ const ClientNavbar: React.FC = () => {
 
                     <Button
                       onClick={(e) => setUserMenuAnchor(e.currentTarget)}
-                      sx={{ textTransform: 'none', color: 'text.primary', ml: 1 }}
-                      endIcon={<ExpandMore />}
+                      sx={{ 
+                          textTransform: 'none', 
+                          color: 'text.primary', 
+                          pl: 0.5, pr: 1, py: 0.5,
+                          borderRadius: 2,
+                          '&:hover': { bgcolor: alpha(theme.palette.action.active, 0.05) }
+                      }}
+                      endIcon={<ExpandMore color="action" />}
                     >
                       <Badge
                         overlap="circular"
                         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
                         badgeContent={
                           user?.is_2fa_enabled ? (
-                            <CheckCircle sx={{ width: 16, height: 16, color: '#4CAF50', bgcolor: 'white', borderRadius: '50%', border: '2px solid white' }} />
+                            <CheckCircle sx={{ width: 14, height: 14, color: theme.palette.success.main, bgcolor: 'white', borderRadius: '50%' }} />
                           ) : null
                         }
                       >
-                        <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main', mr: 1, fontSize: '0.875rem', border: user?.is_2fa_enabled ? '2px solid #4CAF50' : 'none' }}>
+                        <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main', mr: 1.5, fontSize: '0.875rem', fontWeight: 700 }}>
                           {user?.nombre?.charAt(0) || 'U'}
                         </Avatar>
                       </Badge>
-                      <Typography variant="body2" fontWeight={500}>
-                        {user?.nombre?.split(' ')[0]}
-                      </Typography>
+                      <Box textAlign="left">
+                          <Typography variant="body2" fontWeight={700} lineHeight={1.2}>
+                            {user?.nombre?.split(' ')[0]}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary" lineHeight={1}>
+                             Cuenta
+                          </Typography>
+                      </Box>
                     </Button>
 
                     <Menu
                       anchorEl={userMenuAnchor}
                       open={Boolean(userMenuAnchor)}
                       onClose={() => setUserMenuAnchor(null)}
-                      PaperProps={{ elevation: 2, sx: { mt: 1, minWidth: 200 } }}
+                      PaperProps={{ 
+                          elevation: 4, 
+                          sx: { mt: 1.5, minWidth: 220, borderRadius: 2, overflow: 'hidden' } 
+                      }}
                     >
                       {userNavItems[0]?.submenu?.map((item, idx) => {
                         if (item.isDivider) return <Divider key={idx} />;
@@ -332,14 +397,20 @@ const ClientNavbar: React.FC = () => {
                               item.action ? item.action() : item.path && handleNavigate(item.path);
                               setUserMenuAnchor(null);
                             }}
-                            sx={isLogout ? { color: 'error.main' } : {}}
+                            sx={{
+                                py: 1.5,
+                                color: isLogout ? 'error.main' : 'text.primary',
+                                '&:hover': { bgcolor: isLogout ? alpha(theme.palette.error.main, 0.05) : alpha(theme.palette.action.active, 0.05) }
+                            }}
                           >
                             {ItemIcon && (
-                              <ListItemIcon>
-                                <ItemIcon fontSize="small" color={isLogout ? 'error' : 'inherit'} />
+                              <ListItemIcon sx={{ color: isLogout ? 'error.main' : 'inherit' }}>
+                                <ItemIcon fontSize="small" />
                               </ListItemIcon>
                             )}
-                            {item.label}
+                            <Typography variant="body2" fontWeight={isLogout ? 600 : 400}>
+                                {item.label}
+                            </Typography>
                           </MenuItem>
                         );
                       })}
@@ -351,8 +422,14 @@ const ClientNavbar: React.FC = () => {
                       <Button
                         key={idx}
                         variant={btn.variant || 'text'}
+                        color={btn.variant === 'contained' ? 'primary' : 'inherit'}
                         onClick={() => handleNavigate(btn.path || '')}
-                        sx={idx === 0 ? { mr: 1 } : {}}
+                        sx={{ 
+                            borderRadius: 2, 
+                            fontWeight: 700, 
+                            px: 3,
+                            mr: idx === 0 ? 1 : 0 
+                        }}
                       >
                         {btn.label}
                       </Button>
@@ -384,18 +461,22 @@ const ClientNavbar: React.FC = () => {
         anchor="right"
         open={mobileOpen}
         onClose={() => setMobileOpen(false)}
-        PaperProps={{ sx: { width: 280 } }}
+        PaperProps={{ sx: { width: 280, borderLeft: 'none' } }}
       >
         {mobileDrawer}
       </Drawer>
 
-      <Box component="main" sx={{ flexGrow: 1, minHeight: `calc(100vh - ${NAVBAR_HEIGHT.desktop}px)` }}>
+      {/* 3. 🟢 CONTENIDO PRINCIPAL (Empuja el footer) */}
+      <Box component="main" sx={{ flexGrow: 1, width: '100%', py: 3 }}>
         <Outlet />
       </Box>
 
-      {/* ✅ Modal de Confirmación Genérico (incluye Logout) */}
+      {/* 4. 🟢 FOOTER AGREGADO AL FINAL */}
+      <Footer />
+
+      {/* Modal de Confirmación Genérico (incluye Logout) */}
       <ConfirmDialog {...logoutDialogProps} />
-    </>
+    </Box>
   );
 };
 

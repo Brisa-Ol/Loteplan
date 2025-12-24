@@ -13,7 +13,8 @@ import {
   ErrorOutline,
   ReceiptLong as InvoiceIcon
 } from '@mui/icons-material';
-import type { ResumenCuentaDto } from '../../../../types/dto/resumenCuenta.dto';
+import type { ResumenCuentaDto } from '../../../../../types/dto/resumenCuenta.dto';
+
 
 interface DetalleResumenModalProps {
   open: boolean;

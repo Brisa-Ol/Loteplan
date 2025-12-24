@@ -2,12 +2,13 @@ import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { 
   Box, Typography, Stack, Chip, Button, Tooltip, 
-  Tabs, Tab, Badge, TextField, InputAdornment 
+  Tabs, Tab, Badge, TextField, InputAdornment,
+  Card, Avatar, Divider, useTheme, alpha, Paper
 } from '@mui/material';
 import { 
   TrendingUp, EventRepeat, Gavel, CheckCircle, 
   ErrorOutline, HourglassEmpty, Refresh, ReceiptLong, Info,
-  Search, FilterList
+  Search, MonetizationOn, Warning, SwapHoriz
 } from '@mui/icons-material';
 
 // Servicios y Tipos
@@ -21,14 +22,15 @@ import { PageHeader } from '../../../../components/common/PageHeader/PageHeader'
 import { QueryHandler } from '../../../../components/common/QueryHandler/QueryHandler';
 import { DataTable, type DataTableColumn } from '../../../../components/common/DataTable/DataTable';
 
-
 const MisTransacciones: React.FC = () => {
+  const theme = useTheme();
+
   // 1. Estados de Filtros
   const [currentTab, setCurrentTab] = useState(0); // 0: Todas, 1: Exitosas, 2: Pendientes/Fallidas
   const [searchTerm, setSearchTerm] = useState('');
 
   // 2. Carga de Datos
-  const { data: transacciones = [], isLoading, error } = useQuery<TransaccionDto[]>({
+  const { data: transacciones = [], isLoading, error, refetch } = useQuery<TransaccionDto[]>({
     queryKey: ['misTransacciones'],
     queryFn: async () => (await TransaccionService.getMyTransactions()).data
   });
@@ -44,10 +46,24 @@ const MisTransacciones: React.FC = () => {
     onError: (err: any) => alert(err.response?.data?.error || "Error al regenerar checkout.")
   });
 
-  // 4. Lógica de Filtrado y Contadores
-  const { filteredData, counts } = useMemo(() => {
-    // A. Filtrado por Texto (Buscador)
+  // 4. Lógica de Filtrado, Contadores y KPIs
+  const { filteredData, counts, stats } = useMemo(() => {
+    // Base data
     let data = transacciones;
+
+    // A. Contadores Globales (KPIs)
+    const totalCounts = {
+      todas: transacciones.length,
+      exitosas: transacciones.filter(t => t.estado_transaccion === 'pagado').length,
+      problemas: transacciones.filter(t => ['pendiente', 'fallido', 'expirado', 'rechazado_por_capacidad'].includes(t.estado_transaccion)).length
+    };
+
+    // B. Estadísticas Financieras (KPIs)
+    const totalAmount = transacciones
+        .filter(t => t.estado_transaccion === 'pagado')
+        .reduce((acc, curr) => acc + Number(curr.monto), 0);
+
+    // C. Filtrado por Texto (Buscador)
     if (searchTerm) {
       const lowerTerm = searchTerm.toLowerCase();
       data = data.filter(t => 
@@ -57,25 +73,21 @@ const MisTransacciones: React.FC = () => {
       );
     }
 
-    // B. Contadores (sobre la data filtrada por texto o sobre la total, depende tu preferencia)
-    // Usualmente los contadores de tabs se calculan sobre el total sin búsqueda
-    const totalCounts = {
-      todas: transacciones.length,
-      exitosas: transacciones.filter(t => t.estado_transaccion === 'pagado').length,
-      problemas: transacciones.filter(t => ['pendiente', 'fallido', 'expirado', 'rechazado_por_capacidad'].includes(t.estado_transaccion)).length
-    };
-
-    // C. Filtrado por Tab
+    // D. Filtrado por Tab
     if (currentTab === 1) { // Exitosas
       data = data.filter(t => t.estado_transaccion === 'pagado');
     } else if (currentTab === 2) { // Problemas / Pendientes
       data = data.filter(t => ['pendiente', 'fallido', 'expirado', 'rechazado_por_capacidad', 'en_proceso'].includes(t.estado_transaccion));
     }
 
-    // D. Ordenamiento (Más reciente primero)
+    // E. Ordenamiento (Más reciente primero)
     data.sort((a, b) => new Date(b.createdAt || '').getTime() - new Date(a.createdAt || '').getTime());
 
-    return { filteredData: data, counts: totalCounts };
+    return { 
+        filteredData: data, 
+        counts: totalCounts,
+        stats: { totalAmount }
+    };
   }, [transacciones, currentTab, searchTerm]);
 
   // --- CONFIGURACIÓN VISUAL (Helpers) ---
@@ -85,7 +97,7 @@ const MisTransacciones: React.FC = () => {
       case 'mensual': return { icon: <EventRepeat fontSize="small" />, color: 'secondary' as const, label: 'Cuota' };
       case 'pago_suscripcion_inicial': return { icon: <ReceiptLong fontSize="small" />, color: 'primary' as const, label: 'Suscripción' };
       case 'Puja': return { icon: <Gavel fontSize="small" />, color: 'warning' as const, label: 'Subasta' };
-      default: return { icon: <Info fontSize="small" />, color: 'default' as const, label: 'Operación' };
+      default: return { icon: <SwapHoriz fontSize="small" />, color: 'default' as const, label: 'Operación' };
     }
   };
 
@@ -103,22 +115,29 @@ const MisTransacciones: React.FC = () => {
     }
   };
 
+  const formatCurrency = (val: number) => 
+    new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(val);
+
   // --- COLUMNAS DE LA TABLA ---
   const columns = useMemo<DataTableColumn<TransaccionDto>[]>(() => [
     { 
-      id: 'fecha', label: 'Fecha', minWidth: 120,
+      id: 'fecha', label: 'Fecha', minWidth: 140,
       render: (row) => {
         const date = new Date(row.fecha_transaccion ?? row.createdAt);
         return (
           <Box>
-            <Typography variant="body2" fontWeight={600}>{date.toLocaleDateString()}</Typography>
-            <Typography variant="caption" color="text.secondary">{date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</Typography>
+            <Typography variant="body2" fontWeight={600} color="text.primary">
+                {date.toLocaleDateString()}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+                {date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+            </Typography>
           </Box>
         );
       }
     },
     { 
-      id: 'descripcion', label: 'Detalle', minWidth: 200,
+      id: 'descripcion', label: 'Detalle', minWidth: 220,
       render: (row) => {
         const proyecto = row.proyectoTransaccion?.nombre_proyecto || 'Sin Proyecto';
         let detalle = '';
@@ -131,7 +150,7 @@ const MisTransacciones: React.FC = () => {
 
         return (
           <Box>
-            <Typography variant="body2" fontWeight={600} noWrap>{proyecto}</Typography>
+            <Typography variant="body2" fontWeight={600} noWrap color="text.primary">{proyecto}</Typography>
             <Stack direction="row" spacing={1} alignItems="center" mt={0.5}>
                 <Chip 
                     label={detalle || conf.label} 
@@ -139,7 +158,7 @@ const MisTransacciones: React.FC = () => {
                     variant="outlined" 
                     color={conf.color} 
                     icon={conf.icon}
-                    sx={{ height: 20, fontSize: '0.7rem', border: 'none', bgcolor: 'action.hover' }} 
+                    sx={{ height: 22, fontSize: '0.75rem', fontWeight: 500, borderRadius: 1 }} 
                 />
             </Stack>
           </Box>
@@ -147,37 +166,37 @@ const MisTransacciones: React.FC = () => {
       }
     },
     { 
-      id: 'monto', label: 'Monto', align: 'right', minWidth: 100,
+      id: 'monto', label: 'Monto', align: 'right', minWidth: 120,
       render: (row) => (
-        <Typography variant="body2" fontWeight={700} sx={{ fontFamily: 'monospace' }}>
-           ${Number(row.monto).toLocaleString('es-AR')}
+        <Typography variant="subtitle2" fontWeight={700} color="primary.main">
+           {formatCurrency(Number(row.monto))}
         </Typography>
       )
     },
     { 
-      id: 'estado', label: 'Estado', align: 'center', minWidth: 110,
+      id: 'estado', label: 'Estado', align: 'center', minWidth: 130,
       render: (row) => {
         const conf = getStatusConfig(row.estado_transaccion);
         return (
-            <Tooltip title={row.error_detalle || ''} arrow>
+            <Tooltip title={row.error_detalle || ''} arrow placement="top">
                 <Chip 
                     label={conf.label} 
                     color={conf.color} 
                     size="small" 
-                    variant="filled" // O 'filled'
+                    variant="filled" // Para mejor contraste
                     icon={conf.icon as any}
+                    sx={{ fontWeight: 600 }}
                 />
             </Tooltip>
         );
       }
     },
     {
-      id: 'acciones', label: 'Acción', align: 'right', minWidth: 100,
+      id: 'acciones', label: 'Acción', align: 'right', minWidth: 120,
       render: (row) => {
-        // Solo permitimos reintentar si no está pagado ni reembolsado
         const canRetry = ['pendiente', 'fallido', 'expirado', 'en_proceso', 'rechazado_por_capacidad'].includes(row.estado_transaccion);
         
-        if (!canRetry) return <Box minWidth={85} />; // Espaciador para alinear
+        if (!canRetry) return <Box minWidth={100} />;
 
         return (
           <Button 
@@ -186,7 +205,14 @@ const MisTransacciones: React.FC = () => {
             disabled={retryMutation.isPending}
             onClick={() => retryMutation.mutate(row.id)}
             color={['pendiente', 'en_proceso'].includes(row.estado_transaccion) ? 'primary' : 'warning'}
-            sx={{ borderRadius: 2, textTransform: 'none', fontSize: '0.8rem', minWidth: 85 }}
+            disableElevation
+            sx={{ 
+                borderRadius: 2, 
+                textTransform: 'none', 
+                fontWeight: 700, 
+                minWidth: 100,
+                boxShadow: theme.shadows[2]
+            }}
           >
             {retryMutation.isPending ? '...' : 
              ['pendiente', 'en_proceso'].includes(row.estado_transaccion) ? 'Pagar' : 'Reintentar'}
@@ -194,7 +220,7 @@ const MisTransacciones: React.FC = () => {
         );
       }
     }
-  ], [retryMutation.isPending]);
+  ], [retryMutation.isPending, theme]);
 
   return (
     <PageContainer maxWidth="lg">
@@ -202,6 +228,84 @@ const MisTransacciones: React.FC = () => {
         title="Historial de Transacciones" 
         subtitle="Monitorea tus pagos, inversiones y estados de cuenta." 
       />
+
+      {/* --- KPI SECTION (Resumen) --- */}
+      <Box mb={4} display="flex" justifyContent="center">
+        <Card
+          elevation={0}
+          sx={{
+            p: 3,
+            border: `1px solid ${theme.palette.divider}`,
+            borderRadius: 3,
+            bgcolor: 'background.paper',
+            minWidth: { xs: '100%', md: '80%' }
+          }}
+        >
+          <Stack 
+            direction={{ xs: 'column', sm: 'row' }} 
+            divider={<Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', sm: 'block' }, mx: 2 }} />}
+            spacing={{ xs: 4, sm: 4 }}
+            justifyContent="center"
+            alignItems="center"
+          >
+            {/* KPI 1: Total Operado */}
+            <Stack direction="row" spacing={2} alignItems="center">
+              <Avatar variant="rounded" sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main', width: 56, height: 56 }}>
+                <MonetizationOn fontSize="large" />
+              </Avatar>
+              <Box>
+                <Typography variant="caption" color="text.secondary" fontWeight={700}>
+                  TOTAL OPERADO
+                </Typography>
+                <Typography variant="h5" fontWeight={700} color="text.primary">
+                  {formatCurrency(stats.totalAmount)}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                   En transacciones exitosas
+                </Typography>
+              </Box>
+            </Stack>
+
+            {/* KPI 2: Operaciones */}
+            <Stack direction="row" spacing={2} alignItems="center">
+              <Avatar variant="rounded" sx={{ bgcolor: alpha(theme.palette.secondary.main, 0.1), color: 'secondary.main', width: 56, height: 56 }}>
+                <SwapHoriz fontSize="large" />
+              </Avatar>
+              <Box>
+                <Typography variant="caption" color="text.secondary" fontWeight={700}>
+                  OPERACIONES
+                </Typography>
+                <Typography variant="h5" fontWeight={700} color="text.primary">
+                  {counts.exitosas}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                   Transacciones completadas
+                </Typography>
+              </Box>
+            </Stack>
+
+            {/* KPI 3: Problemas */}
+            {counts.problemas > 0 && (
+                <Stack direction="row" spacing={2} alignItems="center">
+                <Avatar variant="rounded" sx={{ bgcolor: alpha(theme.palette.error.main, 0.1), color: 'error.main', width: 56, height: 56 }}>
+                    <Warning fontSize="large" />
+                </Avatar>
+                <Box>
+                    <Typography variant="caption" color="text.secondary" fontWeight={700}>
+                    ATENCIÓN
+                    </Typography>
+                    <Typography variant="h5" fontWeight={700} color="error.main">
+                    {counts.problemas}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                    Requieren revisión
+                    </Typography>
+                </Box>
+                </Stack>
+            )}
+          </Stack>
+        </Card>
+      </Box>
 
       {/* --- FILTROS Y PESTAÑAS --- */}
       <Stack 
@@ -213,7 +317,14 @@ const MisTransacciones: React.FC = () => {
       >
         {/* TABS */}
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-            <Tabs value={currentTab} onChange={(_, val) => setCurrentTab(val)} textColor="primary" indicatorColor="primary">
+            <Tabs 
+                value={currentTab} 
+                onChange={(_, val) => setCurrentTab(val)} 
+                textColor="primary" 
+                indicatorColor="primary"
+                variant="scrollable"
+                scrollButtons="auto"
+            >
                 <Tab label={`Todas (${counts.todas})`} />
                 <Tab label="Exitosas" icon={<CheckCircle fontSize="small"/>} iconPosition="start" />
                 <Tab 
@@ -222,15 +333,19 @@ const MisTransacciones: React.FC = () => {
                             Pendientes / Fallidas
                         </Badge>
                     } 
-                    // Si hay problemas, el texto se pone un poco rojo para alertar
-                    sx={{ color: counts.problemas > 0 ? 'error.main' : 'inherit' }}
+                    icon={<ErrorOutline fontSize="small" />}
+                    iconPosition="start"
+                    sx={{ 
+                        color: counts.problemas > 0 ? 'error.main' : 'inherit',
+                        fontWeight: counts.problemas > 0 ? 'bold' : 'normal'
+                    }}
                 />
             </Tabs>
         </Box>
 
         {/* BUSCADOR */}
         <TextField
-            placeholder="Buscar proyecto o monto..."
+            placeholder="Buscar..."
             size="small"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -241,30 +356,56 @@ const MisTransacciones: React.FC = () => {
                     </InputAdornment>
                 ),
             }}
-            sx={{ minWidth: 250 }}
+            sx={{ 
+                minWidth: 250,
+                '& .MuiOutlinedInput-root': {
+                    bgcolor: 'background.paper',
+                    borderRadius: 2
+                }
+            }}
         />
       </Stack>
 
       {/* --- TABLA --- */}
       <QueryHandler isLoading={isLoading} error={error as Error | null}>
-        <DataTable 
-            columns={columns} 
-            data={filteredData} 
-            getRowKey={(row) => row.id}
-            pagination={true}
-            defaultRowsPerPage={10}
-            emptyMessage={
-                searchTerm ? "No se encontraron resultados para tu búsqueda." :
-                currentTab === 1 ? "No tienes transacciones completadas aún." :
-                currentTab === 2 ? "¡Todo en orden! No hay transacciones fallidas o pendientes." :
-                "No hay movimientos registrados."
-            }
-            // Resaltamos filas con problemas
-            getRowSx={(row) => ({
-                bgcolor: ['fallido', 'expirado', 'rechazado_por_capacidad'].includes(row.estado_transaccion) ? '#fff5f5' : 'inherit',
-                opacity: row.estado_transaccion === 'reembolsado' ? 0.7 : 1
-            })}
-        />
+        
+        <Paper 
+            elevation={0}
+            sx={{
+                border: `1px solid ${theme.palette.divider}`,
+                borderRadius: 3,
+                overflow: 'hidden',
+                boxShadow: theme.shadows[1]
+            }}
+        >
+            <DataTable 
+                columns={columns} 
+                data={filteredData} 
+                getRowKey={(row) => row.id}
+                pagination={true}
+                defaultRowsPerPage={10}
+                emptyMessage={
+                    searchTerm ? "No se encontraron resultados para tu búsqueda." :
+                    currentTab === 1 ? "No tienes transacciones completadas aún." :
+                    currentTab === 2 ? "¡Todo en orden! No hay transacciones fallidas o pendientes." :
+                    "No hay movimientos registrados."
+                }
+                // Resaltamos filas con problemas
+                getRowSx={(row) => ({
+                    bgcolor: ['fallido', 'expirado', 'rechazado_por_capacidad'].includes(row.estado_transaccion) 
+                        ? alpha(theme.palette.error.main, 0.05) 
+                        : ['pendiente', 'en_proceso'].includes(row.estado_transaccion)
+                        ? alpha(theme.palette.warning.main, 0.02)
+                        : 'inherit',
+                    opacity: row.estado_transaccion === 'reembolsado' ? 0.7 : 1,
+                    transition: 'background-color 0.2s',
+                    '&:hover': {
+                         bgcolor: alpha(theme.palette.primary.main, 0.04)
+                    }
+                })}
+            />
+        </Paper>
+
       </QueryHandler>
     </PageContainer>
   );

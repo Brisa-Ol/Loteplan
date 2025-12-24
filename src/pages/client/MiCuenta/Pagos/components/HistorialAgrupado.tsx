@@ -12,18 +12,21 @@ import {
   LinearProgress, 
   Avatar, 
   Chip, 
-  Stack 
+  Stack,
+  useTheme,
+  alpha,
+  Paper
 } from '@mui/material';
 import { 
   ExpandMore, 
   Savings, 
   TrendingUp, 
   CalendarMonth,
-  ReceiptLong
+  ReceiptLong,
+  CheckCircle
 } from '@mui/icons-material';
-import type { PagoDto } from '../../../../../types/dto/pago.dto';
 import type { SuscripcionDto } from '../../../../../types/dto/suscripcion.dto';
-
+import type { PagoDto } from '../../../../../types/dto/pago.dto';
 
 
 interface HistorialPagosAgrupadoProps {
@@ -36,7 +39,7 @@ interface GroupedSubscription {
   suscripcionId: number;
   nombreProyecto: string;
   tipo: 'ahorrista' | 'inversionista';
-  totalCuotas: number; // Viene de proyecto.plazo_inversion
+  totalCuotas: number; 
   pagos: PagoDto[];
 }
 
@@ -44,25 +47,21 @@ export const HistorialPagosAgrupado: React.FC<HistorialPagosAgrupadoProps> = ({
   pagos, 
   suscripciones 
 }) => {
+  const theme = useTheme();
 
   // 1. Lógica de Agrupamiento
   const grupos = useMemo(() => {
     const map = new Map<number, GroupedSubscription>();
 
     pagos.forEach(pago => {
-      // Si el pago no tiene suscripción enlazada, lo saltamos (o podrías agruparlo en "Otros")
       if (!pago.id_suscripcion) return;
 
       if (!map.has(pago.id_suscripcion)) {
-        // Buscamos la suscripción y el proyecto asociado
         const sub = suscripciones.find(s => s.id === pago.id_suscripcion);
         const proyecto = sub?.proyectoAsociado;
 
-        // Lógica para diferenciar Ahorrista (Mensual) vs Inversionista (Directo)
-        // Basado en tu ProyectoDto: tipo_inversion: 'directo' | 'mensual'
+        // Lógica de tipo
         const esInversionDirecta = proyecto?.tipo_inversion === 'directo';
-        
-        // Total de cuotas del plan (plazo_inversion)
         const totalCuotasPlan = proyecto?.plazo_inversion || 0;
 
         map.set(pago.id_suscripcion, {
@@ -80,15 +79,33 @@ export const HistorialPagosAgrupado: React.FC<HistorialPagosAgrupadoProps> = ({
     return Array.from(map.values());
   }, [pagos, suscripciones]);
 
-  // 2. Estado Vacío
+  // 2. Estado Vacío (Empty State consistente)
   if (grupos.length === 0) {
     return (
-      <Box textAlign="center" py={6} bgcolor="background.paper" borderRadius={2} border="1px dashed #ccc">
-        <ReceiptLong sx={{ fontSize: 60, color: 'text.disabled', mb: 2 }} />
-        <Typography color="text.secondary" variant="h6">
+      <Paper 
+        variant="outlined" 
+        sx={{ 
+          p: 6, 
+          textAlign: 'center', 
+          bgcolor: 'background.default', 
+          borderStyle: 'dashed',
+          borderColor: theme.palette.divider,
+          borderRadius: 3
+        }}
+      >
+        <Box 
+            sx={{ 
+                width: 80, height: 80, mx: 'auto', mb: 2, borderRadius: '50%',
+                bgcolor: alpha(theme.palette.text.secondary, 0.1),
+                display: 'flex', alignItems: 'center', justifyContent: 'center'
+            }}
+        >
+            <ReceiptLong sx={{ fontSize: 40, color: 'text.secondary', opacity: 0.5 }} />
+        </Box>
+        <Typography variant="h6" color="text.secondary">
           No tienes historial de pagos completados.
         </Typography>
-      </Box>
+      </Paper>
     );
   }
 
@@ -98,34 +115,49 @@ export const HistorialPagosAgrupado: React.FC<HistorialPagosAgrupadoProps> = ({
       {grupos.map((grupo) => {
         const pagosRealizados = grupo.pagos.length;
         
-        // Calculamos porcentaje solo si es Ahorrista y hay un plazo definido
+        // Calculamos porcentaje
         const porcentaje = (grupo.tipo === 'ahorrista' && grupo.totalCuotas > 0)
           ? Math.min((pagosRealizados / grupo.totalCuotas) * 100, 100)
           : 0;
+        
+        const isCompleted = porcentaje === 100;
+        const themeColor = grupo.tipo === 'inversionista' ? theme.palette.secondary : theme.palette.primary;
 
         return (
           <Accordion 
             key={grupo.suscripcionId} 
             defaultExpanded={false}
+            elevation={0}
             sx={{ 
               mb: 2, 
               borderRadius: '12px !important', 
-              border: '1px solid',
-              borderColor: 'divider',
-              boxShadow: 'none', 
+              border: `1px solid ${theme.palette.divider}`,
               '&:before': { display: 'none' },
-              overflow: 'hidden'
+              overflow: 'hidden',
+              transition: 'border-color 0.2s',
+              '&:hover': {
+                 borderColor: themeColor.main
+              }
             }}
           >
             {/* === CABECERA === */}
-            <AccordionSummary expandIcon={<ExpandMore />} sx={{ px: 2, py: 1 }}>
+            <AccordionSummary 
+                expandIcon={<ExpandMore />} 
+                sx={{ 
+                    px: 3, py: 1,
+                    '& .MuiAccordionSummary-content': { margin: '12px 0' } 
+                }}
+            >
               <Box display="flex" alignItems="center" width="100%" gap={2}>
                 
-                {/* Icono: Alcancía (Ahorro) o Gráfico (Inversión) */}
+                {/* Icono */}
                 <Avatar 
+                  variant="rounded"
                   sx={{ 
-                    bgcolor: grupo.tipo === 'inversionista' ? 'secondary.main' : 'primary.main',
-                    width: 44, height: 44
+                    bgcolor: alpha(themeColor.main, 0.1),
+                    color: themeColor.main,
+                    width: 48, height: 48,
+                    borderRadius: 2
                   }}
                 >
                   {grupo.tipo === 'inversionista' ? <TrendingUp /> : <Savings />}
@@ -133,7 +165,7 @@ export const HistorialPagosAgrupado: React.FC<HistorialPagosAgrupadoProps> = ({
                 
                 {/* Info Principal */}
                 <Box flexGrow={1}>
-                  <Typography variant="subtitle1" fontWeight={700} lineHeight={1.2}>
+                  <Typography variant="subtitle1" fontWeight={700} lineHeight={1.2} color="text.primary">
                     {grupo.nombreProyecto}
                   </Typography>
                   
@@ -141,57 +173,78 @@ export const HistorialPagosAgrupado: React.FC<HistorialPagosAgrupadoProps> = ({
                     <Chip 
                         label={grupo.tipo === 'inversionista' ? "CAPITAL DIRECTO" : "PLAN MENSUAL"} 
                         size="small" 
-                        color={grupo.tipo === 'inversionista' ? "secondary" : "primary"} 
                         variant="outlined"
-                        sx={{ fontSize: '0.65rem', height: 20, fontWeight: 700, border: 'none', bgcolor: 'action.hover' }}
+                        sx={{ 
+                            fontSize: '0.65rem', height: 20, fontWeight: 700, 
+                            color: themeColor.main, borderColor: alpha(themeColor.main, 0.3),
+                            bgcolor: alpha(themeColor.main, 0.05)
+                        }}
                     />
-                    <Typography variant="caption" color="text.secondary">
-                        {pagosRealizados} {pagosRealizados === 1 ? 'pago' : 'pagos'}
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <CheckCircle fontSize="inherit" color="success" sx={{ fontSize: 14 }} />
+                        {pagosRealizados} {pagosRealizados === 1 ? 'pago realizado' : 'pagos realizados'}
                     </Typography>
                   </Stack>
                 </Box>
 
                 {/* Barra de Progreso (Solo Ahorristas) */}
                 {grupo.tipo === 'ahorrista' && grupo.totalCuotas > 0 && (
-                  <Box width="30%" mr={1} display={{ xs: 'none', md: 'block' }}>
-                     <Box display="flex" justifyContent="space-between" mb={0.5}>
-                       <Typography variant="caption" fontWeight="bold" color="primary.main">
-                         Avance del Plan
-                       </Typography>
-                       <Typography variant="caption" color="text.secondary">
-                         {pagosRealizados} / {grupo.totalCuotas}
-                       </Typography>
-                     </Box>
-                     <LinearProgress 
+                  <Box width="30%" mr={2} display={{ xs: 'none', md: 'block' }}>
+                      <Box display="flex" justifyContent="space-between" mb={0.5}>
+                        <Typography variant="caption" fontWeight="bold" color="primary.main">
+                          {isCompleted ? 'Plan Completado' : 'Avance del Plan'}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {pagosRealizados} / {grupo.totalCuotas}
+                        </Typography>
+                      </Box>
+                      <LinearProgress 
                         variant="determinate" 
                         value={porcentaje} 
-                        sx={{ height: 6, borderRadius: 4, bgcolor: 'grey.200' }}
-                     />
+                        sx={{ 
+                            height: 6, 
+                            borderRadius: 4, 
+                            bgcolor: alpha(theme.palette.primary.main, 0.1),
+                            '& .MuiLinearProgress-bar': {
+                                borderRadius: 4,
+                                bgcolor: isCompleted ? theme.palette.success.main : theme.palette.primary.main
+                            }
+                        }}
+                      />
                   </Box>
                 )}
               </Box>
             </AccordionSummary>
             
             {/* === LISTA DE PAGOS === */}
-            <AccordionDetails sx={{ bgcolor: '#fafafa', p: 0 }}>
+            <AccordionDetails sx={{ bgcolor: alpha(theme.palette.action.hover, 0.5), p: 0 }}>
               <List disablePadding>
                 {grupo.pagos
-                  .sort((a, b) => a.mes - b.mes) // Ordenar por cuota (1, 2, 3...)
+                  .sort((a, b) => a.mes - b.mes) // Ordenar cronológicamente por cuota
                   .map((pago, index) => (
                   <React.Fragment key={pago.id}>
-                    {index > 0 && <Divider component="li" />}
+                    {index > 0 && <Divider component="li" variant="inset" sx={{ ml: 9 }} />}
                     
-                    <ListItem sx={{ py: 1.5, px: 3 }}>
-                      <Box mr={2} color="text.disabled" display="flex" alignItems="center">
-                        <CalendarMonth fontSize="small" />
+                    <ListItem sx={{ py: 1.5, px: 3, '&:hover': { bgcolor: 'background.paper' } }}>
+                      <Box mr={2.5} display="flex" alignItems="center">
+                         <Avatar 
+                            sx={{ 
+                                width: 32, height: 32, 
+                                bgcolor: 'background.paper', 
+                                border: `1px solid ${theme.palette.divider}`,
+                                color: 'text.secondary'
+                            }}
+                         >
+                            <CalendarMonth fontSize="small" sx={{ fontSize: 16 }} />
+                         </Avatar>
                       </Box>
 
                       <ListItemText 
                         primary={
-                          <Typography variant="body2" fontWeight={600}>
+                          <Typography variant="body2" fontWeight={600} color="text.primary">
                             {grupo.tipo === 'inversionista' 
                               ? `Aporte de Capital Registrado`  
-                              : `Cuota Mensual #${pago.mes} de ${grupo.totalCuotas}` // AQUÍ ESTÁ EL "1 de 15"
+                              : `Cuota Mensual #${pago.mes} de ${grupo.totalCuotas}`
                             }
                           </Typography>
                         }
@@ -209,7 +262,13 @@ export const HistorialPagosAgrupado: React.FC<HistorialPagosAgrupadoProps> = ({
                         <Typography variant="body2" fontWeight={700} color="text.primary">
                              ${Number(pago.monto).toLocaleString('es-AR')}
                         </Typography>
-                        {/* Podemos mostrar "ARS" o "USD" dependiendo del proyecto si pasamos el dato */}
+                        <Chip 
+                            label="Pagado" 
+                            size="small" 
+                            color="success" 
+                            variant="filled" // Para mejor contraste en la lista
+                            sx={{ height: 20, fontSize: '0.65rem', fontWeight: 600, mt: 0.5 }} 
+                        />
                       </Box>
                     </ListItem>
                   </React.Fragment>

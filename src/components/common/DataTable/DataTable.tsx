@@ -16,6 +16,7 @@ import {
     type SxProps,
     type Theme,
 } from '@mui/material';
+import theme from '../../../theme';
 
 // --- DataSwitch (Componente Auxiliar) ---
 interface DataSwitchProps {
@@ -103,7 +104,10 @@ export function DataTable<T>({
         <TableContainer
             component={Paper}
             // El Theme ya maneja borderRadius, border y boxShadow aquí.
-            sx={{ ...sx }} 
+            sx={{ border: `1px solid ${theme.palette.divider}`,
+                borderRadius: 2,
+                bgcolor: 'background.default', // Gris muy claro o blanco según el theme
+                ...sx }} 
         >
             <Table>
                 {/* El Theme maneja el backgroundColor del TableHead */}

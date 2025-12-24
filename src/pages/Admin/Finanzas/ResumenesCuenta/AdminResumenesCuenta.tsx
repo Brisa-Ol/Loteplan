@@ -10,19 +10,15 @@ import {
 } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
 
-// --- SERVICIOS ---
-import ResumenCuentaService from '../../../Services/resumenCuenta.service';
-import type { ResumenCuentaDto } from '../../../types/dto/resumenCuenta.dto';
 
-// --- COMPONENTES ---
-import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
-import { QueryHandler } from '../../../components/common/QueryHandler/QueryHandler';
-import { PageHeader } from '../../../components/common/PageHeader/PageHeader';
-import { DataTable, type DataTableColumn } from '../../../components/common/DataTable/DataTable';
-
-// Hooks y Modales
-import { useModal } from '../../../hooks/useModal';
 import DetalleResumenModal from './modals/DetalleResumenModal';
+import { useModal } from '../../../../hooks/useModal';
+import type { ResumenCuentaDto } from '../../../../types/dto/resumenCuenta.dto';
+import ResumenCuentaService from '../../../../Services/resumenCuenta.service';
+import { PageContainer } from '../../../../components/common/PageContainer/PageContainer';
+import { PageHeader } from '../../../../components/common/PageHeader/PageHeader';
+import { DataTable, type DataTableColumn } from '../../../../components/common/DataTable/DataTable';
+import { QueryHandler } from '../../../../components/common/QueryHandler/QueryHandler';
 
 const AdminResumenesCuenta: React.FC = () => {
   const theme = useTheme();

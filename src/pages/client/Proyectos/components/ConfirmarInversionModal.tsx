@@ -4,7 +4,7 @@ import {
   Button, Typography, Box, Divider, Stack, Alert, CircularProgress, 
   Paper, useTheme, alpha 
 } from '@mui/material';
-import { MonetizationOn, Business, Info } from '@mui/icons-material';
+import { MonetizationOn, Business, Info, Lock } from '@mui/icons-material';
 import type { ProyectoDto } from '../../../../types/dto/proyecto.dto';
 
 interface Props {
@@ -34,65 +34,87 @@ export const ConfirmarInversionModal: React.FC<Props> = ({
         onClose={isLoading ? undefined : onClose} 
         maxWidth="sm" 
         fullWidth
-        PaperProps={{ sx: { borderRadius: 3 } }}
+        PaperProps={{ sx: { borderRadius: 3, boxShadow: theme.shadows[10] } }}
     >
-      <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 2, borderBottom: `1px solid ${theme.palette.divider}` }}>
+      <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 2, borderBottom: `1px solid ${theme.palette.divider}`, pb: 2 }}>
         <Box sx={{ 
-            p: 1, borderRadius: '50%', 
+            p: 1.5, borderRadius: '50%', 
             bgcolor: alpha(theme.palette.primary.main, 0.1), 
             color: 'primary.main', display: 'flex' 
         }}>
-            <Business />
+            <Business fontSize="medium" />
         </Box>
-        <Typography variant="h6" fontWeight={700}>Confirmar Inversión</Typography>
+        <Box>
+            <Typography variant="h6" fontWeight={800} lineHeight={1.2}>Confirmar Inversión</Typography>
+            <Typography variant="caption" color="text.secondary">Estás invirtiendo como Inversionista</Typography>
+        </Box>
       </DialogTitle>
       
-      <DialogContent sx={{ mt: 2 }}>
+      <DialogContent sx={{ mt: 3 }}>
         <Box mb={3}>
           <Typography variant="body1" color="text.secondary" gutterBottom>
-            Estás a punto de realizar una inversión directa en:
+            Estás a punto de realizar una inversión directa en el proyecto:
           </Typography>
-          <Typography variant="h5" fontWeight={800} color="text.primary">
+          <Typography variant="h5" fontWeight={800} color="text.primary" sx={{ letterSpacing: -0.5 }}>
             {proyecto.nombre_proyecto}
           </Typography>
         </Box>
 
+        {/* Resumen Financiero (Estilo Ticket) */}
         <Paper 
             elevation={0} 
             sx={{ 
-                p: 2, 
-                bgcolor: alpha(theme.palette.secondary.main, 0.1), 
-                borderRadius: 2, 
+                p: 3, 
+                borderRadius: 3, 
                 mb: 3,
-                border: `1px solid ${theme.palette.divider}`
+                border: `1px dashed ${theme.palette.divider}`
             }}
         >
           <Stack spacing={2}>
             <Box display="flex" justifyContent="space-between" alignItems="center">
-              <Typography variant="body2" color="text.secondary">Concepto</Typography>
-              <Typography variant="body2" fontWeight={600}>Pago Único de Inversión</Typography>
+              <Typography variant="body2" color="text.secondary" fontWeight={500}>Concepto</Typography>
+              <Typography variant="body2" fontWeight={700}>Pago Único de Inversión</Typography>
             </Box>
+            
             <Divider />
+            
             <Box display="flex" justifyContent="space-between" alignItems="center">
-              <Box display="flex" alignItems="center" gap={1} color="success.main">
-                <MonetizationOn fontSize="small" />
-                <Typography variant="body1" fontWeight={600}>Monto Total</Typography>
-              </Box>
-              <Typography variant="h5" fontWeight={800} color="success.main">
+              <Stack direction="row" spacing={1} alignItems="center" color="text.primary">
+                <MonetizationOn fontSize="small" color="success" />
+                <Typography variant="body1" fontWeight={600}>Total a Pagar</Typography>
+              </Stack>
+              <Typography variant="h4" fontWeight={800} color="success.main">
                 {montoFormateado}
               </Typography>
             </Box>
           </Stack>
         </Paper>
 
-        <Alert severity="info" icon={<Info fontSize="inherit" />} sx={{ borderRadius: 2 }}>
-          Al confirmar, serás redirigido a la pasarela de pagos segura.<br/>
-          Ten listo tu método de autenticación (2FA).
+        <Alert 
+            severity="info" 
+            icon={<Info fontSize="inherit" />} 
+            sx={{ 
+                borderRadius: 2, 
+                bgcolor: alpha(theme.palette.info.main, 0.05),
+                border: `1px solid ${alpha(theme.palette.info.main, 0.2)}`,
+                color: theme.palette.info.dark
+            }}
+        >
+          <Typography variant="body2" fontWeight={500}>
+             Al confirmar, serás redirigido a la pasarela de pagos segura.
+             Ten listo tu método de autenticación (2FA).
+          </Typography>
         </Alert>
       </DialogContent>
 
-      <DialogActions sx={{ p: 3, pt: 0 }}>
-        <Button onClick={onClose} disabled={isLoading} color="inherit" variant="outlined">
+      <DialogActions sx={{ p: 3, pt: 0, gap: 1 }}>
+        <Button 
+            onClick={onClose} 
+            disabled={isLoading} 
+            color="inherit" 
+            variant="outlined"
+            sx={{ borderRadius: 2, fontWeight: 600, px: 3 }}
+        >
           Cancelar
         </Button>
         <Button 
@@ -100,8 +122,9 @@ export const ConfirmarInversionModal: React.FC<Props> = ({
           onClick={onConfirm} 
           disabled={isLoading}
           size="large"
-          startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : <MonetizationOn />}
-          sx={{ px: 4, fontWeight: 700 }}
+          disableElevation
+          startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : <Lock />}
+          sx={{ px: 4, fontWeight: 700, borderRadius: 2, flexGrow: 1 }}
         >
           {isLoading ? 'Procesando...' : 'Ir a Pagar'}
         </Button>
