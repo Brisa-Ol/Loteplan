@@ -1,10 +1,9 @@
 import React from 'react';
 import { 
-  Dialog, DialogTitle, DialogContent, DialogActions, 
-  Button, Typography, Box, Divider, Stack, Alert, CircularProgress, 
-  Paper, useTheme, alpha 
+  Typography, Box, Divider, Stack, Alert, Paper, useTheme, alpha 
 } from '@mui/material';
 import { MonetizationOn, Business, Info, Lock } from '@mui/icons-material';
+import { BaseModal } from '../../../../components/common/BaseModal/BaseModal';
 import type { ProyectoDto } from '../../../../types/dto/proyecto.dto';
 
 interface Props {
@@ -29,29 +28,24 @@ export const ConfirmarInversionModal: React.FC<Props> = ({
   }).format(Number(proyecto.monto_inversion));
 
   return (
-    <Dialog 
-        open={open} 
-        onClose={isLoading ? undefined : onClose} 
-        maxWidth="sm" 
-        fullWidth
-        PaperProps={{ sx: { borderRadius: 3, boxShadow: theme.shadows[10] } }}
+    <BaseModal
+      open={open}
+      onClose={onClose}
+      title="Confirmar Inversión"
+      subtitle="Estás invirtiendo como Inversionista"
+      icon={<Business />}
+      headerColor="primary"
+      maxWidth="sm"
+      confirmText="Ir a Pagar"
+      confirmButtonIcon={<Lock />}
+      onConfirm={onConfirm}
+      isLoading={isLoading}
+      disableConfirm={isLoading}
     >
-      <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 2, borderBottom: `1px solid ${theme.palette.divider}`, pb: 2 }}>
-        <Box sx={{ 
-            p: 1.5, borderRadius: '50%', 
-            bgcolor: alpha(theme.palette.primary.main, 0.1), 
-            color: 'primary.main', display: 'flex' 
-        }}>
-            <Business fontSize="medium" />
-        </Box>
+      <Stack spacing={3}>
+        
+        {/* Título del Proyecto */}
         <Box>
-            <Typography variant="h6" fontWeight={800} lineHeight={1.2}>Confirmar Inversión</Typography>
-            <Typography variant="caption" color="text.secondary">Estás invirtiendo como Inversionista</Typography>
-        </Box>
-      </DialogTitle>
-      
-      <DialogContent sx={{ mt: 3 }}>
-        <Box mb={3}>
           <Typography variant="body1" color="text.secondary" gutterBottom>
             Estás a punto de realizar una inversión directa en el proyecto:
           </Typography>
@@ -66,7 +60,7 @@ export const ConfirmarInversionModal: React.FC<Props> = ({
             sx={{ 
                 p: 3, 
                 borderRadius: 3, 
-                mb: 3,
+                bgcolor: alpha(theme.palette.background.paper, 0.5),
                 border: `1px dashed ${theme.palette.divider}`
             }}
         >
@@ -90,45 +84,20 @@ export const ConfirmarInversionModal: React.FC<Props> = ({
           </Stack>
         </Paper>
 
+        {/* Aviso de Redirección */}
         <Alert 
             severity="info" 
             icon={<Info fontSize="inherit" />} 
-            sx={{ 
-                borderRadius: 2, 
-                bgcolor: alpha(theme.palette.info.main, 0.05),
-                border: `1px solid ${alpha(theme.palette.info.main, 0.2)}`,
-                color: theme.palette.info.dark
-            }}
+            variant="outlined"
+            sx={{ borderRadius: 2 }}
         >
           <Typography variant="body2" fontWeight={500}>
              Al confirmar, serás redirigido a la pasarela de pagos segura.
              Ten listo tu método de autenticación (2FA).
           </Typography>
         </Alert>
-      </DialogContent>
 
-      <DialogActions sx={{ p: 3, pt: 0, gap: 1 }}>
-        <Button 
-            onClick={onClose} 
-            disabled={isLoading} 
-            color="inherit" 
-            variant="outlined"
-            sx={{ borderRadius: 2, fontWeight: 600, px: 3 }}
-        >
-          Cancelar
-        </Button>
-        <Button 
-          variant="contained" 
-          onClick={onConfirm} 
-          disabled={isLoading}
-          size="large"
-          disableElevation
-          startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : <Lock />}
-          sx={{ px: 4, fontWeight: 700, borderRadius: 2, flexGrow: 1 }}
-        >
-          {isLoading ? 'Procesando...' : 'Ir a Pagar'}
-        </Button>
-      </DialogActions>
-    </Dialog>
+      </Stack>
+    </BaseModal>
   );
 };

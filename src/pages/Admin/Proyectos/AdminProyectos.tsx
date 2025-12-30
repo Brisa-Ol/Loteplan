@@ -62,10 +62,11 @@ const AdminProyectos: React.FC = () => {
   // Estado de Datos
   const [selectedProject, setSelectedProject] = useState<ProyectoDto | null>(null);
 
-  // Estado para el efecto Flash
+  // Estado para el efecto Flash (Feedback visual)
   const [highlightedId, setHighlightedId] = useState<number | null>(null);
 
   // --- LOGICA STICKY (Congelar Orden) ---
+  // Mantiene el estado original visualmente para evitar saltos al filtrar
   const initialStatusRef = useRef<Record<number, boolean>>({});
 
   // Filtros
@@ -88,6 +89,7 @@ const AdminProyectos: React.FC = () => {
     queryFn: async () => (await ProyectoService.getAllAdmin()).data
   });
 
+  // Efecto para Sticky Sort
   useEffect(() => {
     if (proyectos.length > 0) {
       proyectos.forEach(p => {
@@ -98,13 +100,21 @@ const AdminProyectos: React.FC = () => {
     }
   }, [proyectos]);
 
-  const createMutation = useMutation({
+const createMutation = useMutation({
     mutationFn: async ({ data, image }: { data: CreateProyectoDto; image: File | null }) => {
-      return ProyectoService.create(data, image);
+      const response = await ProyectoService.create(data, image);
+      return response.data; // ✅ AQUÍ: Retornamos solo la data (el ProyectoDto)
     },
-    onSuccess: () => {
+    onSuccess: (newItem) => { 
       queryClient.invalidateQueries({ queryKey: ['adminProyectos'] });
       createModal.close();
+      
+      // ✅ Ahora newItem es de tipo ProyectoDto, por lo que .id existe
+      if (newItem?.id) {
+          setHighlightedId(newItem.id);
+          setTimeout(() => setHighlightedId(null), 2500);
+      }
+      
       showSnackbar('Proyecto creado correctamente', 'success');
     },
     onError: (err: any) => showSnackbar(`Error al crear: ${err.response?.data?.error || err.message}`, 'error')
@@ -112,9 +122,10 @@ const AdminProyectos: React.FC = () => {
 
   const startMutation = useMutation({
     mutationFn: (id: number) => ProyectoService.startProcess(id),
-    onSuccess: () => {
+    onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ['adminProyectos'] });
       confirmDialog.close();
+      setHighlightedId(id); // Flash effect
       showSnackbar('Proyecto iniciado. Cobros activados.', 'success');
     },
     onError: (err: any) => {
@@ -126,9 +137,10 @@ const AdminProyectos: React.FC = () => {
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: number, data: UpdateProyectoDto }) =>
       ProyectoService.update(id, data),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['adminProyectos'] });
       editModal.close(); 
+      setHighlightedId(variables.id); // Flash effect
       showSnackbar('Proyecto actualizado correctamente', 'success');
     },
     onError: (err: any) => showSnackbar(`Error al editar: ${err.response?.data?.error || err.message}`, 'error')
@@ -142,6 +154,7 @@ const AdminProyectos: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['adminProyectos'] });
       confirmDialog.close();
       
+      // Activamos el prop highlightedRowId en la tabla
       setHighlightedId(variables.id);
       setTimeout(() => setHighlightedId(null), 2500);
 
@@ -240,7 +253,7 @@ const AdminProyectos: React.FC = () => {
           <Chip
             label={isMensual ? 'Ahorro' : 'Directo'}
             size="small"
-            color={isMensual ? 'primary' : 'secondary'}
+            color={isMensual ? 'primary' : 'default'}
             variant={isMensual ? 'filled' : 'outlined'}
             sx={{ fontWeight: 600, minWidth: 80 }}
           />
@@ -257,7 +270,6 @@ const AdminProyectos: React.FC = () => {
           <Chip
             label={p.estado_proyecto}
             size="small"
-            color={colorKey} 
             sx={{ 
               fontWeight: 600, 
               bgcolor: alpha(colorMain, 0.1),
@@ -298,15 +310,6 @@ const AdminProyectos: React.FC = () => {
                   color="success"
                   size="small"
                   disabled={toggleActiveMutation.isPending}
-                  sx={{
-                    '& .MuiSwitch-switchBase.Mui-checked': {
-                      color: theme.palette.success.main,
-                      '&:hover': { backgroundColor: alpha(theme.palette.success.main, 0.1) },
-                    },
-                    '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                      backgroundColor: theme.palette.success.main,
-                    },
-                  }}
                 />
               </Tooltip>
             )}
@@ -342,7 +345,7 @@ const AdminProyectos: React.FC = () => {
               onClick={(e) => { e.stopPropagation(); handleOpenModal(p, imagesModal.open); }} 
               size="small"
               disabled={toggleActiveMutation.isPending}
-              sx={{ color: 'text.secondary', '&:hover': { color: 'primary.main', bgcolor: alpha(theme.palette.primary.main, 0.1) } }}
+              sx={{ color: 'primary.main'}}
             >
               <ImageIcon fontSize="small" />
             </IconButton>
@@ -354,7 +357,7 @@ const AdminProyectos: React.FC = () => {
                 onClick={(e) => { e.stopPropagation(); handleOpenModal(p, cuotasModal.open); }} 
                 size="small" 
                 disabled={toggleActiveMutation.isPending}
-                sx={{ color: "#E07A4D", '&:hover': { bgcolor: alpha("#E07A4D", 0.1) } }}
+                sx={{ color: 'text.secundary'}}
               >
                 <MonetizationOnIcon fontSize="small" />
               </IconButton>
@@ -453,26 +456,18 @@ const AdminProyectos: React.FC = () => {
       </Paper>
 
       <QueryHandler isLoading={isLoading} error={error as Error}>
-         {/* AQUI ESTABA EL ERROR: Se eliminó el Paper envolvente redundante */}
+         {/* ✅ DataTable Estandarizada */}
           <DataTable
             columns={columns}
             data={filteredProyectos}
             getRowKey={(p) => p.id}
-            getRowSx={(p) => {
-              const isHighlighted = highlightedId === p.id;
-              return {
-                opacity: p.activo ? 1 : 0.6,
-                transition: 'background-color 0.8s ease, opacity 0.3s ease',
-                bgcolor: isHighlighted 
-                  ? alpha(theme.palette.success.main, 0.15)
-                  : (p.activo ? 'inherit' : alpha(theme.palette.action.hover, 0.5)),
-                '&:hover': {
-                  bgcolor: isHighlighted 
-                    ? alpha(theme.palette.success.main, 0.2)
-                    : alpha(theme.palette.action.hover, 0.8)
-                }
-              };
-            }}
+            
+            // ✅ Prop nueva: gestiona visualmente las filas inactivas automáticamente
+            isRowActive={(p) => p.activo} 
+
+            // ✅ Prop nueva: aplica el efecto "Flash" verde al cambiar
+            highlightedRowId={highlightedId} 
+
             emptyMessage="No se encontraron proyectos con los filtros actuales."
             pagination={true}
             defaultRowsPerPage={10}

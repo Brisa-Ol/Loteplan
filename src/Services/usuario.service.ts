@@ -11,47 +11,48 @@ import type { GenericResponseDto } from '../types/dto/auth.dto';
 
 const ENDPOINT = '/usuarios';
 
+/**
+ * Servicio para la gestión de usuarios (Perfil propio y Administración).
+ * Conecta con el controlador `usuarioController` del backend.
+ */
 const UsuarioService = {
   
   // ===========================================
-  // 1. RUTAS DE ADMINISTRACIÓN (Estáticas y Base)
+  // 1. RUTAS DE ADMINISTRACIÓN (Solo Admins)
   // ===========================================
 
   /**
-   * Crear nuevo usuario (Admin)
-   * Backend Route: POST /
+   * Crea un nuevo usuario manualmente (sin flujo de registro público).
+   * @param data - Datos del usuario.
    */
   create: async (data: CreateUsuarioDto): Promise<AxiosResponse<UsuarioDto>> => {
     return await httpService.post(ENDPOINT, data);
   },
 
   /**
-   * Obtener todos los usuarios (Admin)
-   * Backend Route: GET /
+   * Obtiene el listado completo de usuarios (incluyendo inactivos/baneados).
    */
   findAll: async (): Promise<AxiosResponse<UsuarioDto[]>> => {
     return await httpService.get(ENDPOINT);
   },
 
   /**
-   * Obtener solo usuarios activos (Admin)
-   * Backend Route: GET /activos
+   * Obtiene solo los usuarios que están activos en el sistema.
    */
   findAllActivos: async (): Promise<AxiosResponse<UsuarioDto[]>> => {
     return await httpService.get(`${ENDPOINT}/activos`);
   },
 
   /**
-   * Obtener solo administradores activos (Admin)
-   * Backend Route: GET /admins
+   * Obtiene el listado de administradores activos.
    */
   findAllAdmins: async (): Promise<AxiosResponse<UsuarioDto[]>> => {
     return await httpService.get(`${ENDPOINT}/admins`);
   },
 
   /**
-   * Buscar usuarios por query param 'q' (Admin)
-   * Backend Route: GET /search?q=...
+   * Busca usuarios por nombre de usuario o email (coincidencia parcial).
+   * @param term - Término de búsqueda (min 3 caracteres).
    */
   search: async (term: string): Promise<AxiosResponse<UsuarioDto[]>> => {
     return await httpService.get(`${ENDPOINT}/search`, {
@@ -60,50 +61,50 @@ const UsuarioService = {
   },
 
   // ===========================================
-  // 2. RUTAS DE USUARIO PROPIO Y VERIFICACIÓN
+  // 2. RUTAS DE USUARIO PROPIO (Autogestión)
   // ===========================================
 
   /**
-   * Confirmar email con token
-   * Backend Route: GET /confirmar/:token
+   * Valida el token de confirmación de correo electrónico.
+   * @param token - Token recibido por email.
    */
   confirmEmail: async (token: string): Promise<AxiosResponse<GenericResponseDto>> => {
     return await httpService.get(`${ENDPOINT}/confirmar/${token}`);
   },
 
   /**
-   * Obtener perfil propio
-   * Backend Route: GET /me
+   * Obtiene el perfil del usuario autenticado actual.
+   * Usa el token JWT para identificar al usuario.
    */
   getMe: async (): Promise<AxiosResponse<UsuarioDto>> => {
     return await httpService.get(`${ENDPOINT}/me`);
   },
 
   /**
-   * Actualizar perfil propio
-   * Backend Route: PUT /me
+   * Actualiza los datos permitidos del perfil propio (nombre, email, teléfono).
    */
   updateMe: async (data: UpdateUserMeDto): Promise<AxiosResponse<UsuarioDto>> => {
     return await httpService.put(`${ENDPOINT}/me`, data);
   },
 
   /**
-   * Eliminar (Soft Delete) cuenta propia
-   * Backend Route: DELETE /me
+   * Elimina la cuenta propia (Soft Delete).
+   * Requiere código 2FA si el usuario lo tiene activo.
+   * @param twofaCode - Código TOTP de 6 dígitos (Opcional si no tiene 2FA).
    */
-softDeleteMe: async (twofaCode?: string): Promise<AxiosResponse<void>> => {
-    // Si hay código, enviamos objeto. Si no, enviamos objeto vacío.
+  softDeleteMe: async (twofaCode?: string): Promise<AxiosResponse<void>> => {
     const payload = twofaCode ? { twofaCode } : {};
     return await httpService.post(`${ENDPOINT}/me`, payload);
   },
 
   // ===========================================
-  // 3. RUTAS DINÁMICAS (Requieren ID)
+  // 3. GESTIÓN POR ID (Admin)
   // ===========================================
 
   /**
-   * Resetear 2FA de un usuario (Admin)
-   * Backend Route: PATCH /:id/reset-2fa
+   * Permite a un administrador desactivar el 2FA de otro usuario (en caso de pérdida de dispositivo).
+   * @param userId - ID del usuario.
+   * @param data - Justificación opcional.
    */
   adminReset2FA: async (
     userId: number, 
@@ -113,24 +114,21 @@ softDeleteMe: async (twofaCode?: string): Promise<AxiosResponse<void>> => {
   },
 
   /**
-   * Obtener usuario por ID (Admin)
-   * Backend Route: GET /:id
+   * Obtiene el detalle de un usuario específico por su ID.
    */
   findById: async (id: number): Promise<AxiosResponse<UsuarioDto>> => {
     return await httpService.get(`${ENDPOINT}/${id}`);
   },
 
   /**
-   * Actualizar usuario por ID (Admin)
-   * Backend Route: PUT /:id
+   * Actualiza los datos de un usuario específico (Admin puede editar más campos, como Rol).
    */
   update: async (id: number, data: UpdateUserAdminDto): Promise<AxiosResponse<UsuarioDto>> => {
     return await httpService.put(`${ENDPOINT}/${id}`, data);
   },
 
   /**
-   * Eliminar (Soft Delete) usuario por ID (Admin)
-   * Backend Route: DELETE /:id
+   * Desactiva (banea) a un usuario específico.
    */
   softDelete: async (id: number): Promise<AxiosResponse<GenericResponseDto>> => {
     return await httpService.delete(`${ENDPOINT}/${id}`);

@@ -11,21 +11,17 @@ import {
   CircularProgress,
   Box,
   Link,
-  Snackbar,
   Typography
 } from "@mui/material";
 import { Visibility, VisibilityOff, InfoOutlined } from "@mui/icons-material";
 import { useFormik } from "formik";
 import * as Yup from "yup";
 
-// Componentes comunes
 import { PageContainer } from "../../components/common/PageContainer/PageContainer";
 import AuthFormContainer from "./components/AuthFormContainer/AuthFormContainer";
 import TwoFactorAuthModal from "../../components/common/TwoFactorAuthModal/TwoFactorAuthModal";
-
-// Contexto
-import { useAuth } from "../../context/AuthContext";
 import FormTextField from "./components/FormTextField/FormTextField";
+import { useAuth } from "../../context/AuthContext";
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -45,114 +41,79 @@ const LoginPage: React.FC = () => {
     resendConfirmation
   } = useAuth();
 
-  // Estados locales
   const [showPassword, setShowPassword] = useState(false);
   const [showResendEmail, setShowResendEmail] = useState(false);
-  const [emailForResend, setEmailForResend] = useState('');
   const [resendSuccess, setResendSuccess] = useState(false);
 
-  // --- CORRECCIÓN AQUÍ ---
-  // Recuperamos el estado de forma segura
+  // Manejo seguro del estado de navegación
   const state = location.state as { from?: string | { pathname: string }; message?: string } | null;
+  const from = typeof state?.from === 'string' 
+    ? state.from 
+    : (state?.from as any)?.pathname || '/';
   
-  // Extraemos 'from'. Si es un objeto, tomamos .pathname. Si es string, lo usamos directo.
-  const rawFrom = state?.from;
-  const from = typeof rawFrom === 'string' 
-    ? rawFrom 
-    : (rawFrom as any)?.pathname || null;
-
   const successMessage = state?.message;
-  // Ahora 'from' es seguro (string o null), por lo que .includes funcionará
-  const vieneDeProyecto = from && from.includes('/proyectos/');
-  // -----------------------
+  const vieneDeProyecto = from.includes('/proyectos/');
 
-  // Configuración de Formik
+  // --- REDIRECCIÓN INTELIGENTE ---
+  useEffect(() => {
+    if (!isInitializing && isAuthenticated && user && !requires2FA) {
+      if (from && from !== '/') {
+        navigate(from, { replace: true });
+      } else {
+        const dashboard = user.rol === 'admin' ? '/admin/dashboard' : '/client/dashboard';
+        navigate(dashboard, { replace: true });
+      }
+    }
+  }, [isInitializing, isAuthenticated, user, requires2FA, navigate, from]);
+
+  // --- DETECCIÓN DE CUENTA NO ACTIVADA ---
+  useEffect(() => {
+    if (error && (error.includes('Cuenta no activada') || error.includes('no confirmado'))) {
+      setShowResendEmail(true);
+    } else {
+      setShowResendEmail(false);
+    }
+  }, [error]);
+
   const formik = useFormik({
     initialValues: {
       identificador: "",
       password: "",
     },
     validationSchema: Yup.object({
-      identificador: Yup.string().required("Ingresá tu email o nombre de usuario"),
+      identificador: Yup.string().required("Ingresá tu email o usuario"),
       password: Yup.string().required("Ingresá tu contraseña"),
     }),
     onSubmit: async (values) => {
       clearError();
       setShowResendEmail(false);
+      setResendSuccess(false);
       try {
         await login({
           identificador: values.identificador,
           contraseña: values.password,
         });
       } catch (err) {
-        console.error("Fallo en login", err);
+        // El error ya se setea en el contexto
       }
     },
   });
 
-  // 1. Redirección inteligente basada en rol y origen
-  useEffect(() => {
-    if (!isInitializing && isAuthenticated && user && !requires2FA) {
-      if (from) {
-        navigate(from, { replace: true });
-        return;
-      }
-      if (user.rol === 'admin') {
-        navigate('/admin/dashboard', { replace: true });
-      } else if (user.rol === 'cliente') {
-        navigate('/client/dashboard', { replace: true });
-      } else {
-        navigate('/', { replace: true });
-      }
-    }
-  }, [isInitializing, isAuthenticated, user, requires2FA, navigate, from]);
-
-  // 2. Detector de error "Cuenta no activada"
-  useEffect(() => {
-    if (error && (error.includes('Cuenta no activada') || error.includes('no confirmado'))) {
-      setShowResendEmail(true);
-      setEmailForResend(formik.values.identificador);
-    } else {
-      setShowResendEmail(false);
-    }
-  }, [error, formik.values.identificador]);
-
-  // 3. Limpieza de mensajes flash (successMessage)
-  useEffect(() => {
-    if (!successMessage) return;
-    const timer = setTimeout(() => {
-      navigate(location.pathname, { replace: true, state: {} });
-    }, 5000);
-    return () => clearTimeout(timer);
-  }, [successMessage, navigate, location.pathname]);
-
-  // Handlers
   const handleResendEmail = async () => {
     try {
-      await resendConfirmation(emailForResend);
+      await resendConfirmation(formik.values.identificador);
       setResendSuccess(true);
       setShowResendEmail(false);
     } catch (err) {
-      console.error('Error al reenviar email:', err);
-    }
-  };
-
-  const handleVerify2FA = async (code: string) => {
-    try {
-      await verify2FA(code);
-    } catch (err) {
-      // El error lo maneja el context
+      // Error manejado por contexto
     }
   };
 
   const handleCancel2FA = () => {
-    logout();
+    logout(); // Limpia estado y redirige
     clearError();
   };
 
-  const isDisabled = isLoading || isInitializing;
-
-  // Render Loader Inicial
   if (isInitializing) {
     return (
       <Box sx={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center' }}>
@@ -163,33 +124,25 @@ const LoginPage: React.FC = () => {
 
   return (
     <PageContainer maxWidth="sm">
-      <AuthFormContainer title="Iniciar Sesión" subtitle="Ingresá tus datos para continuar">
-
-        {/* Alerta Informativa (si viene de ver un proyecto) */}
-        {vieneDeProyecto && !error && !successMessage && (
-          <Alert
-            severity="info"
-            icon={<InfoOutlined />}
-            sx={{ mb: 3, alignItems: 'center' }}
-          >
-            <Typography variant="body2" fontWeight={500}>
-              Para ver los detalles completos del proyecto y los lotes disponibles, por favor inicia sesión o registrate.
-            </Typography>
+      <AuthFormContainer title="Iniciar Sesión" subtitle="Ingresá tus credenciales para continuar">
+        
+        {/* Alertas Contextuales */}
+        {vieneDeProyecto && !isAuthenticated && (
+          <Alert severity="info" icon={<InfoOutlined />} sx={{ mb: 3 }}>
+            Inicia sesión para ver los detalles y lotes del proyecto.
           </Alert>
         )}
 
-        {/* Mensaje de Éxito (ej: registro completado) */}
-        {successMessage && (
-          <Alert severity="success" sx={{ mb: 2 }}>{successMessage}</Alert>
+        {successMessage && <Alert severity="success" sx={{ mb: 2 }}>{successMessage}</Alert>}
+        
+        {resendSuccess && (
+          <Alert severity="success" sx={{ mb: 2 }}>
+            Email reenviado. Revisa tu bandeja de entrada.
+          </Alert>
         )}
 
-        {/* Manejo de Errores de Login */}
         {error && !requires2FA && (
-          <Alert
-            severity={error.includes('Cuenta no activada') ? 'warning' : 'error'}
-            sx={{ mb: 2 }}
-            onClose={clearError}
-          >
+          <Alert severity={error.includes('Cuenta no activada') ? 'warning' : 'error'} sx={{ mb: 3 }} onClose={clearError}>
             {error}
             {showResendEmail && (
               <Box mt={1}>
@@ -197,8 +150,7 @@ const LoginPage: React.FC = () => {
                   component="button"
                   variant="body2"
                   onClick={handleResendEmail}
-                  sx={{ fontWeight: 'bold', textDecoration: 'underline', cursor: 'pointer' }}
-                  color="inherit"
+                  sx={{ fontWeight: 'bold', textDecoration: 'underline' }}
                 >
                   Reenviar email de confirmación
                 </Link>
@@ -209,33 +161,26 @@ const LoginPage: React.FC = () => {
 
         {/* Formulario */}
         <form onSubmit={formik.handleSubmit}>
-          <Stack spacing={3}>
-            
-            {/* Campo Usuario/Email usando FormTextField */}
+          <Stack spacing={2}>
             <FormTextField
               fullWidth
               name="identificador"
-              label="Email o Nombre de Usuario"
+              label="Email o Usuario"
               formik={formik}
-              disabled={isDisabled || requires2FA}
+              disabled={isLoading}
             />
 
-            {/* Campo Password usando FormTextField */}
             <FormTextField
               fullWidth
               name="password"
               label="Contraseña"
               type={showPassword ? "text" : "password"}
               formik={formik}
-              disabled={isDisabled || requires2FA}
+              disabled={isLoading}
               InputProps={{
                 endAdornment: (
                   <InputAdornment position="end">
-                    <IconButton 
-                      onClick={() => setShowPassword(!showPassword)} 
-                      edge="end"
-                      aria-label="toggle password visibility"
-                    >
+                    <IconButton onClick={() => setShowPassword(!showPassword)} edge="end">
                       {showPassword ? <VisibilityOff /> : <Visibility />}
                     </IconButton>
                   </InputAdornment>
@@ -243,38 +188,43 @@ const LoginPage: React.FC = () => {
               }}
             />
 
-            {/* Botón de Submit */}
             <Button
               fullWidth
               variant="contained"
               type="submit"
-              disabled={isDisabled}
               size="large"
+              disabled={isLoading}
+              sx={{ mt: 1, py: 1.5, fontWeight: 700 }}
             >
-              {isLoading && !requires2FA ? <CircularProgress size={24} color="inherit" /> : "Ingresar"}
+              {isLoading ? <CircularProgress size={24} color="inherit" /> : "INGRESAR"}
             </Button>
           </Stack>
         </form>
 
-        {/* Links de Navegación */}
+        {/* Footer Links */}
         <Box textAlign="center" mt={3} display="flex" flexDirection="column" gap={1}>
-          <Button
+          <Link
+            component="button"
+            variant="body2"
             onClick={() => navigate("/forgot-password")}
-            disabled={isDisabled}
-            color="inherit"
-            sx={{ fontWeight: 500, textTransform: 'none' }}
+            underline="hover"
+            color="text.secondary"
           >
             ¿Olvidaste tu contraseña?
-          </Button>
-
-          <Button
-            onClick={() => navigate("/register")}
-            disabled={isDisabled}
-            color="primary"
-            sx={{ textTransform: 'none', fontWeight: 600 }}
-          >
-            ¿No tienes cuenta? Regístrate
-          </Button>
+          </Link>
+          <Typography variant="body2" color="text.secondary">
+            ¿No tienes cuenta?{' '}
+            <Link
+              component="button"
+              variant="body2"
+              onClick={() => navigate("/register")}
+              underline="hover"
+              fontWeight="bold"
+              color="primary"
+            >
+              Regístrate
+            </Link>
+          </Typography>
         </Box>
 
       </AuthFormContainer>
@@ -283,25 +233,12 @@ const LoginPage: React.FC = () => {
       <TwoFactorAuthModal
         open={requires2FA}
         onClose={handleCancel2FA}
-        onSubmit={handleVerify2FA}
+        onSubmit={verify2FA}
         isLoading={isLoading}
         error={error}
-        title="Login Seguro"
-        description="Tu cuenta está protegida con verificación en dos pasos. Ingresa el código de tu aplicación."
+        title="Verificación en 2 Pasos"
+        description="Tu cuenta está protegida. Ingresa el código de tu autenticador."
       />
-
-      {/* Snackbar para reenvío de email */}
-      <Snackbar
-        open={resendSuccess}
-        autoHideDuration={6000}
-        onClose={() => setResendSuccess(false)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert onClose={() => setResendSuccess(false)} severity="success" sx={{ width: '100%' }}>
-          Email de confirmación reenviado. Revisa tu bandeja de entrada.
-        </Alert>
-      </Snackbar>
-
     </PageContainer>
   );
 };

@@ -1,6 +1,6 @@
 // src/pages/Admin/Contratos/AdminContratosFirmados.tsx
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { 
   Box, Typography, Paper, Chip, IconButton, Tooltip, 
   TextField, InputAdornment, Stack, useTheme, alpha, Avatar, 
@@ -21,7 +21,6 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale'; 
 
 // Servicios y Tipos
-// ✅ IMPORTAMOS EL SERVICIO CORRECTO (ContratoService que tiene findAllSigned y downloadAndSave)
 import ContratoService from '../../../Services/contrato.service'; 
 import type { ContratoFirmadoDto } from '../../../types/dto/contrato.dto';
 
@@ -33,20 +32,24 @@ import { DataTable, type DataTableColumn } from '../../../components/common/Data
 
 const AdminContratosFirmados: React.FC = () => {
   const theme = useTheme();
+  
+  // Estados
   const [searchTerm, setSearchTerm] = useState('');
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
+  
+  // ✅ Feedback Visual: Flash verde al terminar descarga
+  const [highlightedId, setHighlightedId] = useState<number | null>(null);
 
   // 1. Query: Obtener TODOS los contratos firmados
   const { data: contratos = [], isLoading, error } = useQuery<ContratoFirmadoDto[]>({
     queryKey: ['adminContratosFirmados'],
     queryFn: async () => {
-        // ✅ Usamos ContratoService aquí
         const res = await ContratoService.findAllSigned();
         return res.data; 
     }
   });
 
-  // 2. Filtrado en Cliente
+  // 2. Filtrado en Cliente (Memoizado)
   const filteredContratos = useMemo(() => {
     const term = searchTerm.toLowerCase();
     return contratos.filter(c => 
@@ -56,18 +59,22 @@ const AdminContratosFirmados: React.FC = () => {
     );
   }, [contratos, searchTerm]);
 
-  // 3. Manejo de Descarga
-  const handleDownload = async (contrato: ContratoFirmadoDto) => {
+  // 3. Manejo de Descarga (Callback)
+  const handleDownload = useCallback(async (contrato: ContratoFirmadoDto) => {
     try {
       setDownloadingId(contrato.id);
-      // ✅ Usamos ContratoService aquí también
       await ContratoService.downloadAndSave(contrato.id, contrato.nombre_archivo);
+      
+      // ✅ Feedback Visual: Flash de éxito
+      setHighlightedId(contrato.id);
+      setTimeout(() => setHighlightedId(null), 2500);
+
     } catch (error) {
       alert("Error al descargar el archivo. Verifica tu conexión.");
     } finally {
       setDownloadingId(null);
     }
-  };
+  }, []);
 
   // 4. Definición de Columnas
   const columns = useMemo<DataTableColumn<ContratoFirmadoDto>[]>(() => [
@@ -162,13 +169,13 @@ const AdminContratosFirmados: React.FC = () => {
                         '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) } 
                     }}
                 >
-                    {downloadingId === row.id ? <CircularProgress size={20} /> : <DownloadIcon fontSize="small" />}
+                    {downloadingId === row.id ? <CircularProgress size={20} color="inherit" /> : <DownloadIcon fontSize="small" />}
                 </IconButton>
             </span>
         </Tooltip>
       )
     }
-  ], [theme, downloadingId]);
+  ], [theme, downloadingId, handleDownload]);
 
   return (
     <PageContainer maxWidth="xl">
@@ -210,6 +217,10 @@ const AdminContratosFirmados: React.FC = () => {
             columns={columns}
             data={filteredContratos}
             getRowKey={(row) => row.id}
+            
+            // ✅ Feedback Visual al descargar
+            highlightedRowId={highlightedId}
+
             emptyMessage="No se encontraron contratos firmados."
             pagination={true}
             defaultRowsPerPage={10}

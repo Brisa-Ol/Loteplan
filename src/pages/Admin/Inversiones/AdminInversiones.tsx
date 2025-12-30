@@ -1,9 +1,9 @@
 // src/pages/Admin/Inversiones/AdminInversiones.tsx
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { 
   Box, Typography, Paper, TextField, MenuItem, 
-  InputAdornment, Stack, Divider, Avatar, LinearProgress, IconButton, Tooltip, Chip, useTheme, alpha
+  Stack, Divider, Avatar, LinearProgress, IconButton, Tooltip, Chip, useTheme, alpha
 } from '@mui/material';
 import { 
   Search, Visibility, MonetizationOn, ShowChart, 
@@ -43,7 +43,6 @@ const StatCard: React.FC<{
   loading?: boolean;
 }> = ({ title, value, sub, color, icon, loading }) => {
   const theme = useTheme();
-  // Obtener color del theme de forma segura
   const paletteColor = (theme.palette as any)[color] || theme.palette.primary;
 
   return (
@@ -76,7 +75,7 @@ const StatCard: React.FC<{
           <Typography variant="h5" fontWeight="bold" color="text.primary">{value}</Typography>
         )}
         <Typography variant="body2" color="text.secondary" fontWeight={600}>{title}</Typography>
-        {sub && <Typography variant="caption" color={paletteColor.main} fontWeight="bold">{sub}</Typography>}
+        {sub && <Typography variant="caption" color={paletteColor.main} fontWeight="bold" display="block">{sub}</Typography>}
       </Box>
     </Paper>
   );
@@ -102,15 +101,17 @@ const AdminInversiones: React.FC = () => {
     queryFn: async () => (await InversionService.findAll()).data,
   });
 
-  const { data: liquidezData, isLoading: loadingMetrics } = useQuery({
+  const { data: liquidezRes, isLoading: loadingMetrics } = useQuery({
     queryKey: ['adminInversionesLiquidez'],
-    queryFn: async () => (await InversionService.getLiquidityMetrics()).data.data,
+    queryFn: async () => (await InversionService.getLiquidityMetrics()).data,
   });
+  const liquidezData = liquidezRes?.data; // Acceso corregido según DTO
 
-  const { data: topInvestorsRaw = [] } = useQuery({
+  const { data: topInvestorsRes } = useQuery({
     queryKey: ['adminTopInvestorsRaw'],
-    queryFn: async () => (await InversionService.getAggregatedMetrics()).data.data,
+    queryFn: async () => (await InversionService.getAggregatedMetrics()).data,
   });
+  const topInvestorsRaw = topInvestorsRes?.data || [];
 
   const { data: usuarios = [] } = useQuery({
     queryKey: ['adminUsuariosMap'],
@@ -125,24 +126,27 @@ const AdminInversiones: React.FC = () => {
   });
 
   // --- DATA LOGIC ---
-  const getUserInfo = (id: number) => {
+  const getUserInfo = useCallback((id: number) => {
     const user = usuarios.find(u => u.id === id);
     return user ? { name: `${user.nombre} ${user.apellido}`, email: user.email } : { name: `Usuario #${id}`, email: 'Sin datos' };
-  };
+  }, [usuarios]);
 
-  const getProjectName = (id: number) => {
+  const getProjectName = useCallback((id: number) => {
     const proj = proyectos.find(p => p.id === id);
     return proj ? proj.nombre_proyecto : `Proyecto #${id}`;
-  };
+  }, [proyectos]);
 
   const chartData = useMemo(() => {
     return topInvestorsRaw
-      .map(item => ({
-        name: getUserInfo(item.id_usuario).name,
-        monto: parseFloat(item.monto_total_invertido),
-      }))
-      .slice(0, 10);
-  }, [topInvestorsRaw, usuarios]);
+      .map(item => {
+        const info = getUserInfo(item.id_usuario);
+        return {
+            name: info.name,
+            monto: parseFloat(item.monto_total_invertido),
+        };
+      })
+      .slice(0, 8); // Limitamos a 8 para mejor visualización
+  }, [topInvestorsRaw, getUserInfo]);
 
   const filteredInversiones = useMemo(() => {
     return inversiones.filter(inv => {
@@ -160,33 +164,30 @@ const AdminInversiones: React.FC = () => {
       const matchesStatus = filterStatus === 'all' || inv.estado === filterStatus;
 
       let matchesDate = true;
-      if (dateStart || dateEnd) {
-        const invDate = new Date(inv.fecha_inversion || inv.createdAt || '');
-        if (dateStart && invDate < new Date(dateStart)) matchesDate = false;
-        if (dateEnd) {
-          const endDate = new Date(dateEnd);
-          endDate.setHours(23, 59, 59);
-          if (invDate > endDate) matchesDate = false;
-        }
+      const invDate = new Date(inv.fecha_inversion || inv.createdAt || '');
+      if (dateStart && invDate < new Date(dateStart)) matchesDate = false;
+      if (dateEnd) {
+          const limitDate = new Date(dateEnd);
+          limitDate.setHours(23, 59, 59, 999);
+          if (invDate > limitDate) matchesDate = false;
       }
 
       return matchesSearch && matchesProject && matchesStatus && matchesDate;
     });
-  }, [inversiones, searchTerm, filterProject, filterStatus, dateStart, dateEnd, usuarios, proyectos]);
+  }, [inversiones, searchTerm, filterProject, filterStatus, dateStart, dateEnd, getUserInfo, getProjectName]);
 
   // Handlers
-  const handleViewDetails = (inv: InversionDto) => {
+  const handleViewDetails = useCallback((inv: InversionDto) => {
     setSelectedInversion(inv);
     detailModal.open();
-  };
+  }, [detailModal]);
 
-  const handleCloseModal = () => {
+  const handleCloseModal = useCallback(() => {
     detailModal.close();
-    // Timeout para limpieza suave
     setTimeout(() => setSelectedInversion(null), 300);
-  };
+  }, [detailModal]);
 
-  // Columns Definition (Memoized)
+  // Columns Definition
   const columns = useMemo<DataTableColumn<InversionDto>[]>(() => [
     {
       id: 'id',
@@ -202,7 +203,12 @@ const AdminInversiones: React.FC = () => {
         const user = getUserInfo(inv.id_usuario);
         return (
             <Stack direction="row" spacing={2} alignItems="center">
-                <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main', width: 36, height: 36, fontSize: 14, fontWeight: 'bold' }}>
+                <Avatar sx={{ 
+                    bgcolor: alpha(theme.palette.primary.main, 0.1), 
+                    color: 'primary.main', 
+                    width: 36, height: 36, 
+                    fontSize: 14, fontWeight: 'bold' 
+                }}>
                     {user.name.charAt(0) || <PersonIcon />}
                 </Avatar>
                 <Box>
@@ -235,15 +241,18 @@ const AdminInversiones: React.FC = () => {
     {
       id: 'estado',
       label: 'Estado',
-      render: (inv) => (
-        <Chip 
-            label={inv.estado} 
-            size="small" 
-            color={inv.estado === 'pagado' ? 'success' : inv.estado === 'pendiente' ? 'warning' : 'error'} 
-            variant={inv.estado === 'pagado' ? 'filled' : 'outlined'}
-            sx={{ fontWeight: 600, textTransform: 'capitalize' }}
-        />
-      )
+      render: (inv) => {
+        const color = inv.estado === 'pagado' ? 'success' : inv.estado === 'pendiente' ? 'warning' : 'error';
+        return (
+            <Chip 
+                label={inv.estado.toUpperCase()} 
+                size="small" 
+                color={color as any} 
+                variant={inv.estado === 'pagado' ? 'filled' : 'outlined'}
+                sx={{ fontWeight: 700, fontSize: '0.65rem' }}
+            />
+        );
+      }
     },
     {
       id: 'fecha',
@@ -276,14 +285,14 @@ const AdminInversiones: React.FC = () => {
         </Tooltip>
       )
     }
-  ], [theme]);
+  ], [theme, getUserInfo, getProjectName, handleViewDetails]);
 
   return (
     <PageContainer maxWidth="xl" sx={{ py: 3 }}>
 
       <PageHeader
-        title="Inversiones Directas"
-        subtitle="Gestión y monitoreo de capital ingresado y flujo de caja."
+        title="Gestión de Inversiones"
+        subtitle="Monitoreo de capital ingresado y rendimiento de inversores."
       />
 
       {/* ========== 1. KPIs ========== */}
@@ -294,28 +303,28 @@ const AdminInversiones: React.FC = () => {
         mb: 4 
       }}>
         <StatCard 
-          title="Total Registradas" 
-          value={`$${Number(liquidezData?.total_invertido_registrado || 0).toLocaleString('es-AR', { maximumFractionDigits: 0 })}`} 
+          title="Total Registrado" 
+          value={`$${Number(liquidezData?.total_invertido_registrado || 0).toLocaleString('es-AR')}`} 
           color="info" icon={<AttachMoney />}
           loading={loadingMetrics}
         />
         <StatCard 
-          title="Total Pagadas" 
-          value={`$${Number(liquidezData?.total_pagado || 0).toLocaleString('es-AR', { maximumFractionDigits: 0 })}`} 
+          title="Total Cobrado" 
+          value={`$${Number(liquidezData?.total_pagado || 0).toLocaleString('es-AR')}`} 
           color="success" icon={<MonetizationOn />}
           loading={loadingMetrics}
         />
         <StatCard 
           title="Tasa de Liquidez" 
           value={`${liquidezData?.tasa_liquidez || 0}%`} 
-          sub="Conversión Pago"
+          sub="Efectividad de Cobro"
           color="warning" icon={<ShowChart />}
           loading={loadingMetrics}
         />
         <StatCard 
-          title="Inversiones Totales" 
-          value={filteredInversiones.length.toString()} 
-          sub="Transacciones"
+          title="Participaciones" 
+          value={inversiones.length.toString()} 
+          sub="Transacciones totales"
           color="primary" icon={<AccountBalanceWallet />}
           loading={loadingInv}
         />
@@ -324,98 +333,52 @@ const AdminInversiones: React.FC = () => {
       {/* ========== 2. CHART & FILTERS ========== */}
       <Stack direction={{ xs: 'column', lg: 'row' }} spacing={3} mb={4}>
         
-        {/* Left: Chart */}
+        {/* Gráfico */}
         <Box sx={{ flex: 2, minWidth: 0 }}> 
-          <Paper 
-            sx={{ 
-                p: 3, borderRadius: 2, height: 420, 
-                border: '1px solid', borderColor: 'divider' 
-            }} 
-            elevation={0}
-          >
-            <Typography variant="h6" fontWeight="bold" mb={2} color="text.primary">Top 10 Inversores (Acumulado)</Typography>
-            {chartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="90%">
-                <BarChart data={chartData} layout="vertical" margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke={theme.palette.divider} />
-                  <XAxis type="number" tickFormatter={(val) => `$${val/1000}k`} tick={{ fill: theme.palette.text.secondary }} />
-                  <YAxis type="category" dataKey="name" width={100} style={{ fontSize: '12px', fontWeight: 500, fill: theme.palette.text.secondary }} />
-                  <RechartsTooltip 
-                    formatter={(value: number) => [`$${value.toLocaleString('es-AR')}`, 'Total Invertido']}
-                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: theme.shadows[4] }}
-                  />
-                  <Bar dataKey="monto" radius={[0, 4, 4, 0]} barSize={20}>
-                    {chartData.map((_, index) => (
-                       <Cell key={`cell-${index}`} fill={index < 3 ? theme.palette.warning.main : theme.palette.primary.main} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <Box display="flex" justifyContent="center" alignItems="center" height="100%">
-                <Typography color="text.secondary">Insuficientes datos para el gráfico</Typography>
-              </Box>
-            )}
+          <Paper sx={{ p: 3, borderRadius: 2, height: 420, border: '1px solid', borderColor: 'divider' }} elevation={0}>
+            <Typography variant="h6" fontWeight={700} mb={3}>Top 10 Inversores</Typography>
+            <Box sx={{ width: '100%', height: 320 }}>
+              {chartData.length > 0 ? (
+                <ResponsiveContainer>
+                  <BarChart data={chartData} layout="vertical" margin={{ left: 20, right: 30 }}>
+                    <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
+                    <XAxis type="number" hide />
+                    <YAxis type="category" dataKey="name" width={120} tick={{ fontSize: 11 }} />
+                    <RechartsTooltip formatter={(val) => [`$${val.toLocaleString()}`, 'Invertido']} />
+                    <Bar dataKey="monto" radius={[0, 4, 4, 0]} barSize={20}>
+                      {chartData.map((_, index) => (
+                         <Cell key={`cell-${index}`} fill={index < 3 ? theme.palette.warning.main : theme.palette.primary.main} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : <Typography color="text.secondary" textAlign="center">Cargando datos del gráfico...</Typography>}
+            </Box>
           </Paper>
         </Box>
 
-        {/* Right: Filters */}
+        {/* Filtros */}
         <Box sx={{ flex: 1 }}>
-          <Paper 
-            elevation={0}
-            sx={{ 
-                p: 3, borderRadius: 2, height: '100%', 
-                display: 'flex', flexDirection: 'column', gap: 2,
-                border: '1px solid', borderColor: 'divider',
-                bgcolor: alpha(theme.palette.background.paper, 0.6)
-            }} 
-          >
-            <Stack direction="row" alignItems="center" gap={1} mb={1}>
-                <Search color="action" />
-                <Typography variant="h6" fontWeight="bold">Filtros Avanzados</Typography>
-            </Stack>
-            
-            <TextField 
-              placeholder="Buscar (Usuario, ID...)" size="small" fullWidth
-              value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
-              InputProps={{ sx: { borderRadius: 2 } }}
-            />
-            
-            <TextField
-              select label="Estado" size="small" fullWidth
-              value={filterStatus} onChange={(e) => setFilterStatus(e.target.value as any)}
-              InputProps={{ sx: { borderRadius: 2 } }}
-            >
-              <MenuItem value="all">Todos</MenuItem>
+          <Paper sx={{ p: 3, borderRadius: 2, display: 'flex', flexDirection: 'column', gap: 2, border: '1px solid', borderColor: 'divider', bgcolor: alpha(theme.palette.background.paper, 0.6) }} elevation={0}>
+            <Typography variant="h6" fontWeight={700} mb={1}>Filtros</Typography>
+            <TextField placeholder="Buscar inversor o proyecto..." size="small" fullWidth value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+            <TextField select label="Estado" size="small" fullWidth value={filterStatus} onChange={(e) => setFilterStatus(e.target.value as any)}>
+              <MenuItem value="all">Todos los estados</MenuItem>
               <MenuItem value="pendiente">Pendiente</MenuItem>
               <MenuItem value="pagado">Pagado</MenuItem>
               <MenuItem value="fallido">Fallido</MenuItem>
             </TextField>
-            
-            <TextField
-              select label="Proyecto" size="small" fullWidth
-              value={filterProject} onChange={(e) => setFilterProject(e.target.value)}
-              InputProps={{ sx: { borderRadius: 2 } }}
-            >
+            <TextField select label="Proyecto" size="small" fullWidth value={filterProject} onChange={(e) => setFilterProject(e.target.value)}>
               <MenuItem value="all">Todos los proyectos</MenuItem>
-              {proyectos.map(p => (
-                <MenuItem key={p.id} value={p.id}>{p.nombre_proyecto}</MenuItem>
-              ))}
+              {proyectos.map(p => <MenuItem key={p.id} value={p.id}>{p.nombre_proyecto}</MenuItem>)}
             </TextField>
-            
             <Divider sx={{ my: 1 }} />
-            
-            <Stack direction="row" alignItems="center" gap={1}>
-                <CalendarMonth color="action" fontSize="small" />
-                <Typography variant="caption" fontWeight="bold">Rango de Fechas</Typography>
-            </Stack>
             <Stack direction="row" spacing={1}>
-              <TextField type="date" size="small" fullWidth value={dateStart} onChange={(e) => setDateStart(e.target.value)} InputProps={{ sx: { borderRadius: 2 } }} />
-              <TextField type="date" size="small" fullWidth value={dateEnd} onChange={(e) => setDateEnd(e.target.value)} InputProps={{ sx: { borderRadius: 2 } }} />
+              <TextField type="date" size="small" label="Desde" fullWidth value={dateStart} onChange={(e) => setDateStart(e.target.value)} InputLabelProps={{ shrink: true }} />
+              <TextField type="date" size="small" label="Hasta" fullWidth value={dateEnd} onChange={(e) => setDateEnd(e.target.value)} InputLabelProps={{ shrink: true }} />
             </Stack>
           </Paper>
         </Box>
-
       </Stack>
 
       {/* ========== 3. DATA TABLE ========== */}
@@ -424,17 +387,14 @@ const AdminInversiones: React.FC = () => {
             columns={columns}
             data={filteredInversiones}
             getRowKey={(row) => row.id}
-            emptyMessage="No se encontraron inversiones con estos filtros."
-            pagination={true}
-            defaultRowsPerPage={10}
+            isRowActive={(row) => row.estado !== 'fallido'}
+            emptyMessage="No se encontraron registros."
+            pagination
         />
       </QueryHandler>
 
-      {/* ========== MODAL CON HOOK ========== */}
       <DetalleInversionModal 
-        open={detailModal.isOpen} 
-        onClose={handleCloseModal} 
-        inversion={selectedInversion}
+        open={detailModal.isOpen} onClose={handleCloseModal} inversion={selectedInversion}
         userName={selectedInversion ? getUserInfo(selectedInversion.id_usuario).name : ''}
         userEmail={selectedInversion ? getUserInfo(selectedInversion.id_usuario).email : ''}
         projectName={selectedInversion ? getProjectName(selectedInversion.id_proyecto) : ''}

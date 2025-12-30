@@ -1,51 +1,34 @@
-import type { GenericResponseDto } from './auth.dto'; // Reutilizamos la respuesta genérica
-
 // ==========================================
-// 📤 REQUEST DTOs (Lo que envías)
+// 🛡️ DTOs para Gestión de 2FA
 // ==========================================
 
 /**
- * Datos necesarios para activar permanentemente el 2FA
- * Endpoint: verifyAndEnable2FA
+ * Datos necesarios para activar permanentemente el 2FA.
+ * Se envía tras escanear el QR para confirmar que el usuario lo configuró bien.
  */
 export interface Enable2faRequestDto {
-  token: string; // El código TOTP de 6 dígitos
+  /** Código TOTP de 6 dígitos actual. */
+  token: string; 
 }
 
 /**
- * Datos necesarios para desactivar el 2FA
- * Requiere contraseña para mayor seguridad
- * Endpoint: disable2FA
+ * Datos necesarios para desactivar el 2FA.
+ * Requiere contraseña para evitar desactivación por sesión secuestrada.
  */
 export interface Disable2faRequestDto {
+  /** Contraseña actual del usuario. */
   contraseña: string;
-  token: string; // El código TOTP de 6 dígitos
+  /** Código TOTP de 6 dígitos actual. */
+  token: string; 
 }
-
-// ==========================================
-// 📥 RESPONSE DTOs (Lo que recibes)
-// ==========================================
 
 /**
  * Respuesta al solicitar configurar 2FA.
- * El frontend debe usar 'otpauthUrl' para generar el QR.
  */
 export interface Generate2faSecretResponseDto {
   message: string;
-  secret: string;      // Clave en texto (para guardado manual si el usuario quiere)
-  otpauthUrl: string;  // URL para generar el QR (usar librería 'qrcode')
-}
-
-// ==========================================
-// 🛡️ INTERFACES DE ERROR (Middleware de Seguridad)
-// ==========================================
-
-/**
- * Estructura del error 403 devuelto por checkKYCandTwoFA.
- * El frontend debe interceptar esto para redirigir al usuario.
- */
-export interface SecurityRequirementError {
-  error: string;
-  action_required: 'enable_2fa' | 'complete_kyc';
-  kyc_status?: string; // Ejem: 'NO_INICIADO', 'PENDIENTE', 'RECHAZADO'
+  /** Clave secreta en texto (Base32). Útil si el usuario no puede escanear el QR. */
+  secret: string;      
+  /** URL con protocolo `otpauth://`. Debe ser convertida a imagen QR por el frontend. */
+  otpauthUrl: string;  
 }

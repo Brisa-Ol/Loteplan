@@ -1,3 +1,5 @@
+// src/pages/Client/Kyc/VerificacionKYC.tsx
+
 import React, { useState, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -8,7 +10,7 @@ import {
 import {
   VerifiedUser, HourglassEmpty, NavigateNext, Send,
   Person, UploadFile, Assignment, ArrowBack, ErrorOutline,
-  CheckCircle, RadioButtonUnchecked
+  RadioButtonUnchecked
 } from '@mui/icons-material';
 
 // Servicios y Tipos
@@ -94,13 +96,23 @@ const VerificacionKYC: React.FC = () => {
       });
     },
     onSuccess: () => {
+      // Invalida para que la UI cambie a "PENDIENTE" automáticamente
       queryClient.invalidateQueries({ queryKey: ['kycStatus'] });
       setActiveStep(0);
       setUploadError(null);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     },
     onError: (err: any) => {
-      const errorMsg = err.response?.data?.mensaje || err.message || 'Error al enviar documentación';
+      // Manejo inteligente de errores del backend
+      const errorData = err.response?.data;
+      
+      // Si el error es porque ya existe una solicitud, recargamos el estado
+      if (errorData?.tipo === 'SOLICITUD_PENDIENTE' || errorData?.tipo === 'YA_VERIFICADO') {
+         queryClient.invalidateQueries({ queryKey: ['kycStatus'] });
+         return;
+      }
+
+      const errorMsg = errorData?.mensaje || err.message || 'Error al enviar documentación';
       setUploadError(errorMsg);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -170,7 +182,7 @@ const VerificacionKYC: React.FC = () => {
             color="success" 
             size="large" 
             sx={{ mt: 4, px: 4, borderRadius: 2 }}
-            onClick={() => window.location.href = '/dashboard'}
+            onClick={() => window.location.href = '/client/dashboard'}
           >
             Ir al Dashboard
           </Button>
@@ -210,7 +222,8 @@ const VerificacionKYC: React.FC = () => {
     }
 
     // ESTADO: FORMULARIO (Inicio o Rechazo)
-    if (estado === 'NO_INICIADO' || (estado === 'RECHAZADA' && puedeEnviar)) {
+    // Mostramos el form si es 'NO_INICIADO' O si 'puede_enviar' es true (caso rechazo)
+    if (estado === 'NO_INICIADO' || puedeEnviar) {
       return (
         <Stack spacing={4}>
           
@@ -281,7 +294,6 @@ const VerificacionKYC: React.FC = () => {
                     </Box>
                   </Box>
                   
-                  {/* REEMPLAZO DE GRID POR BOX CSS GRID */}
                   <Box display="grid" gridTemplateColumns={{ xs: '1fr', md: '1fr 1fr' }} gap={3}>
                         <TextField 
                             select fullWidth label="Tipo Documento" required
@@ -297,7 +309,6 @@ const VerificacionKYC: React.FC = () => {
                             onChange={(e) => setNumeroDocumento(e.target.value)} 
                         />
 
-                        {/* gridColumn: '1 / -1' hace que ocupe todo el ancho en desktop */}
                         <Box sx={{ gridColumn: { md: '1 / -1' } }}>
                             <TextField 
                                 fullWidth label="Nombre Completo" required
@@ -335,7 +346,6 @@ const VerificacionKYC: React.FC = () => {
                     </Alert>
                   </Box>
                   
-                  {/* REEMPLAZO DE GRID POR BOX CSS GRID */}
                   <Box display="grid" gridTemplateColumns={{ xs: '1fr', md: '1fr 1fr' }} gap={3}>
                       <FileUploadCard
                         title="Frente DNI *"
@@ -396,7 +406,6 @@ const VerificacionKYC: React.FC = () => {
                     }}
                   >
                     <CardContent sx={{ p: 3 }}>
-                      {/* REEMPLAZO DE GRID POR BOX CSS GRID */}
                       <Box display="grid" gridTemplateColumns={{ xs: '1fr', sm: '1fr 1fr' }} gap={3}>
                           <Box>
                               <Typography variant="caption" color="text.secondary" fontWeight={700}>NOMBRE COMPLETO</Typography>
@@ -407,7 +416,6 @@ const VerificacionKYC: React.FC = () => {
                               <Typography variant="body1">{tipoDocumento} - {numeroDocumento}</Typography>
                           </Box>
                           
-                          {/* Elemento de ancho completo */}
                           <Box sx={{ gridColumn: { sm: '1 / -1' } }}>
                               <Divider sx={{ my: 1 }} />
                           </Box>
@@ -431,7 +439,7 @@ const VerificacionKYC: React.FC = () => {
                                             fontSize: '0.875rem'
                                         }}
                                       >
-                                          <CheckCircle fontSize="inherit" color="success" /> {item.label}
+                                          <RadioButtonUnchecked fontSize="inherit" color="success" /> {item.label}
                                       </Box>
                                   ))}
                               </Stack>

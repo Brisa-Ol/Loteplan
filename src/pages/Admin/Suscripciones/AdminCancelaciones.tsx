@@ -1,9 +1,9 @@
 // src/pages/Admin/Cancelaciones/AdminCancelaciones.tsx
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { 
   Box, Typography, Paper, TextField, InputAdornment, 
-  Chip, IconButton, Tooltip, Stack, Avatar, LinearProgress, Divider
+  Chip, IconButton, Tooltip, Stack, Avatar, LinearProgress, Divider, useTheme, alpha
 } from '@mui/material';
 import { 
   Search, Visibility, TrendingDown, MoneyOff, Cancel,
@@ -26,7 +26,7 @@ import DetalleCancelacionModal from './components/DetalleCancelacionModal';
 // Hooks
 import { useModal } from '../../../hooks/useModal';
 
-// --- SUBCOMPONENTE: StatCard (Simplificado) ---
+// --- SUBCOMPONENTE: StatCard ---
 const StatCard: React.FC<{ 
   title: string; 
   value: string; 
@@ -68,6 +68,8 @@ const StatCard: React.FC<{
 
 // --- COMPONENTE PRINCIPAL ---
 const AdminCancelaciones: React.FC = () => {
+  const theme = useTheme();
+
   // 1. Estados de Filtro
   const [searchTerm, setSearchTerm] = useState('');
   const [dateStart, setDateStart] = useState('');
@@ -122,19 +124,18 @@ const AdminCancelaciones: React.FC = () => {
     });
   }, [cancelaciones, searchTerm, dateStart, dateEnd]);
 
-  // 5. Handlers
-  const handleVerDetalle = (item: SuscripcionCanceladaDto) => {
+  // 5. Handlers (Callback para rendimiento)
+  const handleVerDetalle = useCallback((item: SuscripcionCanceladaDto) => {
     setSelectedCancelacion(item);
     detailModal.open();
-  };
+  }, [detailModal]);
 
-  const handleCerrarModal = () => {
+  const handleCerrarModal = useCallback(() => {
     detailModal.close();
-    // Limpieza suave
     setTimeout(() => setSelectedCancelacion(null), 300);
-  };
+  }, [detailModal]);
 
-  // 6. Columnas (Memoizadas para rendimiento)
+  // 6. Columnas
   const columns = useMemo<DataTableColumn<SuscripcionCanceladaDto>[]>(() => [
     {
       id: 'id',
@@ -158,11 +159,17 @@ const AdminCancelaciones: React.FC = () => {
       minWidth: 220,
       render: (item) => (
         <Stack direction="row" spacing={2} alignItems="center">
-            <Avatar sx={{ width: 32, height: 32, bgcolor: 'error.light', color: 'error.main', fontSize: 14 }}>
-                {item.usuario?.nombre?.charAt(0) || <PersonIcon />}
+            <Avatar sx={{ 
+                width: 32, height: 32, 
+                bgcolor: alpha(theme.palette.error.main, 0.1), // Estilo consistente
+                color: 'error.main', 
+                fontSize: 14,
+                fontWeight: 'bold'
+            }}>
+                {item.usuario?.nombre?.charAt(0) || <PersonIcon fontSize="small"/>}
             </Avatar>
             <Box>
-                <Typography variant="body2" fontWeight={600}>
+                <Typography variant="body2" fontWeight={600} color="text.primary">
                     {item.usuario ? `${item.usuario.nombre} ${item.usuario.apellido}` : 'Usuario eliminado'}
                 </Typography>
                 <Typography variant="caption" color="text.secondary" noWrap display="block" sx={{ maxWidth: 180 }}>
@@ -189,7 +196,7 @@ const AdminCancelaciones: React.FC = () => {
             label={`${item.meses_pagados} Meses`} 
             size="small" 
             variant="outlined" 
-            sx={{ fontWeight: 600, borderColor: 'divider' }}
+            sx={{ fontWeight: 600, borderColor: 'divider', color: 'text.secondary' }}
         />
       )
     },
@@ -210,15 +217,15 @@ const AdminCancelaciones: React.FC = () => {
         <Tooltip title="Ver Detalle">
             <IconButton 
               size="small" 
-              color="primary" 
               onClick={() => handleVerDetalle(item)}
+              sx={{ color: 'primary.main', '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.1) } }}
             >
               <Visibility fontSize="small" />
             </IconButton>
         </Tooltip>
       )
     }
-  ], []); // Dependencias vacías porque handleVerDetalle es estable, pero si usara props, agrégalas.
+  ], [theme, handleVerDetalle]); 
 
   return (
     <PageContainer maxWidth="xl">
@@ -284,7 +291,7 @@ const AdminCancelaciones: React.FC = () => {
         </Stack>
       </Paper>
 
-      {/* ========== 3. TABLA OPTIMIZADA ========== */}
+      {/* ========== 3. TABLA ========== */}
       <QueryHandler isLoading={isLoading} error={error as Error | null}>
         <DataTable
             columns={columns}
@@ -293,7 +300,6 @@ const AdminCancelaciones: React.FC = () => {
             emptyMessage="No se encontraron cancelaciones con los filtros actuales."
             pagination={true}
             defaultRowsPerPage={10}
-            // Ya no pasamos elevation ni sx manuales innecesarios
         />
       </QueryHandler>
 

@@ -1,10 +1,10 @@
 // src/pages/Admin/Pagos/AdminPagos.tsx
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { 
   Box, Typography, Paper, TextField, MenuItem, 
   InputAdornment, Chip, IconButton, Tooltip, Stack, 
-  Alert, AlertTitle, LinearProgress, Avatar, useTheme, alpha
+  Alert, AlertTitle, LinearProgress, Avatar, useTheme, alpha, Snackbar
 } from '@mui/material';
 import { 
   Search, Visibility, AttachMoney, TrendingDown, 
@@ -38,7 +38,7 @@ const StatCard: React.FC<{
   icon: React.ReactNode; 
 }> = ({ title, value, sub, color, icon }) => {
   const theme = useTheme();
-  // Obtener color del theme de forma segura
+  // Casting seguro para colores dinámicos
   const paletteColor = (theme.palette as any)[color] || theme.palette.primary;
 
   return (
@@ -77,13 +77,15 @@ const AdminPagos: React.FC = () => {
   const theme = useTheme();
   const queryClient = useQueryClient();
 
-  // --- ESTADOS DE FILTRO ---
+  // --- ESTADOS ---
   const [searchTerm, setSearchTerm] = useState('');
   const [filterState, setFilterState] = useState('all');
   const [dateStart, setDateStart] = useState('');
   const [dateEnd, setDateEnd] = useState('');
-  
-  // Hooks
+  const [highlightedId, setHighlightedId] = useState<number | null>(null);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '' });
+
+  // Hooks Modal
   const detalleModal = useModal();
   const [selectedPago, setSelectedPago] = useState<PagoDto | null>(null);
 
@@ -112,18 +114,18 @@ const AdminPagos: React.FC = () => {
     staleTime: 300000,
   });
 
-  // --- HELPERS ---
-  const getUserName = (id?: number) => {
+  // --- HELPERS (Memoizados para uso interno en columnas) ---
+  const getUserName = useCallback((id?: number) => {
     if (!id) return '-';
     const u = usuarios.find(u => u.id === id);
     return u ? `${u.nombre} ${u.apellido}` : `ID ${id}`;
-  };
+  }, [usuarios]);
 
-  const getProjectName = (id?: number) => {
+  const getProjectName = useCallback((id?: number) => {
     if (!id) return '-';
     const p = proyectos.find(proj => proj.id === id);
     return p ? p.nombre_proyecto : `ID ${id}`;
-  };
+  }, [proyectos]);
 
   // --- CALCULOS Y FILTROS ---
   const alerts = useMemo(() => {
@@ -153,7 +155,6 @@ const AdminPagos: React.FC = () => {
     return { totalPendiente };
   }, [pagos]);
 
-  // Filtro Principal (Memoized)
   const filteredPagos = useMemo(() => {
     return pagos.filter(pago => {
       const uName = getUserName(pago.id_usuario).toLowerCase();
@@ -180,27 +181,33 @@ const AdminPagos: React.FC = () => {
 
       return matchesSearch && matchesState && matchesDate;
     });
-  }, [pagos, searchTerm, filterState, dateStart, dateEnd, usuarios, proyectos]);
+  }, [pagos, searchTerm, filterState, dateStart, dateEnd, getUserName, getProjectName]);
 
-  const handleUpdate = () => {
+  // --- HANDLERS ---
+  const handleUpdate = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['adminPagos'] });
     queryClient.invalidateQueries({ queryKey: ['adminPagosMetrics'] });
-  };
+    
+    // ✅ Feedback Visual
+    if (selectedPago?.id) {
+        setHighlightedId(selectedPago.id);
+        setTimeout(() => setHighlightedId(null), 2500);
+    }
+    setSnackbar({ open: true, message: 'Estado de pago actualizado correctamente' });
+  }, [queryClient, selectedPago]);
 
-  // Handlers Modal
-  const handleVerDetalle = (pago: PagoDto) => {
+  const handleVerDetalle = useCallback((pago: PagoDto) => {
     setSelectedPago(pago);
     detalleModal.open();
-  };
+  }, [detalleModal]);
 
-  const handleCloseDetalle = () => {
+  const handleCloseDetalle = useCallback(() => {
     detalleModal.close();
-    // Timeout para limpiar data suavemente
     setTimeout(() => setSelectedPago(null), 300);
-  };
+  }, [detalleModal]);
 
   // ========================================================================
-  // ⚙️ DEFINICIÓN DE COLUMNAS (Memoized)
+  // ⚙️ DEFINICIÓN DE COLUMNAS
   // ========================================================================
   const columns = useMemo<DataTableColumn<PagoDto>[]>(() => [
     { 
@@ -215,7 +222,12 @@ const AdminPagos: React.FC = () => {
       minWidth: 200,
       render: (p) => (
         <Stack direction="row" spacing={1.5} alignItems="center">
-            <Avatar sx={{ width: 28, height: 28, bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main', fontSize: 12 }}>
+            <Avatar sx={{ 
+                width: 28, height: 28, 
+                bgcolor: alpha(theme.palette.primary.main, 0.1), 
+                color: 'primary.main', 
+                fontSize: 12, fontWeight: 'bold'
+            }}>
                 <PersonIcon fontSize="small" />
             </Avatar>
             <Typography variant="body2" fontWeight={600}>
@@ -235,7 +247,7 @@ const AdminPagos: React.FC = () => {
     { 
       id: 'mes', 
       label: 'Cuota', 
-      render: (p) => <Chip label={`Mes ${p.mes}`} size="small" variant="outlined" />
+      render: (p) => <Chip label={`Mes ${p.mes}`} size="small" variant="outlined" sx={{ color: 'text.secondary', borderColor: 'divider' }} />
     },
     { 
       id: 'monto', 
@@ -277,7 +289,7 @@ const AdminPagos: React.FC = () => {
       label: 'Acciones', 
       align: 'right', 
       render: (p) => (
-        <Tooltip title="Ver Detalle">
+        <Tooltip title="Ver Detalle / Gestionar">
             <IconButton 
                 size="small" 
                 color="primary" 
@@ -289,7 +301,7 @@ const AdminPagos: React.FC = () => {
         </Tooltip>
       )
     }
-  ], [theme, usuarios, proyectos]);
+  ], [theme, getUserName, getProjectName, handleVerDetalle]);
 
   return (
     <PageContainer maxWidth="xl">
@@ -394,19 +406,26 @@ const AdminPagos: React.FC = () => {
         </Stack>
       </Paper>
 
-      {/* ========== 4. TABLA (Datatable) ========== */}
+      {/* ========== 4. TABLA ========== */}
       <QueryHandler isLoading={loadingPagos} error={error as Error | null}>
         <DataTable
             columns={columns}
             data={filteredPagos}
             getRowKey={(p) => p.id}
+            
+            // ✅ Feedback Visual
+            highlightedRowId={highlightedId}
+            
+            // ✅ Dimming para estados inactivos/cancelados
+            isRowActive={(p) => p.estado_pago !== 'cancelado' && p.estado_pago !== 'cubierto_por_puja'}
+
             emptyMessage="No se encontraron pagos con estos filtros."
             pagination={true}
             defaultRowsPerPage={10}
         />
       </QueryHandler>
 
-      {/* ========== MODAL CON USEMODAL ========== */}
+      {/* ========== MODALES ========== */}
       <DetallePagoModal 
         open={detalleModal.isOpen} 
         onClose={handleCloseDetalle} 
@@ -414,6 +433,14 @@ const AdminPagos: React.FC = () => {
         userName={selectedPago ? getUserName(selectedPago.id_usuario) : ''}
         projectName={selectedPago ? getProjectName(selectedPago.id_proyecto) : ''}
         onUpdate={handleUpdate}
+      />
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar(s => ({ ...s, open: false }))}
+        message={snackbar.message}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       />
     </PageContainer>
   );

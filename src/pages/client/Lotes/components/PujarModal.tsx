@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Dialog, DialogTitle, DialogContent, DialogActions, 
-  Button, TextField, Typography, Alert, Box, CircularProgress, 
-  Stack, Divider, InputAdornment 
+  TextField, Typography, Alert, Box, Stack, Divider, InputAdornment, useTheme, alpha 
 } from '@mui/material';
 import { Gavel, MonetizationOn, Token, TrendingUp, VerifiedUser } from '@mui/icons-material';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import PujaService from '../../../../Services/puja.service';
 import type { LoteDto } from '../../../../types/dto/lote.dto';
+import { BaseModal } from '../../../../components/common/BaseModal/BaseModal';
 
 // Interfaz local para el DTO extendido
 interface LoteConPuja extends LoteDto {
@@ -18,10 +17,11 @@ interface Props {
   open: boolean;
   onClose: () => void;
   lote: LoteDto | null;
-  soyGanador?: boolean; // 🟢 Nuevo prop opcional
+  soyGanador?: boolean;
 }
 
 export const PujarModal: React.FC<Props> = ({ open, onClose, lote: loteProp, soyGanador = false }) => {
+  const theme = useTheme();
   const [monto, setMonto] = useState('');
   const [error, setError] = useState<string | null>(null);
   const queryClient = useQueryClient();
@@ -49,13 +49,20 @@ export const PujarModal: React.FC<Props> = ({ open, onClose, lote: loteProp, soy
       queryClient.invalidateQueries({ queryKey: ['misPujas'] });
       
       const msg = soyGanador ? '¡Has actualizado tu puja exitosamente!' : '¡Oferta realizada con éxito!';
-      alert(msg); // Sugerencia: Reemplazar por Toast/Snackbar
-      onClose();
+      // Idealmente reemplazar esto por un Toast/Snackbar global
+      alert(msg); 
+      handleReset();
     },
     onError: (err: any) => {
       setError(err.response?.data?.error || 'Error al realizar la puja. Verifica tus tokens.');
     }
   });
+
+  const handleReset = () => {
+      setMonto('');
+      setError(null);
+      onClose();
+  };
 
   if (!lote) return null;
 
@@ -70,46 +77,50 @@ export const PujarModal: React.FC<Props> = ({ open, onClose, lote: loteProp, soy
 
   const handleSubmit = () => {
     if (!monto) return;
-    const valorOferta = Number(monto);
-    
-    // Validación: Debe ser mayor al precio actual
-    if (valorOferta <= precioActual) {
-      setError(`La oferta debe ser mayor a ${formatMoney(precioActual)}`);
-      return;
-    }
     mutation.mutate();
   };
 
+  // Validaciones para el botón
+  const montoNumerico = Number(monto);
+  const esMontoValido = monto && montoNumerico > precioActual;
+
   return (
-    <Dialog open={open} onClose={mutation.isPending ? undefined : onClose} maxWidth="xs" fullWidth>
-      <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Gavel color="primary" /> {soyGanador ? 'Actualizar Oferta' : 'Realizar Oferta'}
-      </DialogTitle>
-      
-      <DialogContent>
-        <Stack spacing={2} mt={1}>
+    <BaseModal
+        open={open}
+        onClose={handleReset}
+        title={soyGanador ? 'Actualizar Oferta' : 'Realizar Oferta'}
+        subtitle={lote.nombre_lote}
+        icon={soyGanador ? <VerifiedUser /> : <Gavel />}
+        headerColor={soyGanador ? 'success' : 'primary'}
+        maxWidth="xs"
+        confirmText={soyGanador ? 'Actualizar Puja' : 'Confirmar Oferta'}
+        confirmButtonColor={soyGanador ? 'success' : 'primary'}
+        onConfirm={handleSubmit}
+        isLoading={mutation.isPending}
+        disableConfirm={!esMontoValido || mutation.isPending}
+    >
+      <Stack spacing={3}>
           
           {/* Información del Lote y Precio a Vencer */}
-          <Box p={2} 
-               bgcolor={soyGanador ? "success.50" : (hayPujasPrevias ? "warning.50" : "grey.50")} 
-               borderRadius={2} border="1px solid" borderColor="divider">
-            
-            <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
-              {lote.nombre_lote}
-            </Typography>
-            
+          <Box 
+            p={2} 
+            bgcolor={soyGanador ? alpha(theme.palette.success.main, 0.05) : (hayPujasPrevias ? alpha(theme.palette.warning.main, 0.05) : alpha(theme.palette.grey[500], 0.05))} 
+            borderRadius={2} 
+            border="1px solid" 
+            borderColor={soyGanador ? 'success.main' : 'divider'}
+          >
             <Stack direction="row" justifyContent="space-between" alignItems="center">
-              <Typography variant="body2" color="text.secondary" display="flex" alignItems="center" gap={0.5}>
+              <Typography variant="body2" color="text.secondary" display="flex" alignItems="center" gap={0.5} fontWeight={600}>
                 {soyGanador ? <VerifiedUser fontSize="inherit" color="success"/> : (hayPujasPrevias ? <TrendingUp fontSize="inherit"/> : <MonetizationOn fontSize="inherit"/>)}
                 {soyGanador ? 'Tu Puja Actual:' : (hayPujasPrevias ? 'Puja Más Alta:' : 'Precio Base:')}
               </Typography>
-              <Typography variant="h6" color={soyGanador ? "success.main" : (hayPujasPrevias ? "warning.main" : "primary.main")} fontWeight={700}>
+              <Typography variant="h6" color={soyGanador ? "success.main" : (hayPujasPrevias ? "warning.main" : "primary.main")} fontWeight={800}>
                 {formatMoney(precioActual)}
               </Typography>
             </Stack>
 
             {soyGanador && (
-               <Typography variant="caption" color="success.main" display="block" mt={1}>
+               <Typography variant="caption" color="success.main" display="block" mt={1} fontWeight={500}>
                  ¡Vas ganando! Sube tu oferta para proteger tu posición.
                </Typography>
             )}
@@ -120,7 +131,7 @@ export const PujarModal: React.FC<Props> = ({ open, onClose, lote: loteProp, soy
             autoFocus
             fullWidth
             label="Tu Nueva Oferta"
-            placeholder={`Ingresa más de ${formatMoney(precioActual)}`}
+            placeholder={`Mayor a ${formatMoney(precioActual)}`}
             type="number"
             value={monto}
             onChange={(e) => {
@@ -131,44 +142,29 @@ export const PujarModal: React.FC<Props> = ({ open, onClose, lote: loteProp, soy
             InputProps={{
               startAdornment: <InputAdornment position="start"><MonetizationOn color="action" /></InputAdornment>,
             }}
-            error={!!error}
-            helperText={error}
+            error={!!error || (monto !== '' && !esMontoValido)}
+            helperText={error || (monto !== '' && !esMontoValido ? `Debe superar ${formatMoney(precioActual)}` : '')}
+            sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
           />
 
           <Divider />
 
           {/* Aviso de Token Inteligente */}
           {soyGanador ? (
-            <Alert severity="info" icon={<Token fontSize="inherit" />} sx={{ alignItems: 'center' }}>
+            <Alert severity="info" icon={<Token fontSize="inherit" />} sx={{ alignItems: 'center', borderRadius: 2 }}>
                 <Typography variant="caption" display="block">
                   Al actualizar tu propia puja ganadora, <strong>no se consumen tokens adicionales</strong>.
                 </Typography>
             </Alert>
           ) : (
-            <Alert severity="warning" icon={<Token fontSize="inherit" />} sx={{ alignItems: 'center' }}>
+            <Alert severity="warning" icon={<Token fontSize="inherit" />} sx={{ alignItems: 'center', borderRadius: 2 }}>
                 <Typography variant="caption" display="block">
                   Esta acción consumirá <strong>1 Token de Subasta</strong> si es tu primera participación en este lote.
                 </Typography>
             </Alert>
           )}
 
-        </Stack>
-      </DialogContent>
-
-      <DialogActions sx={{ p: 3, pt: 0 }}>
-        <Button onClick={onClose} disabled={mutation.isPending} color="inherit">
-          Cancelar
-        </Button>
-        <Button 
-          variant="contained" 
-          onClick={handleSubmit} 
-          disabled={mutation.isPending || !monto || Number(monto) <= precioActual}
-          startIcon={mutation.isPending ? <CircularProgress size={20} color="inherit" /> : <Gavel />}
-          color={soyGanador ? "success" : "primary"}
-        >
-          {mutation.isPending ? 'Procesando...' : (soyGanador ? 'Actualizar Puja' : 'Confirmar Oferta')}
-        </Button>
-      </DialogActions>
-    </Dialog>
+      </Stack>
+    </BaseModal>
   );
 };

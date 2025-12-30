@@ -1,31 +1,14 @@
+// src/pages/User/Pagos/MisPagos.tsx
+
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { 
-  Box, 
-  Typography, 
-  Button, 
-  Chip, 
-  Tabs, 
-  Tab, 
-  Badge,
-  Stack,
-  Card,
-  Avatar,
-  Divider,
-  useTheme,
-  alpha,
-  Paper
+  Box, Typography, Button, Chip, Tabs, Tab, Badge,
+  Stack, Card, Avatar, Divider, useTheme, alpha, Paper
 } from '@mui/material';
 import { 
-  Lock, 
-  CheckCircle, 
-  ErrorOutline, 
-  AccountBalanceWallet, 
-  Schedule,
-  ReceiptLong,
-  MonetizationOn,
-  Refresh,
-  Warning
+  Lock, CheckCircle, ErrorOutline, AccountBalanceWallet, 
+  Schedule, ReceiptLong, Warning
 } from '@mui/icons-material';
 
 // --- SERVICIOS Y TIPOS ---
@@ -42,7 +25,7 @@ import { QueryHandler } from '../../../../components/common/QueryHandler/QueryHa
 import TwoFactorAuthModal from '../../../../components/common/TwoFactorAuthModal/TwoFactorAuthModal';
 import { DataTable, type DataTableColumn } from '../../../../components/common/DataTable/DataTable'; 
 import { useModal } from '../../../../hooks/useModal';
-import { HistorialPagosAgrupado } from './components/HistorialAgrupado';
+import { HistorialPagosAgrupado } from './HistorialAgrupado';
 
 // ----------------------------------------------------------------------
 // HELPER: Configuración visual de estados
@@ -279,7 +262,6 @@ const MisPagos: React.FC = () => {
       <PageHeader 
         title="Mis Cuotas" 
         subtitle="Gestiona tus obligaciones mensuales y visualiza el progreso de tus planes."
-
       />
 
       {/* --- KPI SUMMARY (Estilo MisInversiones) --- */}
@@ -387,41 +369,32 @@ const MisPagos: React.FC = () => {
         {/* --- CONTENIDO --- */}
         <Box>
             {currentTab === 2 ? (
-                // Vista Historial (Agrupado)
+                // Vista Historial (Agrupado) - No es una tabla plana
                 <HistorialPagosAgrupado 
                     pagos={historialData}
                     suscripciones={suscripcionesQuery.data || []}
                 />
             ) : (
                 // Vista Tabla (Pendientes / Vencidas)
-                <Paper 
-                    elevation={0}
-                    sx={{
-                        border: `1px solid ${theme.palette.divider}`,
-                        borderRadius: 3,
-                        overflow: 'hidden',
-                        boxShadow: theme.shadows[1]
-                    }}
-                >
-                    <DataTable
-                        columns={columns}
-                        data={filteredData}
-                        getRowKey={(row) => row.id}
-                        pagination={true}
-                        defaultRowsPerPage={10}
-                        emptyMessage={
-                            currentTab === 0 ? "¡Todo al día! No tienes pagos pendientes." :
-                            "¡Excelente! No tienes cuotas vencidas."
+                <DataTable
+                    columns={columns}
+                    data={filteredData}
+                    getRowKey={(row) => row.id}
+                    pagination={true}
+                    defaultRowsPerPage={10}
+                    emptyMessage={
+                        currentTab === 0 ? "¡Todo al día! No tienes pagos pendientes." :
+                        "¡Excelente! No tienes cuotas vencidas."
+                    }
+                    // ✅ Estilo condicional para resaltar deudas
+                    getRowSx={(row) => ({
+                        bgcolor: row.estado_pago === 'vencido' ? alpha(theme.palette.error.main, 0.05) : 'inherit',
+                        transition: 'background-color 0.3s',
+                        '&:hover': {
+                            bgcolor: row.estado_pago === 'vencido' ? alpha(theme.palette.error.main, 0.1) : alpha(theme.palette.action.hover, 0.05)
                         }
-                        getRowSx={(row) => ({
-                            bgcolor: row.estado_pago === 'vencido' ? alpha(theme.palette.error.main, 0.05) : 'inherit',
-                            transition: 'background-color 0.3s',
-                            '&:hover': {
-                                bgcolor: row.estado_pago === 'vencido' ? alpha(theme.palette.error.main, 0.1) : alpha(theme.palette.action.hover, 0.05)
-                            }
-                        })}
-                    />
-                </Paper>
+                    })}
+                />
             )}
         </Box>
 

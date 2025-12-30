@@ -23,7 +23,7 @@ import Nosotros from './pages/Nosotros/Nosotros';
 // --- PÁGINAS AUTH ---
 import Register from './pages/Auth/Register';
 import ForgotPasswordPage from './pages/Auth/components/ForgotPassword/ForgotPassword';
-import ResetPasswordPage from './pages/Auth/components/ResetPasswordPage';
+import ResetPasswordPage from './pages/Auth/ResetPasswordPage';
 import ConfirmEmailPage from './pages/Auth/ConfirmEmailPage';
 import LoginPage from './pages/Auth/LoginPage';
 

@@ -1,6 +1,6 @@
 // src/pages/Admin/Inventario/InventarioLotes.tsx
 
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { 
   Box, Typography, Button, Paper, Chip, IconButton, Stack, Tooltip, TextField, MenuItem, Divider, InputAdornment, LinearProgress, Switch, CircularProgress, alpha, Snackbar, Alert, useTheme, Avatar
 } from '@mui/material';
@@ -37,7 +37,7 @@ interface ApiErrorResponse {
   error?: string;
 }
 
-// --- COMPONENTE DE TARJETA KPI (Estilo Unificado) ---
+// --- KPI CARD ---
 const StatCard: React.FC<{ 
   title: string; 
   value: number; 
@@ -46,7 +46,6 @@ const StatCard: React.FC<{
   loading?: boolean;
 }> = ({ title, value, icon, color, loading }) => {
   const theme = useTheme();
-  // Mapeo seguro de colores
   const paletteColor = (theme.palette as any)[color] || theme.palette.primary;
 
   return (
@@ -182,10 +181,20 @@ const InventarioLotes: React.FC = () => {
       if (payload.id) return await LoteService.update(payload.id, payload.dto as UpdateLoteDto);
       return await LoteService.create(payload.dto as CreateLoteDto);
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['adminLotes'] });
       createEditModal.close();
       setSelectedLote(null);
+      
+      // ✅ Feedback visual si es creación o edición
+      // La API debe retornar el objeto creado/editado. Si data.data.id existe, úsalo.
+      // Ajusta esto según tu respuesta real. Asumimos que `data.data` es el LoteDto.
+      const newItem = (data as any).data;
+      if (newItem?.id) {
+          setHighlightedId(newItem.id);
+          setTimeout(() => setHighlightedId(null), 2500);
+      }
+
       showMessage('Lote guardado correctamente');
     },
     onError: (error: unknown) => showMessage(`Error al guardar: ${getErrorMessage(error)}`, 'error')
@@ -198,8 +207,11 @@ const InventarioLotes: React.FC = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['adminLotes'] });
       confirmDialog.close();
+      
+      // ✅ Feedback visual Flash
       setHighlightedId(variables.id);
       setTimeout(() => setHighlightedId(null), 2500);
+      
       showMessage(variables.activo ? 'Lote visible' : 'Lote ocultado');
     },
     onError: (error: unknown) => {
@@ -210,9 +222,13 @@ const InventarioLotes: React.FC = () => {
 
   const startAuction = useMutation({
     mutationFn: (id: number) => LoteService.startAuction(id),
-    onSuccess: (response) => {
+    onSuccess: (response, id) => {
       queryClient.invalidateQueries({ queryKey: ['adminLotes'] });
       confirmDialog.close();
+      
+      setHighlightedId(id); // ✅ Feedback visual
+      setTimeout(() => setHighlightedId(null), 2500);
+
       const data = response.data as any; 
       showMessage(data?.mensaje || 'Subasta iniciada correctamente');
     },
@@ -224,9 +240,13 @@ const InventarioLotes: React.FC = () => {
 
   const endAuction = useMutation({
     mutationFn: (id: number) => LoteService.endAuction(id),
-    onSuccess: (response) => {
+    onSuccess: (response, id) => {
       queryClient.invalidateQueries({ queryKey: ['adminLotes'] });
       confirmDialog.close();
+      
+      setHighlightedId(id); // ✅ Feedback visual
+      setTimeout(() => setHighlightedId(null), 2500);
+
       const data = response.data as any;
       showMessage(data?.mensaje || 'Subasta finalizada correctamente');
     },
@@ -242,10 +262,10 @@ const InventarioLotes: React.FC = () => {
     return 'default';
   };
 
-  // --- HANDLERS ---
-  const handleToggleActive = (lote: LoteDto) => confirmDialog.confirm('toggle_lote_visibility', lote);
-  const handleStartAuction = (lote: LoteDto) => confirmDialog.confirm('start_auction', lote);
-  const handleEndAuction = (lote: LoteDto) => confirmDialog.confirm('end_auction', lote);
+  // --- HANDLERS (Callbacks) ---
+  const handleToggleActive = useCallback((lote: LoteDto) => confirmDialog.confirm('toggle_lote_visibility', lote), [confirmDialog]);
+  const handleStartAuction = useCallback((lote: LoteDto) => confirmDialog.confirm('start_auction', lote), [confirmDialog]);
+  const handleEndAuction = useCallback((lote: LoteDto) => confirmDialog.confirm('end_auction', lote), [confirmDialog]);
 
   const handleConfirmAction = () => {
     if (!confirmDialog.data) return;
@@ -262,14 +282,17 @@ const InventarioLotes: React.FC = () => {
     }
   };
 
-  const handleOpenCreate = () => { setSelectedLote(null); createEditModal.open(); };
-  const handleOpenEdit = (lote: LoteDto) => { setSelectedLote(lote); createEditModal.open(); };
-  const handleManageImages = (lote: LoteDto) => { setSelectedLote(lote); imagesModal.open(); };
-  const handleCloseModals = () => { createEditModal.close(); imagesModal.close(); setTimeout(() => setSelectedLote(null), 300); };
+  const handleOpenCreate = useCallback(() => { setSelectedLote(null); createEditModal.open(); }, [createEditModal]);
+  const handleOpenEdit = useCallback((lote: LoteDto) => { setSelectedLote(lote); createEditModal.open(); }, [createEditModal]);
+  const handleManageImages = useCallback((lote: LoteDto) => { setSelectedLote(lote); imagesModal.open(); }, [imagesModal]);
+  
+  const handleCloseModals = useCallback(() => { 
+      createEditModal.close(); 
+      imagesModal.close(); 
+      setTimeout(() => setSelectedLote(null), 300); 
+  }, [createEditModal, imagesModal]);
 
-  // ========================================================================
-  // ⚙️ DEFINICIÓN DE COLUMNAS (MEMOIZED)
-  // ========================================================================
+  // --- COLUMNS ---
   const columns = useMemo<DataTableColumn<LoteDto>[]>(() => [
     {
       id: 'lote',
@@ -324,7 +347,6 @@ const InventarioLotes: React.FC = () => {
       label: 'Visibilidad',
       align: 'center',
       render: (lote) => {
-        // 🔥 IMPLEMENTACIÓN IGUAL A PROYECTOS (ICONO + TEXTO)
         const isProcessingThis = toggleActiveMutation.isPending && confirmDialog.data?.id === lote.id;
 
         return (
@@ -339,15 +361,6 @@ const InventarioLotes: React.FC = () => {
                         color="success"
                         size="small"
                         disabled={toggleActiveMutation.isPending}
-                        sx={{
-                            '& .MuiSwitch-switchBase.Mui-checked': {
-                                color: theme.palette.success.main,
-                                '&:hover': { backgroundColor: alpha(theme.palette.success.main, 0.1) },
-                            },
-                            '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                                backgroundColor: theme.palette.success.main,
-                            },
-                        }}
                     />
                 </Tooltip>
             )}
@@ -355,12 +368,7 @@ const InventarioLotes: React.FC = () => {
             {!isProcessingThis && (
                <Box display="flex" alignItems="center" gap={0.5}>
                  {lote.activo ? <CheckCircle fontSize="inherit" color="success" sx={{ fontSize: 14 }} /> : <Block fontSize="inherit" color="disabled" sx={{ fontSize: 14 }} />}
-                 <Typography 
-                   variant="caption" 
-                   color={lote.activo ? 'success.main' : 'text.disabled'}
-                   fontWeight={600}
-                   sx={{ minWidth: 50 }}
-                 >
+                 <Typography variant="caption" color={lote.activo ? 'success.main' : 'text.disabled'} fontWeight={600} sx={{ minWidth: 50 }}>
                    {lote.activo ? 'Visible' : 'Oculto'}
                  </Typography>
                </Box>
@@ -451,7 +459,7 @@ const InventarioLotes: React.FC = () => {
         </Stack>
       )
     }
-  ], [proyectos, theme, toggleActiveMutation.isPending, startAuction.isPending, endAuction.isPending, confirmDialog.data]);
+  ], [proyectos, theme, toggleActiveMutation.isPending, startAuction.isPending, endAuction.isPending, confirmDialog.data, handleToggleActive, handleStartAuction, handleEndAuction, handleManageImages, handleOpenEdit]);
 
   return (
     <PageContainer maxWidth="xl" sx={{ py: 3 }}>
@@ -514,25 +522,17 @@ const InventarioLotes: React.FC = () => {
       </Paper>
 
       <QueryHandler isLoading={loadingLotes} error={error as Error}>
+        {/* ✅ DataTable Estandarizada */}
         <DataTable
           columns={columns}
           data={filteredLotes}
           getRowKey={(row) => row.id}
-          getRowSx={(lote) => {
-            const isHighlighted = highlightedId === lote.id;
-            return {
-              opacity: lote.activo ? 1 : 0.6,
-              transition: 'background-color 0.8s ease, opacity 0.3s ease',
-              bgcolor: isHighlighted 
-                ? alpha(theme.palette.success.main, 0.15)
-                : (lote.activo ? 'inherit' : alpha(theme.palette.action.hover, 0.5)),
-              '&:hover': {
-                bgcolor: isHighlighted 
-                  ? alpha(theme.palette.success.main, 0.2)
-                  : alpha(theme.palette.action.hover, 0.8)
-              }
-            };
-          }}
+          
+          // ✅ Feedback visual: Opacidad automática para inactivos
+          isRowActive={(lote) => lote.activo}
+          // ✅ Feedback visual: Flash verde al guardar/editar/subastar
+          highlightedRowId={highlightedId}
+
           emptyMessage="No se encontraron lotes con los filtros actuales."
           pagination={true}
           defaultRowsPerPage={10}

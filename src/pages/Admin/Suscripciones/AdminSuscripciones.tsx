@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { 
   Box, Typography, Paper, Chip, IconButton, Tooltip, 
-  Stack, TextField, MenuItem, InputAdornment, LinearProgress, Avatar, Snackbar, Alert, Divider
+  Stack, TextField, MenuItem, InputAdornment, LinearProgress, Avatar, Snackbar, Alert, Divider, alpha, useTheme
 } from '@mui/material';
 import { 
   CheckCircle, Cancel, Search, Visibility, 
@@ -29,7 +29,7 @@ import { useModal } from '../../../hooks/useModal';
 import { useConfirmDialog } from '../../../hooks/useConfirmDialog';
 import { ConfirmDialog } from '../../../components/common/ConfirmDialog/ConfirmDialog';
 
-// --- SUBCOMPONENTE: StatCard (Estandarizado) ---
+// --- SUBCOMPONENTE: StatCard ---
 const StatCard: React.FC<{ 
   title: string; 
   value: number | string; 
@@ -66,6 +66,7 @@ const StatCard: React.FC<{
 
 const AdminSuscripciones: React.FC = () => {
   const queryClient = useQueryClient();
+  const theme = useTheme();
 
   // 1. Estados de Filtros
   const [searchTerm, setSearchTerm] = useState('');
@@ -81,6 +82,9 @@ const AdminSuscripciones: React.FC = () => {
   const [snackbar, setSnackbar] = useState<{ open: boolean, message: string, severity: 'success' | 'error' }>({
     open: false, message: '', severity: 'success'
   });
+
+  // ✅ Nuevo estado para el efecto "Flash" en la tabla
+  const [highlightedId, setHighlightedId] = useState<number | null>(null);
 
   const showMessage = (message: string, severity: 'success' | 'error' = 'success') => {
     setSnackbar({ open: true, message, severity });
@@ -148,11 +152,17 @@ const AdminSuscripciones: React.FC = () => {
   // 6. Mutaciones
   const cancelarMutation = useMutation({
     mutationFn: async (id: number) => await SuscripcionService.cancelarAdmin(id),
-    onSuccess: () => {
+    onSuccess: (_, variables) => { // variables es el ID enviado
       queryClient.invalidateQueries({ queryKey: ['adminSuscripciones'] });
       queryClient.invalidateQueries({ queryKey: ['metricsCancelacionMetrics'] });
       queryClient.invalidateQueries({ queryKey: ['metricsMorosidad'] });
+      
       confirmDialog.close();
+      
+      // ✅ Activar efecto Flash en la fila modificada
+      setHighlightedId(variables);
+      setTimeout(() => setHighlightedId(null), 2500);
+
       showMessage('Suscripción cancelada correctamente.');
     },
     onError: (err: any) => {
@@ -181,11 +191,10 @@ const AdminSuscripciones: React.FC = () => {
 
   const handleCerrarModal = () => {
     detailModal.close();
-    // Timeout para limpiar el estado después de la animación de cierre
     setTimeout(() => setSelectedSuscripcion(null), 300);
   };
 
-  // 8. Definición de Columnas (Memoizadas)
+  // 8. Definición de Columnas
   const columns = useMemo<DataTableColumn<SuscripcionDto>[]>(() => [
     {
       id: 'usuario',
@@ -193,11 +202,16 @@ const AdminSuscripciones: React.FC = () => {
       minWidth: 240,
       render: (s) => (
         <Stack direction="row" spacing={2} alignItems="center">
-            <Avatar sx={{ width: 36, height: 36, bgcolor: 'primary.light', color: 'primary.main', fontSize: 14 }}>
+            <Avatar sx={{ 
+              width: 36, height: 36, 
+              bgcolor: s.activo ? alpha(theme.palette.primary.main, 0.1) : theme.palette.action.disabledBackground, 
+              color: s.activo ? 'primary.main' : 'text.disabled', 
+              fontSize: 14, fontWeight: 'bold'
+            }}>
                 {s.usuario?.nombre?.charAt(0) || '#'}
             </Avatar>
             <Box>
-                <Typography variant="body2" fontWeight={600}>
+                <Typography variant="body2" fontWeight={600} color="text.primary">
                     {s.usuario?.nombre} {s.usuario?.apellido}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
@@ -220,15 +234,22 @@ const AdminSuscripciones: React.FC = () => {
     {
       id: 'deuda',
       label: 'Estado Deuda',
-      render: (s) => (
-        <Chip 
-            label={s.meses_a_pagar === 0 ? 'Al día' : `${s.meses_a_pagar} pendiente(s)`}
+      render: (s) => {
+        // Lógica de semáforo para deuda
+        let color: 'success' | 'warning' | 'error' = 'success';
+        if (s.meses_a_pagar > 0) color = 'warning';
+        if (s.meses_a_pagar >= 3) color = 'error'; // Alerta crítica
+
+        return (
+          <Chip 
+            label={s.meses_a_pagar === 0 ? 'Al día' : `${s.meses_a_pagar} cuota(s)`}
             size="small"
-            color={s.meses_a_pagar > 0 ? 'warning' : 'success'}
+            color={color}
             variant={s.meses_a_pagar > 0 ? 'filled' : 'outlined'}
             sx={{ fontWeight: 600, borderColor: 'divider' }}
-        />
-      )
+          />
+        );
+      }
     },
     {
       id: 'pagado',
@@ -242,7 +263,7 @@ const AdminSuscripciones: React.FC = () => {
     {
       id: 'tokens',
       label: 'Tokens',
-      render: (s) => <Chip label={s.tokens_disponibles} size="small" variant="outlined" color="default" />
+      render: (s) => <Chip label={s.tokens_disponibles} size="small" variant="outlined" sx={{ color: 'text.secondary', borderColor: 'divider' }} />
     },
     {
       id: 'estado',
@@ -265,9 +286,9 @@ const AdminSuscripciones: React.FC = () => {
         <Stack direction="row" spacing={1} justifyContent="flex-end">
             <Tooltip title="Ver Detalle">
                 <IconButton 
-                    color="primary" 
                     onClick={() => handleVerDetalle(s)} 
                     size="small"
+                    sx={{ color: 'primary.main', bgcolor: alpha(theme.palette.primary.main, 0.1), '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) } }}
                 >
                     <Visibility fontSize="small"/>
                 </IconButton>
@@ -276,10 +297,10 @@ const AdminSuscripciones: React.FC = () => {
             {s.activo && (
                 <Tooltip title="Cancelar Suscripción">
                     <IconButton 
-                        color="error" 
                         onClick={() => handleCancelarClick(s)}
                         disabled={cancelarMutation.isPending}
                         size="small"
+                        sx={{ color: 'error.main', bgcolor: alpha(theme.palette.error.main, 0.1), '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.2) } }}
                     >
                         <Cancel fontSize="small"/>
                     </IconButton>
@@ -288,7 +309,7 @@ const AdminSuscripciones: React.FC = () => {
         </Stack>
       )
     }
-  ], [cancelarMutation.isPending]); // Dependencia necesaria para deshabilitar botones
+  ], [cancelarMutation.isPending, theme]); 
 
   return (
     <PageContainer maxWidth="xl">
@@ -356,10 +377,14 @@ const AdminSuscripciones: React.FC = () => {
             columns={columns}
             data={filteredSuscripciones}
             getRowKey={(s) => s.id}
+            
+            // ✅ PROPS NUEVAS ACTIVADAS:
+            highlightedRowId={highlightedId} // Flash visual
+            isRowActive={(s) => s.activo}    // Opacidad para canceladas
+
             emptyMessage="No se encontraron suscripciones con los filtros actuales."
             pagination={true}
             defaultRowsPerPage={10}
-            // Sin styles manuales, todo via Theme
         />
       </QueryHandler>
 

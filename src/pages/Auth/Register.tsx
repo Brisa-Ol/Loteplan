@@ -1,10 +1,10 @@
 // src/pages/Auth/Register.tsx
 
 import React, { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   Button,
-  TextField, // Mantenemos este import para DNI/Telefono
+  TextField,
   Box,
   InputAdornment,
   IconButton,
@@ -28,88 +28,45 @@ import AuthFormContainer from "./components/AuthFormContainer/AuthFormContainer"
 import type { RegisterRequestDto } from "../../types/dto/auth.dto";
 import FormTextField from "./components/FormTextField/FormTextField";
 
-
 const Register: React.FC = () => {
   const navigate = useNavigate();
-  const location = useLocation();
-
   const {
     register,
     isLoading,
     isInitializing,
     error,
     clearError,
-    resendConfirmation,
-    user,
-    isAuthenticated
+    resendConfirmation
   } = useAuth();
 
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
   const [registeredEmail, setRegisteredEmail] = useState("");
-  const [isResending, setIsResending] = useState(false);
-  const [modalMessage, setModalMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [resending, setResending] = useState(false);
 
-  const successMessage = location.state?.message;
-
-  useEffect(() => {
-    if (!isInitializing && isAuthenticated && user) {
-      if (user.rol === 'admin') {
-        navigate('/admin/dashboard', { replace: true });
-      } else if (user.rol === 'cliente') {
-        navigate('/client/dashboard', { replace: true });
-      } else {
-        navigate('/', { replace: true });
-      }
-    }
-  }, [isInitializing, isAuthenticated, user, navigate]);
-
-  useEffect(() => {
-    if (successMessage) {
-      const timer = setTimeout(() => {
-        navigate(location.pathname, { replace: true, state: {} });
-      }, 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [successMessage, navigate, location.pathname]);
+  // Esquema de validación
+  const validationSchema = Yup.object({
+    nombre: Yup.string().min(2, "Mínimo 2 caracteres").required("Requerido"),
+    apellido: Yup.string().min(2, "Mínimo 2 caracteres").required("Requerido"),
+    email: Yup.string().email("Formato inválido").required("Requerido"),
+    dni: Yup.string().matches(/^\d+$/, "Solo números").min(7, "Mínimo 7 dígitos").max(8, "Máximo 8 dígitos").required("Requerido"),
+    nombre_usuario: Yup.string().min(4, "Mínimo 4 caracteres").required("Requerido"),
+    numero_telefono: Yup.string().matches(/^\d+$/, "Solo números").min(10, "Mínimo 10 dígitos").required("Requerido"),
+    contraseña: Yup.string()
+      .min(8, "Mínimo 8 caracteres")
+      .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, "Requiere mayúscula, minúscula y número")
+      .required("Requerida"),
+    confirmPassword: Yup.string()
+      .oneOf([Yup.ref("contraseña")], "Las contraseñas no coinciden")
+      .required("Confirma tu contraseña"),
+  });
 
   const formik = useFormik({
     initialValues: {
-      nombre: "",
-      apellido: "",
-      email: "",
-      dni: "",
-      nombre_usuario: "",
-      numero_telefono: "",
-      contraseña: "",
-      confirmPassword: "",
+      nombre: "", apellido: "", email: "", dni: "", 
+      nombre_usuario: "", numero_telefono: "", contraseña: "", confirmPassword: "",
     },
-    validationSchema: Yup.object({
-      nombre: Yup.string().min(2, "Muy corto").required("Requerido"),
-      apellido: Yup.string().min(2, "Muy corto").required("Requerido"),
-      email: Yup.string().email("Email inválido").required("Requerido"),
-      dni: Yup.string()
-        .matches(/^\d+$/, "Solo números")
-        .min(7, "DNI inválido")
-        .max(8, "DNI inválido")
-        .required("Requerido"),
-      nombre_usuario: Yup.string()
-        .min(4, "Mínimo 4 caracteres")
-        .required("Requerido"),
-      numero_telefono: Yup.string()
-        .matches(/^\d+$/, "Solo números")
-        .min(10, "Mínimo 10 dígitos")
-        .required("Requerido"),
-      contraseña: Yup.string()
-        .min(8, "Mínimo 8 caracteres")
-        .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, "Debe tener mayúscula, minúscula y número")
-        .required("Requerida"),
-      confirmPassword: Yup.string()
-        .oneOf([Yup.ref("contraseña")], "Las contraseñas no coinciden")
-        .required("Confirma tu contraseña"),
-    }),
+    validationSchema,
     onSubmit: async (values) => {
       clearError();
       try {
@@ -124,118 +81,73 @@ const Register: React.FC = () => {
         };
 
         await register(data);
-
+        
+        // Si no hubo error (register lanza error si falla), abrimos modal
         setRegisteredEmail(values.email);
-        setIsModalOpen(true);
-        setModalMessage(null);
+        setModalOpen(true);
       } catch (err) {
-        console.error("Error registro:", err);
+        // Error manejado por el contexto y mostrado en la UI
       }
     },
   });
 
-  const handleResendEmail = async () => {
-    setModalMessage(null);
-    setIsResending(true);
+  const handleResend = async () => {
+    setResending(true);
     try {
       await resendConfirmation(registeredEmail);
-      setModalMessage({ type: "success", text: "¡Email reenviado con éxito!" });
+      alert("Email reenviado correctamente.");
     } catch {
-      setModalMessage({ type: "error", text: "No se pudo reenviar el email." });
+      alert("Error al reenviar.");
     } finally {
-      setIsResending(false);
+      setResending(false);
     }
   };
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
+  const handleClose = () => {
+    setModalOpen(false);
     navigate("/login");
   };
 
-  const isDisabled = isLoading || isInitializing;
-
-  if (isInitializing) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" height="100vh">
-        <CircularProgress color="primary" />
-      </Box>
-    );
-  }
+  if (isInitializing) return <Box display="flex" height="100vh" justifyContent="center" alignItems="center"><CircularProgress /></Box>;
 
   return (
     <PageContainer maxWidth="sm">
-      <AuthFormContainer
-        title="Crear Cuenta"
-        subtitle="Únete a nuestra plataforma de inversión"
-        maxWidth={600}
-      >
+      <AuthFormContainer title="Crear Cuenta" subtitle="Únete a nuestra comunidad de inversores">
+        
         {error && <Alert severity="error" sx={{ mb: 3 }} onClose={clearError}>{error}</Alert>}
 
         <form onSubmit={formik.handleSubmit}>
-          <Stack spacing={3}>
-
+          <Stack spacing={2}>
             <Box display="flex" gap={2}>
-              {/* ✅ Usamos FormTextField para campos estándar */}
-              <FormTextField
-                fullWidth
-                name="nombre"
-                label="Nombre"
-                formik={formik}
-                disabled={isDisabled}
-              />
-              <FormTextField
-                fullWidth
-                name="apellido"
-                label="Apellido"
-                formik={formik}
-                disabled={isDisabled}
-              />
+              <FormTextField fullWidth name="nombre" label="Nombre" formik={formik} disabled={isLoading} />
+              <FormTextField fullWidth name="apellido" label="Apellido" formik={formik} disabled={isLoading} />
             </Box>
 
-            <FormTextField
-              fullWidth
-              name="email"
-              label="Email"
-              type="email"
-              formik={formik}
-              disabled={isDisabled}
-            />
+            <FormTextField fullWidth name="email" label="Email" type="email" formik={formik} disabled={isLoading} />
 
             <Box display="flex" gap={2}>
-              {/* ⚠️ Mantenemos TextField normal para DNI y Teléfono porque tienen lógica custom en onChange */}
+              {/* Inputs numéricos con filtrado manual */}
               <TextField
                 fullWidth
                 label="DNI"
+                disabled={isLoading}
                 {...formik.getFieldProps("dni")}
-                onChange={(e) => {
-                  const val = e.target.value.replace(/\D/g, '').slice(0, 8);
-                  formik.setFieldValue("dni", val);
-                }}
+                onChange={(e) => formik.setFieldValue("dni", e.target.value.replace(/\D/g, '').slice(0, 8))}
                 error={formik.touched.dni && Boolean(formik.errors.dni)}
                 helperText={formik.touched.dni && formik.errors.dni}
-                disabled={isDisabled}
               />
               <TextField
                 fullWidth
                 label="Teléfono"
+                disabled={isLoading}
                 {...formik.getFieldProps("numero_telefono")}
-                onChange={(e) => {
-                  const val = e.target.value.replace(/\D/g, '').slice(0, 15);
-                  formik.setFieldValue("numero_telefono", val);
-                }}
+                onChange={(e) => formik.setFieldValue("numero_telefono", e.target.value.replace(/\D/g, '').slice(0, 15))}
                 error={formik.touched.numero_telefono && Boolean(formik.errors.numero_telefono)}
                 helperText={formik.touched.numero_telefono && formik.errors.numero_telefono}
-                disabled={isDisabled}
               />
             </Box>
 
-            <FormTextField
-              fullWidth
-              name="nombre_usuario"
-              label="Nombre de Usuario"
-              formik={formik}
-              disabled={isDisabled}
-            />
+            <FormTextField fullWidth name="nombre_usuario" label="Usuario" formik={formik} disabled={isLoading} />
 
             <FormTextField
               fullWidth
@@ -243,7 +155,7 @@ const Register: React.FC = () => {
               label="Contraseña"
               type={showPassword ? "text" : "password"}
               formik={formik}
-              disabled={isDisabled}
+              disabled={isLoading}
               InputProps={{
                 endAdornment: (
                   <InputAdornment position="end">
@@ -259,18 +171,9 @@ const Register: React.FC = () => {
               fullWidth
               name="confirmPassword"
               label="Confirmar Contraseña"
-              type={showConfirmPassword ? "text" : "password"}
+              type="password"
               formik={formik}
-              disabled={isDisabled}
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton onClick={() => setShowConfirmPassword(!showConfirmPassword)} edge="end">
-                      {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              }}
+              disabled={isLoading}
             />
 
             <Button
@@ -278,67 +181,43 @@ const Register: React.FC = () => {
               variant="contained"
               type="submit"
               size="large"
-              disabled={isDisabled}
+              disabled={isLoading}
+              sx={{ py: 1.5, fontWeight: 700, mt: 2 }}
             >
-              {isLoading ? <CircularProgress size={24} color="inherit" /> : "Registrarse"}
+              {isLoading ? <CircularProgress size={24} color="inherit" /> : "REGISTRARSE"}
             </Button>
-
-            <Box textAlign="center">
-              <Button
-                onClick={() => navigate("/login")}
-                disabled={isDisabled}
-                color="primary"
-                sx={{ fontWeight: 500 }}
-              >
-                ¿Ya tienes cuenta? Inicia sesión
-              </Button>
-            </Box>
           </Stack>
         </form>
+
+        <Box textAlign="center" mt={3}>
+          <Typography variant="body2">
+            ¿Ya tienes cuenta?{' '}
+            <Button
+              onClick={() => navigate("/login")}
+              color="primary"
+              sx={{ fontWeight: 700, textTransform: 'none', minWidth: 'auto', p: 0 }}
+            >
+              Inicia sesión aquí
+            </Button>
+          </Typography>
+        </Box>
+
+        {/* Modal Éxito */}
+        <Dialog open={modalOpen} onClose={handleClose}>
+          <DialogTitle sx={{ textAlign: 'center', fontWeight: 'bold' }}>¡Bienvenido!</DialogTitle>
+          <DialogContent>
+            <DialogContentText textAlign="center">
+              Hemos enviado un enlace de confirmación a <strong>{registeredEmail}</strong>.
+              <br />Por favor activa tu cuenta para ingresar.
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions sx={{ justifyContent: 'center', pb: 3, px: 3 }}>
+            <Button onClick={handleResend} disabled={resending}>Reenviar Email</Button>
+            <Button onClick={handleClose} variant="contained" autoFocus>Ir al Login</Button>
+          </DialogActions>
+        </Dialog>
+
       </AuthFormContainer>
-
-      {/* Modal de Confirmación */}
-      <Dialog
-        open={isModalOpen}
-        onClose={() => { }}
-        PaperProps={{ sx: { borderRadius: 3, padding: 1 } }}
-      >
-        <DialogTitle variant="h5" sx={{ textAlign: 'center', fontWeight: 'bold' }}>
-          ¡Registro Exitoso!
-        </DialogTitle>
-        <DialogContent>
-          <DialogContentText sx={{ textAlign: 'center' }}>
-            Hemos enviado un correo de confirmación a:
-            <br />
-            <Typography component="span" fontWeight="bold" color="text.primary" display="block" my={1}>
-              {registeredEmail}
-            </Typography>
-            Por favor, revisa tu bandeja de entrada (y spam) y haz clic en el enlace para activar tu cuenta.
-          </DialogContentText>
-
-          {modalMessage && (
-            <Alert severity={modalMessage.type} sx={{ mt: 2 }}>
-              {modalMessage.text}
-            </Alert>
-          )}
-        </DialogContent>
-        <DialogActions sx={{ justifyContent: 'center', pb: 3, gap: 1 }}>
-          <Button
-            onClick={handleResendEmail}
-            disabled={isResending}
-            color="inherit"
-          >
-            {isResending ? "Enviando..." : "Reenviar Email"}
-          </Button>
-          <Button
-            onClick={handleCloseModal}
-            variant="contained"
-            autoFocus
-          >
-            Ir al Login
-          </Button>
-        </DialogActions>
-      </Dialog>
     </PageContainer>
   );
 };

@@ -1,6 +1,6 @@
 // src/pages/Admin/Plantillas/AdminPlantillas.tsx
 
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { 
   Box, Typography, Paper, Chip, IconButton, Tooltip, 
   Stack, Button, TextField, MenuItem, InputAdornment, useTheme, Switch, CircularProgress, alpha, Snackbar, Alert, Divider
@@ -107,10 +107,17 @@ const AdminPlantillas: React.FC = () => {
   }, [plantillas, searchTerm, filterProject]);
 
   // 5. Mutaciones y Handlers
-  const handleSuccess = (msg: string, modalClose?: () => void) => {
+  const handleSuccess = (msg: string, modalClose?: () => void, updatedId?: number) => {
     queryClient.invalidateQueries({ queryKey: ['adminPlantillas'] });
     if (modalClose) modalClose();
     setPlantillaSelected(null);
+    
+    // ✅ Feedback Visual
+    if (updatedId) {
+        setHighlightedId(updatedId);
+        setTimeout(() => setHighlightedId(null), 2500);
+    }
+
     showMessage(msg, 'success');
   };
 
@@ -123,20 +130,24 @@ const AdminPlantillas: React.FC = () => {
 
   const createMutation = useMutation({
     mutationFn: ContratoPlantillaService.create,
-    onSuccess: () => handleSuccess('Plantilla creada correctamente.', createModal.close),
+    onSuccess: (data) => {
+        // Asumiendo que data.data es el objeto creado y tiene ID
+        const newItem = (data as any).data; 
+        handleSuccess('Plantilla creada correctamente.', createModal.close, newItem?.id);
+    },
     onError: handleError
   });
 
   const updatePdfMutation = useMutation({
     mutationFn: ContratoPlantillaService.updatePdf,
-    onSuccess: () => handleSuccess('PDF actualizado y hash recalculado.', updatePdfModal.close),
+    onSuccess: (_, variables) => handleSuccess('PDF actualizado y hash recalculado.', updatePdfModal.close, variables.id),
     onError: handleError
   });
 
   const updateMetaMutation = useMutation({
     mutationFn: ({ id, data }: { id: number, data: Partial<ContratoPlantillaDto> }) => 
       ContratoPlantillaService.update(id, data),
-    onSuccess: () => handleSuccess('Datos actualizados.', updateMetaModal.close),
+    onSuccess: (_, variables) => handleSuccess('Datos actualizados.', updateMetaModal.close, variables.id),
     onError: handleError
   });
 
@@ -146,8 +157,11 @@ const AdminPlantillas: React.FC = () => {
     onSuccess: (_, plantilla) => {
       queryClient.invalidateQueries({ queryKey: ['adminPlantillas'] });
       confirmDialog.close();
+      
+      // ✅ Feedback Visual
       setHighlightedId(plantilla.id);
       setTimeout(() => setHighlightedId(null), 2500);
+      
       showMessage(plantilla.activo ? 'Plantilla ocultada' : 'Plantilla activada', 'success');
     },
     onError: handleError
@@ -163,14 +177,14 @@ const AdminPlantillas: React.FC = () => {
     onError: handleError
   });
 
-  // Handlers
-  const handleToggleActive = (plantilla: ContratoPlantillaDto) => {
+  // Handlers (Callbacks)
+  const handleToggleActive = useCallback((plantilla: ContratoPlantillaDto) => {
     confirmDialog.confirm('toggle_plantilla_status', plantilla);
-  };
+  }, [confirmDialog]);
 
-  const handleDelete = (plantilla: ContratoPlantillaDto) => {
+  const handleDelete = useCallback((plantilla: ContratoPlantillaDto) => {
     confirmDialog.confirm('delete_plantilla', plantilla);
-  };
+  }, [confirmDialog]);
 
   const handleConfirmAction = () => {
     if (!confirmDialog.data) return;
@@ -183,17 +197,17 @@ const AdminPlantillas: React.FC = () => {
     }
   };
 
-  const handleOpenUpdatePdf = (row: ContratoPlantillaDto) => {
+  const handleOpenUpdatePdf = useCallback((row: ContratoPlantillaDto) => {
     setPlantillaSelected(row);
     updatePdfModal.open(); 
-  };
+  }, [updatePdfModal]);
 
-  const handleOpenUpdateMeta = (row: ContratoPlantillaDto) => {
+  const handleOpenUpdateMeta = useCallback((row: ContratoPlantillaDto) => {
     setPlantillaSelected(row);
     updateMetaModal.open();
-  };
+  }, [updateMetaModal]);
 
-  // 6. Columnas (Memoized)
+  // 6. Columnas
   const columns = useMemo<DataTableColumn<ContratoPlantillaDto>[]>(() => [
     { id: 'id', label: 'ID', minWidth: 50 },
     { 
@@ -315,7 +329,7 @@ const AdminPlantillas: React.FC = () => {
         </Stack>
       )
     }
-  ], [proyectos, theme, toggleActiveMutation.isPending, softDeleteMutation.isPending, confirmDialog.data]);
+  ], [proyectos, theme, toggleActiveMutation.isPending, softDeleteMutation.isPending, confirmDialog.data, handleToggleActive, handleDelete, handleOpenUpdateMeta, handleOpenUpdatePdf]);
 
   return (
     <PageContainer maxWidth="xl">
@@ -365,26 +379,22 @@ const AdminPlantillas: React.FC = () => {
           columns={columns} 
           data={filteredPlantillas} 
           getRowKey={(row) => row.id} 
+          
+          // ✅ Opacidad automática para inactivos
+          isRowActive={(row) => row.activo}
+          // ✅ Efecto flash para feedback
+          highlightedRowId={highlightedId}
+          
+          // ✅ Estilo personalizado SOLO para alerta de integridad (fuera del estándar)
+          getRowSx={(row) => ({
+             ...(row.integrity_compromised && {
+                 bgcolor: alpha(theme.palette.error.main, 0.1)
+             })
+          })}
+
           pagination 
           defaultRowsPerPage={10} 
           emptyMessage="No se encontraron plantillas con los filtros actuales."
-          getRowSx={(row) => {
-            const isHighlighted = highlightedId === row.id;
-            return { 
-              opacity: row.activo ? 1 : 0.6,
-              transition: 'background-color 0.8s ease, opacity 0.3s ease',
-              bgcolor: isHighlighted 
-                ? alpha(theme.palette.success.main, 0.15)
-                : row.integrity_compromised 
-                  ? alpha(theme.palette.error.main, 0.1) 
-                  : (row.activo ? 'inherit' : alpha(theme.palette.action.hover, 0.5)),
-              '&:hover': {
-                bgcolor: isHighlighted 
-                  ? alpha(theme.palette.success.main, 0.2)
-                  : alpha(theme.palette.action.hover, 0.8)
-              }
-            };
-          }}
         />
       </QueryHandler>
 

@@ -1,26 +1,23 @@
+// src/components/Admin/Contratos/Modals/PDFViewerMejorado.tsx
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 import { 
   Box, Paper, Stack, Button, Typography, IconButton, 
-  Alert, Chip, Slider
+  Alert, Chip, Slider, CircularProgress, Tooltip, useTheme, alpha
 } from '@mui/material';
 import { 
   ZoomIn, ZoomOut, NavigateBefore, NavigateNext, 
-  FitScreen, Delete
+  FitScreen, Delete, TouchApp
 } from '@mui/icons-material';
 
 // ====================================================
-// 🔧 CONFIGURACIÓN DEL WORKER (SOLUCIÓN DEFINITIVA)
+// 🔧 CONFIGURACIÓN DEL WORKER
 // ====================================================
-// Usamos un CDN dinámico. La clave es `${pdfjs.version}`.
-// Esto obliga a que si tu librería es la 5.4.296, baje el worker 5.4.296.
-// Nunca más tendrás el error de "Version mismatch".
-
+// Forzamos la versión exacta del worker para coincidir con la librería instalada
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
-
-// ====================================================
 
 interface PDFViewerMejoradoProps {
   pdfUrl: string;
@@ -41,6 +38,7 @@ const PDFViewerMejorado: React.FC<PDFViewerMejoradoProps> = ({
   onSignaturePositionSet,
   readOnlyMode = false
 }) => {
+  const theme = useTheme();
   const [numPages, setNumPages] = useState<number>(0);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [scale, setScale] = useState<number>(1.0);
@@ -50,246 +48,239 @@ const PDFViewerMejorado: React.FC<PDFViewerMejoradoProps> = ({
   
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Ajuste automático al ancho del contenedor
+  useEffect(() => {
+    const updateWidth = () => {
+      if (containerRef.current) {
+        // Restamos padding para evitar scroll horizontal innecesario
+        setPageWidth(containerRef.current.offsetWidth - 32);
+      }
+    };
+    
+    // Observer es más eficiente que window.resize
+    const observer = new ResizeObserver(updateWidth);
+    if (containerRef.current) observer.observe(containerRef.current);
+
+    return () => observer.disconnect();
+  }, []);
+
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
     setLoadError(null);
-  };
-
-  const onDocumentLoadError = (error: Error) => {
-    console.error('Error cargando PDF:', error);
-    // Mensaje amigable para el usuario
-    setLoadError('No se pudo cargar la vista previa del documento.');
   };
 
   const handlePageClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (readOnlyMode) return;
     
     if (!signatureDataUrl) {
-      alert('⚠️ Primero debes dibujar tu firma en el paso anterior');
-      return;
+      // Feedback visual si intenta firmar sin haber dibujado
+      return; 
     }
 
     const target = e.currentTarget;
     const rect = target.getBoundingClientRect();
     
+    // Calculamos coordenadas relativas al PDF original (sin importar el zoom actual)
     const x = (e.clientX - rect.left) / scale;
     const y = (e.clientY - rect.top) / scale;
 
-    const newSignature: SignatureStamp = {
-      x,
-      y,
-      page: currentPage
-    };
+    const newSignature: SignatureStamp = { x, y, page: currentPage };
 
     setSignature(newSignature);
     onSignaturePositionSet(newSignature);
   };
 
-  const goToPage = (page: number) => {
-    setCurrentPage(Math.max(1, Math.min(page, numPages)));
+  const changePage = (offset: number) => {
+    setCurrentPage(prev => Math.max(1, Math.min(prev + offset, numPages)));
   };
 
-  const goToLastPage = () => {
-    setCurrentPage(numPages);
+  const zoomInOut = (value: number) => {
+    setScale(prev => Math.min(Math.max(prev + value, 0.5), 2.5));
   };
-
-  const zoomIn = () => setScale(prev => Math.min(prev + 0.2, 2.5));
-  const zoomOut = () => setScale(prev => Math.max(prev - 0.2, 0.5));
-  const resetZoom = () => setScale(1.0);
-
-  const removeSignature = () => {
-    setSignature(null);
-  };
-
-  useEffect(() => {
-    const updateWidth = () => {
-      if (containerRef.current) {
-        setPageWidth(Math.min(containerRef.current.offsetWidth - 40, 800));
-      }
-    };
-    updateWidth();
-    window.addEventListener('resize', updateWidth);
-    return () => window.removeEventListener('resize', updateWidth);
-  }, []);
 
   return (
-    <Box ref={containerRef}>
-      {/* Barra de Controles Superior */}
-      <Paper elevation={1} sx={{ p: 2, mb: 2, borderRadius: 2 }}>
-        <Stack spacing={2}>
-          
-          {/* Navegación de Páginas */}
-          <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={1}>
-            <Stack direction="row" spacing={1} alignItems="center">
-              <IconButton onClick={() => goToPage(currentPage - 1)} disabled={currentPage === 1} size="small">
+    <Box ref={containerRef} sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      
+      {/* BARRA DE HERRAMIENTAS */}
+      <Paper 
+        elevation={0} 
+        sx={{ 
+            p: 1, mb: 1, borderRadius: 2, 
+            border: `1px solid ${theme.palette.divider}`,
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            bgcolor: 'background.paper', zIndex: 2
+        }}
+      >
+        {/* Paginación */}
+        <Stack direction="row" alignItems="center" spacing={1}>
+            <IconButton onClick={() => changePage(-1)} disabled={currentPage <= 1} size="small">
                 <NavigateBefore />
-              </IconButton>
-              
-              <Chip 
-                label={`${currentPage} / ${numPages || '...'}`} 
-                size="small" 
-                color="primary" 
-                variant="outlined"
-              />
-              
-              <IconButton onClick={() => goToPage(currentPage + 1)} disabled={currentPage === numPages} size="small">
-                <NavigateNext />
-              </IconButton>
-
-              <Button 
+            </IconButton>
+            <Chip 
+                label={`Pág ${currentPage} de ${numPages || '-'}`} 
                 size="small" 
                 variant="outlined" 
-                onClick={goToLastPage}
-                disabled={!numPages}
-                sx={{ ml: 1 }}
-              >
-                Ir al Final
-              </Button>
-            </Stack>
+                sx={{ fontWeight: 600, minWidth: 80 }}
+            />
+            <IconButton onClick={() => changePage(1)} disabled={currentPage >= numPages} size="small">
+                <NavigateNext />
+            </IconButton>
+        </Stack>
 
-            {/* Zoom */}
-            <Stack direction="row" spacing={1} alignItems="center">
-              <IconButton onClick={zoomOut} size="small" disabled={scale <= 0.5}>
-                <ZoomOut />
-              </IconButton>
-              
-              <Box sx={{ minWidth: 120 }}>
-                <Slider
-                  value={scale}
-                  min={0.5}
-                  max={2.5}
-                  step={0.1}
-                  onChange={(_, val) => setScale(val as number)}
-                  valueLabelDisplay="auto"
-                  valueLabelFormat={(val) => `${Math.round(val * 100)}%`}
-                  size="small"
-                />
-              </Box>
-              
-              <IconButton onClick={zoomIn} size="small" disabled={scale >= 2.5}>
-                <ZoomIn />
-              </IconButton>
-              
-              <IconButton onClick={resetZoom} size="small" title="Restablecer zoom">
-                <FitScreen />
-              </IconButton>
-            </Stack>
-          </Stack>
-
-          {/* Indicador de Firma */}
-          {signature && (
-            <Alert 
-              severity="success" 
-              action={
-                <IconButton size="small" onClick={removeSignature}>
-                  <Delete />
+        {/* Zoom */}
+        <Stack direction="row" alignItems="center" spacing={1}>
+            <Tooltip title="Reducir">
+                <IconButton onClick={() => zoomInOut(-0.1)} size="small" disabled={scale <= 0.5}>
+                    <ZoomOut fontSize="small" />
                 </IconButton>
-              }
-            >
-              ✓ Firma colocada en página {signature.page}
-            </Alert>
-          )}
+            </Tooltip>
+            
+            <Box sx={{ width: 80, mx: 1 }}>
+                <Slider
+                    value={scale}
+                    min={0.5} max={2.5} step={0.1}
+                    onChange={(_, val) => setScale(val as number)}
+                    size="small"
+                    aria-label="Zoom"
+                />
+            </Box>
+
+            <Tooltip title="Aumentar">
+                <IconButton onClick={() => zoomInOut(0.1)} size="small" disabled={scale >= 2.5}>
+                    <ZoomIn fontSize="small" />
+                </IconButton>
+            </Tooltip>
+            
+            <Tooltip title="Restablecer">
+                <IconButton onClick={() => setScale(1.0)} size="small">
+                    <FitScreen fontSize="small" />
+                </IconButton>
+            </Tooltip>
         </Stack>
       </Paper>
 
-      {/* Instrucción */}
-      {signatureDataUrl && !signature && !readOnlyMode && (
-        <Alert severity="info" sx={{ mb: 2 }}>
-          👆 Haz clic donde quieras colocar tu firma (recomendado: última página)
-        </Alert>
-      )}
-
-      {/* Error de Carga */}
-      {loadError && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {loadError}
-        </Alert>
-      )}
-
-      {/* Visor del PDF */}
-      <Paper 
-        elevation={3}
+      {/* ÁREA DE DOCUMENTO CON SCROLL */}
+      <Box 
         sx={{ 
-          position: 'relative',
-          display: 'inline-block',
-          borderRadius: 2,
-          overflow: 'hidden',
-          boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-          minHeight: '200px', // Evita colapso si falla carga
-          minWidth: '300px'
+            flex: 1, 
+            overflow: 'auto', 
+            bgcolor: 'grey.100', 
+            borderRadius: 2,
+            border: `1px solid ${theme.palette.divider}`,
+            position: 'relative',
+            display: 'flex',
+            justifyContent: 'center',
+            p: 2
         }}
       >
-        <Box
-          onClick={handlePageClick}
-          sx={{
-            cursor: (signatureDataUrl && !readOnlyMode) ? 'crosshair' : 'default',
-            position: 'relative',
-            display: 'inline-block'
-          }}
-        >
-          <Document
-            file={pdfUrl}
-            onLoadSuccess={onDocumentLoadSuccess}
-            onLoadError={onDocumentLoadError}
-            loading={
-              <Box p={4} textAlign="center">
-                <CircularProgress size={30} />
-                <Typography variant="caption" display="block" mt={1}>Procesando PDF...</Typography>
-              </Box>
-            }
-            error={
-              <Box p={4} textAlign="center" color="error.main">
-                 <Typography>Error visualizando el documento.</Typography>
-              </Box>
-            }
-          >
-            {/* Renderizamos página solo si cargó correctamente */}
-            {numPages > 0 && (
-                <Page
-                pageNumber={currentPage}
-                scale={scale}
-                width={pageWidth}
-                renderTextLayer={false}
-                renderAnnotationLayer={false}
-                />
-            )}
-          </Document>
+        {!loadError ? (
+            <Document
+                file={pdfUrl}
+                onLoadSuccess={onDocumentLoadSuccess}
+                onLoadError={() => setLoadError("No se pudo cargar el documento.")}
+                loading={
+                    <Stack alignItems="center" mt={5} spacing={2}>
+                        <CircularProgress size={40} />
+                        <Typography variant="body2" color="text.secondary">Cargando PDF...</Typography>
+                    </Stack>
+                }
+                error={
+                    <Alert severity="error" sx={{ mt: 5 }}>Error al cargar el archivo PDF.</Alert>
+                }
+            >
+                {/* Renderizado Condicional de la Página */}
+                {numPages > 0 && (
+                    <Box
+                        onClick={handlePageClick}
+                        sx={{
+                            position: 'relative',
+                            boxShadow: theme.shadows[4],
+                            cursor: (signatureDataUrl && !readOnlyMode) ? 'crosshair' : 'default',
+                            transition: 'cursor 0.2s',
+                            '&:hover': (signatureDataUrl && !readOnlyMode) ? {
+                                outline: `2px dashed ${theme.palette.primary.main}`,
+                                outlineOffset: '4px'
+                            } : {}
+                        }}
+                    >
+                        <Page
+                            pageNumber={currentPage}
+                            scale={scale}
+                            width={pageWidth}
+                            renderTextLayer={false}
+                            renderAnnotationLayer={false}
+                        />
 
-          {/* Estampa de Firma */}
-          {signatureDataUrl && signature && signature.page === currentPage && (
-            <Box
-              component="img"
-              src={signatureDataUrl}
-              alt="Firma"
-              sx={{
-                position: 'absolute',
-                left: signature.x * scale,
-                top: signature.y * scale,
-                width: 150 * scale,
-                height: 50 * scale,
-                objectFit: 'contain',
-                pointerEvents: 'none',
-                border: '2px dashed #1976d2',
-                backgroundColor: 'rgba(255, 255, 255, 0.7)',
-                borderRadius: 1,
-                boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-                zIndex: 10
-              }}
-            />
-          )}
-        </Box>
-      </Paper>
+                        {/* ESTAMPA DE FIRMA SOBRE EL PDF */}
+                        {signatureDataUrl && signature && signature.page === currentPage && (
+                            <Box
+                                sx={{
+                                    position: 'absolute',
+                                    left: signature.x * scale,
+                                    top: signature.y * scale,
+                                    width: 150 * scale,
+                                    height: 50 * scale,
+                                    border: `2px dashed ${theme.palette.success.main}`,
+                                    bgcolor: alpha(theme.palette.success.main, 0.1),
+                                    borderRadius: 1,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    zIndex: 10,
+                                    pointerEvents: 'none' // Para permitir clicks a través si fuera necesario
+                                }}
+                            >
+                                <Box 
+                                    component="img"
+                                    src={signatureDataUrl}
+                                    sx={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                                />
+                                {/* Botón eliminar firma (flotante) */}
+                                <IconButton 
+                                    size="small" 
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSignature(null);
+                                    }}
+                                    sx={{ 
+                                        position: 'absolute', top: -15, right: -15, 
+                                        bgcolor: 'error.main', color: 'white',
+                                        '&:hover': { bgcolor: 'error.dark' },
+                                        pointerEvents: 'auto',
+                                        width: 24, height: 24
+                                    }}
+                                >
+                                    <Delete fontSize="small" sx={{ fontSize: 16 }} />
+                                </IconButton>
+                            </Box>
+                        )}
+                    </Box>
+                )}
+            </Document>
+        ) : (
+            <Alert severity="error" sx={{ mt: 5 }}>{loadError}</Alert>
+        )}
+      </Box>
 
-      <Box mt={2} textAlign="center">
-        <Typography variant="caption" color="text.secondary">
-          💡 Tip: Navega hasta la última página y coloca tu firma al final del documento
-        </Typography>
+      {/* FEEDBACK INFERIOR */}
+      <Box mt={1} textAlign="center">
+         {!signature && signatureDataUrl && (
+             <Chip 
+                icon={<TouchApp />} 
+                label="Haz clic sobre el documento para estampar tu firma" 
+                color="primary" 
+                variant="outlined" 
+                sx={{ animation: 'pulse 2s infinite' }}
+             />
+         )}
+         {signature && (
+             <Typography variant="caption" color="success.main" fontWeight={700}>
+                 ✓ Firma colocada en página {signature.page}
+             </Typography>
+         )}
       </Box>
     </Box>
   );
 };
-
-// Necesario importar CircularProgress si no estaba
-import { CircularProgress } from '@mui/material';
 
 export default PDFViewerMejorado;

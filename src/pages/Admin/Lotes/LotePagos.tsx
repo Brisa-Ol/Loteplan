@@ -29,7 +29,6 @@ const StatCard: React.FC<{
   description?: string;
 }> = ({ title, value, icon, color, description }) => {
   const theme = useTheme();
-  // Mapeo seguro
   const paletteColor = theme.palette[color];
 
   return (
@@ -321,7 +320,7 @@ const LotePagos: React.FC = () => {
         </Alert>
       )}
 
-      {/* ✅ USO DEL COMPONENTE DATATABLE (Limpio) */}
+      {/* ✅ USO DEL COMPONENTE DATATABLE */}
       <Box sx={{ mt: 4 }}>
         <Typography variant="h6" fontWeight="bold" gutterBottom sx={{ mb: 2, color: 'text.primary' }}>
             Lotes Pendientes de Pago (Seguimiento)
@@ -334,6 +333,7 @@ const LotePagos: React.FC = () => {
                 emptyMessage="¡Excelente! No hay pendientes de pago con intentos fallidos."
                 pagination={true}
                 defaultRowsPerPage={5}
+                // No usamos highlightedRowId ni isRowActive porque es un monitor pasivo
             />
         </QueryHandler>
       </Box>

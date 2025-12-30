@@ -1,6 +1,4 @@
-// src/pages/Admin/Usuarios/AdminUsuarios.tsx
-
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { 
   Box, Typography, Paper, Chip, IconButton, Tooltip, 
   Stack, Button, TextField, MenuItem, InputAdornment, 
@@ -15,9 +13,10 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { AxiosError } from 'axios';
 
-// --- Servicios y Tipos ---
+// --- Servicios, Tipos y Contexto ---
 import UsuarioService from '../../../Services/usuario.service';
 import type { CreateUsuarioDto, UpdateUserAdminDto, UsuarioDto } from '../../../types/dto/usuario.dto';
+import { useAuth } from '../../../context/AuthContext'; // ✅ Importamos useAuth
 
 // --- Componentes Comunes ---
 import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
@@ -32,39 +31,27 @@ import EditUserModal from './modals/EditUserModal';
 import { useModal } from '../../../hooks/useModal';
 import { useConfirmDialog } from '../../../hooks/useConfirmDialog';
 
-// --- COMPONENTE MINI STAT CARD (Estandarizado) ---
-const MiniStatCard: React.FC<{ title: string; value: number; icon: React.ReactNode; color: string }> = ({ title, value, icon, color }) => {
+// --- COMPONENTE KPI (Estandarizado) ---
+const StatCard: React.FC<{ 
+  title: string; 
+  value: number; 
+  icon: React.ReactNode; 
+  color: string; 
+}> = ({ title, value, icon, color }) => {
   const theme = useTheme();
-  // Obtener color del theme de forma segura
   const paletteColor = (theme.palette as any)[color] || theme.palette.primary;
 
   return (
     <Paper 
       elevation={0} 
       sx={{ 
-        p: 2, 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: 2, 
-        borderRadius: 3, 
-        border: '1px solid',
-        borderColor: 'divider',
+        p: 2, display: 'flex', alignItems: 'center', gap: 2, 
+        borderRadius: 3, border: '1px solid', borderColor: 'divider',
         transition: 'all 0.2s ease',
-        '&:hover': {
-          borderColor: paletteColor.main,
-          transform: 'translateY(-2px)'
-        }
+        '&:hover': { borderColor: paletteColor.main, transform: 'translateY(-2px)' }
       }}
     >
-      <Avatar 
-        variant="rounded" 
-        sx={{ 
-          bgcolor: alpha(paletteColor.main, 0.1), 
-          color: paletteColor.main,
-          width: 48, 
-          height: 48 
-        }}
-      >
+      <Avatar variant="rounded" sx={{ bgcolor: alpha(paletteColor.main, 0.1), color: paletteColor.main, width: 48, height: 48 }}>
         {icon}
       </Avatar>
       <Box>
@@ -81,20 +68,23 @@ const AdminUsuarios: React.FC = () => {
   const theme = useTheme();
   const queryClient = useQueryClient();
   
-  // Hooks de Modales
+  // ✅ Obtenemos el usuario actual para evitar auto-bloqueo
+  const { user: currentUser } = useAuth();
+  
+  // Hooks
   const createModal = useModal();
   const editModal = useModal();
   const confirmDialog = useConfirmDialog();
   
-  // Estados de Interfaz
+  // Estados Locales
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [editingUser, setEditingUser] = useState<UsuarioDto | null>(null);
   
-  // Estado para el efecto Flash
+  // ✅ Feedback Visual
   const [highlightedUserId, setHighlightedUserId] = useState<number | null>(null);
-
-  // --- LOGICA STICKY (Congelar Orden) ---
+  
+  // Referencia para ordenamiento "Sticky"
   const initialStatusRef = useRef<Record<number, boolean>>({});
 
   const [snackbar, setSnackbar] = useState<{ open: boolean, message: string, severity: 'success'|'error' }>({
@@ -113,13 +103,13 @@ const AdminUsuarios: React.FC = () => {
     return 'Ocurrió un error inesperado';
   };
 
-  // Queries & Mutations
+  // --- QUERY ---
   const { data: usuarios = [], isLoading, error } = useQuery<UsuarioDto[]>({
     queryKey: ['adminUsuarios'],
     queryFn: async () => (await UsuarioService.findAll()).data
   });
 
-  // --- EFECTO PARA CAPTURAR ESTADO INICIAL ---
+  // Efecto Sticky
   useEffect(() => {
     if (usuarios.length > 0) {
       usuarios.forEach(u => {
@@ -130,46 +120,48 @@ const AdminUsuarios: React.FC = () => {
     }
   }, [usuarios]);
 
+  // --- MUTACIONES ---
   const createMutation = useMutation({
     mutationFn: (data: CreateUsuarioDto) => UsuarioService.create(data),
-    onSuccess: () => { 
+    onSuccess: (res) => { 
       queryClient.invalidateQueries({ queryKey: ['adminUsuarios'] }); 
       createModal.close(); 
       showMessage('Usuario creado exitosamente');
+      
+      if (res.data?.id) {
+          setHighlightedUserId(res.data.id);
+          setTimeout(() => setHighlightedUserId(null), 2500);
+      }
     },
     onError: (err) => showMessage(`Error al crear: ${getErrorMessage(err)}`, 'error')
   });
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: number, data: UpdateUserAdminDto }) => UsuarioService.update(id, data),
-    onSuccess: () => { 
+    onSuccess: (_, variables) => { 
       queryClient.invalidateQueries({ queryKey: ['adminUsuarios'] }); 
       editModal.close(); 
       setEditingUser(null); 
       showMessage('Usuario actualizado correctamente');
+      
+      setHighlightedUserId(variables.id);
+      setTimeout(() => setHighlightedUserId(null), 2500);
     },
     onError: (err) => showMessage(`Error al editar: ${getErrorMessage(err)}`, 'error')
   });
 
-  // Mutación de Cambio de Estado
   const toggleStatusMutation = useMutation({
     mutationFn: async (usuario: UsuarioDto) => {
-      return await UsuarioService.update(usuario.id, { 
-        activo: !usuario.activo 
-      });
+      return await UsuarioService.update(usuario.id, { activo: !usuario.activo });
     },
     onSuccess: (_, usuario) => {
       queryClient.invalidateQueries({ queryKey: ['adminUsuarios'] });
       confirmDialog.close();
-      
       const accion = usuario.activo ? 'bloqueado' : 'reactivado';
       showMessage(`Usuario ${accion} correctamente`, 'success');
-
-      // Efecto Flash
+      
       setHighlightedUserId(usuario.id);
-      setTimeout(() => {
-        setHighlightedUserId(null);
-      }, 2500);
+      setTimeout(() => setHighlightedUserId(null), 2500);
     },
     onError: (err) => {
       confirmDialog.close();
@@ -177,27 +169,30 @@ const AdminUsuarios: React.FC = () => {
     }
   });
 
-  // ==========================================
-  // HANDLERS
-  // ==========================================
-
-  const handleEditUser = (user: UsuarioDto) => {
+  // --- HANDLERS ---
+  const handleEditUser = useCallback((user: UsuarioDto) => {
     setEditingUser(user);
     editModal.open(); 
-  };
+  }, [editModal]);
 
   const handleCloseEdit = () => {
     editModal.close(); 
     setEditingUser(null);
   };
 
-  const handleToggleStatusClick = (usuario: UsuarioDto) => {
+  const handleToggleStatusClick = useCallback((usuario: UsuarioDto) => {
+    // 🔒 Validación de Auto-Bloqueo
+    if (usuario.id === currentUser?.id) {
+        showMessage('No puedes bloquear tu propia cuenta.', 'error');
+        return;
+    }
+
     if (usuario.activo && usuario.rol === 'admin') {
       showMessage('No se puede bloquear a un administrador. Cambia su rol primero.', 'error');
       return;
     }
     confirmDialog.confirm('toggle_user_status', usuario);
-  };
+  }, [confirmDialog, currentUser]);
 
   const handleConfirmToggle = () => {
     if (confirmDialog.data) {
@@ -205,6 +200,7 @@ const AdminUsuarios: React.FC = () => {
     }
   };
 
+  // --- FILTROS Y ESTADÍSTICAS ---
   const stats = useMemo(() => ({
     total: usuarios.length,
     activos: usuarios.filter(u => u.activo).length,
@@ -227,19 +223,15 @@ const AdminUsuarios: React.FC = () => {
       return matchesSearch && matchesStatus;
     });
 
-    // --- ORDENAMIENTO "STICKY" ---
     return filtered.sort((a, b) => {
       const statusA = initialStatusRef.current[a.id] ?? a.activo;
       const statusB = initialStatusRef.current[b.id] ?? b.activo;
-
-      if (statusA !== statusB) {
-        return statusA ? -1 : 1;
-      }
+      if (statusA !== statusB) return statusA ? -1 : 1;
       return a.nombre_usuario.localeCompare(b.nombre_usuario);
     });
   }, [usuarios, searchTerm, filterStatus]);
 
-  // Columnas (Memoizadas)
+  // --- DEFINICIÓN DE COLUMNAS ---
   const columns = useMemo<DataTableColumn<UsuarioDto>[]>(() => [
     { id: 'id', label: 'ID', minWidth: 50 },
     { 
@@ -248,13 +240,10 @@ const AdminUsuarios: React.FC = () => {
       minWidth: 250,
       render: (user) => (
         <Stack direction="row" alignItems="center" spacing={2}>
-           {/* Avatar con Inicial */}
            <Avatar sx={{ 
-             width: 40, 
-             height: 40, 
+             width: 40, height: 40, 
              bgcolor: user.activo ? alpha(theme.palette.primary.main, 0.1) : theme.palette.action.disabledBackground,
              color: user.activo ? 'primary.main' : 'text.disabled',
-             fontSize: '1rem',
              fontWeight: 'bold'
            }}>
              {user.nombre_usuario.charAt(0).toUpperCase()}
@@ -264,15 +253,14 @@ const AdminUsuarios: React.FC = () => {
               <Typography variant="body2" fontWeight={600} color={user.activo ? 'text.primary' : 'text.disabled'}>
                 {user.nombre_usuario}
               </Typography>
+              {user.id === currentUser?.id && (
+                  <Chip label="TÚ" size="small" color="primary" sx={{ height: 20, fontSize: '0.65rem', fontWeight: 700 }} />
+              )}
               {user.confirmado_email && (
-                <Tooltip title="Email Verificado">
-                  <VerifiedUserIcon color="success" sx={{ fontSize: 16 }} />
-                </Tooltip>
+                <Tooltip title="Email Verificado"><VerifiedUserIcon color="success" sx={{ fontSize: 16 }} /></Tooltip>
               )}
               {user.is_2fa_enabled && (
-                <Tooltip title="2FA Activo">
-                  <TwoFaIcon color="info" sx={{ fontSize: 16 }} />
-                </Tooltip>
+                <Tooltip title="2FA Activo"><TwoFaIcon color="info" sx={{ fontSize: 16 }} /></Tooltip>
               )}
             </Stack>
             <Typography variant="caption" color="text.secondary">
@@ -284,72 +272,92 @@ const AdminUsuarios: React.FC = () => {
     },
     { id: 'email', label: 'Email', minWidth: 200 },
     { 
-      id: 'rol', 
-      label: 'Rol', 
+      id: 'rol', label: 'Rol', 
       render: (user) => {
         const isAdmin = user.rol === 'admin';
         return (
           <Chip 
-            label={user.rol} 
-            size="small" 
+            label={user.rol} size="small" 
             sx={{ 
-              textTransform: 'capitalize',
-              fontWeight: 600,
+              textTransform: 'capitalize', fontWeight: 600,
               bgcolor: isAdmin ? alpha(theme.palette.primary.main, 0.1) : alpha(theme.palette.info.main, 0.1),
               color: isAdmin ? 'primary.main' : 'info.main',
-              border: '1px solid',
-              borderColor: isAdmin ? alpha(theme.palette.primary.main, 0.2) : alpha(theme.palette.info.main, 0.2)
+              border: '1px solid', borderColor: isAdmin ? alpha(theme.palette.primary.main, 0.2) : alpha(theme.palette.info.main, 0.2)
             }} 
           />
         );
       }
     },
     { 
-      id: 'acceso', 
-      label: 'Estado y Acceso',
-      align: 'center',
+      id: 'acceso', label: 'Estado y Acceso', align: 'center',
       render: (user) => {
         const isAdminAndActive = user.rol === 'admin' && user.activo;
+        const isSelf = user.id === currentUser?.id;
         const isProcessingThisUser = toggleStatusMutation.isPending && confirmDialog.data?.id === user.id;
         
+        // Lógica de bloqueo
+        const isSwitchDisabled = toggleStatusMutation.isPending || isAdminAndActive || isSelf;
+
+        // Tooltip dinámico
+        const blockTooltip = isSelf 
+            ? 'No puedes bloquear tu propia cuenta' 
+            : isAdminAndActive 
+                ? 'No se puede bloquear a un administrador' 
+                : user.activo ? 'Bloquear Acceso' : 'Reactivar Acceso';
+
         return (
           <Stack direction="row" alignItems="center" spacing={1} justifyContent="center">
             {isProcessingThisUser ? (
               <CircularProgress size={20} color="inherit" />
             ) : (
-              <Tooltip 
-                title={isAdminAndActive ? 'No se puede bloquear a un administrador' : user.activo ? 'Bloquear Acceso' : 'Reactivar Acceso'}
-              >
-                <Switch
-                  checked={user.activo}
-                  onChange={() => handleToggleStatusClick(user)}
-                  size="small"
-                  disabled={toggleStatusMutation.isPending || isAdminAndActive}
-                  sx={{
-                    '& .MuiSwitch-switchBase.Mui-checked': {
-                      color: theme.palette.success.main,
-                      '&:hover': { backgroundColor: alpha(theme.palette.success.main, 0.1) },
-                    },
-                    '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                      backgroundColor: theme.palette.success.main,
-                    },
-                  }}
-                />
+              <Tooltip title={blockTooltip} arrow placement="top">
+                {/* ✅ CAMBIO CLAVE: Usamos Box en lugar de span simple para aplicar estilos SX.
+                   Esto fuerza visualmente el estado deshabilitado manteniendo el Tooltip activo.
+                */}
+                <Box 
+                    component="span" 
+                    sx={{ 
+                        display: 'inline-flex',
+                        cursor: isSwitchDisabled ? 'not-allowed' : 'pointer', // 🚫 Cursor prohibido
+                        opacity: isSwitchDisabled ? 0.5 : 1, // 👁️ Opacidad visual fuerte
+                        filter: isSwitchDisabled ? 'grayscale(100%)' : 'none', // (Opcional) Quita color
+                        transition: 'opacity 0.2s'
+                    }}
+                >
+                    <Switch
+                        checked={user.activo}
+                        onChange={() => handleToggleStatusClick(user)}
+                        size="small"
+                        disabled={isSwitchDisabled} // Bloqueo funcional
+                        color={user.activo ? "success" : "default"}
+                        // IMPORTANTE: pointerEvents: 'none' en el switch permite que el Box padre capture el hover del Tooltip
+                        sx={{
+                            pointerEvents: isSwitchDisabled ? 'none' : 'auto', 
+                            '& .MuiSwitch-switchBase.Mui-checked': {
+                                color: theme.palette.success.main,
+                                '&:hover': { backgroundColor: alpha(theme.palette.success.main, 0.1) },
+                            },
+                            '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                                backgroundColor: theme.palette.success.main,
+                            },
+                        }}
+                    />
+                </Box>
               </Tooltip>
             )}
             
             {!isProcessingThisUser && (
               <Chip 
                 label={user.activo ? 'Activo' : 'Inactivo'}
-                size="small"
-                variant="outlined"
+                size="small" variant="outlined"
                 icon={user.activo ? <CheckCircle sx={{ fontSize: '14px !important' }} /> : <BlockIcon sx={{ fontSize: '14px !important' }} />}
                 color={user.activo ? 'success' : 'default'}
                 sx={{ 
-                  height: 24, 
-                  border: 'none', 
-                  bgcolor: user.activo ? alpha(theme.palette.success.main, 0.1) : theme.palette.action.hover,
-                  '& .MuiChip-label': { px: 1, fontSize: '0.75rem', fontWeight: 600 }
+                    height: 24, 
+                    fontWeight: 600, 
+                    '& .MuiChip-label': { px: 1, fontSize: '0.75rem' },
+                    // También atenuamos visualmente el Chip si es uno mismo
+                    opacity: isSelf ? 0.5 : 1 
                 }}
               />
             )}
@@ -358,20 +366,13 @@ const AdminUsuarios: React.FC = () => {
       }
     },
     {
-      id: 'acciones', 
-      label: 'Acciones', 
-      align: 'right',
+      id: 'acciones', label: 'Acciones', align: 'right',
       render: (user) => (
         <Stack direction="row" justifyContent="flex-end">
           <Tooltip title="Editar Usuario">
             <IconButton 
-              onClick={() => handleEditUser(user)} 
-              size="small"
-              disabled={toggleStatusMutation.isPending}
-              sx={{ 
-                color: theme.palette.text.secondary,
-                '&:hover': { color: theme.palette.primary.main, bgcolor: alpha(theme.palette.primary.main, 0.1) }
-              }}
+              onClick={() => handleEditUser(user)} size="small" disabled={toggleStatusMutation.isPending}
+              sx={{ color: 'text.secondary', '&:hover': { color: 'primary.main', bgcolor: alpha(theme.palette.primary.main, 0.1) } }}
             >
               <EditIcon fontSize="small" />
             </IconButton>
@@ -379,7 +380,7 @@ const AdminUsuarios: React.FC = () => {
         </Stack>
       )
     }
-  ], [theme, toggleStatusMutation.isPending, confirmDialog.data]);
+  ], [theme, toggleStatusMutation.isPending, confirmDialog.data, currentUser, handleEditUser, handleToggleStatusClick]);
 
   return (
     <PageContainer maxWidth="xl" sx={{ py: 3 }}>
@@ -388,12 +389,12 @@ const AdminUsuarios: React.FC = () => {
         subtitle="Administra los permisos, roles y estado de seguridad de la plataforma." 
       />
 
-      {/* Stats Cards */}
+      {/* Stats Cards (Estandarizado) */}
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', lg: 'repeat(4, 1fr)' }, gap: 3, mb: 4 }}>
-        <MiniStatCard title="Total Usuarios" value={stats.total} icon={<GroupIcon />} color="primary" />
-        <MiniStatCard title="Usuarios Activos" value={stats.activos} icon={<CheckCircle />} color="success" />
-        <MiniStatCard title="Emails Verificados" value={stats.confirmados} icon={<MarkEmailRead />} color="info" />
-        <MiniStatCard title="Seguridad 2FA" value={stats.con2FA} icon={<Security />} color="warning" />
+        <StatCard title="Total Usuarios" value={stats.total} icon={<GroupIcon />} color="primary" />
+        <StatCard title="Usuarios Activos" value={stats.activos} icon={<CheckCircle />} color="success" />
+        <StatCard title="Emails Verificados" value={stats.confirmados} icon={<MarkEmailRead />} color="info" />
+        <StatCard title="Seguridad 2FA" value={stats.con2FA} icon={<Security />} color="warning" />
       </Box>
 
       {/* Filters & Add Button */}
@@ -407,10 +408,8 @@ const AdminUsuarios: React.FC = () => {
       >
         <TextField 
           placeholder="Buscar por nombre, email o usuario..." 
-          size="small" 
-          sx={{ flexGrow: 1, minWidth: 200 }}
-          value={searchTerm} 
-          onChange={(e) => setSearchTerm(e.target.value)}
+          size="small" sx={{ flexGrow: 1, minWidth: 200 }}
+          value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
           InputProps={{ 
             startAdornment: (<InputAdornment position="start"><Search color="action" /></InputAdornment>),
             sx: { borderRadius: 2 }
@@ -429,40 +428,24 @@ const AdminUsuarios: React.FC = () => {
         <Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', md: 'block' }, mx: 1 }} />
         
         <Button 
-          variant="contained" 
-          startIcon={<PersonAdd />} 
-          onClick={createModal.open}
-          sx={{ 
-            borderRadius: 2, textTransform: 'none', fontWeight: 600,
-            boxShadow: theme.shadows[2]
-          }}
+          variant="contained" startIcon={<PersonAdd />} onClick={createModal.open}
+          sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600, boxShadow: theme.shadows[2] }}
         >
           Nuevo Usuario
         </Button>
       </Paper>
 
-      {/* Tabla de Usuarios */}
+      {/* ✅ TABLA REF ACTORIZADA */}
       <QueryHandler isLoading={isLoading} error={error as Error | null}>
-          {/* Eliminado el Paper envolvente redundante */}
           <DataTable
             columns={columns} 
             data={filteredUsers} 
             getRowKey={(user) => user.id}
-            getRowSx={(user) => {
-              const isHighlighted = highlightedUserId === user.id;
-              return {
-                opacity: user.activo ? 1 : 0.6,
-                transition: 'background-color 0.8s ease, opacity 0.3s ease',
-                bgcolor: isHighlighted 
-                  ? alpha(theme.palette.success.main, 0.15)
-                  : (user.activo ? 'inherit' : alpha(theme.palette.action.hover, 0.5)),
-                '&:hover': {
-                  bgcolor: isHighlighted 
-                    ? alpha(theme.palette.success.main, 0.2)
-                    : alpha(theme.palette.action.hover, 0.8)
-                }
-              };
-            }}
+            
+            // ✅ PROPS ESTANDARIZADAS
+            isRowActive={(user) => user.activo} // Atenúa usuarios inactivos
+            highlightedRowId={highlightedUserId} // Feedback al crear/editar
+            
             emptyMessage="No se encontraron usuarios registrados." 
             pagination={true} 
             defaultRowsPerPage={10}
@@ -485,7 +468,6 @@ const AdminUsuarios: React.FC = () => {
         isLoading={updateMutation.isPending}
       />
 
-      {/* Modal de Confirmación */}
       <ConfirmDialog 
         controller={confirmDialog}
         onConfirm={handleConfirmToggle}
@@ -493,15 +475,13 @@ const AdminUsuarios: React.FC = () => {
       />
 
       <Snackbar 
-        open={snackbar.open} 
-        autoHideDuration={4000} 
+        open={snackbar.open} autoHideDuration={4000} 
         onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
         <Alert 
-          severity={snackbar.severity} 
+          severity={snackbar.severity} variant="filled"
           onClose={() => setSnackbar(prev => ({ ...prev, open: false }))} 
-          variant="filled"
           sx={{ width: '100%', boxShadow: theme.shadows[4] }}
         >
           {snackbar.message}

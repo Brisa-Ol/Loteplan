@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+// src/pages/User/Inversiones/MisInversiones.tsx
+
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   Box, Typography, Paper, Stack, Chip, Button, Tooltip,
-  Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  Avatar, Skeleton, alpha, useTheme,
-  Divider, Card
+  Avatar, Divider, Card, useTheme, alpha
 } from '@mui/material';
 import {
   CheckCircle, Schedule, ErrorOutline, Visibility,
@@ -20,10 +20,13 @@ import MercadoPagoService from '../../../Services/pagoMercado.service';
 // Componentes Comunes
 import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
 import { PageHeader } from '../../../components/common/PageHeader/PageHeader';
+import { QueryHandler } from '../../../components/common/QueryHandler/QueryHandler';
+import { DataTable, type DataTableColumn } from '../../../components/common/DataTable/DataTable';
 import TwoFactorAuthModal from '../../../components/common/TwoFactorAuthModal/TwoFactorAuthModal';
 
 // Hooks
 import { useModal } from '../../../hooks/useModal';
+import type { ApiError } from '../../../Services/httpService';
 
 const MisInversiones: React.FC = () => {
   const navigate = useNavigate();
@@ -33,9 +36,10 @@ const MisInversiones: React.FC = () => {
   const twoFaModal = useModal();
   const [selectedInversionId, setSelectedInversionId] = useState<number | null>(null);
   const [twoFAError, setTwoFAError] = useState<string | null>(null);
+  const [highlightedId, setHighlightedId] = useState<number | null>(null);
 
   // --- 2. QUERY ---
-  const { data: inversiones, isLoading, isError, refetch } = useQuery<InversionDto[]>({
+  const { data: inversiones = [], isLoading, error } = useQuery<InversionDto[]>({
     queryKey: ['misInversiones'],
     queryFn: async () => (await InversionService.getMisInversiones()).data,
     retry: 1
@@ -44,19 +48,32 @@ const MisInversiones: React.FC = () => {
   // --- 3. MUTATION (Pagar) ---
   const payMutation = useMutation({
     mutationFn: async (inversionId: number) => {
+      setSelectedInversionId(inversionId);
+      setHighlightedId(inversionId); 
       return await MercadoPagoService.iniciarCheckoutModelo('inversion', inversionId);
     },
-    onSuccess: (response, inversionId) => {
+    onSuccess: (response) => {
       const data = response.data;
       if (response.status === 202 || data.is2FARequired) {
-        setSelectedInversionId(inversionId);
         setTwoFAError(null);
         twoFaModal.open();
         return;
       }
       if (data.redirectUrl) window.location.href = data.redirectUrl;
     },
-    onError: (err: any) => alert(err.response?.data?.error || 'Error al iniciar pago')
+    onError: (error: unknown) => {
+        setHighlightedId(null);
+        const err = error as ApiError;
+
+        // ✅ MANEJO DE SEGURIDAD (Si el usuario perdió el estado 2FA/KYC)
+        if (err.type === 'SECURITY_ACTION') {
+            alert("⚠️ Requisito de Seguridad: Para realizar pagos debes tener activo el 2FA.");
+            navigate('/client/MiCuenta/SecuritySettings');
+            return;
+        }
+
+        alert(err.message || 'Error al iniciar pago');
+    }
   });
 
   // --- 4. MUTATION (2FA) ---
@@ -86,33 +103,130 @@ const MisInversiones: React.FC = () => {
       case 'pagado': return { label: 'Pagado', color: 'success' as const, icon: <CheckCircle fontSize="small" /> };
       case 'pendiente': return { label: 'Pendiente', color: 'warning' as const, icon: <Schedule fontSize="small" /> };
       case 'fallido': return { label: 'Fallido', color: 'error' as const, icon: <ErrorOutline fontSize="small" /> };
-      case 'reembolsado': return { label: 'Reembolsado', color: 'info' as const, icon: <CheckCircle fontSize="small" /> };
+      case 'reembolsado': return { label: 'Reembolsado', color: 'info' as const, icon: <Refresh fontSize="small" /> };
       default: return { label: estado, color: 'default' as const, icon: null };
     }
   };
 
-  // Stats Calculados
-  const stats = {
+  // Stats Calculados (Memoized)
+  const stats = useMemo(() => ({
     total: inversiones?.length || 0,
     pagadas: inversiones?.filter(i => i.estado === 'pagado').length || 0,
     monto: inversiones?.reduce((acc, inv) => acc + Number(inv.monto), 0) || 0
-  };
+  }), [inversiones]);
 
   // --- CONFIGURACIÓN DE COLUMNAS ---
-  const columns = [
-    { id: 'proyecto', label: 'Proyecto / ID', align: 'left' },
-    { id: 'fecha', label: 'Fecha', align: 'left' },
-    { id: 'monto', label: 'Monto Invertido', align: 'left' },
-    { id: 'estado', label: 'Estado', align: 'left' },
-    { id: 'acciones', label: 'Acciones', align: 'right' },
-  ];
+  const columns = useMemo<DataTableColumn<InversionDto>[]>(() => [
+    {
+      id: 'proyecto',
+      label: 'Proyecto / ID',
+      minWidth: 200,
+      render: (row) => (
+        <Box>
+            <Typography variant="body2" fontWeight={600} color="text.primary">
+                {row.proyecto?.nombre_proyecto || `Proyecto no disponible`}
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace', opacity: 0.8 }}>
+                ID: #{row.id}
+            </Typography>
+        </Box>
+      )
+    },
+    {
+      id: 'fecha',
+      label: 'Fecha',
+      minWidth: 120,
+      render: (row) => (
+        <Stack direction="row" alignItems="center" spacing={1}>
+            <Schedule fontSize="inherit" color="action" sx={{ fontSize: 16 }} />
+            <Typography variant="body2" color="text.secondary">
+                {formatDate(row.fecha_inversion)}
+            </Typography>
+        </Stack>
+      )
+    },
+    {
+      id: 'monto',
+      label: 'Monto Invertido',
+      minWidth: 150,
+      render: (row) => (
+        <Typography variant="body2" fontWeight={700} color="primary.main">
+            {formatCurrency(Number(row.monto))}
+        </Typography>
+      )
+    },
+    {
+      id: 'estado',
+      label: 'Estado',
+      minWidth: 140,
+      render: (row) => {
+        const status = getStatusConfig(row.estado);
+        return (
+            <Chip
+                label={status.label}
+                color={status.color}
+                size="small"
+                variant="outlined"
+                icon={status.icon as any}
+                sx={{ fontWeight: 600, borderWidth: 1 }}
+            />
+        );
+      }
+    },
+    {
+      id: 'acciones',
+      label: 'Acciones',
+      align: 'right',
+      minWidth: 180,
+      render: (row) => (
+        <Stack direction="row" spacing={1} justifyContent="flex-end">
+            <Tooltip title="Ver detalles">
+                <Button
+                    variant="outlined"
+                    color="inherit"
+                    size="small"
+                    startIcon={<Visibility fontSize="small" />}
+                    onClick={() => navigate(`/proyectos/${row.id_proyecto}`)}
+                    sx={{
+                        borderColor: theme.palette.divider,
+                        color: 'text.secondary',
+                        '&:hover': {
+                            borderColor: theme.palette.primary.main,
+                            color: theme.palette.primary.main,
+                            bgcolor: alpha(theme.palette.primary.main, 0.05)
+                        }
+                    }}
+                >
+                    Ver
+                </Button>
+            </Tooltip>
+
+            {row.estado === 'pendiente' && (
+                <Tooltip title="Ir a MercadoPago">
+                    <Button
+                        variant="contained"
+                        color="primary"
+                        size="small"
+                        startIcon={<Payment fontSize="small" />}
+                        onClick={() => handlePagarClick(row.id)}
+                        disabled={payMutation.isPending}
+                        disableElevation
+                        sx={{ fontWeight: 600 }}
+                    >
+                        {payMutation.isPending && selectedInversionId === row.id ? '...' : 'Pagar'}
+                    </Button>
+                </Tooltip>
+            )}
+        </Stack>
+      )
+    }
+  ], [theme, payMutation.isPending, selectedInversionId, navigate]);
 
   return (
     <PageContainer maxWidth="lg">
       <PageHeader
         title="Historial de Inversiones"
         subtitle='Gestiona tus participaciones y pagos pendientes'
-
       />
 
       {/* --- KPI SECTION --- */}
@@ -124,7 +238,8 @@ const MisInversiones: React.FC = () => {
             border: `1px solid ${theme.palette.divider}`,
             borderRadius: 3,
             bgcolor: 'background.paper',
-            boxShadow: theme.shadows[1]
+            boxShadow: theme.shadows[1],
+            minWidth: { xs: '100%', md: '80%' }
           }}
         >
           <Stack
@@ -132,6 +247,7 @@ const MisInversiones: React.FC = () => {
             divider={<Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', md: 'block' }, mx: 2 }} />}
             spacing={{ xs: 4, md: 6 }}
             alignItems="center"
+            justifyContent="center"
           >
             {/* KPI 1: Capital */}
             <Stack direction="row" spacing={2} alignItems="center">
@@ -182,211 +298,33 @@ const MisInversiones: React.FC = () => {
       </Box>
 
       {/* --- DATATABLE --- */}
-      <TableContainer
-        component={Paper}
-        elevation={0}
-        sx={{
-          border: `1px solid ${theme.palette.divider}`,
-          borderRadius: 3,
-          overflow: 'hidden',
-          boxShadow: theme.shadows[2]
-        }}
-      >
-        <Table sx={{ minWidth: 700 }}>
-          {/* Header */}
-          <TableHead sx={{ bgcolor: alpha(theme.palette.primary.main, 0.05) }}>
-            <TableRow>
-              {columns.map((col) => (
-                <TableCell
-                  key={col.id}
-                  align={col.align as any}
-                  sx={{
-                    fontWeight: 700,
-                    color: 'text.secondary',
-                    textTransform: 'uppercase',
-                    fontSize: '0.75rem',
-                    letterSpacing: '0.05em',
-                    py: 2.5
-                  }}
-                >
-                  {col.label}
-                </TableCell>
-              ))}
-            </TableRow>
-          </TableHead>
+      <QueryHandler isLoading={isLoading} error={error as Error | null}>
+        <Paper
+            elevation={0}
+            sx={{
+                border: `1px solid ${theme.palette.divider}`,
+                borderRadius: 3,
+                overflow: 'hidden',
+                boxShadow: theme.shadows[2]
+            }}
+        >
+            <DataTable
+                columns={columns}
+                data={inversiones}
+                getRowKey={(row) => row.id}
+                pagination
+                defaultRowsPerPage={10}
+                
+                // ✅ Feedback visual al pagar
+                highlightedRowId={highlightedId}
 
-          {/* Body */}
-          <TableBody>
-            {isLoading ? (
-              // Loading State
-              Array.from(new Array(3)).map((_, index) => (
-                <TableRow key={index}>
-                  <TableCell><Skeleton variant="text" width={180} height={25} /><Skeleton variant="text" width={100} height={15} /></TableCell>
-                  <TableCell><Skeleton variant="text" width={100} /></TableCell>
-                  <TableCell><Skeleton variant="text" width={120} /></TableCell>
-                  <TableCell><Skeleton variant="rounded" width={80} height={24} /></TableCell>
-                  <TableCell align="right"><Skeleton variant="rounded" width={100} height={30} sx={{ ml: 'auto' }} /></TableCell>
-                </TableRow>
-              ))
-            ) : isError ? (
-              // Error State
-              <TableRow>
-                <TableCell colSpan={5} align="center" sx={{ py: 6 }}>
-                  <ErrorOutline color="error" sx={{ fontSize: 40, mb: 1 }} />
-                  <Typography color="error" variant="body2">No se pudieron cargar las inversiones.</Typography>
-                  <Button size="small" onClick={() => refetch()} sx={{ mt: 1 }}>Reintentar</Button>
-                </TableCell>
-              </TableRow>
-            ) : inversiones && inversiones.length > 0 ? (
-              // Data State
-              inversiones.map((inversion) => {
-                const status = getStatusConfig(inversion.estado);
-                const nombreProyecto = inversion.proyecto?.nombre_proyecto || `Proyecto no disponible`;
+                // ✅ Atenuar reembolsadas/fallidas
+                isRowActive={(row) => !['fallido', 'reembolsado'].includes(row.estado)}
 
-                return (
-                  <TableRow
-                    key={inversion.id}
-                    hover
-                    sx={{
-                      '&:last-child td, &:last-child th': { border: 0 },
-                      transition: 'background-color 0.2s',
-                      cursor: 'default'
-                    }}
-                  >
-                    {/* Columna: Proyecto */}
-                    <TableCell>
-                      <Box>
-                        <Typography variant="body2" fontWeight={600} color="text.primary">
-                          {nombreProyecto}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace', opacity: 0.8 }}>
-                          ID: #{inversion.id}
-                        </Typography>
-                      </Box>
-                    </TableCell>
-
-                    {/* Columna: Fecha */}
-                    <TableCell>
-                      <Stack direction="row" alignItems="center" spacing={1}>
-                        <Schedule fontSize="inherit" color="action" sx={{ fontSize: 16 }} />
-                        <Typography variant="body2" color="text.secondary">
-                          {formatDate(inversion.fecha_inversion)}
-                        </Typography>
-                      </Stack>
-                    </TableCell>
-
-                    {/* Columna: Monto */}
-                    <TableCell>
-                      <Typography variant="body2" fontWeight={700} color="text.primary">
-                        {formatCurrency(inversion.monto)}
-                      </Typography>
-                    </TableCell>
-
-                    {/* Columna: Estado */}
-                    <TableCell>
-                      <Chip
-                        label={status.label}
-                        color={status.color}
-                        size="small"
-                        variant="outlined"
-                        icon={status.icon as any}
-                        sx={{ fontWeight: 600, borderWidth: 1 }}
-                      />
-                    </TableCell>
-
-                    {/* Columna: Acciones */}
-                    <TableCell align="right">
-                      <Stack direction="row" spacing={1} justifyContent="flex-end">
-
-                        <Tooltip title="Ver detalles">
-                          <Button
-                            variant="outlined"
-                            color="inherit"
-                            size="small"
-                            startIcon={<Visibility fontSize="small" />}
-                            onClick={() => navigate(`/proyectos/${inversion.id_proyecto}`)}
-                            sx={{
-                              borderColor: theme.palette.divider,
-                              color: 'text.secondary',
-                              '&:hover': {
-                                borderColor: theme.palette.primary.main,
-                                color: theme.palette.primary.main,
-                                bgcolor: alpha(theme.palette.primary.main, 0.05)
-                              }
-                            }}
-                          >
-                            Ver
-                          </Button>
-                        </Tooltip>
-
-                        {inversion.estado === 'pendiente' && (
-                          <Tooltip title="Ir a MercadoPago">
-                            <Button
-                              variant="contained"
-                              color="primary"
-                              size="small"
-                              startIcon={<Payment fontSize="small" />}
-                              onClick={() => handlePagarClick(inversion.id)}
-                              disabled={payMutation.isPending}
-                              disableElevation
-                              sx={{ fontWeight: 600 }}
-                            >
-                              Pagar
-                            </Button>
-                          </Tooltip>
-                        )}
-                      </Stack>
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            ) : (
-              // Empty State
-              <TableRow>
-                <TableCell colSpan={5} align="center" sx={{ py: 8 }}>
-                  <Paper
-                    variant="outlined"
-                    sx={{
-                      p: 4,
-                      maxWidth: 400,
-                      mx: 'auto',
-                      bgcolor: 'background.default',
-                      borderStyle: 'dashed',
-                      borderColor: theme.palette.divider,
-                      borderRadius: 4
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        width: 64, height: 64, mx: 'auto', mb: 2, borderRadius: '50%',
-                        bgcolor: alpha(theme.palette.text.secondary, 0.1),
-                        display: 'flex', alignItems: 'center', justifyContent: 'center'
-                      }}
-                    >
-                      <TrendingUp sx={{ fontSize: 32, color: 'text.secondary', opacity: 0.5 }} />
-                    </Box>
-                    <Typography variant="h6" color="text.primary" gutterBottom fontWeight={600}>
-                      Aún no tienes inversiones
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" mb={3}>
-                      Explora los proyectos inmobiliarios disponibles y comienza a invertir hoy mismo.
-                    </Typography>
-                    <Button
-                      variant="contained"
-                      color="primary"
-                      onClick={() => navigate('/client/Proyectos/RoleSelection')}
-                      disableElevation
-                      sx={{ borderRadius: 2 }}
-                    >
-                      Explorar Oportunidades
-                    </Button>
-                  </Paper>
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+                emptyMessage="Aún no tienes inversiones registradas."
+            />
+        </Paper>
+      </QueryHandler>
 
       {/* Modal 2FA */}
       <TwoFactorAuthModal

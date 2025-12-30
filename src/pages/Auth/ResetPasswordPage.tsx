@@ -15,9 +15,9 @@ import {
 } from '@mui/material';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 
-import AuthService from '../../../Services/auth.service';
-import AuthFormContainer from '../components/AuthFormContainer/AuthFormContainer';
-import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
+import AuthService from '../../Services/auth.service';
+import AuthFormContainer from './components/AuthFormContainer/AuthFormContainer';
+import { PageContainer } from '../../components/common/PageContainer/PageContainer';
 
 const ResetPasswordPage: React.FC = () => {
   const { token } = useParams<{ token: string }>();

@@ -1,9 +1,9 @@
 // src/pages/Admin/Transacciones/AdminTransacciones.tsx
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { 
   Box, Typography, Paper, Chip, IconButton, Tooltip, 
-  TextField, MenuItem, InputAdornment, Avatar, Stack, useTheme, alpha
+  TextField, MenuItem, InputAdornment, Avatar, Stack, useTheme, alpha, Snackbar, Alert
 } from '@mui/material';
 import { 
   Search, Visibility, ErrorOutline, Bolt, Person 
@@ -22,8 +22,10 @@ import ModalDetalleTransaccion from './modal/ModalDetalleTransaccion';
 import { DataTable, type DataTableColumn } from '../../../../components/common/DataTable/DataTable';
 import TransaccionService from '../../../../Services/transaccion.service';
 
-// Import Hook
+// Import Hooks & Components
 import { useModal } from '../../../../hooks/useModal';
+import { useConfirmDialog } from '../../../../hooks/useConfirmDialog';
+import { ConfirmDialog } from '../../../../components/common/ConfirmDialog/ConfirmDialog';
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -46,8 +48,15 @@ const AdminTransacciones: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
 
-  // Modal Hooks
+  // UI State (Feedback visual)
+  const [highlightedId, setHighlightedId] = useState<number | null>(null);
+  const [snackbar, setSnackbar] = useState<{ open: boolean, message: string, severity: 'success' | 'error' }>({
+    open: false, message: '', severity: 'success'
+  });
+
+  // Modal & Dialog Hooks
   const detailModal = useModal();
+  const confirmDialog = useConfirmDialog(); // ✅ Ya incluye 'force_confirm_transaction'
   const [selectedTransaccion, setSelectedTransaccion] = useState<TransaccionDto | null>(null);
 
   // --- QUERIES ---
@@ -57,24 +66,33 @@ const AdminTransacciones: React.FC = () => {
         const res = await TransaccionService.findAll();
         return res.data; 
     },
-    staleTime: 0,
-    refetchOnMount: true
+    staleTime: 30000,
   });
 
   const confirmMutation = useMutation({
     mutationFn: (id: number) => TransaccionService.forceConfirm(id),
-    onSuccess: (response) => {
+    onSuccess: (response, id) => {
+      // 1. Refrescar datos
       queryClient.invalidateQueries({ queryKey: ['adminTransacciones'] });
-      alert(`✅ Éxito: ${response.data.mensaje}`);
-      if (detailModal.isOpen) {
-        handleCloseModal();
-      }
+      
+      // 2. Feedback Visual: Flash verde en la fila
+      setHighlightedId(id);
+      setTimeout(() => setHighlightedId(null), 2500);
+
+      // 3. Notificación
+      setSnackbar({ open: true, message: `✅ Éxito: ${response.data.mensaje}`, severity: 'success' });
+      
+      // 4. Cerrar modales si están abiertos
+      if (detailModal.isOpen) handleCloseModal();
+      confirmDialog.close();
     },
     onError: (err: any) => {
-      alert(`❌ Error al confirmar: ${err.response?.data?.error || err.message}`);
+      confirmDialog.close();
+      setSnackbar({ open: true, message: `❌ Error: ${err.response?.data?.error || err.message}`, severity: 'error' });
     }
   });
 
+  // --- FILTRADO ---
   const filteredData = useMemo(() => {
     return transacciones.filter(t => {
       const term = searchTerm.toLowerCase();
@@ -97,21 +115,28 @@ const AdminTransacciones: React.FC = () => {
   }, [transacciones, searchTerm, filterStatus]);
 
   // --- HANDLERS ---
-  const handleForceConfirm = (id: number) => {
-    if (window.confirm(`⚠️ ¿Forzar confirmación de transacción #${id}?`)) {
-      confirmMutation.mutate(id);
-    }
+  
+  // 1. Abre el diálogo de confirmación (Reemplaza window.confirm)
+  const handleForceConfirmClick = useCallback((id: number) => {
+    confirmDialog.confirm('force_confirm_transaction', { id });
+  }, [confirmDialog]);
+
+  // 2. Ejecuta la mutación si el usuario confirma en el diálogo
+  const handleConfirmAction = () => {
+      if (confirmDialog.action === 'force_confirm_transaction' && confirmDialog.data) {
+          confirmMutation.mutate(confirmDialog.data.id);
+      }
   };
 
-  const handleViewDetails = (row: TransaccionDto) => {
+  const handleViewDetails = useCallback((row: TransaccionDto) => {
     setSelectedTransaccion(row);
     detailModal.open();
-  };
+  }, [detailModal]);
 
-  const handleCloseModal = () => {
+  const handleCloseModal = useCallback(() => {
     detailModal.close();
     setTimeout(() => setSelectedTransaccion(null), 300);
-  };
+  }, [detailModal]);
 
   // ========================================================================
   // ⚙️ COLUMNS DEFINITION
@@ -221,11 +246,13 @@ const AdminTransacciones: React.FC = () => {
                 </IconButton>
             </Tooltip>
 
-            {(row.estado_transaccion === 'pendiente' || row.estado_transaccion === 'fallido') && (
-                <Tooltip title="Forzar Confirmación">
+            {/* ⚡ BOTÓN DEL RAYO: Visible si no está pagado */}
+            {row.estado_transaccion !== 'pagado' && (
+                <Tooltip title="Forzar Confirmación (Manual)">
                     <IconButton 
                         size="small"
-                        onClick={() => handleForceConfirm(row.id)} 
+                        onClick={() => handleForceConfirmClick(row.id)} 
+                        disabled={confirmMutation.isPending}
                         sx={{ color: 'warning.main', bgcolor: alpha(theme.palette.warning.main, 0.1), '&:hover': { bgcolor: alpha(theme.palette.warning.main, 0.2) } }}
                     >
                         <Bolt fontSize="small" />
@@ -235,7 +262,7 @@ const AdminTransacciones: React.FC = () => {
         </Stack>
       )
     }
-  ], [theme]);
+  ], [theme, confirmMutation.isPending, handleViewDetails, handleForceConfirmClick]);
 
   return (
     <PageContainer maxWidth="xl">
@@ -283,20 +310,52 @@ const AdminTransacciones: React.FC = () => {
             columns={columns}
             data={filteredData}
             getRowKey={(row) => row.id}
+            
+            // ✅ Feedback visual: Efecto flash verde al confirmar
+            highlightedRowId={highlightedId}
+            
+            // ✅ Estado visual: Atenúa visualmente las transacciones fallidas/rechazadas
+            // para que resalten las pendientes y pagadas
+            isRowActive={(row) => !['fallido', 'rechazado_por_capacidad', 'rechazado_proyecto_cerrado', 'expirado'].includes(row.estado_transaccion)}
+
             emptyMessage="No se encontraron transacciones."
             pagination={true}
             defaultRowsPerPage={10}
         />
       </QueryHandler>
 
-      {/* Modal */}
+      {/* Modal Detalle */}
       <ModalDetalleTransaccion 
         open={detailModal.isOpen}
         transaccion={selectedTransaccion}
         onClose={handleCloseModal}
-        onForceConfirm={handleForceConfirm}
+        onForceConfirm={handleForceConfirmClick}
         isConfirming={confirmMutation.isPending}
       />
+
+      {/* Diálogo de Confirmación (El freno de mano para el Rayo ⚡) */}
+      <ConfirmDialog 
+        controller={confirmDialog}
+        onConfirm={handleConfirmAction}
+        isLoading={confirmMutation.isPending}
+      />
+
+      {/* Notificaciones */}
+      <Snackbar 
+        open={snackbar.open} 
+        autoHideDuration={6000} 
+        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert 
+          severity={snackbar.severity} 
+          onClose={() => setSnackbar(prev => ({ ...prev, open: false }))} 
+          variant="filled"
+          sx={{ boxShadow: 4 }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
 
     </PageContainer>
   );

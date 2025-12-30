@@ -2,9 +2,8 @@
 
 import React from 'react';
 import { 
-  Dialog, DialogTitle, DialogContent, DialogActions, 
-  Button, Typography, Chip, Divider, Box, Alert, Stack, Avatar, 
-  IconButton, useTheme, alpha, Paper
+  Typography, Chip, Divider, Box, Alert, Stack, Avatar, 
+  useTheme, alpha, Paper, Button
 } from '@mui/material';
 import { 
   AttachMoney, 
@@ -15,11 +14,11 @@ import {
   Person,
   Business,
   CreditCard,
-  Description,
-  Close as CloseIcon
+  Description
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { BaseModal } from '../../../../../components/common/BaseModal/BaseModal';
 import type { TransaccionDto } from '../../../../../types/dto/transaccion.dto';
 
 interface Props {
@@ -38,11 +37,7 @@ const ModalDetalleTransaccion: React.FC<Props> = ({
   if (!transaccion) return null;
 
   const isPendingOrFailed = ['pendiente', 'fallido'].includes(transaccion.estado_transaccion);
-
-  // ALIAS CORRECTO: Usamos proyectoTransaccion porque así viene de tu backend
   const proyectoData = transaccion.proyectoTransaccion;
-  
-  // Datos del Usuario formateados
   const usuarioNombre = transaccion.usuario 
     ? `${transaccion.usuario.nombre} ${transaccion.usuario.apellido}`
     : `Usuario ID: ${transaccion.id_usuario}`;
@@ -54,262 +49,179 @@ const ModalDetalleTransaccion: React.FC<Props> = ({
       case 'fallido': 
       case 'rechazado_por_capacidad':
       case 'rechazado_proyecto_cerrado':
-      case 'expirado':
-        return 'error';
+      case 'expirado': return 'error';
       case 'reembolsado':
       case 'revertido': return 'info';
-      default: return 'default';
+      default: return 'primary';
     }
   };
 
   const statusColor = getStatusColor(transaccion.estado_transaccion);
-  const themeStatusColor = (theme.palette as any)[statusColor !== 'default' ? statusColor : 'primary'];
 
   return (
-    <Dialog 
-        open={open} 
-        onClose={onClose} 
-        maxWidth="md" 
-        fullWidth
-        PaperProps={{ sx: { borderRadius: 3, boxShadow: theme.shadows[10] } }}
+    <BaseModal
+      open={open}
+      onClose={onClose}
+      title={`Transacción #${transaccion.id}`}
+      subtitle={`Ref. Pasarela: ${transaccion.pagoPasarela?.id_transaccion_pasarela || transaccion.id_pago_pasarela || 'N/A'}`}
+      icon={<CreditCard />}
+      headerColor={statusColor as any}
+      maxWidth="md"
+      hideConfirmButton
+      cancelText="Cerrar"
+      headerExtra={
+        <Chip 
+          label={transaccion.estado_transaccion.toUpperCase().replace(/_/g, ' ')} 
+          color={statusColor as any} 
+          variant="filled"
+          sx={{ fontWeight: 'bold', borderRadius: 1.5 }}
+        />
+      }
     >
-      {/* HEADER */}
-      <DialogTitle sx={{ 
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
-        pb: 2, pt: 3, px: 3,
-        bgcolor: alpha(theme.palette.primary.main, 0.04)
-      }}>
-        <Box>
-          <Typography variant="h6" fontWeight={800} color="text.primary" sx={{ lineHeight: 1.2 }}>
-            Transacción #{transaccion.id}
+      {/* SECCIÓN DE ERROR */}
+      {transaccion.error_detalle && (
+        <Alert severity="error" icon={<ErrorIcon />} sx={{ mb: 3, borderRadius: 2 }}>
+          <Typography variant="subtitle2" fontWeight="bold">Detalle del Error:</Typography>
+          {transaccion.error_detalle}
+        </Alert>
+      )}
+
+      {/* LAYOUT PRINCIPAL */}
+      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 4 }}>
+        
+        {/* COLUMNA IZQUIERDA: FINANZAS */}
+        <Box sx={{ flex: 1 }}>
+          <Typography variant="subtitle2" color="primary" gutterBottom fontWeight="bold" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>
+            Datos Financieros
           </Typography>
-          <Stack direction="row" spacing={1} alignItems="center">
-              <Typography variant="caption" color="text.secondary">
-                Ref. Pasarela: 
+          
+          <Stack spacing={2}>
+            <Box display="flex" alignItems="center" gap={1}>
+              <AttachMoney color="action" sx={{ fontSize: 40 }} />
+              <Typography variant="h3" fontWeight="bold" color="text.primary">
+                {Number(transaccion.monto).toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}
               </Typography>
-              <Chip 
-                // Intentamos leer del objeto anidado primero
-                label={transaccion.pagoPasarela?.id_transaccion_pasarela || transaccion.id_pago_pasarela || 'N/A'} 
-                size="small" 
-                variant="outlined" 
-                sx={{ height: 20, fontSize: '0.7rem' }}
-              />
+            </Box>
+            
+            <Paper 
+              elevation={0}
+              sx={{ 
+                p: 2, borderRadius: 2, border: '1px solid', borderColor: 'divider',
+                bgcolor: alpha(theme.palette.action.active, 0.04) 
+              }}
+            >
+              <Stack direction="row" alignItems="center" gap={1} mb={0.5}>
+                <Category fontSize="small" color="action" />
+                <Typography variant="caption" color="text.secondary" fontWeight="bold">TIPO DE OPERACIÓN</Typography>
+              </Stack>
+              <Typography variant="body1" fontWeight={600}>
+                {transaccion.tipo_transaccion === 'pago_suscripcion_inicial' ? 'Suscripción Inicial' : 
+                 transaccion.tipo_transaccion === 'directo' ? 'Inversión Directa' : 
+                 transaccion.tipo_transaccion === 'mensual' ? 'Cuota Mensual' :
+                 transaccion.tipo_transaccion.toUpperCase()}
+              </Typography>
+            </Paper>
+
+            <Stack direction="row" alignItems="center" gap={1}>
+              <Event color="action" fontSize="small" />
+              <Typography variant="body2" color="text.secondary">
+                {transaccion.fecha_transaccion 
+                  ? format(new Date(transaccion.fecha_transaccion), "dd 'de' MMMM, yyyy - HH:mm", { locale: es }) 
+                  : 'Fecha no registrada'}
+              </Typography>
+            </Stack>
           </Stack>
         </Box>
-        
-        <Box display="flex" alignItems="center" gap={1}>
-            <Chip 
-            label={transaccion.estado_transaccion.toUpperCase().replace(/_/g, ' ')} 
-            color={statusColor as any} 
-            variant="filled"
-            sx={{ fontWeight: 'bold' }}
-            />
-            <IconButton onClick={onClose} size="small" sx={{ color: 'text.secondary' }}>
-                <CloseIcon />
-            </IconButton>
-        </Box>
-      </DialogTitle>
 
-      <Divider />
+        <Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', md: 'block' } }} />
 
-      <DialogContent sx={{ bgcolor: alpha(theme.palette.background.default, 0.4), p: 4 }}>
-        
-        {/* SECCIÓN DE ERROR (Solo si existe) */}
-        {transaccion.error_detalle && (
-          <Alert severity="error" icon={<ErrorIcon />} sx={{ mb: 3, borderRadius: 2 }}>
-            <Typography variant="subtitle2" fontWeight="bold">Detalle del Error:</Typography>
-            {transaccion.error_detalle}
-          </Alert>
-        )}
-
-        {/* LAYOUT PRINCIPAL FLEXBOX */}
-        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 4 }}>
+        {/* COLUMNA DERECHA: USUARIO Y CONTEXTO */}
+        <Box sx={{ flex: 1 }}>
+          <Typography variant="subtitle2" color="primary" gutterBottom fontWeight="bold" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>
+            Usuario y Contexto
+          </Typography>
           
-          {/* COLUMNA IZQUIERDA: DATOS FINANCIEROS */}
-          <Box sx={{ flex: 1 }}>
-            <Typography variant="subtitle2" color="primary" gutterBottom fontWeight="bold" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>
-              Datos Financieros
-            </Typography>
-            
-            <Stack spacing={2}>
-              <Box display="flex" alignItems="center" gap={1}>
-                <AttachMoney color="action" sx={{ fontSize: 40 }} />
-                <Typography variant="h3" fontWeight="bold" color="text.primary">
-                  {Number(transaccion.monto).toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}
-                </Typography>
+          <Stack spacing={2}>
+            <Paper 
+              elevation={0}
+              sx={{ p: 2, borderRadius: 2, border: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', gap: 2 }}
+            >
+              <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main', width: 48, height: 48 }}>
+                {transaccion.usuario?.nombre?.[0] || <Person />}
+              </Avatar>
+              <Box>
+                <Typography variant="caption" color="text.secondary" fontWeight="bold">USUARIO</Typography>
+                <Typography variant="subtitle1" fontWeight="bold" lineHeight={1.2}>{usuarioNombre}</Typography>
+                {transaccion.usuario?.email && (
+                  <Typography variant="caption" color="text.secondary" display="block">{transaccion.usuario.email}</Typography>
+                )}
               </Box>
-              
+            </Paper>
+
+            {transaccion.id_proyecto && (
               <Paper 
                 elevation={0}
-                sx={{ 
-                    p: 2, borderRadius: 2, 
-                    border: '1px solid', borderColor: 'divider',
-                    bgcolor: alpha(theme.palette.action.active, 0.04) 
-                }}
+                sx={{ p: 2, borderRadius: 2, border: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', gap: 2 }}
               >
-                <Box display="flex" alignItems="center" gap={1} mb={0.5}>
-                  <Category fontSize="small" color="action" />
-                  <Typography variant="caption" color="text.secondary" fontWeight="bold">TIPO DE OPERACIÓN</Typography>
-                </Box>
-                <Typography variant="body1" fontWeight={600}>
-                  {transaccion.tipo_transaccion === 'pago_suscripcion_inicial' ? 'Suscripción Inicial' : 
-                   transaccion.tipo_transaccion === 'directo' ? 'Inversión Directa' : 
-                   transaccion.tipo_transaccion === 'mensual' ? 'Cuota Mensual' :
-                   transaccion.tipo_transaccion.toUpperCase()}
-                </Typography>
-              </Paper>
-
-              <Box display="flex" alignItems="center" gap={1}>
-                <Event color="action" />
-                <Typography variant="body2">
-                  {transaccion.fecha_transaccion 
-                    ? format(new Date(transaccion.fecha_transaccion), "dd 'de' MMMM, yyyy - HH:mm", { locale: es }) 
-                    : 'Fecha no registrada'}
-                </Typography>
-              </Box>
-            </Stack>
-          </Box>
-
-          <Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', md: 'block' } }} />
-
-          {/* COLUMNA DERECHA: CONTEXTO */}
-          <Box sx={{ flex: 1 }}>
-            <Typography variant="subtitle2" color="primary" gutterBottom fontWeight="bold" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>
-              Usuario y Contexto
-            </Typography>
-            
-            <Stack spacing={2}>
-              
-              {/* Tarjeta Usuario */}
-              <Paper 
-                elevation={0}
-                sx={{ 
-                    p: 2, borderRadius: 2, 
-                    border: '1px solid', borderColor: 'divider',
-                    display: 'flex', alignItems: 'center', gap: 2 
-                }}
-              >
-                <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main', width: 48, height: 48 }}>
-                  {transaccion.usuario?.nombre?.[0] || <Person />}
+                <Avatar sx={{ bgcolor: alpha(theme.palette.secondary.main, 0.1), color: 'secondary.main', width: 48, height: 48 }}>
+                  <Business />
                 </Avatar>
                 <Box>
-                  <Typography variant="caption" color="text.secondary" fontWeight="bold">USUARIO</Typography>
+                  <Typography variant="caption" color="text.secondary" fontWeight="bold">PROYECTO</Typography>
                   <Typography variant="subtitle1" fontWeight="bold" lineHeight={1.2}>
-                    {usuarioNombre}
+                    {proyectoData ? proyectoData.nombre_proyecto : `ID: ${transaccion.id_proyecto}`}
                   </Typography>
-                  {transaccion.usuario && (
-                    <Typography variant="caption" color="text.secondary" display="block">
-                      {transaccion.usuario.email}
-                    </Typography>
-                  )}
-                  {transaccion.usuario?.dni && (
-                    <Typography variant="caption" color="text.secondary">
-                      DNI: {transaccion.usuario.dni}
-                    </Typography>
+                  {proyectoData && (
+                    <Chip label={proyectoData.estado_proyecto} size="small" color="success" sx={{ height: 20, fontSize: '0.65rem', mt: 0.5 }} />
                   )}
                 </Box>
               </Paper>
+            )}
 
-              {/* Tarjeta Proyecto */}
-              {transaccion.id_proyecto && (
-                <Paper 
-                    elevation={0}
-                    sx={{ 
-                        p: 2, borderRadius: 2, 
-                        border: '1px solid', borderColor: 'divider',
-                        display: 'flex', alignItems: 'center', gap: 2 
-                    }}
-                >
-                  <Avatar sx={{ bgcolor: alpha(theme.palette.secondary.main, 0.1), color: 'secondary.main', width: 48, height: 48 }}>
-                    <Business />
-                  </Avatar>
-                  <Box>
-                    <Typography variant="caption" color="text.secondary" fontWeight="bold">PROYECTO</Typography>
-                    <Typography variant="subtitle1" fontWeight="bold" lineHeight={1.2}>
-                      {proyectoData 
-                        ? proyectoData.nombre_proyecto 
-                        : `ID: ${transaccion.id_proyecto}`}
-                    </Typography>
-                    {proyectoData && (
-                      <Chip 
-                        label={proyectoData.estado_proyecto} 
-                        size="small" 
-                        color={proyectoData.estado_proyecto === 'Activo' ? 'success' : 'default'} 
-                        sx={{ height: 20, fontSize: '0.7rem', mt: 0.5 }}
-                      />
-                    )}
-                  </Box>
-                </Paper>
-              )}
-
-              {/* Referencias Técnicas */}
-              <Box sx={{ mt: 1 }}>
-                <Typography variant="caption" color="text.secondary" display="block" mb={1} fontWeight="bold">
-                  REFERENCIAS TÉCNICAS
-                </Typography>
-                <Stack direction="row" gap={1} flexWrap="wrap">
-                  {transaccion.id_inversion && (
-                    <Chip icon={<Description fontSize="small"/>} label={`Inversión #${transaccion.id_inversion}`} size="small" variant="outlined" />
-                  )}
-                  {transaccion.id_suscripcion && (
-                    <Chip icon={<Description fontSize="small"/>} label={`Suscripción #${transaccion.id_suscripcion}`} size="small" variant="outlined" />
-                  )}
-                  {transaccion.id_pago_mensual && (
-                    <Chip icon={<CreditCard fontSize="small"/>} label={`Pago Mensual #${transaccion.id_pago_mensual}`} size="small" variant="outlined" />
-                  )}
-                  {transaccion.id_puja && (
-                    <Chip icon={<AttachMoney fontSize="small"/>} label={`Puja #${transaccion.id_puja}`} size="small" variant="outlined" />
-                  )}
-                </Stack>
-              </Box>
-
-            </Stack>
-          </Box>
+            <Box>
+              <Typography variant="caption" color="text.secondary" display="block" mb={1} fontWeight="bold">REFERENCIAS</Typography>
+              <Stack direction="row" gap={1} flexWrap="wrap">
+                {transaccion.id_inversion && <Chip icon={<Description fontSize="small"/>} label={`Inv #${transaccion.id_inversion}`} size="small" variant="outlined" />}
+                {transaccion.id_suscripcion && <Chip icon={<Description fontSize="small"/>} label={`Susc #${transaccion.id_suscripcion}`} size="small" variant="outlined" />}
+                {transaccion.id_pago_mensual && <Chip icon={<CreditCard fontSize="small"/>} label={`Pago #${transaccion.id_pago_mensual}`} size="small" variant="outlined" />}
+              </Stack>
+            </Box>
+          </Stack>
         </Box>
+      </Box>
 
-        {/* ZONA DE ACCIÓN PARA ADMIN */}
-        {isPendingOrFailed && (
-            <>
-            <Divider sx={{ my: 3 }} />
-            <Paper 
-                elevation={0}
-                sx={{ 
-                    bgcolor: alpha(theme.palette.warning.main, 0.05), 
-                    p: 2, borderRadius: 2, 
-                    border: '1px dashed', borderColor: theme.palette.warning.main 
-                }}
+      {/* ZONA DE ADMINISTRACIÓN */}
+      {isPendingOrFailed && (
+        <>
+          <Divider sx={{ my: 3 }} />
+          <Paper 
+            elevation={0}
+            sx={{ 
+              bgcolor: alpha(theme.palette.warning.main, 0.05), p: 2, borderRadius: 2, 
+              border: '1px dashed', borderColor: 'warning.main' 
+            }}
+          >
+            <Stack direction="row" alignItems="center" gap={1} mb={1}>
+              <Bolt color="warning" />
+              <Typography variant="subtitle2" color="warning.main" fontWeight="bold">Zona de Administración</Typography>
+            </Stack>
+            <Typography variant="body2" color="text.secondary" mb={2}>
+              Si el dinero ingresó a la cuenta bancaria pero el sistema no se actualizó, fuerza la confirmación aquí.
+            </Typography>
+            <Button 
+              variant="contained" 
+              color="warning" 
+              onClick={() => onForceConfirm(transaccion.id)}
+              disabled={isConfirming}
+              fullWidth
+              sx={{ borderRadius: 2, fontWeight: 700 }}
             >
-                <Stack direction="row" alignItems="center" gap={1} mb={1}>
-                <Bolt color="warning" />
-                <Typography variant="subtitle2" color="warning.main" fontWeight="bold">
-                    Zona de Administración
-                </Typography>
-                </Stack>
-                <Typography variant="body2" paragraph color="text.secondary">
-                Si el dinero ingresó a la cuenta bancaria pero el webhook falló, puedes forzar la confirmación manual aquí. 
-                </Typography>
-                <Button 
-                variant="contained" 
-                color="warning" 
-                onClick={() => onForceConfirm(transaccion.id)}
-                disabled={isConfirming}
-                fullWidth
-                sx={{ borderRadius: 2, fontWeight: 700 }}
-                >
-                {isConfirming ? 'Procesando...' : 'Forzar Confirmación Manual'}
-                </Button>
-            </Paper>
-          </>
-        )}
-
-      </DialogContent>
-
-      <DialogActions sx={{ p: 3, bgcolor: alpha(theme.palette.background.default, 0.5) }}>
-        <Button onClick={onClose} variant="contained" color="inherit" sx={{ borderRadius: 2, px: 4, bgcolor: theme.palette.grey[800], color: 'white', '&:hover': { bgcolor: theme.palette.grey[900] } }}>
-          Cerrar
-        </Button>
-      </DialogActions>
-    </Dialog>
+              {isConfirming ? 'Procesando...' : 'Confirmar Transacción Manualmente'}
+            </Button>
+          </Paper>
+        </>
+      )}
+    </BaseModal>
   );
 };
 

@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import {
   Box, Typography, Button, Stack, TextField, Alert, Snackbar,
-  Divider, Avatar, Chip, Card, CardContent, alpha, useTheme, AlertTitle, Grid
+  Divider, Avatar, Chip, Card, CardContent, alpha, useTheme, AlertTitle
 } from '@mui/material';
 import { 
   Edit as EditIcon, 
@@ -25,7 +25,7 @@ import * as Yup from 'yup';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 
-// Servicios
+// Servicios y Contexto
 import { useAuth } from '../../../context/AuthContext';
 import UsuarioService from '../../../Services/usuario.service';
 import kycService from '../../../Services/kyc.service';
@@ -33,10 +33,8 @@ import SuscripcionService from '../../../Services/suscripcion.service';
 import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
 import type { UpdateUserMeDto } from '../../../types/dto/usuario.dto';
 
-// Hook de Confirmación
+// Hooks y Componentes
 import { useConfirmDialog } from '../../../hooks/useConfirmDialog';
-
-// Componentes
 import DeleteAccountModal from './components/DeleteAccountModal';
 import SecuritySettings from './SecuritySettings';
 
@@ -48,14 +46,19 @@ const Perfil: React.FC = () => {
   // Hook de Confirmación
   const confirmController = useConfirmDialog();
 
-  // Estados UI y Formulario
+  // Estados UI
   const [isEditing, setIsEditing] = useState(false);
   const [showSecuritySection, setShowSecuritySection] = useState(false);
   const [successOpen, setSuccessOpen] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
 
   // --- QUERIES ---
-  const { data: kycStatus } = useQuery({ queryKey: ['kycStatus'], queryFn: kycService.getStatus, retry: false });
+  const { data: kycStatus } = useQuery({ 
+      queryKey: ['kycStatus'], 
+      queryFn: kycService.getStatus, 
+      retry: false 
+  });
+  
   const { data: suscripciones, isLoading: loadingDeudas } = useQuery({ 
     queryKey: ['misSuscripcionesCheck'], 
     queryFn: async () => (await SuscripcionService.getMisSuscripciones()).data, 
@@ -92,11 +95,12 @@ const Perfil: React.FC = () => {
       nombre_usuario: user?.nombre_usuario || '',
     },
     validationSchema: Yup.object({
-      nombre: Yup.string().min(2, 'Mínimo 2').required('Requerido'),
-      apellido: Yup.string().min(2, 'Mínimo 2').required('Requerido'),
-      email: Yup.string().email('Inválido').required('Requerido'),
-      nombre_usuario: Yup.string().min(4, 'Mínimo 4').required('Requerido'),
-      numero_telefono: Yup.string().min(8, 'Muy corto').required('Requerido'),
+      nombre: Yup.string().min(2, 'Mínimo 2 caracteres').required('Requerido'),
+      apellido: Yup.string().min(2, 'Mínimo 2 caracteres').required('Requerido'),
+      email: Yup.string().email('Email inválido').required('Requerido'),
+      nombre_usuario: Yup.string().min(4, 'Mínimo 4 caracteres').required('Requerido'),
+      // Unificamos validación con Register (mínimo 10 dígitos suele ser estándar para móviles con prefijo)
+      numero_telefono: Yup.string().min(8, 'Número inválido').required('Requerido'),
     }),
     onSubmit: (values) => mutation.mutate(values),
     enableReinitialize: true,
@@ -157,13 +161,13 @@ const Perfil: React.FC = () => {
                 >
                     {user?.nombre?.charAt(0).toUpperCase()}
                 </Avatar>
-                {/* Botón flotante para editar foto (simulado) */}
+                {/* Botón flotante simulado (puedes activarlo en el futuro) */}
                 <Box 
                     sx={{
                         position: 'absolute', bottom: 0, right: 0,
                         bgcolor: 'background.paper', borderRadius: '50%',
                         border: `1px solid ${theme.palette.divider}`,
-                        p: 0.5, cursor: 'pointer',
+                        p: 0.5, cursor: 'default', // Cambiar a 'pointer' si implementas subida
                         '&:hover': { bgcolor: 'action.hover' }
                     }}
                 >
@@ -183,7 +187,7 @@ const Perfil: React.FC = () => {
                     label={user?.rol === 'admin' ? 'Administrador' : 'Cliente'} 
                     color="primary" 
                     size="small" 
-                    variant="filled" // Filled para destacar rol principal
+                    variant="filled" 
                     sx={{ fontWeight: 700 }} 
                 />
                 {user?.confirmado_email && (
@@ -192,7 +196,7 @@ const Perfil: React.FC = () => {
                         label="Verificado" 
                         color="success" 
                         size="small" 
-                        variant="outlined" // Outlined para estado secundario
+                        variant="outlined"
                         sx={{ 
                             fontWeight: 700, 
                             bgcolor: alpha(theme.palette.success.main, 0.05),
@@ -238,7 +242,7 @@ const Perfil: React.FC = () => {
                     fullWidth label="Nombre" name="nombre" 
                     value={formik.values.nombre} onChange={formik.handleChange} 
                     disabled={!isEditing} 
-                    variant="outlined" // O "filled" si prefieres ese estilo en inputs
+                    variant="outlined"
                  />
                  <TextField 
                     fullWidth label="Apellido" name="apellido" 
@@ -246,12 +250,12 @@ const Perfil: React.FC = () => {
                     disabled={!isEditing} 
                  />
                  
-                 {/* DNI full width */}
+                 {/* DNI full width (Read Only) */}
                  <Box sx={{ gridColumn: { md: '1 / -1' } }}>
                     <TextField 
                         fullWidth label="Documento de Identidad (DNI)" 
                         value={user?.dni || ''} disabled 
-                       
+                        helperText="El DNI no puede modificarse por seguridad."
                     />
                  </Box>
 
@@ -275,7 +279,9 @@ const Perfil: React.FC = () => {
                  <Box sx={{ gridColumn: { md: '1 / -1' } }}>
                    <TextField 
                         fullWidth label="Teléfono" name="numero_telefono" 
-                        value={formik.values.numero_telefono} onChange={formik.handleChange} 
+                        value={formik.values.numero_telefono} 
+                        // Permitir solo números en la edición
+                        onChange={(e) => formik.setFieldValue('numero_telefono', e.target.value.replace(/\D/g, ''))} 
                         disabled={!isEditing} 
                         InputProps={{ 
                             startAdornment: <Phone color="action" sx={{ mr: 1 }} /> 
@@ -314,7 +320,7 @@ const Perfil: React.FC = () => {
                         label={kycStatus?.estado_verificacion || 'NO INICIADO'} 
                         color={getKycColor(kycStatus?.estado_verificacion) as any} 
                         size="small" 
-                        variant="filled" // Filled para resaltar estado
+                        variant="filled" 
                         sx={{ fontWeight: 700 }} 
                      />
                    </Stack>
@@ -333,9 +339,7 @@ const Perfil: React.FC = () => {
                  </Button>
                ) : (
                  <Box 
-                    display="flex" 
-                    alignItems="center" 
-                    gap={1} 
+                    display="flex" alignItems="center" gap={1} 
                     sx={{ 
                         color: 'success.main', 
                         bgcolor: alpha(theme.palette.success.main, 0.1),
@@ -486,8 +490,7 @@ const Perfil: React.FC = () => {
         open={confirmController.open} 
         onClose={confirmController.close} 
         is2FAEnabled={user?.is_2fa_enabled || false}
-        title={confirmController.config?.title}
-        description={confirmController.config?.description}
+        // El hook por defecto tiene textos genéricos, pero deleteAccountModal se encarga de mostrar el detalle
       />
 
     </PageContainer>

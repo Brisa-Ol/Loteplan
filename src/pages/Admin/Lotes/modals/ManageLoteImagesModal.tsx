@@ -2,16 +2,16 @@
 
 import React, { useState } from 'react';
 import {
-  Dialog, DialogTitle, DialogContent, DialogActions, Button,
   Typography, List, ListItem, ListItemAvatar, Avatar, ListItemText, 
-  IconButton, Divider, Alert, Box, CircularProgress, useTheme, alpha
+  IconButton, Divider, Alert, Box, useTheme, Chip, Stack
 } from '@mui/material';
-import { Delete as DeleteIcon, Image as ImageIcon, Close as CloseIcon, Collections } from '@mui/icons-material';
+import { Delete as DeleteIcon, Image as ImageIcon, Collections, CloudUpload } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 // Componentes comunes
 import ImageUploadZone from '../../../../components/common/ImageUploadZone/ImageUploadZone';
 import { QueryHandler } from '../../../../components/common/QueryHandler/QueryHandler';
+import { BaseModal } from '../../../../components/common/BaseModal/BaseModal';
 import type { LoteDto } from '../../../../types/dto/lote.dto';
 import imagenService from '../../../../Services/imagen.service';
 import type { ImagenDto } from '../../../../types/dto/imagen.dto';
@@ -35,10 +35,7 @@ const ManageLoteImagesModal: React.FC<ManageLoteImagesModalProps> = ({
   // 1. Obtener imágenes
   const { data: imagenes = [], isLoading, error } = useQuery<ImagenDto[]>({
     queryKey: queryKey,
-    queryFn: async () => {
-        const res = await imagenService.getAllByLote(lote.id);
-        return res.data; 
-    },
+    queryFn: async () => (await imagenService.getAllByLote(lote.id)).data,
     enabled: open,
   });
 
@@ -60,16 +57,17 @@ const ManageLoteImagesModal: React.FC<ManageLoteImagesModalProps> = ({
         id_lote: lote.id,
       }),
     onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey });
-        queryClient.invalidateQueries({ queryKey: ['adminLotes'] });
+       queryClient.invalidateQueries({ queryKey });
+       queryClient.invalidateQueries({ queryKey: ['adminLotes'] });
     },
     onError: (err: any) => {
-        const msg = err.response?.data?.error || err.message || 'Error al subir imagen';
-        setUploadError(msg);
+       const msg = err.response?.data?.error || err.message || 'Error al subir imagen';
+       setUploadError(msg);
     }
   });
 
-  const handleUploadSubmit = async () => {
+  // Handler para el botón de confirmar (Subida masiva)
+  const handleConfirmUpload = async () => {
     if (stagedFiles.length === 0) return;
     setUploadError(null);
     
@@ -83,145 +81,128 @@ const ManageLoteImagesModal: React.FC<ManageLoteImagesModalProps> = ({
     }
   };
 
+  const handleClose = () => {
+      setStagedFiles([]);
+      setUploadError(null);
+      onClose();
+  };
+
+  const sectionTitleSx = { 
+      textTransform: 'uppercase', letterSpacing: 1, fontWeight: 800, 
+      color: 'text.secondary', fontSize: '0.7rem', mb: 1.5,
+      display: 'flex', alignItems: 'center', gap: 1
+  };
+
   return (
-    <Dialog 
-      open={open} 
-      onClose={onClose} 
-      maxWidth="md" 
-      fullWidth
-      PaperProps={{ sx: { borderRadius: 3, boxShadow: theme.shadows[10] } }}
-    >
-      {/* HEADER */}
-      <DialogTitle sx={{ 
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
-        pb: 2, pt: 3, px: 3,
-        bgcolor: alpha(theme.palette.primary.main, 0.04)
-      }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Avatar variant="rounded" sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}>
-            <Collections />
-          </Avatar>
-          <Box>
-            <Typography variant="h6" fontWeight={800} color="text.primary" sx={{ lineHeight: 1.2 }}>
-              Imágenes del Lote
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              Lote: <strong>{lote.nombre_lote}</strong>
-            </Typography>
-          </Box>
-        </Box>
-        <IconButton onClick={onClose} size="small" sx={{ color: 'text.secondary' }}>
-          <CloseIcon />
-        </IconButton>
-      </DialogTitle>
+    <BaseModal
+      open={open}
+      onClose={handleClose}
+      title="Imágenes del Lote"
+      subtitle={`Administrar galería de: ${lote.nombre_lote}`}
+      icon={<Collections />}
+      headerColor="primary"
+      maxWidth="md"
       
-      <Divider />
+      // Configuración del Footer (Acción de Subida)
+      confirmText={stagedFiles.length > 0 ? `Subir ${stagedFiles.length} Imágenes` : 'Subir Imágenes'}
+      confirmButtonIcon={<CloudUpload />}
+      onConfirm={handleConfirmUpload}
+      disableConfirm={stagedFiles.length === 0 || uploadMutation.isPending}
+      isLoading={uploadMutation.isPending}
+      cancelText="Cerrar"
       
-      <DialogContent sx={{ p: 4 }}>
-        
-        {/* --- SECCIÓN: GALERÍA ACTUAL --- */}
-        <Typography variant="subtitle2" gutterBottom fontWeight="bold" color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>
-          Galería Actual
-        </Typography>
-        
-        <QueryHandler isLoading={isLoading} error={error as Error}>
-          {imagenes.length === 0 ? (
-            <Alert severity="info" variant="outlined" sx={{ mb: 2, borderRadius: 2 }}>
-                Este lote no tiene imágenes cargadas.
-            </Alert>
-          ) : (
-            <List 
-                dense 
-                sx={{ 
-                    maxHeight: 250, 
-                    overflow: 'auto', 
-                    bgcolor: 'background.paper', 
-                    border: '1px solid',
-                    borderColor: 'divider',
-                    borderRadius: 2,
-                    mb: 2
-                }}
-            >
-                {imagenes.map(img => (
-                    <ListItem 
-                        key={img.id}
-                        divider
-                        secondaryAction={
-                            <IconButton 
-                                edge="end" 
-                                color="error" 
-                                onClick={() => deleteMutation.mutate(img.id)}
-                                disabled={deleteMutation.isPending}
-                                size="small"
-                            >
-                                <DeleteIcon />
-                            </IconButton>
-                        }
-                    >
-                        <ListItemAvatar>
-                            <Avatar 
-                                src={imagenService.resolveImageUrl(img.url)} 
-                                variant="rounded"
-                                sx={{ width: 56, height: 56, mr: 2, border: '1px solid', borderColor: 'divider' }}
-                            >
-                                <ImageIcon />
-                            </Avatar>
-                        </ListItemAvatar>
-                        
-                        <ListItemText 
-                            primary={img.descripcion || 'Imagen sin descripción'} 
-                            secondary={`ID: ${img.id} ${img.es_principal ? '• (Principal)' : ''}`}
-                            primaryTypographyProps={{ fontWeight: 600, fontSize: '0.9rem' }}
-                        />
-                    </ListItem>
-                ))}
-            </List>
-          )}
-        </QueryHandler>
-
-        <Divider sx={{ my: 3 }} />
-        
-        {/* --- SECCIÓN: SUBIR NUEVAS --- */}
-        <Typography variant="subtitle2" gutterBottom fontWeight="bold" color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>
-          Subir Nuevas Imágenes
-        </Typography>
-        
-        <ImageUploadZone 
-            images={stagedFiles} 
-            onChange={setStagedFiles} 
-            maxFiles={5} 
-            disabled={uploadMutation.isPending} 
+      // Extra en Header: Contador
+      headerExtra={
+        <Chip 
+            label={`${imagenes.length} archivos`} 
+            size="small" 
+            color="primary" 
+            variant="outlined" 
+            sx={{ fontWeight: 700, borderRadius: 1.5 }}
         />
-        
-        {uploadError && (
-            <Alert severity="error" sx={{ mt: 2, borderRadius: 2 }}>
-                {uploadError}
-            </Alert>
-        )}
-        
-        <Box mt={2} display="flex" justifyContent="flex-end" gap={2} alignItems="center">
-            {uploadMutation.isPending && <CircularProgress size={24} />}
-            <Button 
-                variant="contained" 
-                color="primary"
-                onClick={handleUploadSubmit}
-                disabled={stagedFiles.length === 0 || uploadMutation.isPending}
-                sx={{ borderRadius: 2, fontWeight: 700 }}
-            >
-                {uploadMutation.isPending ? 'Subiendo...' : `Subir ${stagedFiles.length > 0 ? stagedFiles.length : ''} Imágenes`}
-            </Button>
-        </Box>
+      }
+    >
+        <Stack spacing={3}>
+            
+            {/* SECCIÓN: GALERÍA ACTUAL */}
+            <Box>
+                <Typography sx={sectionTitleSx}><Collections fontSize="inherit"/> Galería Actual</Typography>
+                
+                <QueryHandler isLoading={isLoading} error={error as Error}>
+                    {imagenes.length === 0 ? (
+                        <Alert severity="info" variant="outlined" sx={{ borderRadius: 2 }}>
+                            Este lote no tiene imágenes cargadas.
+                        </Alert>
+                    ) : (
+                        <List 
+                            dense 
+                            sx={{ 
+                                maxHeight: 250, 
+                                overflow: 'auto', 
+                                bgcolor: 'background.paper', 
+                                border: '1px solid',
+                                borderColor: 'divider',
+                                borderRadius: 2,
+                            }}
+                        >
+                            {imagenes.map(img => (
+                                <ListItem 
+                                    key={img.id}
+                                    divider
+                                    secondaryAction={
+                                        <IconButton 
+                                            edge="end" 
+                                            color="error" 
+                                            onClick={() => deleteMutation.mutate(img.id)}
+                                            disabled={deleteMutation.isPending || uploadMutation.isPending}
+                                            size="small"
+                                        >
+                                            <DeleteIcon />
+                                        </IconButton>
+                                    }
+                                >
+                                    <ListItemAvatar>
+                                        <Avatar 
+                                            src={imagenService.resolveImageUrl(img.url)} 
+                                            variant="rounded"
+                                            sx={{ width: 56, height: 56, mr: 2, border: '1px solid', borderColor: 'divider' }}
+                                        >
+                                            <ImageIcon />
+                                        </Avatar>
+                                    </ListItemAvatar>
+                                    <ListItemText 
+                                        primary={img.descripcion || 'Imagen sin descripción'} 
+                                        secondary={`ID: ${img.id} ${img.es_principal ? '• (Principal)' : ''}`}
+                                        primaryTypographyProps={{ fontWeight: 600, fontSize: '0.9rem' }}
+                                    />
+                                </ListItem>
+                            ))}
+                        </List>
+                    )}
+                </QueryHandler>
+            </Box>
 
-      </DialogContent>
-      
-      <Divider />
-
-      <DialogActions sx={{ p: 3, bgcolor: alpha(theme.palette.background.default, 0.5) }}>
-        <Button onClick={onClose} color="inherit" sx={{ borderRadius: 2 }}>
-            Cerrar
-        </Button>
-      </DialogActions>
-    </Dialog>
+            <Divider />
+            
+            {/* SECCIÓN: SUBIR NUEVAS */}
+            <Box>
+                <Typography sx={sectionTitleSx}><CloudUpload fontSize="inherit"/> Subir Nuevas Imágenes</Typography>
+                
+                <ImageUploadZone 
+                    images={stagedFiles} 
+                    onChange={setStagedFiles} 
+                    maxFiles={5} 
+                    disabled={uploadMutation.isPending} 
+                />
+                
+                {uploadError && (
+                    <Alert severity="error" sx={{ mt: 2, borderRadius: 2 }}>
+                        {uploadError}
+                    </Alert>
+                )}
+            </Box>
+        </Stack>
+    </BaseModal>
   );
 };
 

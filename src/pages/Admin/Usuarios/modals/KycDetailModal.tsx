@@ -1,27 +1,9 @@
-// src/pages/Admin/KYC/modals/KycDetailModal.tsx
-
 import React from 'react';
 import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Typography,
-  IconButton,
-  Box,
-  Button,
-  Chip,
-  Alert,
-  Stack,
-  Divider,
-  useTheme,
-  Tooltip,
-  Avatar,
-  alpha,
-  Paper
+  Typography, IconButton, Box, Button, Chip, Alert, Stack, 
+  Divider, useTheme, Tooltip, Avatar, alpha, Paper
 } from '@mui/material';
 import {
-  Cancel as CancelIcon,
   CheckCircle as CheckCircleIcon,
   HighlightOff as RejectIcon,
   Person as PersonIcon,
@@ -30,9 +12,9 @@ import {
   EventAvailable as DateIcon,
   Badge as BadgeIcon,
   Fingerprint as FingerprintIcon,
-  OpenInNew as OpenIcon,
-  Close as CloseIcon
+  OpenInNew as OpenIcon
 } from '@mui/icons-material';
+import { BaseModal } from '../../../../components/common/BaseModal/BaseModal';
 import type { KycDTO } from '../../../../types/dto/kyc.dto';
 
 interface KycDetailModalProps {
@@ -43,11 +25,21 @@ interface KycDetailModalProps {
   onReject: (kyc: KycDTO) => void;
 }
 
-// 🔧 HELPER PARA IMÁGENES
+// 🔧 HELPER PARA IMÁGENES (CORREGIDO)
 const getImageUrl = (path: string | null) => {
   if (!path) return '';
   const cleanPath = path.replace(/\\/g, '/');
-  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+  
+  // Usamos VITE_API_BASE_URL (o similar) pero quitamos el sufijo '/api' si existe
+  // para apuntar a la raíz del servidor donde está /uploads
+  let baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+  if (baseUrl.endsWith('/api')) {
+      baseUrl = baseUrl.slice(0, -4); 
+  }
+  
+  // Aseguramos que no haya doble slash
+  if (baseUrl.endsWith('/')) baseUrl = baseUrl.slice(0, -1);
+  
   return `${baseUrl}/uploads/${cleanPath}`; 
 };
 
@@ -58,54 +50,70 @@ const KycDetailModal: React.FC<KycDetailModalProps> = ({
 
   if (!kyc) return null;
 
-  return (
-    <Dialog 
-      open={open} 
-      onClose={onClose} 
-      maxWidth="md" 
-      fullWidth
-      scroll="paper"
-      PaperProps={{ 
-        sx: { 
-          borderRadius: 3,
-          boxShadow: theme.shadows[10]
-        } 
-      }}
-    >
-      {/* --- HEADER --- */}
-      <DialogTitle sx={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        pb: 2, pt: 3, px: 3,
-        bgcolor: alpha(theme.palette.primary.main, 0.04)
-      }}>
-        <Stack direction="row" alignItems="center" spacing={2}>
-          <Avatar variant="rounded" sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}>
-            <BadgeIcon />
-          </Avatar>
-          <Box>
-            <Typography variant="h6" fontWeight={800} color="text.primary" sx={{ lineHeight: 1.2 }}>
-              Verificación KYC #{kyc.id}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              Revisión de identidad y documentación
-            </Typography>
-          </Box>
-        </Stack>
-        <IconButton onClick={onClose} size="small" sx={{ color: 'text.secondary' }}>
-          <CloseIcon />
-        </IconButton>
-      </DialogTitle>
-      
-      <Divider />
+  // Determinar color según estado
+  const getStatusColor = (status: string): 'success' | 'error' | 'warning' | 'primary' => {
+    switch (status) {
+      case 'APROBADA': return 'success';
+      case 'RECHAZADA': return 'error';
+      case 'PENDIENTE': return 'warning';
+      default: return 'primary';
+    }
+  };
 
-      {/* --- CONTENIDO --- */}
-      <DialogContent sx={{ p: 0 }}>
-        <Stack direction={{ xs: 'column', md: 'row' }} divider={<Divider orientation="vertical" flexItem />}>
+  const statusColor = getStatusColor(kyc.estado_verificacion);
+
+  return (
+    <BaseModal
+      open={open}
+      onClose={onClose}
+      title={`Verificación KYC #${kyc.id}`}
+      subtitle="Revisión de identidad y documentación"
+      icon={<BadgeIcon />}
+      headerColor={statusColor}
+      maxWidth="md"
+      headerExtra={
+        <Chip 
+            label={kyc.estado_verificacion} 
+            color={statusColor} 
+            variant="filled"
+            sx={{ fontWeight: 'bold', borderRadius: 1.5 }}
+        />
+      }
+      customActions={
+        <>
+            <Button onClick={onClose} color="inherit" sx={{ borderRadius: 2, mr: 'auto' }}>
+                Cerrar
+            </Button>
+            
+            {kyc.estado_verificacion === 'PENDIENTE' && (
+                <Stack direction="row" spacing={2}>
+                    <Button 
+                        variant="outlined" 
+                        color="error" 
+                        startIcon={<RejectIcon />}
+                        onClick={() => onReject(kyc)}
+                        sx={{ borderRadius: 2, px: 3, fontWeight: 600 }}
+                    >
+                        Rechazar
+                    </Button>
+                    <Button 
+                        variant="contained" 
+                        color="success" 
+                        startIcon={<CheckCircleIcon />}
+                        onClick={() => onApprove(kyc)}
+                        sx={{ borderRadius: 2, px: 3, fontWeight: 700, color: 'white' }}
+                    >
+                        Aprobar
+                    </Button>
+                </Stack>
+            )}
+        </>
+      }
+    >
+      <Stack direction={{ xs: 'column', md: 'row' }} spacing={3} divider={<Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', md: 'block' } }} />}>
           
-          {/* 🟢 COLUMNA IZQUIERDA: DATOS Y ESTADO */}
-          <Box sx={{ flex: 1, p: 3 }}>
+          {/* 🟢 COLUMNA IZQUIERDA: DATOS Y AUDITORÍA */}
+          <Box sx={{ flex: 1 }}>
             <Stack spacing={3}>
             
               {/* 1. Datos del Solicitante */}
@@ -114,10 +122,8 @@ const KycDetailModal: React.FC<KycDetailModalProps> = ({
                 <Paper 
                     elevation={0} 
                     sx={{ 
-                        p: 2, 
-                        borderRadius: 2,
-                        border: '1px solid',
-                        borderColor: 'divider',
+                        p: 2, borderRadius: 2, 
+                        border: '1px solid', borderColor: 'divider',
                         bgcolor: alpha(theme.palette.background.paper, 0.5)
                     }}
                 >
@@ -137,36 +143,22 @@ const KycDetailModal: React.FC<KycDetailModalProps> = ({
                 </Paper>
               </Box>
 
-              {/* 2. Documento y Estado */}
-              <Stack direction="row" spacing={2}>
-                 <Box flex={1}>
-                    <Label text={`Documento (${kyc.tipo_documento})`} icon={<FingerprintIcon fontSize="inherit" />} />
-                    <Typography variant="h6" sx={{ fontWeight: 600, fontFamily: 'monospace', letterSpacing: 1 }}>
-                        {kyc.numero_documento}
-                    </Typography>
-                 </Box>
-                 <Box flex={1}>
-                    <Label text="Estado" icon={<CheckCircleIcon fontSize="inherit" />} />
-                    <Chip 
-                        label={kyc.estado_verificacion} 
-                        color={kyc.estado_verificacion === 'APROBADA' ? 'success' : kyc.estado_verificacion === 'RECHAZADA' ? 'error' : 'warning'} 
-                        size="small"
-                        variant="outlined"
-                        sx={{ fontWeight: 800, border: '2px solid' }} 
-                    />
-                 </Box>
-              </Stack>
+              {/* 2. Documento */}
+              <Box>
+                 <Label text={`Documento (${kyc.tipo_documento})`} icon={<FingerprintIcon fontSize="inherit" />} />
+                 <Typography variant="h6" sx={{ fontWeight: 600, fontFamily: 'monospace', letterSpacing: 1, pl: 1 }}>
+                     {kyc.numero_documento}
+                 </Typography>
+              </Box>
 
               {/* 3. AUDITORÍA (Solo si no es pendiente) */}
               {kyc.estado_verificacion !== 'PENDIENTE' && (
                 <Box>
                     <Divider sx={{ mb: 2 }}><Chip label="Auditoría" size="small" /></Divider>
                     <Box sx={{ 
-                        p: 2, 
-                        borderRadius: 2, 
+                        p: 2, borderRadius: 2, 
                         bgcolor: alpha(theme.palette.action.active, 0.04),
-                        border: '1px dashed',
-                        borderColor: theme.palette.divider
+                        border: '1px dashed', borderColor: theme.palette.divider
                     }}>
                         <Label text="Revisado Por" icon={<AdminIcon fontSize="inherit" />} />
                         
@@ -227,7 +219,7 @@ const KycDetailModal: React.FC<KycDetailModalProps> = ({
           </Box>
 
           {/* 🟣 COLUMNA DERECHA: EVIDENCIA (FOTOS) */}
-          <Box sx={{ flex: 1.3, p: 3, bgcolor: alpha(theme.palette.background.default, 0.4) }}>
+          <Box sx={{ flex: 1.3 }}>
             <Typography variant="subtitle2" fontWeight={700} color="text.primary" mb={2} sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>
                 Evidencia Documental
             </Typography>
@@ -238,41 +230,8 @@ const KycDetailModal: React.FC<KycDetailModalProps> = ({
               <EvidenceImage title="Prueba de Vida (Selfie)" src={kyc.url_foto_selfie_con_documento} />
             </Stack>
           </Box>
-        </Stack>
-      </DialogContent>
-
-      <Divider />
-
-      {/* --- FOOTER (ACCIONES) --- */}
-      <DialogActions sx={{ p: 3, bgcolor: alpha(theme.palette.background.default, 0.5) }}>
-        <Button onClick={onClose} color="inherit" sx={{ borderRadius: 2, mr: 'auto' }}>
-          Cerrar
-        </Button>
-        
-        {kyc.estado_verificacion === 'PENDIENTE' && (
-          <Stack direction="row" spacing={2}>
-            <Button 
-              variant="outlined" 
-              color="error" 
-              startIcon={<RejectIcon />}
-              onClick={() => onReject(kyc)}
-              sx={{ borderRadius: 2, px: 3, fontWeight: 600 }}
-            >
-              Rechazar
-            </Button>
-            <Button 
-              variant="contained" 
-              color="success" 
-              startIcon={<CheckCircleIcon />}
-              onClick={() => onApprove(kyc)}
-              sx={{ borderRadius: 2, px: 3, fontWeight: 700, color: 'white', boxShadow: theme.shadows[4] }}
-            >
-              Aprobar Verificación
-            </Button>
-          </Stack>
-        )}
-      </DialogActions>
-    </Dialog>
+      </Stack>
+    </BaseModal>
   );
 };
 
@@ -282,14 +241,9 @@ const Label = ({ text, icon, color = 'text.secondary' }: { text: string, icon: R
     <Typography 
         variant="caption" 
         sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: 0.5, 
-            fontWeight: 700, 
-            textTransform: 'uppercase', 
-            letterSpacing: 0.5,
-            mb: 0.5,
-            color: color
+            display: 'flex', alignItems: 'center', gap: 0.5, 
+            fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5,
+            mb: 0.5, color: color
         }}
     >
         {icon} {text}
@@ -299,6 +253,7 @@ const Label = ({ text, icon, color = 'text.secondary' }: { text: string, icon: R
 const EvidenceImage = ({ title, src }: { title: string, src: string | null }) => {
   if (!src) return null;
   const theme = useTheme();
+  const url = getImageUrl(src);
   
   return (
     <Box>
@@ -307,7 +262,7 @@ const EvidenceImage = ({ title, src }: { title: string, src: string | null }) =>
             {title.toUpperCase()}
         </Typography>
         <Tooltip title="Abrir original">
-            <IconButton size="small" onClick={() => window.open(getImageUrl(src), '_blank')}>
+            <IconButton size="small" onClick={() => window.open(url, '_blank')}>
                 <OpenIcon fontSize="inherit" />
             </IconButton>
         </Tooltip>
@@ -315,32 +270,24 @@ const EvidenceImage = ({ title, src }: { title: string, src: string | null }) =>
       
       <Box 
         sx={{ 
-          position: 'relative',
-          width: '100%', 
-          height: 200, 
-          borderRadius: 2, 
-          border: '1px solid',
-          borderColor: 'divider',
-          bgcolor: 'background.paper',
-          overflow: 'hidden',
-          transition: 'all 0.3s ease',
-          cursor: 'zoom-in',
+          position: 'relative', width: '100%', height: 200, 
+          borderRadius: 2, border: '1px solid', borderColor: 'divider',
+          bgcolor: 'background.paper', overflow: 'hidden',
+          transition: 'all 0.3s ease', cursor: 'zoom-in',
           '&:hover': { 
             boxShadow: theme.shadows[4],
             borderColor: theme.palette.primary.main,
             '& img': { transform: 'scale(1.05)' }
           }
         }} 
-        onClick={() => window.open(getImageUrl(src), '_blank')}
+        onClick={() => window.open(url, '_blank')}
       >
         <Box 
             component="img"
-            src={getImageUrl(src)} 
+            src={url} 
             alt={title}
             sx={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover', 
+                width: '100%', height: '100%', objectFit: 'cover', 
                 transition: 'transform 0.5s ease',
             }}
         />

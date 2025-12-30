@@ -1,14 +1,8 @@
 import React from 'react';
-import {
-  Dialog, DialogTitle, DialogContent, DialogActions,
-  Button, Typography, Box, IconButton, Chip, useTheme, alpha
-} from '@mui/material';
-import { 
-  Close as CloseIcon, 
-  Download as DownloadIcon, 
-  VerifiedUser as VerifiedIcon 
-} from '@mui/icons-material';
+import { Typography, Box, Chip, useTheme, alpha, Button } from '@mui/material';
+import { VerifiedUser as VerifiedIcon, Download as DownloadIcon } from '@mui/icons-material';
 
+import { BaseModal } from '../../../../components/common/BaseModal/BaseModal';
 import type { ContratoFirmadoDto } from '../../../../types/dto/contrato.dto';
 import ContratoService from '../../../../Services/contrato.service';
 import ImagenService from '../../../../Services/imagen.service';
@@ -34,45 +28,26 @@ export const VerContratoFirmadoModal: React.FC<Props> = ({
   const pdfUrl = contrato.url_archivo ? ImagenService.resolveImageUrl(contrato.url_archivo) : '';
 
   return (
-    <Dialog 
-      open={open} 
-      onClose={onClose} 
-      maxWidth="lg" 
-      fullWidth 
-      PaperProps={{ 
-          sx: { 
-              height: '85vh', 
-              borderRadius: 3, 
-              overflow: 'hidden',
-              boxShadow: theme.shadows[10] 
-          } 
-      }}
+    <BaseModal
+      open={open}
+      onClose={onClose}
+      title={contrato.nombre_archivo}
+      subtitle="Documento firmado digitalmente"
+      icon={<VerifiedIcon />}
+      headerColor="success"
+      maxWidth="lg"
+      // Configuramos el botón principal como "Descargar"
+      confirmText="Descargar Copia"
+      confirmButtonIcon={<DownloadIcon />}
+      onConfirm={handleDownload}
+      cancelText="Cerrar"
+      // Layout específico para visor
+      PaperProps={{ sx: { height: '85vh' } }}
     >
-      {/* HEADER */}
-      <DialogTitle 
-        display="flex" 
-        justifyContent="space-between" 
-        alignItems="center"
-        sx={{ borderBottom: `1px solid ${theme.palette.divider}`, py: 2, bgcolor: 'background.paper' }}
-      >
-        <Box display="flex" gap={1.5} alignItems="center" overflow="hidden">
-            <Box sx={{ p: 0.5, borderRadius: '50%', bgcolor: alpha(theme.palette.success.main, 0.1), display: 'flex' }}>
-                <VerifiedIcon color="success" fontSize="small" /> 
-            </Box>
-            <Typography variant="h6" noWrap fontWeight={700} color="text.primary">
-              {contrato.nombre_archivo}
-            </Typography>
-        </Box>
-        <IconButton onClick={onClose} aria-label="cerrar">
-          <CloseIcon />
-        </IconButton>
-      </DialogTitle>
-
-      <DialogContent sx={{ p: 0, bgcolor: 'background.default', display: 'flex', flexDirection: 'column' }}>
-        <Box display="flex" flexDirection={{ xs: 'column', md: 'row' }} flex={1} overflow="hidden">
+      <Box display="flex" flexDirection={{ xs: 'column', md: 'row' }} height="100%" overflow="hidden">
           
           {/* COLUMNA IZQUIERDA: VISOR PDF */}
-          <Box flex={1} p={0} overflow="hidden" display="flex" flexDirection="column" bgcolor="action.hover">
+          <Box flex={1} p={0} overflow="hidden" display="flex" flexDirection="column" bgcolor="action.hover" borderRadius={2} mr={{ md: 3 }} mb={{ xs: 2, md: 0 }}>
             {pdfUrl ? (
                 <PDFViewerMejorado
                   pdfUrl={pdfUrl}
@@ -89,81 +64,58 @@ export const VerContratoFirmadoModal: React.FC<Props> = ({
 
           {/* COLUMNA DERECHA: METADATOS DE AUDITORÍA */}
           <Box 
-            width={{ xs: '100%', md: 340 }} 
-            bgcolor="background.paper" 
-            borderLeft={`1px solid ${theme.palette.divider}`} 
-            p={3}
+            width={{ xs: '100%', md: 300 }} 
             display="flex"
             flexDirection="column"
             gap={3}
             overflow="auto"
-            sx={{ boxShadow: { xs: 'none', md: `-4px 0 16px ${alpha(theme.palette.common.black, 0.05)}` } }}
           >
-            <Typography variant="subtitle2" color="primary.main" fontWeight="800" sx={{ letterSpacing: 1, textTransform: 'uppercase' }}>
-              Auditoría de Firma
-            </Typography>
-
             <Box>
-              <Typography variant="caption" color="text.secondary" display="block" mb={0.5} fontWeight={600}>ESTADO ACTUAL</Typography>
-              <Chip 
-                label={contrato.estado_firma} 
-                color={contrato.estado_firma === 'FIRMADO' ? 'success' : 'error'} 
-                size="small" 
-                variant="filled" // Mantenemos filled para impacto visual
-                sx={{ fontWeight: 'bold', borderRadius: 1 }}
-              />
-            </Box>
+                <Typography variant="subtitle2" color="primary.main" fontWeight="800" sx={{ letterSpacing: 1, textTransform: 'uppercase', mb: 2 }}>
+                    Auditoría de Firma
+                </Typography>
 
-            <Box>
-              <Typography variant="caption" color="text.secondary" display="block" fontWeight={600}>FECHA DE FIRMA</Typography>
-              <Typography variant="body2" fontWeight="600" mt={0.5} color="text.primary">
-                {new Date(contrato.fecha_firma).toLocaleDateString()}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {new Date(contrato.fecha_firma).toLocaleTimeString()}
-              </Typography>
-            </Box>
+                <Box mb={2}>
+                    <Typography variant="caption" color="text.secondary" display="block" mb={0.5} fontWeight={600}>ESTADO ACTUAL</Typography>
+                    <Chip 
+                        label={contrato.estado_firma} 
+                        color={contrato.estado_firma === 'FIRMADO' ? 'success' : 'error'} 
+                        size="small" 
+                        variant="filled"
+                        sx={{ fontWeight: 'bold', borderRadius: 1 }}
+                    />
+                </Box>
 
-            <Box>
-              <Typography variant="caption" color="text.secondary" display="block" mb={0.5} fontWeight={600}>
-                  HASH DE INTEGRIDAD (SHA-256)
-              </Typography>
-              <Box 
-                bgcolor={alpha(theme.palette.action.active, 0.05)}
-                p={1.5} 
-                borderRadius={2} 
-                border={`1px solid ${theme.palette.divider}`}
-                sx={{ wordBreak: 'break-all', fontFamily: 'monospace', fontSize: '0.75rem', color: 'text.primary' }}
-              >
-                {contrato.hash_archivo_firmado}
-              </Box>
-              <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.65rem', mt: 0.5, display: 'block', lineHeight: 1.2 }}>
-                  * Este hash único garantiza criptográficamente que el contenido del documento no ha sido alterado post-firma.
-              </Typography>
-            </Box>
+                <Box mb={2}>
+                    <Typography variant="caption" color="text.secondary" display="block" fontWeight={600}>FECHA DE FIRMA</Typography>
+                    <Typography variant="body2" fontWeight="600" mt={0.5} color="text.primary">
+                        {new Date(contrato.fecha_firma).toLocaleDateString()}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                        {new Date(contrato.fecha_firma).toLocaleTimeString()}
+                    </Typography>
+                </Box>
 
-            <Box mt="auto" pt={2}>
-              <Button 
-                variant="contained" 
-                fullWidth 
-                startIcon={<DownloadIcon />} 
-                onClick={handleDownload}
-                size="large"
-                disableElevation
-                sx={{ fontWeight: 700, borderRadius: 2 }}
-              >
-                Descargar Copia
-              </Button>
+                <Box>
+                    <Typography variant="caption" color="text.secondary" display="block" mb={0.5} fontWeight={600}>
+                        HASH DE INTEGRIDAD (SHA-256)
+                    </Typography>
+                    <Box 
+                        bgcolor={alpha(theme.palette.action.active, 0.05)}
+                        p={1.5} 
+                        borderRadius={2} 
+                        border={`1px solid ${theme.palette.divider}`}
+                        sx={{ wordBreak: 'break-all', fontFamily: 'monospace', fontSize: '0.75rem', color: 'text.primary' }}
+                    >
+                        {contrato.hash_archivo_firmado}
+                    </Box>
+                    <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.65rem', mt: 0.5, display: 'block', lineHeight: 1.2 }}>
+                        * Este hash único garantiza criptográficamente que el contenido del documento no ha sido alterado post-firma.
+                    </Typography>
+                </Box>
             </Box>
           </Box>
-        </Box>
-      </DialogContent>
-
-      <DialogActions sx={{ p: 1.5, borderTop: `1px solid ${theme.palette.divider}`, bgcolor: 'background.paper' }}>
-        <Button onClick={onClose} color="inherit" sx={{ fontWeight: 600 }}>
-          Cerrar
-        </Button>
-      </DialogActions>
-    </Dialog>
+      </Box>
+    </BaseModal>
   );
 };

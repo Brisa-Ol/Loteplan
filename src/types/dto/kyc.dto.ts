@@ -1,46 +1,65 @@
 import type { BaseDTO } from './base.dto';
 
-// ✅ COINCIDE CON: DataTypes.ENUM("PENDIENTE", "APROBADA", "RECHAZADA")
-// Agregamos 'NO_INICIADO' para el manejo seguro en el frontend.
-export type EstadoVerificacion = 'NO_INICIADO' | 'PENDIENTE' | 'APROBADA' | 'RECHAZADA';
-
-// ✅ COINCIDE CON: DataTypes.ENUM("DNI", "PASAPORTE", "LICENCIA")
-export type TipoDocumento = 'DNI' | 'PASAPORTE' | 'LICENCIA';
+// ==========================================
+// 🧠 ENUMS & TIPOS GLOBALES
+// ==========================================
 
 /**
- * DTO PRINCIPAL (Refleja la tabla 'verificacion_identidad' + JOIN con 'usuario')
+ * Estados posibles del proceso de verificación de identidad.
+ * - `NO_INICIADO`: El usuario aún no ha enviado ninguna solicitud.
+ * - `PENDIENTE`: Solicitud enviada y esperando revisión manual.
+ * - `APROBADA`: Identidad validada. Usuario habilitado para operar.
+ * - `RECHAZADA`: Solicitud denegada. El usuario puede reintentar.
+ */
+export type EstadoVerificacion = 'NO_INICIADO' | 'PENDIENTE' | 'APROBADA' | 'RECHAZADA';
+
+/**
+ * Tipos de documentos aceptados por la plataforma.
+ * Coincide con el ENUM de la base de datos.
+ */
+export type TipoDocumento = 'DNI' | 'PASAPORTE' | 'LICENCIA';
+
+// ==========================================
+// 📦 DTO PRINCIPAL (Modelo Completo)
+// ==========================================
+
+/**
+ * Representación completa de un registro de Verificación de Identidad (KYC).
+ * Refleja la tabla `verificacion_identidad` y sus relaciones.
  */
 export interface KycDTO extends BaseDTO {
-  // --- CAMPOS DIRECTOS DEL MODELO ---
   
-  id_usuario: number; // FK
+  /** ID del usuario dueño de la verificación (FK). */
+  id_usuario: number;
   
-  // Datos Personales
+  // --- DATOS PERSONALES DEL FORMULARIO ---
   tipo_documento: TipoDocumento;
   numero_documento: string;
   nombre_completo: string;
-  fecha_nacimiento?: string; // DataTypes.DATEONLY llega como string "YYYY-MM-DD"
+  /** Fecha de nacimiento en formato ISO "YYYY-MM-DD". */
+  fecha_nacimiento?: string;
   
-  // URLs de Archivos (DataTypes.STRING)
+  // --- URLs DE ARCHIVOS (Solo lectura desde el back) ---
   url_foto_documento_frente: string;
-  url_foto_documento_dorso: string | null; // AllowNull: true en modelo
+  url_foto_documento_dorso: string | null;
   url_foto_selfie_con_documento: string;
-  url_video_verificacion: string | null;   // AllowNull: true en modelo
+  url_video_verificacion: string | null;
   
-  // Estado y Gestión
+  // --- ESTADO Y GESTIÓN ---
   estado_verificacion: EstadoVerificacion;
-  id_verificador?: number; // Puede ser null si nadie lo ha revisado
-  fecha_verificacion?: string; // DataTypes.DATE llega como string ISO
-  motivo_rechazo?: string;     // DataTypes.TEXT
+  /** ID del administrador que realizó la revisión (si aplica). */
+  id_verificador?: number;
+  fecha_verificacion?: string;
+  /** Razón del rechazo, visible para el usuario si estado es 'RECHAZADA'. */
+  motivo_rechazo?: string;
   
-  // Metadatos Técnicos
-  latitud_verificacion?: number;  // DataTypes.DECIMAL
-  longitud_verificacion?: number; // DataTypes.DECIMAL
-  ip_verificacion?: string;       // DataTypes.STRING
+  // --- METADATOS TÉCNICOS ---
+  latitud_verificacion?: number;
+  longitud_verificacion?: number;
+  ip_verificacion?: string;
 
-  // --- 🚀 RELACIÓN (JOIN) ---
-  // Esto existe gracias a: VerificacionIdentidad.belongsTo(Usuario, { as: "usuario" })
-  // Solo vendrá lleno si usas 'include' en el backend.
+  // --- RELACIONES (Includes) ---
+  /** Datos del usuario que envió la solicitud (útil para el Admin Dashboard). */
   usuario?: {
     id: number;
     nombre: string;
@@ -50,11 +69,10 @@ export interface KycDTO extends BaseDTO {
     nombre_usuario?: string;
     numero_telefono?: string;
     rol?: string;
-
   };
 
-  
-verificador?: {
+  /** Datos del administrador que procesó la solicitud. */
+  verificador?: {
     id: number;
     nombre: string;
     apellido?: string;
@@ -63,16 +81,20 @@ verificador?: {
     rol?: string;
   };
 
-  // --- 🛠 HELPERS DE LÓGICA DE NEGOCIO ---
-  // Estos campos NO están en la tabla, pero tu Controller los calcula y envía.
+  // --- HELPERS (Calculados en el Controller) ---
+  /** Indica si el usuario puede enviar una nueva solicitud (True si es NO_INICIADO o RECHAZADA). */
   puede_enviar?: boolean; 
+  /** Mensaje descriptivo del estado actual para la UI. */
   mensaje_estado?: string;
 }
 
+// ==========================================
+// 🛡️ DTOs ESPECÍFICOS (Vistas Parciales)
+// ==========================================
+
 /**
- * DTO PARA ESTADO DE USUARIO
- * Es una versión "segura" para mostrar en el perfil del cliente.
- * Omitimos URLs sensibles que no son necesarias para ver el estado.
+ * Versión "ligera" del estado KYC para mostrar en el perfil del cliente.
+ * Omite URLs de archivos sensibles y datos técnicos irrelevantes para el usuario final.
  */
 export type KycStatusDTO = Omit<
   KycDTO, 
@@ -84,8 +106,8 @@ export type KycStatusDTO = Omit<
 >;
 
 /**
- * DTO DE ENTRADA (Formulario de React)
- * Lo que envías al endpoint /submit en FormData
+ * Datos requeridos para enviar una nueva solicitud de verificación.
+ * Se convierte a `FormData` en el servicio antes de enviarse.
  */
 export interface SubmitKycDto {
   tipo_documento: TipoDocumento;
@@ -93,19 +115,24 @@ export interface SubmitKycDto {
   nombre_completo: string;
   fecha_nacimiento?: string;
   
-  // En el Front usamos 'File' (blob), el Back los recibe y convierte a URLs
+  /** Archivo de imagen (JPG/PNG/PDF). Obligatorio. */
   documento_frente: File;
+  /** Archivo de imagen. Opcional. */
   documento_dorso?: File;
+  /** Selfie sosteniendo el documento. Obligatorio. */
   selfie_con_documento: File;
+  /** Video corto de prueba de vida. Opcional. */
   video_verificacion?: File;
   
+  // Geo-localización del usuario al momento de enviar
   latitud_verificacion?: number;
   longitud_verificacion?: number;
 }
 
 /**
- * DTO DE ENTRADA (Admin - Rechazo)
+ * Datos requeridos por el administrador para rechazar una solicitud.
  */
 export interface RejectKycDTO {
+  /** Explicación clara de por qué se rechazó la solicitud. */
   motivo_rechazo: string;
 }

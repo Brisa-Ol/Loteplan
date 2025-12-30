@@ -1,3 +1,5 @@
+// src/pages/User/ResumenesCuenta/MisResumenes.tsx
+
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -7,7 +9,7 @@ import {
 } from '@mui/material';
 import { 
   Assessment, Close, LocalShipping, ReceiptLong, TrendingUp,
-  Business, Refresh, Percent, MonetizationOn, Warning
+  Business, Percent, MonetizationOn, Warning, CheckCircle
 } from '@mui/icons-material';
 
 // Servicios y Tipos
@@ -21,7 +23,7 @@ import { QueryHandler } from '../../../components/common/QueryHandler/QueryHandl
 import { DataTable, type DataTableColumn } from '../../../components/common/DataTable/DataTable';
 
 // ----------------------------------------------------------------------
-// 1. SUB-COMPONENTE: Modal de Detalle Financiero
+// 1. SUB-COMPONENTE: Modal de Detalle Financiero (Estilizado)
 // ----------------------------------------------------------------------
 interface DetalleModalProps {
   open: boolean;
@@ -40,9 +42,7 @@ const DetalleCuotaModal: React.FC<DetalleModalProps> = ({ open, onClose, data, n
       onClose={onClose} 
       maxWidth="sm" 
       fullWidth
-      PaperProps={{
-        sx: { borderRadius: 3, overflow: 'hidden' }
-      }}
+      PaperProps={{ sx: { borderRadius: 3, overflow: 'hidden' } }}
     >
       <DialogTitle 
         display="flex" 
@@ -51,7 +51,7 @@ const DetalleCuotaModal: React.FC<DetalleModalProps> = ({ open, onClose, data, n
         sx={{ bgcolor: alpha(theme.palette.primary.main, 0.05), borderBottom: `1px solid ${theme.palette.divider}` }}
       >
         <Box display="flex" alignItems="center" gap={2}>
-            <Avatar sx={{ bgcolor: 'primary.main', width: 32, height: 32 }}>
+            <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main', width: 32, height: 32 }}>
                 <ReceiptLong fontSize="small" />
             </Avatar>
             <Box>
@@ -141,7 +141,7 @@ const MisResumenes: React.FC = () => {
   const [selectedResumen, setSelectedResumen] = useState<{data: DetalleCuotaJson, nombre: string} | null>(null);
 
   // Query
-  const { data: resumenes = [], isLoading, error, refetch } = useQuery<ResumenCuentaDto[]>({
+  const { data: resumenes = [], isLoading, error } = useQuery<ResumenCuentaDto[]>({
     queryKey: ['misResumenes'],
     queryFn: async () => (await ResumenCuentaService.getMyAccountSummaries()).data
   });
@@ -197,10 +197,11 @@ const MisResumenes: React.FC = () => {
                 value={row.porcentaje_pagado} 
                 sx={{ 
                     height: 8, 
-                    borderRadius: 4,
+                    borderRadius: 4, 
                     bgcolor: alpha(theme.palette.primary.main, 0.1),
                     '& .MuiLinearProgress-bar': {
-                        borderRadius: 4
+                        borderRadius: 4,
+                        bgcolor: row.porcentaje_pagado >= 100 ? theme.palette.success.main : theme.palette.primary.main
                     }
                 }}
             />
@@ -220,6 +221,15 @@ const MisResumenes: React.FC = () => {
                     size="small" 
                     color="error" 
                     variant="filled"
+                    sx={{ fontWeight: 600 }}
+                />
+            ) : row.porcentaje_pagado >= 100 ? (
+                <Chip 
+                    icon={<CheckCircle fontSize="small" />}
+                    label="Completado" 
+                    size="small" 
+                    color="success" 
+                    variant="filled" 
                     sx={{ fontWeight: 600 }}
                 />
             ) : (
@@ -288,11 +298,10 @@ const MisResumenes: React.FC = () => {
         subtitle="Analiza el progreso de tus planes y la composición financiera de tus cuotas." 
       />
 
-      {/* --- KPI SECTION (Sin Grid) --- */}
+      {/* --- KPI SECTION --- */}
       <Box 
         mb={4}
         display="grid" 
-        // En móvil 1 columna, en desktop (sm en adelante) 3 columnas iguales
         gridTemplateColumns={{ xs: '1fr', sm: 'repeat(3, 1fr)' }} 
         gap={3}
       >
@@ -366,7 +375,11 @@ const MisResumenes: React.FC = () => {
                 pagination={true}
                 defaultRowsPerPage={5}
                 emptyMessage="No tienes planes activos actualmente."
-                // Resaltamos si hay cuotas vencidas en la fila entera de forma sutil
+                
+                // ✅ Atenuar planes completados para enfocar en los activos
+                isRowActive={(row) => row.porcentaje_pagado < 100}
+
+                // ✅ Resaltado de deudas (Alerta crítica)
                 getRowSx={(row) => ({
                     bgcolor: row.cuotas_vencidas > 0 ? alpha(theme.palette.error.main, 0.05) : 'inherit',
                     transition: 'background-color 0.2s',

@@ -1,15 +1,14 @@
 // src/pages/Admin/ResumenesCuenta/AdminResumenesCuenta.tsx
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   Box, Typography, Paper, TextField, MenuItem,
-  InputAdornment, Chip, IconButton, Tooltip, LinearProgress, useTheme, alpha
+  InputAdornment, Chip, IconButton, Tooltip, LinearProgress, useTheme, alpha, Stack
 } from '@mui/material';
 import {
-  Search, Visibility, CheckCircle, AccessTime
+  Search, Visibility, CheckCircle, AccessTime, ErrorOutline, AccountBalanceWallet
 } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
-
 
 import DetalleResumenModal from './modals/DetalleResumenModal';
 import { useModal } from '../../../../hooks/useModal';
@@ -26,6 +25,9 @@ const AdminResumenesCuenta: React.FC = () => {
   // --- ESTADOS DE FILTRO ---
   const [searchTerm, setSearchTerm] = useState('');
   const [filterState, setFilterState] = useState<'all' | 'active' | 'completed' | 'overdue'>('all');
+  
+  // Estado para feedback visual (opcional si agregas acciones futuras)
+  const [highlightedId, setHighlightedId] = useState<number | null>(null);
 
   // Hooks
   const detalleModal = useModal();
@@ -62,44 +64,43 @@ const AdminResumenesCuenta: React.FC = () => {
     });
   }, [resumenes, searchTerm, filterState]);
 
-  // Handlers
-  const handleVerDetalle = (resumen: ResumenCuentaDto) => {
+  // Handlers (Callback para rendimiento)
+  const handleVerDetalle = useCallback((resumen: ResumenCuentaDto) => {
     setSelectedResumen(resumen);
     detalleModal.open();
-  };
+  }, [detalleModal]);
 
-  const handleCloseModal = () => {
+  const handleCloseModal = useCallback(() => {
     detalleModal.close();
-    // Timeout para limpieza suave
     setTimeout(() => setSelectedResumen(null), 300);
-  };
+  }, [detalleModal]);
 
-  // --- COLUMNAS (Memoized) ---
+  // --- COLUMNAS ---
   const columns = useMemo<DataTableColumn<ResumenCuentaDto>[]>(() => [
     {
       id: 'id',
-      label: 'ID',
-      minWidth: 80,
+      label: 'ID / Ref',
+      minWidth: 100,
       render: (resumen) => (
         <Box>
           <Typography variant="body2" fontWeight={700}>#{resumen.id}</Typography>
           <Typography variant="caption" color="text.secondary">
-            Susc. {resumen.id_suscripcion}
+            Susc. #{resumen.id_suscripcion}
           </Typography>
         </Box>
       )
     },
     {
       id: 'proyecto',
-      label: 'Proyecto',
+      label: 'Proyecto / Plan',
       minWidth: 200,
       render: (resumen) => (
         <Box>
           <Typography variant="body2" fontWeight={600} color="text.primary">
             {resumen.nombre_proyecto}
           </Typography>
-          <Typography variant="caption" color="text.secondary">
-            Plan de {resumen.meses_proyecto} meses
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            <AccessTime sx={{ fontSize: 10 }} /> Plan de {resumen.meses_proyecto} meses
           </Typography>
         </Box>
       )
@@ -107,48 +108,49 @@ const AdminResumenesCuenta: React.FC = () => {
     {
       id: 'cuotas',
       label: 'Progreso Cuotas',
-      minWidth: 150,
+      minWidth: 160,
       render: (resumen) => (
-        <Box>
-          <Typography variant="body2" fontWeight={600}>
-            {resumen.cuotas_pagadas} / {resumen.meses_proyecto}
-          </Typography>
-          {resumen.cuotas_vencidas > 0 && (
-            <Chip
-              label={`${resumen.cuotas_vencidas} vencida(s)`}
-              color="error"
-              size="small"
-              variant="outlined"
-              sx={{ mt: 0.5, fontWeight: 700, fontSize: '0.65rem', height: 20 }}
-            />
-          )}
-        </Box>
-      )
-    },
-    {
-      id: 'progreso',
-      label: 'Avance',
-      minWidth: 140,
-      render: (resumen) => (
-        <Box sx={{ width: '100%', mr: 1 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
-            <Typography variant="caption" fontWeight="bold" color="text.secondary">
-               {resumen.porcentaje_pagado.toFixed(0)}%
-            </Typography>
-          </Box>
+        <Stack spacing={0.5}>
+          <Stack direction="row" justifyContent="space-between" alignItems="center">
+             <Typography variant="caption" fontWeight={700} color="text.primary">
+                {resumen.cuotas_pagadas} / {resumen.meses_proyecto}
+             </Typography>
+             {resumen.cuotas_vencidas > 0 && (
+                <Chip
+                  label={`${resumen.cuotas_vencidas} vencida(s)`}
+                  color="error"
+                  size="small"
+                  variant="filled"
+                  sx={{ height: 16, fontSize: '0.65rem', fontWeight: 700 }}
+                />
+             )}
+          </Stack>
+          
           <LinearProgress
             variant="determinate"
             value={Math.min(resumen.porcentaje_pagado, 100)}
             sx={{ 
                 height: 6, 
                 borderRadius: 3,
-                bgcolor: alpha(theme.palette.primary.main, 0.1),
+                bgcolor: alpha(theme.palette.grey[400], 0.2),
                 '& .MuiLinearProgress-bar': {
-                    bgcolor: resumen.porcentaje_pagado >= 100 ? theme.palette.success.main : theme.palette.primary.main
+                    bgcolor: resumen.porcentaje_pagado >= 100 
+                      ? theme.palette.success.main 
+                      : resumen.cuotas_vencidas > 0 ? theme.palette.warning.main : theme.palette.primary.main
                 }
             }}
           />
-        </Box>
+        </Stack>
+      )
+    },
+    {
+      id: 'porcentaje',
+      label: '%',
+      align: 'center',
+      render: (resumen) => (
+        <Typography variant="body2" fontWeight={700} color="text.secondary">
+            {resumen.porcentaje_pagado.toFixed(0)}%
+        </Typography>
       )
     },
     {
@@ -163,9 +165,13 @@ const AdminResumenesCuenta: React.FC = () => {
             label={isCompleted ? 'Completado' : hasOverdue ? 'Con Deuda' : 'Al Día'}
             color={isCompleted ? 'success' : hasOverdue ? 'error' : 'info'}
             size="small"
-            variant={isCompleted ? 'filled' : 'outlined'}
-            icon={isCompleted ? <CheckCircle sx={{ fontSize: '14px !important' }} /> : hasOverdue ? <AccessTime sx={{ fontSize: '14px !important' }} /> : undefined}
-            sx={{ fontWeight: 600 }}
+            variant={isCompleted || hasOverdue ? 'filled' : 'outlined'}
+            icon={
+                isCompleted ? <CheckCircle sx={{ fontSize: '14px !important' }} /> : 
+                hasOverdue ? <ErrorOutline sx={{ fontSize: '14px !important' }} /> : 
+                undefined
+            }
+            sx={{ fontWeight: 600, minWidth: 90 }}
           />
         );
       }
@@ -174,9 +180,12 @@ const AdminResumenesCuenta: React.FC = () => {
       id: 'cuota_mensual',
       label: 'Valor Cuota',
       render: (resumen) => (
-        <Typography variant="body2" fontWeight={700} color="primary.main" sx={{ fontFamily: 'monospace' }}>
-          ${resumen.detalle_cuota.valor_mensual_final.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-        </Typography>
+        <Stack direction="row" alignItems="center" spacing={0.5}>
+            <AccountBalanceWallet sx={{ fontSize: 14, color: 'text.disabled' }} />
+            <Typography variant="body2" fontWeight={700} color="text.primary" sx={{ fontFamily: 'monospace' }}>
+                ${resumen.detalle_cuota.valor_mensual_final.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+            </Typography>
+        </Stack>
       )
     },
     {
@@ -199,7 +208,7 @@ const AdminResumenesCuenta: React.FC = () => {
         </Tooltip>
       )
     }
-  ], [theme]);
+  ], [theme, handleVerDetalle]);
 
   return (
     <PageContainer maxWidth="xl">
@@ -253,6 +262,11 @@ const AdminResumenesCuenta: React.FC = () => {
           columns={columns}
           data={filteredResumenes}
           getRowKey={(row) => row.id} 
+          
+          // ✅ Las cuentas completadas (100%) se atenúan para centrarse en las activas/deudoras
+          isRowActive={(row) => row.porcentaje_pagado < 100} 
+          highlightedRowId={highlightedId}
+
           emptyMessage="No se encontraron resúmenes de cuenta con los filtros actuales."
           pagination={true}
           defaultRowsPerPage={10}

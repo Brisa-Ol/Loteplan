@@ -1,3 +1,5 @@
+// src/pages/Client/Proyectos/DetalleProyecto.tsx
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -123,10 +125,13 @@ const DetalleProyecto: React.FC = () => {
     if (!proyecto || !user) return;
     let tienePermiso = false;
 
+    // Lógica para Inversión Directa
     if (proyecto.tipo_inversion === 'directo' && misInversiones) {
       const inv = misInversiones.find(i => i.id_proyecto === proyecto.id && i.estado === 'pagado');
       if (inv) tienePermiso = true;
-    } else if (proyecto.tipo_inversion === 'mensual' && misSuscripciones) {
+    } 
+    // Lógica para Suscripción Mensual
+    else if (proyecto.tipo_inversion === 'mensual' && misSuscripciones) {
       const sub = misSuscripciones.find(s => s.id_proyecto === proyecto.id && s.activo);
       if (sub) tienePermiso = true;
     }
@@ -447,13 +452,13 @@ const DetalleProyecto: React.FC = () => {
                        <Typography variant="caption" fontWeight="bold" color="primary">{porcentaje.toFixed(0)}%</Typography>
                    </Box>
                    <LinearProgress 
-                        variant="determinate" 
-                        value={porcentaje} 
-                        sx={{ 
-                            height: 10, borderRadius: 5, 
-                            bgcolor: alpha(theme.palette.primary.main, 0.1),
-                            '& .MuiLinearProgress-bar': { borderRadius: 5 }
-                        }} 
+                       variant="determinate" 
+                       value={porcentaje} 
+                       sx={{ 
+                           height: 10, borderRadius: 5, 
+                           bgcolor: alpha(theme.palette.primary.main, 0.1),
+                           '& .MuiLinearProgress-bar': { borderRadius: 5 }
+                       }} 
                    />
                  </Box>
                )}
@@ -468,7 +473,7 @@ const DetalleProyecto: React.FC = () => {
                 </Alert>
                )}
 
-               {/* === BOTÓN PRINCIPAL DE ACCIÓN === */}
+               {/* === BOTÓN PRINCIPAL DE ACCIÓN (INVERTIR / SUSCRIBIR) === */}
                {!yaFirmo && !puedeFirmar && (
                  <Tooltip title={is2FAMissing && user ? "Activa 2FA para continuar" : ""}>
                    <Box> 
@@ -487,8 +492,10 @@ const DetalleProyecto: React.FC = () => {
                  </Tooltip>
                )}
 
-               {/* ZONA DE CONTRATOS (Si ya pagó) */}
-               {user && proyecto.tipo_inversion === 'mensual' && (
+               {/* ✅ ZONA DE CONTRATOS - ACTUALIZADA 
+                   Se muestra si el usuario está logueado Y (es mensual O es directo).
+               */}
+               {user && (proyecto.tipo_inversion === 'mensual' || proyecto.tipo_inversion === 'directo') && (
                  <Stack spacing={2}>
                    {yaFirmo ? (
                      <Button 

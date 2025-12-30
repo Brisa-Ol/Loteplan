@@ -1,4 +1,6 @@
-import React, { useState, useMemo } from 'react';
+// src/pages/User/Transacciones/MisTransacciones.tsx
+
+import React, { useState, useMemo, useCallback } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { 
   Box, Typography, Stack, Chip, Button, Tooltip, 
@@ -25,31 +27,36 @@ import { DataTable, type DataTableColumn } from '../../../../components/common/D
 const MisTransacciones: React.FC = () => {
   const theme = useTheme();
 
-  // 1. Estados de Filtros
+  // 1. Estados de Filtros y UI
   const [currentTab, setCurrentTab] = useState(0); // 0: Todas, 1: Exitosas, 2: Pendientes/Fallidas
   const [searchTerm, setSearchTerm] = useState('');
+  const [highlightedId, setHighlightedId] = useState<number | null>(null);
 
   // 2. Carga de Datos
-  const { data: transacciones = [], isLoading, error, refetch } = useQuery<TransaccionDto[]>({
+  const { data: transacciones = [], isLoading, error } = useQuery<TransaccionDto[]>({
     queryKey: ['misTransacciones'],
-    queryFn: async () => (await TransaccionService.getMyTransactions()).data
+    queryFn: async () => (await TransaccionService.getMyTransactions()).data,
+    refetchOnWindowFocus: false,
   });
 
   // 3. Mutación Retry
   const retryMutation = useMutation({
     mutationFn: async (idTransaccion: number) => {
+      setHighlightedId(idTransaccion); // Feedback visual inmediato
       return await MercadoPagoService.createCheckoutGenerico({ id_transaccion: idTransaccion });
     },
     onSuccess: (res) => {
       if (res.data.redirectUrl) window.location.href = res.data.redirectUrl;
     },
-    onError: (err: any) => alert(err.response?.data?.error || "Error al regenerar checkout.")
+    onError: (err: any) => {
+        setHighlightedId(null);
+        alert(err.response?.data?.error || "Error al regenerar checkout.");
+    }
   });
 
   // 4. Lógica de Filtrado, Contadores y KPIs
   const { filteredData, counts, stats } = useMemo(() => {
-    // Base data
-    let data = transacciones;
+    let data = [...transacciones];
 
     // A. Contadores Globales (KPIs)
     const totalCounts = {
@@ -58,12 +65,12 @@ const MisTransacciones: React.FC = () => {
       problemas: transacciones.filter(t => ['pendiente', 'fallido', 'expirado', 'rechazado_por_capacidad'].includes(t.estado_transaccion)).length
     };
 
-    // B. Estadísticas Financieras (KPIs)
+    // B. Estadísticas Financieras
     const totalAmount = transacciones
         .filter(t => t.estado_transaccion === 'pagado')
         .reduce((acc, curr) => acc + Number(curr.monto), 0);
 
-    // C. Filtrado por Texto (Buscador)
+    // C. Filtrado por Texto
     if (searchTerm) {
       const lowerTerm = searchTerm.toLowerCase();
       data = data.filter(t => 
@@ -76,7 +83,7 @@ const MisTransacciones: React.FC = () => {
     // D. Filtrado por Tab
     if (currentTab === 1) { // Exitosas
       data = data.filter(t => t.estado_transaccion === 'pagado');
-    } else if (currentTab === 2) { // Problemas / Pendientes
+    } else if (currentTab === 2) { // Problemas
       data = data.filter(t => ['pendiente', 'fallido', 'expirado', 'rechazado_por_capacidad', 'en_proceso'].includes(t.estado_transaccion));
     }
 
@@ -118,7 +125,7 @@ const MisTransacciones: React.FC = () => {
   const formatCurrency = (val: number) => 
     new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(val);
 
-  // --- COLUMNAS DE LA TABLA ---
+  // --- COLUMNAS ---
   const columns = useMemo<DataTableColumn<TransaccionDto>[]>(() => [
     { 
       id: 'fecha', label: 'Fecha', minWidth: 140,
@@ -158,7 +165,7 @@ const MisTransacciones: React.FC = () => {
                     variant="outlined" 
                     color={conf.color} 
                     icon={conf.icon}
-                    sx={{ height: 22, fontSize: '0.75rem', fontWeight: 500, borderRadius: 1 }} 
+                    sx={{ height: 22, fontSize: '0.75rem', fontWeight: 600, borderRadius: 1 }} 
                 />
             </Stack>
           </Box>
@@ -168,7 +175,7 @@ const MisTransacciones: React.FC = () => {
     { 
       id: 'monto', label: 'Monto', align: 'right', minWidth: 120,
       render: (row) => (
-        <Typography variant="subtitle2" fontWeight={700} color="primary.main">
+        <Typography variant="subtitle2" fontWeight={700} color="primary.main" sx={{ fontFamily: 'monospace' }}>
            {formatCurrency(Number(row.monto))}
         </Typography>
       )
@@ -183,7 +190,7 @@ const MisTransacciones: React.FC = () => {
                     label={conf.label} 
                     color={conf.color} 
                     size="small" 
-                    variant="filled" // Para mejor contraste
+                    variant="filled" 
                     icon={conf.icon as any}
                     sx={{ fontWeight: 600 }}
                 />
@@ -191,12 +198,15 @@ const MisTransacciones: React.FC = () => {
         );
       }
     },
-    {
+    { 
       id: 'acciones', label: 'Acción', align: 'right', minWidth: 120,
       render: (row) => {
         const canRetry = ['pendiente', 'fallido', 'expirado', 'en_proceso', 'rechazado_por_capacidad'].includes(row.estado_transaccion);
         
         if (!canRetry) return <Box minWidth={100} />;
+
+        // Si se está reintentando ESTA fila
+        const isThisLoading = retryMutation.isPending && highlightedId === row.id;
 
         return (
           <Button 
@@ -214,13 +224,13 @@ const MisTransacciones: React.FC = () => {
                 boxShadow: theme.shadows[2]
             }}
           >
-            {retryMutation.isPending ? '...' : 
+            {isThisLoading ? '...' : 
              ['pendiente', 'en_proceso'].includes(row.estado_transaccion) ? 'Pagar' : 'Reintentar'}
           </Button>
         );
       }
     }
-  ], [retryMutation.isPending, theme]);
+  ], [retryMutation.isPending, highlightedId, theme]);
 
   return (
     <PageContainer maxWidth="lg">
@@ -229,7 +239,7 @@ const MisTransacciones: React.FC = () => {
         subtitle="Monitorea tus pagos, inversiones y estados de cuenta." 
       />
 
-      {/* --- KPI SECTION (Resumen) --- */}
+      {/* --- KPI SUMMARY --- */}
       <Box mb={4} display="flex" justifyContent="center">
         <Card
           elevation={0}
@@ -390,14 +400,20 @@ const MisTransacciones: React.FC = () => {
                     currentTab === 2 ? "¡Todo en orden! No hay transacciones fallidas o pendientes." :
                     "No hay movimientos registrados."
                 }
-                // Resaltamos filas con problemas
+                
+                // ✅ Highlight momentáneo si se clickea retry (antes de redirección)
+                highlightedRowId={highlightedId}
+
+                // ✅ Atenuar filas irrelevantes (ej. reembolsadas)
+                isRowActive={(row) => row.estado_transaccion !== 'reembolsado'}
+
+                // ✅ Colores de fondo para alertas críticas
                 getRowSx={(row) => ({
                     bgcolor: ['fallido', 'expirado', 'rechazado_por_capacidad'].includes(row.estado_transaccion) 
                         ? alpha(theme.palette.error.main, 0.05) 
                         : ['pendiente', 'en_proceso'].includes(row.estado_transaccion)
                         ? alpha(theme.palette.warning.main, 0.02)
                         : 'inherit',
-                    opacity: row.estado_transaccion === 'reembolsado' ? 0.7 : 1,
                     transition: 'background-color 0.2s',
                     '&:hover': {
                          bgcolor: alpha(theme.palette.primary.main, 0.04)

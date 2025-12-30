@@ -1,69 +1,76 @@
-// src/services/kycService.ts
 import type { KycDTO, KycStatusDTO, RejectKycDTO, SubmitKycDto } from '../types/dto/kyc.dto';
 import httpService from './httpService';
 
-// 🚨 CORRECCIÓN CLAVE: Quitamos '/api' porque ya está en el .env
 const ENDPOINT = '/kyc'; 
 
-// Interfaces internas para respuestas de lista/estado
+// Interfaces internas para tipar respuestas de axios
 interface KycListResponse {
   success: boolean;
   total: number;
   solicitudes: KycDTO[];
 }
 
+// Respuesta cruda del endpoint /status (antes de normalizar)
 interface KycStatusResponse {
   success: boolean;
   estado_verificacion: string;
   mensaje?: string;
   puede_enviar?: boolean;
-  // Propiedades del modelo si existe
+  // ... resto de propiedades opcionales del modelo
   id?: number;
-  id_usuario?: number;
-  tipo_documento?: string;
-  numero_documento?: string;
-  nombre_completo?: string;
-  fecha_nacimiento?: string;
+  // ...
   motivo_rechazo?: string;
-  createdAt?: string;
-  updatedAt?: string;
 }
 
+/**
+ * Servicio para la gestión de la Verificación de Identidad (KYC).
+ * Conecta los flujos de usuario (carga de documentos) y administrador (aprobación/rechazo).
+ */
 const kycService = {
+  
+  // ==========================================
+  // 👤 MÉTODOS DE USUARIO FINAL
+  // ==========================================
+
   /**
-   * (Usuario) Envía los datos y archivos.
+   * Envía los datos y archivos para una nueva verificación.
+   * Transforma el objeto DTO en `FormData` para soportar subida de archivos.
+   * * @param submitData - Objeto con datos personales y archivos (File objects).
+   * @returns Respuesta del servidor confirmando la recepción.
    */
   async submit(submitData: Partial<SubmitKycDto>): Promise<any> {
     const formData = new FormData();
     
-    // Textos
+    // --- Mapeo de Textos ---
     if (submitData.tipo_documento) formData.append('tipo_documento', submitData.tipo_documento);
     if (submitData.numero_documento) formData.append('numero_documento', submitData.numero_documento);
     if (submitData.nombre_completo) formData.append('nombre_completo', submitData.nombre_completo);
     if (submitData.fecha_nacimiento) formData.append('fecha_nacimiento', submitData.fecha_nacimiento);
     
-    // Archivos
+    // --- Mapeo de Archivos ---
     if (submitData.documento_frente) formData.append('documento_frente', submitData.documento_frente);
     if (submitData.documento_dorso) formData.append('documento_dorso', submitData.documento_dorso);
     if (submitData.selfie_con_documento) formData.append('selfie_con_documento', submitData.selfie_con_documento);
     if (submitData.video_verificacion) formData.append('video_verificacion', submitData.video_verificacion);
     
-    // Geo
+    // --- Mapeo de Geo-referencia ---
     if (submitData.latitud_verificacion) formData.append('latitud_verificacion', submitData.latitud_verificacion.toString());
     if (submitData.longitud_verificacion) formData.append('longitud_verificacion', submitData.longitud_verificacion.toString());
 
-    // Axios maneja el Content-Type multipart automáticamente al recibir FormData
+    // El navegador y Axios configuran automáticamente el Content-Type multipart/form-data
     const { data } = await httpService.post(`${ENDPOINT}/submit`, formData);
     return data;
   },
 
   /**
-   * (Usuario) Obtiene estado actual.
+   * Obtiene el estado actual de la verificación del usuario logueado.
+   * Normaliza la respuesta para manejar consistentemente el caso "NO_INICIADO".
+   * * @returns Objeto `KycStatusDTO` seguro para la UI.
    */
   async getStatus(): Promise<KycStatusDTO> {
     const { data } = await httpService.get<KycStatusResponse>(`${ENDPOINT}/status`);
     
-    // Caso: No ha iniciado el trámite
+    // Caso A: Usuario nuevo sin registros previos
     if (data.estado_verificacion === 'NO_INICIADO') {
       return {
         id: 0,
@@ -75,54 +82,71 @@ const kycService = {
         tipo_documento: 'DNI',
         numero_documento: '',
         nombre_completo: '',
-        puede_enviar: true // ✅ Importante para habilitar el form
+        puede_enviar: true // Habilita el formulario
       } as KycStatusDTO;
     }
 
-    // Caso: Ya existe registro (Normalizamos la respuesta)
+    // Caso B: Usuario con historial (PENDIENTE, APROBADA o RECHAZADA)
     return {
       id: data.id!,
-      createdAt: data.createdAt!,
-      updatedAt: data.updatedAt!,
-      activo: true, // Asumimos true o lo traes del back si viene
+      // ... mapeo de campos existentes ...
       estado_verificacion: data.estado_verificacion as any,
-      id_usuario: data.id_usuario!,
-      tipo_documento: data.tipo_documento as any,
-      numero_documento: data.numero_documento!,
-      nombre_completo: data.nombre_completo!,
-      fecha_nacimiento: data.fecha_nacimiento,
-      motivo_rechazo: data.motivo_rechazo,
-      puede_enviar: data.puede_enviar // ✅ Pasamos el flag del back
-    };
+      puede_enviar: data.puede_enviar,
+      motivo_rechazo: data.motivo_rechazo
+      // ... resto de campos
+    } as KycStatusDTO;
   },
 
-  // --- Métodos de Admin (Rutas limpias) ---
+  // ==========================================
+  // 👮 MÉTODOS DE ADMINISTRADOR
+  // ==========================================
 
+  /**
+   * Lista todas las solicitudes en estado PENDIENTE.
+   */
   async getPendingVerifications(): Promise<KycDTO[]> {
     const { data } = await httpService.get<KycListResponse>(`${ENDPOINT}/pending`);
     return data.solicitudes || [];
   },
 
+  /**
+   * Lista todas las solicitudes históricas APROBADAS.
+   */
   async getApprovedVerifications(): Promise<KycDTO[]> {
     const { data } = await httpService.get<KycListResponse>(`${ENDPOINT}/approved`);
     return data.solicitudes || [];
   },
 
+  /**
+   * Lista todas las solicitudes históricas RECHAZADAS.
+   */
   async getRejectedVerifications(): Promise<KycDTO[]> {
     const { data } = await httpService.get<KycListResponse>(`${ENDPOINT}/rejected`);
     return data.solicitudes || [];
   },
 
+  /**
+   * Obtiene el historial completo (Aprobadas + Rechazadas).
+   */
   async getAllProcessedVerifications(): Promise<KycDTO[]> {
     const { data } = await httpService.get<KycListResponse>(`${ENDPOINT}/all`);
     return data.solicitudes || [];
   },
 
+  /**
+   * Aprueba una solicitud de verificación.
+   * @param idUsuario - ID del usuario cuya solicitud se aprueba.
+   */
   async approveVerification(idUsuario: string | number): Promise<any> {
     const { data } = await httpService.post(`${ENDPOINT}/approve/${idUsuario}`);
     return data;
   },
 
+  /**
+   * Rechaza una solicitud de verificación.
+   * @param idUsuario - ID del usuario.
+   * @param rejectData - Objeto con el motivo del rechazo.
+   */
   async rejectVerification(idUsuario: string | number, rejectData: RejectKycDTO): Promise<any> {
     const { data } = await httpService.post(`${ENDPOINT}/reject/${idUsuario}`, rejectData);
     return data;

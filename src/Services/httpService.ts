@@ -1,17 +1,17 @@
 // src/services/httpService.ts
+
 import axios, { type AxiosResponse, type InternalAxiosRequestConfig } from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
 
-// ✅ 1. INTERFAZ TIPADA PARA ERRORES
-// Esto te permitirá usar "err.type" o "err.action_required" en tus componentes sin TS errors.
+// Definición robusta de errores para que los componentes sepan qué hacer
 export interface ApiError {
   status: number;
   message: string;
-  type?: 'SECURITY_ACTION' | 'ROLE_RESTRICTION' | 'RATE_LIMIT' | 'AUTH_ERROR' | 'UNKNOWN';
-  action_required?: string; // Ej: 'enable_2fa', 'complete_kyc'
-  kyc_status?: string;      // Ej: 'pending', 'rejected'
-  originalError?: unknown;  // El error original de Axios por si acaso
+  type: 'SECURITY_ACTION' | 'ROLE_RESTRICTION' | 'RATE_LIMIT' | 'AUTH_ERROR' | 'UNKNOWN' | 'VALIDATION_ERROR';
+  action_required?: 'enable_2fa' | 'complete_kyc';
+  kyc_status?: string;
+  originalError?: unknown;
 }
 
 const httpService = axios.create({
@@ -21,9 +21,7 @@ const httpService = axios.create({
   },
 });
 
-// =================================================
-// 📤 REQUEST INTERCEPTOR (Adjuntar Token)
-// =================================================
+// 📤 Request Interceptor
 httpService.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const token = localStorage.getItem('auth_token');
@@ -35,19 +33,15 @@ httpService.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// =================================================
-// 📥 RESPONSE INTERCEPTOR (Manejo de Errores)
-// =================================================
+// 📥 Response Interceptor
 httpService.interceptors.response.use(
-  (response: AxiosResponse) => {
-    return response;
-  },
+  (response: AxiosResponse) => response,
   (error) => {
-    // Si no hay respuesta (error de red), devolvemos algo genérico
+    // Si no hay respuesta del servidor (Network Error)
     if (!error.response) {
       return Promise.reject({
         status: 0,
-        message: 'Error de red. Verifica tu conexión.',
+        message: 'No se pudo conectar con el servidor. Verifica tu conexión.',
         type: 'UNKNOWN',
         originalError: error
       } as ApiError);
@@ -56,66 +50,62 @@ httpService.interceptors.response.use(
     const status = error.response.status;
     const data = error.response.data;
 
-    // 🛑 1. RATE LIMIT (429)
+    // 🛡️ 429: Rate Limit (Demasiados intentos)
     if (status === 429) {
-      console.warn('⏳ Rate Limit Excedido:', data.error);
       return Promise.reject({
         status: 429,
-        message: data.error || 'Has excedido el límite de intentos. Espera unos minutos.',
+        message: data.error || 'Has excedido el límite de intentos. Por favor espera unos minutos.',
         type: 'RATE_LIMIT',
         originalError: error
       } as ApiError);
     }
 
-    // 🛑 2. SESIÓN EXPIRADA (401)
+    // 🔒 401: Sesión Expirada o Credenciales Inválidas
     if (status === 401) {
-      // Evitamos bucle infinito si ya estamos en login
-      if (!window.location.pathname.includes('/login')) {
-        console.error('🔒 Sesión expirada');
+      // Ignoramos el endpoint de login/verify para no redirigir en caso de credenciales malas
+      const isLoginEndpoint = error.config.url?.includes('/auth/login') || error.config.url?.includes('/auth/2fa/verify');
+      
+      if (!isLoginEndpoint && !window.location.pathname.includes('/login')) {
         localStorage.removeItem('auth_token');
-        localStorage.removeItem('two_fa_token');
-        window.location.href = '/login';
+        window.location.href = '/login'; // Redirección de seguridad
       }
+      
       return Promise.reject({
         status: 401,
-        message: 'Sesión expirada',
+        message: data.error || 'Credenciales inválidas o sesión expirada.',
         type: 'AUTH_ERROR',
         originalError: error
       } as ApiError);
     }
 
-    // 🛑 3. BLOQUEOS Y PERMISOS (403)
+    // 🚫 403: Bloqueos de Seguridad / Roles
     if (status === 403) {
-      
-      // CASO A: Requiere Acción de Seguridad (KYC / 2FA)
-      // Tu backend envía: { action_required: 'enable_2fa', ... }
-      if (data?.action_required) {
+      // Caso A: Requiere acción (KYC o 2FA)
+      if (data.action_required) {
         return Promise.reject({
           status: 403,
           message: data.error,
-          type: 'SECURITY_ACTION', // 👈 Clave para redirigir
+          type: 'SECURITY_ACTION',
           action_required: data.action_required,
           kyc_status: data.kyc_status,
           originalError: error
         } as ApiError);
       }
-
-      // CASO B: Restricción de Rol (Admin intentando operar)
-      // Tu backend envía: { error: "⛔ Acceso denegado..." }
+      
+      // Caso B: Restricción de Rol
       return Promise.reject({
         status: 403,
-        message: data?.error || 'Acceso denegado. No tienes permisos para esta acción.',
-        type: 'ROLE_RESTRICTION', // 👈 Clave para mostrar solo alerta
+        message: data.error || 'No tienes permisos para realizar esta acción.',
+        type: 'ROLE_RESTRICTION',
         originalError: error
       } as ApiError);
     }
 
-    // 🛑 4. OTROS ERRORES (400, 404, 500)
-    // Devolvemos el mensaje que viene del backend o uno genérico
+    // ⚠️ 400/409/500: Errores de Validación o Servidor
     return Promise.reject({
       status: status,
-      message: data?.message || data?.error || 'Ocurrió un error inesperado.',
-      type: 'UNKNOWN',
+      message: data.error || data.message || 'Ocurrió un error inesperado.',
+      type: 'VALIDATION_ERROR',
       originalError: error
     } as ApiError);
   }

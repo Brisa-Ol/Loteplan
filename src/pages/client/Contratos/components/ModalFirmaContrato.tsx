@@ -1,6 +1,7 @@
+// src/components/Admin/Contratos/Modals/ModalFirmaContrato.tsx
+
 import React, { useState, useRef, useEffect } from 'react';
 import { 
-  Dialog, DialogTitle, DialogContent, DialogActions, 
   Button, Typography, Box, TextField, Alert, CircularProgress, 
   Stepper, Step, StepLabel, Stack, Paper, Fade, useTheme, alpha
 } from '@mui/material';
@@ -10,7 +11,8 @@ import {
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { PDFDocument } from 'pdf-lib';
 
-// Importaciones
+// Componentes y Servicios
+import { BaseModal } from '../../../../components/common/BaseModal/BaseModal';
 import ContratoFirmadoService from '../../../../Services/contrato-firmado.service';
 import ContratoPlantillaService from '../../../../Services/contrato-plantilla.service';
 import ImagenService from '../../../../Services/imagen.service';
@@ -24,7 +26,9 @@ interface ModalFirmaContratoProps {
   onFirmaExitosa: () => void;
 }
 
-// Sub-componente Canvas (Estilizado)
+// ════════════════════════════════════════════════════════════
+// SUB-COMPONENTE: CANVAS DE FIRMA
+// ════════════════════════════════════════════════════════════
 const SignatureCanvas: React.FC<{ onSave: (data: string) => void; disabled?: boolean }> = ({ onSave, disabled }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -36,16 +40,15 @@ const SignatureCanvas: React.FC<{ onSave: (data: string) => void; disabled?: boo
     if (canvas) {
       const context = canvas.getContext('2d', { willReadFrequently: true });
       if (context) {
-        context.strokeStyle = theme.palette.text.primary; // Usar color del tema
-        context.lineWidth = 2.5; // Un poco más grueso para mejor visibilidad
-        context.lineCap = 'round'; // Trazos más suaves
+        context.strokeStyle = theme.palette.text.primary;
+        context.lineWidth = 2.5;
+        context.lineCap = 'round';
         context.lineJoin = 'round';
         setCtx(context);
       }
     }
   }, [theme]);
 
-  // ... (Lógica de dibujo: startDrawing, draw, stopDrawing - SE MANTIENE IGUAL) ...
   const startDrawing = (e: any) => {
     if (disabled || !ctx || !canvasRef.current) return;
     const rect = canvasRef.current.getBoundingClientRect();
@@ -88,13 +91,9 @@ const SignatureCanvas: React.FC<{ onSave: (data: string) => void; disabled?: boo
       <Paper 
         variant="outlined" 
         sx={{ 
-            mb: 2, 
-            overflow: 'hidden', 
-            touchAction: 'none',
-            bgcolor: 'background.default',
-            border: `2px dashed ${theme.palette.divider}`,
-            borderRadius: 2,
-            position: 'relative'
+            mb: 2, overflow: 'hidden', touchAction: 'none',
+            bgcolor: 'background.default', border: `2px dashed ${theme.palette.divider}`,
+            borderRadius: 2, position: 'relative'
         }}
       >
         {!isDrawing && (
@@ -128,6 +127,10 @@ const SignatureCanvas: React.FC<{ onSave: (data: string) => void; disabled?: boo
   );
 };
 
+// ════════════════════════════════════════════════════════════
+// COMPONENTE PRINCIPAL
+// ════════════════════════════════════════════════════════════
+
 const steps = ['Revisión', 'Dibujar Firma', 'Colocar Firma', 'Seguridad', 'Confirmar'];
 
 const ModalFirmaContrato: React.FC<ModalFirmaContratoProps> = ({ 
@@ -141,7 +144,6 @@ const ModalFirmaContrato: React.FC<ModalFirmaContratoProps> = ({
   const [location, setLocation] = useState<{lat: string, lng: string} | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // ... (Queries y Mutaciones - SE MANTIENEN IGUAL) ...
   const { data: plantillas, isLoading: loadingPlantilla } = useQuery({
     queryKey: ['plantillaContrato', idProyecto],
     queryFn: async () => (await ContratoPlantillaService.findByProject(idProyecto)).data,
@@ -190,8 +192,6 @@ const ModalFirmaContrato: React.FC<ModalFirmaContratoProps> = ({
       });
     },
     onSuccess: (res) => {
-      // Usar un Toast o Snackbar global sería mejor que alert, pero mantenemos por simplicidad lógica
-      // alert(res.data.message); 
       onFirmaExitosa();
       handleClose();
     },
@@ -203,12 +203,15 @@ const ModalFirmaContrato: React.FC<ModalFirmaContratoProps> = ({
 
   const handleNext = () => setActiveStep(p => p + 1);
   const handleBack = () => setActiveStep(p => p - 1);
+  
   const handleClose = () => {
     onClose();
     setTimeout(() => {
         setActiveStep(0);
         setSignatureDataUrl(null);
         setCodigo2FA('');
+        setSignaturePosition(null);
+        setErrorMsg(null);
     }, 200);
   };
 
@@ -221,10 +224,7 @@ const ModalFirmaContrato: React.FC<ModalFirmaContratoProps> = ({
           <Box height={400} bgcolor="grey.100" borderRadius={2} overflow="hidden" border={`1px solid ${theme.palette.divider}`}>
              <iframe 
                 src={ImagenService.resolveImageUrl(plantillaActual.url_archivo)} 
-                width="100%" 
-                height="100%" 
-                title="Vista previa" 
-                style={{ border: 'none' }}
+                width="100%" height="100%" title="Vista previa" style={{ border: 'none' }}
              />
           </Box>
         );
@@ -302,60 +302,68 @@ const ModalFirmaContrato: React.FC<ModalFirmaContratoProps> = ({
   };
 
   return (
-    <Dialog 
-        open={open} 
-        onClose={handleClose} 
-        maxWidth="md" 
-        fullWidth
-        PaperProps={{ sx: { borderRadius: 3 } }}
+    <BaseModal
+      open={open}
+      onClose={handleClose}
+      title="Proceso de Firma Digital"
+      subtitle="Validación de identidad y firma de contrato"
+      icon={<GppGood />}
+      headerColor="success"
+      maxWidth="md"
+      isLoading={firmaMutation.isPending}
+      // Usamos customActions para manejar el flujo del Stepper
+      customActions={
+        <>
+            <Button 
+                onClick={activeStep === 0 ? handleClose : handleBack} 
+                color="inherit" 
+                disabled={firmaMutation.isPending}
+                sx={{ mr: 'auto', borderRadius: 2 }}
+            >
+                {activeStep === 0 ? 'Cancelar' : 'Atrás'}
+            </Button>
+
+            {activeStep < 4 ? (
+                <Button 
+                    variant="contained" 
+                    onClick={handleNext} 
+                    disabled={!plantillaActual || (activeStep === 1 && !signatureDataUrl)}
+                    sx={{ px: 4, fontWeight: 700, borderRadius: 2 }}
+                >
+                    Siguiente
+                </Button>
+            ) : (
+                <Button 
+                    variant="contained" 
+                    color="success" 
+                    onClick={() => firmaMutation.mutate()} 
+                    disabled={firmaMutation.isPending}
+                    startIcon={firmaMutation.isPending && <CircularProgress size={20} color="inherit" />}
+                    sx={{ px: 4, fontWeight: 700, borderRadius: 2 }}
+                >
+                    {firmaMutation.isPending ? 'Firmando...' : 'Finalizar Firma'}
+                </Button>
+            )}
+        </>
+      }
     >
-      <DialogTitle sx={{ borderBottom: `1px solid ${theme.palette.divider}`, display: 'flex', alignItems: 'center', gap: 1 }}>
-        <GppGood color="success" /> 
-        <Typography variant="h6" fontWeight={700}>Proceso de Firma Digital</Typography>
-      </DialogTitle>
-      
-      <DialogContent sx={{ mt: 2 }}>
-        <Stepper activeStep={activeStep} alternativeLabel sx={{ mb: 4 }}>
+      <Box sx={{ width: '100%', mb: 4 }}>
+        <Stepper activeStep={activeStep} alternativeLabel>
             {steps.map(s => (
                 <Step key={s}>
-                    <StepLabel StepIconProps={{ sx: { '&.Mui-active': { color: 'primary.main' }, '&.Mui-completed': { color: 'success.main' } } }}>
+                    <StepLabel StepIconProps={{ sx: { '&.Mui-active': { color: 'success.main' }, '&.Mui-completed': { color: 'success.main' } } }}>
                         {s}
                     </StepLabel>
                 </Step>
             ))}
         </Stepper>
-        {loadingPlantilla ? (
-            <Box display="flex" justifyContent="center" py={5}><CircularProgress /></Box>
-        ) : renderStep(activeStep)}
-      </DialogContent>
+      </Box>
 
-      <DialogActions sx={{ p: 3, pt: 0 }}>
-        <Button onClick={activeStep === 0 ? handleClose : handleBack} color="inherit">
-            {activeStep === 0 ? 'Cancelar' : 'Atrás'}
-        </Button>
-        {activeStep < 4 ? (
-            <Button 
-                variant="contained" 
-                onClick={handleNext} 
-                disabled={!plantillaActual || (activeStep === 1 && !signatureDataUrl)}
-                sx={{ px: 4, fontWeight: 700 }}
-            >
-                Siguiente
-            </Button>
-        ) : (
-            <Button 
-                variant="contained" 
-                color="success" 
-                onClick={() => firmaMutation.mutate()} 
-                disabled={firmaMutation.isPending}
-                sx={{ px: 4, fontWeight: 700 }}
-                startIcon={firmaMutation.isPending && <CircularProgress size={20} color="inherit" />}
-            >
-                {firmaMutation.isPending ? 'Firmando...' : 'Finalizar Firma'}
-            </Button>
-        )}
-      </DialogActions>
-    </Dialog>
+      {loadingPlantilla ? (
+          <Box display="flex" justifyContent="center" py={5}><CircularProgress /></Box>
+      ) : renderStep(activeStep)}
+
+    </BaseModal>
   );
 };
 

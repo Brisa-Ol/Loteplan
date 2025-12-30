@@ -1,3 +1,5 @@
+// src/hooks/useConfirmDialog.ts
+
 import { useState, useCallback } from 'react';
 
 // 1. Definimos todas las acciones posibles en la app
@@ -15,14 +17,15 @@ export type ConfirmAction =
   | 'end_auction'
   | 'delete_plantilla'
   | 'toggle_plantilla_status'
-  | 'approve_kyc' // ✅ NUEVO: Acción para aprobar KYC
+  | 'approve_kyc'
+  | 'force_confirm_transaction' // ✅ NUEVO: Acción agregada
   | null;
 
 interface ConfirmConfig {
   title: string;
   description: string;
   confirmText: string;
-  severity: 'error' | 'warning' | 'info' | 'success'; // Agregué 'success' por si acaso, aunque MUI usa info/success similares en alerts
+  severity: 'error' | 'warning' | 'info' | 'success';
 }
 
 // 2. Configuración centralizada de textos y colores
@@ -105,12 +108,18 @@ const CONFIRM_CONFIGS: Record<NonNullable<ConfirmAction>, ConfirmConfig> = {
     confirmText: 'Confirmar',
     severity: 'warning',
   },
-  // ✅ Configuración base para KYC
   approve_kyc: {
     title: '¿Aprobar verificación?',
     description: 'El usuario será habilitado para operar.',
     confirmText: 'Sí, Aprobar',
     severity: 'info', 
+  },
+  // ✅ Configuración base para Transacciones
+  force_confirm_transaction: {
+    title: '¿Forzar confirmación?',
+    description: 'Esta acción marcará la transacción como pagada manualmente.',
+    confirmText: 'Sí, Forzar Pago',
+    severity: 'error', // Usamos error/warning fuerte porque es una acción delicada
   },
 };
 
@@ -142,21 +151,30 @@ export const useConfirmDialog = () => {
 
     // --- CASOS DINÁMICOS ---
 
-    // Caso especial: approve_kyc (NUEVO)
+    // Caso especial: force_confirm_transaction (NUEVO)
+    if (state.action === 'force_confirm_transaction' && state.data) {
+        return {
+            title: `¿Forzar transacción #${state.data.id}?`,
+            description: `⚠️ ESTA ACCIÓN ES IRREVERSIBLE. Estás confirmando manualmente que el dinero llegó al banco/pasarela. Esto asignará activos al usuario inmediatamente.`,
+            confirmText: 'Sí, Confirmar Manualmente',
+            severity: 'error',
+        };
+    }
+
+    // Caso especial: approve_kyc
     if (state.action === 'approve_kyc' && state.data) {
         const userName = state.data.nombre_completo || 'el usuario';
         return {
             title: `¿Aprobar verificación KYC?`,
             description: `Estás a punto de validar la identidad de ${userName}. El usuario recibirá una notificación y quedará habilitado para operar en la plataforma.`,
             confirmText: 'Sí, Aprobar Verificación',
-            severity: 'info', // O 'success' si tu ConfirmDialog lo soporta
+            severity: 'info',
         };
     }
 
     // Caso especial: toggle_project_visibility
     if (state.action === 'toggle_project_visibility' && state.data) {
       const isActive = state.data.activo;
-      
       return {
         title: isActive ? '¿Ocultar proyecto?' : '¿Mostrar proyecto?',
         description: isActive 
@@ -171,7 +189,6 @@ export const useConfirmDialog = () => {
     if (state.action === 'toggle_user_status' && state.data) {
       const isActive = state.data.activo;
       const userName = `${state.data.nombre} ${state.data.apellido}`;
-      
       return {
         title: isActive ? '¿Desactivar usuario?' : 'Activar usuario?',
         description: isActive 
@@ -185,7 +202,6 @@ export const useConfirmDialog = () => {
     // Caso especial: toggle_lote_visibility
     if (state.action === 'toggle_lote_visibility' && state.data) {
       const isActive = state.data.activo;
-      
       return {
         title: isActive ? '¿Ocultar lote?' : '¿Mostrar lote?',
         description: isActive 
@@ -199,7 +215,6 @@ export const useConfirmDialog = () => {
     // Caso especial: start_auction
     if (state.action === 'start_auction' && state.data) {
       const loteName = state.data.nombre_lote;
-      
       return {
         title: '¿Iniciar subasta del lote?',
         description: `Se iniciará la subasta para "${loteName}". Los usuarios podrán comenzar a pujar inmediatamente. Esta acción no se puede deshacer.`,
@@ -211,7 +226,6 @@ export const useConfirmDialog = () => {
     // Caso especial: end_auction
     if (state.action === 'end_auction' && state.data) {
       const loteName = state.data.nombre_lote;
-      
       return {
         title: '¿Finalizar subasta del lote?',
         description: `Se finalizará la subasta para "${loteName}". Se determinará un ganador y no se podrán realizar más pujas. Esta acción es irreversible.`,
@@ -223,7 +237,6 @@ export const useConfirmDialog = () => {
     // Caso especial: delete_plantilla
     if (state.action === 'delete_plantilla' && state.data) {
       const fileName = state.data.nombre_archivo;
-      
       return {
         title: '¿Eliminar plantilla?',
         description: `La plantilla "${fileName}" dejará de estar disponible y será movida a la papelera. Esta acción puede revertirse posteriormente.`,
@@ -236,7 +249,6 @@ export const useConfirmDialog = () => {
     if (state.action === 'toggle_plantilla_status' && state.data) {
       const isActive = state.data.activo;
       const fileName = state.data.nombre_archivo;
-      
       return {
         title: isActive ? '¿Desactivar plantilla?' : '¿Activar plantilla?',
         description: isActive 
@@ -251,7 +263,6 @@ export const useConfirmDialog = () => {
     if (state.action === 'admin_cancel_subscription' && state.data) {
       const userName = `${state.data.usuario?.nombre} ${state.data.usuario?.apellido}`;
       const lote = state.data.nombre_lote || `ID ${state.data.id}`;
-      
       return {
         title: `¿Cancelar suscripción #${state.data.id}?`,
         description: `Estás a punto de cancelar la suscripción de ${userName} para el lote ${lote}. Esta acción generará una deuda inmediata por el saldo restante y anulará el acceso.`,
