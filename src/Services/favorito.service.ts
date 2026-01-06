@@ -9,7 +9,15 @@ import type {
 import type { LoteDto } from '../types/dto/lote.dto'; // Asumo que tienes este archivo
 import httpService from './httpService';
 import type { AxiosResponse } from 'axios';
-
+/**
+ * Servicio para la gestión de favoritos (lotes guardados).
+ * Conecta con el controlador `favoritoController` del backend.
+ *  @remarks
+ * - Los favoritos permiten a los usuarios guardar lotes de interés
+ * - Los lotes privados (con proyecto) requieren suscripción activa
+ * - Los lotes públicos pueden ser favoritos sin restricciones
+ * - El backend valida permisos antes de agregar favoritos
+ */
 const FavoritoService = {
   // =================================================
   // ❤️ GESTIÓN USUARIO (Mis Favoritos)
@@ -17,7 +25,8 @@ const FavoritoService = {
 
   /**
    * Agrega o quita un lote de favoritos (Toggle).
-   * Backend: POST /favoritos/toggle
+   * @param idLote - ID del lote a agregar/quitar
+   * @returns Respuesta indicando si fue agregado o removido
    */
   toggle: async (idLote: number): Promise<AxiosResponse<ToggleFavoritoResponseDto>> => {
     const data: ToggleFavoritoRequestDto = { id_lote: idLote };
@@ -26,7 +35,12 @@ const FavoritoService = {
 
   /**
    * Obtiene la lista de lotes favoritos del usuario actual.
-   * Backend: GET /favoritos/mis-favoritos
+   * @returns Lista de lotes favoritos
+   * @remarks
+   * Backend: GET /api/favoritos/mis-favoritos
+   * - Requiere autenticación
+   * - Retorna solo lotes activos
+   * - Incluye información completa de cada lote
    */
   getMisFavoritos: async (): Promise<AxiosResponse<LoteDto[]>> => {
     return await httpService.get<LoteDto[]>('/favoritos/mis-favoritos');
@@ -34,7 +48,8 @@ const FavoritoService = {
 
   /**
    * Verifica si un lote específico es favorito del usuario.
-   * Backend: GET /favoritos/check/:id
+   * @param idLote - ID del lote a verificar
+   * @returns Respuesta con estado de favorito
    */
   checkEsFavorito: async (idLote: number): Promise<AxiosResponse<CheckFavoritoResponseDto>> => {
     return await httpService.get<CheckFavoritoResponseDto>(`/favoritos/check/${idLote}`);
@@ -46,7 +61,6 @@ const FavoritoService = {
 
   /**
    * Obtiene estadísticas de popularidad de lotes por proyecto.
-   * Backend: GET /favoritos/estadisticas?id_proyecto=X
    */
   getPopularidadLotes: async (idProyecto?: number): Promise<PopularidadLoteDTO[]> => {
     try {

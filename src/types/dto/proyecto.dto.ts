@@ -2,18 +2,73 @@ import type { BaseDTO } from "./base.dto";
 import type { ImagenDto } from "./imagen.dto";
 import type { LoteDto } from "./lote.dto";
 
+/**
+ * DTOs para la gestión de proyectos.
+ * 
+ * @remarks
+ * Los tipos están alineados con el modelo `Proyecto` del backend (Sequelize).
+ * - El backend valida que tipo_inversion sea 'directo' o 'mensual'
+ * - Los proyectos mensuales tienen plazo_inversion (meses)
+ * - Los proyectos directos tienen monto_inversion fijo
+ * - Soft delete: activo: true/false
+ * 
+ * @see {@link https://github.com/.../models/proyecto.js} Modelo Backend
+ */
+
 // ==========================================
 // 🛠️ ENUMS & TYPES
 // ==========================================
 
+/**
+ * Tipo de inversión del proyecto.
+ * - 'directo': Pago único, adjudicación inmediata
+ * - 'mensual': Cuotas mensuales, adjudicación desde cuota 12
+ */
 export type TipoInversion = 'directo' | 'mensual';
+
+/**
+ * Estado del proyecto en su ciclo de vida.
+ * - 'En Espera': Creado pero no iniciado
+ * - 'En proceso': Activo, aceptando suscripciones
+ * - 'Finalizado': Completado, no acepta más suscripciones
+ */
 export type EstadoProyecto = 'En Espera' | 'En proceso' | 'Finalizado';
+
+/**
+ * Moneda en la que se maneja el proyecto.
+ * - 'USD': Dólares estadounidenses
+ * - 'ARS': Pesos argentinos
+ */
 export type MonedaProyecto = 'USD' | 'ARS';
 
 // ==========================================
 // 📤 REQUEST DTOs (Lo que envías)
 // ==========================================
 
+/**
+ * Datos para crear un nuevo proyecto.
+ * 
+ * @remarks
+ * Backend: POST /api/proyectos/
+ * - Requiere autenticación y rol admin
+ * - El backend crea el proyecto y asocia lotes iniciales si se proporcionan
+ * - Envía notificaciones a todos los usuarios activos
+ * - La imagen se envía como multipart/form-data
+ * 
+ * @example
+ * ```typescript
+ * const proyecto = {
+ *   nombre_proyecto: "Proyecto Nuevo",
+ *   tipo_inversion: "mensual",
+ *   monto_inversion: 50000,
+ *   plazo_inversion: 24,
+ *   moneda: "ARS",
+ *   fecha_inicio: "2024-01-01",
+ *   fecha_cierre: "2024-12-31",
+ *   lotesIds: [1, 2, 3]
+ * };
+ * ```
+ */
 export interface CreateProyectoDto {
   nombre_proyecto: string;
   descripcion?: string;

@@ -13,6 +13,23 @@ export interface ConfirmarPago2faDto {
   codigo_2fa: string;
 }
 
+/**
+ * DTO para generar pagos adelantados (Admin).
+ * Endpoint: POST /pagos/generar-adelantados
+ */
+export interface GenerateAdvancePaymentsDto {
+  id_suscripcion: number;
+  cantidad: number;
+}
+
+/**
+ * DTO para actualizar el monto de un pago (Admin).
+ * Endpoint: PATCH /pagos/:id/monto
+ */
+export interface UpdatePaymentAmountDto {
+  monto: number;
+}
+
 // ==========================================
 // 📥 RESPONSE DTOs (Lo que recibes)
 // ==========================================
@@ -21,12 +38,12 @@ export interface PagoDto extends BaseDTO {
   id_suscripcion: number;
   id_usuario?: number; // ✅ Coincide con tu modelo actualizado
   id_proyecto?: number; // ✅ Coincide con tu modelo actualizado
-  
+
   monto: number; // Sequelize lo devuelve como number gracias al getter
   mes: number;
   fecha_vencimiento: string; // ISO Date Only (YYYY-MM-DD)
   fecha_pago?: string;       // ISO Date Only
-  
+
   estado_pago: 'pendiente' | 'pagado' | 'vencido' | 'cancelado' | 'cubierto_por_puja';
 }
 
@@ -35,12 +52,12 @@ export interface PagoDto extends BaseDTO {
  */
 export interface PagoCheckoutResponse {
   message: string;
-  
+
   // Caso A: Éxito directo (Status 200) o tras 2FA verificado
   redirectUrl?: string;
   transaccionId?: number;
   monto?: number; // ⚠️ FALTABA ESTE CAMPO que tu backend envía en línea 116
-  
+
   // Caso B: Requiere 2FA (Status 202)
   is2FARequired?: boolean;
   pagoId?: number;

@@ -1,50 +1,48 @@
 import type { BaseDTO } from "./base.dto";
 
+
 // ==========================================
-// 📤 REQUEST DTOs (Lo que envías al Back)
+// 📤 REQUEST DTOs (Lo que envías)
 // ==========================================
 
+
+/**
+ * Datos para subir una nueva plantilla.
+ * Se convertirá a FormData.
+ */
 export interface CreatePlantillaDto {
-  file: File;
+  file: File; // ⚠️ En el FormData debe ir como 'plantillaFile'
   nombre_archivo: string;
   version: number;
-  id_proyecto?: number | null; 
+  id_proyecto?: number | null; // Puede ser null si es una plantilla genérica inicial
 }
 
+/**
+ * Datos para actualizar SOLAMENTE el PDF de una plantilla existente.
+ */
 export interface UpdatePlantillaPdfDto {
   id: number;
-  file: File;
+  file: File; // ⚠️ En el FormData debe ir como 'plantillaFile'
 }
 
 // ==========================================
-// 📥 RESPONSE DTOs (Lo que recibes del Back)
+// 📥 RESPONSE DTOs (Lo que recibes)
 // ==========================================
 
 /**
- * Reflejo exacto del modelo Sequelize 'ContratoPlantilla'.
+ * Modelo de Plantilla de Contrato.
+ * Extiende BaseDTO.
  */
 export interface ContratoPlantillaDto extends BaseDTO {
   nombre_archivo: string;
   url_archivo: string;
-  hash_archivo_original: string;
+  hash_archivo_original: string; // Hash SHA-256
   version: number;
   
-  // ✅ Coincide con allowNull: true del Back
-  id_proyecto: number | null; 
-  
-  // ✅ Coincide con allowNull: true del Back
-  id_usuario_creacion: number | null; 
+  id_proyecto: number | null;
+  id_usuario_creacion: number;
 
-  // Este campo no está en DB, pero si tu Controller lo calcula, 
-  // lo dejamos opcional. Si no viene, no pasa nada.
+  // 🚨 Campo calculado en el backend (integrity check)
+  // Si es true, mostrar advertencia roja en la UI del admin
   integrity_compromised?: boolean; 
-}
-
-/**
- * Estructura para solucionar el error "Property 'id' does not exist".
- * Asumimos que tu Controller responde: { message: "...", plantilla: { ... } }
- */
-export interface ContratoActionResponse {
-  message: string;
-  plantilla: ContratoPlantillaDto; 
 }

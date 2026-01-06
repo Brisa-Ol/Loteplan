@@ -11,26 +11,51 @@ import httpService from './httpService';
 import type { AxiosResponse } from 'axios';
 
 const BASE_ENDPOINT = '/pujas';
-
+/**
+ * Servicio para la gestión de pujas y subastas.
+ * Conecta con el controlador `pujaController` del backend.
+ * @remarks
+ * - Las pujas están asociadas a lotes en subasta
+ * - La primera puja en un lote consume 1 token de subasta
+ * - Los administradores están bloqueados de realizar pujas (blockAdminTransactions)
+ * - Las pujas ganadoras deben pagarse dentro de 90 días
+ * - Soft delete: activo: true/false
+ */
 const PujaService = {
-  // =================================================
+ // =================================================
   // 🔨 PARTICIPACIÓN EN SUBASTA (USUARIO)
   // =================================================
 
   /**
-   * Realiza una nueva puja en un lote.
-   * ⚠️ Consume 1 Token de subasta en la primera puja al lote.
-   * Backend: POST /pujas
-   * Middleware: authenticate + blockAdminTransactions
+   * Realiza una nueva puja en un lote en subasta.
+   * 
+   * @param data - Datos de la puja (id_lote, monto_puja)
+   * @returns Puja creada
+   * 
+   * @remarks
+   * Backend: POST /api/pujas
+   * - Requiere autenticación
+   * - Bloquea administradores (blockAdminTransactions)
+   * - La primera puja en un lote consume 1 token de subasta del usuario
+   * - Valida que el monto sea mayor que la puja actual
+   * - Valida que el lote esté en subasta activa
+   * 
    */
   create: async (data: CreatePujaDto): Promise<AxiosResponse<PujaDto>> => {
     return await httpService.post(BASE_ENDPOINT, data);
   },
 
   /**
-   * Obtiene todas las pujas del usuario autenticado.
-   * Backend: GET /pujas/mis_pujas
-   * Middleware: authenticate
+    * Obtiene todas las pujas del usuario autenticado.
+   * 
+   * @returns Lista de pujas del usuario
+   * 
+   * @remarks
+   * Backend: GET /api/pujas/mis_pujas
+   * - Requiere autenticación
+   * - Retorna pujas de todos los lotes
+   * - Incluye estado actual de cada puja
+   * 
    */
   getMyPujas: async (): Promise<AxiosResponse<PujaDto[]>> => {
     return await httpService.get(`${BASE_ENDPOINT}/mis_pujas`);
@@ -38,18 +63,34 @@ const PujaService = {
 
   /**
    * Obtiene el detalle de una puja específica del usuario.
-   * Backend: GET /pujas/mis_pujas/:id
-   * Middleware: authenticate
+   * 
+   * @param id - ID de la puja
+   * @returns Puja con detalles completos
+   * 
+   * @remarks
+   * Backend: GET /api/pujas/mis_pujas/:id
+   * - Requiere autenticación
+   * - Solo retorna si la puja pertenece al usuario
+   * - Incluye: lote, estado, fecha_vencimiento_pago
+   * 
    */
   getMyPujaById: async (id: number): Promise<AxiosResponse<PujaDto>> => {
     return await httpService.get(`${BASE_ENDPOINT}/mis_pujas/${id}`);
   },
 
   /**
-   * Cancela (Soft Delete) una puja propia.
-   * ⚠️ Solo permitido si no es la ganadora (lógica de backend).
-   * Backend: DELETE /pujas/mis_pujas/:id
-   * Middleware: authenticate
+    * Cancela una puja propia (soft delete).
+   * 
+   * @param id - ID de la puja a cancelar
+   * @returns Void
+   * 
+   * @remarks
+   * Backend: DELETE /api/pujas/mis_pujas/:id
+   * - Requiere autenticación
+   * - Solo permite cancelar si NO es la puja ganadora
+   * - Solo permite cancelar si la subasta aún está activa
+   * - Soft delete: establece activo: false
+   * 
    */
   cancelMyPuja: async (id: number): Promise<AxiosResponse<void>> => {
     return await httpService.delete(`${BASE_ENDPOINT}/mis_pujas/${id}`);
@@ -102,7 +143,7 @@ const PujaService = {
     return await httpService.get(BASE_ENDPOINT);
   },
 
-  /**
+ /**
    * Gestiona manualmente el cierre de subasta y liberación de tokens (Admin).
    * ⚠️ Generalmente lo hace el backend automáticamente al finalizar subasta.
    * Backend: POST /pujas/gestionar_finalizacion
@@ -139,7 +180,7 @@ const PujaService = {
     return await httpService.delete(`${BASE_ENDPOINT}/${id}`);
   },
 
-  // =================================================
+    // =================================================
   // 🔧 HELPERS FRONTEND (Lógica de UI)
   // =================================================
 

@@ -55,13 +55,13 @@ const AdminDashboard = React.lazy(() => import('./pages/Admin/Dashboard/AdminDas
 const AdminKYC = React.lazy(() => import('./pages/Admin/Usuarios/AdminKYC'));
 const AdminProyectos = React.lazy(() => import('./pages/Admin/Proyectos/AdminProyectos'));
 const SalaControlPujas = React.lazy(() => import('./pages/Admin/Pujas/SalaControlPujas'));
-const InventarioLotes = React.lazy(() => import('./pages/Admin/Lotes/InventarioLotes'));
+const InventarioLotes = React.lazy(() => import('./pages/Admin/Lotes/AdminLotes'));
 const AdminUsuarios = React.lazy(() => import('./pages/Admin/Usuarios/AdminUsuarios'));
 const AdminSuscripciones = React.lazy(() => import('./pages/Admin/Suscripciones/AdminSuscripciones'));
 const AdminInversiones = React.lazy(() => import('./pages/Admin/Inversiones/AdminInversiones'));
 const AdminCancelaciones = React.lazy(() => import('./pages/Admin/Suscripciones/AdminCancelaciones'));
 const AdminPagos = React.lazy(() => import('./pages/Admin/Finanzas/Pagos/AdminPagos'));
-const LotePagos = React.lazy(() => import('./pages/Admin/Lotes/LotePagos'));
+const LotePagos = React.lazy(() => import('./pages/Admin/Lotes/AdminLotePagos'));
 const AdminPlantillas = React.lazy(() => import('./pages/Admin/Contrato/AdminPlantillas'));
 const AdminTransacciones = React.lazy(() => import('./pages/Admin/Finanzas/Transacciones/AdminTransacciones'));
 const AdminContratosFirmados = React.lazy(() => import('./pages/Admin/Contrato/AdminContratosFirmados'));

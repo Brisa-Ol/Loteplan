@@ -89,7 +89,7 @@ const StatCard: React.FC<{
   );
 };
 
-const InventarioLotes: React.FC = () => {
+const AdminLotes: React.FC = () => {
   const theme = useTheme();
   const queryClient = useQueryClient();
   
@@ -559,4 +559,4 @@ const InventarioLotes: React.FC = () => {
   );
 };
 
-export default InventarioLotes;
+export default AdminLotes;

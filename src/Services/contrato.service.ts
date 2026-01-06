@@ -7,16 +7,26 @@ import type {
 } from '../types/dto/contrato.dto';
 
 const BASE_ENDPOINT = '/contratos'; 
-
+/**
+ * Servicio para la gestión de contratos firmados.
+ * Conecta con el controlador `contratoFirmadoController` del backend.
+ * @remarks
+ * - Los contratos se firman digitalmente con PDF
+ * - Requiere código 2FA para firmar (seguridad)
+ * - El backend valida integridad del archivo con hash SHA-256
+ * - Los contratos se almacenan de forma segura
+ * - Incluye verificación geográfica opcional (lat/long)
+ */
 const ContratoService = {
 
   // =================================================
   // ✍️ PROCESO DE FIRMA (Usuario)
   // =================================================
 
-  /**
-   * Sube el contrato firmado.
-   * 🛑 CORRECCIÓN: El archivo se envía como 'pdfFile' para coincidir con Multer.
+/**
+   * Registra un contrato firmado subiendo el PDF.
+   * @param data - Datos del contrato y archivo PDF firmado
+   * @returns Contrato firmado registrado
    */
   registrarFirma: async (data: RegistrarFirmaRequestDto): Promise<AxiosResponse<ContratoFirmadoResponseDto>> => {
     const formData = new FormData();
@@ -48,6 +58,8 @@ const ContratoService = {
 
   /**
    * Obtiene mis contratos firmados.
+   * @returns Lista de contratos firmados del usuario}
+   * @throws {ApiError} 401 si no está autenticado
    */
   getMyContracts: async (): Promise<AxiosResponse<ContratoFirmadoDto[]>> => {
     return await httpService.get(`${BASE_ENDPOINT}/mis_contratos`);
@@ -55,13 +67,16 @@ const ContratoService = {
 
   /**
    * Obtiene un contrato por ID (verificando integridad en el backend).
+   * @param id - ID del contrato
+   * @returns Contrato con detalles completos
    */
   getById: async (id: number): Promise<AxiosResponse<ContratoFirmadoDto>> => {
     return await httpService.get(`${BASE_ENDPOINT}/${id}`);
   },
 
   /**
-   * ADMIN: Obtiene todos los contratos del sistema.
+* Obtiene todos los contratos firmados del sistema (solo administradores).
+* @returns Lista completa de contratos
    */
   findAllSigned: async (): Promise<AxiosResponse<ContratoFirmadoDto[]>> => {
     return await httpService.get(`${BASE_ENDPOINT}/`);

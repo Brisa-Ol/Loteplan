@@ -22,7 +22,7 @@ export interface CreateUsuarioDto {
   /** Número de teléfono móvil. */
   numero_telefono: string;
   /** Nivel de acceso. Por defecto es 'cliente'. */
-  rol?: 'cliente' | 'admin'; 
+  rol?: 'cliente' | 'admin';
 }
 
 /**
@@ -59,7 +59,7 @@ export interface UpdateUserMeDto {
  */
 export interface AdminDisable2FADto {
   /** Razón del reseteo (opcional, para auditoría futura). */
-  justificacion?: string; 
+  justificacion?: string;
 }
 
 // ==========================================
@@ -75,7 +75,7 @@ export interface UsuarioDto extends BaseDTO {
   nombre_usuario: string;
   email: string;
   rol: 'cliente' | 'admin';
-  
+
   // Estados de Seguridad
   /** Indica si validó su email. */
   confirmado_email: boolean;
@@ -83,15 +83,32 @@ export interface UsuarioDto extends BaseDTO {
   is_2fa_enabled: boolean;
   /** Si es false, el usuario está "baneado" o eliminado lógicamente. */
   activo: boolean;
-  
+
   // Datos Personales
   nombre: string;
   apellido: string;
   dni: string;
   numero_telefono: string;
-  
+
   // Metadatos (Sequelize)
   fecha_registro?: string;
   createdAt?: string;
   updatedAt?: string;
+}
+
+/**
+ * Respuesta del endpoint de validación previa a desactivación.
+ * Endpoint: GET /usuarios/me/validate-deactivation
+ */
+export interface ValidateDeactivationResponseDto {
+  /** Indica si el usuario puede proceder con la desactivación. */
+  canDeactivate: boolean;
+  /** Lista de advertencias (suscripciones activas, pagos pendientes, etc). */
+  warnings: string[];
+  /** Datos adicionales sobre bloqueos (opcional). */
+  blockers?: {
+    suscripcionesActivas?: number;
+    pagosPendientes?: number;
+    inversionesPendientes?: number;
+  };
 }

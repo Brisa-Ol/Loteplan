@@ -1,5 +1,3 @@
-// src/services/contrato-plantilla.service.ts
-
 import httpService from './httpService';
 import type { AxiosResponse } from 'axios';
 import type { 
@@ -17,33 +15,32 @@ const ContratoPlantillaService = {
   // 📝 ADMIN (Creación y Edición)
   // =================================================
 
-  /**
+ /**
    * Crea una nueva plantilla de contrato.
-   * Llama a: contratoPlantillaService.create(data) en el Backend.
-   * El backend espera 'plantillaFile' en req.files y los datos en req.body.
+   * @returns Respuesta con { message, plantilla }
    */
   create: async (data: CreatePlantillaDto): Promise<AxiosResponse<ContratoActionResponse>> => {
     const formData = new FormData();
     
-    // ✅ Clave 'plantillaFile' debe coincidir con tu middleware Multer en el router del backend
+     // ✅ Campo coincide con middleware: uploadPlantilla
     formData.append('plantillaFile', data.file); 
     formData.append('nombre_archivo', data.nombre_archivo);
     formData.append('version', data.version.toString());
     
-    // ✅ Backend permite id_proyecto null (plantilla global)
+    // ✅ Solo enviar si tiene valor (undefined = no se envía)
     if (data.id_proyecto !== undefined && data.id_proyecto !== null) {
       formData.append('id_proyecto', data.id_proyecto.toString());
     }
 
-    // Asegúrate de que tu ruta en el backend sea exactamente esta
     return await httpService.post(`${ENDPOINT}/plantillas/upload`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
   },
 
-  /**
-   * Actualiza los metadatos de una plantilla.
-   * Llama a: contratoPlantillaService.updatePlantillaData(id, updateData) en el Backend.
+ /**
+   * Actualiza los datos de una plantilla (nombre, proyecto, versión).
+   * NO modifica el archivo PDF.
+   * @returns Respuesta con { message, plantilla }
    */
   update: async (
     id: number, 
@@ -51,7 +48,6 @@ const ContratoPlantillaService = {
   ): Promise<AxiosResponse<ContratoActionResponse>> => {
     const payload: Record<string, any> = {};
     
-    // Solo enviamos los campos que tu service de backend permite en 'allowedFields'
     if (data.nombre_archivo !== undefined) {
       payload.nombre_archivo = data.nombre_archivo;
     }
@@ -61,7 +57,6 @@ const ContratoPlantillaService = {
     }
     
     if (data.id_proyecto !== undefined) {
-      // Backend espera null para desasignar o un ID válido
       payload.id_proyecto = data.id_proyecto;
     }
 
@@ -69,9 +64,10 @@ const ContratoPlantillaService = {
   },
 
   /**
-   * Actualiza SOLO el archivo PDF.
-   * Llama a: contratoPlantillaService.updatePdf(id, buffer, path) en el Backend.
+   * Actualiza solo el archivo PDF de una plantilla.
+   * @returns Respuesta con { message, plantilla }
    */
+
   updatePdf: async (data: UpdatePlantillaPdfDto): Promise<AxiosResponse<ContratoActionResponse>> => {
     const formData = new FormData();
     formData.append('plantillaFile', data.file); 
@@ -82,56 +78,62 @@ const ContratoPlantillaService = {
   },
 
   /**
-   * Activa/Desactiva una plantilla.
-   * Llama a: contratoPlantillaService.toggleActive(id, activo) en el Backend.
+   * Activa o desactiva una plantilla.
+   * @returns Respuesta con { message, plantilla }
    */
+
   toggleActive: async (id: number, activo: boolean): Promise<AxiosResponse<ContratoActionResponse>> => {
     return await httpService.put(`${ENDPOINT}/plantillas/toggle-active/${id}`, { activo });
   },
 
   /**
-   * Borrado lógico.
-   * Llama a: contratoPlantillaService.softDelete(id) en el Backend.
+   * Realiza el borrado lógico de una plantilla.
+   * @returns Respuesta con { message }
    */
   softDelete: async (id: number): Promise<AxiosResponse<{ message: string }>> => {
     return await httpService.put(`${ENDPOINT}/plantillas/soft-delete/${id}`);
   },
 
   // =================================================
-  // 🔍 LECTURA (Coincidiendo con tus métodos del Backend)
+  // 🔍 LECTURA
   // =================================================
 
   /**
-   * Llama a: contratoPlantillaService.findAll()
+   * Lista TODAS las plantillas (activas e inactivas).
+   * ⚠️ Respuesta directa: array de plantillas (sin wrapper)
    */
   findAll: async (): Promise<AxiosResponse<ContratoPlantillaDto[]>> => {
     return await httpService.get(`${ENDPOINT}/plantillas/all`);
   },
 
   /**
-   * Llama a: contratoPlantillaService.findAllActivo()
+   * Lista solo las plantillas activas.
+   * ⚠️ Respuesta directa: array de plantillas (sin wrapper)
    */
   findAllActive: async (): Promise<AxiosResponse<ContratoPlantillaDto[]>> => {
     return await httpService.get(`${ENDPOINT}/plantillas/active`);
   },
 
   /**
-   * Llama a: contratoPlantillaService.findUnassociated()
+   * Lista plantillas activas sin proyecto asignado.
+   * ⚠️ Respuesta directa: array de plantillas (sin wrapper)
    */
   findUnassociated: async (): Promise<AxiosResponse<ContratoPlantillaDto[]>> => {
     return await httpService.get(`${ENDPOINT}/plantillas/unassociated`);
   },
 
   /**
-   * Llama a: contratoPlantillaService.findByProjectId(id_proyecto)
+   * Lista todas las versiones de plantillas activas para un proyecto.
+   * ⚠️ Respuesta directa: array de plantillas (sin wrapper)
    */
   findByProject: async (idProyecto: number): Promise<AxiosResponse<ContratoPlantillaDto[]>> => {
     return await httpService.get(`${ENDPOINT}/plantillas/project/${idProyecto}`);
   },
 
   /**
-   * Llama a: contratoPlantillaService.findByProyectoAndVersion(id_proyecto, version)
-   * ✅ ESTE ES CLAVE: Devuelve el campo integrity_compromised calculado en el Back.
+   * Obtiene una plantilla específica por proyecto y versión.
+   * Incluye verificación de integridad.
+   * ⚠️ Respuesta directa: objeto plantilla (sin wrapper)
    */
   getByProjectAndVersion: async (
     idProyecto: number, 

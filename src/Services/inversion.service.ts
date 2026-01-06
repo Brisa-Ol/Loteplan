@@ -8,9 +8,20 @@ import type {
 } from '../types/dto/inversion.dto';
 import httpService from './httpService';
 import type { AxiosResponse } from 'axios';
+import type { GenericResponseDto } from '../types/dto/auth.dto';
 
 const BASE_ENDPOINT = '/inversiones';
 
+/**
+ * Servicio para la gestión de inversiones directas en proyectos.
+ * Conecta con el controlador `inversionController` del backend.
+ * @remarks
+ * - Las inversiones son para proyectos con tipo_inversion: 'directo'
+ * - Requiere KYC completado y puede requerir 2FA
+ * - Los administradores están bloqueados de realizar inversiones (blockAdminTransactions)
+ * - El backend calcula métricas de liquidez y agregación por usuario
+ * - Soft delete: activo: true/false
+ */
 const InversionService = {
 
   // =================================================
@@ -18,41 +29,71 @@ const InversionService = {
   // =================================================
 
   /**
-   * Crea el registro de inversión (Paso 1).
-   * Según tu ruta de backend: router.post("/", ...)
+   * Crea el registro inicial de una inversión (Paso 1).
+   * 
+   * @param data - Datos de la inversión (id_proyecto, monto)
+   * @returns Respuesta con información de la inversión y estado de pago
+   * 
+   * @remarks
+   * Backend: POST /api/inversiones/
+   * - Requiere autenticación
+   * - Valida KYC y bloquea administradores (blockAdminTransactions)
+   * - Si el usuario tiene 2FA activo, retorna `requires2FA: true`
+   * - Crea la inversión en estado 'pendiente'
+   * - Solo aplica a proyectos con tipo_inversion: 'directo'
    */
   iniciar: async (data: CreateInversionDto): Promise<AxiosResponse<InversionInitResponse>> => {
-    // Si tu backend usa POST / para crear, ajustamos aquí. 
-    // Si antes usabas '/iniciar' y funcionaba, déjalo, pero según tu código backend es '/'
-    return await httpService.post(`${BASE_ENDPOINT}`, data); 
+    return await httpService.post(`${BASE_ENDPOINT}`, data);
   },
 
   /**
-   * Inicia el flujo de checkout/pago (Paso 1.5).
-   * Según tu ruta de backend: router.post("/iniciar-pago/:idInversion", ...)
+   * Inicia el flujo de checkout/pago para una inversión existente.
+   * 
+   * @param inversionId - ID de la inversión
+   * @returns Respuesta con URL de checkout o indicador de 2FA requerido
+   * 
+   * @remarks
+   * Backend: POST /api/inversiones/iniciar-pago/:idInversion
+   * - Requiere autenticación
+   * - Valida KYC y bloquea administradores
+   * - Si el usuario tiene 2FA activo, retorna status 202
+   * - Genera la preferencia de pago en Mercado Pago
+
    */
   iniciarPago: async (inversionId: number): Promise<AxiosResponse<InversionInitResponse>> => {
     return await httpService.post(`${BASE_ENDPOINT}/iniciar-pago/${inversionId}`);
   },
 
   /**
-   * Confirma inversión con 2FA (Paso 2).
-   * Según tu ruta de backend: router.post("/confirmar-2fa", ...)
+   * Confirma la inversión con código 2FA y obtiene la URL de checkout.
+   * 
+   * @param data - Token temporal y código 2FA
+   * @returns Respuesta con URL de checkout de Mercado Pago
+   * 
+   * @remarks
+   * Backend: POST /api/inversiones/confirmar-2fa
+   * - Requiere autenticación
+   * - Se llama solo si `iniciar` o `iniciarPago` retornaron status 202
+   * - Valida el código TOTP de 6 dígitos
+   * - Genera la preferencia de pago en Mercado Pago
+   * - Retorna URL de checkout para redirección
+
    */
   confirmar2FA: async (data: ConfirmInversion2faDto): Promise<AxiosResponse<InversionInitResponse>> => {
     return await httpService.post(`${BASE_ENDPOINT}/confirmar-2fa`, data);
   },
 
   /**
-   * Confirma inversión tras webhook (Paso 3 - Opcional según implementación).
-   */
-  confirmarWebhook: async (transaccionId: number): Promise<AxiosResponse<InversionDto>> => {
-    return await httpService.post(`${BASE_ENDPOINT}/confirmar-webhook`, { transaccionId });
-  },
+   * Obtiene todas las inversiones del usuario autenticado.
+   * 
+   * @returns Lista de inversiones del usuario
+   * 
+   * @remarks
+   * Backend: GET /api/inversiones/mis_inversiones
+   * - Requiere autenticación
+   * - Retorna inversiones de todos los proyectos
+   * - Incluye información del proyecto y estado de pago
 
-  /**
-   * Obtiene todas las inversiones del usuario logueado.
-   * ✅ CORREGIDO: Se ajustó la URL para coincidir con router.get("/mis_inversiones")
    */
   getMisInversiones: async (): Promise<AxiosResponse<InversionDto[]>> => {
     return await httpService.get(`${BASE_ENDPOINT}/mis_inversiones`);
@@ -60,37 +101,125 @@ const InversionService = {
 
   /**
    * Obtiene una inversión específica por ID.
-   * GET /inversiones/:id
+   * 
+   * @param id - ID de la inversión
+   * @returns Inversión con detalles completos
+   * 
+   * @remarks
+   * Backend: GET /api/inversiones/:id
+   * - Requiere autenticación
+   * - Solo retorna si la inversión pertenece al usuario o es admin
+   * - Incluye: proyecto, transacciones, estado
+ 
    */
   getById: async (id: number): Promise<AxiosResponse<InversionDto>> => {
     return await httpService.get(`${BASE_ENDPOINT}/${id}`);
   },
 
   // =================================================
-  // 👮 GESTIÓN ADMINISTRATIVA
+  // 👮 GESTIÓN ADMINISTRATIVA (ADMIN)
   // =================================================
 
+  /**
+   * Obtiene todas las inversiones del sistema (solo administradores).
+   * 
+   * @returns Lista completa de inversiones
+   * 
+   * @remarks
+   * Backend: GET /api/inversiones/
+   * - Requiere autenticación y rol admin
+   * - Incluye inversiones activas e inactivas
+   * - Útil para gestión administrativa completa
+
+   */
   findAll: async (): Promise<AxiosResponse<InversionDto[]>> => {
     return await httpService.get(BASE_ENDPOINT);
   },
 
-  getByUserId: async (userId: number): Promise<AxiosResponse<InversionDto[]>> => {
-    return await httpService.get(`${BASE_ENDPOINT}/usuario/${userId}`);
+  /**
+   * Obtiene solo las inversiones activas (solo administradores).
+   * 
+   * @returns Lista de inversiones activas
+   * 
+   * @remarks
+   * Backend: GET /api/inversiones/activas
+   * - Requiere autenticación y rol admin
+   * - Solo retorna inversiones con activo: true
+
+   */
+  findAllActive: async (): Promise<AxiosResponse<InversionDto[]>> => {
+    return await httpService.get(`${BASE_ENDPOINT}/activas`);
   },
 
-  getByProyectoId: async (proyectoId: number): Promise<AxiosResponse<InversionDto[]>> => {
-    return await httpService.get(`${BASE_ENDPOINT}/proyecto/${proyectoId}`);
+  /**
+   * Actualiza una inversión existente (solo administradores).
+   * 
+   * @param id - ID de la inversión a actualizar
+   * @param data - Datos parciales a actualizar
+   * @returns Inversión actualizada
+   * 
+   * @remarks
+   * Backend: PUT /api/inversiones/:id
+   * - Requiere autenticación y rol admin
+   * - Actualiza solo los campos proporcionados
+   * - Útil para correcciones administrativas
+
+   */
+  update: async (id: number, data: Partial<InversionDto>): Promise<AxiosResponse<InversionDto>> => {
+    return await httpService.put(`${BASE_ENDPOINT}/${id}`, data);
+  },
+
+  /**
+   * Desactiva una inversión (soft delete - solo administradores).
+   * 
+   * @param id - ID de la inversión a desactivar
+   * @returns Mensaje de confirmación
+   * 
+   * @remarks
+   * Backend: DELETE /api/inversiones/:id
+   * - Requiere autenticación y rol admin
+   * - Soft delete: establece activo: false
+   * - La inversión no se elimina físicamente de la BD
+
+   */
+  softDelete: async (id: number): Promise<AxiosResponse<GenericResponseDto>> => {
+    return await httpService.delete(`${BASE_ENDPOINT}/${id}`);
   },
 
   // =================================================
-  // 📊 MÉTRICAS (ADMIN)
+  // 📊 MÉTRICAS (ADMIN) - KPIs
   // =================================================
 
-  getLiquidityMetrics: async (): Promise<AxiosResponse<{ data: LiquidityRateDTO }>> => {
+  /**
+   * Obtiene la tasa de liquidez de inversiones (KPI 6).
+   * 
+   * @returns Métricas de liquidez
+   * 
+   * @remarks
+   * Backend: GET /api/inversiones/metricas/liquidez
+   * - Requiere autenticación y rol admin
+   * - Calcula: total_inversiones, inversiones_liquidadas, tasa_liquidez
+   * - Útil para dashboard administrativo
+
+   */
+  getLiquidityMetrics: async (): Promise<AxiosResponse<{ mensaje: string, data: LiquidityRateDTO }>> => {
     return await httpService.get(`${BASE_ENDPOINT}/metricas/liquidez`);
   },
 
-  getAggregatedMetrics: async (): Promise<AxiosResponse<{ data: InversionPorUsuarioDTO[] }>> => {
+  /**
+   * Obtiene inversiones agregadas por usuario (KPI 7).
+   * 
+   * @returns Lista de usuarios con total de inversiones
+   * 
+   * @remarks
+   * Backend: GET /api/inversiones/metricas/agregado-por-usuario
+   * - Requiere autenticación y rol admin
+   * - Agrupa inversiones por usuario
+   * - Calcula total invertido por usuario
+   * - Útil para análisis de inversores
+``
+   */
+  getAggregatedMetrics: async (): Promise<AxiosResponse<{ mensaje: string, data: InversionPorUsuarioDTO[] }>> => {
     return await httpService.get(`${BASE_ENDPOINT}/metricas/agregado-por-usuario`);
   }
 };

@@ -4,20 +4,15 @@ import {
   Card, CardContent, Divider, Chip, useTheme, IconButton, Avatar
 } from '@mui/material';
 import { 
-  AccountBalanceWallet, Warning, TrendingUp, Description, Gavel, ChevronRight, CheckCircle, Schedule, ReceiptLong, Assessment, EmojiEvents,
+  AccountBalanceWallet, Warning, TrendingUp, Description, Gavel,
+  ChevronRight, CheckCircle, Schedule, ReceiptLong, Assessment, EmojiEvents,
   AccountCircle, HelpOutline, Security,
   MonetizationOn
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 
-// Servicios
-import MensajeService from '../../../services/mensaje.service';
-import PagoService from '../../../services/pago.service';
-import SuscripcionService from '../../../services/suscripcion.service';
-import ResumenCuentaService from '../../../services/resumenCuenta.service';
-import InversionService from '../../../services/inversion.service';
-import PujaService from '../../../services/puja.service';
+
 
 // Context & Hooks
 import { useAuth } from '../../../context/AuthContext';
@@ -30,6 +25,12 @@ import type { PagoDto } from '../../../types/dto/pago.dto';
 import type { SuscripcionDto } from '../../../types/dto/suscripcion.dto';
 import type { ResumenCuentaDto } from '../../../types/dto/resumenCuenta.dto';
 import type { InversionDto } from '../../../types/dto/inversion.dto';
+import InversionService from '../../../services/inversion.service';
+import ResumenCuentaService from '../../../services/resumenCuenta.service';
+import MensajeService from '../../../services/mensaje.service';
+import SuscripcionService from '../../../services/suscripcion.service';
+import PagoService from '../../../services/pago.service';
+import PujaService from '../../../services/puja.service';
 
 const UserDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -68,7 +69,19 @@ const UserDashboard: React.FC = () => {
   // ========== 2. LÓGICA CENTRALIZADA ========== 
   const stats = useDashboardStats({ resumenes, suscripciones, inversiones, pagos });
   const mensajesSinLeer = mensajesData?.conteo || 0;
-  const cantidadGanadas = misPujas?.filter(p => p.estado_puja === 'ganadora_pendiente').length || 0;
+  const pujasGanadoras = misPujas?.filter(p => p.estado_puja === 'ganadora_pendiente') || [];
+  const cantidadGanadas = pujasGanadoras.length;
+  
+  // Calcular días restantes para cada puja ganadora
+  const pujasConDiasRestantes = pujasGanadoras.map(puja => {
+    const diasRestantes = puja.fecha_vencimiento_pago 
+      ? PujaService.calcularDiasRestantes(puja.fecha_vencimiento_pago)
+      : 90;
+    return { ...puja, diasRestantes };
+  }).sort((a, b) => a.diasRestantes - b.diasRestantes); // Ordenar por urgencia
+  
+  const pujaMasUrgente = pujasConDiasRestantes[0]; // La que tiene menos días
+  const hayPujasUrgentes = pujaMasUrgente && pujaMasUrgente.diasRestantes <= 7;
 
   return (
     <Box sx={{ bgcolor: 'background.default', minHeight: '100vh', pb: 8 }}>
@@ -112,18 +125,77 @@ const UserDashboard: React.FC = () => {
           <Stack spacing={2} mb={5}>
             {cantidadGanadas > 0 && (
                <Alert 
-                severity="success" 
+                severity={hayPujasUrgentes ? "warning" : "success"} 
                 variant="filled"
                 icon={<EmojiEvents fontSize="large" />}
                 action={
-                  <Button variant="contained" color="warning" size="small" onClick={() => navigate('/client/subastas')} sx={{ fontWeight: 800 }}>
+                  <Button 
+                    variant="contained" 
+                    color={hayPujasUrgentes ? "error" : "warning"} 
+                    size="small" 
+                    onClick={() => navigate('/client/subastas')} 
+                    sx={{ fontWeight: 800 }}
+                  >
                     Pagar Ahora
                   </Button>
                 }
-                sx={{ borderRadius: 3, py: 2, px: 3, boxShadow: theme.shadows[4] }}
+                sx={{ 
+                  borderRadius: 3, 
+                  py: 2, 
+                  px: 3, 
+                  boxShadow: theme.shadows[4],
+                  bgcolor: hayPujasUrgentes 
+                    ? theme.palette.warning.dark 
+                    : theme.palette.success.dark
+                }}
               >
-                <Typography variant="subtitle1" fontWeight={700}>¡Felicitaciones! Ganaste {cantidadGanadas} subasta{cantidadGanadas > 1 ? 's' : ''}</Typography>
-                <Typography variant="body2">Asegura tu adjudicación completando el pago hoy.</Typography>
+                <Stack spacing={1}>
+                  <Typography variant="subtitle1" fontWeight={700}>
+                    {hayPujasUrgentes 
+                      ? `⚠️ ¡Urgente! ${cantidadGanadas} subasta${cantidadGanadas > 1 ? 's' : ''} por pagar`
+                      : `¡Felicitaciones! Ganaste ${cantidadGanadas} subasta${cantidadGanadas > 1 ? 's' : ''}`
+                    }
+                  </Typography>
+                  
+                  {pujaMasUrgente && (
+                    <Box>
+                      <Typography variant="body2" sx={{ opacity: 0.95, mb: 0.5 }}>
+                        {pujaMasUrgente.lote?.nombre_lote || `Lote #${pujaMasUrgente.id_lote}`}
+                      </Typography>
+                      <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
+                        <Chip 
+                          label={
+                            pujaMasUrgente.diasRestantes === 0 
+                              ? "⚠️ Vence HOY" 
+                              : pujaMasUrgente.diasRestantes === 1
+                                ? "⚠️ Vence MAÑANA"
+                                : pujaMasUrgente.diasRestantes <= 7
+                                  ? `⚠️ ${pujaMasUrgente.diasRestantes} días restantes`
+                                  : `${pujaMasUrgente.diasRestantes} días restantes`
+                          }
+                          color={pujaMasUrgente.diasRestantes <= 7 ? "error" : "default"}
+                          size="small"
+                          sx={{ 
+                            fontWeight: 700,
+                            bgcolor: pujaMasUrgente.diasRestantes <= 7 ? 'error.main' : 'rgba(255,255,255,0.2)',
+                            color: pujaMasUrgente.diasRestantes <= 7 ? 'white' : 'inherit'
+                          }}
+                        />
+                        {pujaMasUrgente.fecha_vencimiento_pago && (
+                          <Typography variant="caption" sx={{ opacity: 0.9 }}>
+                            Vence: {new Date(pujaMasUrgente.fecha_vencimiento_pago).toLocaleDateString('es-AR')}
+                          </Typography>
+                        )}
+                      </Stack>
+                    </Box>
+                  )}
+                  
+                  {cantidadGanadas > 1 && (
+                    <Typography variant="caption" sx={{ opacity: 0.85, display: 'block', mt: 0.5 }}>
+                      {cantidadGanadas - 1} {cantidadGanadas - 1 === 1 ? 'subasta más' : 'subastas más'} pendiente{cantidadGanadas - 1 > 1 ? 's' : ''} de pago
+                    </Typography>
+                  )}
+                </Stack>
               </Alert>
             )}
 

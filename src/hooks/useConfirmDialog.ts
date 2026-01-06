@@ -1,23 +1,8 @@
 // src/hooks/useConfirmDialog.ts
+
 import { useState, useCallback } from 'react';
 
-/**
- * Interfaz para permitir acceso seguro a propiedades comunes 
- * sin usar 'any' dentro de la lógica del hook.
- */
-interface EntityWithDetails {
-  id?: number | string;
-  nombre?: string;
-  apellido?: string;
-  nombre_completo?: string;
-  nombre_proyecto?: string;
-  nombre_lote?: string;
-  nombre_archivo?: string;
-  activo?: boolean;
-  usuario?: { nombre: string; apellido: string };
-}
-
-// 1. Definición de acciones posibles
+// 1. Definimos todas las acciones posibles en la app
 export type ConfirmAction =
   | 'cancel_subscription'
   | 'admin_cancel_subscription'
@@ -33,7 +18,8 @@ export type ConfirmAction =
   | 'delete_plantilla'
   | 'toggle_plantilla_status'
   | 'approve_kyc'
-  | 'force_confirm_transaction'
+  | 'force_confirm_transaction' // ✅ NUEVO: Acción agregada
+  | 'cancel_puja' // ✅ NUEVO: Cancelar puja
   | null;
 
 interface ConfirmConfig {
@@ -43,7 +29,7 @@ interface ConfirmConfig {
   severity: 'error' | 'warning' | 'info' | 'success';
 }
 
-// 2. Configuración base estática
+// 2. Configuración centralizada de textos y colores
 const CONFIRM_CONFIGS: Record<NonNullable<ConfirmAction>, ConfirmConfig> = {
   cancel_subscription: {
     title: '¿Cancelar suscripción?',
@@ -129,27 +115,35 @@ const CONFIRM_CONFIGS: Record<NonNullable<ConfirmAction>, ConfirmConfig> = {
     confirmText: 'Sí, Aprobar',
     severity: 'info', 
   },
+  // ✅ Configuración base para Transacciones
   force_confirm_transaction: {
     title: '¿Forzar confirmación?',
     description: 'Esta acción marcará la transacción como pagada manualmente.',
     confirmText: 'Sí, Forzar Pago',
-    severity: 'error',
+    severity: 'error', // Usamos error/warning fuerte porque es una acción delicada
+  },
+  // ✅ Configuración para Cancelar Puja
+  cancel_puja: {
+    title: '¿Cancelar puja?',
+    description: 'Esta acción cancelará tu oferta. Solo puedes cancelar pujas que no sean ganadoras y mientras la subasta esté activa.',
+    confirmText: 'Sí, cancelar puja',
+    severity: 'warning',
   },
 };
 
-// 3. El Hook con Genéricos
-export const useConfirmDialog = <T = unknown>() => {
+// 3. El Hook
+export const useConfirmDialog = () => {
   const [state, setState] = useState<{
     open: boolean;
     action: ConfirmAction;
-    data: T | null;
+    data: any;
   }>({ 
     open: false, 
     action: null, 
     data: null 
   });
 
-  const confirm = useCallback((action: NonNullable<ConfirmAction>, data: T | null = null) => {
+  const confirm = useCallback((action: NonNullable<ConfirmAction>, data?: any) => {
     setState({ open: true, action, data });
   }, []);
 
@@ -157,113 +151,155 @@ export const useConfirmDialog = <T = unknown>() => {
     setState({ open: false, action: null, data: null });
   }, []);
 
-  // Obtenemos la configuración dinámica basada en la acción y los datos
+  // Obtenemos la configuración basada en la acción actual
   const getConfig = (): ConfirmConfig | null => {
     if (!state.action) return null;
 
     const baseConfig = CONFIRM_CONFIGS[state.action];
-    const d = state.data as EntityWithDetails; // Casting seguro interno
 
-    // Manejo de textos dinámicos
-    switch (state.action) {
-      case 'force_confirm_transaction':
+    // --- CASOS DINÁMICOS ---
+
+    // Caso especial: force_confirm_transaction (NUEVO)
+    if (state.action === 'force_confirm_transaction' && state.data) {
         return {
-          ...baseConfig,
-          title: `¿Forzar transacción #${d?.id}?`,
-          description: `⚠️ ESTA ACCIÓN ES IRREVERSIBLE. Estás confirmando manualmente que el dinero llegó al banco/pasarela. Esto asignará activos al usuario inmediatamente.`,
-          confirmText: 'Sí, Confirmar Manualmente',
+            title: `¿Forzar transacción #${state.data.id}?`,
+            description: `⚠️ ESTA ACCIÓN ES IRREVERSIBLE. Estás confirmando manualmente que el dinero llegó al banco/pasarela. Esto asignará activos al usuario inmediatamente.`,
+            confirmText: 'Sí, Confirmar Manualmente',
+            severity: 'error',
         };
-
-      case 'approve_kyc':
-        return {
-          ...baseConfig,
-          title: `¿Aprobar verificación KYC?`,
-          description: `Estás a punto de validar la identidad de ${d?.nombre_completo || 'el usuario'}. El usuario recibirá una notificación y quedará habilitado para operar.`,
-          confirmText: 'Sí, Aprobar Verificación',
-        };
-
-      case 'toggle_project_visibility':
-        return {
-          ...baseConfig,
-          title: d?.activo ? '¿Ocultar proyecto?' : '¿Mostrar proyecto?',
-          description: d?.activo 
-            ? 'El proyecto dejará de ser visible para los usuarios. Podrás reactivarlo cuando lo desees.'
-            : 'El proyecto será visible para todos los usuarios. Asegúrate de que esté listo para ser publicado.',
-          confirmText: d?.activo ? 'Sí, ocultar' : 'Sí, mostrar',
-          severity: d?.activo ? 'warning' : 'info',
-        };
-
-      case 'toggle_user_status':
-        return {
-          ...baseConfig,
-          title: d?.activo ? '¿Desactivar usuario?' : '¿Activar usuario?',
-          description: d?.activo 
-            ? `${d?.nombre} ${d?.apellido} no podrá iniciar sesión ni realizar operaciones hasta que sea activado manualmente.`
-            : `${d?.nombre} ${d?.apellido} recuperará el acceso completo a la plataforma.`,
-          confirmText: d?.activo ? 'Sí, Desactivar' : 'Sí, Activar',
-          severity: d?.activo ? 'error' : 'info',
-        };
-
-      case 'toggle_lote_visibility':
-        return {
-          ...baseConfig,
-          title: d?.activo ? '¿Ocultar lote?' : '¿Mostrar lote?',
-          description: d?.activo 
-            ? 'El lote dejará de ser visible en la plataforma.'
-            : 'El lote será visible para todos los usuarios.',
-          confirmText: d?.activo ? 'Sí, ocultar' : 'Sí, mostrar',
-          severity: d?.activo ? 'warning' : 'info',
-        };
-
-      case 'start_auction':
-        return {
-          ...baseConfig,
-          title: '¿Iniciar subasta del lote?',
-          description: `Se iniciará la subasta para "${d?.nombre_lote}". Los usuarios podrán comenzar a pujar inmediatamente.`,
-          confirmText: 'Sí, iniciar subasta',
-        };
-
-      case 'end_auction':
-        return {
-          ...baseConfig,
-          title: '¿Finalizar subasta del lote?',
-          description: `Se finalizará la subasta para "${d?.nombre_lote}". Se determinará un ganador y no se podrán realizar más pujas.`,
-          confirmText: 'Sí, finalizar subasta',
-        };
-
-      case 'delete_plantilla':
-        return {
-          ...baseConfig,
-          title: '¿Eliminar plantilla?',
-          description: `La plantilla "${d?.nombre_archivo}" dejará de estar disponible y será movida a la papelera.`,
-        };
-
-      case 'toggle_plantilla_status':
-        return {
-          ...baseConfig,
-          title: d?.activo ? '¿Desactivar plantilla?' : '¿Activar plantilla?',
-          description: d?.activo 
-            ? `La plantilla "${d?.nombre_archivo}" dejará de estar disponible para nuevos contratos.`
-            : `La plantilla "${d?.nombre_archivo}" volverá a estar disponible para generar nuevos contratos.`,
-          confirmText: d?.activo ? 'Sí, desactivar' : 'Sí, activar',
-        };
-
-      case 'admin_cancel_subscription':
-        return {
-          ...baseConfig,
-          title: `¿Cancelar suscripción #${d?.id}?`,
-          description: `Estás a punto de cancelar la suscripción de ${d?.usuario?.nombre} ${d?.usuario?.apellido}. Esta acción generará una deuda inmediata y anulará el acceso.`,
-        };
-
-      default:
-        return baseConfig;
     }
+
+    // Caso especial: approve_kyc
+    if (state.action === 'approve_kyc' && state.data) {
+        const userName = state.data.nombre_completo || 'el usuario';
+        return {
+            title: `¿Aprobar verificación KYC?`,
+            description: `Estás a punto de validar la identidad de ${userName}. El usuario recibirá una notificación y quedará habilitado para operar en la plataforma.`,
+            confirmText: 'Sí, Aprobar Verificación',
+            severity: 'info',
+        };
+    }
+
+    // Caso especial: toggle_project_visibility
+    if (state.action === 'toggle_project_visibility' && state.data) {
+      const isActive = state.data.activo;
+      return {
+        title: isActive ? '¿Ocultar proyecto?' : '¿Mostrar proyecto?',
+        description: isActive 
+          ? 'El proyecto dejará de ser visible para los usuarios en la plataforma. Podrás reactivarlo cuando lo desees.'
+          : 'El proyecto será visible para todos los usuarios en la plataforma. Asegúrate de que esté listo para ser publicado.',
+        confirmText: isActive ? 'Sí, ocultar' : 'Sí, mostrar',
+        severity: isActive ? 'warning' : 'info',
+      };
+    }
+
+    // Caso especial: toggle_user_status
+    if (state.action === 'toggle_user_status' && state.data) {
+      const isActive = state.data.activo;
+      const userName = `${state.data.nombre} ${state.data.apellido}`;
+      return {
+        title: isActive ? '¿Desactivar usuario?' : 'Activar usuario?',
+        description: isActive 
+          ? `${userName} no podrá iniciar sesión ni realizar operaciones hasta que sea Activado manualmente.`
+          : `${userName} recuperará el acceso completo a la plataforma y podrá iniciar sesión normalmente.`,
+        confirmText: isActive ? 'Sí, Desactivar' : 'Sí, Activar',
+        severity: isActive ? 'error' : 'info',
+      };
+    }
+
+    // Caso especial: toggle_lote_visibility
+    if (state.action === 'toggle_lote_visibility' && state.data) {
+      const isActive = state.data.activo;
+      return {
+        title: isActive ? '¿Ocultar lote?' : '¿Mostrar lote?',
+        description: isActive 
+          ? 'El lote dejará de ser visible para los usuarios en la plataforma. Podrás reactivarlo cuando lo desees.'
+          : 'El lote será visible para todos los usuarios en la plataforma. Asegúrate de que esté listo para ser publicado.',
+        confirmText: isActive ? 'Sí, ocultar' : 'Sí, mostrar',
+        severity: isActive ? 'warning' : 'info',
+      };
+    }
+
+    // Caso especial: start_auction
+    if (state.action === 'start_auction' && state.data) {
+      const loteName = state.data.nombre_lote;
+      return {
+        title: '¿Iniciar subasta del lote?',
+        description: `Se iniciará la subasta para "${loteName}". Los usuarios podrán comenzar a pujar inmediatamente. Esta acción no se puede deshacer.`,
+        confirmText: 'Sí, iniciar subasta',
+        severity: 'warning',
+      };
+    }
+
+    // Caso especial: end_auction
+    if (state.action === 'end_auction' && state.data) {
+      const loteName = state.data.nombre_lote;
+      return {
+        title: '¿Finalizar subasta del lote?',
+        description: `Se finalizará la subasta para "${loteName}". Se determinará un ganador y no se podrán realizar más pujas. Esta acción es irreversible.`,
+        confirmText: 'Sí, finalizar subasta',
+        severity: 'error',
+      };
+    }
+
+    // Caso especial: delete_plantilla
+    if (state.action === 'delete_plantilla' && state.data) {
+      const fileName = state.data.nombre_archivo;
+      return {
+        title: '¿Eliminar plantilla?',
+        description: `La plantilla "${fileName}" dejará de estar disponible y será movida a la papelera. Esta acción puede revertirse posteriormente.`,
+        confirmText: 'Sí, eliminar',
+        severity: 'error',
+      };
+    }
+
+    // Caso especial: toggle_plantilla_status
+    if (state.action === 'toggle_plantilla_status' && state.data) {
+      const isActive = state.data.activo;
+      const fileName = state.data.nombre_archivo;
+      return {
+        title: isActive ? '¿Desactivar plantilla?' : '¿Activar plantilla?',
+        description: isActive 
+          ? `La plantilla "${fileName}" dejará de estar disponible para generar nuevos contratos. Los contratos existentes no se verán afectados.`
+          : `La plantilla "${fileName}" volverá a estar disponible para generar nuevos contratos.`,
+        confirmText: isActive ? 'Sí, desactivar' : 'Sí, activar',
+        severity: isActive ? 'warning' : 'info',
+      };
+    }
+
+    // Caso especial: Admin cancela suscripción
+    if (state.action === 'admin_cancel_subscription' && state.data) {
+      const userName = `${state.data.usuario?.nombre} ${state.data.usuario?.apellido}`;
+      const lote = state.data.nombre_lote || `ID ${state.data.id}`;
+      return {
+        title: `¿Cancelar suscripción #${state.data.id}?`,
+        description: `Estás a punto de cancelar la suscripción de ${userName} para el lote ${lote}. Esta acción generará una deuda inmediata por el saldo restante y anulará el acceso.`,
+        confirmText: 'Sí, cancelar y generar deuda',
+        severity: 'error',
+      };
+    }
+
+    // Caso especial: Cancelar puja
+    if (state.action === 'cancel_puja' && state.data) {
+      const loteName = state.data.lote?.nombre_lote || `Lote #${state.data.id_lote}`;
+      const monto = new Intl.NumberFormat('es-AR', { 
+        style: 'currency', 
+        currency: 'ARS',
+        maximumFractionDigits: 0 
+      }).format(state.data.monto_puja);
+      return {
+        title: '¿Cancelar tu puja?',
+        description: `Estás a punto de cancelar tu oferta de ${monto} para ${loteName}. Esta acción solo es posible si la subasta está activa y tu puja no es la ganadora.`,
+        confirmText: 'Sí, cancelar puja',
+        severity: 'warning',
+      };
+    }
+
+    return baseConfig;
   };
 
   return {
-    open: state.open,
-    action: state.action,
-    data: state.data,
+    ...state,
     config: getConfig(),
     confirm,
     close,

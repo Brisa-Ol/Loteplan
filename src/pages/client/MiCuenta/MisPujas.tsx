@@ -2,37 +2,54 @@ import React, { useState } from 'react';
 import {
   Box, Typography, Button, Stack, Chip, Alert, Divider,
   Card, CardContent, CardMedia, CardActions,
-  alpha, useTheme, CircularProgress
+  alpha, useTheme, CircularProgress, Snackbar
 } from '@mui/material';
 import {
   Gavel, Payment, AccessTime, CheckCircle, Cancel, Visibility,
-  MonetizationOn, CalendarMonth, EmojiEvents
+  MonetizationOn, CalendarMonth, EmojiEvents, DeleteOutline
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
-// Servicios y Tipos
-import PujaService from '../../../services/puja.service';
+
 import type { PujaDto } from '../../../types/dto/puja.dto';
-import ImagenService from '../../../services/imagen.service';
+
 
 // Componentes Comunes
 import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
 import { QueryHandler } from '../../../components/common/QueryHandler/QueryHandler';
 import { PageHeader } from '../../../components/common/PageHeader/PageHeader';
 import TwoFactorAuthModal from '../../../components/common/TwoFactorAuthModal/TwoFactorAuthModal';
+import { ConfirmDialog } from '../../../components/common/ConfirmDialog/ConfirmDialog';
 
 // Hooks
 import { useModal } from '../../../hooks/useModal';
+import { useConfirmDialog } from '../../../hooks/useConfirmDialog';
+import PujaService from '../../../services/puja.service';
+import ImagenService from '../../../services/imagen.service';
 
 const MisPujas: React.FC = () => {
   const navigate = useNavigate();
   const theme = useTheme();
+  const queryClient = useQueryClient();
   
   // 1. Estados y Hooks para 2FA y Selección
   const twoFaModal = useModal();
+  const confirmDialog = useConfirmDialog();
   const [selectedPujaId, setSelectedPujaId] = useState<number | null>(null);
   const [twoFAError, setTwoFAError] = useState<string | null>(null);
+  const [highlightedId, setHighlightedId] = useState<number | null>(null);
+  
+  // Estado para Snackbar
+  const [snackbar, setSnackbar] = useState<{ 
+    open: boolean; 
+    message: string; 
+    severity: 'success' | 'error' | 'info' 
+  }>({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
 
   // 2. Obtener mis pujas
   const { data: pujas, isLoading, error } = useQuery<PujaDto[]>({
@@ -45,11 +62,12 @@ const MisPujas: React.FC = () => {
     mutationFn: async (pujaId: number) => {
       return await PujaService.iniciarPagoGanadora(pujaId);
     },
-    onSuccess: (response, pujaId) => {
+    onSuccess: (response) => {
       const data = response.data;
       
       // Caso A: Requiere 2FA (Status 202 o flag is2FARequired)
       if (response.status === 202 || data.is2FARequired) {
+        // Mantenemos selectedPujaId seteuado para saber cuál confirmar
         setTwoFAError(null);
         twoFaModal.open();
         return;
@@ -62,7 +80,7 @@ const MisPujas: React.FC = () => {
     },
     onError: (err: any) => {
       alert(err.response?.data?.error || 'Error al iniciar el pago');
-      setSelectedPujaId(null); 
+      setSelectedPujaId(null); // Limpiamos selección si falla
     }
   });
 
@@ -84,6 +102,53 @@ const MisPujas: React.FC = () => {
     onError: (err: any) => setTwoFAError(err.response?.data?.error || "Código inválido.")
   });
 
+  // 5. Mutación para Cancelar Puja
+  const cancelPujaMutation = useMutation({
+    mutationFn: async (pujaId: number) => {
+      return await PujaService.cancelMyPuja(pujaId);
+    },
+    onSuccess: (_, pujaId) => {
+      // Invalidar queries para refrescar datos
+      queryClient.invalidateQueries({ queryKey: ['misPujas'] });
+      queryClient.invalidateQueries({ queryKey: ['lote'] });
+      queryClient.invalidateQueries({ queryKey: ['lotesProyecto'] });
+      
+      // Feedback visual
+      setHighlightedId(pujaId);
+      setTimeout(() => setHighlightedId(null), 2500);
+      
+      // Mostrar mensaje de éxito
+      setSnackbar({
+        open: true,
+        message: 'Puja cancelada exitosamente',
+        severity: 'success'
+      });
+      
+      confirmDialog.close();
+    },
+    onError: (err: any) => {
+      const errorMessage = err.response?.data?.error || 'Error al cancelar la puja';
+      setSnackbar({
+        open: true,
+        message: errorMessage,
+        severity: 'error'
+      });
+      confirmDialog.close();
+    }
+  });
+
+  // Handler para cancelar puja
+  const handleCancelarPuja = (puja: PujaDto) => {
+    confirmDialog.confirm('cancel_puja', puja);
+  };
+
+  // Handler para confirmar cancelación
+  const handleConfirmCancel = () => {
+    if (confirmDialog.data) {
+      cancelPujaMutation.mutate(confirmDialog.data.id);
+    }
+  };
+
   // Helper de Configuración Visual de Estados
   const getStatusConfig = (status: string) => {
     switch (status) {
@@ -99,7 +164,8 @@ const MisPujas: React.FC = () => {
   const formatCurrency = (val: number) => 
     new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(val);
 
-  
+  // 🚨 CÓDIGO ELIMINADO AQUÍ: El bloque <Button> flotante que causaba el error de sintaxis ha sido removido.
+
   return (
     <PageContainer maxWidth="lg">
       
@@ -120,6 +186,8 @@ const MisPujas: React.FC = () => {
                 : undefined;
 
               const isWinnerPending = puja.estado_puja === 'ganadora_pendiente';
+              const puedeCancelar = puja.estado_puja === 'activa'; // Solo pujas activas pueden cancelarse
+              const isHighlighted = highlightedId === puja.id;
 
               return (
                 <Card
@@ -129,9 +197,15 @@ const MisPujas: React.FC = () => {
                     display: 'flex', flexDirection: 'column',
                     borderRadius: 3,
                     border: '1px solid',
-                    borderColor: isWinnerPending ? 'warning.main' : 'divider',
+                    borderColor: isHighlighted 
+                      ? 'success.main' 
+                      : isWinnerPending 
+                        ? 'warning.main' 
+                        : 'divider',
+                    borderWidth: isHighlighted ? 2 : 1,
                     position: 'relative',
                     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    bgcolor: isHighlighted ? alpha(theme.palette.success.main, 0.05) : 'background.paper',
                     '&:hover': { transform: 'translateY(-4px)', boxShadow: theme.shadows[4] }
                   }}
                 >
@@ -199,43 +273,122 @@ const MisPujas: React.FC = () => {
                       </Box>
                     </Stack>
 
-                    {isWinnerPending && puja.fecha_vencimiento_pago && (
-                      <Alert severity="warning" sx={{ mt: 2, borderRadius: 2 }}>
-                        <Typography variant="caption" fontWeight={600}>
-                           Vence el: {new Date(puja.fecha_vencimiento_pago).toLocaleDateString()}
-                        </Typography>
-                      </Alert>
-                    )}
+                    {isWinnerPending && puja.fecha_vencimiento_pago && (() => {
+                      const diasRestantes = PujaService.calcularDiasRestantes(puja.fecha_vencimiento_pago);
+                      const esUrgente = diasRestantes <= 7;
+                      const venceHoy = diasRestantes === 0;
+                      const venceManana = diasRestantes === 1;
+                      
+                      return (
+                        <Alert 
+                          severity={venceHoy ? "error" : esUrgente ? "warning" : "info"} 
+                          sx={{ 
+                            mt: 2, 
+                            borderRadius: 2,
+                            bgcolor: venceHoy 
+                              ? alpha(theme.palette.error.main, 0.1)
+                              : esUrgente
+                                ? alpha(theme.palette.warning.main, 0.1)
+                                : alpha(theme.palette.info.main, 0.1)
+                          }}
+                        >
+                          <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={1}>
+                            <Box>
+                              <Typography variant="caption" fontWeight={700} display="block">
+                                {venceHoy 
+                                  ? "⚠️ VENCE HOY - Paga inmediatamente"
+                                  : venceManana
+                                    ? "⚠️ Vence MAÑANA"
+                                    : esUrgente
+                                      ? `⚠️ ${diasRestantes} días restantes`
+                                      : `${diasRestantes} días restantes`
+                                }
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
+                                Vence el: {new Date(puja.fecha_vencimiento_pago).toLocaleDateString('es-AR', { 
+                                  weekday: 'long', 
+                                  year: 'numeric', 
+                                  month: 'long', 
+                                  day: 'numeric' 
+                                })}
+                              </Typography>
+                            </Box>
+                            <Chip 
+                              label={
+                                venceHoy 
+                                  ? "URGENTE"
+                                  : esUrgente
+                                    ? `${diasRestantes}d`
+                                    : `${diasRestantes} días`
+                              }
+                              color={venceHoy ? "error" : esUrgente ? "warning" : "default"}
+                              size="small"
+                              sx={{ 
+                                fontWeight: 800,
+                                fontSize: venceHoy ? '0.75rem' : '0.7rem'
+                              }}
+                            />
+                          </Stack>
+                        </Alert>
+                      );
+                    })()}
                   </CardContent>
 
                   <Divider />
 
                   <CardActions sx={{ p: 2 }}>
-                    <Stack direction="row" spacing={1} width="100%">
-                      <Button
-                        variant="outlined"
-                        fullWidth
-                        startIcon={<Visibility />}
-                        onClick={() => idProyecto && navigate(`/proyectos/${idProyecto}`)}
-                        disabled={!idProyecto}
-                      >
-                        Ver Proyecto
-                      </Button>
-
-                      {isWinnerPending && (
+                    <Stack direction="column" spacing={1} width="100%">
+                      <Stack direction="row" spacing={1} width="100%">
                         <Button
-                          variant="contained"
-                          color="warning"
+                          variant="outlined"
                           fullWidth
-                          startIcon={payMutation.isPending && selectedPujaId === puja.id ? <CircularProgress size={20} color="inherit" /> : <Payment />}
-                          onClick={() => {
-                            setSelectedPujaId(puja.id); 
-                            payMutation.mutate(puja.id);
-                          }}
-                          disabled={payMutation.isPending} 
-                          sx={{ fontWeight: 700 }}
+                          startIcon={<Visibility />}
+                          onClick={() => idProyecto && navigate(`/proyectos/${idProyecto}`)}
+                          disabled={!idProyecto}
                         >
-                          {payMutation.isPending && selectedPujaId === puja.id ? 'Procesando...' : 'Pagar'}
+                          Ver Proyecto
+                        </Button>
+
+                        {isWinnerPending && (
+                          <Button
+                            variant="contained"
+                            color="warning"
+                            fullWidth
+                            startIcon={payMutation.isPending && selectedPujaId === puja.id ? <CircularProgress size={20} color="inherit" /> : <Payment />}
+                            onClick={() => {
+                              setSelectedPujaId(puja.id);
+                              payMutation.mutate(puja.id);
+                            }}
+                            disabled={payMutation.isPending}
+                            sx={{ fontWeight: 700 }}
+                          >
+                            {payMutation.isPending && selectedPujaId === puja.id ? 'Procesando...' : 'Pagar'}
+                          </Button>
+                        )}
+                      </Stack>
+
+                      {/* Botón Cancelar Puja - Solo para pujas activas */}
+                      {puedeCancelar && (
+                        <Button
+                          variant="outlined"
+                          color="error"
+                          fullWidth
+                          size="small"
+                          startIcon={cancelPujaMutation.isPending && confirmDialog.data?.id === puja.id ? <CircularProgress size={16} color="inherit" /> : <DeleteOutline />}
+                          onClick={() => handleCancelarPuja(puja)}
+                          disabled={cancelPujaMutation.isPending || payMutation.isPending}
+                          sx={{ 
+                            mt: 0.5,
+                            borderStyle: 'dashed',
+                            '&:hover': {
+                              borderStyle: 'solid',
+                              bgcolor: alpha(theme.palette.error.main, 0.05)
+                            }
+                          }}
+                        >
+                          {cancelPujaMutation.isPending && confirmDialog.data?.id === puja.id 
+                            ? 'Cancelando...' 
+                            : 'Cancelar Puja'}
                         </Button>
                       )}
                     </Stack>
@@ -291,6 +444,30 @@ const MisPujas: React.FC = () => {
         title="Confirmar Pago"
         description="Ingresa el código para asegurar tu lote ganado."
       />
+
+      {/* Dialog de Confirmación para Cancelar Puja */}
+      <ConfirmDialog
+        controller={confirmDialog}
+        onConfirm={handleConfirmCancel}
+      />
+
+      {/* Snackbar para Feedback */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert 
+          onClose={() => setSnackbar({ ...snackbar, open: false })} 
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+          elevation={6}
+          variant="filled"
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
 
     </PageContainer>
   );

@@ -16,15 +16,19 @@ interface KycStatusResponse {
   estado_verificacion: string;
   mensaje?: string;
   puede_enviar?: boolean;
-  // ... resto de propiedades opcionales del modelo
   id?: number;
-  // ...
   motivo_rechazo?: string;
 }
-
 /**
  * Servicio para la gestión de la Verificación de Identidad (KYC).
- * Conecta los flujos de usuario (carga de documentos) y administrador (aprobación/rechazo).
+ * Conecta con el controlador `verificacionIdentidadController` del backend.
+ * 
+ * @remarks
+ * - El KYC es obligatorio para realizar operaciones financieras (suscripciones, inversiones, pagos)
+ * - Los usuarios suben documentos de identidad y selfie
+ * - Los administradores revisan y aprueban/rechazan las solicitudes
+ * - El estado puede ser: NO_INICIADO, PENDIENTE, APROBADA, RECHAZADA
+ * - Los archivos se envían como FormData (multipart/form-data)
  */
 const kycService = {
   
@@ -34,9 +38,17 @@ const kycService = {
 
   /**
    * Envía los datos y archivos para una nueva verificación.
-   * Transforma el objeto DTO en `FormData` para soportar subida de archivos.
-   * * @param submitData - Objeto con datos personales y archivos (File objects).
-   * @returns Respuesta del servidor confirmando la recepción.
+   * 
+   * @param submitData - Datos personales y archivos (documentos, selfie, video)
+   * @returns Respuesta del servidor confirmando la recepción
+   *@remarks
+   * Backend: POST /api/kyc/submit
+   * - Requiere autenticación
+   * - Transforma el DTO en FormData para soportar archivos
+   * - Archivos requeridos: documento_frente, documento_dorso, selfie_con_documento
+   * - Archivo opcional: video_verificacion
+   * - Incluye verificación geográfica opcional (latitud/longitud)
+   * - Crea la solicitud en estado 'PENDIENTE'
    */
   async submit(submitData: Partial<SubmitKycDto>): Promise<any> {
     const formData = new FormData();
@@ -63,9 +75,17 @@ const kycService = {
   },
 
   /**
-   * Obtiene el estado actual de la verificación del usuario logueado.
-   * Normaliza la respuesta para manejar consistentemente el caso "NO_INICIADO".
-   * * @returns Objeto `KycStatusDTO` seguro para la UI.
+   * Obtiene el estado actual de la verificación de identidad del usuario autenticado.
+   * 
+   * @returns Estado de verificación normalizado
+   * 
+   * @remarks
+   * Backend: GET /api/kyc/status
+   * - Requiere autenticación
+   * - Normaliza la respuesta para manejar el caso "NO_INICIADO"
+   * - Retorna: estado_verificacion, puede_enviar, motivo_rechazo (si aplica)
+   * - Si no hay solicitud previa, retorna estado "NO_INICIADO" con puede_enviar: true
+   * 
    */
   async getStatus(): Promise<KycStatusDTO> {
     const { data } = await httpService.get<KycStatusResponse>(`${ENDPOINT}/status`);
@@ -93,7 +113,7 @@ const kycService = {
       estado_verificacion: data.estado_verificacion as any,
       puede_enviar: data.puede_enviar,
       motivo_rechazo: data.motivo_rechazo
-      // ... resto de campos
+
     } as KycStatusDTO;
   },
 
@@ -102,7 +122,16 @@ const kycService = {
   // ==========================================
 
   /**
-   * Lista todas las solicitudes en estado PENDIENTE.
+ * Lista todas las solicitudes de verificación en estado PENDIENTE (solo administradores).
+   * 
+   * @returns Lista de solicitudes pendientes de revisión
+   * 
+   * @remarks
+   * Backend: GET /api/kyc/pending
+   * - Requiere autenticación y rol admin
+   * - Retorna solo solicitudes que esperan aprobación/rechazo
+   * - Incluye todos los archivos y datos del usuario
+   * 
    */
   async getPendingVerifications(): Promise<KycDTO[]> {
     const { data } = await httpService.get<KycListResponse>(`${ENDPOINT}/pending`);
@@ -110,7 +139,15 @@ const kycService = {
   },
 
   /**
-   * Lista todas las solicitudes históricas APROBADAS.
+   * Lista todas las solicitudes históricas APROBADAS (solo administradores).
+   *    * 
+   * @returns Lista de solicitudes aprobadas
+   * 
+   * @remarks
+   * Backend: GET /api/kyc/approved
+   * - Requiere autenticación y rol admin
+   * - Retorna historial de aprobaciones
+   * 
    */
   async getApprovedVerifications(): Promise<KycDTO[]> {
     const { data } = await httpService.get<KycListResponse>(`${ENDPOINT}/approved`);
@@ -118,7 +155,15 @@ const kycService = {
   },
 
   /**
-   * Lista todas las solicitudes históricas RECHAZADAS.
+  * Lista todas las solicitudes históricas RECHAZADAS (solo administradores).
+   * 
+   * @returns Lista de solicitudes rechazadas
+   * 
+   * @remarks
+   * Backend: GET /api/kyc/rejected
+   * - Requiere autenticación y rol admin
+   * - Retorna historial de rechazos con motivos
+   * 
    */
   async getRejectedVerifications(): Promise<KycDTO[]> {
     const { data } = await httpService.get<KycListResponse>(`${ENDPOINT}/rejected`);
@@ -126,7 +171,16 @@ const kycService = {
   },
 
   /**
-   * Obtiene el historial completo (Aprobadas + Rechazadas).
+    * Obtiene el historial completo de solicitudes procesadas (solo administradores).
+   * 
+   * @returns Lista de solicitudes aprobadas y rechazadas
+   * 
+   * @remarks
+   * Backend: GET /api/kyc/all
+   * - Requiere autenticación y rol admin
+   * - Retorna todas las solicitudes con estado final (APROBADA o RECHAZADA)
+   * - Útil para reportes y análisis
+   * 
    */
   async getAllProcessedVerifications(): Promise<KycDTO[]> {
     const { data } = await httpService.get<KycListResponse>(`${ENDPOINT}/all`);
@@ -134,8 +188,18 @@ const kycService = {
   },
 
   /**
-   * Aprueba una solicitud de verificación.
-   * @param idUsuario - ID del usuario cuya solicitud se aprueba.
+  * Aprueba una solicitud de verificación de identidad (solo administradores).
+   * 
+   * @param idUsuario - ID del usuario cuya solicitud se aprueba
+   * @returns Respuesta de confirmación
+   * 
+   * @remarks
+   * Backend: POST /api/kyc/approve/:idUsuario
+   * - Requiere autenticación y rol admin
+   * - Cambia el estado a 'APROBADA'
+   * - Habilita al usuario para realizar operaciones financieras
+   * - Envía notificación al usuario
+   * 
    */
   async approveVerification(idUsuario: string | number): Promise<any> {
     const { data } = await httpService.post(`${ENDPOINT}/approve/${idUsuario}`);
@@ -143,9 +207,20 @@ const kycService = {
   },
 
   /**
-   * Rechaza una solicitud de verificación.
-   * @param idUsuario - ID del usuario.
-   * @param rejectData - Objeto con el motivo del rechazo.
+* Rechaza una solicitud de verificación de identidad (solo administradores).
+   * 
+   * @param idUsuario - ID del usuario
+   * @param rejectData - Motivo del rechazo
+   * @returns Respuesta de confirmación
+   * 
+   * @remarks
+   * Backend: POST /api/kyc/reject/:idUsuario
+   * - Requiere autenticación y rol admin
+   * - Cambia el estado a 'RECHAZADA'
+   * - Guarda el motivo del rechazo
+   * - El usuario puede enviar una nueva solicitud después
+   * - Envía notificación al usuario con el motivo
+   * 
    */
   async rejectVerification(idUsuario: string | number, rejectData: RejectKycDTO): Promise<any> {
     const { data } = await httpService.post(`${ENDPOINT}/reject/${idUsuario}`, rejectData);

@@ -35,7 +35,34 @@ httpService.interceptors.request.use(
 
 // 📥 Response Interceptor
 httpService.interceptors.response.use(
-  (response: AxiosResponse) => response,
+  (response: AxiosResponse) => {
+    // ✅ MEJORA: Normalizar respuestas del backend
+    // El backend puede responder con diferentes formatos:
+    // 1. { success: true, data: {...}, message: "..." }
+    // 2. { message: "...", data: {...} }
+    // 3. Array directo [...]
+    // 4. Objeto directo {...}
+    
+    const data = response.data;
+    
+    // Si la respuesta tiene el formato estándar del backend con 'success'
+    if (data && typeof data === 'object' && 'success' in data) {
+      if (data.success === false) {
+        // El backend ya marcó esto como error, pero llegó con status 200
+        // Convertirlo a un error para que se maneje correctamente
+        return Promise.reject({
+          status: response.status,
+          message: data.error || 'Error en la operación',
+          type: 'VALIDATION_ERROR',
+          code: data.code,
+          originalError: data
+        } as ApiError);
+      }
+      // Si success === true, la respuesta es válida, continuar normalmente
+    }
+    
+    return response;
+  },
   (error) => {
     // Si no hay respuesta del servidor (Network Error)
     if (!error.response) {
@@ -102,10 +129,16 @@ httpService.interceptors.response.use(
     }
 
     // ⚠️ 400/409/500: Errores de Validación o Servidor
+    // ✅ MEJORA: Manejar formato estándar del backend (success: false)
+    const errorMessage = data?.success === false 
+      ? data.error 
+      : (data?.error || data?.message || 'Ocurrió un error inesperado.');
+    
     return Promise.reject({
       status: status,
-      message: data.error || data.message || 'Ocurrió un error inesperado.',
+      message: errorMessage,
       type: 'VALIDATION_ERROR',
+      code: data?.code,
       originalError: error
     } as ApiError);
   }

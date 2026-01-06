@@ -5,7 +5,8 @@ import type {
   UpdateUserAdminDto,
   UpdateUserMeDto,
   UsuarioDto,
-  AdminDisable2FADto
+  AdminDisable2FADto,
+  ValidateDeactivationResponseDto
 } from '../types/dto/usuario.dto';
 import type { GenericResponseDto } from '../types/dto/auth.dto';
 
@@ -16,14 +17,14 @@ const ENDPOINT = '/usuarios';
  * Conecta con el controlador `usuarioController` del backend.
  */
 const UsuarioService = {
-  
+
   // ===========================================
   // 1. RUTAS DE ADMINISTRACIÓN (Solo Admins)
   // ===========================================
 
   /**
    * Crea un nuevo usuario manualmente (sin flujo de registro público).
-   * @param data - Datos del usuario.
+   * Backend: POST /usuarios/
    */
   create: async (data: CreateUsuarioDto): Promise<AxiosResponse<UsuarioDto>> => {
     return await httpService.post(ENDPOINT, data);
@@ -31,6 +32,7 @@ const UsuarioService = {
 
   /**
    * Obtiene el listado completo de usuarios (incluyendo inactivos/baneados).
+   * Backend: GET /usuarios/
    */
   findAll: async (): Promise<AxiosResponse<UsuarioDto[]>> => {
     return await httpService.get(ENDPOINT);
@@ -38,6 +40,7 @@ const UsuarioService = {
 
   /**
    * Obtiene solo los usuarios que están activos en el sistema.
+   * Backend: GET /usuarios/activos
    */
   findAllActivos: async (): Promise<AxiosResponse<UsuarioDto[]>> => {
     return await httpService.get(`${ENDPOINT}/activos`);
@@ -45,6 +48,7 @@ const UsuarioService = {
 
   /**
    * Obtiene el listado de administradores activos.
+   * Backend: GET /usuarios/admins
    */
   findAllAdmins: async (): Promise<AxiosResponse<UsuarioDto[]>> => {
     return await httpService.get(`${ENDPOINT}/admins`);
@@ -52,7 +56,7 @@ const UsuarioService = {
 
   /**
    * Busca usuarios por nombre de usuario o email (coincidencia parcial).
-   * @param term - Término de búsqueda (min 3 caracteres).
+   * Backend: GET /usuarios/search?q=term
    */
   search: async (term: string): Promise<AxiosResponse<UsuarioDto[]>> => {
     return await httpService.get(`${ENDPOINT}/search`, {
@@ -66,7 +70,7 @@ const UsuarioService = {
 
   /**
    * Valida el token de confirmación de correo electrónico.
-   * @param token - Token recibido por email.
+   * Backend: GET /usuarios/confirmar/:token
    */
   confirmEmail: async (token: string): Promise<AxiosResponse<GenericResponseDto>> => {
     return await httpService.get(`${ENDPOINT}/confirmar/${token}`);
@@ -74,7 +78,7 @@ const UsuarioService = {
 
   /**
    * Obtiene el perfil del usuario autenticado actual.
-   * Usa el token JWT para identificar al usuario.
+   * Backend: GET /usuarios/me
    */
   getMe: async (): Promise<AxiosResponse<UsuarioDto>> => {
     return await httpService.get(`${ENDPOINT}/me`);
@@ -82,15 +86,25 @@ const UsuarioService = {
 
   /**
    * Actualiza los datos permitidos del perfil propio (nombre, email, teléfono).
+   * Backend: PUT /usuarios/me
    */
   updateMe: async (data: UpdateUserMeDto): Promise<AxiosResponse<UsuarioDto>> => {
     return await httpService.put(`${ENDPOINT}/me`, data);
   },
 
   /**
+   * Valida si el usuario puede desactivar su cuenta.
+   * Retorna advertencias sobre suscripciones activas, pagos pendientes, etc.
+   * Backend: GET /usuarios/me/validate-deactivation
+   */
+  validateDeactivation: async (): Promise<AxiosResponse<ValidateDeactivationResponseDto>> => {
+    return await httpService.get(`${ENDPOINT}/me/validate-deactivation`);
+  },
+
+  /**
    * Elimina la cuenta propia (Soft Delete).
    * Requiere código 2FA si el usuario lo tiene activo.
-   * @param twofaCode - Código TOTP de 6 dígitos (Opcional si no tiene 2FA).
+   * Backend: POST /usuarios/me (con body { twofaCode })
    */
   softDeleteMe: async (twofaCode?: string): Promise<AxiosResponse<void>> => {
     const payload = twofaCode ? { twofaCode } : {};
@@ -102,19 +116,40 @@ const UsuarioService = {
   // ===========================================
 
   /**
-   * Permite a un administrador desactivar el 2FA de otro usuario (en caso de pérdida de dispositivo).
-   * @param userId - ID del usuario.
-   * @param data - Justificación opcional.
+   * Prepara una cuenta desactivada para ser reactivada.
+   * Permite actualizar email/nombre_usuario/dni para resolver conflictos.
+   * Backend: PATCH /usuarios/:id/prepare-reactivation
+   */
+  prepareForReactivation: async (
+    userId: number,
+    data?: { email?: string; nombre_usuario?: string; dni?: string }
+  ): Promise<AxiosResponse<GenericResponseDto>> => {
+    return await httpService.patch(`${ENDPOINT}/${userId}/prepare-reactivation`, data || {});
+  },
+
+  /**
+   * Reactiva una cuenta previamente desactivada.
+   * Backend: PATCH /usuarios/:id/reactivate
+   */
+  reactivateAccount: async (userId: number): Promise<AxiosResponse<GenericResponseDto>> => {
+    return await httpService.patch(`${ENDPOINT}/${userId}/reactivate`);
+  },
+
+  /**
+   * Permite a un administrador desactivar el 2FA de otro usuario.
+   * Útil cuando el usuario perdió acceso a su dispositivo autenticador.
+   * Backend: PATCH /usuarios/:id/reset-2fa
    */
   adminReset2FA: async (
-    userId: number, 
-    data: AdminDisable2FADto 
+    userId: number,
+    data: AdminDisable2FADto
   ): Promise<AxiosResponse<GenericResponseDto>> => {
     return await httpService.patch(`${ENDPOINT}/${userId}/reset-2fa`, data);
   },
 
   /**
    * Obtiene el detalle de un usuario específico por su ID.
+   * Backend: GET /usuarios/:id
    */
   findById: async (id: number): Promise<AxiosResponse<UsuarioDto>> => {
     return await httpService.get(`${ENDPOINT}/${id}`);
@@ -122,6 +157,7 @@ const UsuarioService = {
 
   /**
    * Actualiza los datos de un usuario específico (Admin puede editar más campos, como Rol).
+   * Backend: PUT /usuarios/:id
    */
   update: async (id: number, data: UpdateUserAdminDto): Promise<AxiosResponse<UsuarioDto>> => {
     return await httpService.put(`${ENDPOINT}/${id}`, data);
@@ -129,6 +165,7 @@ const UsuarioService = {
 
   /**
    * Desactiva (banea) a un usuario específico.
+   * Backend: DELETE /usuarios/:id
    */
   softDelete: async (id: number): Promise<AxiosResponse<GenericResponseDto>> => {
     return await httpService.delete(`${ENDPOINT}/${id}`);
