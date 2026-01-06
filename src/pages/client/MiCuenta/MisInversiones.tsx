@@ -26,12 +26,15 @@ import TwoFactorAuthModal from '../../../components/common/TwoFactorAuthModal/Tw
 
 // Hooks
 import { useModal } from '../../../hooks/useModal';
+import { useSnackbar } from '../../../context/SnackbarContext'; // ✅ Hook Global
 import type { ApiError } from '../../../services/httpService';
-
 
 const MisInversiones: React.FC = () => {
   const navigate = useNavigate();
   const theme = useTheme();
+  
+  // ✅ Usamos snackbar global (opcional para feedback extra)
+  const { showInfo } = useSnackbar();
 
   // --- 1. ESTADOS Y MODAL ---
   const twoFaModal = useModal();
@@ -55,25 +58,29 @@ const MisInversiones: React.FC = () => {
     },
     onSuccess: (response) => {
       const data = response.data;
+      
+      // Caso A: Requiere 2FA
       if (response.status === 202 || data.is2FARequired) {
         setTwoFAError(null);
         twoFaModal.open();
         return;
       }
-      if (data.redirectUrl) window.location.href = data.redirectUrl;
+      
+      // Caso B: Redirección directa (Helper del servicio ya maneja el error si no hay URL)
+      MercadoPagoService.handleRedirect(data);
     },
     onError: (error: unknown) => {
         setHighlightedId(null);
         const err = error as ApiError;
 
-        // ✅ MANEJO DE SEGURIDAD (Si el usuario perdió el estado 2FA/KYC)
+        // ✅ MANEJO DE SEGURIDAD ESPECÍFICO (Redirección a configuración)
         if (err.type === 'SECURITY_ACTION') {
-            alert("⚠️ Requisito de Seguridad: Para realizar pagos debes tener activo el 2FA.");
+            showInfo("⚠️ Para pagar debes configurar tu 2FA primero.");
             navigate('/client/MiCuenta/SecuritySettings');
             return;
         }
-
-        alert(err.message || 'Error al iniciar pago');
+        
+        // El resto de errores (500, 400) ya salieron por el interceptor global
     }
   });
 
@@ -84,10 +91,15 @@ const MisInversiones: React.FC = () => {
       return await InversionService.confirmar2FA({ inversionId: selectedInversionId, codigo_2fa: codigo });
     },
     onSuccess: (response) => {
-      if (response.data.redirectUrl) window.location.href = response.data.redirectUrl;
+      // Éxito: Redirigir a Mercado Pago
+      MercadoPagoService.handleRedirect(response.data);
       twoFaModal.close();
     },
-    onError: (err: any) => setTwoFAError(err.response?.data?.error || "Código inválido.")
+    onError: (err: any) => {
+        // Error específico del modal (código incorrecto) -> Lo mostramos dentro del modal
+        // El interceptor ya mostró una alerta, pero aquí actualizamos el estado del modal
+        setTwoFAError(err.response?.data?.error || "Código inválido.");
+    }
   });
 
   // --- HELPERS ---

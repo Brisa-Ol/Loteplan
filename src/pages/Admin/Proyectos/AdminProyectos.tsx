@@ -25,8 +25,8 @@ import { QueryHandler } from '../../../components/common/QueryHandler/QueryHandl
 import { PageHeader } from '../../../components/common/PageHeader/PageHeader';
 import { DataTable, type DataTableColumn } from '../../../components/common/DataTable/DataTable';
 
-
-import { useSnackbar } from '../../../hooks/useSnackbar';
+// ✅ Hook del contexto (Solo para success)
+import { useSnackbar } from '../../../context/SnackbarContext'; 
 
 // Modales y Servicios
 import CreateProyectoModal from './components/modals/CreateProyectoModal';
@@ -40,7 +40,6 @@ import ProyectoService from '../../../services/proyecto.service';
 import { useModal } from '../../../hooks/useModal';
 import { ConfirmDialog } from '../../../components/common/ConfirmDialog/ConfirmDialog';
 import { useConfirmDialog } from '../../../hooks/useConfirmDialog';
-import GlobalSnackbar from '../../../components/common/GlobalSnackbarProps/GlobalSnackbarProps';
 
 type TipoInversionFilter = 'all' | 'mensual' | 'directo';
 type AppColor = 'primary' | 'secondary' | 'error' | 'warning' | 'info' | 'success';
@@ -49,8 +48,8 @@ const AdminProyectos: React.FC = () => {
   const theme = useTheme();
   const queryClient = useQueryClient();
 
-  // ✅ Hook de Snackbar Global
-  const { snackbar, showSuccess, showError, handleClose: closeSnackbar } = useSnackbar();
+  // ✅ Solo necesitamos feedback de éxito. El error es automático globalmente.
+  const { showSuccess } = useSnackbar();
 
   // --- HOOKS DE MODALES ---
   const createModal = useModal();
@@ -90,6 +89,7 @@ const AdminProyectos: React.FC = () => {
     }
   }, [proyectos]);
 
+  // 1. CREAR PROYECTO
   const createMutation = useMutation({
     mutationFn: async ({ data, image }: { data: CreateProyectoDto; image: File | null }) => {
       const response = await ProyectoService.create(data, image);
@@ -103,26 +103,27 @@ const AdminProyectos: React.FC = () => {
           setHighlightedId(newItem.id);
           setTimeout(() => setHighlightedId(null), 2500);
       }
-      
-      showSuccess('Proyecto creado correctamente'); // ✅
-    },
-    onError: (err: any) => showError(`Error al crear: ${err.response?.data?.error || err.message}`) // ✅
+      showSuccess('Proyecto creado correctamente');
+    }
+    // 🗑️ onError eliminado: Si falla, el modal sigue abierto para corregir y la alerta sale sola.
   });
 
+  // 2. INICIAR PROYECTO (COBROS)
   const startMutation = useMutation({
     mutationFn: (id: number) => ProyectoService.startProcess(id),
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ['adminProyectos'] });
       confirmDialog.close();
       setHighlightedId(id); 
-      showSuccess('Proyecto iniciado. Cobros activados.'); // ✅
+      showSuccess('Proyecto iniciado. Cobros activados.');
     },
-    onError: (err: any) => {
+    onError: () => {
+      // Solo cerramos el diálogo para no bloquear la UI. El error ya se mostró.
       confirmDialog.close();
-      showError(`Error al iniciar: ${err.response?.data?.error || err.message}`); // ✅
     }
   });
 
+  // 3. EDITAR PROYECTO
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: number, data: UpdateProyectoDto }) =>
       ProyectoService.update(id, data),
@@ -130,11 +131,12 @@ const AdminProyectos: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['adminProyectos'] });
       editModal.close(); 
       setHighlightedId(variables.id); 
-      showSuccess('Proyecto actualizado correctamente'); // ✅
-    },
-    onError: (err: any) => showError(`Error al editar: ${err.response?.data?.error || err.message}`) // ✅
+      showSuccess('Proyecto actualizado correctamente');
+    }
+    // 🗑️ onError eliminado: El modal queda abierto para corregir.
   });
 
+  // 4. ACTIVAR/DESACTIVAR VISIBILIDAD
   const toggleActiveMutation = useMutation({
     mutationFn: async ({ id, activo }: { id: number; activo: boolean }) => {
       return ProyectoService.update(id, { activo });
@@ -146,11 +148,11 @@ const AdminProyectos: React.FC = () => {
       setHighlightedId(variables.id);
       setTimeout(() => setHighlightedId(null), 2500);
 
-      showSuccess(variables.activo ? 'Proyecto ahora es visible' : 'Proyecto ocultado correctamente'); // ✅
+      showSuccess(variables.activo ? 'Proyecto ahora es visible' : 'Proyecto ocultado correctamente');
     },
-    onError: (err: any) => {
+    onError: () => {
+      // Cerramos diálogo de confirmación si falla.
       confirmDialog.close();
-      showError(`Error: ${err.response?.data?.error || err.message}`); // ✅
     }
   });
 
@@ -496,12 +498,6 @@ const AdminProyectos: React.FC = () => {
         controller={confirmDialog}
         onConfirm={handleConfirmAction}
         isLoading={startMutation.isPending || toggleActiveMutation.isPending}
-      />
-
-      {/* ✅ Implementación del GlobalSnackbar */}
-      <GlobalSnackbar 
-        {...snackbar} 
-        onClose={closeSnackbar} 
       />
 
     </PageContainer>

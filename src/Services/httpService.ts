@@ -1,16 +1,19 @@
 // src/services/httpService.ts
 
 import axios, { type AxiosResponse, type InternalAxiosRequestConfig } from 'axios';
+// ✅ IMPORTANTE: Importamos el puente para mostrar alertas visuales
+import { notifyError, notifyWarning } from '../utils/snackbarUtils';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
 
-// Definición robusta de errores para que los componentes sepan qué hacer
+// Definición robusta de errores
 export interface ApiError {
   status: number;
   message: string;
   type: 'SECURITY_ACTION' | 'ROLE_RESTRICTION' | 'RATE_LIMIT' | 'AUTH_ERROR' | 'UNKNOWN' | 'VALIDATION_ERROR';
   action_required?: 'enable_2fa' | 'complete_kyc';
   kyc_status?: string;
+  code?: string;
   originalError?: unknown;
 }
 
@@ -21,7 +24,9 @@ const httpService = axios.create({
   },
 });
 
-// 📤 Request Interceptor
+// =================================================================
+// 📤 REQUEST INTERCEPTOR (Inyección de Token)
+// =================================================================
 httpService.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const token = localStorage.getItem('auth_token');
@@ -33,42 +38,52 @@ httpService.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// 📥 Response Interceptor
+// =================================================================
+// 📥 RESPONSE INTERCEPTOR (Manejo Global de Errores y Alertas)
+// =================================================================
 httpService.interceptors.response.use(
   (response: AxiosResponse) => {
-    // ✅ MEJORA: Normalizar respuestas del backend
-    // El backend puede responder con diferentes formatos:
-    // 1. { success: true, data: {...}, message: "..." }
-    // 2. { message: "...", data: {...} }
-    // 3. Array directo [...]
-    // 4. Objeto directo {...}
-    
+    // ---------------------------------------------------------------
+    // 1. Manejo de "Soft Errors" (Backend devuelve 200 pero success: false)
+    // ---------------------------------------------------------------
     const data = response.data;
     
-    // Si la respuesta tiene el formato estándar del backend con 'success'
     if (data && typeof data === 'object' && 'success' in data) {
       if (data.success === false) {
-        // El backend ya marcó esto como error, pero llegó con status 200
-        // Convertirlo a un error para que se maneje correctamente
+        const message = data.error || 'Error en la operación';
+
+        // 🔔 ALERTA VISUAL AUTOMÁTICA
+        notifyError(message);
+
+        // Rechazamos la promesa para que el componente sepa que falló
         return Promise.reject({
           status: response.status,
-          message: data.error || 'Error en la operación',
+          message: message,
           type: 'VALIDATION_ERROR',
           code: data.code,
           originalError: data
         } as ApiError);
       }
-      // Si success === true, la respuesta es válida, continuar normalmente
     }
     
+    // Si todo está bien, devolvemos la respuesta limpia
     return response;
   },
   (error) => {
-    // Si no hay respuesta del servidor (Network Error)
+    // ---------------------------------------------------------------
+    // 2. Manejo de Errores de Red / Servidor (Catch)
+    // ---------------------------------------------------------------
+
+    // A) Si no hay respuesta del servidor (Internet caído o Server Down)
     if (!error.response) {
+      const msg = 'No se pudo conectar con el servidor. Verifica tu conexión.';
+      
+      // 🔔 ALERTA VISUAL
+      notifyError(msg); 
+      
       return Promise.reject({
         status: 0,
-        message: 'No se pudo conectar con el servidor. Verifica tu conexión.',
+        message: msg,
         type: 'UNKNOWN',
         originalError: error
       } as ApiError);
@@ -77,38 +92,54 @@ httpService.interceptors.response.use(
     const status = error.response.status;
     const data = error.response.data;
 
-    // 🛡️ 429: Rate Limit (Demasiados intentos)
+    // B) 🛡️ 429: Rate Limit
     if (status === 429) {
+      const msg = data.error || 'Has excedido el límite de intentos. Por favor espera unos minutos.';
+      
+      // 🔔 ALERTA VISUAL
+      notifyError(msg); 
+
       return Promise.reject({
         status: 429,
-        message: data.error || 'Has excedido el límite de intentos. Por favor espera unos minutos.',
+        message: msg,
         type: 'RATE_LIMIT',
         originalError: error
       } as ApiError);
     }
 
-    // 🔒 401: Sesión Expirada o Credenciales Inválidas
+    // C) 🔒 401: Sesión Expirada
     if (status === 401) {
-      // Ignoramos el endpoint de login/verify para no redirigir en caso de credenciales malas
+      // Evitamos bucle infinito si falla el login mismo
       const isLoginEndpoint = error.config.url?.includes('/auth/login') || error.config.url?.includes('/auth/2fa/verify');
+      const msg = data.error || 'Credenciales inválidas o sesión expirada.';
       
+      // 🔔 ALERTA VISUAL (Siempre avisamos)
+      notifyError(msg);
+
       if (!isLoginEndpoint && !window.location.pathname.includes('/login')) {
         localStorage.removeItem('auth_token');
-        window.location.href = '/login'; // Redirección de seguridad
+        // Pequeño delay opcional para que el usuario lea el mensaje antes de cambiar de página
+        setTimeout(() => {
+             window.location.href = '/login'; 
+        }, 1000);
       }
       
       return Promise.reject({
         status: 401,
-        message: data.error || 'Credenciales inválidas o sesión expirada.',
+        message: msg,
         type: 'AUTH_ERROR',
         originalError: error
       } as ApiError);
     }
 
-    // 🚫 403: Bloqueos de Seguridad / Roles
+    // D) 🚫 403: Forbidden (Permisos o Acciones requeridas)
     if (status === 403) {
-      // Caso A: Requiere acción (KYC o 2FA)
+      // Caso: Requiere acción (KYC o 2FA)
       if (data.action_required) {
+        
+        // 🔔 ALERTA VISUAL (Usamos Warning para diferenciar)
+        notifyWarning(data.error || 'Acción de seguridad requerida');
+
         return Promise.reject({
           status: 403,
           message: data.error,
@@ -119,21 +150,28 @@ httpService.interceptors.response.use(
         } as ApiError);
       }
       
-      // Caso B: Restricción de Rol
+      // Caso: Restricción de Rol
+      const msg = data.error || 'No tienes permisos para realizar esta acción.';
+      
+      // 🔔 ALERTA VISUAL
+      notifyError(msg);
+
       return Promise.reject({
         status: 403,
-        message: data.error || 'No tienes permisos para realizar esta acción.',
+        message: msg,
         type: 'ROLE_RESTRICTION',
         originalError: error
       } as ApiError);
     }
 
-    // ⚠️ 400/409/500: Errores de Validación o Servidor
-    // ✅ MEJORA: Manejar formato estándar del backend (success: false)
+    // E) ⚠️ 400/500: Errores Genéricos (Validación o Crash del Server)
     const errorMessage = data?.success === false 
       ? data.error 
       : (data?.error || data?.message || 'Ocurrió un error inesperado.');
     
+    // 🔔 ALERTA VISUAL (Catch-all para cualquier otro error)
+    notifyError(errorMessage);
+
     return Promise.reject({
       status: status,
       message: errorMessage,

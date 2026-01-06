@@ -1,6 +1,6 @@
 // src/pages/Auth/ForgotPassword.tsx
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useFormik } from "formik";
 import * as Yup from "yup";
@@ -18,6 +18,7 @@ import {
 } from "@mui/material";
 import { MarkEmailRead, ArrowBack, Send as SendIcon } from "@mui/icons-material";
 
+// Contexto y Componentes
 import { useAuth } from "../../context/AuthContext";
 import { PageContainer } from "../../components/common/PageContainer/PageContainer";
 import AuthFormContainer from "./components/AuthFormContainer/AuthFormContainer";
@@ -26,11 +27,22 @@ import FormTextField from "./components/FormTextField/FormTextField";
 const ForgotPasswordPage: React.FC = () => {
   const navigate = useNavigate();
   const theme = useTheme();
-  const { forgotPassword, error, clearError } = useAuth(); // Ya no dependemos solo de isLoading del context
   
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  // ✅ ESTADO LOCAL para respuesta inmediata al click
-  const [localLoading, setLocalLoading] = useState(false);
+  // ✅ Extraemos todo del hook unificado
+  const { 
+    forgotPassword, 
+    isLoading, // Viene de useAccountActions
+    error,     // Viene de useAccountActions
+    clearError 
+  } = useAuth();
+  
+  const [successEmail, setSuccessEmail] = useState<string | null>(null);
+
+  // Limpiar errores al entrar/salir
+  useEffect(() => {
+    clearError();
+    return () => clearError();
+  }, [clearError]);
 
   const formik = useFormik({
     initialValues: {
@@ -41,43 +53,29 @@ const ForgotPasswordPage: React.FC = () => {
     }),
     onSubmit: async (values) => {
       clearError();
-      setSuccessMessage(null);
-      
-      // 1. Activamos la carga INMEDIATAMENTE
-      setLocalLoading(true);
-
       try {
-        // 2. Esperamos al backend
+        // useAccountActions maneja la carga y el error internamente
         await forgotPassword(values.email);
         
-        // 3. Si todo sale bien, mostramos éxito
-        setSuccessMessage(
-          "Hemos enviado las instrucciones de recuperación a tu correo. Por favor, revisa tu bandeja de entrada (y la carpeta de spam)."
-        );
+        // Si no hay error (la promesa se resuelve), mostramos éxito
+        setSuccessEmail(values.email);
       } catch (err) {
-        // Si falla, desactivamos la carga para mostrar el error
-        // (El error ya se guarda en el context 'error')
-      } finally {
-        // 4. Desactivamos el loading local
-        setLocalLoading(false);
+        // No es necesario hacer nada, el error se mostrará en la UI gracias al context
       }
     },
   });
 
-  // Usamos el estado local para decidir qué mostrar
-  const showLoading = localLoading;
-
-  // Título dinámico
+  // Título dinámico según estado
   const getTitle = () => {
-    if (showLoading) return "Enviando...";
-    if (successMessage) return "¡Correo Enviado!";
-    return "Restablecer Contraseña";
+    if (isLoading) return "Enviando...";
+    if (successEmail) return "¡Correo Enviado!";
+    return "Recuperar Contraseña";
   };
 
   const getSubtitle = () => {
-    if (showLoading) return "Procesando tu solicitud";
-    if (successMessage) return "";
-    return "Ingresá tu email y te enviaremos un enlace.";
+    if (isLoading) return "Procesando tu solicitud";
+    if (successEmail) return "";
+    return "Ingresá tu email y te enviaremos las instrucciones.";
   };
 
   return (
@@ -87,8 +85,8 @@ const ForgotPasswordPage: React.FC = () => {
         subtitle={getSubtitle()}
       >
         
-        {/* 1. VISTA DE CARGA (Prioridad absoluta) */}
-        {showLoading ? (
+        {/* 1. VISTA DE CARGA (Usando isLoading del hook) */}
+        {isLoading ? (
            <Fade in={true} timeout={300}>
              <Box textAlign="center" py={5}>
                <CircularProgress size={60} thickness={4} />
@@ -97,7 +95,7 @@ const ForgotPasswordPage: React.FC = () => {
                </Typography>
              </Box>
            </Fade>
-        ) : successMessage ? (
+        ) : successEmail ? (
           
           /* 2. VISTA DE ÉXITO */
           <Fade in={true}>
@@ -117,7 +115,8 @@ const ForgotPasswordPage: React.FC = () => {
               </Typography>
               
               <Typography variant="body2" color="text.secondary" paragraph sx={{ mb: 4 }}>
-                {successMessage}
+                Hemos enviado las instrucciones a <strong>{successEmail}</strong>.<br/>
+                Por favor revisa también tu carpeta de spam.
               </Typography>
 
               <Button
@@ -137,6 +136,7 @@ const ForgotPasswordPage: React.FC = () => {
           /* 3. VISTA DE FORMULARIO */
           <Fade in={true}>
             <Box>
+              {/* ✅ Error Inline del Contexto */}
               {error && (
                 <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }} onClose={clearError}>
                   {error}
@@ -150,7 +150,7 @@ const ForgotPasswordPage: React.FC = () => {
                     name="email"
                     label="Email"
                     formik={formik}
-                    disabled={showLoading}
+                    disabled={isLoading}
                   />
 
                   <Button
@@ -159,7 +159,7 @@ const ForgotPasswordPage: React.FC = () => {
                     type="submit"
                     size="large"
                     endIcon={<SendIcon />}
-                    disabled={showLoading || !formik.isValid || !formik.dirty}
+                    disabled={isLoading || !formik.isValid || !formik.dirty}
                     sx={{ py: 1.5, fontWeight: 700, borderRadius: 2 }}
                   >
                     Enviar Enlace

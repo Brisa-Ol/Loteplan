@@ -19,9 +19,6 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import type { KycDTO } from '../../../types/dto/kyc.dto';
-import type { ApiError } from '../../../services/httpService'; // Asegúrate de importar el tipo de error
-import kycService from '../../../services/kyc.service';
-
 import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
 import { PageHeader } from '../../../components/common/PageHeader/PageHeader';
 import { QueryHandler } from '../../../components/common/QueryHandler/QueryHandler';
@@ -29,9 +26,12 @@ import { DataTable, type DataTableColumn } from '../../../components/common/Data
 import { useModal } from '../../../hooks/useModal';
 import { useConfirmDialog } from '../../../hooks/useConfirmDialog';
 import { ConfirmDialog } from '../../../components/common/ConfirmDialog/ConfirmDialog';
-import { useSnackbar } from '../../../hooks/useSnackbar';
-import GlobalSnackbar from '../../../components/common/GlobalSnackbarProps/GlobalSnackbarProps';
+
+// ✅ Hook Global
+import { useSnackbar } from '../../../context/SnackbarContext';
+
 import KycDetailModal from './modals/KycDetailModal';
+import kycService from '../../../services/kyc.service';
 
 type TabValue = 'pendiente' | 'aprobada' | 'rechazada' | 'todas';
 
@@ -40,23 +40,21 @@ const AdminKYC: React.FC = () => {
   const queryClient = useQueryClient();
   const [currentTab, setCurrentTab] = useState<TabValue>('pendiente');
   
-  // Hooks
-  const { snackbar, showSuccess, showError, handleClose: closeSnackbar } = useSnackbar();
+  // ✅ Usamos el contexto global para éxito
+  const { showSuccess } = useSnackbar();
+  
+  // Modales y Dialogs
   const detailsModal = useModal();
   const rejectModal = useModal();
-  const confirmDialog = useConfirmDialog<KycDTO>();
+  const confirmDialog = useConfirmDialog();
 
   // Estados Locales
   const [selectedKyc, setSelectedKyc] = useState<KycDTO | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [kycToReject, setKycToReject] = useState<KycDTO | null>(null);
+  
+  // ✅ Estado para el efecto visual de la tabla
   const [lastActionId, setLastActionId] = useState<number | string | null>(null);
-
-  // Helper de Errores
-  const getErrorMessage = (error: unknown) => {
-    const apiError = error as ApiError;
-    return apiError.message || 'Ocurrió un error inesperado';
-  };
 
   // 📡 QUERIES
   const { data: pendingKYCs = [], isLoading: loadingPending, error: errorPending } = useQuery({
@@ -85,25 +83,29 @@ const AdminKYC: React.FC = () => {
   const isLoading = loadingPending || loadingApproved || loadingRejected || loadingAll;
   const error = errorPending || errorApproved || errorRejected || errorAll;
 
+  // Limpiar el resaltado al cambiar de pestaña
   useEffect(() => { setLastActionId(null); }, [currentTab]);
 
   // ⚡ MUTATIONS
   const approveMutation = useMutation({
     mutationFn: (idUsuario: number) => kycService.approveVerification(idUsuario),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
+      // Usamos variables (idUsuario) o el ID del item si lo tenemos guardado en confirmDialog
       if (confirmDialog.data?.id) setLastActionId(confirmDialog.data.id);
       
       queryClient.invalidateQueries({ queryKey: ['kycPending'] });
       queryClient.invalidateQueries({ queryKey: ['kycApproved'] });
       queryClient.invalidateQueries({ queryKey: ['kycAll'] });
       
-      showSuccess('Verificación aprobada correctamente'); 
+      showSuccess('✅ Verificación aprobada correctamente');
+      
       confirmDialog.close();
       detailsModal.close();
     },
-    onError: (err) => {
+    onError: () => {
+        // Solo cerramos el diálogo para no bloquear la UI. 
+        // El error sale automático por httpService.
         confirmDialog.close();
-        showError(getErrorMessage(err)); 
     },
   });
 
@@ -117,18 +119,20 @@ const AdminKYC: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['kycRejected'] });
       queryClient.invalidateQueries({ queryKey: ['kycAll'] });
       
-      showSuccess('Solicitud rechazada correctamente'); 
+      showSuccess('✅ Solicitud rechazada correctamente');
+      
       rejectModal.close();
       detailsModal.close();
       setRejectReason('');
     },
-    onError: (err) => showError(getErrorMessage(err)), 
+    // onError eliminado: Si falla, el modal de rechazo sigue abierto para que el usuario pueda reintentar.
   });
 
   // HANDLERS
   const handleOpenDetails = (kyc: KycDTO) => { setSelectedKyc(kyc); detailsModal.open(); };
   
   const handleApproveClick = (kyc: KycDTO) => {
+    // Pasamos el objeto completo para tener acceso al ID visual luego
     confirmDialog.confirm('approve_kyc', kyc);
   };
 
@@ -260,6 +264,7 @@ const AdminKYC: React.FC = () => {
     <PageContainer maxWidth="xl" sx={{ py: 3 }}>
       <PageHeader title="Gestión KYC" subtitle="Validación de identidad y documentación de usuarios" />
       
+      {/* Tabs Styled */}
       <Paper 
         elevation={0} 
         sx={{ 
@@ -286,12 +291,13 @@ const AdminKYC: React.FC = () => {
       </Paper>
 
       <QueryHandler isLoading={isLoading} error={error as Error}>
+        {/* ✅ DataTable Implementado con highlightedRowId */}
         <DataTable
             columns={columns}
             data={currentData}
             getRowKey={(row) => row.id} 
             emptyMessage={`No hay solicitudes en estado: ${currentTab}.`}
-            highlightedRowId={lastActionId}
+            highlightedRowId={lastActionId} // ✨ Efecto visual al aprobar/rechazar
             pagination 
             defaultRowsPerPage={10}
         />
@@ -309,6 +315,7 @@ const AdminKYC: React.FC = () => {
         isLoading={approveMutation.isPending}
       />
 
+      {/* Modal de Rechazo Manual */}
       <Dialog 
         open={rejectModal.isOpen} 
         onClose={rejectModal.close} 
@@ -342,7 +349,7 @@ const AdminKYC: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      <GlobalSnackbar {...snackbar} onClose={closeSnackbar} />
+      {/* ✅ <Snackbar> manual eliminado */}
     </PageContainer>
   );
 };

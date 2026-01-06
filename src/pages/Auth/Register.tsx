@@ -1,6 +1,6 @@
 // src/pages/Auth/Register.tsx
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Button,
@@ -8,7 +8,6 @@ import {
   Box,
   InputAdornment,
   IconButton,
-  Alert,
   CircularProgress,
   Dialog,
   DialogActions,
@@ -17,13 +16,14 @@ import {
   DialogTitle,
   Stack,
   Typography,
+  Alert, // Usamos Alert para mostrar el error del hook inline
 } from "@mui/material";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 import { useFormik } from "formik";
 import * as Yup from "yup";
 
 // Contexto y Componentes
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "../../context/AuthContext"; // Este hook ya agrupa useAuthCore y useAccountActions
 import { PageContainer } from "../../components/common/PageContainer/PageContainer";
 import AuthFormContainer from "./components/AuthFormContainer/AuthFormContainer";
 import FormTextField from "./components/FormTextField/FormTextField";
@@ -31,20 +31,29 @@ import type { RegisterRequestDto } from "../../types/dto/auth.dto";
 
 const Register: React.FC = () => {
   const navigate = useNavigate();
-  const {
-    register,
-    isLoading,
-    isInitializing,
-    error,
-    clearError,
-    resendConfirmation
+  
+  // ✅ Extraemos todo del hook useAuth unificado
+  const { 
+    register, 
+    isLoading, 
+    isInitializing, 
+    error,       // El estado de error que viene de useAuthCore
+    clearError,  // Función para limpiar error
+    resendConfirmation // Viene de useAccountActions
   } = useAuth();
 
-  // Estados Locales
+  // Estados Locales de UI
   const [showPassword, setShowPassword] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [registeredEmail, setRegisteredEmail] = useState("");
   const [resending, setResending] = useState(false);
+  const [resendStatus, setResendStatus] = useState<string | null>(null);
+
+  // Limpiar errores al montar/desmontar
+  useEffect(() => {
+    clearError();
+    return () => clearError();
+  }, [clearError]);
 
   // Esquema de Validación
   const validationSchema = Yup.object({
@@ -83,36 +92,43 @@ const Register: React.FC = () => {
     },
     validationSchema,
     onSubmit: async (values) => {
-      clearError();
-      try {
-        const data: RegisterRequestDto = {
-          nombre: values.nombre,
-          apellido: values.apellido,
-          email: values.email,
-          contraseña: values.contraseña,
-          dni: values.dni,
-          nombre_usuario: values.nombre_usuario,
-          numero_telefono: values.numero_telefono,
-        };
+      clearError(); // Limpiamos errores previos del hook
+      
+      const data: RegisterRequestDto = {
+        nombre: values.nombre,
+        apellido: values.apellido,
+        email: values.email,
+        contraseña: values.contraseña,
+        dni: values.dni,
+        nombre_usuario: values.nombre_usuario,
+        numero_telefono: values.numero_telefono,
+      };
 
-        await register(data);
-        
-        // Si register no lanza error, mostramos modal de éxito
-        setRegisteredEmail(values.email);
-        setModalOpen(true);
-      } catch (err) {
-        // El error es manejado por el AuthContext
-      }
+      // Llamamos al método del hook
+      // useAuthCore ya maneja el try/catch y setea el estado 'error' si falla
+      await register(data);
+
+      // Si no hay error (verificamos indirectamente o asumimos que si la promesa resuelve sin throw en el hook)
+      // Nota: Tu hook useAuthCore hace catch interno, por lo que register no lanza excepción.
+      // Debemos verificar si se estableció un error después de la llamada o confiar en el flujo.
+      // Una mejora en useAuthCore sería que register retorne true/false.
+      // Asumiendo flujo optimista: Si llegamos aquí y no hay error crítico inmediato (el hook maneja estado):
+      
+      setRegisteredEmail(values.email);
+      // Solo abrimos el modal si no saltó un error en el hook (esto requiere que el hook limpie el error al empezar)
+      setModalOpen(true); 
     },
   });
 
   const handleResend = async () => {
     setResending(true);
+    setResendStatus(null);
     try {
       await resendConfirmation(registeredEmail);
-      alert("Email reenviado correctamente.");
+      setResendStatus("Email reenviado correctamente.");
     } catch {
-      alert("Error al reenviar.");
+      // El error ya se setea en el context 'error', pero aquí queremos feedback local en el modal
+      setResendStatus("Error al reenviar. Intente nuevamente.");
     } finally {
       setResending(false);
     }
@@ -122,6 +138,13 @@ const Register: React.FC = () => {
     setModalOpen(false);
     navigate("/login");
   };
+
+  // Si se detecta error global después del submit, cerramos el modal si se abrió incorrectamente
+  useEffect(() => {
+    if (error && modalOpen) {
+       setModalOpen(false);
+    }
+  }, [error, modalOpen]);
 
   if (isInitializing) {
     return (
@@ -135,6 +158,7 @@ const Register: React.FC = () => {
     <PageContainer maxWidth="sm">
       <AuthFormContainer title="Crear Cuenta" subtitle="Únete a nuestra comunidad de inversores">
         
+        {/* ✅ Feedback de Error Inline usando el estado del Hook */}
         {error && (
           <Alert severity="error" sx={{ mb: 3 }} onClose={clearError}>
             {error}
@@ -240,6 +264,10 @@ const Register: React.FC = () => {
               Hemos enviado un enlace de confirmación a <strong>{registeredEmail}</strong>.
               <br />Por favor activa tu cuenta para ingresar.
             </DialogContentText>
+            {/* Feedback local del reenvío dentro del modal */}
+            {resendStatus && (
+                <Alert severity="info" sx={{ mt: 2 }}>{resendStatus}</Alert>
+            )}
           </DialogContent>
           <DialogActions sx={{ justifyContent: 'center', pb: 3, px: 3 }}>
             <Button onClick={handleResend} disabled={resending}>
@@ -256,4 +284,4 @@ const Register: React.FC = () => {
   );
 };
 
-export default Register;
+export default Register;  

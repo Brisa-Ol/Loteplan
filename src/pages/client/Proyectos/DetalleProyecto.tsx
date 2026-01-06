@@ -1,3 +1,5 @@
+// src/pages/client/Proyectos/DetalleProyecto.tsx
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -22,10 +24,12 @@ import MercadoPagoService from '../../../services/pagoMercado.service';
 
 // --- TIPOS ---
 import type { ContratoFirmadoDto } from '../../../types/dto/contrato.dto';
+import type { ApiError } from '../../../services/httpService';
 
 // --- HOOKS Y CONTEXTO ---
 import { useModal } from '../../../hooks/useModal';
 import { useAuth } from '../../../context/AuthContext';
+import { useSnackbar } from '../../../context/SnackbarContext'; // ✅ Hook Global
 
 // --- COMPONENTES COMUNES ---
 import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
@@ -57,6 +61,9 @@ const DetalleProyecto: React.FC = () => {
   const { user } = useAuth(); 
   const queryClient = useQueryClient();
   const theme = useTheme();
+  
+  // ✅ Usamos snackbar global
+  const { showSuccess, showError, showInfo } = useSnackbar();
   
   // --- ESTADOS DE UI ---
   const [tabValue, setTabValue] = useState(0);
@@ -145,7 +152,7 @@ const DetalleProyecto: React.FC = () => {
     if (status === 'approved' && externalReference && !pagoExitosoModal.isOpen) {
         verificarEstadoPago(Number(externalReference));
     } else if (status === 'failure' || status === 'rejected') {
-        alert("El pago fue rechazado o no se completó.");
+        showError("El pago fue rechazado o no se completó.");
         limpiarUrl();
     }
     return () => { if (pollingTimeoutRef.current) clearTimeout(pollingTimeoutRef.current); };
@@ -168,7 +175,7 @@ const DetalleProyecto: React.FC = () => {
                   pollingTimeoutRef.current = setTimeout(() => verificarEstadoPago(transaccionId, intentos + 1), 3000);
               } else {
                   setVerificandoPago(false);
-                  alert("Pago aprobado en MP. Espera unos minutos a que impacte en el sistema.");
+                  showInfo("Pago aprobado en MP. Espera unos minutos a que impacte en el sistema.");
                   limpiarUrl();
               }
           }
@@ -224,8 +231,7 @@ const DetalleProyecto: React.FC = () => {
       manejarRedireccionExito(data);
     },
     onError: (err: any) => {
-      console.error(err);
-      alert(`Error: ${err.response?.data?.error || err.message || 'Error al procesar la solicitud'}`);
+      // El error ya sale por el interceptor, pero cerramos modales
       suscribirseModal.close(); 
       inversionModal.close();
     }
@@ -263,6 +269,7 @@ const DetalleProyecto: React.FC = () => {
     setYaFirmo(true);
     firmaModal.close();
     queryClient.invalidateQueries({ queryKey: ['misContratos'] });
+    showSuccess("Contrato firmado correctamente");
   };
 
   const handleVerContratoFirmado = () => {

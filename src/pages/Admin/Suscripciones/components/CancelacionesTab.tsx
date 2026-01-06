@@ -1,45 +1,48 @@
-// src/pages/Admin/Cancelaciones/AdminCancelaciones.tsx
+// src/pages/Admin/Suscripciones/components/CancelacionesTab.tsx
 
 import React, { useState, useMemo, useCallback } from 'react';
-import { 
-  Box, Typography, Paper, TextField, InputAdornment, 
+import {
+  Box, Typography, Paper, TextField, InputAdornment,
   Chip, IconButton, Tooltip, Stack, Avatar, LinearProgress, Divider, useTheme, alpha
 } from '@mui/material';
-import { 
+import {
   Search, Visibility, TrendingDown, MoneyOff, Cancel,
-  Person as PersonIcon, DateRange as DateIcon
+  Person as PersonIcon,
+  DateRange as DateIcon
 } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
 
 // DTOs y Servicios
-import type { SuscripcionCanceladaDto } from '../../../types/dto/suscripcion.dto';
-import SuscripcionService from '../../../services/suscripcion.service';
+import type { SuscripcionCanceladaDto } from '../../../../types/dto/suscripcion.dto';
+
 
 // Componentes Comunes
-import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
-import { QueryHandler } from '../../../components/common/QueryHandler/QueryHandler';
-import { PageHeader } from '../../../components/common/PageHeader/PageHeader';
-import { DataTable, type DataTableColumn } from '../../../components/common/DataTable/DataTable';
-import DetalleCancelacionModal from './components/DetalleCancelacionModal';
+import { QueryHandler } from '../../../../components/common/QueryHandler/QueryHandler';
+import { DataTable, type DataTableColumn } from '../../../../components/common/DataTable/DataTable';
+import DetalleCancelacionModal from './DetalleCancelacionModal';
 
 // Hooks
-import { useModal } from '../../../hooks/useModal';
+import { useModal } from '../../../../hooks/useModal';
+import SuscripcionService from '../../../../services/suscripcion.service';
 
 // --- SUBCOMPONENTE: StatCard ---
-const StatCard: React.FC<{ 
-  title: string; 
-  value: string; 
-  sub?: string; 
-  color: string; 
+const StatCard: React.FC<{
+  title: string;
+  value: string;
+  sub?: string;
+  color: string;
   icon: React.ReactNode;
-  loading?: boolean; 
+  loading?: boolean;
 }> = ({ title, value, sub, color, icon, loading }) => (
-  <Paper 
-    elevation={0} 
-    sx={{ 
-      p: 2, 
-      display: 'flex', alignItems: 'center', gap: 2, 
-      border: '1px solid', borderColor: 'divider',
+  <Paper
+    elevation={0}
+    sx={{
+      p: 2,
+      display: 'flex',
+      alignItems: 'center',
+      gap: 2,
+      border: '1px solid',
+      borderColor: 'divider',
       flex: 1
     }}
   >
@@ -63,19 +66,19 @@ const StatCard: React.FC<{
 );
 
 // --- COMPONENTE PRINCIPAL ---
-const AdminCancelaciones: React.FC = () => {
+const CancelacionesTab: React.FC = () => {
   const theme = useTheme();
 
-  // Estados de Filtro
+  // 1. Estados de Filtro
   const [searchTerm, setSearchTerm] = useState('');
   const [dateStart, setDateStart] = useState('');
   const [dateEnd, setDateEnd] = useState('');
-  
-  // Modal y Selección
+
+  // 2. Estado de Modal y Selección
   const detailModal = useModal();
   const [selectedCancelacion, setSelectedCancelacion] = useState<SuscripcionCanceladaDto | null>(null);
 
-  // Queries
+  // 3. Queries
   const { data: cancelaciones = [], isLoading, error } = useQuery({
     queryKey: ['adminCancelaciones'],
     queryFn: async () => (await SuscripcionService.getAllCanceladas()).data,
@@ -86,20 +89,20 @@ const AdminCancelaciones: React.FC = () => {
     queryFn: async () => (await SuscripcionService.getCancellationMetrics()).data,
   });
 
-  // Cálculos Memoizados
+  // 4. Cálculos (Memos)
   const totalMontoLiquidado = useMemo(() => {
-    return cancelaciones.reduce((acc: number, curr: SuscripcionCanceladaDto) => acc + Number(curr.monto_pagado_total), 0);
+    return cancelaciones.reduce((acc, curr) => acc + Number(curr.monto_pagado_total), 0);
   }, [cancelaciones]);
 
   const filteredCancelaciones = useMemo(() => {
-    return cancelaciones.filter((item: SuscripcionCanceladaDto) => {
+    return cancelaciones.filter(item => {
       const term = searchTerm.toLowerCase();
-      
+
       const userName = item.usuario ? `${item.usuario.nombre} ${item.usuario.apellido}` : '';
       const userEmail = item.usuario?.email || '';
       const projectName = item.proyecto?.nombre_proyecto || '';
-      
-      const matchesSearch = 
+
+      const matchesSearch =
         userName.toLowerCase().includes(term) ||
         userEmail.toLowerCase().includes(term) ||
         projectName.toLowerCase().includes(term) ||
@@ -120,7 +123,7 @@ const AdminCancelaciones: React.FC = () => {
     });
   }, [cancelaciones, searchTerm, dateStart, dateEnd]);
 
-  // Handlers
+  // 5. Handlers (Callback para rendimiento)
   const handleVerDetalle = useCallback((item: SuscripcionCanceladaDto) => {
     setSelectedCancelacion(item);
     detailModal.open();
@@ -131,171 +134,177 @@ const AdminCancelaciones: React.FC = () => {
     setTimeout(() => setSelectedCancelacion(null), 300);
   }, [detailModal]);
 
-  // Columnas
+  // 6. Columnas
   const columns = useMemo<DataTableColumn<SuscripcionCanceladaDto>[]>(() => [
     {
-      id: 'id', label: 'ID / Fecha', minWidth: 140,
+      id: 'id',
+      label: 'ID / Fecha',
+      minWidth: 140,
       render: (item) => (
         <Box>
-            <Typography variant="body2" fontWeight={700}>#{item.id}</Typography>
-            <Stack direction="row" alignItems="center" spacing={0.5}>
-                <DateIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
-                <Typography variant="caption" color="text.secondary">
-                    {new Date(item.fecha_cancelacion).toLocaleDateString('es-AR')}
-                </Typography>
-            </Stack>
+          <Typography variant="body2" fontWeight={700}>#{item.id}</Typography>
+          <Stack direction="row" alignItems="center" spacing={0.5}>
+            <DateIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
+            <Typography variant="caption" color="text.secondary">
+              {new Date(item.fecha_cancelacion).toLocaleDateString('es-AR')}
+            </Typography>
+          </Stack>
         </Box>
       )
     },
     {
-      id: 'usuario', label: 'Ex-Usuario', minWidth: 220,
+      id: 'usuario',
+      label: 'Ex-Usuario',
+      minWidth: 220,
       render: (item) => (
         <Stack direction="row" spacing={2} alignItems="center">
-            <Avatar sx={{ 
-                width: 32, height: 32, 
-                bgcolor: alpha(theme.palette.error.main, 0.1),
-                color: 'error.main', fontSize: 14, fontWeight: 'bold'
-            }}>
-                {item.usuario?.nombre?.charAt(0) || <PersonIcon fontSize="small"/>}
-            </Avatar>
-            <Box>
-                <Typography variant="body2" fontWeight={600} color="text.primary">
-                    {item.usuario ? `${item.usuario.nombre} ${item.usuario.apellido}` : 'Usuario eliminado'}
-                </Typography>
-                <Typography variant="caption" color="text.secondary" noWrap display="block" sx={{ maxWidth: 180 }}>
-                    {item.usuario?.email || `ID Original: ${item.id_usuario}`}
-                </Typography>
-            </Box>
+          <Avatar sx={{
+            width: 32, height: 32,
+            bgcolor: alpha(theme.palette.error.main, 0.1), // Estilo consistente
+            color: 'error.main',
+            fontSize: 14,
+            fontWeight: 'bold'
+          }}>
+            {item.usuario?.nombre?.charAt(0) || <PersonIcon fontSize="small" />}
+          </Avatar>
+          <Box>
+            <Typography variant="body2" fontWeight={600} color="text.primary">
+              {item.usuario ? `${item.usuario.nombre} ${item.usuario.apellido}` : 'Usuario eliminado'}
+            </Typography>
+            <Typography variant="caption" color="text.secondary" noWrap display="block" sx={{ maxWidth: 180 }}>
+              {item.usuario?.email || `ID Original: ${item.id_usuario}`}
+            </Typography>
+          </Box>
         </Stack>
       )
     },
     {
-      id: 'proyecto', label: 'Proyecto',
+      id: 'proyecto',
+      label: 'Proyecto',
       render: (item) => (
         <Typography variant="body2" fontWeight={500}>
-            {item.proyecto?.nombre_proyecto || `ID Proyecto: ${item.id_proyecto}`}
+          {item.proyecto?.nombre_proyecto || `ID Proyecto: ${item.id_proyecto}`}
         </Typography>
       )
     },
     {
-      id: 'meses', label: 'Permanencia',
+      id: 'meses',
+      label: 'Permanencia',
       render: (item) => (
-        <Chip 
-            label={`${item.meses_pagados} Meses`} 
-            size="small" variant="outlined" 
-            sx={{ fontWeight: 600, borderColor: 'divider', color: 'text.secondary' }}
+        <Chip
+          label={`${item.meses_pagados} Meses`}
+          size="small"
+          variant="outlined"
+          sx={{ fontWeight: 600, borderColor: 'divider', color: 'text.secondary' }}
         />
       )
     },
     {
-      id: 'monto', label: 'Liquidado',
+      id: 'monto',
+      label: 'Liquidado',
       render: (item) => (
         <Typography variant="body2" fontWeight={700} color="error.main" sx={{ fontFamily: 'monospace' }}>
-            ${Number(item.monto_pagado_total).toLocaleString('es-AR')}
+          ${Number(item.monto_pagado_total).toLocaleString('es-AR')}
         </Typography>
       )
     },
     {
-      id: 'acciones', label: 'Acciones', align: 'right',
+      id: 'acciones',
+      label: 'Acciones',
+      align: 'right',
       render: (item) => (
         <Tooltip title="Ver Detalle">
-            <IconButton 
-              size="small" 
-              onClick={() => handleVerDetalle(item)}
-              sx={{ color: 'primary.main', '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.1) } }}
-            >
-              <Visibility fontSize="small" />
-            </IconButton>
+          <IconButton
+            size="small"
+            onClick={() => handleVerDetalle(item)}
+            sx={{ color: 'primary.main', '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.1) } }}
+          >
+            <Visibility fontSize="small" />
+          </IconButton>
         </Tooltip>
       )
     }
-  ], [theme, handleVerDetalle]); 
+  ], [theme, handleVerDetalle]);
 
   return (
-    <PageContainer maxWidth="xl">
-      
-      <PageHeader
-        title="Historial de Cancelaciones"
-        subtitle="Monitor de bajas, devoluciones y métricas de retención"
-      />
-
-      {/* 1. KPIs */}
-      <Box sx={{ 
-        display: 'grid', 
-        gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, 
-        gap: 2, mb: 4 
+    <Box>
+      {/* ========== 1. KPIs ========== */}
+      <Box sx={{
+        display: 'grid',
+        gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' },
+        gap: 2, mb: 4
       }}>
-        <StatCard 
-          title="Total Cancelaciones" 
-          value={metrics?.total_canceladas.toString() || '0'} 
+        <StatCard
+          title="Total Cancelaciones"
+          value={metrics?.total_canceladas.toString() || '0'}
           sub={`De ${metrics?.total_suscripciones || 0} totales`}
           color="error" icon={<Cancel />}
           loading={loadingMetrics}
         />
-        <StatCard 
-          title="Tasa de Cancelación (Churn)" 
-          value={`${metrics?.tasa_cancelacion || '0'}%`} 
+        <StatCard
+          title="Tasa de Cancelación (Churn)"
+          value={`${metrics?.tasa_cancelacion || '0'}%`}
           color="warning" icon={<TrendingDown />}
           loading={loadingMetrics}
         />
-        <StatCard 
-          title="Monto Total Liquidado" 
-          value={`$${totalMontoLiquidado.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`} 
+        <StatCard
+          title="Monto Total Liquidado"
+          value={`$${totalMontoLiquidado.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`}
           color="info" icon={<MoneyOff />}
           loading={isLoading}
         />
       </Box>
 
-      {/* 2. FILTROS */}
+      {/* ========== 2. FILTROS ========== */}
       <Paper sx={{ p: 2, mb: 3 }} elevation={0} variant="outlined">
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="center">
-          <TextField 
-            placeholder="Buscar por usuario, email o proyecto..." 
-            size="small" 
+          <TextField
+            placeholder="Buscar por usuario, email o proyecto..."
+            size="small"
             sx={{ flex: 2 }}
-            value={searchTerm} 
+            value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             InputProps={{ startAdornment: <InputAdornment position="start"><Search color="action" /></InputAdornment> }}
           />
-          
+
           <Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', md: 'block' } }} />
 
           <Stack direction="row" spacing={2} alignItems="center" sx={{ flex: 1, width: '100%' }}>
-            <TextField 
-              type="date" size="small" fullWidth 
+            <TextField
+              type="date" size="small" fullWidth
               label="Desde" InputLabelProps={{ shrink: true }}
-              value={dateStart} onChange={(e) => setDateStart(e.target.value)} 
+              value={dateStart} onChange={(e) => setDateStart(e.target.value)}
             />
-            <TextField 
-              type="date" size="small" fullWidth 
+            <TextField
+              type="date" size="small" fullWidth
               label="Hasta" InputLabelProps={{ shrink: true }}
-              value={dateEnd} onChange={(e) => setDateEnd(e.target.value)} 
+              value={dateEnd} onChange={(e) => setDateEnd(e.target.value)}
             />
           </Stack>
         </Stack>
       </Paper>
 
-      {/* 3. TABLA */}
+      {/* ========== 3. TABLA ========== */}
       <QueryHandler isLoading={isLoading} error={error as Error | null}>
         <DataTable
-            columns={columns}
-            data={filteredCancelaciones}
-            getRowKey={(row) => row.id}
-            emptyMessage="No se encontraron cancelaciones con los filtros actuales."
-            pagination={true}
-            defaultRowsPerPage={10}
+          columns={columns}
+          data={filteredCancelaciones}
+          getRowKey={(row) => row.id}
+          emptyMessage="No se encontraron cancelaciones con los filtros actuales."
+          pagination={true}
+          defaultRowsPerPage={10}
         />
       </QueryHandler>
 
-      {/* MODAL */}
-      <DetalleCancelacionModal 
+      {/* ========== MODAL ========== */}
+      <DetalleCancelacionModal
         open={detailModal.isOpen}
         onClose={handleCerrarModal}
         cancelacion={selectedCancelacion}
       />
 
-    </PageContainer>
+    </Box>
   );
 };
 
-export default AdminCancelaciones;
+export default CancelacionesTab;

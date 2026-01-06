@@ -4,7 +4,8 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { 
   Box, Typography, Paper, TextField, MenuItem, 
   InputAdornment, Chip, IconButton, Tooltip, Stack, 
-  Alert, AlertTitle, LinearProgress, Avatar, useTheme, alpha, Snackbar
+  Alert, AlertTitle, Avatar, useTheme, alpha 
+  // ❌ Eliminado: Snackbar
 } from '@mui/material';
 import { 
   Search, Visibility, AttachMoney, TrendingDown, 
@@ -28,6 +29,8 @@ import ProyectoService from '../../../../services/proyecto.service';
 
 // Hooks
 import { useModal } from '../../../../hooks/useModal';
+// ✅ Hook Global
+import { useSnackbar } from '../../../../context/SnackbarContext';
 
 // --- COMPONENTE KPI (Estandarizado) ---
 const StatCard: React.FC<{ 
@@ -38,7 +41,6 @@ const StatCard: React.FC<{
   icon: React.ReactNode; 
 }> = ({ title, value, sub, color, icon }) => {
   const theme = useTheme();
-  // Casting seguro para colores dinámicos
   const paletteColor = (theme.palette as any)[color] || theme.palette.primary;
 
   return (
@@ -46,14 +48,9 @@ const StatCard: React.FC<{
       elevation={0} 
       sx={{ 
         p: 2, 
-        border: '1px solid', 
-        borderColor: 'divider', 
-        borderRadius: 2, 
-        flex: 1, 
-        minWidth: 0, 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: 2,
+        border: '1px solid', borderColor: 'divider', borderRadius: 2, 
+        flex: 1, minWidth: 0, 
+        display: 'flex', alignItems: 'center', gap: 2,
         transition: 'all 0.2s ease',
         '&:hover': {
             borderColor: paletteColor.main,
@@ -77,13 +74,15 @@ const AdminPagos: React.FC = () => {
   const theme = useTheme();
   const queryClient = useQueryClient();
 
+  // ✅ Usamos el contexto global para éxito
+  const { showSuccess } = useSnackbar();
+
   // --- ESTADOS ---
   const [searchTerm, setSearchTerm] = useState('');
   const [filterState, setFilterState] = useState('all');
   const [dateStart, setDateStart] = useState('');
   const [dateEnd, setDateEnd] = useState('');
   const [highlightedId, setHighlightedId] = useState<number | null>(null);
-  const [snackbar, setSnackbar] = useState({ open: false, message: '' });
 
   // Hooks Modal
   const detalleModal = useModal();
@@ -114,7 +113,7 @@ const AdminPagos: React.FC = () => {
     staleTime: 300000,
   });
 
-  // --- HELPERS (Memoizados para uso interno en columnas) ---
+  // --- HELPERS (Memoizados) ---
   const getUserName = useCallback((id?: number) => {
     if (!id) return '-';
     const u = usuarios.find(u => u.id === id);
@@ -193,8 +192,10 @@ const AdminPagos: React.FC = () => {
         setHighlightedId(selectedPago.id);
         setTimeout(() => setHighlightedId(null), 2500);
     }
-    setSnackbar({ open: true, message: 'Estado de pago actualizado correctamente' });
-  }, [queryClient, selectedPago]);
+    
+    // ✅ Uso Global
+    showSuccess('Estado de pago actualizado correctamente');
+  }, [queryClient, selectedPago, showSuccess]);
 
   const handleVerDetalle = useCallback((pago: PagoDto) => {
     setSelectedPago(pago);
@@ -310,7 +311,7 @@ const AdminPagos: React.FC = () => {
          subtitle="Gestión centralizada de cuotas y recaudación."
       />
 
-      {/* ========== 1. ALERTAS ========== */}
+      {/* ========== 1. ALERTAS (Dashboard) ========== */}
       <Stack spacing={2} mb={4}>
         {alerts.veryOverdue.length > 0 && (
           <Alert severity="error" icon={<Warning />} sx={{ borderRadius: 2 }}>
@@ -433,14 +434,6 @@ const AdminPagos: React.FC = () => {
         userName={selectedPago ? getUserName(selectedPago.id_usuario) : ''}
         projectName={selectedPago ? getProjectName(selectedPago.id_proyecto) : ''}
         onUpdate={handleUpdate}
-      />
-
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={4000}
-        onClose={() => setSnackbar(s => ({ ...s, open: false }))}
-        message={snackbar.message}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       />
     </PageContainer>
   );

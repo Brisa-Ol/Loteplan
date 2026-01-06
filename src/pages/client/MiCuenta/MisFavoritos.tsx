@@ -1,3 +1,5 @@
+// src/pages/client/MiCuenta/MisFavoritos.tsx
+
 import React from 'react';
 import {
   Box, Typography, Card, CardMedia, CardContent, CardActions,
@@ -21,9 +23,12 @@ import type { LoteDto } from '../../../types/dto/lote.dto';
 import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
 import { PageHeader } from '../../../components/common/PageHeader/PageHeader';
 
-// ✅ Importamos Hook y Componente
+// ✅ Importamos Hook y Componente de Confirmación
 import { useConfirmDialog } from '../../../hooks/useConfirmDialog';
 import { ConfirmDialog } from '../../../components/common/ConfirmDialog/ConfirmDialog';
+
+// ✅ Hook Global de Snackbar
+import { useSnackbar } from '../../../context/SnackbarContext';
 
 // --- Card Component ---
 const LoteFavoritoCard: React.FC<{
@@ -118,8 +123,9 @@ const MisFavoritos: React.FC = () => {
   const queryClient = useQueryClient();
   const theme = useTheme();
 
-  // 1. Instanciamos el Hook (Controller)
+  // ✅ Hooks Globales
   const confirmDialog = useConfirmDialog();
+  const { showSuccess } = useSnackbar(); // Solo éxito
 
   // 2. Fetch
   const { data: favoritos = [], isLoading, error } = useQuery<LoteDto[]>({
@@ -132,27 +138,24 @@ const MisFavoritos: React.FC = () => {
     mutationFn: (idLote: number) => FavoritoService.toggle(idLote),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['misFavoritos'] });
-      // Si el diálogo tenía un ID (data), invalidamos ese específico también por seguridad
       if (confirmDialog.data) {
         queryClient.invalidateQueries({ queryKey: ['favorito', confirmDialog.data] });
       }
       confirmDialog.close();
+      
+      // ✅ Feedback de éxito
+      showSuccess('Eliminado de favoritos');
     },
-    onError: () => {
-        alert('Error al eliminar favorito');
-        confirmDialog.close();
-    }
+    onError: () => confirmDialog.close() // Solo cerrar modal
   });
 
   // 4. Handler para abrir modal
   const handleRemoveClick = (id: number) => {
-    // ✅ Llamada correcta al hook: Acción + Datos (ID)
     confirmDialog.confirm('remove_favorite', id);
   };
 
   // 5. Handler de confirmación
   const handleConfirmDelete = () => {
-    // El ID se guardó en el estado del hook (data)
     if (confirmDialog.data) {
         removeFavoritoMutation.mutate(confirmDialog.data);
     }
@@ -199,18 +202,17 @@ const MisFavoritos: React.FC = () => {
               lote={lote} 
               onRemove={handleRemoveClick} 
               onVerDetalle={(id) => navigate(`/lotes/${id}`)}
-              isRemoving={removeFavoritoMutation.isPending && confirmDialog.data === lote.id} // Loading solo en la card afectada si quieres ser muy específico
+              isRemoving={removeFavoritoMutation.isPending && confirmDialog.data === lote.id} 
             />
           ))}
         </Box>
       )}
 
-      {/* ✅ INTEGRACIÓN DEL COMPONENTE GLOBAL */}
+      {/* ✅ Componente Global de Confirmación */}
       <ConfirmDialog 
         controller={confirmDialog}
         onConfirm={handleConfirmDelete}
         isLoading={removeFavoritoMutation.isPending}
-        // Sobrescribimos el título/descripción por defecto del hook si queremos ser específicos en esta pantalla
         description="Este lote ya no aparecerá en tu lista de seguimiento." 
       />
     </PageContainer>

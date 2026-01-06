@@ -6,7 +6,7 @@ import {
   Button,
   InputAdornment,
   IconButton,
-  Alert,
+  Alert, // ✅ Usamos Alert para feedback inline
   Stack,
   CircularProgress,
   Box,
@@ -18,7 +18,7 @@ import { useFormik } from "formik";
 import * as Yup from "yup";
 
 // Contexto y Componentes
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "../../context/AuthContext"; // ✅ Hook unificado
 import { PageContainer } from "../../components/common/PageContainer/PageContainer";
 import AuthFormContainer from "./components/AuthFormContainer/AuthFormContainer";
 import TwoFactorAuthModal from "../../components/common/TwoFactorAuthModal/TwoFactorAuthModal";
@@ -34,11 +34,12 @@ const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // ✅ Extraemos todo del hook useAuth (que usa useAuthCore + use2FAManagement internamente)
   const {
     login,
     verify2FA,
     requires2FA,
-    error,
+    error,           // Error global del contexto
     isLoading,
     isInitializing,
     clearError,
@@ -48,7 +49,7 @@ const LoginPage: React.FC = () => {
     resendConfirmation
   } = useAuth();
 
-  // Estados Locales
+  // Estados Locales de UI
   const [showPassword, setShowPassword] = useState(false);
   const [showResendEmail, setShowResendEmail] = useState(false);
   const [resendSuccess, setResendSuccess] = useState(false);
@@ -63,7 +64,12 @@ const LoginPage: React.FC = () => {
   const successMessage = state?.message;
   const vieneDeProyecto = from.includes('/proyectos/');
 
-  // 1. Efecto: Redirección si ya está autenticado
+  // 1. Efecto: Limpieza al desmontar o cambiar
+  useEffect(() => {
+    return () => clearError();
+  }, [clearError]);
+
+  // 2. Efecto: Redirección si ya está autenticado y no requiere 2FA
   useEffect(() => {
     if (!isInitializing && isAuthenticated && user && !requires2FA) {
       if (from && from !== '/') {
@@ -75,8 +81,9 @@ const LoginPage: React.FC = () => {
     }
   }, [isInitializing, isAuthenticated, user, requires2FA, navigate, from]);
 
-  // 2. Efecto: Detectar error de cuenta no activada
+  // 3. Efecto: Detectar error específico para mostrar botón de "Reenviar Email"
   useEffect(() => {
+    // Si el contexto tiene un error y es sobre cuenta no activada
     if (error && (error.toLowerCase().includes('cuenta no activada') || error.toLowerCase().includes('no confirmado'))) {
       setShowResendEmail(true);
     } else {
@@ -95,34 +102,41 @@ const LoginPage: React.FC = () => {
       password: Yup.string().required("Ingresá tu contraseña"),
     }),
     onSubmit: async (values) => {
-      clearError();
+      // Limpiamos estados visuales locales
       setShowResendEmail(false);
       setResendSuccess(false);
+      clearError(); 
+
       try {
+        // useAuthCore maneja el error internamente y setea el estado 'error'
+        // Si requiere 2FA, el contexto setea 'requires2FA' a true
         await login({
           identificador: values.identificador,
           contraseña: values.password,
         });
       } catch (err) {
-        // El error es manejado por el AuthContext y se refleja en la variable `error`
+        // No necesitamos hacer nada aquí, el 'error' del contexto disparará el Alert en el JSX
       }
     },
   });
 
   // Handlers
   const handleResendEmail = async () => {
+    setResendSuccess(false);
     try {
       await resendConfirmation(formik.values.identificador);
+      
+      // Si tuvo éxito:
       setResendSuccess(true);
       setShowResendEmail(false);
-      clearError(); // Limpiamos el error original para mostrar el éxito
+      clearError(); // Quitamos el error rojo de "cuenta no activada" para mostrar el verde de éxito
     } catch (err) {
-      // Error manejado por contexto
+      // Si falla, el contexto setea 'error' y se mostrará en el Alert rojo
     }
   };
 
   const handleCancel2FA = () => {
-    logout(); 
+    logout(); // Resetea el estado temporal de 2FA en el contexto
     clearError();
   };
 
@@ -140,23 +154,24 @@ const LoginPage: React.FC = () => {
     <PageContainer maxWidth="sm">
       <AuthFormContainer title="Iniciar Sesión" subtitle="Ingresá tus credenciales para continuar">
         
-        {/* Alertas Contextuales */}
+        {/* --- ALERTAS INLINE --- */}
+
+        {/* 1. Alerta Informativa (vengo de ruta protegida) */}
         {vieneDeProyecto && !isAuthenticated && (
           <Alert severity="info" icon={<InfoOutlined />} sx={{ mb: 3, borderRadius: 2 }}>
             Inicia sesión para ver los detalles y lotes del proyecto.
           </Alert>
         )}
 
-        {successMessage && (
-            <Alert severity="success" sx={{ mb: 2, borderRadius: 2 }}>{successMessage}</Alert>
+        {/* 2. Alerta de Éxito (redirección o reenvío) */}
+        {(successMessage || resendSuccess) && (
+            <Alert severity="success" sx={{ mb: 2, borderRadius: 2 }}>
+                {successMessage || "Email reenviado. Revisa tu bandeja de entrada."}
+            </Alert>
         )}
         
-        {resendSuccess && (
-          <Alert severity="success" sx={{ mb: 2, borderRadius: 2 }}>
-            Email reenviado. Revisa tu bandeja de entrada.
-          </Alert>
-        )}
-
+        {/* 3. Alerta de Error (Login fallido o Error de reenvío) */}
+        {/* Solo mostramos si NO hay 2FA activo (el modal tiene su propio manejo) y NO hubo éxito reciente */}
         {error && !requires2FA && !resendSuccess && (
           <Alert 
             severity={showResendEmail ? 'warning' : 'error'} 
@@ -164,6 +179,8 @@ const LoginPage: React.FC = () => {
             onClose={clearError}
           >
             {error}
+            
+            {/* Botón condicional para reenviar email dentro de la alerta */}
             {showResendEmail && (
               <Box mt={1}>
                 <Link
@@ -255,7 +272,7 @@ const LoginPage: React.FC = () => {
         onClose={handleCancel2FA}
         onSubmit={verify2FA}
         isLoading={isLoading}
-        error={error}
+        error={error} // Pasamos el error al modal para que lo muestre dentro
         title="Verificación en 2 Pasos"
         description="Tu cuenta está protegida. Ingresa el código de tu autenticador."
       />

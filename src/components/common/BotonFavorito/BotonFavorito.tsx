@@ -1,5 +1,5 @@
 import React from 'react';
-import { IconButton, Tooltip, CircularProgress } from '@mui/material'; // 1. Se eliminó useTheme
+import { IconButton, Tooltip, CircularProgress } from '@mui/material';
 import { Favorite, FavoriteBorder } from '@mui/icons-material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
@@ -9,7 +9,9 @@ import SuscripcionService from '../../../services/suscripcion.service';
 import LoteService from '../../../services/lote.service';
 import { useAuth } from '../../../context/AuthContext';
 import type { CheckFavoritoResponseDto } from '../../../types/dto/favorito.dto';
-import type { ApiError } from '../../../services/httpService'; // 2. Importamos el tipo de error
+
+// ✅ Hook Global
+import { useSnackbar } from '../../../context/SnackbarContext';
 
 interface FavoritoButtonProps {
   loteId: number;
@@ -22,11 +24,13 @@ export const FavoritoButton: React.FC<FavoritoButtonProps> = ({
   size = 'medium',
   onRemoveRequest 
 }) => {
-  // const theme = useTheme(); // 3. Se eliminó la línea que causaba el error TS6133
   const queryClient = useQueryClient();
   const { isAuthenticated } = useAuth();
+  
+  // ✅ Usamos el sistema de notificaciones global
+  const { showSuccess, showInfo } = useSnackbar();
 
-  // 1. Estado Actual (Query Key: ['favorito', id])
+  // 1. Estado Actual
   const { data: status, isLoading: loadingStatus } = useQuery<CheckFavoritoResponseDto>({
     queryKey: ['favorito', loteId],
     queryFn: async () => (await FavoritoService.checkEsFavorito(loteId)).data,
@@ -51,14 +55,16 @@ export const FavoritoButton: React.FC<FavoritoButtonProps> = ({
   const mutation = useMutation({
     mutationFn: () => FavoritoService.toggle(loteId),
     onSuccess: (response) => {
-      const nuevoEstado = response.data.agregado;
-      queryClient.setQueryData(['favorito', loteId], { es_favorito: nuevoEstado });
+      const fueAgregado = response.data.agregado;
+      
+      // Actualizamos cache local optimista
+      queryClient.setQueryData(['favorito', loteId], { es_favorito: fueAgregado });
       queryClient.invalidateQueries({ queryKey: ['misFavoritos'] });
+
+      // ✅ Feedback visual sutil
+      showSuccess(fueAgregado ? 'Añadido a favoritos' : 'Eliminado de favoritos');
     },
-    onError: (error: ApiError) => { // 4. Cambiado 'any' por 'ApiError' (Error TS7006)
-      const msg = error.message || 'Error al actualizar favorito';
-      alert(msg); 
-    }
+    // ❌ onError ELIMINADO: El interceptor global maneja el error HTTP.
   });
 
   const handleClick = (e: React.MouseEvent) => {
@@ -67,11 +73,13 @@ export const FavoritoButton: React.FC<FavoritoButtonProps> = ({
 
     const esFavoritoActualmente = status?.es_favorito;
 
+    // Caso especial: Si el padre maneja la eliminación (ej: lista de favoritos)
     if (esFavoritoActualmente && onRemoveRequest) {
       onRemoveRequest(loteId);
       return;
     }
 
+    // Validación de Negocio (Lotes Privados)
     if (!esFavoritoActualmente && lote && lote.id_proyecto) {
         const tieneSuscripcion = suscripciones?.some(
             s => s.id_proyecto === lote.id_proyecto && s.activo
@@ -80,7 +88,8 @@ export const FavoritoButton: React.FC<FavoritoButtonProps> = ({
         const validacion = FavoritoService.puedeAgregarFavorito(lote, !!tieneSuscripcion);
         
         if (!validacion.puede) {
-            alert(`🚫 Acceso Restringido: ${validacion.razon}`);
+            // ✅ Reemplazo de alert() por notificación global (Info/Warning)
+            showInfo(`Restringido: ${validacion.razon}`);
             return;
         }
     }

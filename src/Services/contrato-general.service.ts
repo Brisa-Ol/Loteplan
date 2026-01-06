@@ -1,3 +1,4 @@
+// src/services/contratoGeneral.service.ts
 import httpService from './httpService';
 import type { AxiosResponse } from 'axios';
 import type { ContratoFirmadoDto } from '../types/dto/contrato.dto';
@@ -35,23 +36,25 @@ const ContratoGeneralService = {
   },
 
   /**
-   * Helper para descargar y guardar automáticamente en el navegador
+   * Helper para descargar y guardar automáticamente en el navegador.
+   * ❌ ELIMINADO: try/catch y console.error.
+   * El interceptor maneja los errores HTTP.
    */
   downloadAndSave: async (idContratoFirmado: number, fileNameSugestion: string = 'documento-legal.pdf') => {
-    try {
+      // 1. Llamada a la API (Si falla, el interceptor avisa y detiene la ejecución)
       const blob = await ContratoGeneralService.downloadRequest(idContratoFirmado);
+      
+      // 2. Manipulación del DOM (Solo se ejecuta si la descarga fue exitosa)
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
       link.setAttribute('download', fileNameSugestion);
       document.body.appendChild(link);
       link.click();
+      
+      // Limpieza
       link.remove();
       window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error("Error gestionando la descarga:", error);
-      throw error;
-    }
   }
 };
 

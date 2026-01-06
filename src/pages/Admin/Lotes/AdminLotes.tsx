@@ -9,7 +9,6 @@ import {
   Search, Inventory, Gavel, AssignmentLate, CheckCircle, Person, Block
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import type { AxiosError } from 'axios';
 
 // Tipos
 import type { CreateLoteDto, LoteDto, UpdateLoteDto } from '../../../types/dto/lote.dto';
@@ -21,9 +20,6 @@ import { PageHeader } from '../../../components/common/PageHeader/PageHeader';
 import { DataTable, type DataTableColumn } from '../../../components/common/DataTable/DataTable';
 import { ConfirmDialog } from '../../../components/common/ConfirmDialog/ConfirmDialog';
 
-
-import { useSnackbar } from '../../../hooks/useSnackbar';
-
 // Modales y Servicios
 import ManageLoteImagesModal from './modals/ManageLoteImagesModal';
 import CreateEditLoteModal from './modals/CreateEditLoteModal';
@@ -33,13 +29,9 @@ import LoteService from '../../../services/lote.service';
 // Hooks
 import { useModal } from '../../../hooks/useModal';
 import { useConfirmDialog } from '../../../hooks/useConfirmDialog';
-import GlobalSnackbar from '../../../components/common/GlobalSnackbarProps/GlobalSnackbarProps';
 
-interface ApiErrorResponse {
-  mensaje?: string;
-  message?: string;
-  error?: string;
-}
+// ✅ Hook Global
+import { useSnackbar } from '../../../context/SnackbarContext';
 
 // --- KPI CARD ---
 const StatCard: React.FC<{ 
@@ -57,14 +49,9 @@ const StatCard: React.FC<{
       elevation={0} 
       sx={{ 
         p: 2, 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: 2, 
-        borderRadius: 2, 
-        border: '1px solid', 
-        borderColor: 'divider',
-        flex: 1, 
-        minWidth: 0,
+        display: 'flex', alignItems: 'center', gap: 2, 
+        borderRadius: 2, border: '1px solid', borderColor: 'divider',
+        flex: 1, minWidth: 0,
         transition: 'all 0.2s ease',
         '&:hover': {
             borderColor: paletteColor.main,
@@ -93,8 +80,8 @@ const AdminLotes: React.FC = () => {
   const theme = useTheme();
   const queryClient = useQueryClient();
   
-  // ✅ Hook de Snackbar Global
-  const { snackbar, showSuccess, showError, handleClose: closeSnackbar } = useSnackbar();
+  // ✅ Usamos el contexto global para éxito
+  const { showSuccess } = useSnackbar();
 
   // Hooks Modales
   const createEditModal = useModal();
@@ -167,15 +154,8 @@ const AdminLotes: React.FC = () => {
     });
   }, [lotes, searchTerm, filterProject]);
 
-  const getErrorMessage = (error: unknown): string => {
-    if (error && typeof error === 'object' && 'response' in error) {
-        const axiosError = error as AxiosError<ApiErrorResponse>;
-        return axiosError.response?.data?.mensaje || axiosError.response?.data?.message || axiosError.message;
-    }
-    return String(error);
-  };
+  // --- MUTACIONES (Refactorizadas) ---
 
-  // --- MUTACIONES ---
   const saveMutation = useMutation({
     mutationFn: async (payload: { dto: CreateLoteDto | UpdateLoteDto; id?: number }) => {
       if (payload.id) return await LoteService.update(payload.id, payload.dto as UpdateLoteDto);
@@ -192,9 +172,9 @@ const AdminLotes: React.FC = () => {
           setTimeout(() => setHighlightedId(null), 2500);
       }
 
-      showSuccess('Lote guardado correctamente'); // ✅
-    },
-    onError: (error: unknown) => showError(`Error al guardar: ${getErrorMessage(error)}`) // ✅
+      showSuccess('Lote guardado correctamente');
+    }
+    // onError eliminado: El interceptor global maneja la alerta de error
   });
 
   const toggleActiveMutation = useMutation({
@@ -208,12 +188,9 @@ const AdminLotes: React.FC = () => {
       setHighlightedId(variables.id);
       setTimeout(() => setHighlightedId(null), 2500);
       
-      showSuccess(variables.activo ? 'Lote ahora es visible' : 'Lote ocultado correctamente'); // ✅
+      showSuccess(variables.activo ? 'Lote ahora es visible' : 'Lote ocultado correctamente');
     },
-    onError: (error: unknown) => {
-      confirmDialog.close();
-      showError(`Error al cambiar estado: ${getErrorMessage(error)}`); // ✅
-    }
+    onError: () => confirmDialog.close() // Solo cerramos el modal
   });
 
   const startAuction = useMutation({
@@ -225,12 +202,9 @@ const AdminLotes: React.FC = () => {
       setTimeout(() => setHighlightedId(null), 2500);
 
       const data = response.data as any; 
-      showSuccess(data?.mensaje || 'Subasta iniciada correctamente'); // ✅
+      showSuccess(data?.mensaje || 'Subasta iniciada correctamente');
     },
-    onError: (error: unknown) => {
-      confirmDialog.close();
-      showError(`Error al iniciar subasta: ${getErrorMessage(error)}`); // ✅
-    }
+    onError: () => confirmDialog.close()
   });
 
   const endAuction = useMutation({
@@ -242,12 +216,9 @@ const AdminLotes: React.FC = () => {
       setTimeout(() => setHighlightedId(null), 2500);
 
       const data = response.data as any;
-      showSuccess(data?.mensaje || 'Subasta finalizada correctamente'); // ✅
+      showSuccess(data?.mensaje || 'Subasta finalizada correctamente');
     },
-    onError: (error: unknown) => {
-      confirmDialog.close();
-      showError(`Error al finalizar subasta: ${getErrorMessage(error)}`); // ✅
-    }
+    onError: () => confirmDialog.close()
   });
 
   const getStatusColor = (estado: string): 'success' | 'info' | 'default' => {
@@ -519,8 +490,11 @@ const AdminLotes: React.FC = () => {
           columns={columns}
           data={filteredLotes}
           getRowKey={(row) => row.id}
+          
+          // ✅ Feedback Visual
           isRowActive={(lote) => lote.activo}
           highlightedRowId={highlightedId}
+          
           emptyMessage="No se encontraron lotes con los filtros actuales."
           pagination={true}
           defaultRowsPerPage={10}
@@ -550,11 +524,6 @@ const AdminLotes: React.FC = () => {
         isLoading={toggleActiveMutation.isPending || startAuction.isPending || endAuction.isPending}
       />
 
-      {/* ✅ Componente Snackbar Global */}
-      <GlobalSnackbar 
-        {...snackbar} 
-        onClose={closeSnackbar} 
-      />
     </PageContainer>
   );
 };

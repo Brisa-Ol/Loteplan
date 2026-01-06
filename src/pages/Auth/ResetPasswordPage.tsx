@@ -1,3 +1,5 @@
+// src/pages/Auth/ResetPasswordPage.tsx
+
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useFormik } from 'formik';
@@ -12,7 +14,6 @@ import {
   IconButton,
   Box,
   Typography,
-  Paper,
   Fade
 } from '@mui/material';
 import { Visibility, VisibilityOff, CheckCircleOutline, LockReset } from '@mui/icons-material';
@@ -71,7 +72,10 @@ const ResetPasswordPage: React.FC = () => {
 
       } catch (error: any) {
         setStatus('error');
-        const msg = error.response?.data?.error || error.response?.data?.message || 'El enlace es inválido o ha expirado.';
+        
+        // ✅ CORRECCIÓN CRÍTICA:
+        // Como 'httpService' ya normalizó el error, accedemos a 'error.message'
+        const msg = error.message || 'El enlace es inválido o ha expirado.';
         setErrorMessage(msg);
       }
     },

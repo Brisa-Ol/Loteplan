@@ -1,19 +1,19 @@
+// src/pages/User/Subastas/MisPujas.tsx
+
 import React, { useState } from 'react';
 import {
   Box, Typography, Button, Stack, Chip, Alert, Divider,
   Card, CardContent, CardMedia, CardActions,
-  alpha, useTheme, CircularProgress, Snackbar
+  alpha, useTheme, CircularProgress
 } from '@mui/material';
 import {
-  Gavel, Payment, AccessTime, CheckCircle, Cancel, Visibility,
+  Gavel, AccessTime, CheckCircle, Cancel, Visibility,
   MonetizationOn, CalendarMonth, EmojiEvents, DeleteOutline
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
-
 import type { PujaDto } from '../../../types/dto/puja.dto';
-
 
 // Componentes Comunes
 import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
@@ -28,28 +28,23 @@ import { useConfirmDialog } from '../../../hooks/useConfirmDialog';
 import PujaService from '../../../services/puja.service';
 import ImagenService from '../../../services/imagen.service';
 
+// ✅ Hook Global
+import { useSnackbar } from '../../../context/SnackbarContext';
+
 const MisPujas: React.FC = () => {
   const navigate = useNavigate();
   const theme = useTheme();
   const queryClient = useQueryClient();
   
+  // ✅ Usamos el contexto global para éxito
+  const { showSuccess } = useSnackbar();
+
   // 1. Estados y Hooks para 2FA y Selección
   const twoFaModal = useModal();
   const confirmDialog = useConfirmDialog();
   const [selectedPujaId, setSelectedPujaId] = useState<number | null>(null);
   const [twoFAError, setTwoFAError] = useState<string | null>(null);
   const [highlightedId, setHighlightedId] = useState<number | null>(null);
-  
-  // Estado para Snackbar
-  const [snackbar, setSnackbar] = useState<{ 
-    open: boolean; 
-    message: string; 
-    severity: 'success' | 'error' | 'info' 
-  }>({
-    open: false,
-    message: '',
-    severity: 'success'
-  });
 
   // 2. Obtener mis pujas
   const { data: pujas, isLoading, error } = useQuery<PujaDto[]>({
@@ -60,6 +55,8 @@ const MisPujas: React.FC = () => {
   // 3. Mutación para Pagar
   const payMutation = useMutation({
     mutationFn: async (pujaId: number) => {
+      // Seteamos highlighted para feedback visual inmediato
+      setHighlightedId(pujaId);
       return await PujaService.iniciarPagoGanadora(pujaId);
     },
     onSuccess: (response) => {
@@ -67,7 +64,6 @@ const MisPujas: React.FC = () => {
       
       // Caso A: Requiere 2FA (Status 202 o flag is2FARequired)
       if (response.status === 202 || data.is2FARequired) {
-        // Mantenemos selectedPujaId seteuado para saber cuál confirmar
         setTwoFAError(null);
         twoFaModal.open();
         return;
@@ -78,9 +74,10 @@ const MisPujas: React.FC = () => {
         window.location.href = data.url_checkout;
       }
     },
-    onError: (err: any) => {
-      alert(err.response?.data?.error || 'Error al iniciar el pago');
-      setSelectedPujaId(null); // Limpiamos selección si falla
+    onError: () => {
+      // Limpiamos selección si falla, el error sale por Snackbar Global
+      setHighlightedId(null);
+      setSelectedPujaId(null); 
     }
   });
 
@@ -99,7 +96,10 @@ const MisPujas: React.FC = () => {
       }
       twoFaModal.close();
     },
-    onError: (err: any) => setTwoFAError(err.response?.data?.error || "Código inválido.")
+    onError: (err: any) => {
+        // Mantenemos el error local del modal para feedback específico en el input
+        setTwoFAError(err.response?.data?.error || "Código inválido.");
+    }
   });
 
   // 5. Mutación para Cancelar Puja
@@ -117,22 +117,13 @@ const MisPujas: React.FC = () => {
       setHighlightedId(pujaId);
       setTimeout(() => setHighlightedId(null), 2500);
       
-      // Mostrar mensaje de éxito
-      setSnackbar({
-        open: true,
-        message: 'Puja cancelada exitosamente',
-        severity: 'success'
-      });
+      // ✅ Mostrar mensaje de éxito global
+      showSuccess('Puja cancelada exitosamente');
       
       confirmDialog.close();
     },
-    onError: (err: any) => {
-      const errorMessage = err.response?.data?.error || 'Error al cancelar la puja';
-      setSnackbar({
-        open: true,
-        message: errorMessage,
-        severity: 'error'
-      });
+    onError: () => {
+      // Solo cerramos el diálogo, el error sale por Snackbar Global
       confirmDialog.close();
     }
   });
@@ -164,8 +155,6 @@ const MisPujas: React.FC = () => {
   const formatCurrency = (val: number) => 
     new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(val);
 
-  // 🚨 CÓDIGO ELIMINADO AQUÍ: El bloque <Button> flotante que causaba el error de sintaxis ha sido removido.
-
   return (
     <PageContainer maxWidth="lg">
       
@@ -186,7 +175,7 @@ const MisPujas: React.FC = () => {
                 : undefined;
 
               const isWinnerPending = puja.estado_puja === 'ganadora_pendiente';
-              const puedeCancelar = puja.estado_puja === 'activa'; // Solo pujas activas pueden cancelarse
+              const puedeCancelar = puja.estado_puja === 'activa'; 
               const isHighlighted = highlightedId === puja.id;
 
               return (
@@ -354,7 +343,7 @@ const MisPujas: React.FC = () => {
                             variant="contained"
                             color="warning"
                             fullWidth
-                            startIcon={payMutation.isPending && selectedPujaId === puja.id ? <CircularProgress size={20} color="inherit" /> : <Payment />}
+                            startIcon={payMutation.isPending && selectedPujaId === puja.id ? <CircularProgress size={20} color="inherit" /> : <MonetizationOn />}
                             onClick={() => {
                               setSelectedPujaId(puja.id);
                               payMutation.mutate(puja.id);
@@ -451,23 +440,7 @@ const MisPujas: React.FC = () => {
         onConfirm={handleConfirmCancel}
       />
 
-      {/* Snackbar para Feedback */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={4000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert 
-          onClose={() => setSnackbar({ ...snackbar, open: false })} 
-          severity={snackbar.severity}
-          sx={{ width: '100%' }}
-          elevation={6}
-          variant="filled"
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
+      {/* ✅ <Snackbar> manual eliminado */}
 
     </PageContainer>
   );

@@ -3,14 +3,13 @@
 import React from 'react';
 import { 
   Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography,
-  Avatar, useTheme, alpha, Box
+  Box, Avatar, useTheme, alpha 
 } from '@mui/material';
 import { Warning, Help, CheckCircle, ErrorOutline } from '@mui/icons-material';
 import type { useConfirmDialog } from '../../../hooks/useConfirmDialog';
 
 interface Props {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  controller: ReturnType<typeof useConfirmDialog<any>>; 
+  controller: ReturnType<typeof useConfirmDialog>; 
   onConfirm: () => void;
   isLoading?: boolean;
   title?: string;
@@ -48,6 +47,15 @@ export const ConfirmDialog: React.FC<Props> = ({
     }
   };
 
+  const getButtonColor = (): 'error' | 'warning' | 'success' | 'primary' => {
+    switch(severity) {
+      case 'error': return 'error';
+      case 'warning': return 'warning';
+      case 'success': return 'success';
+      default: return 'primary';
+    }
+  };
+
   const severityColor = getSeverityColor();
 
   return (
@@ -56,40 +64,32 @@ export const ConfirmDialog: React.FC<Props> = ({
       onClose={isLoading ? undefined : close} 
       maxWidth="xs" 
       fullWidth
+      // ✅ ESTILO IGUALADO A BASEMODAL
       PaperProps={{
         sx: {
-          borderRadius: 3, 
-          boxShadow: theme.shadows[10], 
+          borderRadius: 3, // Igual que BaseModal
+          boxShadow: theme.shadows[10], // Sombra profunda igual que BaseModal
           overflow: 'hidden'
         }
       }}
     >
-      <DialogTitle 
-        component="div" // ✅ CORRECCIÓN 1: Renderizar DialogTitle como div para evitar h2 automático
-        sx={{ 
+      {/* HEADER con fondo suave igual que BaseModal */}
+      <DialogTitle sx={{ 
           pb: 2, pt: 3, px: 3,
           display: 'flex', alignItems: 'center', gap: 2,
-          bgcolor: alpha(severityColor, 0.04) 
+          bgcolor: alpha(severityColor, 0.04) // Fondo sutil del color de la alerta
       }}>
           <Avatar 
             variant="rounded"
             sx={{ 
               bgcolor: alpha(severityColor, 0.1), 
               color: severityColor,
-              width: 40, height: 40 
+              width: 40, height: 40 // Tamaño ajustado a BaseModal
             }}
           >
             {getSeverityIcon()}
           </Avatar>
-          
-          {/* ✅ CORRECCIÓN 2: Typography con component="span" o "div" */}
-          <Typography 
-            variant="h6" 
-            component="span" 
-            fontWeight={800} 
-            color="text.primary" 
-            sx={{ lineHeight: 1.2 }}
-          >
+          <Typography variant="h6" fontWeight={800} color="text.primary" sx={{ lineHeight: 1.2 }}>
             {displayTitle}
           </Typography>
       </DialogTitle>
@@ -100,6 +100,7 @@ export const ConfirmDialog: React.FC<Props> = ({
         </Typography>
       </DialogContent>
       
+      {/* FOOTER con fondo gris suave igual que BaseModal */}
       <DialogActions sx={{ 
           p: 3, 
           bgcolor: alpha(theme.palette.background.default, 0.5),
@@ -109,7 +110,7 @@ export const ConfirmDialog: React.FC<Props> = ({
           onClick={close} 
           disabled={isLoading} 
           color="inherit"
-          sx={{ borderRadius: 2, fontWeight: 600, mr: 'auto' }}
+          sx={{ borderRadius: 2, fontWeight: 600, mr: 'auto' }} // Botón cancelar a la izquierda si prefieres estilo BaseModal
         >
           Cancelar
         </Button>
@@ -117,15 +118,9 @@ export const ConfirmDialog: React.FC<Props> = ({
           onClick={onConfirm} 
           disabled={isLoading}
           variant="contained" 
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          color={severity === 'info' ? 'primary' : (severity as any)}
+          color={getButtonColor()}
           disableElevation
-          sx={{ 
-            borderRadius: 2, 
-            fontWeight: 700, 
-            px: 3,
-            color: severity === 'success' ? '#fff' : 'inherit'
-          }}
+          sx={{ borderRadius: 2, fontWeight: 700, px: 3 }}
         >
           {isLoading ? 'Procesando...' : confirmText}
         </Button>

@@ -3,7 +3,8 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { 
   Box, Typography, Paper, Chip, IconButton, Tooltip, 
-  TextField, MenuItem, InputAdornment, Avatar, Stack, useTheme, alpha, Snackbar, Alert
+  TextField, MenuItem, InputAdornment, Avatar, Stack, useTheme, alpha 
+  // ❌ Eliminado: Snackbar, Alert
 } from '@mui/material';
 import { 
   Search, Visibility, ErrorOutline, Bolt, Person 
@@ -27,6 +28,9 @@ import { useModal } from '../../../../hooks/useModal';
 import { useConfirmDialog } from '../../../../hooks/useConfirmDialog';
 import { ConfirmDialog } from '../../../../components/common/ConfirmDialog/ConfirmDialog';
 
+// ✅ Hook Global
+import { useSnackbar } from '../../../../context/SnackbarContext';
+
 const getStatusColor = (status: string) => {
   switch (status) {
     case 'pagado': return 'success';
@@ -44,19 +48,19 @@ const AdminTransacciones: React.FC = () => {
   const theme = useTheme();
   const queryClient = useQueryClient();
   
+  // ✅ Usamos el contexto global para éxito
+  const { showSuccess } = useSnackbar();
+
   // Filters State
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
 
   // UI State (Feedback visual)
   const [highlightedId, setHighlightedId] = useState<number | null>(null);
-  const [snackbar, setSnackbar] = useState<{ open: boolean, message: string, severity: 'success' | 'error' }>({
-    open: false, message: '', severity: 'success'
-  });
 
   // Modal & Dialog Hooks
   const detailModal = useModal();
-  const confirmDialog = useConfirmDialog(); // ✅ Ya incluye 'force_confirm_transaction'
+  const confirmDialog = useConfirmDialog(); 
   const [selectedTransaccion, setSelectedTransaccion] = useState<TransaccionDto | null>(null);
 
   // --- QUERIES ---
@@ -79,16 +83,17 @@ const AdminTransacciones: React.FC = () => {
       setHighlightedId(id);
       setTimeout(() => setHighlightedId(null), 2500);
 
-      // 3. Notificación
-      setSnackbar({ open: true, message: `✅ Éxito: ${response.data.mensaje}`, severity: 'success' });
+      // 3. Notificación Global
+      showSuccess(`✅ Éxito: ${response.data.mensaje}`);
       
       // 4. Cerrar modales si están abiertos
       if (detailModal.isOpen) handleCloseModal();
       confirmDialog.close();
     },
-    onError: (err: any) => {
+    onError: () => {
+      // Solo cerramos el diálogo para no bloquear la UI. 
+      // El error ya se mostró automáticamente por httpService.
       confirmDialog.close();
-      setSnackbar({ open: true, message: `❌ Error: ${err.response?.data?.error || err.message}`, severity: 'error' });
     }
   });
 
@@ -116,12 +121,10 @@ const AdminTransacciones: React.FC = () => {
 
   // --- HANDLERS ---
   
-  // 1. Abre el diálogo de confirmación (Reemplaza window.confirm)
   const handleForceConfirmClick = useCallback((id: number) => {
     confirmDialog.confirm('force_confirm_transaction', { id });
   }, [confirmDialog]);
 
-  // 2. Ejecuta la mutación si el usuario confirma en el diálogo
   const handleConfirmAction = () => {
       if (confirmDialog.action === 'force_confirm_transaction' && confirmDialog.data) {
           confirmMutation.mutate(confirmDialog.data.id);
@@ -315,7 +318,6 @@ const AdminTransacciones: React.FC = () => {
             highlightedRowId={highlightedId}
             
             // ✅ Estado visual: Atenúa visualmente las transacciones fallidas/rechazadas
-            // para que resalten las pendientes y pagadas
             isRowActive={(row) => !['fallido', 'rechazado_por_capacidad', 'rechazado_proyecto_cerrado', 'expirado'].includes(row.estado_transaccion)}
 
             emptyMessage="No se encontraron transacciones."
@@ -333,30 +335,12 @@ const AdminTransacciones: React.FC = () => {
         isConfirming={confirmMutation.isPending}
       />
 
-      {/* Diálogo de Confirmación (El freno de mano para el Rayo ⚡) */}
+      {/* Diálogo de Confirmación */}
       <ConfirmDialog 
         controller={confirmDialog}
         onConfirm={handleConfirmAction}
         isLoading={confirmMutation.isPending}
       />
-
-      {/* Notificaciones */}
-      <Snackbar 
-        open={snackbar.open} 
-        autoHideDuration={6000} 
-        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert 
-          severity={snackbar.severity} 
-          onClose={() => setSnackbar(prev => ({ ...prev, open: false }))} 
-          variant="filled"
-          sx={{ boxShadow: 4 }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
-
     </PageContainer>
   );
 };

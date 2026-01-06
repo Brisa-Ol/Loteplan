@@ -14,8 +14,9 @@ import * as Yup from 'yup';
 
 import { BaseModal } from '../../../../components/common/BaseModal/BaseModal';
 import type { UpdateUserAdminDto, UsuarioDto } from '../../../../types/dto/usuario.dto';
-import UsuarioService from '../../../../services/usuario.service';
+
 import { useAuth } from '../../../../context/AuthContext'; // ✅ Importamos useAuth
+import UsuarioService from '../../../../services/usuario.service';
 
 // ════════════════════════════════════════════════════════════
 // SUB-COMPONENTE: DIÁLOGO 2FA (Refactorizado con BaseModal)
@@ -26,40 +27,40 @@ const Disable2FADialog: React.FC<{
   isLoading: boolean; userName: string;
 }> = ({ open, onClose, onConfirm, isLoading, userName }) => {
   const [justificacion, setJustificacion] = useState('');
-  
+
   const handleConfirm = () => {
     if (justificacion.trim().length < 10) return alert('La justificación debe tener al menos 10 caracteres');
-    onConfirm(justificacion); 
+    onConfirm(justificacion);
     setJustificacion('');
   };
 
   return (
     <BaseModal
-        open={open}
-        onClose={onClose}
-        title="Confirmar Desactivación 2FA"
-        subtitle={`Acción de seguridad para: ${userName}`}
-        icon={<WarningIcon />}
-        headerColor="warning"
-        confirmText="Confirmar Desactivación"
-        confirmButtonColor="warning"
-        onConfirm={handleConfirm}
-        isLoading={isLoading}
-        disableConfirm={justificacion.trim().length < 10 || isLoading}
-        maxWidth="sm"
+      open={open}
+      onClose={onClose}
+      title="Confirmar Desactivación 2FA"
+      subtitle={`Acción de seguridad para: ${userName}`}
+      icon={<WarningIcon />}
+      headerColor="warning"
+      confirmText="Confirmar Desactivación"
+      confirmButtonColor="warning"
+      onConfirm={handleConfirm}
+      isLoading={isLoading}
+      disableConfirm={justificacion.trim().length < 10 || isLoading}
+      maxWidth="sm"
     >
-        <Alert severity="warning" variant="outlined" sx={{ mb: 3, borderRadius: 2 }}>
-            Esta acción reducirá la seguridad de la cuenta. Se requiere justificación obligatoria para auditoría.
-        </Alert>
-        <TextField 
-          fullWidth multiline rows={4} 
-          label="Justificación obligatoria" 
-          placeholder="Ingrese el motivo por el cual se desactiva el 2FA..."
-          value={justificacion} 
-          onChange={(e) => setJustificacion(e.target.value)} 
-          disabled={isLoading}
-          sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-        />
+      <Alert severity="warning" variant="outlined" sx={{ mb: 3, borderRadius: 2 }}>
+        Esta acción reducirá la seguridad de la cuenta. Se requiere justificación obligatoria para auditoría.
+      </Alert>
+      <TextField
+        fullWidth multiline rows={4}
+        label="Justificación obligatoria"
+        placeholder="Ingrese el motivo por el cual se desactiva el 2FA..."
+        value={justificacion}
+        onChange={(e) => setJustificacion(e.target.value)}
+        disabled={isLoading}
+        sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+      />
     </BaseModal>
   );
 };
@@ -88,15 +89,20 @@ const validationSchema = Yup.object({
 
 const EditUserModal: React.FC<EditUserModalProps> = ({ open, onClose, user, onSubmit, isLoading = false }) => {
   const theme = useTheme();
-  
+
   // ✅ Obtenemos el usuario actual logueado
   const { user: currentUser } = useAuth();
 
   const [showDisable2FADialog, setShowDisable2FADialog] = useState(false);
   const [isDisabling2FA, setIsDisabling2FA] = useState(false);
+  const [preparingReactivation, setPreparingReactivation] = useState(false);
+  const [reactivationError, setReactivationError] = useState<string | null>(null);
 
   // ✅ Determinamos si se está auto-editando
   const isSelfEditing = currentUser?.id === user?.id;
+
+  // ✅ Determinamos si el usuario está inactivo (candidato para prepareForReactivation)
+  const isInactiveUser = user ? !user.activo : false;
 
   const formik = useFormik({
     initialValues: {
@@ -107,14 +113,43 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ open, onClose, user, onSu
     enableReinitialize: true,
     onSubmit: async (values) => {
       if (!user) return;
+      setReactivationError(null);
+
       try {
-        // Mapeo el campo numero_telefono a telefono para el DTO si es necesario
-        // (Si ya corregiste el backend, puedes quitar 'telefono: values.numero_telefono')
-        const dataToSend: any = { ...values, telefono: values.numero_telefono };
-        await onSubmit(user.id, dataToSend);
+        // ✅ Si el usuario está INACTIVO y cambió email o nombre_usuario,
+        // usamos prepareForReactivation para resolver conflictos
+        const identityChanged =
+          values.email !== user.email ||
+          values.nombre_usuario !== user.nombre_usuario;
+
+        if (isInactiveUser && identityChanged) {
+          setPreparingReactivation(true);
+          try {
+            // Usar endpoint específico para preparar reactivación
+            await UsuarioService.prepareForReactivation(user.id, {
+              email: values.email !== user.email ? values.email : undefined,
+              nombre_usuario: values.nombre_usuario !== user.nombre_usuario ? values.nombre_usuario : undefined,
+            });
+
+            // Después actualizamos el resto de campos con update normal
+            const dataToSend: any = { ...values, telefono: values.numero_telefono };
+            delete dataToSend.email; // Ya se actualizó con prepareForReactivation
+            delete dataToSend.nombre_usuario; // Ya se actualizó
+            await onSubmit(user.id, dataToSend);
+          } finally {
+            setPreparingReactivation(false);
+          }
+        } else {
+          // Flujo normal: usar update
+          const dataToSend: any = { ...values, telefono: values.numero_telefono };
+          await onSubmit(user.id, dataToSend);
+        }
+
         onClose();
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error update:', error);
+        const errorMsg = error.response?.data?.error || error.message || 'Error al guardar';
+        setReactivationError(errorMsg);
       }
     },
   });
@@ -140,7 +175,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ open, onClose, user, onSu
       await UsuarioService.adminReset2FA(user.id, { justificacion });
       alert('✅ 2FA desactivado.');
       setShowDisable2FADialog(false);
-      onClose(); 
+      onClose();
     } catch (error: any) {
       alert(`Error: ${error.message}`);
     } finally {
@@ -152,183 +187,205 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ open, onClose, user, onSu
 
   // Estilos reutilizables
   const commonInputSx = { '& .MuiOutlinedInput-root': { borderRadius: 2 } };
-  const sectionTitleSx = { 
-      textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700, 
-      color: 'text.secondary', fontSize: '0.75rem', mb: 1, display: 'flex', alignItems: 'center', gap: 1
+  const sectionTitleSx = {
+    textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700,
+    color: 'text.secondary', fontSize: '0.75rem', mb: 1, display: 'flex', alignItems: 'center', gap: 1
   };
+
+  // ✅ Loading combinado
+  const isBusy = isLoading || preparingReactivation;
 
   return (
     <>
       <BaseModal
         open={open}
         onClose={onClose}
-        title="Editar Usuario"
-        subtitle="Modificar datos y permisos de acceso"
+        title={isInactiveUser ? "Preparar Reactivación" : "Editar Usuario"}
+        subtitle={isInactiveUser ? "Resolver conflictos antes de reactivar" : "Modificar datos y permisos de acceso"}
         icon={<EditIcon />}
-        headerColor="primary"
-        confirmText="Confirmar Cambios"
+        headerColor={isInactiveUser ? "warning" : "primary"}
+        confirmText={preparingReactivation ? "Preparando..." : "Confirmar Cambios"}
         onConfirm={formik.submitForm}
-        isLoading={isLoading}
-        disableConfirm={!formik.isValid || isLoading}
+        isLoading={isBusy}
+        disableConfirm={!formik.isValid || isBusy}
         confirmButtonIcon={<EditIcon />}
         maxWidth="md"
         headerExtra={
-            <Stack direction="row" spacing={1}>
-                <Chip label={`ID: ${user.id}`} size="small" variant="outlined" sx={{ fontWeight: 700, borderRadius: 1.5 }} />
-                {user.dni && <Chip label={`DNI: ${user.dni}`} size="small" variant="outlined" sx={{ fontWeight: 700, borderRadius: 1.5 }} />}
-                {/* Etiqueta visual si se está editando a sí mismo */}
-                {isSelfEditing && (
-                    <Chip label="TÚ" size="small" color="primary" sx={{ fontWeight: 700, borderRadius: 1.5 }} />
-                )}
-            </Stack>
+          <Stack direction="row" spacing={1}>
+            <Chip label={`ID: ${user.id}`} size="small" variant="outlined" sx={{ fontWeight: 700, borderRadius: 1.5 }} />
+            {user.dni && <Chip label={`DNI: ${user.dni}`} size="small" variant="outlined" sx={{ fontWeight: 700, borderRadius: 1.5 }} />}
+            {/* Etiqueta visual para usuario inactivo */}
+            {isInactiveUser && (
+              <Chip label="INACTIVO" size="small" color="warning" sx={{ fontWeight: 700, borderRadius: 1.5 }} />
+            )}
+            {/* Etiqueta visual si se está editando a sí mismo */}
+            {isSelfEditing && (
+              <Chip label="TÚ" size="small" color="primary" sx={{ fontWeight: 700, borderRadius: 1.5 }} />
+            )}
+          </Stack>
         }
       >
         <Stack spacing={4}>
 
-            {/* DATOS PERSONALES */}
-            <Box>
-                <Typography sx={sectionTitleSx}><PersonIcon fontSize="inherit" /> Información Personal</Typography>
-                <Stack spacing={2}>
-                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                        <TextField fullWidth label="Nombre" {...formik.getFieldProps('nombre')} error={formik.touched.nombre && Boolean(formik.errors.nombre)} helperText={formik.touched.nombre && formik.errors.nombre} disabled={isLoading} sx={commonInputSx} />
-                        <TextField fullWidth label="Apellido" {...formik.getFieldProps('apellido')} error={formik.touched.apellido && Boolean(formik.errors.apellido)} helperText={formik.touched.apellido && formik.errors.apellido} disabled={isLoading} sx={commonInputSx} />
-                    </Stack>
-                    <TextField fullWidth label="Teléfono" {...formik.getFieldProps('numero_telefono')} error={formik.touched.numero_telefono && Boolean(formik.errors.numero_telefono)} helperText={formik.touched.numero_telefono && formik.errors.numero_telefono} disabled={isLoading} sx={commonInputSx} />
-                </Stack>
-            </Box>
+          {/* ✅ Alerta para usuarios inactivos */}
+          {isInactiveUser && (
+            <Alert severity="warning" sx={{ borderRadius: 2 }}>
+              <strong>Cuenta desactivada.</strong> Modifica email o nombre de usuario si hay conflictos,
+              luego podrás reactivar la cuenta desde la tabla.
+            </Alert>
+          )}
 
-            {/* CREDENCIALES */}
-            <Box>
-                <Typography sx={sectionTitleSx}><KeyIcon fontSize="inherit" /> Credenciales</Typography>
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                    <TextField fullWidth label="Email" {...formik.getFieldProps('email')} error={formik.touched.email && Boolean(formik.errors.email)} helperText={formik.touched.email && formik.errors.email} disabled={isLoading} sx={commonInputSx} />
-                    <TextField fullWidth label="Usuario" {...formik.getFieldProps('nombre_usuario')} error={formik.touched.nombre_usuario && Boolean(formik.errors.nombre_usuario)} helperText={formik.touched.nombre_usuario && formik.errors.nombre_usuario} disabled={isLoading} sx={commonInputSx} />
-                </Stack>
-            </Box>
+          {/* ✅ Error de reactivación */}
+          {reactivationError && (
+            <Alert severity="error" sx={{ borderRadius: 2 }} onClose={() => setReactivationError(null)}>
+              {reactivationError}
+            </Alert>
+          )}
 
-            <Divider />
+          {/* DATOS PERSONALES */}
+          <Box>
+            <Typography sx={sectionTitleSx}><PersonIcon fontSize="inherit" /> Información Personal</Typography>
+            <Stack spacing={2}>
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                <TextField fullWidth label="Nombre" {...formik.getFieldProps('nombre')} error={formik.touched.nombre && Boolean(formik.errors.nombre)} helperText={formik.touched.nombre && formik.errors.nombre} disabled={isLoading} sx={commonInputSx} />
+                <TextField fullWidth label="Apellido" {...formik.getFieldProps('apellido')} error={formik.touched.apellido && Boolean(formik.errors.apellido)} helperText={formik.touched.apellido && formik.errors.apellido} disabled={isLoading} sx={commonInputSx} />
+              </Stack>
+              <TextField fullWidth label="Teléfono" {...formik.getFieldProps('numero_telefono')} error={formik.touched.numero_telefono && Boolean(formik.errors.numero_telefono)} helperText={formik.touched.numero_telefono && formik.errors.numero_telefono} disabled={isLoading} sx={commonInputSx} />
+            </Stack>
+          </Box>
 
-            {/* PERMISOS Y ESTADO */}
-            <Box>
-                <Typography sx={sectionTitleSx}><SettingsIcon fontSize="inherit" /> Permisos y Estado</Typography>
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="stretch">
-                    
-                    {/* ✅ Bloquear cambio de ROL si es uno mismo */}
-                    <Tooltip title={isSelfEditing ? "No puedes cambiar tu propio rol" : ""}>
-                        <TextField 
-                            select 
-                            label="Rol del Sistema" 
-                            {...formik.getFieldProps('rol')} 
-                            disabled={isLoading || isSelfEditing} 
-                            sx={{ ...commonInputSx, flex: 1 }}
-                        >
-                            <MenuItem value="cliente">Cliente</MenuItem>
-                            <MenuItem value="admin">Administrador</MenuItem>
-                        </TextField>
-                    </Tooltip>
+          {/* CREDENCIALES */}
+          <Box>
+            <Typography sx={sectionTitleSx}><KeyIcon fontSize="inherit" /> Credenciales</Typography>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+              <TextField fullWidth label="Email" {...formik.getFieldProps('email')} error={formik.touched.email && Boolean(formik.errors.email)} helperText={formik.touched.email && formik.errors.email} disabled={isLoading} sx={commonInputSx} />
+              <TextField fullWidth label="Usuario" {...formik.getFieldProps('nombre_usuario')} error={formik.touched.nombre_usuario && Boolean(formik.errors.nombre_usuario)} helperText={formik.touched.nombre_usuario && formik.errors.nombre_usuario} disabled={isLoading} sx={commonInputSx} />
+            </Stack>
+          </Box>
 
-                    {/* ✅ Bloquear cambio de ESTADO si es uno mismo */}
-                    <Tooltip title={isSelfEditing ? "No puedes desactivar tu propia cuenta aquí" : ""}>
-                        <Box sx={{ 
-                            p: 1, px: 2,
-                            border: '1px solid', 
-                            borderColor: formik.values.activo ? 'success.main' : 'error.main', 
-                            bgcolor: formik.values.activo ? alpha(theme.palette.success.main, 0.05) : alpha(theme.palette.error.main, 0.05),
-                            borderRadius: 2, 
-                            flex: 1.5, 
-                            display: 'flex', 
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            opacity: isSelfEditing ? 0.6 : 1, // Feedback visual de deshabilitado
-                            cursor: isSelfEditing ? 'not-allowed' : 'default'
-                        }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                <Avatar sx={{ width: 32, height: 32, bgcolor: formik.values.activo ? 'success.main' : 'error.main' }}>
-                                    {formik.values.activo ? <CheckCircleIcon fontSize="small" /> : <BlockIcon fontSize="small" />}
-                                </Avatar>
-                                <Box>
-                                    <Typography variant="body2" fontWeight="bold" color={formik.values.activo ? 'success.dark' : 'error.dark'}>
-                                        {formik.values.activo ? 'CUENTA HABILITADA' : 'CUENTA BLOQUEADA'}
-                                    </Typography>
-                                    <Typography variant="caption" color="text.secondary">
-                                        {formik.values.activo ? 'Acceso permitido' : 'Acceso denegado'}
-                                    </Typography>
-                                </Box>
-                            </Box>
-                            <Switch
-                                checked={Boolean(formik.values.activo)}
-                                onChange={formik.handleChange}
-                                name="activo"
-                                color={formik.values.activo ? 'success' : 'error'}
-                                disabled={isLoading || isSelfEditing} // 🔒 BLOQUEADO
-                            />
-                        </Box>
-                    </Tooltip>
-                </Stack>
-                
-                {/* Alerta de seguridad (solo si no es self-editing) */}
-                {!formik.values.activo && !isSelfEditing && (
-                    <Alert severity="error" variant="filled" sx={{ mt: 2, borderRadius: 2 }}>
-                        Al guardar, este usuario será desconectado inmediatamente.
-                    </Alert>
-                )}
-                 {/* Alerta de Self Editing */}
-                 {isSelfEditing && (
-                    <Alert severity="info" sx={{ mt: 2, borderRadius: 2 }}>
-                        Estás editando tu propio perfil. Ciertas acciones de seguridad están bloqueadas.
-                    </Alert>
-                )}
-            </Box>
+          <Divider />
 
-            {/* ZONA DE SEGURIDAD 2FA */}
-            <Box sx={{ p: 2, borderRadius: 2, border: '1px dashed', borderColor: 'divider' }}>
-                <Typography variant="subtitle2" color="text.secondary" gutterBottom fontWeight="bold" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <SecurityIcon fontSize="small" /> Estado de Seguridad
-                </Typography>
-                <Stack direction="row" spacing={1} mb={user.is_2fa_enabled ? 2 : 0} alignItems="center">
-                    <Chip 
-                        icon={user.confirmado_email ? <CheckCircleIcon /> : <CancelIcon />} 
-                        label={user.confirmado_email ? 'Email Confirmado' : 'Email Pendiente'} 
-                        color={user.confirmado_email ? 'success' : 'default'} 
-                        size="small" variant="outlined" 
-                    />
-                    <Chip 
-                        label={user.is_2fa_enabled ? '2FA Activado' : '2FA Desactivado'} 
-                        color={user.is_2fa_enabled ? 'info' : 'default'} 
-                        size="small" variant="outlined" 
-                    />
-                </Stack>
-                
-                {user.is_2fa_enabled && (
-                    <Tooltip title={isSelfEditing ? "Usa 'Mi Perfil' para gestionar tu seguridad" : ""}>
-                         <span> {/* Span necesario para tooltip en elemento disabled */}
-                            <Button 
-                                variant="outlined" 
-                                color="warning" 
-                                startIcon={<SecurityIcon />} 
-                                onClick={() => setShowDisable2FADialog(true)} 
-                                fullWidth 
-                                size="small"
-                                disabled={isSelfEditing} // 🔒 También bloqueamos el reset 2FA propio desde admin
-                                sx={{ mt: 1, borderColor: 'warning.light', color: 'warning.dark', borderRadius: 2 }}
-                            >
-                                Resetear Autenticación de Dos Pasos
-                            </Button>
-                         </span>
-                    </Tooltip>
-                )}
-            </Box>
+          {/* PERMISOS Y ESTADO */}
+          <Box>
+            <Typography sx={sectionTitleSx}><SettingsIcon fontSize="inherit" /> Permisos y Estado</Typography>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="stretch">
+
+              {/* ✅ Bloquear cambio de ROL si es uno mismo */}
+              <Tooltip title={isSelfEditing ? "No puedes cambiar tu propio rol" : ""}>
+                <TextField
+                  select
+                  label="Rol del Sistema"
+                  {...formik.getFieldProps('rol')}
+                  disabled={isLoading || isSelfEditing}
+                  sx={{ ...commonInputSx, flex: 1 }}
+                >
+                  <MenuItem value="cliente">Cliente</MenuItem>
+                  <MenuItem value="admin">Administrador</MenuItem>
+                </TextField>
+              </Tooltip>
+
+              {/* ✅ Bloquear cambio de ESTADO si es uno mismo */}
+              <Tooltip title={isSelfEditing ? "No puedes desactivar tu propia cuenta aquí" : ""}>
+                <Box sx={{
+                  p: 1, px: 2,
+                  border: '1px solid',
+                  borderColor: formik.values.activo ? 'success.main' : 'error.main',
+                  bgcolor: formik.values.activo ? alpha(theme.palette.success.main, 0.05) : alpha(theme.palette.error.main, 0.05),
+                  borderRadius: 2,
+                  flex: 1.5,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  opacity: isSelfEditing ? 0.6 : 1, // Feedback visual de deshabilitado
+                  cursor: isSelfEditing ? 'not-allowed' : 'default'
+                }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                    <Avatar sx={{ width: 32, height: 32, bgcolor: formik.values.activo ? 'success.main' : 'error.main' }}>
+                      {formik.values.activo ? <CheckCircleIcon fontSize="small" /> : <BlockIcon fontSize="small" />}
+                    </Avatar>
+                    <Box>
+                      <Typography variant="body2" fontWeight="bold" color={formik.values.activo ? 'success.dark' : 'error.dark'}>
+                        {formik.values.activo ? 'CUENTA HABILITADA' : 'CUENTA BLOQUEADA'}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {formik.values.activo ? 'Acceso permitido' : 'Acceso denegado'}
+                      </Typography>
+                    </Box>
+                  </Box>
+                  <Switch
+                    checked={Boolean(formik.values.activo)}
+                    onChange={formik.handleChange}
+                    name="activo"
+                    color={formik.values.activo ? 'success' : 'error'}
+                    disabled={isLoading || isSelfEditing} // 🔒 BLOQUEADO
+                  />
+                </Box>
+              </Tooltip>
+            </Stack>
+
+            {/* Alerta de seguridad (solo si no es self-editing) */}
+            {!formik.values.activo && !isSelfEditing && (
+              <Alert severity="error" variant="filled" sx={{ mt: 2, borderRadius: 2 }}>
+                Al guardar, este usuario será desconectado inmediatamente.
+              </Alert>
+            )}
+            {/* Alerta de Self Editing */}
+            {isSelfEditing && (
+              <Alert severity="info" sx={{ mt: 2, borderRadius: 2 }}>
+                Estás editando tu propio perfil. Ciertas acciones de seguridad están bloqueadas.
+              </Alert>
+            )}
+          </Box>
+
+          {/* ZONA DE SEGURIDAD 2FA */}
+          <Box sx={{ p: 2, borderRadius: 2, border: '1px dashed', borderColor: 'divider' }}>
+            <Typography variant="subtitle2" color="text.secondary" gutterBottom fontWeight="bold" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <SecurityIcon fontSize="small" /> Estado de Seguridad
+            </Typography>
+            <Stack direction="row" spacing={1} mb={user.is_2fa_enabled ? 2 : 0} alignItems="center">
+              <Chip
+                icon={user.confirmado_email ? <CheckCircleIcon /> : <CancelIcon />}
+                label={user.confirmado_email ? 'Email Confirmado' : 'Email Pendiente'}
+                color={user.confirmado_email ? 'success' : 'default'}
+                size="small" variant="outlined"
+              />
+              <Chip
+                label={user.is_2fa_enabled ? '2FA Activado' : '2FA Desactivado'}
+                color={user.is_2fa_enabled ? 'info' : 'default'}
+                size="small" variant="outlined"
+              />
+            </Stack>
+
+            {user.is_2fa_enabled && (
+              <Tooltip title={isSelfEditing ? "Usa 'Mi Perfil' para gestionar tu seguridad" : ""}>
+                <span> {/* Span necesario para tooltip en elemento disabled */}
+                  <Button
+                    variant="outlined"
+                    color="warning"
+                    startIcon={<SecurityIcon />}
+                    onClick={() => setShowDisable2FADialog(true)}
+                    fullWidth
+                    size="small"
+                    disabled={isSelfEditing} // 🔒 También bloqueamos el reset 2FA propio desde admin
+                    sx={{ mt: 1, borderColor: 'warning.light', color: 'warning.dark', borderRadius: 2 }}
+                  >
+                    Resetear Autenticación de Dos Pasos
+                  </Button>
+                </span>
+              </Tooltip>
+            )}
+          </Box>
 
         </Stack>
       </BaseModal>
 
       {/* Sub-modal de confirmación */}
-      <Disable2FADialog 
-        open={showDisable2FADialog} 
-        onClose={() => setShowDisable2FADialog(false)} 
-        onConfirm={handleDisable2FA} 
-        isLoading={isDisabling2FA} 
-        userName={`${user.nombre} ${user.apellido}`} 
+      <Disable2FADialog
+        open={showDisable2FADialog}
+        onClose={() => setShowDisable2FADialog(false)}
+        onConfirm={handleDisable2FA}
+        isLoading={isDisabling2FA}
+        userName={`${user.nombre} ${user.apellido}`}
       />
     </>
   );

@@ -1,4 +1,6 @@
-import React, { Suspense } from 'react';
+// src/App.tsx
+
+import React, { Suspense, useEffect } from 'react'; // ✅ Agregado useEffect
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import { Box, CircularProgress } from '@mui/material';
@@ -8,6 +10,9 @@ import theme from './theme';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { AuthProvider, useAuth } from './context/AuthContext';
+// ✅ Importamos el Contexto y el Setter del puente
+import { SnackbarProvider, useSnackbar } from './context/SnackbarContext'; 
+import { setGlobalSnackbar } from './utils/snackbarUtils'; 
 
 // --- LAYOUTS (carga inmediata - se usan siempre) ---
 import ClientNavbar from './components/layout/Navbar/ClientNavbar';
@@ -59,7 +64,7 @@ const InventarioLotes = React.lazy(() => import('./pages/Admin/Lotes/AdminLotes'
 const AdminUsuarios = React.lazy(() => import('./pages/Admin/Usuarios/AdminUsuarios'));
 const AdminSuscripciones = React.lazy(() => import('./pages/Admin/Suscripciones/AdminSuscripciones'));
 const AdminInversiones = React.lazy(() => import('./pages/Admin/Inversiones/AdminInversiones'));
-const AdminCancelaciones = React.lazy(() => import('./pages/Admin/Suscripciones/AdminCancelaciones'));
+
 const AdminPagos = React.lazy(() => import('./pages/Admin/Finanzas/Pagos/AdminPagos'));
 const LotePagos = React.lazy(() => import('./pages/Admin/Lotes/AdminLotePagos'));
 const AdminPlantillas = React.lazy(() => import('./pages/Admin/Contrato/AdminPlantillas'));
@@ -73,7 +78,6 @@ const queryClient = new QueryClient({
   },
 });
 
-
 const AppLoadingScreen: React.FC = () => (
   <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', bgcolor: 'background.default' }}>
     <Box textAlign="center">
@@ -82,6 +86,24 @@ const AppLoadingScreen: React.FC = () => (
     </Box>
   </Box>
 );
+
+// ✅ NUEVO COMPONENTE: Configura el puente entre Axios y React
+// Este componente no renderiza nada visual, solo conecta la lógica.
+const GlobalSnackbarConfigurator = () => {
+  const { showSuccess, showError, showInfo } = useSnackbar();
+
+  useEffect(() => {
+    // Aquí le decimos a 'utils/snackbarUtils' qué funciones de React debe usar
+    setGlobalSnackbar((msg, type) => {
+      if (type === 'success') showSuccess(msg);
+      else if (type === 'error') showError(msg);
+      else if (type === 'warning') showInfo(msg); // Asumiendo que showInfo maneja warning o tienes showWarning
+      else showInfo(msg);
+    });
+  }, [showSuccess, showError, showInfo]);
+
+  return null;
+};
 
 const AppContent: React.FC = () => {
   const { isInitializing } = useAuth();
@@ -153,7 +175,7 @@ const AppContent: React.FC = () => {
             <Route path="/admin/Proyectos" element={<AdminProyectos />} />
             <Route path="/admin/suscripciones" element={<AdminSuscripciones />} />
             <Route path="/admin/Inversiones" element={<AdminInversiones />} />
-            <Route path="/admin/cancelaciones" element={<AdminCancelaciones />} />
+
             <Route path="/Admin/Lotes" element={<InventarioLotes />} />
             <Route path="/admin/Pagos" element={<AdminPagos />} />
             <Route path="/admin/LotePagos" element={<LotePagos />} />
@@ -171,14 +193,24 @@ const App: React.FC = () => {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Router>
-        <QueryClientProvider client={queryClient}>
-          <AuthProvider>
-            <AppContent />
-          </AuthProvider>
-          <ReactQueryDevtools initialIsOpen={false} />
-        </QueryClientProvider>
-      </Router>
+      
+      {/* 1. Proveedor Global */}
+      <SnackbarProvider>
+        
+        {/* 2. ✅ COMPONENTE CONECTOR: Inicializa el puente aquí dentro */}
+        <GlobalSnackbarConfigurator />
+
+        <Router>
+          <QueryClientProvider client={queryClient}>
+            <AuthProvider>
+              <AppContent />
+            </AuthProvider>
+            <ReactQueryDevtools initialIsOpen={false} />
+          </QueryClientProvider>
+        </Router>
+
+      </SnackbarProvider>
+      
     </ThemeProvider>
   );
 };

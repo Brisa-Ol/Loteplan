@@ -85,7 +85,7 @@ export const useNavbarMenu = () => {
           label: "Gestión de Usuarios",
           icon: PersonIcon, 
           submenu: [
-            { label: "Control de Usuarios", path: "/admin/usuarios", icon: ConstructionIcon },
+            { label: "Gestion Usuarios", path: "/admin/usuarios", icon: ConstructionIcon },
             { label: "Verificacion de usuarios", path: "/admin/KYC", icon: AdminPanelSettingsIcon },
           ],
         },
@@ -93,9 +93,8 @@ export const useNavbarMenu = () => {
           label: "Proyectos",
           icon: ConstructionIcon, 
           submenu: [
-            { label: "Inventario Proyectos", path: "/admin/Proyectos", icon: ConstructionIcon },
+            { label: "Gestion Proyectos", path: "/admin/Proyectos", icon: ConstructionIcon },
             { label: "Gestion de suscripciones", path: "/admin/suscripciones", icon: AssignmentIcon },
-            { label: "Control de Cancelaciones", path: "/admin/cancelaciones", icon: ReceiptIcon },
             { label: "Gestion de Inversiones", path: "/admin/Inversiones", icon: AttachMoneyIcon },
           ],
         },
@@ -104,26 +103,26 @@ export const useNavbarMenu = () => {
           icon: TerrainIcon,
           submenu: [
             { label: "Gestión de Lotes", path: "/admin/Lotes", icon: TerrainIcon },
-            { label: "Lote Pagos", path: "/admin/LotePagos", icon: AttachMoneyIcon },
+            { label: "Gestion de Pagos", path: "/admin/LotePagos", icon: AttachMoneyIcon },
             { isDivider: true, label: "" },
-            { label: "Sala de Pujas", path: "/admin/SalaControlPujas", icon: GavelIcon },
+            { label: "Gestion de Pujas", path: "/admin/SalaControlPujas", icon: GavelIcon },
           ],
         },
         {
           label: "Contratos",
           icon: PaidIcon,
           submenu: [
-            { label: "Plantillas", path: "/admin/Plantillas", icon: DescriptionIcon },
-            { label: "Firmados", path: "/admin/Firmados", icon: AssignmentIcon },
+            { label: "Gestion de Contrato Plantilla", path: "/admin/Plantillas", icon: DescriptionIcon },
+            { label: "Gestion de Contratos Firmados", path: "/admin/Firmados", icon: AssignmentIcon },
           ],
         },
         {
           label: "Finanzas",
           icon: AccountBalanceIcon,
           submenu: [
-            { label: "Control de Pagos", path: "/admin/Pagos", icon: AttachMoneyIcon },
-            { label: "Transacciones", path: "/admin/transacciones", icon: ReceiptIcon },
-            { label: "Resumenes de Cuenta", path: "/admin/ResumenesCuenta", icon: ReceiptIcon },
+            { label: "Gestion de Pagos ", path: "/admin/Pagos", icon: AttachMoneyIcon },
+            { label: "Gestion Transacciones", path: "/admin/transacciones", icon: ReceiptIcon },
+            { label: "Gestion de Resumenes de Cuenta", path: "/admin/ResumenesCuenta", icon: ReceiptIcon },
           ],
         },
       ];
