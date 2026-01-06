@@ -150,7 +150,7 @@ const ContactarGanadorModal: React.FC<{
 // COMPONENTE PRINCIPAL
 // =============================================================================
 
-const SalaControlPujas: React.FC = () => {
+const AdminPujas: React.FC = () => {
   const queryClient = useQueryClient();
   const theme = useTheme();
   
@@ -533,4 +533,4 @@ const SalaControlPujas: React.FC = () => {
   );
 };
 
-export default SalaControlPujas;
+export default AdminPujas;

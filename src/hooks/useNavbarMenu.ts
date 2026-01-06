@@ -25,6 +25,7 @@ import {
   SupervisedUserCircle as SupervisedUserIcon,
   AccountCircle as AccountCircleIcon,
   Logout as LogoutIcon,
+   Message as MessageIcon,
   type SvgIconComponent,
 } from "@mui/icons-material";
 
@@ -105,7 +106,7 @@ export const useNavbarMenu = () => {
             { label: "Gestión de Lotes", path: "/admin/Lotes", icon: TerrainIcon },
             { label: "Gestion de Pagos", path: "/admin/LotePagos", icon: AttachMoneyIcon },
             { isDivider: true, label: "" },
-            { label: "Gestion de Pujas", path: "/admin/SalaControlPujas", icon: GavelIcon },
+            { label: "Gestion de Pujas", path: "/admin/pujas", icon: GavelIcon },
           ],
         },
         {
@@ -123,6 +124,16 @@ export const useNavbarMenu = () => {
             { label: "Gestion de Pagos ", path: "/admin/Pagos", icon: AttachMoneyIcon },
             { label: "Gestion Transacciones", path: "/admin/transacciones", icon: ReceiptIcon },
             { label: "Gestion de Resumenes de Cuenta", path: "/admin/ResumenesCuenta", icon: ReceiptIcon },
+          ],
+        },
+        { isDivider: true, label: "" },
+        {
+          
+          label: "Proyectos Vista Cliente",
+          icon: AccountBalanceIcon,
+          submenu: [
+            { label: "Ahorrista ", path: "/proyectos/ProyectosAhorrista", icon: AttachMoneyIcon },
+            { label: "Inversionista", path: "/proyectos/ProyectosInversionista", icon: ReceiptIcon },
           ],
         },
       ];
@@ -170,7 +181,7 @@ export const useNavbarMenu = () => {
             { label: "Para Inversionistas", path: "/como-funciona/inversionista", icon: AttachMoneyIcon },
           ],
         },
-        { label: "Proyectos", path: "/proyectos/RolSeleccion" },
+        { label: "Proyectos", path: "/proyectos/rol-seleccion" },
         {
             label: "Mis Finanzas",
             icon: AccountBalanceIcon,
@@ -247,7 +258,7 @@ export const useNavbarMenu = () => {
             { label: "Para Inversionistas", path: "/como-funciona/inversionista", icon: AttachMoneyIcon },
           ],
         },
-        { label: "Proyectos", path: "/proyectos/RolSeleccion" },
+        { label: "Proyectos", path: "/proyectos/rol-seleccion" },
         { label: "Nosotros", path: "/nosotros" },
       ],
       userNavItems: [],

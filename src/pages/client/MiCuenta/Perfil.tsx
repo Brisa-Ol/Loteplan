@@ -1,6 +1,8 @@
+// src/pages/client/MiCuenta/Perfil.tsx
+
 import React, { useState, useMemo } from 'react';
 import {
-  Box, Typography, Button, Stack, TextField, Alert, Snackbar,
+  Box, Typography, Button, Stack, TextField, Alert,
   Divider, Avatar, Chip, Card, CardContent, alpha, useTheme, AlertTitle
 } from '@mui/material';
 import {
@@ -27,7 +29,7 @@ import { useNavigate } from 'react-router-dom';
 
 // Servicios y Contexto
 import { useAuth } from '../../../context/AuthContext';
-
+import { useSnackbar } from '../../../context/SnackbarContext'; // ✅ Hook Global
 import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
 import type { UpdateUserMeDto } from '../../../types/dto/usuario.dto';
 
@@ -42,6 +44,9 @@ const Perfil: React.FC = () => {
   const { user, refetchUser } = useAuth();
   const navigate = useNavigate();
   const theme = useTheme();
+  
+  // ✅ Usamos snackbar global
+  const { showSuccess } = useSnackbar();
 
   // Hook de Confirmación
   const confirmController = useConfirmDialog();
@@ -49,31 +54,29 @@ const Perfil: React.FC = () => {
   // Estados UI
   const [isEditing, setIsEditing] = useState(false);
   const [showSecuritySection, setShowSecuritySection] = useState(false);
-  const [successOpen, setSuccessOpen] = useState(false);
-  const [serverError, setServerError] = useState<string | null>(null);
+  
+  // Nuevo estado para mostrar el bloqueo de eliminación SOLO al intentar borrar
+  const [showDeactivationBlock, setShowDeactivationBlock] = useState(false);
 
   // --- QUERIES ---
   const { data: kycStatus } = useQuery({
     queryKey: ['kycStatus'],
-    queryFn: kycService.getStatus,
+    queryFn: async () => await kycService.getStatus(), // Sin .data extra
     retry: false
   });
 
-  // ✅ MEJORADO: Usamos el endpoint validateDeactivation del backend
-  // que centraliza la validación de bloqueos (deudas, inversiones pendientes, etc.)
   const { data: deactivationValidation, isLoading: loadingDeudas } = useQuery({
     queryKey: ['validateDeactivation'],
     queryFn: async () => (await UsuarioService.validateDeactivation()).data,
     retry: false
   });
 
-  // ✅ El backend devuelve canDeactivate: false si hay bloqueos
-  const deudaActiva = useMemo(() => {
+  // Calculamos si tiene bloqueos, pero NO lo usamos para deshabilitar el botón visualmente
+  const hasBlockers = useMemo(() => {
     if (!deactivationValidation) return false;
     return !deactivationValidation.canDeactivate;
   }, [deactivationValidation]);
 
-  // Warnings del backend para mostrar al usuario
   const deactivationWarnings = useMemo(() => {
     return deactivationValidation?.warnings || [];
   }, [deactivationValidation]);
@@ -87,10 +90,9 @@ const Perfil: React.FC = () => {
     onSuccess: async () => {
       await refetchUser();
       setIsEditing(false);
-      setSuccessOpen(true);
-      setServerError(null);
+      showSuccess('Perfil actualizado correctamente');
     },
-    onError: (error: any) => setServerError(error.response?.data?.error || 'Error al actualizar el perfil.'),
+    // El error sale por el interceptor global
   });
 
   // --- FORMIK ---
@@ -107,7 +109,6 @@ const Perfil: React.FC = () => {
       apellido: Yup.string().min(2, 'Mínimo 2 caracteres').required('Requerido'),
       email: Yup.string().email('Email inválido').required('Requerido'),
       nombre_usuario: Yup.string().min(4, 'Mínimo 4 caracteres').required('Requerido'),
-      // Unificamos validación con Register (mínimo 10 dígitos suele ser estándar para móviles con prefijo)
       numero_telefono: Yup.string().min(8, 'Número inválido').required('Requerido'),
     }),
     onSubmit: (values) => mutation.mutate(values),
@@ -116,7 +117,6 @@ const Perfil: React.FC = () => {
 
   const handleCancel = () => {
     formik.resetForm();
-    setServerError(null);
     setIsEditing(false);
   };
 
@@ -129,8 +129,19 @@ const Perfil: React.FC = () => {
     }
   };
 
+  // ✅ NUEVA LÓGICA DE BOTÓN ELIMINAR
   const handleDeleteClick = () => {
-    confirmController.confirm('delete_account');
+    // 1. Ocultamos alertas previas
+    setShowDeactivationBlock(false);
+
+    // 2. Verificamos si hay bloqueos
+    if (hasBlockers) {
+        // Si hay deudas/suscripciones, mostramos la alerta ROJA en ese momento
+        setShowDeactivationBlock(true);
+    } else {
+        // Si está limpio, abrimos el modal de confirmación normal
+        confirmController.confirm('delete_account');
+    }
   };
 
   return (
@@ -169,13 +180,12 @@ const Perfil: React.FC = () => {
               >
                 {user?.nombre?.charAt(0).toUpperCase()}
               </Avatar>
-              {/* Botón flotante simulado (puedes activarlo en el futuro) */}
               <Box
                 sx={{
                   position: 'absolute', bottom: 0, right: 0,
                   bgcolor: 'background.paper', borderRadius: '50%',
                   border: `1px solid ${theme.palette.divider}`,
-                  p: 0.5, cursor: 'default', // Cambiar a 'pointer' si implementas subida
+                  p: 0.5, cursor: 'default',
                   '&:hover': { bgcolor: 'action.hover' }
                 }}
               >
@@ -220,7 +230,6 @@ const Perfil: React.FC = () => {
         <Card elevation={0} sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 3 }}>
           <CardContent sx={{ p: 4 }}>
             <form onSubmit={formik.handleSubmit}>
-              {/* Header form */}
               <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
                 <Stack direction="row" spacing={2} alignItems="center">
                   <Avatar variant="rounded" sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}>
@@ -240,11 +249,6 @@ const Perfil: React.FC = () => {
 
               <Divider sx={{ mb: 4 }} />
 
-              {serverError && (
-                <Alert severity="error" sx={{ mb: 3 }}>{serverError}</Alert>
-              )}
-
-              {/* Inputs con Grid CSS */}
               <Box display="grid" gridTemplateColumns={{ xs: '1fr', md: '1fr 1fr' }} gap={3}>
                 <TextField
                   fullWidth label="Nombre" name="nombre"
@@ -258,7 +262,6 @@ const Perfil: React.FC = () => {
                   disabled={!isEditing}
                 />
 
-                {/* DNI full width (Read Only) */}
                 <Box sx={{ gridColumn: { md: '1 / -1' } }}>
                   <TextField
                     fullWidth label="Documento de Identidad (DNI)"
@@ -288,7 +291,6 @@ const Perfil: React.FC = () => {
                   <TextField
                     fullWidth label="Teléfono" name="numero_telefono"
                     value={formik.values.numero_telefono}
-                    // Permitir solo números en la edición
                     onChange={(e) => formik.setFieldValue('numero_telefono', e.target.value.replace(/\D/g, ''))}
                     disabled={!isEditing}
                     InputProps={{
@@ -339,7 +341,7 @@ const Perfil: React.FC = () => {
                 <Button
                   variant="contained"
                   color="warning"
-                  onClick={() => navigate('/kyc')}
+                  onClick={() => navigate('/client/kyc')}
                   sx={{ minWidth: 160, borderRadius: 2 }}
                   disableElevation
                 >
@@ -409,9 +411,10 @@ const Perfil: React.FC = () => {
         <Card
           elevation={0}
           sx={{
-            border: `1px solid ${deudaActiva ? theme.palette.warning.light : theme.palette.error.light}`,
-            bgcolor: deudaActiva ? alpha(theme.palette.warning.main, 0.02) : alpha(theme.palette.error.main, 0.02),
-            borderRadius: 3
+            border: `1px solid ${showDeactivationBlock ? theme.palette.warning.light : theme.palette.error.light}`,
+            bgcolor: showDeactivationBlock ? alpha(theme.palette.warning.main, 0.02) : alpha(theme.palette.error.main, 0.02),
+            borderRadius: 3,
+            transition: 'all 0.3s ease'
           }}
         >
           <CardContent sx={{ p: 4 }}>
@@ -428,7 +431,11 @@ const Perfil: React.FC = () => {
                 </Box>
               </Stack>
 
-              {deudaActiva ? (
+              {/* ✅ LÓGICA DE VISUALIZACIÓN:
+                  1. Si el usuario hace clic y tiene bloqueos (showDeactivationBlock es true) -> Mostramos Alerta Naranja.
+                  2. Si no, mostramos el aviso azul informativo por defecto.
+              */}
+              {showDeactivationBlock ? (
                 <Alert
                   severity="warning"
                   icon={<MoneyOff fontSize="inherit" />}
@@ -440,7 +447,6 @@ const Perfil: React.FC = () => {
                   }}
                 >
                   <AlertTitle fontWeight={700}>Acción Bloqueada</AlertTitle>
-                  {/* ✅ Mostramos los warnings dinámicos del backend */}
                   {deactivationWarnings.length > 0 ? (
                     <Box component="ul" sx={{ pl: 2, mb: 2 }}>
                       {deactivationWarnings.map((warning, idx) => (
@@ -451,7 +457,7 @@ const Perfil: React.FC = () => {
                     </Box>
                   ) : (
                     <Typography variant="body2" paragraph>
-                      No puedes desactivar tu cuenta. Debes regularizar tu situación primero.
+                      No puedes desactivar tu cuenta. Debes regularizar tu situación financiera primero.
                     </Typography>
                   )}
                   <Button size="small" color="warning" variant="contained" onClick={() => navigate('/client/suscripciones')} sx={{ fontWeight: 700, borderRadius: 2 }}>
@@ -485,7 +491,8 @@ const Perfil: React.FC = () => {
                   color="error"
                   startIcon={<DeleteIcon />}
                   onClick={handleDeleteClick}
-                  disabled={deudaActiva || loadingDeudas}
+                  // ✅ El botón SIEMPRE está habilitado (excepto si carga) para que el usuario pueda hacer clic y ver por qué falla
+                  disabled={loadingDeudas}
                   disableElevation
                   sx={{ borderRadius: 2, fontWeight: 700 }}
                 >
@@ -498,18 +505,11 @@ const Perfil: React.FC = () => {
 
       </Stack>
 
-      <Snackbar open={successOpen} autoHideDuration={3000} onClose={() => setSuccessOpen(false)}>
-        <Alert onClose={() => setSuccessOpen(false)} severity="success" variant="filled" sx={{ width: '100%', borderRadius: 2 }}>
-          ¡Perfil actualizado correctamente!
-        </Alert>
-      </Snackbar>
-
       {/* Modal conectado al hook */}
       <DeleteAccountModal
         open={confirmController.open}
         onClose={confirmController.close}
         is2FAEnabled={user?.is_2fa_enabled || false}
-      // El hook por defecto tiene textos genéricos, pero deleteAccountModal se encarga de mostrar el detalle
       />
 
     </PageContainer>
