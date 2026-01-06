@@ -26,7 +26,8 @@ const ImageUploadZone: React.FC<ImageUploadZoneProps> = ({
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const validateFile = (file: File): boolean => {
+  // ✅ 1. Envolvemos validateFile en useCallback
+  const validateFile = useCallback((file: File): boolean => {
     if (!file.type.startsWith('image/')) {
       setError(`El archivo "${file.name}" no es una imagen válida.`);
       return false;
@@ -38,8 +39,9 @@ const ImageUploadZone: React.FC<ImageUploadZoneProps> = ({
     }
 
     return true;
-  };
+  }, [maxSizeMB]); // Solo cambia si cambia el límite de tamaño
 
+  // ✅ 2. Ahora podemos incluir validateFile en las dependencias de handleFiles
   const handleFiles = useCallback(
     (fileList: FileList | null) => {
       if (!fileList || disabled) return;
@@ -59,7 +61,7 @@ const ImageUploadZone: React.FC<ImageUploadZoneProps> = ({
         onChange([...images, ...filtered]);
       }
     },
-    [images, onChange, disabled, maxFiles]
+    [images, onChange, disabled, maxFiles, validateFile] // validateFile agregado aquí
   );
 
   const handleDrag = (e: React.DragEvent) => {
@@ -112,7 +114,7 @@ const ImageUploadZone: React.FC<ImageUploadZoneProps> = ({
           style={{ display: 'none' }}
         />
 
-        <label htmlFor="image-upload-input">
+        <label htmlFor="image-upload-input" style={{ cursor: disabled ? 'not-allowed' : 'pointer' }}>
           <Stack spacing={2} alignItems="center">
             <UploadIcon sx={{ fontSize: 48, color: dragActive ? 'primary.main' : 'action.active' }} />
 
@@ -148,7 +150,7 @@ const ImageUploadZone: React.FC<ImageUploadZoneProps> = ({
           <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
             {images.map((file, i) => (
               <Paper
-                key={i}
+                key={`${file.name}-${i}`} // Mejor key para evitar warnings de renderizado
                 elevation={2}
                 sx={{
                   width: 120,
@@ -189,6 +191,7 @@ const ImageUploadZone: React.FC<ImageUploadZoneProps> = ({
                     left: 4,
                     bgcolor: 'rgba(0,0,0,0.7)',
                     color: 'white',
+                    fontSize: '0.65rem'
                   }}
                 />
               </Paper>

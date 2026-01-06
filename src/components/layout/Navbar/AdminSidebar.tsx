@@ -17,6 +17,22 @@ import { ConfirmDialog } from '../../common/ConfirmDialog/ConfirmDialog';
 const DRAWER_WIDTH = 260;
 const DRAWER_COLLAPSED = 72;
 
+// --- INTERFACES DE TIPADO ---
+interface NavSubItem {
+  label: string;
+  path?: string;
+  icon?: React.ElementType;
+  action?: () => void;
+  isDivider?: boolean;
+}
+
+interface NavItem {
+  label: string;
+  path?: string;
+  icon?: React.ElementType;
+  submenu?: NavSubItem[];
+}
+
 interface AdminSidebarProps {
   pendingKYC?: number;
 }
@@ -27,7 +43,6 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ pendingKYC = 0 }) => {
   const location = useLocation();
   const { user } = useAuth();
 
-  // Obtenemos logoutDialogProps en lugar de logoutProps
   const { config: { navItems, userNavItems }, logoutDialogProps } = useNavbarMenu();
 
   const [collapsed, setCollapsed] = useState(false);
@@ -37,8 +52,9 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ pendingKYC = 0 }) => {
     return path ? location.pathname === path : false;
   };
 
-  const isChildActive = (submenu?: any[]) => {
-    return submenu?.some(child => location.pathname === child.path);
+  // ✅ Tipado corregido de any[] a NavSubItem[]
+  const isChildActive = (submenu?: NavSubItem[]) => {
+    return submenu?.some(child => child.path && location.pathname === child.path);
   };
 
   const handleToggleMenu = (label: string) => {
@@ -51,7 +67,6 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ pendingKYC = 0 }) => {
     if (path) navigate(path);
   };
 
-  // Usamos la acción definida en el hook (que abre el modal)
   const handleLogoutClick = () => {
     const logoutItem = userNavItems[0]?.submenu?.find(s => s.label === 'Cerrar Sesión');
     if (logoutItem?.action) {
@@ -59,7 +74,8 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ pendingKYC = 0 }) => {
     }
   };
 
-  const renderNavItems = (items: any[]) => {
+  // ✅ Tipado corregido de any[] a NavItem[]
+  const renderNavItems = (items: NavItem[]) => {
     return items.map((item, index) => {
       const active = isActive(item.path) || isChildActive(item.submenu);
       const hasSubmenu = item.submenu && item.submenu.length > 0;
@@ -111,7 +127,8 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ pendingKYC = 0 }) => {
           {!collapsed && hasSubmenu && (
             <Collapse in={isOpen} timeout="auto" unmountOnExit>
               <List disablePadding>
-                {item.submenu.map((subItem: any, subIndex: number) => {
+                {/* ✅ Tipado explícito en el map del submenú */}
+                {item.submenu?.map((subItem: NavSubItem, subIndex: number) => {
                   if (subItem.isDivider) return <Divider key={subIndex} sx={{ my: 1 }} />;
                   const SubIcon = subItem.icon;
                   const isSubActive = isActive(subItem.path);
@@ -191,7 +208,8 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ pendingKYC = 0 }) => {
 
         <Box sx={{ flex: 1, py: 2, overflowY: 'auto' }}>
           <List disablePadding>
-            {renderNavItems(navItems)}
+            {/* ✅ Llamada a renderNavItems con el tipo correcto */}
+            {renderNavItems(navItems as NavItem[])}
           </List>
         </Box>
 
@@ -232,7 +250,6 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ pendingKYC = 0 }) => {
         </Box>
       </Drawer>
 
-      {/* Modal de Confirmación Genérico (incluye Logout) */}
       <ConfirmDialog {...logoutDialogProps} />
     </>
   );

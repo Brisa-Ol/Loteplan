@@ -20,8 +20,8 @@ import { es } from 'date-fns/locale';
 
 // --- Imports de Servicios y Tipos ---
 import type { ContratoFirmadoDto } from '../../../types/dto/contrato-general.dto';
-import ContratoGeneralService from '../../../Services/contrato-general.service';
-import ImagenService from '../../../Services/imagen.service';
+import ContratoGeneralService from '../../../services/contrato-general.service';
+import ImagenService from '../../../services/imagen.service';
 
 // --- Imports de Componentes y Hooks ---
 import PDFViewerMejorado from './components/PDFViewerMejorado';

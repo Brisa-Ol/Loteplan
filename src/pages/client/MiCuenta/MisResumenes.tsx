@@ -13,7 +13,7 @@ import {
 } from '@mui/icons-material';
 
 // Servicios y Tipos
-import ResumenCuentaService from '../../../Services/resumenCuenta.service';
+import ResumenCuentaService from '../../../services/resumenCuenta.service';
 import type { ResumenCuentaDto, DetalleCuotaJson } from '../../../types/dto/resumenCuenta.dto';
 
 // Componentes Comunes

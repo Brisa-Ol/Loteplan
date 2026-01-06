@@ -1,11 +1,10 @@
 import React from 'react';
 import { 
   Box, Typography, Paper, Button, Alert, Stack, LinearProgress, 
-  Card, CardContent, Divider, Chip, useTheme, IconButton, Tooltip, Avatar
+  Card, CardContent, Divider, Chip, useTheme, IconButton, Avatar
 } from '@mui/material';
 import { 
-  AccountBalanceWallet, Warning, TrendingUp, Description, Gavel,
-  NotificationsActive, ChevronRight, CheckCircle, Schedule, ReceiptLong, Assessment, EmojiEvents,
+  AccountBalanceWallet, Warning, TrendingUp, Description, Gavel, ChevronRight, CheckCircle, Schedule, ReceiptLong, Assessment, EmojiEvents,
   AccountCircle, HelpOutline, Security,
   MonetizationOn
 } from '@mui/icons-material';
@@ -13,12 +12,12 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 
 // Servicios
-import MensajeService from '../../../Services/mensaje.service';
-import PagoService from '../../../Services/pago.service';
-import SuscripcionService from '../../../Services/suscripcion.service';
-import ResumenCuentaService from '../../../Services/resumenCuenta.service';
-import InversionService from '../../../Services/inversion.service';
-import PujaService from '../../../Services/puja.service';
+import MensajeService from '../../../services/mensaje.service';
+import PagoService from '../../../services/pago.service';
+import SuscripcionService from '../../../services/suscripcion.service';
+import ResumenCuentaService from '../../../services/resumenCuenta.service';
+import InversionService from '../../../services/inversion.service';
+import PujaService from '../../../services/puja.service';
 
 // Context & Hooks
 import { useAuth } from '../../../context/AuthContext';

@@ -4,7 +4,7 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { 
   Box, Typography, Button, Stack, Chip,
   Tabs, Tab, Card, Avatar, Divider, 
-  useTheme, alpha, Paper, Tooltip, IconButton, Snackbar, Alert
+  useTheme, alpha, Paper, Tooltip, IconButton
 } from '@mui/material';
 import { 
   Cancel as CancelIcon, Visibility as VisibilityIcon,
@@ -16,8 +16,9 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 // --- SERVICIOS Y TIPOS ---
-import SuscripcionService from '../../../Services/suscripcion.service';
+import SuscripcionService from '../../../services/suscripcion.service';
 import type { SuscripcionDto } from '../../../types/dto/suscripcion.dto';
+import type { ApiError } from '../../../services/httpService';
 
 // --- COMPONENTES Y HOOKS ---
 import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
@@ -26,23 +27,23 @@ import { QueryHandler } from '../../../components/common/QueryHandler/QueryHandl
 import { DataTable, type DataTableColumn } from '../../../components/common/DataTable/DataTable';
 import { useConfirmDialog } from '../../../hooks/useConfirmDialog';
 import { ConfirmDialog } from '../../../components/common/ConfirmDialog/ConfirmDialog';
+import { useSnackbar } from '../../../hooks/useSnackbar';
+import GlobalSnackbar from '../../../components/common/GlobalSnackbarProps/GlobalSnackbarProps';
 
 const MisSuscripciones: React.FC = () => {
   const navigate = useNavigate();
   const theme = useTheme();
   const queryClient = useQueryClient();
-  const confirmDialog = useConfirmDialog();
+  
+  // Hooks
+  const confirmDialog = useConfirmDialog<SuscripcionDto>();
+  const { snackbar, showSuccess, showError, handleClose: closeSnackbar } = useSnackbar();
 
-  // --- ESTADOS ---
+  // Estados
   const [tabValue, setTabValue] = useState(0); 
   const [highlightedId, setHighlightedId] = useState<number | null>(null);
-  
-  // Feedback
-  const [snackbar, setSnackbar] = useState<{ open: boolean, message: string, severity: 'success' | 'error' }>({
-    open: false, message: '', severity: 'success'
-  });
 
-  // --- QUERIES ---
+  // Queries
   const { data, isLoading, error } = useQuery({
     queryKey: ['misSuscripcionesFull'],
     queryFn: async () => {
@@ -60,25 +61,24 @@ const MisSuscripciones: React.FC = () => {
   const suscripciones = data?.activas || [];
   const canceladas = data?.canceladas || [];
 
-  // --- MUTACIÓN CANCELAR ---
+  // Mutaciones
   const cancelMutation = useMutation({
     mutationFn: async (id: number) => await SuscripcionService.cancelar(id),
     onSuccess: (_, variables) => { 
       queryClient.invalidateQueries({ queryKey: ['misSuscripcionesFull'] });
       confirmDialog.close(); 
       
-      // Feedback Visual
       setHighlightedId(variables);
       setTimeout(() => setHighlightedId(null), 2500);
-      setSnackbar({ open: true, message: 'Suscripción cancelada correctamente.', severity: 'success' });
+      
+      showSuccess('Suscripción cancelada correctamente.'); 
     },
-    onError: (err: any) => {
+    onError: (err: unknown) => {
+      const apiError = err as ApiError;
       confirmDialog.close();
-      // Si el error es de seguridad (403), el httpService ya lo manejó globalmente.
-      // Si es de negocio (400 - Ej: Puja ganada), mostramos el mensaje.
-      if (err.status !== 403) {
-          const mensaje = err.response?.data?.error || err.message || "Error al cancelar.";
-          setSnackbar({ open: true, message: mensaje, severity: 'error' });
+      if (apiError.status !== 403) {
+          const mensaje = apiError.message || "Error al cancelar.";
+          showError(mensaje); 
       }
     }
   });
@@ -103,15 +103,13 @@ const MisSuscripciones: React.FC = () => {
   const stats = useMemo(() => ({
     activas: suscripciones.length,
     canceladas: canceladas.length,
-    totalPagado: suscripciones.reduce((acc, s) => acc + Number(s.monto_total_pagado || 0), 0)
+    totalPagado: suscripciones.reduce((acc: number, s: SuscripcionDto) => acc + Number(s.monto_total_pagado || 0), 0)
   }), [suscripciones, canceladas]);
 
-  // --- DEFINICIÓN DE COLUMNAS (Activas) ---
+  // Columnas Activas
   const columnsActivas = useMemo<DataTableColumn<SuscripcionDto>[]>(() => [
     {
-      id: 'proyecto',
-      label: 'Proyecto',
-      minWidth: 220,
+      id: 'proyecto', label: 'Proyecto', minWidth: 220,
       render: (row) => (
         <Stack direction="row" spacing={2} alignItems="center">
             <Avatar variant="rounded" sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}>
@@ -129,41 +127,27 @@ const MisSuscripciones: React.FC = () => {
       )
     },
     {
-      id: 'tokens',
-      label: 'Tokens',
-      minWidth: 120,
+      id: 'tokens', label: 'Tokens', minWidth: 120,
       render: (row) => (
         <Chip 
             icon={<TokenIcon sx={{ fontSize: '14px !important' }} />} 
             label={`${row.tokens_disponibles ?? 0} Tokens`} 
-            size="small" 
-            variant="outlined" 
-            sx={{ 
-                borderColor: theme.palette.info.main, 
-                color: theme.palette.info.main,
-                bgcolor: alpha(theme.palette.info.main, 0.05),
-                fontWeight: 600
-            }} 
+            size="small" variant="outlined" 
+            sx={{ borderColor: theme.palette.info.main, color: theme.palette.info.main, bgcolor: alpha(theme.palette.info.main, 0.05), fontWeight: 600 }} 
         />
       )
     },
     {
-      id: 'progreso',
-      label: 'Progreso',
-      minWidth: 150,
+      id: 'progreso', label: 'Progreso', minWidth: 150,
       render: (row) => (
         <Stack direction="row" alignItems="center" spacing={1}>
             <MesesIcon fontSize="small" color="action" />
-            <Typography variant="body2" color="text.primary">
-                {row.meses_a_pagar} pendientes
-            </Typography>
+            <Typography variant="body2" color="text.primary">{row.meses_a_pagar} pendientes</Typography>
         </Stack>
       )
     },
     {
-      id: 'total_pagado',
-      label: 'Total Pagado',
-      minWidth: 150,
+      id: 'total_pagado', label: 'Total Pagado', minWidth: 150,
       render: (row) => (
         <Box>
             <Typography variant="body2" fontWeight={700} color="primary.main">
@@ -178,46 +162,22 @@ const MisSuscripciones: React.FC = () => {
       )
     },
     {
-        id: 'estado',
-        label: 'Estado',
-        minWidth: 100,
+        id: 'estado', label: 'Estado', minWidth: 100,
         render: () => (
-            <Chip 
-                label="Activa" 
-                color="success" 
-                size="small" 
-                variant="filled" 
-                icon={<CheckCircle sx={{ fontSize: '14px !important' }} />}
-                sx={{ fontWeight: 600 }} 
-            />
+            <Chip label="Activa" color="success" size="small" variant="filled" icon={<CheckCircle sx={{ fontSize: '14px !important' }} />} sx={{ fontWeight: 600 }} />
         )
     },
     {
-        id: 'acciones',
-        label: 'Acciones',
-        align: 'right',
-        minWidth: 180,
+        id: 'acciones', label: 'Acciones', align: 'right', minWidth: 180,
         render: (row) => (
             <Stack direction="row" justifyContent="flex-end" spacing={1}>
                 <Tooltip title="Ver detalle del proyecto">
-                    <IconButton
-                        size="small"
-                        onClick={() => navigate(`/proyectos/${row.id_proyecto}`)}
-                        sx={{ color: 'primary.main', bgcolor: alpha(theme.palette.primary.main, 0.1), '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) } }}
-                    >
+                    <IconButton size="small" onClick={() => navigate(`/proyectos/${row.id_proyecto}`)} sx={{ color: 'primary.main', bgcolor: alpha(theme.palette.primary.main, 0.1), '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) } }}>
                         <VisibilityIcon fontSize="small" />
                     </IconButton>
                 </Tooltip>
-                
                 <Tooltip title="Cancelar suscripción">
-                    <Button
-                        variant="outlined"
-                        color="error"
-                        size="small"
-                        startIcon={<CancelIcon fontSize="small" />}
-                        onClick={() => handleOpenCancelDialog(row)}
-                        sx={{ fontWeight: 600, textTransform: 'none', borderRadius: 2 }}
-                    >
+                    <Button variant="outlined" color="error" size="small" startIcon={<CancelIcon fontSize="small" />} onClick={() => handleOpenCancelDialog(row)} sx={{ fontWeight: 600, textTransform: 'none', borderRadius: 2 }}>
                         Cancelar
                     </Button>
                 </Tooltip>
@@ -226,122 +186,60 @@ const MisSuscripciones: React.FC = () => {
     }
   ], [theme, navigate, handleOpenCancelDialog]);
 
-  // --- DEFINICIÓN DE COLUMNAS (Canceladas) ---
+  // Columnas Canceladas
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const columnsCanceladas = useMemo<DataTableColumn<any>[]>(() => [
     {
-        id: 'proyecto',
-        label: 'Proyecto',
-        minWidth: 200,
+        id: 'proyecto', label: 'Proyecto', minWidth: 200,
         render: (row) => (
             <Stack direction="row" spacing={2} alignItems="center">
-                <Avatar variant="rounded" sx={{ bgcolor: alpha(theme.palette.text.disabled, 0.1), color: 'text.disabled' }}>
-                    <Business fontSize="small" />
-                </Avatar>
-                <Typography variant="body2" fontWeight={600} color="text.secondary">
-                    {row.proyecto?.nombre_proyecto || `Proyecto #${row.id_proyecto}`}
-                </Typography>
+                <Avatar variant="rounded" sx={{ bgcolor: alpha(theme.palette.text.disabled, 0.1), color: 'text.disabled' }}><Business fontSize="small" /></Avatar>
+                <Typography variant="body2" fontWeight={600} color="text.secondary">{row.proyecto?.nombre_proyecto || `Proyecto #${row.id_proyecto}`}</Typography>
             </Stack>
         )
     },
     {
-        id: 'fecha_cancelacion',
-        label: 'Fecha Baja',
-        minWidth: 120,
-        render: (row) => (
-            <Typography variant="body2" color="text.secondary">{formatDate(row.fecha_cancelacion)}</Typography>
-        )
+        id: 'fecha_cancelacion', label: 'Fecha Baja', minWidth: 120,
+        render: (row) => <Typography variant="body2" color="text.secondary">{formatDate(row.fecha_cancelacion)}</Typography>
     },
     {
-        id: 'meses_pagados',
-        label: 'Meses Pagados',
-        minWidth: 120,
-        render: (row) => (
-            <Typography variant="body2" color="text.secondary">{row.meses_pagados} meses</Typography>
-        )
+        id: 'meses_pagados', label: 'Meses Pagados', minWidth: 120,
+        render: (row) => <Typography variant="body2" color="text.secondary">{row.meses_pagados} meses</Typography>
     },
     {
-        id: 'total_liquidado',
-        label: 'Liquidado Total',
-        minWidth: 150,
-        render: (row) => (
-            <Typography variant="body2" fontWeight={600} color="text.primary">
-                {formatCurrency(Number(row.monto_pagado_total))}
-            </Typography>
-        )
+        id: 'total_liquidado', label: 'Liquidado Total', minWidth: 150,
+        render: (row) => <Typography variant="body2" fontWeight={600} color="text.primary">{formatCurrency(Number(row.monto_pagado_total))}</Typography>
     },
     {
-        id: 'estado',
-        label: 'Estado',
-        minWidth: 100,
-        render: () => (
-            <Chip 
-                label="Cancelada" 
-                size="small" 
-                variant="outlined" 
-                icon={<EventBusy sx={{ fontSize: '14px !important' }} />}
-                sx={{ 
-                    borderColor: theme.palette.text.disabled, 
-                    color: theme.palette.text.disabled,
-                    fontWeight: 500
-                }} 
-            />
-        )
+        id: 'estado', label: 'Estado', minWidth: 100,
+        render: () => <Chip label="Cancelada" size="small" variant="outlined" icon={<EventBusy sx={{ fontSize: '14px !important' }} />} sx={{ borderColor: theme.palette.text.disabled, color: theme.palette.text.disabled, fontWeight: 500 }} />
     }
   ], [theme]);
 
   return (
     <PageContainer maxWidth="lg">
-      <PageHeader 
-        title="Mis Suscripciones" 
-        subtitle='Gestiona tus pagos recurrentes y visualiza tu historial.'
-      />
+      <PageHeader title="Mis Suscripciones" subtitle='Gestiona tus pagos recurrentes y visualiza tu historial.' />
 
-      {/* --- KPI SUMMARY --- */}
+      {/* KPI SUMMARY */}
       <Box mb={4} display="flex" justifyContent="center">
-        <Card 
-          elevation={0}
-          sx={{ 
-            p: 3,
-            border: `1px solid ${theme.palette.divider}`,
-            borderRadius: 3,
-            bgcolor: 'background.paper',
-            minWidth: { xs: '100%', md: '80%' }
-          }}
-        >
-          <Stack 
-            direction={{ xs: 'column', sm: 'row' }} 
-            divider={<Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', sm: 'block' }, mx: 2 }} />}
-            spacing={{ xs: 4, sm: 4 }}
-            justifyContent="center"
-            alignItems="center"
-          >
-            {/* Activas */}
+        <Card elevation={0} sx={{ p: 3, border: `1px solid ${theme.palette.divider}`, borderRadius: 3, bgcolor: 'background.paper', minWidth: { xs: '100%', md: '80%' } }}>
+          <Stack direction={{ xs: 'column', sm: 'row' }} divider={<Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', sm: 'block' }, mx: 2 }} />} spacing={{ xs: 4, sm: 4 }} justifyContent="center" alignItems="center">
             <Stack direction="row" spacing={2} alignItems="center">
-                <Avatar variant="rounded" sx={{ bgcolor: alpha(theme.palette.success.main, 0.1), color: 'success.main', width: 56, height: 56 }}>
-                    <PlayCircleFilled fontSize="large" />
-                </Avatar>
+                <Avatar variant="rounded" sx={{ bgcolor: alpha(theme.palette.success.main, 0.1), color: 'success.main', width: 56, height: 56 }}><PlayCircleFilled fontSize="large" /></Avatar>
                 <Box>
                     <Typography variant="caption" color="text.secondary" fontWeight={700}>ACTIVAS</Typography>
                     <Typography variant="h5" fontWeight={800} color="text.primary">{stats.activas}</Typography>
                 </Box>
             </Stack>
-
-            {/* Pagado */}
             <Stack direction="row" spacing={2} alignItems="center">
-                <Avatar variant="rounded" sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main', width: 56, height: 56 }}>
-                    <MonetizationOn fontSize="large" />
-                </Avatar>
+                <Avatar variant="rounded" sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main', width: 56, height: 56 }}><MonetizationOn fontSize="large" /></Avatar>
                 <Box>
                     <Typography variant="caption" color="text.secondary" fontWeight={700}>TOTAL PAGADO</Typography>
                     <Typography variant="h5" fontWeight={800} color="text.primary">{formatCurrency(stats.totalPagado)}</Typography>
                 </Box>
             </Stack>
-
-            {/* Canceladas */}
             <Stack direction="row" spacing={2} alignItems="center">
-                <Avatar variant="rounded" sx={{ bgcolor: alpha(theme.palette.error.main, 0.1), color: 'error.main', width: 56, height: 56 }}>
-                    <EventBusy fontSize="large" />
-                </Avatar>
+                <Avatar variant="rounded" sx={{ bgcolor: alpha(theme.palette.error.main, 0.1), color: 'error.main', width: 56, height: 56 }}><EventBusy fontSize="large" /></Avatar>
                 <Box>
                     <Typography variant="caption" color="text.secondary" fontWeight={700}>BAJAS</Typography>
                     <Typography variant="h5" fontWeight={800} color="text.primary">{stats.canceladas}</Typography>
@@ -351,29 +249,16 @@ const MisSuscripciones: React.FC = () => {
         </Card>
       </Box>
 
-      {/* --- PESTAÑAS --- */}
+      {/* PESTAÑAS */}
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-        <Tabs 
-            value={tabValue} 
-            onChange={(_, v) => setTabValue(v)} 
-            textColor="primary" 
-            indicatorColor="primary"
-        >
+        <Tabs value={tabValue} onChange={(_, v) => setTabValue(v)} textColor="primary" indicatorColor="primary">
           <Tab label="Suscripciones Activas" icon={<CheckCircle />} iconPosition="start" />
           <Tab label="Historial de Bajas" icon={<HistoryIcon />} iconPosition="start" />
         </Tabs>
       </Box>
 
       <QueryHandler isLoading={isLoading} error={error as Error | null}>
-        <Paper 
-            elevation={0}
-            sx={{
-                border: `1px solid ${theme.palette.divider}`,
-                borderRadius: 3,
-                overflow: 'hidden',
-                boxShadow: theme.shadows[1]
-            }}
-        >
+        <Paper elevation={0} sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 3, overflow: 'hidden', boxShadow: theme.shadows[1] }}>
             {tabValue === 0 && (
                 <DataTable
                     columns={columnsActivas}
@@ -385,7 +270,6 @@ const MisSuscripciones: React.FC = () => {
                     highlightedRowId={highlightedId}
                 />
             )}
-
             {tabValue === 1 && (
                 <DataTable
                     columns={columnsCanceladas}
@@ -400,7 +284,6 @@ const MisSuscripciones: React.FC = () => {
         </Paper>
       </QueryHandler>
 
-      {/* MODAL CONFIRMACIÓN */}
       <ConfirmDialog 
         controller={confirmDialog}
         onConfirm={handleConfirmCancel}
@@ -409,21 +292,7 @@ const MisSuscripciones: React.FC = () => {
         description="Esta acción detendrá los pagos automáticos. Podrás reactivarla o invertir manualmente en el futuro si hay cupo."
       />
 
-      {/* Snackbar Feedback */}
-      <Snackbar 
-        open={snackbar.open} autoHideDuration={6000} 
-        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert 
-          severity={snackbar.severity} variant="filled"
-          onClose={() => setSnackbar(prev => ({ ...prev, open: false }))} 
-          sx={{ width: '100%', boxShadow: theme.shadows[4] }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
-
+      <GlobalSnackbar {...snackbar} onClose={closeSnackbar} />
     </PageContainer>
   );
 };

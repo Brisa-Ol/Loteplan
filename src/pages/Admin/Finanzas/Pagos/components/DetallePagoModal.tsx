@@ -9,7 +9,7 @@ import {
 } from '@mui/icons-material';
 import { BaseModal } from '../../../../../components/common/BaseModal/BaseModal';
 import type { PagoDto } from '../../../../../types/dto/pago.dto';
-import PagoService from '../../../../../Services/pago.service';
+import PagoService from '../../../../../services/pago.service';
 
 interface Props {
   open: boolean;

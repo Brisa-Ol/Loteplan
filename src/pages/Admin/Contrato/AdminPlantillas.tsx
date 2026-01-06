@@ -14,8 +14,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 // --- DTOs y Servicios ---
 import type { ContratoPlantillaDto } from '../../../types/dto/contrato.dto';
-import ContratoPlantillaService from '../../../Services/contrato-plantilla.service';
-import ProyectoService from '../../../Services/proyecto.service';
+import type { ApiError } from '../../../services/httpService';
+import ContratoPlantillaService from '../../../services/contrato-plantilla.service';
+import ProyectoService from '../../../services/proyecto.service';
 
 // --- Componentes Comunes ---
 import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
@@ -46,7 +47,7 @@ const AdminPlantillas: React.FC = () => {
   const createModal = useModal();
   const updatePdfModal = useModal();
   const updateMetaModal = useModal();
-  const confirmDialog = useConfirmDialog();
+  const confirmDialog = useConfirmDialog<ContratoPlantillaDto>();
 
   const [snackbar, setSnackbar] = useState<{ open: boolean, message: string, severity: 'success' | 'error' | 'info' }>({
     open: false, message: '', severity: 'success'
@@ -66,13 +67,13 @@ const AdminPlantillas: React.FC = () => {
   const { data: plantillas = [], isLoading, error } = useQuery<ContratoPlantillaDto[]>({
     queryKey: ['adminPlantillas'],
     queryFn: async () => (await ContratoPlantillaService.findAll()).data,
-    staleTime: 1000 * 60 * 2 // 2 min cache
+    staleTime: 1000 * 60 * 2 
   });
 
   const { data: proyectos = [] } = useQuery({
     queryKey: ['adminProyectosSelect'],
     queryFn: async () => (await ProyectoService.getAllAdmin()).data,
-    staleTime: 1000 * 60 * 30 // 30 min cache
+    staleTime: 1000 * 60 * 30 
   });
 
   useEffect(() => {
@@ -85,7 +86,7 @@ const AdminPlantillas: React.FC = () => {
     }
   }, [plantillas]);
 
-  // 4. Lógica de Filtrado (Memoized)
+  // 4. Filtrado Memoizado
   const filteredPlantillas = useMemo(() => {
     const term = searchTerm.toLowerCase();
     
@@ -99,9 +100,7 @@ const AdminPlantillas: React.FC = () => {
       const statusA = initialStatusRef.current[a.id] ?? a.activo;
       const statusB = initialStatusRef.current[b.id] ?? b.activo;
 
-      if (statusA !== statusB) {
-        return statusA ? -1 : 1;
-      }
+      if (statusA !== statusB) return statusA ? -1 : 1;
       return a.nombre_archivo.localeCompare(b.nombre_archivo);
     });
   }, [plantillas, searchTerm, filterProject]);
@@ -112,29 +111,24 @@ const AdminPlantillas: React.FC = () => {
     if (modalClose) modalClose();
     setPlantillaSelected(null);
     
-    // ✅ Feedback Visual
     if (updatedId) {
         setHighlightedId(updatedId);
         setTimeout(() => setHighlightedId(null), 2500);
     }
-
     showMessage(msg, 'success');
   };
 
-  const handleError = (err: any) => {
+  const handleError = (err: ApiError) => {
     console.error(err);
     confirmDialog.close();
-    const msg = err.response?.data?.message || 'Ocurrió un error inesperado';
+    const msg = err.message || 'Ocurrió un error inesperado';
     showMessage(msg, 'error');
   };
 
+  // ✅ MUTACIÓN AJUSTADA: Solo lee el mensaje, no busca IDs anidados que no existen
   const createMutation = useMutation({
     mutationFn: ContratoPlantillaService.create,
-    onSuccess: (data) => {
-        // Asumiendo que data.data es el objeto creado y tiene ID
-        const newItem = (data as any).data; 
-        handleSuccess('Plantilla creada correctamente.', createModal.close, newItem?.id);
-    },
+    onSuccess: () => handleSuccess('Plantilla creada correctamente.', createModal.close),
     onError: handleError
   });
 
@@ -157,11 +151,8 @@ const AdminPlantillas: React.FC = () => {
     onSuccess: (_, plantilla) => {
       queryClient.invalidateQueries({ queryKey: ['adminPlantillas'] });
       confirmDialog.close();
-      
-      // ✅ Feedback Visual
       setHighlightedId(plantilla.id);
       setTimeout(() => setHighlightedId(null), 2500);
-      
       showMessage(plantilla.activo ? 'Plantilla ocultada' : 'Plantilla activada', 'success');
     },
     onError: handleError
@@ -177,7 +168,7 @@ const AdminPlantillas: React.FC = () => {
     onError: handleError
   });
 
-  // Handlers (Callbacks)
+  // Callbacks de Acción
   const handleToggleActive = useCallback((plantilla: ContratoPlantillaDto) => {
     confirmDialog.confirm('toggle_plantilla_status', plantilla);
   }, [confirmDialog]);
@@ -207,7 +198,7 @@ const AdminPlantillas: React.FC = () => {
     updateMetaModal.open();
   }, [updateMetaModal]);
 
-  // 6. Columnas
+  // 6. Definición de Columnas
   const columns = useMemo<DataTableColumn<ContratoPlantillaDto>[]>(() => [
     { id: 'id', label: 'ID', minWidth: 50 },
     { 
@@ -247,12 +238,9 @@ const AdminPlantillas: React.FC = () => {
       )
     },
     {
-      id: 'visibilidad',
-      label: 'Estado',
-      align: 'center',
+      id: 'visibilidad', label: 'Estado', align: 'center',
       render: (row) => {
         const isProcessingThis = toggleActiveMutation.isPending && confirmDialog.data?.id === row.id;
-
         return (
           <Stack direction="row" alignItems="center" spacing={1} justifyContent="center">
             {isProcessingThis ? (
@@ -265,26 +253,11 @@ const AdminPlantillas: React.FC = () => {
                         color="success"
                         size="small"
                         disabled={toggleActiveMutation.isPending || softDeleteMutation.isPending}
-                        sx={{
-                            '& .MuiSwitch-switchBase.Mui-checked': {
-                                color: theme.palette.success.main,
-                                '&:hover': { backgroundColor: alpha(theme.palette.success.main, 0.1) },
-                            },
-                            '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                                backgroundColor: theme.palette.success.main,
-                            },
-                        }}
                     />
                 </Tooltip>
             )}
-            
             {!isProcessingThis && (
-              <Typography 
-                variant="caption" 
-                color={row.activo ? 'success.main' : 'text.disabled'}
-                fontWeight={600}
-                sx={{ minWidth: 50 }}
-              >
+              <Typography variant="caption" color={row.activo ? 'success.main' : 'text.disabled'} fontWeight={600} sx={{ minWidth: 50 }}>
                 {row.activo ? 'Activa' : 'Inactiva'}
               </Typography>
             )}
@@ -335,22 +308,12 @@ const AdminPlantillas: React.FC = () => {
     <PageContainer maxWidth="xl">
       <PageHeader title="Gestión de Plantillas" subtitle="Administración de documentos base y contratos legales." />
 
-      <Paper 
-        elevation={0} 
-        sx={{ 
-            p: 2, mb: 3, borderRadius: 2, 
-            border: '1px solid', borderColor: 'divider', 
-            bgcolor: alpha(theme.palette.background.paper, 0.6)
-        }} 
-      >
+      <Paper elevation={0} sx={{ p: 2, mb: 3, borderRadius: 2, border: '1px solid', borderColor: 'divider', bgcolor: alpha(theme.palette.background.paper, 0.6) }}>
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="center">
           <TextField 
             placeholder="Buscar por nombre de archivo..." size="small" value={searchTerm} 
             onChange={(e) => setSearchTerm(e.target.value)} sx={{ flexGrow: 1 }}
-            InputProps={{ 
-                startAdornment: <InputAdornment position="start"><Search color="action" /></InputAdornment>,
-                sx: { borderRadius: 2 }
-            }}
+            InputProps={{ startAdornment: <InputAdornment position="start"><Search color="action" /></InputAdornment>, sx: { borderRadius: 2 } }}
           />
           <TextField
             select label="Filtrar por Proyecto" size="small" value={filterProject}
@@ -360,15 +323,8 @@ const AdminPlantillas: React.FC = () => {
             <MenuItem value="all"><em>Todos los Proyectos</em></MenuItem>
             {proyectos.map(p => <MenuItem key={p.id} value={p.id}>{p.nombre_proyecto}</MenuItem>)}
           </TextField>
-          
           <Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', md: 'block' }, mx: 1 }} />
-
-          <Button 
-            variant="contained" 
-            startIcon={<AddIcon />} 
-            onClick={createModal.open}
-            sx={{ borderRadius: 2, fontWeight: 700, boxShadow: theme.shadows[2] }}
-          >
+          <Button variant="contained" startIcon={<AddIcon />} onClick={createModal.open} sx={{ borderRadius: 2, fontWeight: 700, boxShadow: theme.shadows[2] }}>
             Nuevo Contrato
           </Button>
         </Stack>
@@ -379,26 +335,15 @@ const AdminPlantillas: React.FC = () => {
           columns={columns} 
           data={filteredPlantillas} 
           getRowKey={(row) => row.id} 
-          
-          // ✅ Opacidad automática para inactivos
           isRowActive={(row) => row.activo}
-          // ✅ Efecto flash para feedback
           highlightedRowId={highlightedId}
-          
-          // ✅ Estilo personalizado SOLO para alerta de integridad (fuera del estándar)
-          getRowSx={(row) => ({
-             ...(row.integrity_compromised && {
-                 bgcolor: alpha(theme.palette.error.main, 0.1)
-             })
-          })}
-
           pagination 
           defaultRowsPerPage={10} 
           emptyMessage="No se encontraron plantillas con los filtros actuales."
         />
       </QueryHandler>
 
-      {/* Modales */}
+      {/* --- Modales --- */}
       <CreatePlantillaModal 
         open={createModal.isOpen} 
         onClose={createModal.close} 
@@ -415,37 +360,21 @@ const AdminPlantillas: React.FC = () => {
         isLoading={updatePdfMutation.isPending} 
       />
 
-      {plantillaSelected && updateMetaModal.isOpen && (
+      {plantillaSelected && (
          <UpdateMetadataModal 
-           open={updateMetaModal.isOpen} 
-           onClose={() => { updateMetaModal.close(); setPlantillaSelected(null); }} 
-           plantilla={plantillaSelected} 
-           proyectos={proyectos} 
-           onSubmit={async (values) => { await updateMetaMutation.mutateAsync({ id: plantillaSelected.id, data: values }); }} 
-           isLoading={updateMetaMutation.isPending} 
+            open={updateMetaModal.isOpen} 
+            onClose={() => { updateMetaModal.close(); setPlantillaSelected(null); }} 
+            plantilla={plantillaSelected} 
+            proyectos={proyectos} 
+            onSubmit={async (values) => { await updateMetaMutation.mutateAsync({ id: plantillaSelected.id, data: values }); }} 
+            isLoading={updateMetaMutation.isPending} 
          />
       )}
 
-      {/* Modal de Confirmación */}
-      <ConfirmDialog 
-        controller={confirmDialog}
-        onConfirm={handleConfirmAction}
-        isLoading={toggleActiveMutation.isPending || softDeleteMutation.isPending}
-      />
+      <ConfirmDialog controller={confirmDialog} onConfirm={handleConfirmAction} isLoading={toggleActiveMutation.isPending || softDeleteMutation.isPending} />
 
-      {/* Snackbar Global */}
-      <Snackbar 
-        open={snackbar.open} 
-        autoHideDuration={6000} 
-        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert 
-          severity={snackbar.severity} 
-          onClose={() => setSnackbar(prev => ({ ...prev, open: false }))} 
-          variant="filled"
-          sx={{ boxShadow: theme.shadows[4] }}
-        >
+      <Snackbar open={snackbar.open} autoHideDuration={6000} onClose={() => setSnackbar(prev => ({ ...prev, open: false }))} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+        <Alert severity={snackbar.severity} onClose={() => setSnackbar(prev => ({ ...prev, open: false }))} variant="filled" sx={{ boxShadow: theme.shadows[4] }}>
           {snackbar.message}
         </Alert>
       </Snackbar>

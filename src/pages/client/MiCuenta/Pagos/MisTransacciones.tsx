@@ -15,8 +15,8 @@ import {
 
 // Servicios y Tipos
 import type { TransaccionDto } from '../../../../types/dto/transaccion.dto';
-import TransaccionService from '../../../../Services/transaccion.service';
-import MercadoPagoService from '../../../../Services/pagoMercado.service';
+import TransaccionService from '../../../../services/transaccion.service';
+import MercadoPagoService from '../../../../services/pagoMercado.service';
 
 // Componentes Comunes
 import { PageContainer } from '../../../../components/common/PageContainer/PageContainer';

@@ -22,8 +22,8 @@ import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 
 // Servicios
-import LoteService from '../../../../../Services/lote.service';
-import ContratoPlantillaService from '../../../../../Services/contrato-plantilla.service';
+import LoteService from '../../../../../services/lote.service';
+import ContratoPlantillaService from '../../../../../services/contrato-plantilla.service';
 
 // DataTable
 import { DataTable, type DataTableColumn } from '../../../../../components/common/DataTable/DataTable'; 

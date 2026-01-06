@@ -7,8 +7,8 @@ import { useQuery } from '@tanstack/react-query';
 
 // Componentes y Servicios
 import { BaseModal } from '../../../../components/common/BaseModal/BaseModal';
-import ContratoPlantillaService from '../../../../Services/contrato-plantilla.service';
-import ImagenService from '../../../../Services/imagen.service';
+import ContratoPlantillaService from '../../../../services/contrato-plantilla.service';
+import ImagenService from '../../../../services/imagen.service';
 import PDFViewerMejorado from './PDFViewerMejorado';
 
 interface Props {

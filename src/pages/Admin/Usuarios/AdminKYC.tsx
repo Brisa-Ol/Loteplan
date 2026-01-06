@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import {
-  Box, Typography, Paper, Chip, Stack, Snackbar,
+  Box, Typography, Paper, Chip, Stack,
   Dialog, DialogTitle, DialogContent, DialogActions, TextField,
   Avatar, IconButton, Tabs, Tab, Tooltip, useTheme, Alert, alpha, Button
 } from '@mui/material';
@@ -19,6 +19,9 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import type { KycDTO } from '../../../types/dto/kyc.dto';
+import type { ApiError } from '../../../services/httpService'; // Asegúrate de importar el tipo de error
+import kycService from '../../../services/kyc.service';
+
 import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
 import { PageHeader } from '../../../components/common/PageHeader/PageHeader';
 import { QueryHandler } from '../../../components/common/QueryHandler/QueryHandler';
@@ -26,9 +29,9 @@ import { DataTable, type DataTableColumn } from '../../../components/common/Data
 import { useModal } from '../../../hooks/useModal';
 import { useConfirmDialog } from '../../../hooks/useConfirmDialog';
 import { ConfirmDialog } from '../../../components/common/ConfirmDialog/ConfirmDialog';
-
+import { useSnackbar } from '../../../hooks/useSnackbar';
+import GlobalSnackbar from '../../../components/common/GlobalSnackbarProps/GlobalSnackbarProps';
 import KycDetailModal from './modals/KycDetailModal';
-import kycService from '../../../Services/kyc.service';
 
 type TabValue = 'pendiente' | 'aprobada' | 'rechazada' | 'todas';
 
@@ -37,19 +40,23 @@ const AdminKYC: React.FC = () => {
   const queryClient = useQueryClient();
   const [currentTab, setCurrentTab] = useState<TabValue>('pendiente');
   
-  // Modales y Dialogs
+  // Hooks
+  const { snackbar, showSuccess, showError, handleClose: closeSnackbar } = useSnackbar();
   const detailsModal = useModal();
   const rejectModal = useModal();
-  const confirmDialog = useConfirmDialog();
+  const confirmDialog = useConfirmDialog<KycDTO>();
 
   // Estados Locales
   const [selectedKyc, setSelectedKyc] = useState<KycDTO | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [kycToReject, setKycToReject] = useState<KycDTO | null>(null);
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
-  
-  // ✅ Estado para el efecto visual de la tabla (nuevo prop de DataTable)
   const [lastActionId, setLastActionId] = useState<number | string | null>(null);
+
+  // Helper de Errores
+  const getErrorMessage = (error: unknown) => {
+    const apiError = error as ApiError;
+    return apiError.message || 'Ocurrió un error inesperado';
+  };
 
   // 📡 QUERIES
   const { data: pendingKYCs = [], isLoading: loadingPending, error: errorPending } = useQuery({
@@ -78,27 +85,25 @@ const AdminKYC: React.FC = () => {
   const isLoading = loadingPending || loadingApproved || loadingRejected || loadingAll;
   const error = errorPending || errorApproved || errorRejected || errorAll;
 
-  // Limpiar el resaltado al cambiar de pestaña
   useEffect(() => { setLastActionId(null); }, [currentTab]);
 
   // ⚡ MUTATIONS
   const approveMutation = useMutation({
     mutationFn: (idUsuario: number) => kycService.approveVerification(idUsuario),
-    onSuccess: (_, variables) => {
-      // Usamos variables (idUsuario) o el ID del item si lo tenemos guardado en confirmDialog
+    onSuccess: () => {
       if (confirmDialog.data?.id) setLastActionId(confirmDialog.data.id);
       
       queryClient.invalidateQueries({ queryKey: ['kycPending'] });
       queryClient.invalidateQueries({ queryKey: ['kycApproved'] });
       queryClient.invalidateQueries({ queryKey: ['kycAll'] });
       
-      setSnackbar({ open: true, message: '✅ Verificación aprobada', severity: 'success' });
+      showSuccess('Verificación aprobada correctamente'); 
       confirmDialog.close();
       detailsModal.close();
     },
-    onError: (err: any) => {
+    onError: (err) => {
         confirmDialog.close();
-        setSnackbar({ open: true, message: err.response?.data?.mensaje || 'Error al aprobar', severity: 'error' });
+        showError(getErrorMessage(err)); 
     },
   });
 
@@ -112,19 +117,18 @@ const AdminKYC: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['kycRejected'] });
       queryClient.invalidateQueries({ queryKey: ['kycAll'] });
       
-      setSnackbar({ open: true, message: '✅ Solicitud rechazada correctamente', severity: 'success' });
+      showSuccess('Solicitud rechazada correctamente'); 
       rejectModal.close();
       detailsModal.close();
       setRejectReason('');
     },
-    onError: (err: any) => setSnackbar({ open: true, message: err.response?.data?.mensaje || 'Error al rechazar', severity: 'error' }),
+    onError: (err) => showError(getErrorMessage(err)), 
   });
 
   // HANDLERS
   const handleOpenDetails = (kyc: KycDTO) => { setSelectedKyc(kyc); detailsModal.open(); };
   
   const handleApproveClick = (kyc: KycDTO) => {
-    // Pasamos el objeto completo para tener acceso al ID visual luego
     confirmDialog.confirm('approve_kyc', kyc);
   };
 
@@ -256,7 +260,6 @@ const AdminKYC: React.FC = () => {
     <PageContainer maxWidth="xl" sx={{ py: 3 }}>
       <PageHeader title="Gestión KYC" subtitle="Validación de identidad y documentación de usuarios" />
       
-      {/* Tabs Styled */}
       <Paper 
         elevation={0} 
         sx={{ 
@@ -283,13 +286,12 @@ const AdminKYC: React.FC = () => {
       </Paper>
 
       <QueryHandler isLoading={isLoading} error={error as Error}>
-        {/* ✅ DataTable Implementado con highlightedRowId */}
         <DataTable
             columns={columns}
             data={currentData}
-            getRowKey={(row) => row.id} // Asegúrate que tu DTO tiene 'id', si no usa row.id_usuario
+            getRowKey={(row) => row.id} 
             emptyMessage={`No hay solicitudes en estado: ${currentTab}.`}
-            highlightedRowId={lastActionId} // ✨ Efecto visual al aprobar/rechazar
+            highlightedRowId={lastActionId}
             pagination 
             defaultRowsPerPage={10}
         />
@@ -307,7 +309,6 @@ const AdminKYC: React.FC = () => {
         isLoading={approveMutation.isPending}
       />
 
-      {/* Modal de Rechazo Manual */}
       <Dialog 
         open={rejectModal.isOpen} 
         onClose={rejectModal.close} 
@@ -341,16 +342,7 @@ const AdminKYC: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      <Snackbar 
-        open={snackbar.open} 
-        autoHideDuration={4000} 
-        onClose={() => setSnackbar(s => ({...s, open: false}))}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert severity={snackbar.severity} variant="filled" onClose={() => setSnackbar(s => ({...s, open: false}))}>
-            {snackbar.message}
-        </Alert>
-      </Snackbar>
+      <GlobalSnackbar {...snackbar} onClose={closeSnackbar} />
     </PageContainer>
   );
 };

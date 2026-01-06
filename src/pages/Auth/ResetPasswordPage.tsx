@@ -11,21 +11,24 @@ import {
   InputAdornment, 
   IconButton,
   Box,
-  Typography
+  Typography,
+  Paper,
+  Fade
 } from '@mui/material';
-import { Visibility, VisibilityOff } from '@mui/icons-material';
+import { Visibility, VisibilityOff, CheckCircleOutline, LockReset } from '@mui/icons-material';
 
-import AuthService from '../../Services/auth.service';
+// Servicios y Componentes
+import AuthService from '../../services/auth.service';
 import AuthFormContainer from './components/AuthFormContainer/AuthFormContainer';
 import { PageContainer } from '../../components/common/PageContainer/PageContainer';
 
 const ResetPasswordPage: React.FC = () => {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
+  
+  // Estados
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
-
-  // Estados para controlar la visibilidad de las contraseñas
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -46,65 +49,83 @@ const ResetPasswordPage: React.FC = () => {
         .required('Confirma tu contraseña'),
     }),
     onSubmit: async (values) => {
-      if (!token) return;
+      if (!token) {
+        setErrorMessage('Token no válido o expirado.');
+        setStatus('error');
+        return;
+      }
+
       setStatus('loading');
+      setErrorMessage('');
+
       try {
         await AuthService.resetPassword(token, { nueva_contraseña: values.password });
         setStatus('success');
-        setTimeout(() => navigate('/login', { 
-            state: { message: 'Contraseña restablecida. Ingresa con tu nueva clave.' } 
-        }), 3000);
+        
+        // Redirección automática
+        setTimeout(() => {
+            navigate('/login', { 
+                state: { message: 'Contraseña restablecida. Ingresa con tu nueva clave.' } 
+            });
+        }, 3000);
+
       } catch (error: any) {
         setStatus('error');
-        setErrorMessage(error.response?.data?.error || 'El enlace es inválido o ha expirado.');
+        const msg = error.response?.data?.error || error.response?.data?.message || 'El enlace es inválido o ha expirado.';
+        setErrorMessage(msg);
       }
     },
   });
 
-  const isDisabled = status === 'loading' || status === 'success';
+  const isLoading = status === 'loading';
+  const isSuccess = status === 'success';
 
   return (
     <PageContainer maxWidth="sm">
       <AuthFormContainer 
-        title={status === 'success' ? "¡Contraseña Actualizada!" : "Nueva Contraseña"} 
-        subtitle={status === 'success' ? "" : "Ingresa tu nueva clave de acceso"}
+        title={isSuccess ? "¡Todo listo!" : "Restablecer Contraseña"} 
+        subtitle={isSuccess ? "" : "Crea una nueva contraseña segura para tu cuenta"}
       >
         
-        {status === 'success' ? (
-          <Box textAlign="center" py={2}>
-            <Alert severity="success" sx={{ mb: 2 }}>
-              Tu contraseña ha sido actualizada correctamente.
-            </Alert>
-            <Typography variant="body2" color="text.secondary">
-              Serás redirigido al login en unos segundos...
-            </Typography>
-            <Button 
-              variant="outlined" 
-              onClick={() => navigate('/login')} 
-              sx={{ mt: 3 }}
-              fullWidth
-            >
-              Ir al Login ahora
-            </Button>
-          </Box>
+        {isSuccess ? (
+          <Fade in={true}>
+            <Box textAlign="center" py={4}>
+              <CheckCircleOutline color="success" sx={{ fontSize: 60, mb: 2 }} />
+              <Typography variant="h6" gutterBottom>
+                Contraseña actualizada
+              </Typography>
+              <Typography variant="body2" color="text.secondary" mb={3}>
+                Serás redirigido al inicio de sesión en unos segundos...
+              </Typography>
+              <Button 
+                variant="contained" 
+                onClick={() => navigate('/login')} 
+                fullWidth
+                sx={{ borderRadius: 2 }}
+              >
+                Ir al Login ahora
+              </Button>
+            </Box>
+          </Fade>
         ) : (
-          <>
-            {status === 'error' && (
-              <Alert severity="error" sx={{ mb: 3 }}>
-                {errorMessage}
-              </Alert>
-            )}
-            
+          <Fade in={true}>
             <form onSubmit={formik.handleSubmit}>
               <Stack spacing={3}>
+                
+                {status === 'error' && (
+                  <Alert severity="error" variant="filled" sx={{ borderRadius: 2 }}>
+                    {errorMessage}
+                  </Alert>
+                )}
+
                 <TextField
                   fullWidth
                   label="Nueva Contraseña"
                   type={showPassword ? "text" : "password"}
+                  disabled={isLoading}
                   {...formik.getFieldProps('password')}
                   error={formik.touched.password && Boolean(formik.errors.password)}
                   helperText={formik.touched.password && formik.errors.password}
-                  disabled={isDisabled}
                   InputProps={{
                     endAdornment: (
                       <InputAdornment position="end">
@@ -120,10 +141,10 @@ const ResetPasswordPage: React.FC = () => {
                   fullWidth
                   label="Confirmar Nueva Contraseña"
                   type={showConfirmPassword ? "text" : "password"}
+                  disabled={isLoading}
                   {...formik.getFieldProps('confirmPassword')}
                   error={formik.touched.confirmPassword && Boolean(formik.errors.confirmPassword)}
                   helperText={formik.touched.confirmPassword && formik.errors.confirmPassword}
-                  disabled={isDisabled}
                   InputProps={{
                     endAdornment: (
                       <InputAdornment position="end">
@@ -140,13 +161,15 @@ const ResetPasswordPage: React.FC = () => {
                   variant="contained" 
                   type="submit" 
                   size="large"
-                  disabled={isDisabled}
+                  disabled={isLoading}
+                  startIcon={!isLoading && <LockReset />}
+                  sx={{ py: 1.5, fontWeight: 700, borderRadius: 2 }}
                 >
-                  {status === 'loading' ? <CircularProgress size={24} color="inherit" /> : 'Cambiar Contraseña'}
+                  {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Cambiar Contraseña'}
                 </Button>
               </Stack>
             </form>
-          </>
+          </Fade>
         )}
       </AuthFormContainer>
     </PageContainer>

@@ -8,7 +8,7 @@ import { useAuth } from "../../../context/AuthContext";
 import { PageContainer, PageHeader, SectionTitle } from "../../../components/common";
 import { QueryHandler } from "../../../components/common/QueryHandler/QueryHandler";
 
-import proyectoService from '../../../Services/proyecto.service'; 
+import proyectoService from '../../../services/proyecto.service'; 
 import { ProjectCard } from "./components/ProjectCard";
 
 // --- COMPONENTE VISUAL: Highlights ---

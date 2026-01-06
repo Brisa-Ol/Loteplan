@@ -12,9 +12,9 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 
 // Servicios y Tipos
-import PujaService from '../../../Services/puja.service';
+import PujaService from '../../../services/puja.service';
 import type { PujaDto } from '../../../types/dto/puja.dto';
-import ImagenService from '../../../Services/imagen.service';
+import ImagenService from '../../../services/imagen.service';
 
 // Componentes Comunes
 import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
@@ -50,7 +50,6 @@ const MisPujas: React.FC = () => {
       
       // Caso A: Requiere 2FA (Status 202 o flag is2FARequired)
       if (response.status === 202 || data.is2FARequired) {
-        // Mantenemos selectedPujaId seteuado para saber cuál confirmar
         setTwoFAError(null);
         twoFaModal.open();
         return;
@@ -63,7 +62,7 @@ const MisPujas: React.FC = () => {
     },
     onError: (err: any) => {
       alert(err.response?.data?.error || 'Error al iniciar el pago');
-      setSelectedPujaId(null); // Limpiamos selección si falla
+      setSelectedPujaId(null); 
     }
   });
 
@@ -100,8 +99,7 @@ const MisPujas: React.FC = () => {
   const formatCurrency = (val: number) => 
     new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(val);
 
-  // 🚨 CÓDIGO ELIMINADO AQUÍ: El bloque <Button> flotante que causaba el error de sintaxis ha sido removido.
-
+  
   return (
     <PageContainer maxWidth="lg">
       
@@ -229,13 +227,12 @@ const MisPujas: React.FC = () => {
                           variant="contained"
                           color="warning"
                           fullWidth
-                          // 🟢 CORRECCIÓN: Loading individual por tarjeta
                           startIcon={payMutation.isPending && selectedPujaId === puja.id ? <CircularProgress size={20} color="inherit" /> : <Payment />}
                           onClick={() => {
-                            setSelectedPujaId(puja.id); // Marcamos cuál se está pagando
+                            setSelectedPujaId(puja.id); 
                             payMutation.mutate(puja.id);
                           }}
-                          disabled={payMutation.isPending} // Bloqueamos si hay algún pago en curso
+                          disabled={payMutation.isPending} 
                           sx={{ fontWeight: 700 }}
                         >
                           {payMutation.isPending && selectedPujaId === puja.id ? 'Procesando...' : 'Pagar'}

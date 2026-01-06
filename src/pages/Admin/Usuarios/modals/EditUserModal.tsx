@@ -14,7 +14,7 @@ import * as Yup from 'yup';
 
 import { BaseModal } from '../../../../components/common/BaseModal/BaseModal';
 import type { UpdateUserAdminDto, UsuarioDto } from '../../../../types/dto/usuario.dto';
-import UsuarioService from '../../../../Services/usuario.service';
+import UsuarioService from '../../../../services/usuario.service';
 import { useAuth } from '../../../../context/AuthContext'; // ✅ Importamos useAuth
 
 // ════════════════════════════════════════════════════════════

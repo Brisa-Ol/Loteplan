@@ -14,7 +14,7 @@ import {
   CloudUpload as UploadIcon
 } from '@mui/icons-material';
 
-import imagenService from '../../../../../Services/imagen.service';
+import imagenService from '../../../../../services/imagen.service';
 import { QueryHandler } from '../../../../../components/common/QueryHandler/QueryHandler';
 import ImageUploadZone from '../../../../../components/common/ImageUploadZone/ImageUploadZone';
 import type { CreateImagenDto, ImagenDto } from '../../../../../types/dto/imagen.dto';

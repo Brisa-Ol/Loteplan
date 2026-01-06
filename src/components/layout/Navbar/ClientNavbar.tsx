@@ -20,7 +20,7 @@ import { useNavbarMenu, NAVBAR_HEIGHT, type NavItem } from '../../../hooks/useNa
 
 // Components & Services
 import { ConfirmDialog } from '../../../components/common/ConfirmDialog/ConfirmDialog'; 
-import MensajeService from '../../../Services/mensaje.service';
+import MensajeService from '../../../services/mensaje.service';
 import Footer from '../../layout/Footer/Footer'; // 👈 1. IMPORTAR FOOTER
 
 // =================================================================

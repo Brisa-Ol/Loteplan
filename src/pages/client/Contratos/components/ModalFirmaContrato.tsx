@@ -13,9 +13,9 @@ import { PDFDocument } from 'pdf-lib';
 
 // Componentes y Servicios
 import { BaseModal } from '../../../../components/common/BaseModal/BaseModal';
-import ContratoFirmadoService from '../../../../Services/contrato-firmado.service';
-import ContratoPlantillaService from '../../../../Services/contrato-plantilla.service';
-import ImagenService from '../../../../Services/imagen.service';
+import ContratoFirmadoService from '../../../../services/contrato-firmado.service';
+import ContratoPlantillaService from '../../../../services/contrato-plantilla.service';
+import ImagenService from '../../../../services/imagen.service';
 import PDFViewerMejorado from './PDFViewerMejorado';
 
 interface ModalFirmaContratoProps {

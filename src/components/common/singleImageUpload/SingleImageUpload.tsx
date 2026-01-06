@@ -32,7 +32,8 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
     return existingImageUrl || null;
   }, [image, existingImageUrl]);
 
-  const validateFile = (file: File): boolean => {
+  // ✅ 1. Memorizar validateFile para mantener una referencia estable
+  const validateFile = useCallback((file: File): boolean => {
     if (!file.type.startsWith('image/')) {
       setError(`El archivo "${file.name}" no es una imagen válida.`);
       return false;
@@ -45,8 +46,9 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
     }
 
     return true;
-  };
+  }, [maxSizeMB]);
 
+  // ✅ 2. Agregar validateFile como dependencia de handleFile
   const handleFile = useCallback(
     (file: File | null) => {
       if (!file || disabled) return;
@@ -57,7 +59,7 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
         onChange(file);
       }
     },
-    [onChange, disabled, maxSizeMB]
+    [onChange, disabled, validateFile] // validateFile agregado aquí
   );
 
   const handleDrag = useCallback(

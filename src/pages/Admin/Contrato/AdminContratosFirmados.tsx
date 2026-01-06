@@ -21,7 +21,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale'; 
 
 // Servicios y Tipos
-import ContratoService from '../../../Services/contrato.service'; 
+import ContratoService from '../../../services/contrato.service'; 
 import type { ContratoFirmadoDto } from '../../../types/dto/contrato.dto';
 
 // Componentes Comunes

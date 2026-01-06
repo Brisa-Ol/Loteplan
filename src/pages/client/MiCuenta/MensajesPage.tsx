@@ -16,7 +16,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 // Servicios y Contexto
-import MensajeService from '../../../Services/mensaje.service';
+import MensajeService from '../../../services/mensaje.service';
 import { useAuth } from '../../../context/AuthContext';
 import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
 import { PageHeader } from '../../../components/common/PageHeader/PageHeader';

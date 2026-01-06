@@ -1,6 +1,6 @@
 // src/pages/User/Inversiones/MisInversiones.tsx
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Box, Typography, Paper, Stack, Chip, Button, Tooltip,
   Avatar, Divider, Card, useTheme, alpha
@@ -13,9 +13,9 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 
 // Servicios y Tipos
-import InversionService from '../../../Services/inversion.service';
+import InversionService from '../../../services/inversion.service';
 import type { InversionDto } from '../../../types/dto/inversion.dto';
-import MercadoPagoService from '../../../Services/pagoMercado.service';
+import MercadoPagoService from '../../../services/pagoMercado.service';
 
 // Componentes Comunes
 import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
@@ -26,7 +26,8 @@ import TwoFactorAuthModal from '../../../components/common/TwoFactorAuthModal/Tw
 
 // Hooks
 import { useModal } from '../../../hooks/useModal';
-import type { ApiError } from '../../../Services/httpService';
+import type { ApiError } from '../../../services/httpService';
+
 
 const MisInversiones: React.FC = () => {
   const navigate = useNavigate();

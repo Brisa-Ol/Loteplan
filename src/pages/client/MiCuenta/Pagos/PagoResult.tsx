@@ -9,7 +9,7 @@ import {
   CheckCircle, Error, HourglassEmpty, Refresh, 
   Home, History, ReceiptLong 
 } from '@mui/icons-material';
-import MercadoPagoService from '../../../../Services/pagoMercado.service';
+import MercadoPagoService from '../../../../services/pagoMercado.service';
 import { PageContainer } from '../../../../components/common/PageContainer/PageContainer';
 
 const PagoResult: React.FC = () => {

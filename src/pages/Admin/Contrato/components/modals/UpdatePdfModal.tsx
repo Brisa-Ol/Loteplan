@@ -10,7 +10,8 @@ import {
     Warning
 } from '@mui/icons-material';
 import { BaseModal } from '../../../../../components/common/BaseModal/BaseModal';
-import type { ContratoPlantillaDto, UpdatePlantillaPdfDto } from '../../../../../types/dto/contrato-plantilla.dto';
+// ✅ Ruta ajustada al estándar del proyecto
+import type { ContratoPlantillaDto, UpdatePlantillaPdfDto } from '../../../../../types/dto/contrato.dto';
 
 interface Props {
   open: boolean;
@@ -86,10 +87,10 @@ const UpdatePdfModal: React.FC<Props> = ({ open, onClose, plantilla, onSubmit, i
             cursor: isLoading ? 'not-allowed' : 'pointer',
             transition: 'all 0.3s ease',
             display: 'block',
-            '&:hover': { 
+            '&:hover': !isLoading ? { 
               borderColor: 'primary.main',
               bgcolor: alpha(theme.palette.primary.main, 0.02)
-            }
+            } : {}
           }}
         >
           <input 

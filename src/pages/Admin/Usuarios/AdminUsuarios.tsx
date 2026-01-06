@@ -1,9 +1,11 @@
+// src/pages/Admin/Usuarios/AdminUsuarios.tsx
+
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { 
   Box, Typography, Paper, Chip, IconButton, Tooltip, 
   Stack, Button, TextField, MenuItem, InputAdornment, 
-  Snackbar, Alert, Switch, CircularProgress, alpha, 
-  Avatar, useTheme, Divider 
+  CircularProgress, alpha, Avatar, useTheme, Divider, 
+  Switch
 } from '@mui/material';
 import { 
   PersonAdd, Search, Group as GroupIcon, MarkEmailRead, 
@@ -11,12 +13,12 @@ import {
   PhonelinkLock as TwoFaIcon, CheckCircle, Block as BlockIcon
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import type { AxiosError } from 'axios';
 
-// --- Servicios, Tipos y Contexto ---
-import UsuarioService from '../../../Services/usuario.service';
+// --- Servicios y Tipos ---
+import UsuarioService from '../../../services/usuario.service';
 import type { CreateUsuarioDto, UpdateUserAdminDto, UsuarioDto } from '../../../types/dto/usuario.dto';
-import { useAuth } from '../../../context/AuthContext'; // ✅ Importamos useAuth
+import type { ApiError } from '../../../services/httpService';
+import { useAuth } from '../../../context/AuthContext';
 
 // --- Componentes Comunes ---
 import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
@@ -24,21 +26,19 @@ import { PageHeader } from '../../../components/common/PageHeader/PageHeader';
 import { QueryHandler } from '../../../components/common/QueryHandler/QueryHandler';
 import { DataTable, type DataTableColumn } from '../../../components/common/DataTable/DataTable';
 import { ConfirmDialog } from '../../../components/common/ConfirmDialog/ConfirmDialog';
+import GlobalSnackbar from '../../../components/common/GlobalSnackbarProps/GlobalSnackbarProps';
 
-// --- Modales y Hooks ---
-import CreateUserModal from './modals/CreateUserModal';
-import EditUserModal from './modals/EditUserModal';
+// --- Hooks y Modales ---
+import { useSnackbar } from '../../../hooks/useSnackbar';
 import { useModal } from '../../../hooks/useModal';
 import { useConfirmDialog } from '../../../hooks/useConfirmDialog';
+import CreateUserModal from './modals/CreateUserModal';
+import EditUserModal from './modals/EditUserModal';
 
-// --- COMPONENTE KPI (Estandarizado) ---
-const StatCard: React.FC<{ 
-  title: string; 
-  value: number; 
-  icon: React.ReactNode; 
-  color: string; 
-}> = ({ title, value, icon, color }) => {
+// --- KPI Card ---
+const StatCard: React.FC<{ title: string; value: number; icon: React.ReactNode; color: string }> = ({ title, value, icon, color }) => {
   const theme = useTheme();
+  // Safe access to palette color
   const paletteColor = (theme.palette as any)[color] || theme.palette.primary;
 
   return (
@@ -67,40 +67,25 @@ const StatCard: React.FC<{
 const AdminUsuarios: React.FC = () => {
   const theme = useTheme();
   const queryClient = useQueryClient();
-  
-  // ✅ Obtenemos el usuario actual para evitar auto-bloqueo
   const { user: currentUser } = useAuth();
   
   // Hooks
+  const { snackbar, showSuccess, showError, handleClose: closeSnackbar } = useSnackbar();
   const createModal = useModal();
   const editModal = useModal();
-  const confirmDialog = useConfirmDialog();
+  const confirmDialog = useConfirmDialog<UsuarioDto>();
   
   // Estados Locales
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [editingUser, setEditingUser] = useState<UsuarioDto | null>(null);
-  
-  // ✅ Feedback Visual
   const [highlightedUserId, setHighlightedUserId] = useState<number | null>(null);
-  
-  // Referencia para ordenamiento "Sticky"
   const initialStatusRef = useRef<Record<number, boolean>>({});
 
-  const [snackbar, setSnackbar] = useState<{ open: boolean, message: string, severity: 'success'|'error' }>({
-    open: false, message: '', severity: 'success'
-  });
-
-  const showMessage = (message: string, severity: 'success' | 'error' = 'success') => {
-    setSnackbar({ open: true, message, severity });
-  };
-
+  // Helper de Errores
   const getErrorMessage = (error: unknown) => {
-    if (error && typeof error === 'object' && 'response' in error) {
-      const axiosError = error as AxiosError<any>;
-      return axiosError.response?.data?.error || axiosError.response?.data?.message || axiosError.message;
-    }
-    return 'Ocurrió un error inesperado';
+    const apiError = error as ApiError;
+    return apiError.message || 'Ocurrió un error inesperado';
   };
 
   // --- QUERY ---
@@ -109,7 +94,6 @@ const AdminUsuarios: React.FC = () => {
     queryFn: async () => (await UsuarioService.findAll()).data
   });
 
-  // Efecto Sticky
   useEffect(() => {
     if (usuarios.length > 0) {
       usuarios.forEach(u => {
@@ -126,14 +110,14 @@ const AdminUsuarios: React.FC = () => {
     onSuccess: (res) => { 
       queryClient.invalidateQueries({ queryKey: ['adminUsuarios'] }); 
       createModal.close(); 
-      showMessage('Usuario creado exitosamente');
+      showSuccess('Usuario creado exitosamente'); 
       
       if (res.data?.id) {
           setHighlightedUserId(res.data.id);
           setTimeout(() => setHighlightedUserId(null), 2500);
       }
     },
-    onError: (err) => showMessage(`Error al crear: ${getErrorMessage(err)}`, 'error')
+    onError: (err) => showError(`Error al crear: ${getErrorMessage(err)}`)
   });
 
   const updateMutation = useMutation({
@@ -142,30 +126,37 @@ const AdminUsuarios: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['adminUsuarios'] }); 
       editModal.close(); 
       setEditingUser(null); 
-      showMessage('Usuario actualizado correctamente');
+      showSuccess('Usuario actualizado correctamente'); 
       
       setHighlightedUserId(variables.id);
       setTimeout(() => setHighlightedUserId(null), 2500);
     },
-    onError: (err) => showMessage(`Error al editar: ${getErrorMessage(err)}`, 'error')
+    onError: (err) => showError(`Error al editar: ${getErrorMessage(err)}`)
   });
 
   const toggleStatusMutation = useMutation({
     mutationFn: async (usuario: UsuarioDto) => {
-      return await UsuarioService.update(usuario.id, { activo: !usuario.activo });
+      // Usamos el servicio de borrado lógico o actualización según corresponda
+      // Asumiendo que el toggle es un update de 'activo' o softDelete
+      if (usuario.activo) {
+          return await UsuarioService.softDelete(usuario.id);
+      } else {
+          // Si existe un método reactivar o update
+          return await UsuarioService.update(usuario.id, { activo: true });
+      }
     },
     onSuccess: (_, usuario) => {
       queryClient.invalidateQueries({ queryKey: ['adminUsuarios'] });
       confirmDialog.close();
       const accion = usuario.activo ? 'bloqueado' : 'reactivado';
-      showMessage(`Usuario ${accion} correctamente`, 'success');
+      showSuccess(`Usuario ${accion} correctamente`); 
       
       setHighlightedUserId(usuario.id);
       setTimeout(() => setHighlightedUserId(null), 2500);
     },
     onError: (err) => {
       confirmDialog.close();
-      showMessage(`Error al cambiar estado: ${getErrorMessage(err)}`, 'error');
+      showError(`Error al cambiar estado: ${getErrorMessage(err)}`);
     }
   });
 
@@ -175,24 +166,18 @@ const AdminUsuarios: React.FC = () => {
     editModal.open(); 
   }, [editModal]);
 
-  const handleCloseEdit = () => {
-    editModal.close(); 
-    setEditingUser(null);
-  };
-
   const handleToggleStatusClick = useCallback((usuario: UsuarioDto) => {
-    // 🔒 Validación de Auto-Bloqueo
     if (usuario.id === currentUser?.id) {
-        showMessage('No puedes bloquear tu propia cuenta.', 'error');
+        showError('No puedes bloquear tu propia cuenta.');
         return;
     }
 
     if (usuario.activo && usuario.rol === 'admin') {
-      showMessage('No se puede bloquear a un administrador. Cambia su rol primero.', 'error');
+      showError('No se puede bloquear a un administrador. Cambia su rol primero.');
       return;
     }
     confirmDialog.confirm('toggle_user_status', usuario);
-  }, [confirmDialog, currentUser]);
+  }, [confirmDialog, currentUser, showError]);
 
   const handleConfirmToggle = () => {
     if (confirmDialog.data) {
@@ -214,12 +199,14 @@ const AdminUsuarios: React.FC = () => {
       const matchesSearch = 
         user.nombre_usuario.toLowerCase().includes(term) ||
         user.email.toLowerCase().includes(term) ||
-        user.nombre.toLowerCase().includes(term) ||
-        user.apellido.toLowerCase().includes(term);
+        (user.nombre?.toLowerCase() || '').includes(term) ||
+        (user.apellido?.toLowerCase() || '').includes(term);
+      
       const matchesStatus = 
         filterStatus === 'all' ? true :
         filterStatus === 'active' ? user.activo :
         !user.activo;
+      
       return matchesSearch && matchesStatus;
     });
 
@@ -231,7 +218,7 @@ const AdminUsuarios: React.FC = () => {
     });
   }, [usuarios, searchTerm, filterStatus]);
 
-  // --- DEFINICIÓN DE COLUMNAS ---
+  // --- COLUMNAS ---
   const columns = useMemo<DataTableColumn<UsuarioDto>[]>(() => [
     { id: 'id', label: 'ID', minWidth: 50 },
     { 
@@ -264,7 +251,7 @@ const AdminUsuarios: React.FC = () => {
               )}
             </Stack>
             <Typography variant="caption" color="text.secondary">
-              {user.nombre} {user.apellido}
+              {user.nombre || '-'} {user.apellido || '-'}
             </Typography>
           </Box>
         </Stack>
@@ -289,16 +276,13 @@ const AdminUsuarios: React.FC = () => {
       }
     },
     { 
-      id: 'acceso', label: 'Estado y Acceso', align: 'center',
+      id: 'acceso', label: 'Estado', align: 'center',
       render: (user) => {
         const isAdminAndActive = user.rol === 'admin' && user.activo;
         const isSelf = user.id === currentUser?.id;
         const isProcessingThisUser = toggleStatusMutation.isPending && confirmDialog.data?.id === user.id;
-        
-        // Lógica de bloqueo
         const isSwitchDisabled = toggleStatusMutation.isPending || isAdminAndActive || isSelf;
 
-        // Tooltip dinámico
         const blockTooltip = isSelf 
             ? 'No puedes bloquear tu propia cuenta' 
             : isAdminAndActive 
@@ -311,36 +295,13 @@ const AdminUsuarios: React.FC = () => {
               <CircularProgress size={20} color="inherit" />
             ) : (
               <Tooltip title={blockTooltip} arrow placement="top">
-                {/* ✅ CAMBIO CLAVE: Usamos Box en lugar de span simple para aplicar estilos SX.
-                   Esto fuerza visualmente el estado deshabilitado manteniendo el Tooltip activo.
-                */}
-                <Box 
-                    component="span" 
-                    sx={{ 
-                        display: 'inline-flex',
-                        cursor: isSwitchDisabled ? 'not-allowed' : 'pointer', // 🚫 Cursor prohibido
-                        opacity: isSwitchDisabled ? 0.5 : 1, // 👁️ Opacidad visual fuerte
-                        filter: isSwitchDisabled ? 'grayscale(100%)' : 'none', // (Opcional) Quita color
-                        transition: 'opacity 0.2s'
-                    }}
-                >
+                <Box component="span" sx={{ display: 'inline-flex', opacity: isSwitchDisabled ? 0.5 : 1 }}>
                     <Switch
                         checked={user.activo}
                         onChange={() => handleToggleStatusClick(user)}
                         size="small"
-                        disabled={isSwitchDisabled} // Bloqueo funcional
+                        disabled={isSwitchDisabled}
                         color={user.activo ? "success" : "default"}
-                        // IMPORTANTE: pointerEvents: 'none' en el switch permite que el Box padre capture el hover del Tooltip
-                        sx={{
-                            pointerEvents: isSwitchDisabled ? 'none' : 'auto', 
-                            '& .MuiSwitch-switchBase.Mui-checked': {
-                                color: theme.palette.success.main,
-                                '&:hover': { backgroundColor: alpha(theme.palette.success.main, 0.1) },
-                            },
-                            '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                                backgroundColor: theme.palette.success.main,
-                            },
-                        }}
                     />
                 </Box>
               </Tooltip>
@@ -353,10 +314,8 @@ const AdminUsuarios: React.FC = () => {
                 icon={user.activo ? <CheckCircle sx={{ fontSize: '14px !important' }} /> : <BlockIcon sx={{ fontSize: '14px !important' }} />}
                 color={user.activo ? 'success' : 'default'}
                 sx={{ 
-                    height: 24, 
-                    fontWeight: 600, 
+                    height: 24, fontWeight: 600, 
                     '& .MuiChip-label': { px: 1, fontSize: '0.75rem' },
-                    // También atenuamos visualmente el Chip si es uno mismo
                     opacity: isSelf ? 0.5 : 1 
                 }}
               />
@@ -384,12 +343,8 @@ const AdminUsuarios: React.FC = () => {
 
   return (
     <PageContainer maxWidth="xl" sx={{ py: 3 }}>
-      <PageHeader 
-        title="Gestión de Usuarios" 
-        subtitle="Administra los permisos, roles y estado de seguridad de la plataforma." 
-      />
+      <PageHeader title="Gestión de Usuarios" subtitle="Administra los permisos, roles y estado de seguridad de la plataforma." />
 
-      {/* Stats Cards (Estandarizado) */}
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', lg: 'repeat(4, 1fr)' }, gap: 3, mb: 4 }}>
         <StatCard title="Total Usuarios" value={stats.total} icon={<GroupIcon />} color="primary" />
         <StatCard title="Usuarios Activos" value={stats.activos} icon={<CheckCircle />} color="success" />
@@ -397,15 +352,7 @@ const AdminUsuarios: React.FC = () => {
         <StatCard title="Seguridad 2FA" value={stats.con2FA} icon={<Security />} color="warning" />
       </Box>
 
-      {/* Filters & Add Button */}
-      <Paper 
-        elevation={0} 
-        sx={{ 
-          p: 2, mb: 3, display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center', 
-          borderRadius: 2, border: '1px solid', borderColor: 'divider', 
-          bgcolor: alpha(theme.palette.background.paper, 0.6)
-        }} 
-      >
+      <Paper elevation={0} sx={{ p: 2, mb: 3, display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center', borderRadius: 2, border: '1px solid', borderColor: 'divider', bgcolor: alpha(theme.palette.background.paper, 0.6) }}>
         <TextField 
           placeholder="Buscar por nombre, email o usuario..." 
           size="small" sx={{ flexGrow: 1, minWidth: 200 }}
@@ -427,32 +374,24 @@ const AdminUsuarios: React.FC = () => {
         
         <Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', md: 'block' }, mx: 1 }} />
         
-        <Button 
-          variant="contained" startIcon={<PersonAdd />} onClick={createModal.open}
-          sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600, boxShadow: theme.shadows[2] }}
-        >
+        <Button variant="contained" startIcon={<PersonAdd />} onClick={createModal.open} sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600, boxShadow: theme.shadows[2] }}>
           Nuevo Usuario
         </Button>
       </Paper>
 
-      {/* ✅ TABLA REF ACTORIZADA */}
       <QueryHandler isLoading={isLoading} error={error as Error | null}>
           <DataTable
             columns={columns} 
             data={filteredUsers} 
             getRowKey={(user) => user.id}
-            
-            // ✅ PROPS ESTANDARIZADAS
-            isRowActive={(user) => user.activo} // Atenúa usuarios inactivos
-            highlightedRowId={highlightedUserId} // Feedback al crear/editar
-            
+            isRowActive={(user) => user.activo}
+            highlightedRowId={highlightedUserId}
             emptyMessage="No se encontraron usuarios registrados." 
             pagination={true} 
             defaultRowsPerPage={10}
           />
       </QueryHandler>
 
-      {/* --- MODALES --- */}
       <CreateUserModal 
         open={createModal.isOpen}
         onClose={createModal.close}
@@ -462,7 +401,7 @@ const AdminUsuarios: React.FC = () => {
 
       <EditUserModal 
         open={editModal.isOpen}
-        onClose={handleCloseEdit}
+        onClose={() => { editModal.close(); setEditingUser(null); }}
         user={editingUser}
         onSubmit={async (id, data) => { await updateMutation.mutateAsync({ id, data }); }}
         isLoading={updateMutation.isPending}
@@ -474,19 +413,7 @@ const AdminUsuarios: React.FC = () => {
         isLoading={toggleStatusMutation.isPending}
       />
 
-      <Snackbar 
-        open={snackbar.open} autoHideDuration={4000} 
-        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert 
-          severity={snackbar.severity} variant="filled"
-          onClose={() => setSnackbar(prev => ({ ...prev, open: false }))} 
-          sx={{ width: '100%', boxShadow: theme.shadows[4] }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
+      <GlobalSnackbar {...snackbar} onClose={closeSnackbar} />
     </PageContainer>
   );
 };

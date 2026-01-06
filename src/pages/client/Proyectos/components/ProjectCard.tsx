@@ -19,7 +19,7 @@ import {
     MonetizationOn, 
     MapsHomeWork
 } from "@mui/icons-material";
-import ImagenService from "../../../../Services/imagen.service";
+import ImagenService from "../../../../services/imagen.service";
 import type { ProyectoDto } from "../../../../types/dto/proyecto.dto";
 
 export interface ProjectCardProps {

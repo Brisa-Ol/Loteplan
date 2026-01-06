@@ -25,9 +25,9 @@ import { DataTable, type DataTableColumn } from '../../../components/common/Data
 // Servicios y Tipos
 import type { LoteDto } from '../../../types/dto/lote.dto';
 import type { PujaDto } from '../../../types/dto/puja.dto';
-import PujaService from '../../../Services/puja.service';
-import LoteService from '../../../Services/lote.service';
-import imagenService from '../../../Services/imagen.service';
+import PujaService from '../../../services/puja.service';
+import LoteService from '../../../services/lote.service';
+import imagenService from '../../../services/imagen.service';
 
 // Hooks
 import { useModal } from '../../../hooks/useModal';

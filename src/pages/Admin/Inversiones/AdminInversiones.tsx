@@ -26,9 +26,9 @@ import { DataTable, type DataTableColumn } from '../../../components/common/Data
 import DetalleInversionModal from './components/DetalleInversionModal';
 
 // Servicios
-import InversionService from '../../../Services/inversion.service';
-import UsuarioService from '../../../Services/usuario.service';
-import ProyectoService from '../../../Services/proyecto.service';
+import InversionService from '../../../services/inversion.service';
+import UsuarioService from '../../../services/usuario.service';
+import ProyectoService from '../../../services/proyecto.service';
 
 // Hooks
 import { useModal } from '../../../hooks/useModal';

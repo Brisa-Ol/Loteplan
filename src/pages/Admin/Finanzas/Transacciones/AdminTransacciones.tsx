@@ -20,7 +20,7 @@ import ModalDetalleTransaccion from './modal/ModalDetalleTransaccion';
 
 // Import DataTable
 import { DataTable, type DataTableColumn } from '../../../../components/common/DataTable/DataTable';
-import TransaccionService from '../../../../Services/transaccion.service';
+import TransaccionService from '../../../../services/transaccion.service';
 
 // Import Hooks & Components
 import { useModal } from '../../../../hooks/useModal';

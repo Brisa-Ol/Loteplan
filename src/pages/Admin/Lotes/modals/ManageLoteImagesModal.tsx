@@ -13,7 +13,7 @@ import ImageUploadZone from '../../../../components/common/ImageUploadZone/Image
 import { QueryHandler } from '../../../../components/common/QueryHandler/QueryHandler';
 import { BaseModal } from '../../../../components/common/BaseModal/BaseModal';
 import type { LoteDto } from '../../../../types/dto/lote.dto';
-import imagenService from '../../../../Services/imagen.service';
+import imagenService from '../../../../services/imagen.service';
 import type { ImagenDto } from '../../../../types/dto/imagen.dto';
 
 interface ManageLoteImagesModalProps {

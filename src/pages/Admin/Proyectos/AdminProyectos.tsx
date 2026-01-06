@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import {
   Box, Typography, Button, Paper, Chip, IconButton, Stack, Tooltip,
-  TextField, MenuItem, InputAdornment, Snackbar, Alert, Switch, CircularProgress,
+  TextField, MenuItem, InputAdornment, Switch, CircularProgress,
   alpha, Avatar, useTheme, Divider
 } from '@mui/material';
 import {
@@ -25,31 +25,32 @@ import { QueryHandler } from '../../../components/common/QueryHandler/QueryHandl
 import { PageHeader } from '../../../components/common/PageHeader/PageHeader';
 import { DataTable, type DataTableColumn } from '../../../components/common/DataTable/DataTable';
 
+
+import { useSnackbar } from '../../../hooks/useSnackbar';
+
 // Modales y Servicios
 import CreateProyectoModal from './components/modals/CreateProyectoModal';
 import ConfigCuotasModal from './components/modals/ConfigCuotasModal';
 import EditProyectoModal from './components/modals/EditProyectoModal';
 import ProjectLotesModal from './components/modals/ProjectLotesModal';
 import ManageImagesModal from './components/modals/ManageImagesModal';
-import ProyectoService from '../../../Services/proyecto.service';
+import ProyectoService from '../../../services/proyecto.service';
 
 // Hooks y Componentes de Confirmación
 import { useModal } from '../../../hooks/useModal';
 import { ConfirmDialog } from '../../../components/common/ConfirmDialog/ConfirmDialog';
 import { useConfirmDialog } from '../../../hooks/useConfirmDialog';
+import GlobalSnackbar from '../../../components/common/GlobalSnackbarProps/GlobalSnackbarProps';
 
 type TipoInversionFilter = 'all' | 'mensual' | 'directo';
 type AppColor = 'primary' | 'secondary' | 'error' | 'warning' | 'info' | 'success';
 
-interface SnackbarState {
-  open: boolean;
-  message: string;
-  severity: 'success' | 'error' | 'info';
-}
-
 const AdminProyectos: React.FC = () => {
   const theme = useTheme();
   const queryClient = useQueryClient();
+
+  // ✅ Hook de Snackbar Global
+  const { snackbar, showSuccess, showError, handleClose: closeSnackbar } = useSnackbar();
 
   // --- HOOKS DE MODALES ---
   const createModal = useModal();
@@ -65,22 +66,12 @@ const AdminProyectos: React.FC = () => {
   // Estado para el efecto Flash (Feedback visual)
   const [highlightedId, setHighlightedId] = useState<number | null>(null);
 
-  // --- LOGICA STICKY (Congelar Orden) ---
-  // Mantiene el estado original visualmente para evitar saltos al filtrar
+  // --- LOGICA STICKY ---
   const initialStatusRef = useRef<Record<number, boolean>>({});
 
   // Filtros
   const [searchTerm, setSearchTerm] = useState('');
   const [filterTipo, setFilterTipo] = useState<TipoInversionFilter>('all');
-
-  // Notificaciones
-  const [snackbar, setSnackbar] = useState<SnackbarState>({
-    open: false, message: '', severity: 'success'
-  });
-
-  const showSnackbar = (message: string, severity: 'success' | 'error' | 'info' = 'success') => {
-    setSnackbar({ open: true, message, severity });
-  };
 
   // --- QUERIES & MUTATIONS ---
 
@@ -89,7 +80,6 @@ const AdminProyectos: React.FC = () => {
     queryFn: async () => (await ProyectoService.getAllAdmin()).data
   });
 
-  // Efecto para Sticky Sort
   useEffect(() => {
     if (proyectos.length > 0) {
       proyectos.forEach(p => {
@@ -100,24 +90,23 @@ const AdminProyectos: React.FC = () => {
     }
   }, [proyectos]);
 
-const createMutation = useMutation({
+  const createMutation = useMutation({
     mutationFn: async ({ data, image }: { data: CreateProyectoDto; image: File | null }) => {
       const response = await ProyectoService.create(data, image);
-      return response.data; // ✅ AQUÍ: Retornamos solo la data (el ProyectoDto)
+      return response.data;
     },
     onSuccess: (newItem) => { 
       queryClient.invalidateQueries({ queryKey: ['adminProyectos'] });
       createModal.close();
       
-      // ✅ Ahora newItem es de tipo ProyectoDto, por lo que .id existe
       if (newItem?.id) {
           setHighlightedId(newItem.id);
           setTimeout(() => setHighlightedId(null), 2500);
       }
       
-      showSnackbar('Proyecto creado correctamente', 'success');
+      showSuccess('Proyecto creado correctamente'); // ✅
     },
-    onError: (err: any) => showSnackbar(`Error al crear: ${err.response?.data?.error || err.message}`, 'error')
+    onError: (err: any) => showError(`Error al crear: ${err.response?.data?.error || err.message}`) // ✅
   });
 
   const startMutation = useMutation({
@@ -125,12 +114,12 @@ const createMutation = useMutation({
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ['adminProyectos'] });
       confirmDialog.close();
-      setHighlightedId(id); // Flash effect
-      showSnackbar('Proyecto iniciado. Cobros activados.', 'success');
+      setHighlightedId(id); 
+      showSuccess('Proyecto iniciado. Cobros activados.'); // ✅
     },
     onError: (err: any) => {
       confirmDialog.close();
-      showSnackbar(`Error al iniciar: ${err.response?.data?.error || err.message}`, 'error');
+      showError(`Error al iniciar: ${err.response?.data?.error || err.message}`); // ✅
     }
   });
 
@@ -140,10 +129,10 @@ const createMutation = useMutation({
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['adminProyectos'] });
       editModal.close(); 
-      setHighlightedId(variables.id); // Flash effect
-      showSnackbar('Proyecto actualizado correctamente', 'success');
+      setHighlightedId(variables.id); 
+      showSuccess('Proyecto actualizado correctamente'); // ✅
     },
-    onError: (err: any) => showSnackbar(`Error al editar: ${err.response?.data?.error || err.message}`, 'error')
+    onError: (err: any) => showError(`Error al editar: ${err.response?.data?.error || err.message}`) // ✅
   });
 
   const toggleActiveMutation = useMutation({
@@ -154,15 +143,14 @@ const createMutation = useMutation({
       queryClient.invalidateQueries({ queryKey: ['adminProyectos'] });
       confirmDialog.close();
       
-      // Activamos el prop highlightedRowId en la tabla
       setHighlightedId(variables.id);
       setTimeout(() => setHighlightedId(null), 2500);
 
-      showSnackbar(variables.activo ? 'Proyecto visible' : 'Proyecto ocultado', 'success');
+      showSuccess(variables.activo ? 'Proyecto ahora es visible' : 'Proyecto ocultado correctamente'); // ✅
     },
     onError: (err: any) => {
       confirmDialog.close();
-      showSnackbar(`Error: ${err.response?.data?.error || err.message}`, 'error');
+      showError(`Error: ${err.response?.data?.error || err.message}`); // ✅
     }
   });
 
@@ -357,7 +345,6 @@ const createMutation = useMutation({
                 onClick={(e) => { e.stopPropagation(); handleOpenModal(p, cuotasModal.open); }} 
                 size="small" 
                 disabled={toggleActiveMutation.isPending}
-                sx={{ color: 'text.secundary'}}
               >
                 <MonetizationOnIcon fontSize="small" />
               </IconButton>
@@ -370,7 +357,7 @@ const createMutation = useMutation({
                 size="small"
                 onClick={(e) => { e.stopPropagation(); handleStartProcessClick(p); }}
                 disabled={toggleActiveMutation.isPending}
-                sx={{ color: "success.main", '&:hover': { bgcolor: alpha(theme.palette.success.main, 0.1) } }}
+                sx={{ color: "success.main" }}
               >
                 <PlayArrow fontSize="small" />
               </IconButton>
@@ -382,7 +369,7 @@ const createMutation = useMutation({
               onClick={(e) => { e.stopPropagation(); handleOpenModal(p, editModal.open); }} 
               size="small"
               disabled={toggleActiveMutation.isPending}
-              sx={{ color: 'primary.main', '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.1) } }}
+              sx={{ color: 'primary.main' }}
             >
               <Edit fontSize="small" />
             </IconButton>
@@ -393,7 +380,7 @@ const createMutation = useMutation({
               onClick={(e) => { e.stopPropagation(); handleOpenModal(p, lotesModal.open); }} 
               size="small"
               disabled={toggleActiveMutation.isPending}
-              sx={{ color: 'info.main', '&:hover': { bgcolor: alpha(theme.palette.info.main, 0.1) } }}
+              sx={{ color: 'info.main' }}
             >
               <VisibilityIcon fontSize="small" />
             </IconButton>
@@ -449,25 +436,19 @@ const createMutation = useMutation({
           variant="contained" 
           startIcon={<Add />} 
           onClick={createModal.open}
-          sx={{ borderRadius: 2, fontWeight: 600, boxShadow: theme.shadows[2] }}
+          sx={{ borderRadius: 2, fontWeight: 600 }}
         >
           Nuevo Proyecto
         </Button>
       </Paper>
 
       <QueryHandler isLoading={isLoading} error={error as Error}>
-         {/* ✅ DataTable Estandarizada */}
           <DataTable
             columns={columns}
             data={filteredProyectos}
             getRowKey={(p) => p.id}
-            
-            // ✅ Prop nueva: gestiona visualmente las filas inactivas automáticamente
             isRowActive={(p) => p.activo} 
-
-            // ✅ Prop nueva: aplica el efecto "Flash" verde al cambiar
             highlightedRowId={highlightedId} 
-
             emptyMessage="No se encontraron proyectos con los filtros actuales."
             pagination={true}
             defaultRowsPerPage={10}
@@ -517,21 +498,11 @@ const createMutation = useMutation({
         isLoading={startMutation.isPending || toggleActiveMutation.isPending}
       />
 
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={4000}
-        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert 
-          severity={snackbar.severity} 
-          variant="filled" 
-          onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
-          sx={{ boxShadow: theme.shadows[4] }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
+      {/* ✅ Implementación del GlobalSnackbar */}
+      <GlobalSnackbar 
+        {...snackbar} 
+        onClose={closeSnackbar} 
+      />
 
     </PageContainer>
   );

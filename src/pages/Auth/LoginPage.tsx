@@ -1,6 +1,6 @@
 // src/pages/Auth/LoginPage.tsx
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Button,
@@ -17,11 +17,18 @@ import { Visibility, VisibilityOff, InfoOutlined } from "@mui/icons-material";
 import { useFormik } from "formik";
 import * as Yup from "yup";
 
+// Contexto y Componentes
+import { useAuth } from "../../context/AuthContext";
 import { PageContainer } from "../../components/common/PageContainer/PageContainer";
 import AuthFormContainer from "./components/AuthFormContainer/AuthFormContainer";
 import TwoFactorAuthModal from "../../components/common/TwoFactorAuthModal/TwoFactorAuthModal";
 import FormTextField from "./components/FormTextField/FormTextField";
-import { useAuth } from "../../context/AuthContext";
+
+// Interfaz para el estado de navegación
+interface LocationState {
+  from?: { pathname: string } | string;
+  message?: string;
+}
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -41,20 +48,22 @@ const LoginPage: React.FC = () => {
     resendConfirmation
   } = useAuth();
 
+  // Estados Locales
   const [showPassword, setShowPassword] = useState(false);
   const [showResendEmail, setShowResendEmail] = useState(false);
   const [resendSuccess, setResendSuccess] = useState(false);
 
-  // Manejo seguro del estado de navegación
-  const state = location.state as { from?: string | { pathname: string }; message?: string } | null;
-  const from = typeof state?.from === 'string' 
-    ? state.from 
-    : (state?.from as any)?.pathname || '/';
-  
+  // Lógica de Navegación (Redirección post-login)
+  const state = location.state as LocationState;
+  const from = useMemo(() => {
+    if (!state?.from) return '/';
+    return typeof state.from === 'string' ? state.from : state.from.pathname;
+  }, [state]);
+
   const successMessage = state?.message;
   const vieneDeProyecto = from.includes('/proyectos/');
 
-  // --- REDIRECCIÓN INTELIGENTE ---
+  // 1. Efecto: Redirección si ya está autenticado
   useEffect(() => {
     if (!isInitializing && isAuthenticated && user && !requires2FA) {
       if (from && from !== '/') {
@@ -66,15 +75,16 @@ const LoginPage: React.FC = () => {
     }
   }, [isInitializing, isAuthenticated, user, requires2FA, navigate, from]);
 
-  // --- DETECCIÓN DE CUENTA NO ACTIVADA ---
+  // 2. Efecto: Detectar error de cuenta no activada
   useEffect(() => {
-    if (error && (error.includes('Cuenta no activada') || error.includes('no confirmado'))) {
+    if (error && (error.toLowerCase().includes('cuenta no activada') || error.toLowerCase().includes('no confirmado'))) {
       setShowResendEmail(true);
     } else {
       setShowResendEmail(false);
     }
   }, [error]);
 
+  // Formulario
   const formik = useFormik({
     initialValues: {
       identificador: "",
@@ -94,26 +104,29 @@ const LoginPage: React.FC = () => {
           contraseña: values.password,
         });
       } catch (err) {
-        // El error ya se setea en el contexto
+        // El error es manejado por el AuthContext y se refleja en la variable `error`
       }
     },
   });
 
+  // Handlers
   const handleResendEmail = async () => {
     try {
       await resendConfirmation(formik.values.identificador);
       setResendSuccess(true);
       setShowResendEmail(false);
+      clearError(); // Limpiamos el error original para mostrar el éxito
     } catch (err) {
       // Error manejado por contexto
     }
   };
 
   const handleCancel2FA = () => {
-    logout(); // Limpia estado y redirige
+    logout(); 
     clearError();
   };
 
+  // Render: Loading Inicial
   if (isInitializing) {
     return (
       <Box sx={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center' }}>
@@ -122,27 +135,34 @@ const LoginPage: React.FC = () => {
     );
   }
 
+  // Render: Formulario
   return (
     <PageContainer maxWidth="sm">
       <AuthFormContainer title="Iniciar Sesión" subtitle="Ingresá tus credenciales para continuar">
         
         {/* Alertas Contextuales */}
         {vieneDeProyecto && !isAuthenticated && (
-          <Alert severity="info" icon={<InfoOutlined />} sx={{ mb: 3 }}>
+          <Alert severity="info" icon={<InfoOutlined />} sx={{ mb: 3, borderRadius: 2 }}>
             Inicia sesión para ver los detalles y lotes del proyecto.
           </Alert>
         )}
 
-        {successMessage && <Alert severity="success" sx={{ mb: 2 }}>{successMessage}</Alert>}
+        {successMessage && (
+            <Alert severity="success" sx={{ mb: 2, borderRadius: 2 }}>{successMessage}</Alert>
+        )}
         
         {resendSuccess && (
-          <Alert severity="success" sx={{ mb: 2 }}>
+          <Alert severity="success" sx={{ mb: 2, borderRadius: 2 }}>
             Email reenviado. Revisa tu bandeja de entrada.
           </Alert>
         )}
 
-        {error && !requires2FA && (
-          <Alert severity={error.includes('Cuenta no activada') ? 'warning' : 'error'} sx={{ mb: 3 }} onClose={clearError}>
+        {error && !requires2FA && !resendSuccess && (
+          <Alert 
+            severity={showResendEmail ? 'warning' : 'error'} 
+            sx={{ mb: 3, borderRadius: 2 }} 
+            onClose={clearError}
+          >
             {error}
             {showResendEmail && (
               <Box mt={1}>
@@ -150,7 +170,7 @@ const LoginPage: React.FC = () => {
                   component="button"
                   variant="body2"
                   onClick={handleResendEmail}
-                  sx={{ fontWeight: 'bold', textDecoration: 'underline' }}
+                  sx={{ fontWeight: 'bold', textDecoration: 'underline', cursor: 'pointer' }}
                 >
                   Reenviar email de confirmación
                 </Link>
@@ -159,7 +179,7 @@ const LoginPage: React.FC = () => {
           </Alert>
         )}
 
-        {/* Formulario */}
+        {/* Inputs */}
         <form onSubmit={formik.handleSubmit}>
           <Stack spacing={2}>
             <FormTextField
@@ -194,7 +214,7 @@ const LoginPage: React.FC = () => {
               type="submit"
               size="large"
               disabled={isLoading}
-              sx={{ mt: 1, py: 1.5, fontWeight: 700 }}
+              sx={{ mt: 1, py: 1.5, fontWeight: 700, borderRadius: 2 }}
             >
               {isLoading ? <CircularProgress size={24} color="inherit" /> : "INGRESAR"}
             </Button>

@@ -25,33 +25,28 @@ interface KycDetailModalProps {
   onReject: (kyc: KycDTO) => void;
 }
 
-// 🔧 HELPER PARA IMÁGENES (CORREGIDO)
+// 🔧 HELPER PARA IMÁGENES
 const getImageUrl = (path: string | null) => {
   if (!path) return '';
   const cleanPath = path.replace(/\\/g, '/');
   
-  // Usamos VITE_API_BASE_URL (o similar) pero quitamos el sufijo '/api' si existe
-  // para apuntar a la raíz del servidor donde está /uploads
   let baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
   if (baseUrl.endsWith('/api')) {
       baseUrl = baseUrl.slice(0, -4); 
   }
   
-  // Aseguramos que no haya doble slash
   if (baseUrl.endsWith('/')) baseUrl = baseUrl.slice(0, -1);
-  
   return `${baseUrl}/uploads/${cleanPath}`; 
 };
 
 const KycDetailModal: React.FC<KycDetailModalProps> = ({ 
   open, onClose, kyc, onApprove, onReject 
 }) => {
+  // ✅ 1. Los Hooks siempre al principio, fuera de cualquier IF
   const theme = useTheme();
 
-  if (!kyc) return null;
-
-  // Determinar color según estado
-  const getStatusColor = (status: string): 'success' | 'error' | 'warning' | 'primary' => {
+  // ✅ 2. Lógica de colores (independiente de si kyc existe o no para el tipado)
+  const getStatusColor = (status?: string): 'success' | 'error' | 'warning' | 'primary' => {
     switch (status) {
       case 'APROBADA': return 'success';
       case 'RECHAZADA': return 'error';
@@ -59,6 +54,9 @@ const KycDetailModal: React.FC<KycDetailModalProps> = ({
       default: return 'primary';
     }
   };
+
+  // ✅ 3. Early return DESPUÉS de los hooks
+  if (!kyc) return null;
 
   const statusColor = getStatusColor(kyc.estado_verificacion);
 
@@ -112,11 +110,9 @@ const KycDetailModal: React.FC<KycDetailModalProps> = ({
     >
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={3} divider={<Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', md: 'block' } }} />}>
           
-          {/* 🟢 COLUMNA IZQUIERDA: DATOS Y AUDITORÍA */}
+          {/* COLUMNA IZQUIERDA: DATOS */}
           <Box sx={{ flex: 1 }}>
             <Stack spacing={3}>
-            
-              {/* 1. Datos del Solicitante */}
               <Box>
                 <Label text="Solicitante" icon={<PersonIcon fontSize="inherit" />} />
                 <Paper 
@@ -143,7 +139,6 @@ const KycDetailModal: React.FC<KycDetailModalProps> = ({
                 </Paper>
               </Box>
 
-              {/* 2. Documento */}
               <Box>
                  <Label text={`Documento (${kyc.tipo_documento})`} icon={<FingerprintIcon fontSize="inherit" />} />
                  <Typography variant="h6" sx={{ fontWeight: 600, fontFamily: 'monospace', letterSpacing: 1, pl: 1 }}>
@@ -151,7 +146,6 @@ const KycDetailModal: React.FC<KycDetailModalProps> = ({
                  </Typography>
               </Box>
 
-              {/* 3. AUDITORÍA (Solo si no es pendiente) */}
               {kyc.estado_verificacion !== 'PENDIENTE' && (
                 <Box>
                     <Divider sx={{ mb: 2 }}><Chip label="Auditoría" size="small" /></Divider>
@@ -194,19 +188,6 @@ const KycDetailModal: React.FC<KycDetailModalProps> = ({
                 </Box>
               )}
 
-              {/* 4. Geolocalización */}
-              {(kyc.latitud_verificacion && kyc.longitud_verificacion) && (
-                <Box>
-                    <Label text="Ubicación de envío" icon={<LocationIcon fontSize="inherit" />} />
-                    <Alert severity="info" variant="outlined" sx={{ py: 0, borderStyle: 'dashed' }}>
-                        <Typography variant="caption" sx={{ fontFamily: 'monospace' }}>
-                        Lat: {kyc.latitud_verificacion} • Lon: {kyc.longitud_verificacion}
-                        </Typography>
-                    </Alert>
-                </Box>
-              )}
-
-              {/* 5. Rechazo */}
               {kyc.motivo_rechazo && (
                 <Box>
                     <Label text="Motivo Rechazo" icon={<RejectIcon fontSize="inherit" />} color="error.main" />
@@ -218,16 +199,16 @@ const KycDetailModal: React.FC<KycDetailModalProps> = ({
             </Stack>
           </Box>
 
-          {/* 🟣 COLUMNA DERECHA: EVIDENCIA (FOTOS) */}
+          {/* COLUMNA DERECHA: FOTOS */}
           <Box sx={{ flex: 1.3 }}>
             <Typography variant="subtitle2" fontWeight={700} color="text.primary" mb={2} sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>
                 Evidencia Documental
             </Typography>
             
             <Stack spacing={3}>
-              <EvidenceImage title="Frente del Documento" src={kyc.url_foto_documento_frente} />
-              <EvidenceImage title="Dorso del Documento" src={kyc.url_foto_documento_dorso} />
-              <EvidenceImage title="Prueba de Vida (Selfie)" src={kyc.url_foto_selfie_con_documento} />
+              <EvidenceImage title="Frente" src={kyc.url_foto_documento_frente} />
+              <EvidenceImage title="Dorso" src={kyc.url_foto_documento_dorso} />
+              <EvidenceImage title="Selfie" src={kyc.url_foto_selfie_con_documento} />
             </Stack>
           </Box>
       </Stack>
@@ -251,8 +232,8 @@ const Label = ({ text, icon, color = 'text.secondary' }: { text: string, icon: R
 );
 
 const EvidenceImage = ({ title, src }: { title: string, src: string | null }) => {
+  const theme = useTheme(); // ✅ Hook llamado correctamente dentro de un componente funcional
   if (!src) return null;
-  const theme = useTheme();
   const url = getImageUrl(src);
   
   return (

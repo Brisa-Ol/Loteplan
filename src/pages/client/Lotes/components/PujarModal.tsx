@@ -4,7 +4,8 @@ import {
 } from '@mui/material';
 import { Gavel, MonetizationOn, Token, TrendingUp, VerifiedUser } from '@mui/icons-material';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import PujaService from '../../../../Services/puja.service';
+
+import PujaService from '../../../../services/puja.service';
 import type { LoteDto } from '../../../../types/dto/lote.dto';
 import { BaseModal } from '../../../../components/common/BaseModal/BaseModal';
 
@@ -49,7 +50,6 @@ export const PujarModal: React.FC<Props> = ({ open, onClose, lote: loteProp, soy
       queryClient.invalidateQueries({ queryKey: ['misPujas'] });
       
       const msg = soyGanador ? '¡Has actualizado tu puja exitosamente!' : '¡Oferta realizada con éxito!';
-      // Idealmente reemplazar esto por un Toast/Snackbar global
       alert(msg); 
       handleReset();
     },
@@ -80,7 +80,6 @@ export const PujarModal: React.FC<Props> = ({ open, onClose, lote: loteProp, soy
     mutation.mutate();
   };
 
-  // Validaciones para el botón
   const montoNumerico = Number(monto);
   const esMontoValido = monto && montoNumerico > precioActual;
 

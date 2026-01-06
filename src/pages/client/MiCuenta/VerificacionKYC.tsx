@@ -13,8 +13,7 @@ import {
   RadioButtonUnchecked
 } from '@mui/icons-material';
 
-// Servicios y Tipos
-import kycService from '../../../Services/kyc.service';
+
 import type { TipoDocumento } from '../../../types/dto/kyc.dto';
 
 // Componentes Comunes
@@ -22,6 +21,7 @@ import { PageContainer } from '../../../components/common/PageContainer/PageCont
 import { QueryHandler } from '../../../components/common/QueryHandler/QueryHandler';
 import { FileUploadCard } from './components/FileUploadCard';
 import { PageHeader } from '../../../components/common/PageHeader/PageHeader';
+import kycService from '../../../services/kyc.service';
 
 const TIPOS_DOCUMENTO: TipoDocumento[] = ['DNI', 'PASAPORTE', 'LICENCIA'];
 

@@ -22,9 +22,9 @@ import { PageHeader } from '../../../../components/common/PageHeader/PageHeader'
 import { DataTable, type DataTableColumn } from '../../../../components/common/DataTable/DataTable';
 
 // Servicios
-import UsuarioService from '../../../../Services/usuario.service';
-import PagoService from '../../../../Services/pago.service';
-import ProyectoService from '../../../../Services/proyecto.service';
+import UsuarioService from '../../../../services/usuario.service';
+import PagoService from '../../../../services/pago.service';
+import ProyectoService from '../../../../services/proyecto.service';
 
 // Hooks
 import { useModal } from '../../../../hooks/useModal';

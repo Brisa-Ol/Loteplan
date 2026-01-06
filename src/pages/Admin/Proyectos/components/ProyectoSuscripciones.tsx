@@ -16,7 +16,7 @@ import {
 import { useQuery } from '@tanstack/react-query';
 
 import type { SuscripcionCanceladaDto, SuscripcionDto } from '../../../../types/dto/suscripcion.dto';
-import SuscripcionService from '../../../../Services/suscripcion.service';
+import SuscripcionService from '../../../../services/suscripcion.service';
 import { QueryHandler } from '../../../../components/common/QueryHandler/QueryHandler';
 
 interface ProyectoSuscripcionesProps {

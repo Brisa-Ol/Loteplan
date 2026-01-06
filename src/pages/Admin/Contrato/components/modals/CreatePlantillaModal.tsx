@@ -32,12 +32,15 @@ const CreatePlantillaModal: React.FC<Props> = ({ open, onClose, onSubmit, isLoad
 
   const handleConfirm = async () => {
     if (!file) return;
+    
+    // ✅ LÓGICA DE NEGOCIO: idProyecto vacío string -> null para backend
     await onSubmit({
       file, 
       nombre_archivo: nombre, 
       version: Number(version),
       id_proyecto: idProyecto === '' ? null : Number(idProyecto)
     });
+    
     handleReset();
   };
 
@@ -67,7 +70,6 @@ const CreatePlantillaModal: React.FC<Props> = ({ open, onClose, onSubmit, isLoad
       maxWidth="sm"
     >
       <Stack spacing={3}>
-        {/* Campos de Texto */}
         <TextField 
             label="Nombre descriptivo" 
             fullWidth 
@@ -100,6 +102,7 @@ const CreatePlantillaModal: React.FC<Props> = ({ open, onClose, onSubmit, isLoad
                         <VersionIcon color="action" />
                     </InputAdornment>
                 ),
+                inputProps: { min: 1 } // Validación HTML5 básica
             }}
           />
           <TextField 
@@ -133,6 +136,7 @@ const CreatePlantillaModal: React.FC<Props> = ({ open, onClose, onSubmit, isLoad
         <Box 
           component="label"
           sx={{ 
+            display: 'block',
             border: '2px dashed',
             borderColor: file ? 'primary.main' : 'grey.400', 
             borderRadius: 2, 
@@ -141,10 +145,10 @@ const CreatePlantillaModal: React.FC<Props> = ({ open, onClose, onSubmit, isLoad
             bgcolor: file ? alpha(theme.palette.primary.main, 0.05) : alpha(theme.palette.background.default, 0.5), 
             cursor: isLoading ? 'not-allowed' : 'pointer',
             transition: 'all 0.3s ease',
-            '&:hover': {
+            '&:hover': !isLoading ? {
                 borderColor: 'primary.main',
                 bgcolor: alpha(theme.palette.primary.main, 0.02)
-            }
+            } : {}
           }}
         >
           <input 
@@ -155,6 +159,7 @@ const CreatePlantillaModal: React.FC<Props> = ({ open, onClose, onSubmit, isLoad
                 if (e.target.files && e.target.files[0]) { 
                     const selectedFile = e.target.files[0];
                     setFile(selectedFile); 
+                    // Autocompletar nombre si está vacío
                     if (!nombre) setNombre(selectedFile.name.replace('.pdf', '')); 
                 } 
             }} 
@@ -175,7 +180,7 @@ const CreatePlantillaModal: React.FC<Props> = ({ open, onClose, onSubmit, isLoad
           
           {!file && (
               <Typography variant="caption" color="text.secondary">
-                  Soporta solo archivos .PDF
+                  Soporta solo archivos .PDF (Máx 15MB)
               </Typography>
           )}
         </Box>

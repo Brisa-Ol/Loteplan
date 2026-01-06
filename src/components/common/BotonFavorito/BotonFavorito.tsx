@@ -1,14 +1,15 @@
 import React from 'react';
-import { IconButton, Tooltip, CircularProgress, useTheme } from '@mui/material';
+import { IconButton, Tooltip, CircularProgress } from '@mui/material'; // 1. Se eliminó useTheme
 import { Favorite, FavoriteBorder } from '@mui/icons-material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 // Servicios y Tipos
-import FavoritoService from '../../../Services/favorito.service';
-import SuscripcionService from '../../../Services/suscripcion.service';
-import LoteService from '../../../Services/lote.service';
+import FavoritoService from '../../../services/favorito.service';
+import SuscripcionService from '../../../services/suscripcion.service';
+import LoteService from '../../../services/lote.service';
 import { useAuth } from '../../../context/AuthContext';
 import type { CheckFavoritoResponseDto } from '../../../types/dto/favorito.dto';
+import type { ApiError } from '../../../services/httpService'; // 2. Importamos el tipo de error
 
 interface FavoritoButtonProps {
   loteId: number;
@@ -21,7 +22,7 @@ export const FavoritoButton: React.FC<FavoritoButtonProps> = ({
   size = 'medium',
   onRemoveRequest 
 }) => {
-  const theme = useTheme();
+  // const theme = useTheme(); // 3. Se eliminó la línea que causaba el error TS6133
   const queryClient = useQueryClient();
   const { isAuthenticated } = useAuth();
 
@@ -30,14 +31,14 @@ export const FavoritoButton: React.FC<FavoritoButtonProps> = ({
     queryKey: ['favorito', loteId],
     queryFn: async () => (await FavoritoService.checkEsFavorito(loteId)).data,
     enabled: isAuthenticated,
-    staleTime: 1000 * 60 * 5, // Cache por 5 mins
+    staleTime: 1000 * 60 * 5, 
   });
 
   // 2. Datos para validación (Lote y Suscripciones)
   const { data: lote } = useQuery({
     queryKey: ['lote', loteId],
     queryFn: async () => (await LoteService.getByIdActive(loteId)).data,
-    enabled: isAuthenticated && !status?.es_favorito // Solo si vamos a intentar agregar
+    enabled: isAuthenticated && !status?.es_favorito 
   });
 
   const { data: suscripciones } = useQuery({
@@ -50,40 +51,32 @@ export const FavoritoButton: React.FC<FavoritoButtonProps> = ({
   const mutation = useMutation({
     mutationFn: () => FavoritoService.toggle(loteId),
     onSuccess: (response) => {
-      // ✅ CORRECCIÓN CLAVE: Mapeamos 'agregado' (del toggle) a 'es_favorito' (de la caché)
       const nuevoEstado = response.data.agregado;
-      
-      // Actualizamos la caché optimísticamente
       queryClient.setQueryData(['favorito', loteId], { es_favorito: nuevoEstado });
-      
-      // Invalidamos la lista global
       queryClient.invalidateQueries({ queryKey: ['misFavoritos'] });
     },
-    onError: (error: any) => {
-      const msg = error.response?.data?.message || 'Error al actualizar favorito';
-      alert(msg); // O usar un snackbar global
+    onError: (error: ApiError) => { // 4. Cambiado 'any' por 'ApiError' (Error TS7006)
+      const msg = error.message || 'Error al actualizar favorito';
+      alert(msg); 
     }
   });
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!isAuthenticated) return; // O redirigir a login
+    if (!isAuthenticated) return;
 
     const esFavoritoActualmente = status?.es_favorito;
 
-    // Si ya es favorito y hay handler de remover (ej: en pantalla MisFavoritos), usalo
     if (esFavoritoActualmente && onRemoveRequest) {
       onRemoveRequest(loteId);
       return;
     }
 
-    // Validación de Negocio (Solo al intentar AGREGAR)
     if (!esFavoritoActualmente && lote && lote.id_proyecto) {
         const tieneSuscripcion = suscripciones?.some(
             s => s.id_proyecto === lote.id_proyecto && s.activo
         );
         
-        // Usamos el helper del servicio
         const validacion = FavoritoService.puedeAgregarFavorito(lote, !!tieneSuscripcion);
         
         if (!validacion.puede) {
@@ -92,7 +85,6 @@ export const FavoritoButton: React.FC<FavoritoButtonProps> = ({
         }
     }
 
-    // Si pasa validaciones, ejecutamos
     mutation.mutate();
   };
 

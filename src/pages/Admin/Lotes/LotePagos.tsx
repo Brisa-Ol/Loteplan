@@ -17,8 +17,8 @@ import { PageHeader } from '../../../components/common/PageHeader/PageHeader';
 import { DataTable, type DataTableColumn } from '../../../components/common/DataTable/DataTable';
 
 import type { LoteDto } from '../../../types/dto/lote.dto';
-import LoteService from '../../../Services/lote.service';
-import imagenService from '../../../Services/imagen.service';
+import LoteService from '../../../services/lote.service';
+import imagenService from '../../../services/imagen.service';
 
 // --- COMPONENTE KPI (Estandarizado) ---
 const StatCard: React.FC<{

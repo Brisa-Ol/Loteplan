@@ -5,7 +5,7 @@ import { Outlet } from 'react-router-dom';
 import { Box, useTheme } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import AdminSidebar from './AdminSidebar';
-import kycService from '../../../Services/kyc.service';
+import kycService from '../../../services/kyc.service';
 
 const AdminLayout: React.FC = () => {
   const theme = useTheme();

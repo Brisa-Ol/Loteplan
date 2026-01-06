@@ -21,7 +21,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { BaseModal } from '../../../../../components/common/BaseModal/BaseModal';
 import type { CreateCuotaMensualDto } from '../../../../../types/dto/cuotaMensual.dto';
 import type { ProyectoDto } from '../../../../../types/dto/proyecto.dto';
-import CuotaMensualService from '../../../../../Services/cuotaMensual.service';
+import CuotaMensualService from '../../../../../services/cuotaMensual.service';
 import ProyectoPriceHistory from '../ProyectoPriceHistory'; 
 
 interface ConfigCuotasModalProps {

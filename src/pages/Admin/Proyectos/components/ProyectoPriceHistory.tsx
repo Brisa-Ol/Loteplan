@@ -11,7 +11,7 @@ import {
 } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
 import type { CuotaMensualDto } from '../../../../types/dto/cuotaMensual.dto';
-import CuotaMensualService from '../../../../Services/cuotaMensual.service';
+import CuotaMensualService from '../../../../services/cuotaMensual.service';
 
 interface Props {
   proyectoId: number;

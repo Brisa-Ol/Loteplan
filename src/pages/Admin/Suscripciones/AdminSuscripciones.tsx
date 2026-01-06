@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { 
   Box, Typography, Paper, Chip, IconButton, Tooltip, 
-  Stack, TextField, MenuItem, InputAdornment, LinearProgress, Avatar, Snackbar, Alert, Divider, alpha, useTheme
+  Stack, TextField, MenuItem, InputAdornment, LinearProgress, Avatar, Divider, alpha, useTheme
 } from '@mui/material';
 import { 
   CheckCircle, Cancel, Search, Visibility, 
@@ -11,23 +11,25 @@ import {
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
+// --- Tipos ---
 import type { SuscripcionDto } from '../../../types/dto/suscripcion.dto';
+import type { ApiError } from '../../../services/httpService';
 
-// --- COMPONENTES COMUNES ---
+// --- Componentes Comunes ---
 import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
 import { QueryHandler } from '../../../components/common/QueryHandler/QueryHandler';
 import { PageHeader } from '../../../components/common/PageHeader/PageHeader';
 import { DataTable, type DataTableColumn } from '../../../components/common/DataTable/DataTable';
+import { ConfirmDialog } from '../../../components/common/ConfirmDialog/ConfirmDialog';
+import GlobalSnackbar from '../../../components/common/GlobalSnackbarProps/GlobalSnackbarProps';
 import DetalleSuscripcionModal from './components/DetalleSuscripcionModal';
 
-// Servicios
-import SuscripcionService from '../../../Services/suscripcion.service';
-import ProyectoService from '../../../Services/proyecto.service';
-
-// Hooks
+// --- Servicios y Hooks ---
+import SuscripcionService from '../../../services/suscripcion.service';
+import ProyectoService from '../../../services/proyecto.service';
+import { useSnackbar } from '../../../hooks/useSnackbar';
 import { useModal } from '../../../hooks/useModal';
 import { useConfirmDialog } from '../../../hooks/useConfirmDialog';
-import { ConfirmDialog } from '../../../components/common/ConfirmDialog/ConfirmDialog';
 
 // --- SUBCOMPONENTE: StatCard ---
 const StatCard: React.FC<{ 
@@ -41,13 +43,9 @@ const StatCard: React.FC<{
     elevation={0} 
     sx={{ 
       p: 2, 
-      display: 'flex', 
-      alignItems: 'center', 
-      gap: 2, 
-      border: '1px solid', 
-      borderColor: 'divider',
-      flex: 1, 
-      minWidth: 0
+      display: 'flex', alignItems: 'center', gap: 2, 
+      border: '1px solid', borderColor: 'divider',
+      flex: 1, minWidth: 0
     }}
   >
     <Box sx={{ bgcolor: `${color}.light`, color: `${color}.main`, p: 1.5, borderRadius: '50%', display: 'flex' }}>
@@ -68,29 +66,19 @@ const AdminSuscripciones: React.FC = () => {
   const queryClient = useQueryClient();
   const theme = useTheme();
 
-  // 1. Estados de Filtros
+  // Hooks
+  const { snackbar, showSuccess, showError, handleClose: closeSnackbar } = useSnackbar();
+  const detailModal = useModal();
+  const confirmDialog = useConfirmDialog<SuscripcionDto>();
+  
+  // Estados Locales
   const [searchTerm, setSearchTerm] = useState('');
   const [filterProject, setFilterProject] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | 'activas' | 'inactivas'>('activas');
-  
-  // 2. Hooks de Modales y Dialogs
-  const detailModal = useModal();
-  const confirmDialog = useConfirmDialog();
   const [selectedSuscripcion, setSelectedSuscripcion] = useState<SuscripcionDto | null>(null);
-
-  // 3. Feedback Visual
-  const [snackbar, setSnackbar] = useState<{ open: boolean, message: string, severity: 'success' | 'error' }>({
-    open: false, message: '', severity: 'success'
-  });
-
-  // ✅ Nuevo estado para el efecto "Flash" en la tabla
   const [highlightedId, setHighlightedId] = useState<number | null>(null);
 
-  const showMessage = (message: string, severity: 'success' | 'error' = 'success') => {
-    setSnackbar({ open: true, message, severity });
-  };
-
-  // 4. Queries
+  // Queries
   const { data: suscripciones = [], isLoading: loadingSuscripciones, error } = useQuery({
     queryKey: ['adminSuscripciones', filterStatus],
     queryFn: async () => {
@@ -124,7 +112,7 @@ const AdminSuscripciones: React.FC = () => {
   const totalCanceladas = cancelacionStats?.total_canceladas || 0;
   const totalActivas = totalSuscripciones - totalCanceladas;
 
-  // 5. Filtrado (Memoizado)
+  // Filtrado Memoizado
   const filteredSuscripciones = useMemo(() => {
     return suscripciones.filter(suscripcion => {
       const term = searchTerm.toLowerCase();
@@ -149,30 +137,29 @@ const AdminSuscripciones: React.FC = () => {
     });
   }, [suscripciones, searchTerm, filterProject, filterStatus]);
 
-  // 6. Mutaciones
+  // Mutaciones
   const cancelarMutation = useMutation({
     mutationFn: async (id: number) => await SuscripcionService.cancelarAdmin(id),
-    onSuccess: (_, variables) => { // variables es el ID enviado
+    onSuccess: (_, variables) => { 
       queryClient.invalidateQueries({ queryKey: ['adminSuscripciones'] });
       queryClient.invalidateQueries({ queryKey: ['metricsCancelacionMetrics'] });
       queryClient.invalidateQueries({ queryKey: ['metricsMorosidad'] });
       
       confirmDialog.close();
-      
-      // ✅ Activar efecto Flash en la fila modificada
       setHighlightedId(variables);
       setTimeout(() => setHighlightedId(null), 2500);
 
-      showMessage('Suscripción cancelada correctamente.');
+      showSuccess('Suscripción cancelada correctamente.');
     },
-    onError: (err: any) => {
-      const backendError = err.response?.data?.error || 'Error desconocido';
+    onError: (err: unknown) => {
+      const apiError = err as ApiError;
+      const backendError = apiError.message || 'Error desconocido';
       confirmDialog.close();
-      showMessage(`No se pudo cancelar: ${backendError}`, 'error');
+      showError(`No se pudo cancelar: ${backendError}`);
     }
   });
 
-  // 7. Handlers
+  // Handlers
   const handleCancelarClick = (suscripcion: SuscripcionDto) => {
     if (!suscripcion.activo) return;
     confirmDialog.confirm('admin_cancel_subscription', suscripcion);
@@ -194,7 +181,7 @@ const AdminSuscripciones: React.FC = () => {
     setTimeout(() => setSelectedSuscripcion(null), 300);
   };
 
-  // 8. Definición de Columnas
+  // Definición de Columnas
   const columns = useMemo<DataTableColumn<SuscripcionDto>[]>(() => [
     {
       id: 'usuario',
@@ -235,10 +222,9 @@ const AdminSuscripciones: React.FC = () => {
       id: 'deuda',
       label: 'Estado Deuda',
       render: (s) => {
-        // Lógica de semáforo para deuda
         let color: 'success' | 'warning' | 'error' = 'success';
         if (s.meses_a_pagar > 0) color = 'warning';
-        if (s.meses_a_pagar >= 3) color = 'error'; // Alerta crítica
+        if (s.meses_a_pagar >= 3) color = 'error';
 
         return (
           <Chip 
@@ -313,22 +299,19 @@ const AdminSuscripciones: React.FC = () => {
 
   return (
     <PageContainer maxWidth="xl">
-      
       <PageHeader
         title="Gestión de Suscripciones"
         subtitle="Monitor de suscripciones activas, canceladas y métricas clave"
       />
 
-      {/* ========== SECCIÓN DE KPIs ========== */}
+      {/* KPIs */}
       <Stack spacing={2} mb={4}>
-        {/* FILA 1: Totales */}
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
           <StatCard title="Total Histórico" value={totalSuscripciones} icon={<Groups />} color="primary" loading={loadCancelacion} />
           <StatCard title="Activas Hoy" value={totalActivas} icon={<CheckCircle />} color="success" loading={loadCancelacion} />
           <StatCard title="Canceladas" value={totalCanceladas} icon={<Cancel />} color="error" loading={loadCancelacion} />
         </Stack>
 
-        {/* FILA 2: Financiero */}
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
           <StatCard title="Tasa Cancelación" value={`${cancelacionStats?.tasa_cancelacion || 0}%`} icon={<TrendingDown />} color="warning" loading={loadCancelacion} />
           <StatCard title="Tasa Morosidad" value={`${morosidadStats?.tasa_morosidad || 0}%`} icon={<Warning />} color="error" loading={loadMorosidad} />
@@ -336,7 +319,7 @@ const AdminSuscripciones: React.FC = () => {
         </Stack>
       </Stack>
 
-      {/* ========== FILTROS ========== */}
+      {/* Filtros */}
       <Paper sx={{ p: 2, mb: 3 }} elevation={0} variant="outlined">
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="center">
           <TextField 
@@ -371,24 +354,21 @@ const AdminSuscripciones: React.FC = () => {
         </Stack>
       </Paper>
 
-      {/* ========== TABLA ========== */}
+      {/* Tabla */}
       <QueryHandler isLoading={loadingSuscripciones} error={error as Error | null}>
         <DataTable
             columns={columns}
             data={filteredSuscripciones}
             getRowKey={(s) => s.id}
-            
-            // ✅ PROPS NUEVAS ACTIVADAS:
-            highlightedRowId={highlightedId} // Flash visual
-            isRowActive={(s) => s.activo}    // Opacidad para canceladas
-
+            highlightedRowId={highlightedId}
+            isRowActive={(s) => s.activo}
             emptyMessage="No se encontraron suscripciones con los filtros actuales."
             pagination={true}
             defaultRowsPerPage={10}
         />
       </QueryHandler>
 
-      {/* ========== MODALES ========== */}
+      {/* Modales */}
       <DetalleSuscripcionModal 
         open={detailModal.isOpen} 
         onClose={handleCerrarModal} 
@@ -401,21 +381,7 @@ const AdminSuscripciones: React.FC = () => {
         isLoading={cancelarMutation.isPending}
       />
 
-      <Snackbar 
-        open={snackbar.open} 
-        autoHideDuration={6000} 
-        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert 
-          severity={snackbar.severity} 
-          onClose={() => setSnackbar(prev => ({ ...prev, open: false }))} 
-          variant="filled"
-          sx={{ boxShadow: 4 }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
+      <GlobalSnackbar {...snackbar} onClose={closeSnackbar} />
 
     </PageContainer>
   );

@@ -11,20 +11,18 @@ import {
 } from '@mui/icons-material';
 import QRCode from 'qrcode';
 import { useAuth } from '../../../context/AuthContext';
-import { use2FA } from '../../../hooks/use2FA';
 import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
 import { PageHeader } from '../../../components/common/PageHeader/PageHeader';
 
 const SecuritySettings: React.FC = () => {
-  const { user, refetchUser, disable2FA } = useAuth();
+  const { user, refetchUser, disable2FA, generate2FASecret, enable2FA, isLoading: authLoading } = useAuth();
   const theme = useTheme();
-  
-  // Hook de Lógica 2FA
-  const { 
-    generateSecret, enable2FA, isLoading: hookLoading, 
-    error: hookError, clearError: clearHookError,
-    secret, qrCodeUrl: otpAuthUrl 
-  } = use2FA();
+
+  // Estados de 2FA Setup (antes en use2FA)
+  const [secret, setSecret] = useState<string | null>(null);
+  const [otpAuthUrl, setOtpAuthUrl] = useState<string | null>(null);
+  const [setupLoading, setSetupLoading] = useState(false);
+  const [setupError, setSetupError] = useState<string | null>(null);
 
   // Estados de UI
   const [activeStep, setActiveStep] = useState(0);
@@ -45,8 +43,8 @@ const SecuritySettings: React.FC = () => {
   const [copiedSecret, setCopiedSecret] = useState(false);
 
   const is2FAEnabled = user?.is_2fa_enabled || false;
-  const isLoading = hookLoading || disableLoading;
-  const displayError = hookError || localError;
+  const isLoading = authLoading || setupLoading || disableLoading;
+  const displayError = setupError || localError;
 
   useEffect(() => {
     if (otpAuthUrl) {
@@ -59,20 +57,32 @@ const SecuritySettings: React.FC = () => {
   // Handlers Activación
   const handleStartEnable = async () => {
     setLocalError(null);
-    clearHookError();
-    const success = await generateSecret();
-    if (success) {
+    setSetupError(null);
+    setSetupLoading(true);
+    try {
+      const data = await generate2FASecret();
+      setSecret(data.secret);
+      setOtpAuthUrl(data.otpauthUrl);
       setIsEnabling(true);
       setActiveStep(0);
+    } catch (err) {
+      setSetupError('Error generando secreto 2FA');
+    } finally {
+      setSetupLoading(false);
     }
   };
 
   const handleVerifyAndEnable = async () => {
     if (verificationCode.length !== 6) return;
-    const success = await enable2FA(verificationCode);
-    if (success) {
+    setSetupLoading(true);
+    try {
+      await enable2FA(verificationCode);
       setSuccessMessage('¡Autenticación de dos factores activada exitosamente!');
       handleCloseEnableDialog();
+    } catch (err) {
+      setSetupError('Código incorrecto. Intenta de nuevo.');
+    } finally {
+      setSetupLoading(false);
     }
   };
 
@@ -81,7 +91,9 @@ const SecuritySettings: React.FC = () => {
     setActiveStep(0);
     setVerificationCode('');
     setQrImage(null);
-    clearHookError();
+    setSecret(null);
+    setOtpAuthUrl(null);
+    setSetupError(null);
     setLocalError(null);
   };
 
@@ -123,14 +135,14 @@ const SecuritySettings: React.FC = () => {
   return (
     <PageContainer maxWidth="md">
       {/* Encabezado */}
-      <PageHeader 
-        title="Seguridad de la Cuenta" 
+      <PageHeader
+        title="Seguridad de la Cuenta"
         subtitle="Gestiona la autenticación de dos factores y protege el acceso a tu cuenta."
       />
 
       {/* Contenedor centrado para las tarjetas */}
       <Box sx={{ width: '100%', maxWidth: 600, mx: 'auto', mt: 2 }}>
-        
+
         {successMessage && (
           <Alert severity="success" onClose={() => setSuccessMessage(null)} sx={{ mb: 3 }}>
             {successMessage}
@@ -138,7 +150,7 @@ const SecuritySettings: React.FC = () => {
         )}
 
         {/* --- ESTADO ACTUAL --- */}
-        <Card 
+        <Card
           elevation={0}
           sx={{
             mb: 4,
@@ -151,8 +163,8 @@ const SecuritySettings: React.FC = () => {
           <CardContent sx={{ p: 3 }}>
             <Box display="flex" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={2}>
               <Box display="flex" alignItems="center" gap={3}>
-                <Avatar 
-                  sx={{ 
+                <Avatar
+                  sx={{
                     width: 56, height: 56,
                     bgcolor: is2FAEnabled ? alpha(theme.palette.success.main, 0.2) : alpha(theme.palette.warning.main, 0.2),
                     color: is2FAEnabled ? 'success.main' : 'warning.main'
@@ -182,9 +194,9 @@ const SecuritySettings: React.FC = () => {
         </Card>
 
         {/* --- ACCIONES --- */}
-        <Card 
-          elevation={0} 
-          sx={{ 
+        <Card
+          elevation={0}
+          sx={{
             border: `1px solid ${theme.palette.secondary.dark}`,
             bgcolor: 'background.default',
             borderRadius: 3
@@ -193,13 +205,13 @@ const SecuritySettings: React.FC = () => {
           <CardContent sx={{ p: 4 }}>
             <Stack direction="row" spacing={2} alignItems="flex-start" mb={3}>
               <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}>
-                  <Security />
+                <Security />
               </Avatar>
               <Box>
-                  <Typography variant="h6" fontWeight={700} gutterBottom>Autenticación de Dos Factores (2FA)</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Añade una capa adicional de seguridad solicitando un código de verificación desde tu aplicación móvil (Google Authenticator, Authy, etc.).
-                  </Typography>
+                <Typography variant="h6" fontWeight={700} gutterBottom>Autenticación de Dos Factores (2FA)</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Añade una capa adicional de seguridad solicitando un código de verificación desde tu aplicación móvil (Google Authenticator, Authy, etc.).
+                </Typography>
               </Box>
             </Stack>
 
@@ -208,15 +220,15 @@ const SecuritySettings: React.FC = () => {
             {!is2FAEnabled ? (
               <Box>
                 <Button
-                  variant="contained" 
-                  size="large" 
-                  fullWidth 
+                  variant="contained"
+                  size="large"
+                  fullWidth
                   startIcon={<QrCode2 />}
-                  onClick={handleStartEnable} 
+                  onClick={handleStartEnable}
                   disabled={isLoading}
                   sx={{ borderRadius: 2, py: 1.5 }}
                 >
-                  {isLoading ? <CircularProgress size={24} color="inherit"/> : 'Configurar Verificación en Dos Pasos'}
+                  {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Configurar Verificación en Dos Pasos'}
                 </Button>
               </Box>
             ) : (
@@ -225,12 +237,12 @@ const SecuritySettings: React.FC = () => {
                   Para desactivar la verificación, necesitarás confirmar tu contraseña y un código 2FA válido.
                 </Alert>
                 <Button
-                  variant="outlined" 
-                  color="error" 
-                  size="large" 
-                  fullWidth 
+                  variant="outlined"
+                  color="error"
+                  size="large"
+                  fullWidth
                   startIcon={<Lock />}
-                  onClick={() => setIsDisabling(true)} 
+                  onClick={() => setIsDisabling(true)}
                   disabled={isLoading}
                   sx={{ borderRadius: 2, py: 1.5 }}
                 >
@@ -243,7 +255,7 @@ const SecuritySettings: React.FC = () => {
       </Box>
 
       {/* --- DIALOGS (Fuera del contenedor visual principal) --- */}
-      
+
       {/* DIALOG: ACTIVAR */}
       <Dialog open={isEnabling} onClose={handleCloseEnableDialog} maxWidth="sm" fullWidth>
         <DialogTitle display="flex" justifyContent="space-between" alignItems="center" sx={{ borderBottom: `1px solid ${theme.palette.divider}` }}>
@@ -262,7 +274,7 @@ const SecuritySettings: React.FC = () => {
               <Box p={2} border={`1px solid ${theme.palette.divider}`} borderRadius={2}>
                 <img src={qrImage} alt="QR Code" style={{ width: '100%', maxWidth: 200, display: 'block' }} />
               </Box>
-              
+
               {secret && (
                 <Box sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 2, width: '100%' }}>
                   <Typography variant="caption" color="text.secondary" display="block" mb={1} fontWeight={600}>
@@ -290,19 +302,19 @@ const SecuritySettings: React.FC = () => {
                 Abre tu aplicación de autenticación e ingresa el código de 6 dígitos.
               </Typography>
               <TextField
-                fullWidth 
+                fullWidth
                 placeholder="000 000"
                 value={verificationCode}
                 onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                inputProps={{ 
-                  maxLength: 6, 
-                  style: { textAlign: 'center', letterSpacing: 8, fontSize: '1.5rem', fontWeight: 700 } 
+                inputProps={{
+                  maxLength: 6,
+                  style: { textAlign: 'center', letterSpacing: 8, fontSize: '1.5rem', fontWeight: 700 }
                 }}
               />
               <Stack direction="row" spacing={2}>
                 <Button variant="outlined" onClick={() => setActiveStep(0)} fullWidth>Atrás</Button>
-                <Button 
-                  variant="contained" onClick={handleVerifyAndEnable} fullWidth 
+                <Button
+                  variant="contained" onClick={handleVerifyAndEnable} fullWidth
                   disabled={isLoading || verificationCode.length !== 6}
                 >
                   {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Verificar y Activar'}
@@ -323,9 +335,9 @@ const SecuritySettings: React.FC = () => {
           <Alert severity="warning" sx={{ mb: 3 }}>
             Tu cuenta será más vulnerable a accesos no autorizados.
           </Alert>
-          
+
           {localError && <Alert severity="error" sx={{ mb: 2 }}>{localError}</Alert>}
-          
+
           <Stack spacing={2}>
             <TextField
               fullWidth type={showPassword ? 'text' : 'password'} label="Contraseña Actual"
@@ -349,7 +361,7 @@ const SecuritySettings: React.FC = () => {
         </DialogContent>
         <DialogActions sx={{ p: 2, borderTop: `1px solid ${theme.palette.divider}` }}>
           <Button onClick={handleCloseDisableDialog} color="inherit">Cancelar</Button>
-          <Button 
+          <Button
             onClick={handleConfirmDisable} color="error" variant="contained"
             disabled={disableLoading || !disablePassword || disableCode.length !== 6}
           >

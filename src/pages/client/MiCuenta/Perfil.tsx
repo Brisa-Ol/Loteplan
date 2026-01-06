@@ -27,9 +27,7 @@ import { useNavigate } from 'react-router-dom';
 
 // Servicios y Contexto
 import { useAuth } from '../../../context/AuthContext';
-import UsuarioService from '../../../Services/usuario.service';
-import kycService from '../../../Services/kyc.service';
-import SuscripcionService from '../../../Services/suscripcion.service';
+
 import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
 import type { UpdateUserMeDto } from '../../../types/dto/usuario.dto';
 
@@ -37,6 +35,9 @@ import type { UpdateUserMeDto } from '../../../types/dto/usuario.dto';
 import { useConfirmDialog } from '../../../hooks/useConfirmDialog';
 import DeleteAccountModal from './components/DeleteAccountModal';
 import SecuritySettings from './SecuritySettings';
+import kycService from '../../../services/kyc.service';
+import SuscripcionService from '../../../services/suscripcion.service';
+import UsuarioService from '../../../services/usuario.service';
 
 const Perfil: React.FC = () => {
   const { user, refetchUser } = useAuth();

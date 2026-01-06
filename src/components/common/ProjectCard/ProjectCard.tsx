@@ -14,7 +14,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { LocationOn as LocationIcon } from "@mui/icons-material";
 import type { EstadoProyecto, ProyectoDto } from "../../../types/dto/proyecto.dto";
-import ImagenService from "../../../Services/imagen.service";
+import ImagenService from "../../../services/imagen.service";
 
 // Importaciones de arquitectura
 

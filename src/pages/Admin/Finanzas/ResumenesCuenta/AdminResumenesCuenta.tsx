@@ -13,7 +13,7 @@ import { useQuery } from '@tanstack/react-query';
 import DetalleResumenModal from './modals/DetalleResumenModal';
 import { useModal } from '../../../../hooks/useModal';
 import type { ResumenCuentaDto } from '../../../../types/dto/resumenCuenta.dto';
-import ResumenCuentaService from '../../../../Services/resumenCuenta.service';
+import ResumenCuentaService from '../../../../services/resumenCuenta.service';
 import { PageContainer } from '../../../../components/common/PageContainer/PageContainer';
 import { PageHeader } from '../../../../components/common/PageHeader/PageHeader';
 import { DataTable, type DataTableColumn } from '../../../../components/common/DataTable/DataTable';

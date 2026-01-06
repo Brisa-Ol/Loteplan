@@ -18,7 +18,7 @@ import { useQuery } from '@tanstack/react-query';
 import { BaseModal } from '../../../../components/common/BaseModal/BaseModal';
 import type { LoteDto, UpdateLoteDto } from '../../../../types/dto/lote.dto';
 import type { ProyectoDto } from '../../../../types/dto/proyecto.dto';
-import ProyectoService from '../../../../Services/proyecto.service';
+import ProyectoService from '../../../../services/proyecto.service';
 
 interface EditLoteModalProps {
   open: boolean;

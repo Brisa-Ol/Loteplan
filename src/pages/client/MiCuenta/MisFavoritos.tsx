@@ -15,8 +15,8 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 
-import imagenService from '../../../Services/imagen.service';
-import FavoritoService from '../../../Services/favorito.service';
+import imagenService from '../../../services/imagen.service';
+import FavoritoService from '../../../services/favorito.service';
 import type { LoteDto } from '../../../types/dto/lote.dto';
 import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
 import { PageHeader } from '../../../components/common/PageHeader/PageHeader';

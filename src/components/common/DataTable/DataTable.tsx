@@ -53,11 +53,12 @@ export const DataSwitch: React.FC<DataSwitchProps> = ({
 
 // --- Interfaces ---
 export interface DataTableColumn<T> {
-  id: string;
+  id: string; // Se mantiene string para mayor flexibilidad (columnas calculadas)
   label: string;
   align?: 'left' | 'right' | 'center';
   minWidth?: number;
-  format?: (value: any, row: T) => React.ReactNode;
+  // ✅ CORRECCIÓN: Se tipa el value como unknown en lugar de any
+  format?: (value: unknown, row: T) => React.ReactNode;
   render?: (row: T) => React.ReactNode;
 }
 
@@ -68,11 +69,8 @@ interface DataTableProps<T> {
   onRowClick?: (row: T) => void;
   emptyMessage?: string;
   sx?: SxProps<Theme>;
-  // ✅ Nuevo: Si pasas esta función, se aplica el estilo por defecto para filas activas/inactivas
   isRowActive?: (row: T) => boolean; 
-  // ✅ Nuevo: ID de la fila para aplicar efecto "flash" (éxito)
   highlightedRowId?: string | number | null; 
-  // Permite sobreescribir estilos, pero ya no es obligatorio para la lógica común
   getRowSx?: (row: T) => SxProps<Theme>; 
   pagination?: boolean;
   defaultRowsPerPage?: number;
@@ -87,8 +85,8 @@ export function DataTable<T>({
   onRowClick,
   emptyMessage = 'No hay datos disponibles',
   sx,
-  isRowActive, // Nueva prop
-  highlightedRowId, // Nueva prop
+  isRowActive,
+  highlightedRowId,
   getRowSx,
   pagination = true,
   defaultRowsPerPage = 10,
@@ -141,25 +139,23 @@ export function DataTable<T>({
             paginatedData.map((row) => {
               const rowKey = getRowKey(row);
               const isHighlighted = highlightedRowId === rowKey;
-              const isActive = isRowActive ? isRowActive(row) : true; // Por defecto true si no se pasa la función
+              const isActive = isRowActive ? isRowActive(row) : true;
 
-              // Estilos Base Estandarizados
               const defaultRowStyles = {
                 cursor: onRowClick ? 'pointer' : 'default',
                 transition: 'background-color 0.5s ease',
                 bgcolor: isHighlighted 
-                  ? alpha(theme.palette.success.main, 0.12) // Verde suave para flash
+                  ? alpha(theme.palette.success.main, 0.12)
                   : !isActive 
-                    ? alpha(theme.palette.grey[500], 0.2) // Gris muy suave para inactivos
+                    ? alpha(theme.palette.grey[500], 0.2)
                     : 'inherit',
                 '&:hover': {
                   bgcolor: isHighlighted 
                     ? alpha(theme.palette.success.main, 0.18)
-                    : alpha(theme.palette.primary.main, 0.04) // Hover azul muy sutil estándar
+                    : alpha(theme.palette.primary.main, 0.04)
                 }
               };
 
-              // Si el padre pasa getRowSx, se fusionan los estilos (el padre tiene prioridad)
               const customStyles = getRowSx ? getRowSx(row) : {};
 
               return (
@@ -169,15 +165,21 @@ export function DataTable<T>({
                   onClick={() => onRowClick?.(row)}
                   sx={{ ...defaultRowStyles, ...customStyles }}
                 >
-                  {columns.map((column) => (
-                    <TableCell key={column.id} align={column.align || 'left'}>
-                      {column.render
-                        ? column.render(row)
-                        : column.format
-                          ? column.format((row as any)[column.id], row)
-                          : (row as any)[column.id]}
-                    </TableCell>
-                  ))}
+                  {columns.map((column) => {
+                    // ✅ CORRECCIÓN DE TIPADO:
+                    // Obtenemos el valor de la celda de forma segura
+                    const cellValue = (row as Record<string, unknown>)[column.id];
+
+                    return (
+                      <TableCell key={column.id} align={column.align || 'left'}>
+                        {column.render
+                          ? column.render(row)
+                          : column.format
+                            ? column.format(cellValue, row)
+                            : String(cellValue ?? '')}
+                      </TableCell>
+                    );
+                  })}
                 </TableRow>
               );
             })

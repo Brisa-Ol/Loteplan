@@ -10,7 +10,7 @@ import {
   CardContent 
 } from '@mui/material';
 import { CheckCircleOutline, ErrorOutline } from '@mui/icons-material';
-import AuthService from '../../Services/auth.service';
+import AuthService from '../../services/auth.service';
 
 const ConfirmEmailPage: React.FC = () => {
   const { token } = useParams<{ token: string }>();

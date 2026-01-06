@@ -7,14 +7,13 @@ import {
 } from '@mui/material';
 import { 
   Search, Visibility, TrendingDown, MoneyOff, Cancel,
-  Person as PersonIcon,
-  DateRange as DateIcon
+  Person as PersonIcon, DateRange as DateIcon
 } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
 
 // DTOs y Servicios
 import type { SuscripcionCanceladaDto } from '../../../types/dto/suscripcion.dto';
-import SuscripcionService from '../../../Services/suscripcion.service';
+import SuscripcionService from '../../../services/suscripcion.service';
 
 // Componentes Comunes
 import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
@@ -39,11 +38,8 @@ const StatCard: React.FC<{
     elevation={0} 
     sx={{ 
       p: 2, 
-      display: 'flex', 
-      alignItems: 'center', 
-      gap: 2, 
-      border: '1px solid', 
-      borderColor: 'divider',
+      display: 'flex', alignItems: 'center', gap: 2, 
+      border: '1px solid', borderColor: 'divider',
       flex: 1
     }}
   >
@@ -70,16 +66,16 @@ const StatCard: React.FC<{
 const AdminCancelaciones: React.FC = () => {
   const theme = useTheme();
 
-  // 1. Estados de Filtro
+  // Estados de Filtro
   const [searchTerm, setSearchTerm] = useState('');
   const [dateStart, setDateStart] = useState('');
   const [dateEnd, setDateEnd] = useState('');
   
-  // 2. Estado de Modal y Selección
+  // Modal y Selección
   const detailModal = useModal();
   const [selectedCancelacion, setSelectedCancelacion] = useState<SuscripcionCanceladaDto | null>(null);
 
-  // 3. Queries
+  // Queries
   const { data: cancelaciones = [], isLoading, error } = useQuery({
     queryKey: ['adminCancelaciones'],
     queryFn: async () => (await SuscripcionService.getAllCanceladas()).data,
@@ -90,13 +86,13 @@ const AdminCancelaciones: React.FC = () => {
     queryFn: async () => (await SuscripcionService.getCancellationMetrics()).data,
   });
 
-  // 4. Cálculos (Memos)
+  // Cálculos Memoizados
   const totalMontoLiquidado = useMemo(() => {
-    return cancelaciones.reduce((acc, curr) => acc + Number(curr.monto_pagado_total), 0);
+    return cancelaciones.reduce((acc: number, curr: SuscripcionCanceladaDto) => acc + Number(curr.monto_pagado_total), 0);
   }, [cancelaciones]);
 
   const filteredCancelaciones = useMemo(() => {
-    return cancelaciones.filter(item => {
+    return cancelaciones.filter((item: SuscripcionCanceladaDto) => {
       const term = searchTerm.toLowerCase();
       
       const userName = item.usuario ? `${item.usuario.nombre} ${item.usuario.apellido}` : '';
@@ -124,7 +120,7 @@ const AdminCancelaciones: React.FC = () => {
     });
   }, [cancelaciones, searchTerm, dateStart, dateEnd]);
 
-  // 5. Handlers (Callback para rendimiento)
+  // Handlers
   const handleVerDetalle = useCallback((item: SuscripcionCanceladaDto) => {
     setSelectedCancelacion(item);
     detailModal.open();
@@ -135,12 +131,10 @@ const AdminCancelaciones: React.FC = () => {
     setTimeout(() => setSelectedCancelacion(null), 300);
   }, [detailModal]);
 
-  // 6. Columnas
+  // Columnas
   const columns = useMemo<DataTableColumn<SuscripcionCanceladaDto>[]>(() => [
     {
-      id: 'id',
-      label: 'ID / Fecha',
-      minWidth: 140,
+      id: 'id', label: 'ID / Fecha', minWidth: 140,
       render: (item) => (
         <Box>
             <Typography variant="body2" fontWeight={700}>#{item.id}</Typography>
@@ -154,17 +148,13 @@ const AdminCancelaciones: React.FC = () => {
       )
     },
     {
-      id: 'usuario',
-      label: 'Ex-Usuario',
-      minWidth: 220,
+      id: 'usuario', label: 'Ex-Usuario', minWidth: 220,
       render: (item) => (
         <Stack direction="row" spacing={2} alignItems="center">
             <Avatar sx={{ 
                 width: 32, height: 32, 
-                bgcolor: alpha(theme.palette.error.main, 0.1), // Estilo consistente
-                color: 'error.main', 
-                fontSize: 14,
-                fontWeight: 'bold'
+                bgcolor: alpha(theme.palette.error.main, 0.1),
+                color: 'error.main', fontSize: 14, fontWeight: 'bold'
             }}>
                 {item.usuario?.nombre?.charAt(0) || <PersonIcon fontSize="small"/>}
             </Avatar>
@@ -180,8 +170,7 @@ const AdminCancelaciones: React.FC = () => {
       )
     },
     {
-      id: 'proyecto',
-      label: 'Proyecto',
+      id: 'proyecto', label: 'Proyecto',
       render: (item) => (
         <Typography variant="body2" fontWeight={500}>
             {item.proyecto?.nombre_proyecto || `ID Proyecto: ${item.id_proyecto}`}
@@ -189,20 +178,17 @@ const AdminCancelaciones: React.FC = () => {
       )
     },
     {
-      id: 'meses',
-      label: 'Permanencia',
+      id: 'meses', label: 'Permanencia',
       render: (item) => (
         <Chip 
             label={`${item.meses_pagados} Meses`} 
-            size="small" 
-            variant="outlined" 
+            size="small" variant="outlined" 
             sx={{ fontWeight: 600, borderColor: 'divider', color: 'text.secondary' }}
         />
       )
     },
     {
-      id: 'monto',
-      label: 'Liquidado',
+      id: 'monto', label: 'Liquidado',
       render: (item) => (
         <Typography variant="body2" fontWeight={700} color="error.main" sx={{ fontFamily: 'monospace' }}>
             ${Number(item.monto_pagado_total).toLocaleString('es-AR')}
@@ -210,9 +196,7 @@ const AdminCancelaciones: React.FC = () => {
       )
     },
     {
-      id: 'acciones',
-      label: 'Acciones',
-      align: 'right',
+      id: 'acciones', label: 'Acciones', align: 'right',
       render: (item) => (
         <Tooltip title="Ver Detalle">
             <IconButton 
@@ -235,7 +219,7 @@ const AdminCancelaciones: React.FC = () => {
         subtitle="Monitor de bajas, devoluciones y métricas de retención"
       />
 
-      {/* ========== 1. KPIs ========== */}
+      {/* 1. KPIs */}
       <Box sx={{ 
         display: 'grid', 
         gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, 
@@ -262,7 +246,7 @@ const AdminCancelaciones: React.FC = () => {
         />
       </Box>
 
-      {/* ========== 2. FILTROS ========== */}
+      {/* 2. FILTROS */}
       <Paper sx={{ p: 2, mb: 3 }} elevation={0} variant="outlined">
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="center">
           <TextField 
@@ -291,7 +275,7 @@ const AdminCancelaciones: React.FC = () => {
         </Stack>
       </Paper>
 
-      {/* ========== 3. TABLA ========== */}
+      {/* 3. TABLA */}
       <QueryHandler isLoading={isLoading} error={error as Error | null}>
         <DataTable
             columns={columns}
@@ -303,7 +287,7 @@ const AdminCancelaciones: React.FC = () => {
         />
       </QueryHandler>
 
-      {/* ========== MODAL ========== */}
+      {/* MODAL */}
       <DetalleCancelacionModal 
         open={detailModal.isOpen}
         onClose={handleCerrarModal}

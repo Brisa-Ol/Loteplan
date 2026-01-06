@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-  TextField, MenuItem, Stack, Box, Alert, Chip, InputAdornment 
+  TextField, MenuItem, Stack, Alert, Chip, InputAdornment 
 } from '@mui/material';
 import { 
     EditNote as EditIcon, 
@@ -14,13 +14,18 @@ import {
 import { BaseModal } from '../../../../../components/common/BaseModal/BaseModal';
 import type { ContratoPlantillaDto } from '../../../../../types/dto/contrato.dto';
 
+interface ProjectOption {
+  id: number;
+  nombre_proyecto: string;
+}
+
 interface Props {
   open: boolean;
   onClose: () => void;
   plantilla: ContratoPlantillaDto | null;
   onSubmit: (data: Partial<ContratoPlantillaDto>) => Promise<void>;
   isLoading: boolean;
-  proyectos: any[]; 
+  proyectos: ProjectOption[]; 
 }
 
 const UpdateMetadataModal: React.FC<Props> = ({ 
@@ -34,6 +39,7 @@ const UpdateMetadataModal: React.FC<Props> = ({
     if (plantilla) {
       setNombre(plantilla.nombre_archivo);
       setVersion(plantilla.version);
+      // Convertir null a string vacío para el Select de MUI
       setIdProyecto(plantilla.id_proyecto === null ? '' : plantilla.id_proyecto.toString());
     }
   }, [plantilla]);
@@ -42,6 +48,7 @@ const UpdateMetadataModal: React.FC<Props> = ({
     await onSubmit({
       nombre_archivo: nombre,
       version: Number(version),
+      // Convertir string vacío a null para el backend
       id_proyecto: idProyecto === '' ? null : Number(idProyecto)
     });
   };
@@ -108,6 +115,7 @@ const UpdateMetadataModal: React.FC<Props> = ({
                   <VersionIcon color="action" />
                 </InputAdornment>
               ),
+              inputProps: { min: 1 }
             }}
           />
           <TextField 

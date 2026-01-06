@@ -1,11 +1,9 @@
-// src/pages/Client/Proyectos/DetalleProyecto.tsx
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   Box, Typography, Button, Stack, Chip, LinearProgress, 
-  Paper, Divider, Tabs, Tab, Skeleton, Alert, Tooltip,
+  Divider, Tabs, Tab, Skeleton, Alert, Tooltip,
   Backdrop, CircularProgress, useTheme, alpha, Card, CardContent
 } from '@mui/material';
 import { 
@@ -14,13 +12,13 @@ import {
 } from '@mui/icons-material';
 
 // --- SERVICIOS ---
-import ProyectoService from '../../../Services/proyecto.service';
-import SuscripcionService from '../../../Services/suscripcion.service';
-import InversionService from '../../../Services/inversion.service';
-import ImagenService from '../../../Services/imagen.service';
-import TransaccionService from '../../../Services/transaccion.service';
-import ContratoService from '../../../Services/contrato.service';
-import MercadoPagoService from '../../../Services/pagoMercado.service';
+import ProyectoService from '../../../services/proyecto.service';
+import SuscripcionService from '../../../services/suscripcion.service';
+import InversionService from '../../../services/inversion.service';
+import ImagenService from '../../../services/imagen.service';
+import TransaccionService from '../../../services/transaccion.service';
+import ContratoService from '../../../services/contrato.service';
+import MercadoPagoService from '../../../services/pagoMercado.service';
 
 // --- TIPOS ---
 import type { ContratoFirmadoDto } from '../../../types/dto/contrato.dto';
@@ -319,7 +317,7 @@ const DetalleProyecto: React.FC = () => {
         </Stack>
       </Backdrop>
 
-      {/* --- HERO IMAGE (Premium) --- */}
+      {/* --- HERO IMAGE --- */}
       <Box 
         sx={{ 
             position: 'relative', 
@@ -431,8 +429,8 @@ const DetalleProyecto: React.FC = () => {
                {/* Monto */}
                <Box 
                  sx={{ 
-                    bgcolor: alpha(theme.palette.primary.main, 0.05), 
-                    p: 2, borderRadius: 2, border: `1px dashed ${alpha(theme.palette.primary.main, 0.2)}`
+                   bgcolor: alpha(theme.palette.primary.main, 0.05), 
+                   p: 2, borderRadius: 2, border: `1px dashed ${alpha(theme.palette.primary.main, 0.2)}`
                  }}
                >
                  <Stack direction="row" spacing={1} alignItems="center" color="text.secondary" mb={0.5}>
@@ -473,7 +471,7 @@ const DetalleProyecto: React.FC = () => {
                 </Alert>
                )}
 
-               {/* === BOTÓN PRINCIPAL DE ACCIÓN (INVERTIR / SUSCRIBIR) === */}
+               {/* === BOTÓN PRINCIPAL DE ACCIÓN === */}
                {!yaFirmo && !puedeFirmar && (
                  <Tooltip title={is2FAMissing && user ? "Activa 2FA para continuar" : ""}>
                    <Box> 
@@ -492,9 +490,7 @@ const DetalleProyecto: React.FC = () => {
                  </Tooltip>
                )}
 
-               {/* ✅ ZONA DE CONTRATOS - ACTUALIZADA 
-                   Se muestra si el usuario está logueado Y (es mensual O es directo).
-               */}
+               {/* ZONA DE CONTRATOS */}
                {user && (proyecto.tipo_inversion === 'mensual' || proyecto.tipo_inversion === 'directo') && (
                  <Stack spacing={2}>
                    {yaFirmo ? (

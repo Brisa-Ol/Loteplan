@@ -4,8 +4,8 @@ import { VerifiedUser as VerifiedIcon, Download as DownloadIcon } from '@mui/ico
 
 import { BaseModal } from '../../../../components/common/BaseModal/BaseModal';
 import type { ContratoFirmadoDto } from '../../../../types/dto/contrato.dto';
-import ContratoService from '../../../../Services/contrato.service';
-import ImagenService from '../../../../Services/imagen.service';
+import ContratoService from '../../../../services/contrato.service';
+import ImagenService from '../../../../services/imagen.service';
 import PDFViewerMejorado from '../../Contratos/components/PDFViewerMejorado';
 
 interface Props {

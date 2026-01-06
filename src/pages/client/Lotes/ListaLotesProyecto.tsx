@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import {
   Box, Card, CardContent, CardMedia, Typography, Button,
   Chip, Stack, Skeleton, Alert, Fade, useTheme, alpha
@@ -7,12 +8,11 @@ import {
 import {
   Gavel, CheckCircle, Lock, MonetizationOn, AccessTime, CalendarMonth, LocationOn
 } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
 
 // Servicios
-import LoteService from '../../../Services/lote.service';
-import FavoritoService from '../../../Services/favorito.service';
-import ImagenService from '../../../Services/imagen.service';
+import LoteService from '../../../services/lote.service';
+import FavoritoService from '../../../services/favorito.service';
+import ImagenService from '../../../services/imagen.service';
 
 // Contexto y Tipos
 import { useAuth } from '../../../context/AuthContext';
@@ -33,27 +33,23 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const theme = useTheme(); // 🟢 Hook del tema
+  const theme = useTheme(); 
   
-  // 1. Hooks de Modales
   const pujarModal = useModal();
-  const confirmDialog = useConfirmDialog();
+  const confirmDialog = useConfirmDialog<number>();
   
-  // 2. Estados
   const [selectedLote, setSelectedLote] = useState<LoteDto | null>(null);
 
- const { data: lotes, isLoading, error } = useQuery<LoteDto[]>({
-  queryKey: ['lotesProyecto', idProyecto],
-  queryFn: async () => {
-
-    const res = await LoteService.getAllActive();
-    return res.data.filter(lote => lote.id_proyecto === idProyecto);
-  },
+  const { data: lotes, isLoading, error } = useQuery<LoteDto[]>({
+    queryKey: ['lotesProyecto', idProyecto],
+    queryFn: async () => {
+      const res = await LoteService.getAllActive();
+      return res.data.filter(lote => lote.id_proyecto === idProyecto);
+    },
     enabled: !!idProyecto && isAuthenticated,
     retry: 1
   });
 
-  // 3. Mutación para eliminar favorito
   const unfavMutation = useMutation({
     mutationFn: async (loteId: number) => await FavoritoService.toggle(loteId),
     onSuccess: (_, loteId) => {
@@ -64,7 +60,6 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
     onError: () => alert('Error al quitar de favoritos')
   });
 
-  // Handlers
   const handlePujarClick = (lote: LoteDto) => {
     setSelectedLote(lote);
     pujarModal.open();
@@ -77,8 +72,6 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
   const handleConfirmUnfav = () => {
     if (confirmDialog.data) unfavMutation.mutate(confirmDialog.data);
   };
-
-  // --- RENDER ---
 
   if (!isAuthenticated) {
     return (
@@ -135,7 +128,7 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
                   bgcolor: 'background.paper',
                   '&:hover': { 
                     transform: 'translateY(-4px)', 
-                    boxShadow: theme.shadows[4], // Sombra del theme
+                    boxShadow: theme.shadows[4],
                     borderColor: 'primary.main' 
                   }
                 }}
@@ -145,10 +138,12 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
                 <Box sx={{ position: 'relative', height: 200, borderRadius: '12px 12px 0 0', overflow: 'hidden', bgcolor: 'action.hover' }}>
                   <CardMedia
                     component="img" height="200" image={imgUrl} alt={lote.nombre_lote} sx={{ objectFit: 'cover' }}
-                    onError={(e) => { (e.target as HTMLImageElement).src = '/assets/placeholder-lote.jpg'; }}
+                    onError={(e) => { 
+                        const target = e.target as HTMLImageElement;
+                        target.src = '/assets/placeholder-lote.jpg'; 
+                    }}
                   />
                   
-                  {/* Gradiente sutil para legibilidad de chips */}
                   <Box sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '40%', background: 'linear-gradient(to bottom, rgba(0,0,0,0.4), transparent)' }} />
 
                   <Box position="absolute" top={10} left={10}>
@@ -161,7 +156,6 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
                     )}
                   </Box>
 
-                  {/* BOTÓN FAVORITO */}
                   <Box 
                     position="absolute" top={10} right={10} 
                     onClick={(e) => e.stopPropagation()}
@@ -184,8 +178,8 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
                 <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', pt: 2.5, px: 2.5 }}>
                   <Typography variant="h6" fontWeight={700} lineHeight={1.2} mb={0.5} noWrap color="text.primary">{lote.nombre_lote}</Typography>
                   <Stack direction="row" spacing={0.5} alignItems="center" mb={2}>
-                     <LocationOn sx={{ fontSize: 14, color: 'text.secondary' }} />
-                     <Typography variant="caption" color="text.secondary">Lote #{lote.id}</Typography>
+                      <LocationOn sx={{ fontSize: 14, color: 'text.secondary' }} />
+                      <Typography variant="caption" color="text.secondary">Lote #{lote.id}</Typography>
                   </Stack>
 
                   {lote.estado_subasta === 'pendiente' && lote.fecha_inicio && (
@@ -235,7 +229,6 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
         <PujarModal open={pujarModal.isOpen} lote={selectedLote} onClose={() => { pujarModal.close(); setSelectedLote(null); }} />
       )}
 
-      {/* 🆕 Diálogo Confirmación GENÉRICO */}
       <ConfirmDialog 
         controller={confirmDialog}
         onConfirm={handleConfirmUnfav}
