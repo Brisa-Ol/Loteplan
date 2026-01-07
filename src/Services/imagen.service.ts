@@ -25,9 +25,6 @@ const SERVER_URL = getServerUrl();
  * Servicio para la gestión de imágenes.
  * Conecta con el controlador `imagenController` del backend.
  * 
- * @see {@link https://github.com/.../controllers/imagen.controller.js} Backend Controller
- * @see {@link https://github.com/.../routes/imagen.routes.js} Backend Routes
- * 
  * @remarks
  * - Las imágenes pueden estar asociadas a proyectos o lotes
  * - El backend almacena las imágenes en la carpeta /uploads

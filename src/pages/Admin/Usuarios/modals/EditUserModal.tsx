@@ -17,6 +17,7 @@ import type { UpdateUserAdminDto, UsuarioDto } from '../../../../types/dto/usuar
 
 import { useAuth } from '../../../../context/AuthContext'; // ✅ Importamos useAuth
 import UsuarioService from '../../../../services/usuario.service';
+import { useSnackbar } from '../../../../context/SnackbarContext';
 
 // ════════════════════════════════════════════════════════════
 // SUB-COMPONENTE: DIÁLOGO 2FA (Refactorizado con BaseModal)
@@ -27,9 +28,10 @@ const Disable2FADialog: React.FC<{
   isLoading: boolean; userName: string;
 }> = ({ open, onClose, onConfirm, isLoading, userName }) => {
   const [justificacion, setJustificacion] = useState('');
+  const { showError } = useSnackbar();
 
   const handleConfirm = () => {
-    if (justificacion.trim().length < 10) return alert('La justificación debe tener al menos 10 caracteres');
+    if (justificacion.trim().length < 10) return showError('La justificación debe tener al menos 10 caracteres');
     onConfirm(justificacion);
     setJustificacion('');
   };
@@ -89,6 +91,7 @@ const validationSchema = Yup.object({
 
 const EditUserModal: React.FC<EditUserModalProps> = ({ open, onClose, user, onSubmit, isLoading = false }) => {
   const theme = useTheme();
+  const { showSuccess, showError } = useSnackbar();
 
   // ✅ Obtenemos el usuario actual logueado
   const { user: currentUser } = useAuth();
@@ -173,11 +176,11 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ open, onClose, user, onSu
     setIsDisabling2FA(true);
     try {
       await UsuarioService.adminReset2FA(user.id, { justificacion });
-      alert('✅ 2FA desactivado.');
+      showSuccess('✅ 2FA desactivado.');
       setShowDisable2FADialog(false);
       onClose();
     } catch (error: any) {
-      alert(`Error: ${error.message}`);
+      showError(`Error: ${error.message}`);
     } finally {
       setIsDisabling2FA(false);
     }
