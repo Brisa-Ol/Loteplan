@@ -1,8 +1,8 @@
 // src/pages/Admin/Inventario/modals/EditLoteModal.tsx
 
 import React, { useEffect } from 'react';
-import { TextField, Stack, Box, Typography, MenuItem, Alert, Divider, Chip } from '@mui/material';
-import { Save as SaveIcon, Edit as EditIcon, Inventory as InventoryIcon, Link as LinkIcon, AccessTime as TimeIcon, LocationOn as LocationIcon } from '@mui/icons-material';
+import { TextField, Stack, Box, Typography, MenuItem, Alert } from '@mui/material';
+import { Save as SaveIcon, Edit as EditIcon, Inventory as InventoryIcon, Link as LinkIcon } from '@mui/icons-material';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { useQuery } from '@tanstack/react-query';
@@ -32,9 +32,9 @@ const EditLoteModal: React.FC<EditLoteModalProps> = ({ open, onClose, onSubmit, 
   });
 
   const formik = useFormik<UpdateLoteDto>({
-    initialValues: { nombre_lote: '', precio_base: 0, id_proyecto: null, fecha_inicio: '', fecha_fin: '', latitud: 0, longitud: 0 },
+    initialValues: { nombre_lote: '', precio_base: 0, id_proyecto: null, latitud: 0, longitud: 0 },
     validationSchema,
-    enableReinitialize: true, // ✅ Permite que el formulario se actualice al cambiar de lote
+    enableReinitialize: true,
     onSubmit: async (values) => {
       if (!lote) return;
       await onSubmit(lote.id, {
@@ -50,8 +50,6 @@ const EditLoteModal: React.FC<EditLoteModalProps> = ({ open, onClose, onSubmit, 
         nombre_lote: lote.nombre_lote,
         precio_base: Number(lote.precio_base),
         id_proyecto: lote.id_proyecto,
-        fecha_inicio: lote.fecha_inicio ? new Date(lote.fecha_inicio).toISOString().slice(0, 16) : '',
-        fecha_fin: lote.fecha_fin ? new Date(lote.fecha_fin).toISOString().slice(0, 16) : '',
         latitud: lote.latitud || 0,
         longitud: lote.longitud || 0,
       });
@@ -68,7 +66,7 @@ const EditLoteModal: React.FC<EditLoteModalProps> = ({ open, onClose, onSubmit, 
       open={open}
       onClose={onClose}
       title={`Editar Lote #${lote.id}`}
-      subtitle="Modifique la información del lote existente"
+      subtitle="Modifique la información básica del lote."
       icon={<EditIcon />}
       onConfirm={formik.submitForm}
       isLoading={isLoading}
@@ -93,14 +91,8 @@ const EditLoteModal: React.FC<EditLoteModalProps> = ({ open, onClose, onSubmit, 
             {proyectos.map(p => <MenuItem key={p.id} value={p.id}>{p.nombre_proyecto}</MenuItem>)}
           </TextField>
         </Box>
-
-        <Box>
-          <Typography sx={sectionTitleSx}><TimeIcon fontSize="inherit"/> TIEMPOS</Typography>
-          <Stack direction="row" spacing={2}>
-            <TextField fullWidth type="datetime-local" label="Inicio" InputLabelProps={{ shrink: true }} {...formik.getFieldProps('fecha_inicio')} disabled={subastaActiva} />
-            <TextField fullWidth type="datetime-local" label="Fin" InputLabelProps={{ shrink: true }} {...formik.getFieldProps('fecha_fin')} disabled={lote.estado_subasta === 'finalizada'} />
-          </Stack>
-        </Box>
+        
+        {/* Se eliminó la sección de fechas */}
       </Stack>
     </BaseModal>
   );

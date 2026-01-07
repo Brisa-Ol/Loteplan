@@ -1,10 +1,13 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { 
-  Box, Typography, Button, Paper, Chip, IconButton, Stack, Tooltip, TextField, MenuItem, Divider, InputAdornment, LinearProgress, Switch, alpha, useTheme
+  Box, Typography, Button, Paper, Chip, IconButton, Stack, Tooltip, 
+  TextField, MenuItem, Divider, InputAdornment, LinearProgress, Switch, 
+  CircularProgress, alpha, useTheme
 } from '@mui/material';
 import { 
-  Add, Edit, PlayCircleFilled, StopCircle, Warning, Collections, 
-  Search, Inventory, Gavel, AssignmentLate, CheckCircle, Block
+  Add, Edit, Warning, Collections, Search, Inventory, 
+  Gavel, AssignmentLate, CheckCircle, Person, Block,
+  StopCircle
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -22,6 +25,7 @@ import { ConfirmDialog } from '../../../components/common/ConfirmDialog/ConfirmD
 import ManageLoteImagesModal from './modals/ManageLoteImagesModal';
 import CreateLoteModal from './modals/CreateLoteModal';
 import EditLoteModal from './modals/EditLoteModal';
+import AuctionControlModal from './modals/AuctionControlModal';
 import ProyectoService from '../../../services/proyecto.service';
 import LoteService from '../../../services/lote.service';
 
@@ -35,7 +39,7 @@ const StatCard: React.FC<{
   title: string; 
   value: number; 
   icon: React.ReactNode; 
-  color: string;
+  color: string; 
   loading?: boolean;
 }> = ({ title, value, icon, color, loading }) => {
   const theme = useTheme();
@@ -71,12 +75,13 @@ const StatCard: React.FC<{
 const AdminLotes: React.FC = () => {
   const theme = useTheme();
   const queryClient = useQueryClient();
-  const { showSuccess } = useSnackbar();
+  const { showSuccess, showError } = useSnackbar();
 
-  // ✅ Hooks de Modales usando tu useModal.ts
+  // Hooks de Modales
   const createModal = useModal();
   const editModal = useModal();
   const imagesModal = useModal();
+  const auctionModal = useModal();
   const confirmDialog = useConfirmDialog();
 
   // Estados
@@ -93,7 +98,7 @@ const AdminLotes: React.FC = () => {
     queryFn: async () => (await LoteService.findAllAdmin()).data,
   });
 
-  const { data: proyectos = [] } = useQuery({
+  const { data: proyectos = [], isLoading: loadingProyectos } = useQuery({
     queryKey: ['adminProyectosSelect'],
     queryFn: async () => (await ProyectoService.getAllAdmin()).data,
   });
@@ -127,6 +132,7 @@ const AdminLotes: React.FC = () => {
   }, [lotes, searchTerm, filterProject]);
 
   // --- MUTACIONES ---
+
   const saveMutation = useMutation({
     mutationFn: async (payload: { dto: CreateLoteDto | UpdateLoteDto; id?: number }) => {
       if (payload.id) return await LoteService.update(payload.id, payload.dto as UpdateLoteDto);
@@ -141,7 +147,8 @@ const AdminLotes: React.FC = () => {
         setTimeout(() => setHighlightedId(null), 2500);
       }
       showSuccess('Lote procesado correctamente');
-    }
+    },
+    onError: (err: any) => showError(err.response?.data?.error || 'Error al guardar')
   });
 
   const toggleActiveMutation = useMutation({
@@ -151,7 +158,11 @@ const AdminLotes: React.FC = () => {
       confirmDialog.close();
       setHighlightedId(variables.id);
       setTimeout(() => setHighlightedId(null), 2500);
-      showSuccess(variables.activo ? 'Lote visible' : 'Lote oculto');
+      showSuccess(variables.activo ? 'Lote visible' : 'Lote ocultado');
+    },
+    onError: (err: any) => {
+        showError(err.response?.data?.error || 'Error al cambiar estado');
+        confirmDialog.close();
     }
   });
 
@@ -159,8 +170,41 @@ const AdminLotes: React.FC = () => {
     mutationFn: (id: number) => LoteService.startAuction(id),
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ['adminLotes'] });
-      confirmDialog.close();
-      showSuccess('Subasta iniciada');
+      auctionModal.close();
+      setHighlightedId(id); 
+      setTimeout(() => setHighlightedId(null), 2500);
+      showSuccess('✅ Subasta iniciada correctamente');
+    },
+    onError: (error: any) => {
+      const statusCode = error.response?.status;
+      
+      // Si es un error 500, verificar si la operación fue exitosa de todos modos
+      if (statusCode === 500) {
+        // No mostrar error inmediatamente, verificar primero el estado real
+        queryClient.invalidateQueries({ queryKey: ['adminLotes'] });
+        
+        // Verificar después de un momento si la subasta se activó
+        setTimeout(() => {
+          const updatedLotes = queryClient.getQueryData<LoteDto[]>(['adminLotes']);
+          const updatedLote = updatedLotes?.find(l => l.id === selectedLote?.id);
+          
+          if (updatedLote?.estado_subasta === 'activa') {
+            // La operación fue exitosa a pesar del error 500
+            auctionModal.close();
+            setHighlightedId(updatedLote.id);
+            setTimeout(() => setHighlightedId(null), 2500);
+            showSuccess('✅ Subasta iniciada correctamente');
+          } else {
+            // El error 500 fue real, mostrar error ahora
+            showError('❌ Error del servidor al iniciar subasta. Intente nuevamente.');
+          }
+        }, 1200);
+      } else {
+        // Errores de validación (400, 404, etc) - mostrar mensaje específico
+        const backendError = error.response?.data?.error || error.response?.data?.message;
+        const msg = backendError || error.message || 'Error al iniciar subasta';
+        showError(`❌ ${msg}`);
+      }
     }
   });
 
@@ -168,12 +212,51 @@ const AdminLotes: React.FC = () => {
     mutationFn: (id: number) => LoteService.endAuction(id),
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ['adminLotes'] });
-      confirmDialog.close();
-      showSuccess('Subasta finalizada');
+      auctionModal.close();
+      setHighlightedId(id); 
+      setTimeout(() => setHighlightedId(null), 2500);
+      showSuccess('✅ Subasta finalizada correctamente');
+    },
+    onError: (error: any) => {
+      const statusCode = error.response?.status;
+      
+      // Si es un error 500, verificar si la operación fue exitosa de todos modos
+      if (statusCode === 500) {
+        queryClient.invalidateQueries({ queryKey: ['adminLotes'] });
+        
+        setTimeout(() => {
+          const updatedLotes = queryClient.getQueryData<LoteDto[]>(['adminLotes']);
+          const updatedLote = updatedLotes?.find(l => l.id === selectedLote?.id);
+          
+          if (updatedLote?.estado_subasta === 'finalizada') {
+            auctionModal.close();
+            setHighlightedId(updatedLote.id);
+            setTimeout(() => setHighlightedId(null), 2500);
+            showSuccess('✅ Subasta finalizada correctamente');
+          } else {
+            showError('❌ Error del servidor al finalizar subasta. Intente nuevamente.');
+          }
+        }, 1200);
+      } else {
+        const backendError = error.response?.data?.error || error.response?.data?.message;
+        const msg = backendError || error.message || 'Error al finalizar subasta';
+        showError(`❌ ${msg}`);
+      }
     }
   });
 
+  const getStatusColor = (estado: string): 'success' | 'info' | 'default' => {
+    if (estado === 'activa') return 'success';
+    if (estado === 'finalizada') return 'info';
+    return 'default';
+  };
+
   // --- HANDLERS ---
+  
+  const handleToggleActive = useCallback((lote: LoteDto) => 
+    confirmDialog.confirm('toggle_lote_visibility', lote), [confirmDialog]
+  );
+
   const handleOpenCreate = useCallback(() => {
     setSelectedLote(null);
     createModal.open();
@@ -189,57 +272,76 @@ const AdminLotes: React.FC = () => {
     imagesModal.open();
   }, [imagesModal]);
 
+  const handleAuctionClick = useCallback((lote: LoteDto) => {
+    setSelectedLote(lote);
+    auctionModal.open();
+  }, [auctionModal]);
+
   const handleCloseAllModals = useCallback(() => {
     createModal.close();
     editModal.close();
     imagesModal.close();
+    auctionModal.close();
     setTimeout(() => setSelectedLote(null), 300);
-  }, [createModal, editModal, imagesModal]);
+  }, [createModal, editModal, imagesModal, auctionModal]);
 
   const handleConfirmAction = () => {
     if (!confirmDialog.data) return;
     const { id, activo } = confirmDialog.data;
-    if (confirmDialog.action === 'toggle_lote_visibility') toggleActiveMutation.mutate({ id, activo: !activo });
-    else if (confirmDialog.action === 'start_auction') startAuction.mutate(id);
-    else if (confirmDialog.action === 'end_auction') endAuction.mutate(id);
+    if (confirmDialog.action === 'toggle_lote_visibility') {
+        toggleActiveMutation.mutate({ id, activo: !activo });
+    }
   };
 
   // --- COLUMNS ---
   const columns = useMemo<DataTableColumn<LoteDto>[]>(() => [
-    { id: 'lote', label: 'Lote / ID', render: (l) => (
+    { id: 'lote', label: 'Lote / ID', minWidth: 200, render: (l) => (
       <Box><Typography fontWeight={700} variant="body2">{l.nombre_lote}</Typography><Typography variant="caption" color="text.secondary">ID: {l.id}</Typography></Box>
     )},
-    { id: 'proyecto', label: 'Proyecto', render: (l) => (
-      l.id_proyecto ? <Chip label={proyectos.find(p => p.id === l.id_proyecto)?.nombre_proyecto || `ID: ${l.id_proyecto}`} size="small" variant="outlined" color="primary" /> 
+    { id: 'proyecto', label: 'Proyecto', minWidth: 150, render: (l) => (
+      l.id_proyecto ? <Chip label={proyectos.find(p => p.id === l.id_proyecto)?.nombre_proyecto || `Proy. ${l.id_proyecto}`} size="small" variant="outlined" color="primary" /> 
       : <Chip label="Huérfano" size="small" color="warning" icon={<Warning sx={{ fontSize: 14 }} />} variant="outlined" />
     )},
     { id: 'precio', label: 'Precio Base', render: (l) => <Typography variant="body2" fontWeight={700} color="primary.main">${Number(l.precio_base).toLocaleString('es-AR')}</Typography> },
-    { id: 'estado', label: 'Estado', render: (l) => <Chip label={l.estado_subasta.toUpperCase()} color={l.estado_subasta === 'activa' ? 'success' : 'default'} size="small" sx={{ fontWeight: 700 }} /> },
+    { id: 'estado', label: 'Estado', render: (l) => <Chip label={l.estado_subasta.toUpperCase()} color={getStatusColor(l.estado_subasta)} size="small" variant={l.estado_subasta === 'pendiente' ? 'outlined' : 'filled'} sx={{ fontWeight: 700 }} /> },
     { id: 'visibilidad', label: 'Visibilidad', align: 'center', render: (l) => (
       <Stack direction="row" alignItems="center" spacing={1} justifyContent="center">
-        <Switch checked={l.activo} onChange={() => confirmDialog.confirm('toggle_lote_visibility', l)} size="small" color="success" />
-        <Typography variant="caption" fontWeight={600} color={l.activo ? 'success.main' : 'text.disabled'}>{l.activo ? 'Visible' : 'Oculto'}</Typography>
+        {toggleActiveMutation.isPending && confirmDialog.data?.id === l.id ? <CircularProgress size={20} /> : <Switch checked={l.activo} onChange={() => handleToggleActive(l)} size="small" color="success" />}
       </Stack>
+    )},
+    { id: 'ganador', label: 'Ganador', render: (l) => (
+      l.id_ganador ? <Chip icon={<Person sx={{ fontSize: '14px !important' }} />} label={`Usuario ${l.id_ganador}`} size="small" color="success" variant="outlined" /> : <Typography variant="caption" color="text.disabled">-</Typography>
+    )},
+    { id: 'subasta', label: 'Control', align: 'right', render: (l) => (
+      l.id_proyecto && (
+        <Tooltip title="Gestionar Subasta">
+            <IconButton 
+                size="small" 
+                onClick={() => handleAuctionClick(l)}
+                sx={{ 
+                    color: l.estado_subasta === 'activa' ? 'error.main' : 'success.main',
+                    bgcolor: alpha(l.estado_subasta === 'activa' ? theme.palette.error.main : theme.palette.success.main, 0.1),
+                    '&:hover': { bgcolor: alpha(l.estado_subasta === 'activa' ? theme.palette.error.main : theme.palette.success.main, 0.2) }
+                }}
+            >
+                {l.estado_subasta === 'activa' ? <StopCircle /> : <Gavel />}
+            </IconButton>
+        </Tooltip>
+      )
     )},
     { id: 'acciones', label: 'Acciones', align: 'right', render: (l) => (
       <Stack direction="row" justifyContent="flex-end" spacing={0.5}>
-        <Tooltip title="Gestionar Imágenes"><IconButton onClick={() => handleManageImages(l)} size="small" color="primary"><Collections fontSize="small" /></IconButton></Tooltip>
-        <Tooltip title="Editar Datos"><IconButton onClick={() => handleOpenEdit(l)} size="small"><Edit fontSize="small" /></IconButton></Tooltip>
-        {l.estado_subasta === 'pendiente' && l.id_proyecto && (
-            <Tooltip title="Iniciar Subasta"><IconButton onClick={() => confirmDialog.confirm('start_auction', l)} size="small" sx={{ color: 'success.main' }}><PlayCircleFilled /></IconButton></Tooltip>
-        )}
-        {l.estado_subasta === 'activa' && (
-            <Tooltip title="Finalizar Subasta"><IconButton onClick={() => confirmDialog.confirm('end_auction', l)} size="small" sx={{ color: 'error.main' }}><StopCircle /></IconButton></Tooltip>
-        )}
+        <Tooltip title="Imágenes"><IconButton onClick={() => handleManageImages(l)} size="small" color="primary"><Collections fontSize="small" /></IconButton></Tooltip>
+        <Tooltip title="Editar"><IconButton size="small" onClick={() => handleOpenEdit(l)}><Edit fontSize="small" /></IconButton></Tooltip>
       </Stack>
     )}
-  ], [proyectos, handleManageImages, handleOpenEdit, confirmDialog]);
+  ], [proyectos, theme, toggleActiveMutation.isPending, confirmDialog.data, handleToggleActive, handleAuctionClick, handleManageImages, handleOpenEdit]);
 
   return (
     <PageContainer maxWidth="xl" sx={{ py: 3 }}>
-      <PageHeader title="Gestión de Lotes" subtitle="Inventario, proyectos y control de subastas." />
+      <PageHeader title="Gestión de Lotes" subtitle="Inventario, asignación de proyectos y control de subastas." />
 
-      {/* KPIs */}
+      {/* Grid de KPIs */}
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', lg: 'repeat(4, 1fr)' }, gap: 2, mb: 4 }}>
         <StatCard title="Total Lotes" value={stats.total} icon={<Inventory />} color="primary" loading={loadingLotes} />
         <StatCard title="En Subasta" value={stats.enSubasta} icon={<Gavel />} color="success" loading={loadingLotes} />
@@ -248,13 +350,13 @@ const AdminLotes: React.FC = () => {
       </Box>
 
       {/* Barra de Filtros */}
-      <Paper elevation={0} sx={{ p: 2, mb: 3, borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
+      <Paper elevation={0} sx={{ p: 2, mb: 3, borderRadius: 2, border: '1px solid', borderColor: 'divider', bgcolor: alpha(theme.palette.background.paper, 0.6) }}>
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="center">
           <TextField 
-            placeholder="Buscar por nombre o ID..." size="small" sx={{ flexGrow: 1 }} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
-            InputProps={{ startAdornment: <InputAdornment position="start"><Search color="action"/></InputAdornment> }}
+            placeholder="Buscar por nombre o ID..." size="small" sx={{ flexGrow: 1 }} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} 
+            InputProps={{ startAdornment: <InputAdornment position="start"><Search color="action"/></InputAdornment> }} 
           />
-          <TextField select label="Filtrar Proyecto" size="small" sx={{ minWidth: 220 }} value={filterProject} onChange={(e) => setFilterProject(e.target.value)}>
+          <TextField select label="Filtrar Proyecto" size="small" sx={{ minWidth: 250 }} value={filterProject} onChange={(e) => setFilterProject(e.target.value)}>
             <MenuItem value="all">Todos los Lotes</MenuItem>
             <MenuItem value="huerfano">⚠️ Sin Proyecto</MenuItem>
             <Divider />
@@ -265,19 +367,19 @@ const AdminLotes: React.FC = () => {
       </Paper>
 
       <QueryHandler isLoading={loadingLotes} error={error as Error}>
-        <DataTable columns={columns} data={filteredLotes} getRowKey={(row) => row.id} highlightedRowId={highlightedId} pagination={true} />
+        <DataTable columns={columns} data={filteredLotes} getRowKey={(row) => row.id} isRowActive={(lote) => lote.activo} highlightedRowId={highlightedId} emptyMessage="No se encontraron lotes." pagination={true} defaultRowsPerPage={10} />
       </QueryHandler>
 
-      {/* --- SECCIÓN DE MODALES USANDO modalProps --- */}
-
+      {/* --- MODALES --- */}
+      
       <CreateLoteModal 
-        {...createModal.modalProps}
+        {...createModal.modalProps} 
         onSubmit={async (data) => { await saveMutation.mutateAsync({ dto: data }); }} 
         isLoading={saveMutation.isPending} 
       />
 
       <EditLoteModal 
-        {...editModal.modalProps}
+        {...editModal.modalProps} 
         lote={selectedLote} 
         onSubmit={async (id, data) => { await saveMutation.mutateAsync({ dto: data, id }); }} 
         isLoading={saveMutation.isPending} 
@@ -285,12 +387,27 @@ const AdminLotes: React.FC = () => {
 
       {selectedLote && (
         <ManageLoteImagesModal 
-          {...imagesModal.modalProps}
+          {...imagesModal.modalProps} 
           lote={selectedLote} 
         />
       )}
 
-      <ConfirmDialog controller={confirmDialog} onConfirm={handleConfirmAction} isLoading={saveMutation.isPending} />
+      {selectedLote && (
+          <AuctionControlModal 
+            open={auctionModal.isOpen}
+            onClose={auctionModal.close}
+            lote={selectedLote}
+            isLoading={startAuction.isPending || endAuction.isPending}
+            onStart={(id) => startAuction.mutate(id)}
+            onEnd={(id) => endAuction.mutate(id)}
+          />
+      )}
+
+      <ConfirmDialog 
+        controller={confirmDialog} 
+        onConfirm={handleConfirmAction} 
+        isLoading={toggleActiveMutation.isPending} 
+      />
 
     </PageContainer>
   );

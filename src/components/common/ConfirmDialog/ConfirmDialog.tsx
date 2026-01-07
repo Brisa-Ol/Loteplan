@@ -89,9 +89,15 @@ export const ConfirmDialog: React.FC<Props> = ({
           >
             {getSeverityIcon()}
           </Avatar>
-          <Typography variant="h6" fontWeight={800} color="text.primary" sx={{ lineHeight: 1.2 }}>
-            {displayTitle}
-          </Typography>
+         <Typography 
+        variant="h6"       // Mantiene el tamaño y estilo visual de h6
+        component="span"   // Renderiza una etiqueta <span> (válida dentro de h2)
+        fontWeight={800} 
+        color="text.primary" 
+        sx={{ lineHeight: 1.2 }}
+    >
+      {displayTitle}
+    </Typography>
       </DialogTitle>
       
       <DialogContent sx={{ px: 3, py: 3 }}>

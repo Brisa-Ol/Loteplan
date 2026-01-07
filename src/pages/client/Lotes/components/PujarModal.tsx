@@ -12,6 +12,7 @@ import { BaseModal } from '../../../../components/common/BaseModal/BaseModal';
 // Interfaz local para el DTO extendido
 interface LoteConPuja extends LoteDto {
     ultima_puja?: { monto: number; id_usuario: number; }; 
+    monto_ganador_lote?: number;
 }
 
 interface Props {
@@ -19,9 +20,10 @@ interface Props {
   onClose: () => void;
   lote: LoteDto | null;
   soyGanador?: boolean;
+  onSuccess?: () => void; // ✅ AGREGADO: Prop faltante
 }
 
-export const PujarModal: React.FC<Props> = ({ open, onClose, lote: loteProp, soyGanador = false }) => {
+export const PujarModal: React.FC<Props> = ({ open, onClose, lote: loteProp, soyGanador = false, onSuccess }) => {
   const theme = useTheme();
   const [monto, setMonto] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -45,15 +47,20 @@ export const PujarModal: React.FC<Props> = ({ open, onClose, lote: loteProp, soy
       });
     },
     onSuccess: () => {
+      // Invalidar queries para refrescar UI
       queryClient.invalidateQueries({ queryKey: ['lotesProyecto'] }); 
       queryClient.invalidateQueries({ queryKey: ['lote'] });
       queryClient.invalidateQueries({ queryKey: ['misPujas'] });
       
       const msg = soyGanador ? '¡Has actualizado tu puja exitosamente!' : '¡Oferta realizada con éxito!';
+      // Reemplazamos alert por snackbar si lo tienes disponible, sino alert está bien por ahora
       alert(msg); 
+      
+      if (onSuccess) onSuccess(); // ✅ Ejecutar callback si existe
       handleReset();
     },
     onError: (err: any) => {
+      // Extraer mensaje de error del backend (ej: "No tienes tokens")
       setError(err.response?.data?.error || 'Error al realizar la puja. Verifica tus tokens.');
     }
   });
@@ -67,10 +74,13 @@ export const PujarModal: React.FC<Props> = ({ open, onClose, lote: loteProp, soy
   if (!lote) return null;
 
   // Cálculos de precio
-  const ultimaPujaMonto = lote.ultima_puja?.monto ? Number(lote.ultima_puja.monto) : 0;
+  // Intentamos leer el monto ganador directo, o la última puja, o el precio base
+  const ultimaPujaMonto = Number(lote.monto_ganador_lote || lote.ultima_puja?.monto || 0);
   const precioBase = Number(lote.precio_base);
-  const precioActual = ultimaPujaMonto > precioBase ? ultimaPujaMonto : precioBase;
-  const hayPujasPrevias = ultimaPujaMonto > precioBase;
+  
+  // Precio a superar: Si hay puja, debe ser mayor. Si no, mayor o igual al base.
+  const precioA_Vencer = ultimaPujaMonto > 0 ? ultimaPujaMonto : precioBase;
+  const hayPujasPrevias = ultimaPujaMonto > 0;
 
   const formatMoney = (amount: number) => 
     new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(amount);
@@ -81,7 +91,8 @@ export const PujarModal: React.FC<Props> = ({ open, onClose, lote: loteProp, soy
   };
 
   const montoNumerico = Number(monto);
-  const esMontoValido = monto && montoNumerico > precioActual;
+  // Validación: Si hay puja previa, debe ser estrictamente mayor. Si no, mayor o igual al base.
+  const esMontoValido = monto !== '' && (hayPujasPrevias ? montoNumerico > precioA_Vencer : montoNumerico >= precioBase);
 
   return (
     <BaseModal
@@ -114,7 +125,7 @@ export const PujarModal: React.FC<Props> = ({ open, onClose, lote: loteProp, soy
                 {soyGanador ? 'Tu Puja Actual:' : (hayPujasPrevias ? 'Puja Más Alta:' : 'Precio Base:')}
               </Typography>
               <Typography variant="h6" color={soyGanador ? "success.main" : (hayPujasPrevias ? "warning.main" : "primary.main")} fontWeight={800}>
-                {formatMoney(precioActual)}
+                {formatMoney(precioA_Vencer)}
               </Typography>
             </Stack>
 
@@ -130,7 +141,7 @@ export const PujarModal: React.FC<Props> = ({ open, onClose, lote: loteProp, soy
             autoFocus
             fullWidth
             label="Tu Nueva Oferta"
-            placeholder={`Mayor a ${formatMoney(precioActual)}`}
+            placeholder={hayPujasPrevias ? `Mayor a ${formatMoney(precioA_Vencer)}` : `Mínimo ${formatMoney(precioBase)}`}
             type="number"
             value={monto}
             onChange={(e) => {
@@ -142,7 +153,7 @@ export const PujarModal: React.FC<Props> = ({ open, onClose, lote: loteProp, soy
               startAdornment: <InputAdornment position="start"><MonetizationOn color="action" /></InputAdornment>,
             }}
             error={!!error || (monto !== '' && !esMontoValido)}
-            helperText={error || (monto !== '' && !esMontoValido ? `Debe superar ${formatMoney(precioActual)}` : '')}
+            helperText={error || (monto !== '' && !esMontoValido ? `Debe superar ${formatMoney(precioA_Vencer)}` : '')}
             sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
           />
 
@@ -167,3 +178,5 @@ export const PujarModal: React.FC<Props> = ({ open, onClose, lote: loteProp, soy
     </BaseModal>
   );
 };
+
+export default PujarModal;
