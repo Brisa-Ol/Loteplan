@@ -1,5 +1,3 @@
-// src/components/Admin/Proyectos/AdminProyectos.tsx
-
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import {
   Box, Typography, Button, Paper, Chip, IconButton, Stack, Tooltip,
@@ -25,30 +23,24 @@ import { QueryHandler } from '../../../components/common/QueryHandler/QueryHandl
 import { PageHeader } from '../../../components/common/PageHeader/PageHeader';
 import { DataTable, type DataTableColumn } from '../../../components/common/DataTable/DataTable';
 
-// ✅ Hook del contexto (Solo para success)
 import { useSnackbar } from '../../../context/SnackbarContext'; 
+import { useModal } from '../../../hooks/useModal';
+import { ConfirmDialog } from '../../../components/common/ConfirmDialog/ConfirmDialog';
+import { useConfirmDialog } from '../../../hooks/useConfirmDialog';
+import ProyectoService from '../../../services/proyecto.service';
 
-// Modales y Servicios
+// Modales
 import CreateProyectoModal from './components/modals/CreateProyectoModal';
 import ConfigCuotasModal from './components/modals/ConfigCuotasModal';
 import EditProyectoModal from './components/modals/EditProyectoModal';
 import ProjectLotesModal from './components/modals/ProjectLotesModal';
 import ManageImagesModal from './components/modals/ManageImagesModal';
-import ProyectoService from '../../../services/proyecto.service';
-
-// Hooks y Componentes de Confirmación
-import { useModal } from '../../../hooks/useModal';
-import { ConfirmDialog } from '../../../components/common/ConfirmDialog/ConfirmDialog';
-import { useConfirmDialog } from '../../../hooks/useConfirmDialog';
 
 type TipoInversionFilter = 'all' | 'mensual' | 'directo';
-type AppColor = 'primary' | 'secondary' | 'error' | 'warning' | 'info' | 'success';
 
 const AdminProyectos: React.FC = () => {
   const theme = useTheme();
   const queryClient = useQueryClient();
-
-  // ✅ Solo necesitamos feedback de éxito. El error es automático globalmente.
   const { showSuccess } = useSnackbar();
 
   // --- HOOKS DE MODALES ---
@@ -59,21 +51,14 @@ const AdminProyectos: React.FC = () => {
   const imagesModal = useModal();
   const confirmDialog = useConfirmDialog();
   
-  // Estado de Datos
   const [selectedProject, setSelectedProject] = useState<ProyectoDto | null>(null);
-
-  // Estado para el efecto Flash (Feedback visual)
   const [highlightedId, setHighlightedId] = useState<number | null>(null);
-
-  // --- LOGICA STICKY ---
-  const initialStatusRef = useRef<Record<number, boolean>>({});
-
-  // Filtros
   const [searchTerm, setSearchTerm] = useState('');
   const [filterTipo, setFilterTipo] = useState<TipoInversionFilter>('all');
 
-  // --- QUERIES & MUTATIONS ---
+  const initialStatusRef = useRef<Record<number, boolean>>({});
 
+  // --- QUERIES ---
   const { data: proyectos = [], isLoading, error } = useQuery({
     queryKey: ['adminProyectos'],
     queryFn: async () => (await ProyectoService.getAllAdmin()).data
@@ -89,240 +74,140 @@ const AdminProyectos: React.FC = () => {
     }
   }, [proyectos]);
 
-  // 1. CREAR PROYECTO
+  // --- MUTACIONES ---
+
+  // 1. CREAR
   const createMutation = useMutation({
-    mutationFn: async ({ data, image }: { data: CreateProyectoDto; image: File | null }) => {
-      const response = await ProyectoService.create(data, image);
-      return response.data;
-    },
-    onSuccess: (newItem) => { 
+    mutationFn: (data: CreateProyectoDto) => ProyectoService.create(data),
+    onSuccess: (response) => { 
       queryClient.invalidateQueries({ queryKey: ['adminProyectos'] });
       createModal.close();
-      
-      if (newItem?.id) {
-          setHighlightedId(newItem.id);
+      if (response.data?.id) {
+          setHighlightedId(response.data.id);
           setTimeout(() => setHighlightedId(null), 2500);
       }
-      showSuccess('Proyecto creado correctamente');
-    }
-    // 🗑️ onError eliminado: Si falla, el modal sigue abierto para corregir y la alerta sale sola.
-  });
-
-  // 2. INICIAR PROYECTO (COBROS)
-  const startMutation = useMutation({
-    mutationFn: (id: number) => ProyectoService.startProcess(id),
-    onSuccess: (_, id) => {
-      queryClient.invalidateQueries({ queryKey: ['adminProyectos'] });
-      confirmDialog.close();
-      setHighlightedId(id); 
-      showSuccess('Proyecto iniciado. Cobros activados.');
-    },
-    onError: () => {
-      // Solo cerramos el diálogo para no bloquear la UI. El error ya se mostró.
-      confirmDialog.close();
+      showSuccess('Proyecto creado. Use el icono de imagen para subir la portada.');
     }
   });
 
-  // 3. EDITAR PROYECTO
+  // 2. EDITAR (Solución del error TypeScript)
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number, data: UpdateProyectoDto }) =>
-      ProyectoService.update(id, data),
+    mutationFn: ({ id, data }: { id: number, data: UpdateProyectoDto }) => ProyectoService.update(id, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['adminProyectos'] });
       editModal.close(); 
       setHighlightedId(variables.id); 
       showSuccess('Proyecto actualizado correctamente');
     }
-    // 🗑️ onError eliminado: El modal queda abierto para corregir.
   });
 
-  // 4. ACTIVAR/DESACTIVAR VISIBILIDAD
+  // 3. VISIBILIDAD
   const toggleActiveMutation = useMutation({
-    mutationFn: async ({ id, activo }: { id: number; activo: boolean }) => {
-      return ProyectoService.update(id, { activo });
-    },
+    mutationFn: async ({ id, activo }: { id: number; activo: boolean }) => ProyectoService.update(id, { activo }),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['adminProyectos'] });
       confirmDialog.close();
-      
       setHighlightedId(variables.id);
       setTimeout(() => setHighlightedId(null), 2500);
-
-      showSuccess(variables.activo ? 'Proyecto ahora es visible' : 'Proyecto ocultado correctamente');
-    },
-    onError: () => {
-      // Cerramos diálogo de confirmación si falla.
-      confirmDialog.close();
+      showSuccess(variables.activo ? 'Proyecto ahora es visible' : 'Proyecto ocultado');
     }
   });
 
-  // --- HANDLERS ---
+  // 4. INICIAR PROCESO
+  const startMutation = useMutation({
+    mutationFn: (id: number) => ProyectoService.startProcess(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminProyectos'] });
+      confirmDialog.close();
+      showSuccess('Proceso de cobros iniciado');
+    }
+  });
 
-  const handleOpenModal = useCallback((proyecto: ProyectoDto, modalOpenFn: () => void) => {
+  // --- HANDLERS OPTIMIZADOS (useCallback) ---
+  // Estos evitan re-renders innecesarios al pasar funciones estables a los hijos
+
+  const handleCreateSubmit = useCallback(async (data: CreateProyectoDto) => {
+    await createMutation.mutateAsync(data);
+  }, [createMutation]);
+
+  const handleUpdateSubmit = useCallback(async (id: number, data: UpdateProyectoDto) => {
+    await updateMutation.mutateAsync({ id, data });
+  }, [updateMutation]);
+
+  const handleAction = useCallback((proyecto: ProyectoDto, action: 'edit' | 'images' | 'cuotas' | 'lotes') => {
     setSelectedProject(proyecto);
-    modalOpenFn();
-  }, []);
+    if (action === 'edit') editModal.open();
+    else if (action === 'images') imagesModal.open();
+    else if (action === 'cuotas') cuotasModal.open();
+    else if (action === 'lotes') lotesModal.open();
+  }, [editModal, imagesModal, cuotasModal, lotesModal]);
 
-  const handleCloseModal = useCallback((modalCloseFn: () => void) => {
-    modalCloseFn();
-  }, []);
-
-  const handleStartProcessClick = (proyecto: ProyectoDto) => {
-    confirmDialog.confirm('start_project_process', proyecto);
-  };
-
-  const handleConfirmAction = () => {
+  const handleConfirmAction = useCallback(() => {
     if (!confirmDialog.data) return;
-    const projectData = confirmDialog.data as ProyectoDto;
+    const project = confirmDialog.data as ProyectoDto;
     
     if (confirmDialog.action === 'start_project_process') {
-      startMutation.mutate(projectData.id);
+      startMutation.mutate(project.id);
     } 
     else if (confirmDialog.action === 'toggle_project_visibility') {
-      toggleActiveMutation.mutate({ id: projectData.id, activo: !projectData.activo });
+      toggleActiveMutation.mutate({ id: project.id, activo: !project.activo });
     }
-  };
+  }, [confirmDialog, startMutation, toggleActiveMutation]);
 
+  // --- FILTRADO (Memoizado) ---
   const filteredProyectos = useMemo(() => {
-    const filtered = proyectos.filter(p => {
-      const term = searchTerm.toLowerCase();
-      const matchesSearch = p.nombre_proyecto.toLowerCase().includes(term);
+    return proyectos.filter(p => {
+      const matchesSearch = p.nombre_proyecto.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesType = filterTipo === 'all' || p.tipo_inversion === filterTipo;
       return matchesSearch && matchesType;
     });
-
-    return filtered.sort((a, b) => {
-      const statusA = initialStatusRef.current[a.id] ?? a.activo;
-      const statusB = initialStatusRef.current[b.id] ?? b.activo;
-      if (statusA !== statusB) return statusA ? -1 : 1;
-      return a.nombre_proyecto.localeCompare(b.nombre_proyecto);
-    });
   }, [proyectos, searchTerm, filterTipo]);
 
-  const getStatusColor = (status: string): AppColor => {
-    switch (status) {
-      case 'En proceso': return 'success';
-      case 'Finalizado': return 'info';
-      case 'En Espera': return 'warning';
-      case 'Cancelado': return 'error';
-      default: return 'primary';
-    }
-  };
-
+  // --- COLUMNAS (Memoizadas) ---
   const columns = useMemo<DataTableColumn<ProyectoDto>[]>(() => [
     {
       id: 'proyecto',
       label: 'Proyecto / ID',
-      minWidth: 250,
       render: (p) => (
         <Stack direction="row" alignItems="center" spacing={2}>
-          <Avatar variant="rounded" sx={{ 
-            bgcolor: p.activo ? alpha(theme.palette.primary.main, 0.1) : theme.palette.action.disabledBackground, 
-            color: p.activo ? 'primary.main' : 'text.disabled',
-            width: 40, height: 40
-          }}>
+          <Avatar variant="rounded" sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}>
             <ApartmentIcon />
           </Avatar>
           <Box>
-            <Typography variant="body2" fontWeight={700} color={p.activo ? 'text.primary' : 'text.disabled'}>
-              {p.nombre_proyecto}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              ID: {p.id}
-            </Typography>
+            <Typography variant="body2" fontWeight={700}>{p.nombre_proyecto}</Typography>
+            <Typography variant="caption" color="text.secondary">ID: {p.id}</Typography>
           </Box>
         </Stack>
       )
     },
     {
       id: 'tipo',
-      label: 'Tipo Inversión',
-      render: (p) => {
-        const isMensual = p.tipo_inversion === 'mensual';
-        return (
-          <Chip
-            label={isMensual ? 'Ahorro' : 'Directo'}
-            size="small"
-            color={isMensual ? 'primary' : 'default'}
-            variant={isMensual ? 'filled' : 'outlined'}
-            sx={{ fontWeight: 600, minWidth: 80 }}
-          />
-        );
-      }
+      label: 'Tipo',
+      render: (p) => <Chip label={p.tipo_inversion === 'mensual' ? 'Ahorro' : 'Directo'} size="small" color={p.tipo_inversion === 'mensual' ? 'primary' : 'default'} />
     },
     {
-      id: 'estado',
-      label: 'Estado',
-      render: (p) => {
-        const colorKey = getStatusColor(p.estado_proyecto);
-        const colorMain = theme.palette[colorKey].main;
-        return (
-          <Chip
-            label={p.estado_proyecto}
-            size="small"
-            sx={{ 
-              fontWeight: 600, 
-              bgcolor: alpha(colorMain, 0.1),
-              color: colorMain,
-              border: '1px solid',
-              borderColor: alpha(colorMain, 0.2)
-            }}
-          />
-        );
-      }
-    },
-    {
-      id: 'finanzas',
-      label: 'Inversión Total',
-      render: (p) => (
-        <Typography variant="body2" fontWeight={600} sx={{ fontFamily: 'monospace' }}>
-          {p.moneda} {Number(p.monto_inversion).toLocaleString()}
-        </Typography>
-      )
+        id: 'finanzas',
+        label: 'Inversión',
+        render: (p) => <Typography variant="body2" fontWeight={600}>{p.moneda} {Number(p.monto_inversion).toLocaleString()}</Typography>
     },
     {
       id: 'visibilidad',
       label: 'Visibilidad',
       align: 'center',
-      render: (p) => {
-        const currentId = confirmDialog.data ? (confirmDialog.data as ProyectoDto).id : null;
-        const isProcessingThis = toggleActiveMutation.isPending && currentId === p.id;
-
-        return (
-          <Stack direction="row" alignItems="center" spacing={1} justifyContent="center">
-            {isProcessingThis ? (
-              <CircularProgress size={20} color="inherit" />
-            ) : (
-              <Tooltip title={p.activo ? 'Ocultar Proyecto' : 'Hacer Visible'}>
-                <Switch
-                  checked={p.activo}
-                  onChange={() => confirmDialog.confirm('toggle_project_visibility', p)}
-                  color="success"
-                  size="small"
-                  disabled={toggleActiveMutation.isPending}
-                />
-              </Tooltip>
-            )}
-            
-            {!isProcessingThis && (
-              <Box display="flex" alignItems="center" gap={0.5}>
-                {p.activo ? (
-                  <CheckCircle fontSize="inherit" color="success" sx={{ fontSize: 14 }} />
-                ) : (
-                  <Block fontSize="inherit" color="disabled" sx={{ fontSize: 14 }} />
-                )}
-                <Typography 
-                  variant="caption" 
-                  color={p.activo ? 'success.main' : 'text.disabled'}
-                  fontWeight={600}
-                >
-                  {p.activo ? 'Visible' : 'Oculto'}
-                </Typography>
-              </Box>
-            )}
-          </Stack>
-        );
-      }
+      render: (p) => (
+        <Stack direction="row" alignItems="center" spacing={1} justifyContent="center">
+          <Switch 
+            checked={p.activo} 
+            onChange={() => confirmDialog.confirm('toggle_project_visibility', p)} 
+            size="small" 
+            color="success" 
+            disabled={toggleActiveMutation.isPending}
+          />
+          <Typography variant="caption" fontWeight={600} color={p.activo ? 'success.main' : 'text.disabled'}>
+            {p.activo ? 'Visible' : 'Oculto'}
+          </Typography>
+        </Stack>
+      )
     },
     {
       id: 'acciones',
@@ -330,167 +215,70 @@ const AdminProyectos: React.FC = () => {
       align: 'right',
       render: (p) => (
         <Stack direction="row" spacing={0.5} justifyContent="flex-end">
-          <Tooltip title="Gestionar Imágenes">
-            <IconButton 
-              onClick={(e) => { e.stopPropagation(); handleOpenModal(p, imagesModal.open); }} 
-              size="small"
-              disabled={toggleActiveMutation.isPending}
-              sx={{ color: 'primary.main'}}
-            >
-              <ImageIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-
+          <Tooltip title="Imágenes"><IconButton onClick={() => handleAction(p, 'images')} size="small" color="primary"><ImageIcon fontSize="small" /></IconButton></Tooltip>
           {p.tipo_inversion === 'mensual' && (
-            <Tooltip title="Configurar Cuota">
-              <IconButton 
-                onClick={(e) => { e.stopPropagation(); handleOpenModal(p, cuotasModal.open); }} 
-                size="small" 
-                disabled={toggleActiveMutation.isPending}
-              >
-                <MonetizationOnIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
+            <Tooltip title="Cuotas"><IconButton onClick={() => handleAction(p, 'cuotas')} size="small"><MonetizationOnIcon fontSize="small" /></IconButton></Tooltip>
           )}
-
           {p.tipo_inversion === 'mensual' && p.estado_proyecto === 'En Espera' && (
-            <Tooltip title="Iniciar Proceso (Activar Cobros)">
-              <IconButton
-                size="small"
-                onClick={(e) => { e.stopPropagation(); handleStartProcessClick(p); }}
-                disabled={toggleActiveMutation.isPending}
-                sx={{ color: "success.main" }}
-              >
-                <PlayArrow fontSize="small" />
-              </IconButton>
-            </Tooltip>
+            <Tooltip title="Iniciar Cobros"><IconButton onClick={() => confirmDialog.confirm('start_project_process', p)} size="small" sx={{ color: "success.main" }}><PlayArrow fontSize="small" /></IconButton></Tooltip>
           )}
-
-          <Tooltip title="Editar">
-            <IconButton 
-              onClick={(e) => { e.stopPropagation(); handleOpenModal(p, editModal.open); }} 
-              size="small"
-              disabled={toggleActiveMutation.isPending}
-              sx={{ color: 'primary.main' }}
-            >
-              <Edit fontSize="small" />
-            </IconButton>
-          </Tooltip>
-
-          <Tooltip title="Ver Lotes">
-            <IconButton 
-              onClick={(e) => { e.stopPropagation(); handleOpenModal(p, lotesModal.open); }} 
-              size="small"
-              disabled={toggleActiveMutation.isPending}
-              sx={{ color: 'info.main' }}
-            >
-              <VisibilityIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
+          <Tooltip title="Editar"><IconButton onClick={() => handleAction(p, 'edit')} size="small"><Edit fontSize="small" /></IconButton></Tooltip>
+          <Tooltip title="Lotes"><IconButton onClick={() => handleAction(p, 'lotes')} size="small" color="info"><VisibilityIcon fontSize="small" /></IconButton></Tooltip>
         </Stack>
       )
     }
-  ], [theme, toggleActiveMutation.isPending, confirmDialog, handleOpenModal, imagesModal, cuotasModal, editModal, lotesModal]);
+  ], [theme, toggleActiveMutation.isPending, confirmDialog, handleAction]);
 
   return (
     <PageContainer maxWidth="xl" sx={{ py: 3 }}>
-      <PageHeader
-        title="Gestión de Proyectos"
-        subtitle="Administra el catálogo de inversiones, estados y configuración financiera."
-      />
+      <PageHeader title="Gestión de Proyectos" subtitle="Administra el catálogo de inversiones y estados." />
 
       {/* Barra de Filtros */}
-      <Paper 
-        elevation={0} 
-        sx={{ 
-          p: 2, mb: 3, display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center', 
-          borderRadius: 2, border: '1px solid', borderColor: 'divider', 
-          bgcolor: alpha(theme.palette.background.paper, 0.6)
-        }} 
-      >
-        <TextField
-          placeholder="Buscar por nombre..."
-          size="small"
-          sx={{ flexGrow: 1, minWidth: 200 }}
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          InputProps={{ 
-            startAdornment: (<InputAdornment position="start"><Search color="action" /></InputAdornment>),
-            sx: { borderRadius: 2 }
-          }}
+      <Paper elevation={0} sx={{ p: 2, mb: 3, display: 'flex', gap: 2, alignItems: 'center', borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
+        <TextField 
+          placeholder="Buscar..." size="small" sx={{ flexGrow: 1 }} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
+          InputProps={{ startAdornment: <InputAdornment position="start"><Search /></InputAdornment> }} 
         />
-        <TextField
-          select
-          label="Tipo Inversión"
-          size="small"
-          value={filterTipo}
-          onChange={(e) => setFilterTipo(e.target.value as TipoInversionFilter)}
-          sx={{ minWidth: 180, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-        >
+        <TextField select label="Tipo" size="small" value={filterTipo} onChange={(e) => setFilterTipo(e.target.value as TipoInversionFilter)} sx={{ minWidth: 150 }}>
           <MenuItem value="all">Todos</MenuItem>
-          <MenuItem value="directo">Directo (Lotes)</MenuItem>
-          <MenuItem value="mensual">Ahorro (Mensual)</MenuItem>
+          <MenuItem value="directo">Directo</MenuItem>
+          <MenuItem value="mensual">Ahorro</MenuItem>
         </TextField>
-
-        <Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', md: 'block' }, mx: 1 }} />
-
-        <Button 
-          variant="contained" 
-          startIcon={<Add />} 
-          onClick={createModal.open}
-          sx={{ borderRadius: 2, fontWeight: 600 }}
-        >
-          Nuevo Proyecto
-        </Button>
+        <Button variant="contained" startIcon={<Add />} onClick={createModal.open}>Nuevo Proyecto</Button>
       </Paper>
 
       <QueryHandler isLoading={isLoading} error={error as Error}>
-          <DataTable
-            columns={columns}
-            data={filteredProyectos}
-            getRowKey={(p) => p.id}
-            isRowActive={(p) => p.activo} 
+          {/* La tabla ya no se redibuja innecesariamente gracias a los useCallbacks */}
+          <DataTable 
+            columns={columns} 
+            data={filteredProyectos} 
+            getRowKey={(p) => p.id} 
             highlightedRowId={highlightedId} 
-            emptyMessage="No se encontraron proyectos con los filtros actuales."
-            pagination={true}
-            defaultRowsPerPage={10}
+            pagination={true} 
           />
       </QueryHandler>
 
-      {/* --- MODALES --- */}
+      {/* --- MODALES OPTIMIZADOS --- */}
+
       <CreateProyectoModal
         {...createModal.modalProps} 
-        onSubmit={async (data, image) => { await createMutation.mutateAsync({ data, image }); }}
+        onSubmit={handleCreateSubmit}
         isLoading={createMutation.isPending}
       />
 
       {selectedProject && (
         <>
-          <ConfigCuotasModal
-            open={cuotasModal.modalProps.open}
-            onClose={() => handleCloseModal(cuotasModal.close)}
-            proyecto={selectedProject}
+          <ConfigCuotasModal {...cuotasModal.modalProps} proyecto={selectedProject} />
+          
+          <EditProyectoModal 
+            {...editModal.modalProps} 
+            proyecto={selectedProject} 
+            onSubmit={handleUpdateSubmit} // Usamos el callback estable
+            isLoading={updateMutation.isPending} // Usamos el estado real de la mutación
           />
-
-          <EditProyectoModal
-            open={editModal.modalProps.open}
-            onClose={() => handleCloseModal(editModal.close)}
-            proyecto={selectedProject}
-            onSubmit={async (id, data) => { await updateMutation.mutateAsync({ id, data }); }}
-            isLoading={updateMutation.isPending}
-          />
-
-          <ProjectLotesModal
-            open={lotesModal.modalProps.open}
-            onClose={() => handleCloseModal(lotesModal.close)}
-            proyecto={selectedProject}
-          />
-
-          <ManageImagesModal
-            open={imagesModal.modalProps.open}
-            onClose={() => handleCloseModal(imagesModal.close)}
-            proyecto={selectedProject}
-          />
+          
+          <ProjectLotesModal {...lotesModal.modalProps} proyecto={selectedProject} />
+          <ManageImagesModal {...imagesModal.modalProps} proyecto={selectedProject} />
         </>
       )}
 
