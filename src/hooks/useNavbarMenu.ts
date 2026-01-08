@@ -104,7 +104,7 @@ export const useNavbarMenu = () => {
           icon: TerrainIcon,
           submenu: [
             { label: "Gestión de Lotes", path: "/admin/Lotes", icon: TerrainIcon },
-            { label: "Gestion de Pagos", path: "/admin/LotePagos", icon: AttachMoneyIcon },
+            { label: "Gestion de Pagos", path: "/admin/AdminLotePagos", icon: AttachMoneyIcon },
             { isDivider: true, label: "" },
             { label: "Gestion de Pujas", path: "/admin/pujas", icon: GavelIcon },
           ],
@@ -188,7 +188,7 @@ export const useNavbarMenu = () => {
             submenu: [
                 { label: "Inversiones", path: "/MisInversiones", icon: AttachMoneyIcon },
                 { label: "Suscripciones", path: "/client/suscripciones", icon: SupervisedUserIcon },
-                { label: "Subastas", path: "/client/subastas", icon: GavelIcon },
+                { label: "Pujas", path: "/client/MisPujas", icon: GavelIcon },
                 { isDivider: true, label: "Pagos" },
                 { label: "Cuotas a Pagar", path: "/pagos", icon: AttachMoneyIcon }, 
                 { label: "Historial Transacciones", path: "/client/transacciones", icon: ReceiptIcon }, 

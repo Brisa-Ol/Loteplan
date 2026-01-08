@@ -23,11 +23,8 @@ export interface LoteDto {
 
   // 2. Datos básicos
   nombre_lote: string;
-  precio_base: number; // En BD es DECIMAL, Sequelize lo devuelve como string, pero en TS lo tipamos number para operar
-ultima_puja?: {
-     monto: number;
-     id_usuario: number; // Para saber si voy ganando yo
-  };
+  precio_base: string; // En BD es DECIMAL, Sequelize lo devuelve como string, pero en TS lo tipamos string para operar
+  monto_ganador_lote: string | null; // DECIMAL, null si no hay ganador
   // 3. Estado y Tiempos
   estado_subasta: EstadoSubasta;
   fecha_inicio: string | null; // DataTypes.DATE devuelve string ISO
@@ -71,7 +68,7 @@ ultima_puja?: {
 export interface CreateLoteDto {
   id_proyecto?: number | null;
   nombre_lote: string;
-  precio_base: number;
+  precio_base: string;
   
   // Opcionales (Tienen default en BD o son nullables)
   estado_subasta?: EstadoSubasta;
@@ -95,6 +92,7 @@ export interface UpdateLoteDto extends Partial<CreateLoteDto> {
   id_puja_mas_alta?: number | null;
   intentos_fallidos_pago?: number;
   excedente_visualizacion?: number;
+  monto_ganador_lote?: string | null;
 }
 
 // ==========================================

@@ -1,192 +1,127 @@
-import React, { useState } from 'react';
-import {
-  TextField, Stack, Box, Typography, InputAdornment, Alert, Divider,
-  Paper, useTheme, alpha, Chip
+import React, { useMemo } from 'react';
+import { 
+  Box, Typography, Chip, Stack, LinearProgress, useTheme, alpha, Button 
 } from '@mui/material';
-import {
-  Gavel as GavelIcon,
-  MonetizationOn,
-  Token,
-  TrendingUp
+import { 
+  Gavel, CalendarToday, MonetizationOn, OpenInNew, Warning 
 } from '@mui/icons-material';
-import { useFormik } from 'formik';
-import * as Yup from 'yup';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import type { LoteDto } from '../../../types/dto/lote.dto';
-import useSnackbar from '../../../hooks/useSnackbar';
+import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
+
+// Componentes Comunes
+import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
+import { PageHeader } from '../../../components/common/PageHeader/PageHeader';
+import { QueryHandler } from '../../../components/common/QueryHandler/QueryHandler';
+import { DataTable, type DataTableColumn } from '../../../components/common/DataTable/DataTable';
+
+// Servicios y Tipos
 import PujaService from '../../../services/puja.service';
-import type { CreatePujaDto } from '../../../types/dto/puja.dto';
-import BaseModal from '../../../components/common/BaseModal/BaseModal';
+import type { PujaDto } from '../../../types/dto/puja.dto';
 
-
-
-interface PujarModalProps {
-  open: boolean;
-  onClose: () => void;
-  lote: LoteDto;
-  onSuccess?: () => void;
-}
-
-// Esquema de validación
-const validationSchema = (minAmount: number) => Yup.object({
-  monto_puja: Yup.number()
-    .required('Debes ingresar un monto')
-    .min(minAmount, `La oferta debe ser mayor a $${minAmount.toLocaleString()}`)
-    .typeError('Debe ser un número válido'),
-});
-
-const PujarModal: React.FC<PujarModalProps> = ({ open, onClose, lote, onSuccess }) => {
+const MisPujas: React.FC = () => {
+  const navigate = useNavigate();
   const theme = useTheme();
-  const queryClient = useQueryClient();
-  const { showSuccess } = useSnackbar();
-  const [serverError, setServerError] = useState<string | null>(null);
 
-  // Determinar el monto mínimo sugerido (Puja más alta + 1, o Precio Base)
-  // Nota: Esto es solo una ayuda visual, el backend tiene la validación final real.
-  const precioBase = Number(lote.precio_base);
-  
-  // Si el DTO de Lote incluye el monto actual (depende de tu backend), úsalo aquí.
-  // Si no, usamos el precio base como referencia inicial.
-  // En tu modelo backend: 'monto_ganador_lote' o 'id_puja_mas_alta'.
-  // Asumiremos que si hay puja, el usuario debe superar la actual.
-  const pujaMasAlta = Number((lote as any).monto_ganador_lote || 0); 
-  const montoMinimo = Math.max(precioBase, pujaMasAlta);
+  // 1. Obtener las pujas del usuario logueado
+  const { data: misPujas = [], isLoading, error } = useQuery<PujaDto[]>({
+    queryKey: ['misPujas'],
+    queryFn: async () => (await PujaService.getMyPujas()).data,
+  });
 
-  // Mutación para crear la puja
-  const pujaMutation = useMutation({
-    mutationFn: async (data: CreatePujaDto) => {
-      return await PujaService.create(data);
+  // 2. Configuración de Columnas
+  const columns = useMemo<DataTableColumn<PujaDto>[]>(() => [
+    { 
+      id: 'lote', 
+      label: 'Lote', 
+      minWidth: 200,
+      render: (puja) => (
+        <Box>
+          <Typography fontWeight={700} variant="body2">
+            {puja.lote?.nombre_lote || `Lote #${puja.id_lote}`}
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            ID Puja: {puja.id}
+          </Typography>
+        </Box>
+      )
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['misPujas'] });
-      queryClient.invalidateQueries({ queryKey: ['lote', lote.id] }); // Refrescar datos del lote
-      
-      showSuccess('¡Oferta realizada con éxito!');
-      if (onSuccess) onSuccess();
-      handleClose();
+    { 
+      id: 'monto', 
+      label: 'Mi Oferta', 
+      render: (puja) => (
+        <Stack direction="row" spacing={1} alignItems="center">
+          <MonetizationOn color="success" fontSize="small" />
+          <Typography fontWeight={700}>
+            ${Number(puja.monto_puja).toLocaleString('es-AR')}
+          </Typography>
+        </Stack>
+      )
     },
-    onError: (err: any) => {
-      // Capturamos el error del backend (ej: "No tienes tokens")
-      const msg = err.response?.data?.error || err.message || 'Error al procesar la oferta';
-      setServerError(msg);
+    { 
+      id: 'fecha', 
+      label: 'Fecha', 
+      render: (puja) => (
+        <Stack direction="row" spacing={1} alignItems="center">
+          <CalendarToday color="action" fontSize="small" />
+          <Typography variant="body2">
+            {new Date(puja.fecha_puja).toLocaleDateString()}
+          </Typography>
+        </Stack>
+      )
+    },
+    { 
+      id: 'estado', 
+      label: 'Estado', 
+      render: (puja) => {
+        let color: 'default' | 'success' | 'warning' | 'error' | 'info' = 'default';
+        let label = puja.estado_puja.toUpperCase().replace('_', ' ');
+
+        switch (puja.estado_puja) {
+          case 'activa': color = 'info'; break;
+          case 'ganadora_pendiente': color = 'warning'; label = 'GANASTE (PAGAR)'; break;
+          case 'ganadora_pagada': color = 'success'; label = 'GANADA Y PAGADA'; break;
+          case 'perdedora': color = 'error'; break;
+          case 'ganadora_incumplimiento': color = 'error'; label = 'ANULADA'; break;
+        }
+
+        return <Chip label={label} color={color} size="small" sx={{ fontWeight: 'bold' }} />;
+      }
+    },
+    { 
+      id: 'acciones', 
+      label: 'Acciones', 
+      align: 'right',
+      render: (puja) => (
+        <Button 
+          size="small" 
+          variant="outlined" 
+          endIcon={<OpenInNew />}
+          onClick={() => navigate(`/lotes/${puja.id_lote}`)}
+        >
+          Ver Lote
+        </Button>
+      )
     }
-  });
-
-  const formik = useFormik({
-    initialValues: {
-      monto_puja: '',
-    },
-    validationSchema: validationSchema(montoMinimo),
-    onSubmit: async (values) => {
-      setServerError(null);
-      await pujaMutation.mutateAsync({
-        id_lote: lote.id,
-        monto_puja: Number(values.monto_puja)
-      });
-    },
-  });
-
-  const handleClose = () => {
-    formik.resetForm();
-    setServerError(null);
-    onClose();
-  };
-
-  const formatCurrency = (val: number) =>
-    new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(val);
+  ], [navigate]);
 
   return (
-    <BaseModal
-      open={open}
-      onClose={handleClose}
-      title="Realizar Oferta"
-      subtitle={`Lote: ${lote.nombre_lote}`}
-      icon={<GavelIcon />}
-      onConfirm={formik.submitForm}
-      confirmText="Confirmar Oferta"
-      isLoading={pujaMutation.isPending}
-      disableConfirm={!formik.isValid || !formik.dirty || pujaMutation.isPending}
-      maxWidth="sm"
-    >
-      <Stack spacing={3}>
-        
-        {/* RESUMEN DE ESTADO ACTUAL */}
-        <Paper 
-            variant="outlined" 
-            sx={{ p: 2, bgcolor: alpha(theme.palette.primary.main, 0.03), borderColor: theme.palette.divider }}
-        >
-            <Stack spacing={2}>
-                <Box display="flex" justifyContent="space-between" alignItems="center">
-                    <Typography variant="body2" color="text.secondary">Precio Base:</Typography>
-                    <Typography variant="body1" fontWeight={600}>{formatCurrency(precioBase)}</Typography>
-                </Box>
-                <Divider />
-                <Box display="flex" justifyContent="space-between" alignItems="center">
-                    <Box display="flex" alignItems="center" gap={1}>
-                        <TrendingUp fontSize="small" color="primary"/>
-                        <Typography variant="body2" color="primary.main" fontWeight={600}>Oferta más alta:</Typography>
-                    </Box>
-                    <Typography variant="h6" fontWeight={700} color="primary.main">
-                        {pujaMasAlta > 0 ? formatCurrency(pujaMasAlta) : 'Sin ofertas'}
-                    </Typography>
-                </Box>
-            </Stack>
-        </Paper>
+    <PageContainer>
+      <PageHeader 
+        title="Mis Subastas" 
+        subtitle="Historial de tus participaciones y estado de tus ofertas." 
+      />
 
-        {/* INPUT DE OFERTA */}
-        <Box>
-            <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ mb: 1, display: 'block' }}>
-                TU PROPUESTA
-            </Typography>
-            <TextField
-                fullWidth
-                id="monto_puja"
-                name="monto_puja"
-                label="Monto a ofertar"
-                type="number"
-                placeholder={`Mínimo: ${montoMinimo}`}
-                value={formik.values.monto_puja}
-                onChange={formik.handleChange}
-                error={formik.touched.monto_puja && Boolean(formik.errors.monto_puja)}
-                helperText={formik.touched.monto_puja && formik.errors.monto_puja}
-                disabled={pujaMutation.isPending}
-                InputProps={{
-                    startAdornment: <InputAdornment position="start"><MonetizationOn color="action" /></InputAdornment>,
-                }}
-                sx={{
-                    '& .MuiOutlinedInput-root': {
-                        fontSize: '1.2rem',
-                        fontWeight: 600
-                    }
-                }}
-            />
-        </Box>
-
-        {/* ERRORES DEL SERVIDOR */}
-        {serverError && (
-            <Alert severity="error" variant="filled" sx={{ borderRadius: 2 }}>
-                {serverError}
-            </Alert>
-        )}
-
-        {/* ADVERTENCIA DE TOKENS */}
-        <Alert 
-            severity="info" 
-            icon={<Token />}
-            sx={{ 
-                alignItems: 'center', 
-                bgcolor: alpha(theme.palette.info.main, 0.1), 
-                color: theme.palette.info.dark 
-            }}
-        >
-            <Typography variant="body2" fontWeight={500}>
-                Al confirmar, se descontará <strong>1 Token</strong> de tu suscripción si es tu primera oferta en este lote.
-            </Typography>
-        </Alert>
-
-      </Stack>
-    </BaseModal>
+      <QueryHandler isLoading={isLoading} error={error as Error}>
+        <DataTable 
+          columns={columns} 
+          data={misPujas} 
+          getRowKey={(row) => row.id}
+          emptyMessage="Aún no has participado en ninguna subasta."
+          pagination
+        />
+      </QueryHandler>
+    </PageContainer>
   );
 };
 
-export default PujarModal;
+export default MisPujas;

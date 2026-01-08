@@ -14,7 +14,7 @@ import type { LoteDto } from "./lote.dto";
 export interface CreatePujaDto {
   id_lote: number;
   monto_puja: number;
-  id_suscripcion?: number;
+
 }
 /**
  * DTO para confirmar pago con 2FA.
@@ -55,7 +55,7 @@ export interface PujaDto extends BaseDTO {
   
   estado_puja: EstadoPuja;
   fecha_vencimiento_pago?: string; // ISO Date (Solo si es ganadora_pendiente)
-  
+  id_proyecto: number;
   id_lote: number;
   id_usuario: number;
   id_transaccion?: number;

@@ -55,6 +55,7 @@ import MisFavoritos from './pages/client/MiCuenta/MisFavoritos';
 import DetalleLote from './pages/client/Lotes/DetalleLote';
 import HistorialContratos from './pages/client/Contratos/Historialcontratos';
 import ForgotPasswordPage from './pages/Auth/ForgotPassword';
+import MisPujas from './pages/client/MiCuenta/MisPujas';
 
 // --- PÁGINAS ADMIN (Lazy Loading) ---
 const AdminDashboard = lazy(() => import('./pages/Admin/Dashboard/AdminDashboard'));
@@ -166,7 +167,7 @@ const AppContent: React.FC = () => {
             <Route path="/client/seguridad" element={<SecuritySettings />} />
             <Route path="/client/suscripciones" element={<MisSuscripciones />} />
             <Route path="/client/favoritos" element={<MisFavoritos />} />
-            <Route path="/client/subastas" element={<MisSubastas />} />
+            <Route path="/client/MisPujas" element={<MisPujas />} />
             <Route path="/client/contratos" element={<HistorialContratos />} />
             <Route path="/lotes/:id" element={<DetalleLote />} />
             <Route path="/mis-inversiones" element={<MisInversiones />} />
@@ -197,7 +198,7 @@ const AppContent: React.FC = () => {
             <Route path="/admin/lotes" element={<AdminLotes />} />
           
             <Route path="/admin/pagos" element={<AdminPagos />} />
-            <Route path="/admin/lote-pagos" element={<AdminLotePagos />} />
+            <Route path="/admin/AdminLotePagos" element={<AdminLotePagos />} />
             <Route path="/admin/Pujas" element={<AdminPujas />} />
           </Route>
         </Route>  

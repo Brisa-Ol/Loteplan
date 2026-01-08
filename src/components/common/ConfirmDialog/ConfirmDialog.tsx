@@ -1,16 +1,14 @@
-// src/components/common/ConfirmDialog/ConfirmDialog.tsx
-
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography,
-  Box, Avatar, useTheme, alpha 
+  Box, Avatar, useTheme, alpha, TextField 
 } from '@mui/material';
 import { Warning, Help, CheckCircle, ErrorOutline } from '@mui/icons-material';
 import type { useConfirmDialog } from '../../../hooks/useConfirmDialog';
 
 interface Props {
   controller: ReturnType<typeof useConfirmDialog>; 
-  onConfirm: () => void;
+  onConfirm: (inputValue?: string) => void; // ✅ Recibe string opcional
   isLoading?: boolean;
   title?: string;
   description?: string;
@@ -21,6 +19,14 @@ export const ConfirmDialog: React.FC<Props> = ({
 }) => {
   const theme = useTheme();
   const { open, close, config } = controller;
+  
+  // ✅ Estado para el input
+  const [inputValue, setInputValue] = useState('');
+
+  // Limpiar input al abrir
+  useEffect(() => {
+    if (open) setInputValue('');
+  }, [open]);
   
   if (!config) return null;
 
@@ -58,71 +64,66 @@ export const ConfirmDialog: React.FC<Props> = ({
 
   const severityColor = getSeverityColor();
 
+  const handleConfirmClick = () => {
+    onConfirm(inputValue);
+  };
+
+  // Bloquear si es requerido y está vacío
+  const isConfirmDisabled = isLoading || (config.requireInput && inputValue.trim().length < 3);
+
   return (
     <Dialog 
       open={open} 
       onClose={isLoading ? undefined : close} 
       maxWidth="xs" 
       fullWidth
-      // ✅ ESTILO IGUALADO A BASEMODAL
       PaperProps={{
-        sx: {
-          borderRadius: 3, // Igual que BaseModal
-          boxShadow: theme.shadows[10], // Sombra profunda igual que BaseModal
-          overflow: 'hidden'
-        }
+        sx: { borderRadius: 3, boxShadow: theme.shadows[10], overflow: 'hidden' }
       }}
     >
-      {/* HEADER con fondo suave igual que BaseModal */}
       <DialogTitle sx={{ 
           pb: 2, pt: 3, px: 3,
           display: 'flex', alignItems: 'center', gap: 2,
-          bgcolor: alpha(severityColor, 0.04) // Fondo sutil del color de la alerta
+          bgcolor: alpha(severityColor, 0.04)
       }}>
-          <Avatar 
-            variant="rounded"
-            sx={{ 
-              bgcolor: alpha(severityColor, 0.1), 
-              color: severityColor,
-              width: 40, height: 40 // Tamaño ajustado a BaseModal
-            }}
-          >
+          <Avatar variant="rounded" sx={{ bgcolor: alpha(severityColor, 0.1), color: severityColor, width: 40, height: 40 }}>
             {getSeverityIcon()}
           </Avatar>
-         <Typography 
-        variant="h6"       // Mantiene el tamaño y estilo visual de h6
-        component="span"   // Renderiza una etiqueta <span> (válida dentro de h2)
-        fontWeight={800} 
-        color="text.primary" 
-        sx={{ lineHeight: 1.2 }}
-    >
-      {displayTitle}
-    </Typography>
+         <Typography variant="h6" component="span" fontWeight={800} color="text.primary" sx={{ lineHeight: 1.2 }}>
+            {displayTitle}
+         </Typography>
       </DialogTitle>
       
       <DialogContent sx={{ px: 3, py: 3 }}>
-        <Typography variant="body1" color="text.secondary">
+        <Typography variant="body1" color="text.secondary" mb={config.requireInput ? 2 : 0}>
           {displayDesc}
         </Typography>
+
+        {/* ✅ RENDERIZADO DEL INPUT */}
+        {config.requireInput && (
+            <TextField
+                autoFocus
+                fullWidth
+                variant="outlined"
+                label={config.inputLabel || "Motivo"}
+                placeholder={config.inputPlaceholder}
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                size="small"
+                multiline
+                rows={2}
+                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+            />
+        )}
       </DialogContent>
       
-      {/* FOOTER con fondo gris suave igual que BaseModal */}
-      <DialogActions sx={{ 
-          p: 3, 
-          bgcolor: alpha(theme.palette.background.default, 0.5),
-          borderTop: `1px solid ${theme.palette.divider}`
-      }}>
-        <Button 
-          onClick={close} 
-          disabled={isLoading} 
-          color="inherit"
-          sx={{ borderRadius: 2, fontWeight: 600, mr: 'auto' }} // Botón cancelar a la izquierda si prefieres estilo BaseModal
-        >
+      <DialogActions sx={{ p: 3, bgcolor: alpha(theme.palette.background.default, 0.5), borderTop: `1px solid ${theme.palette.divider}` }}>
+        <Button onClick={close} disabled={isLoading} color="inherit" sx={{ borderRadius: 2, fontWeight: 600, mr: 'auto' }}>
           Cancelar
         </Button>
         <Button 
-          onClick={onConfirm} 
-          disabled={isLoading}
+          onClick={handleConfirmClick} 
+          disabled={isConfirmDisabled}
           variant="contained" 
           color={getButtonColor()}
           disableElevation

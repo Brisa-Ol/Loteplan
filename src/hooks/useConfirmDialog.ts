@@ -18,6 +18,7 @@ export type ConfirmAction =
   | 'approve_kyc'
   | 'force_confirm_transaction' // ✅ Acción para AdminTransacciones
   | 'cancel_puja'               // ✅ Acción para MisPujas
+| 'cancel_ganadora_anticipada'
   | null;
 
 interface ConfirmConfig {
@@ -25,6 +26,9 @@ interface ConfirmConfig {
   description: string;
   confirmText: string;
   severity: 'error' | 'warning' | 'info' | 'success';
+  requireInput?: boolean; 
+  inputLabel?: string;
+  inputPlaceholder?: string;
 }
 
 // 2. Configuración centralizada (Fallbacks y textos estáticos)
@@ -34,6 +38,15 @@ const CONFIRM_CONFIGS: Record<NonNullable<ConfirmAction>, ConfirmConfig> = {
     description: 'Perderás tu progreso de antigüedad, tokens acumulados y se detendrán los cobros futuros. Esta acción es irreversible.',
     confirmText: 'Sí, cancelar definitivamente',
     severity: 'error',
+  },
+  cancel_ganadora_anticipada: {
+    title: '¿Anular adjudicación?',
+    description: 'Se anulará la victoria del usuario, se devolverá su token y se marcará como intento fallido.',
+    confirmText: 'Sí, Anular',
+    severity: 'error',
+    requireInput: true, // Indica que necesita texto
+    inputLabel: 'Motivo de la anulación',
+    inputPlaceholder: 'Ej: El usuario notificó que no tiene fondos...'
   },
   admin_cancel_subscription: {
     title: '¿Forzar cancelación?',
@@ -165,7 +178,12 @@ export const useConfirmDialog = () => {
             description: `⚠️ ESTA ACCIÓN ES IRREVERSIBLE. Estás confirmando manualmente que el dinero llegó. El usuario recibirá sus activos inmediatamente.`,
         };
     }
-
+if (state.action === 'cancel_ganadora_anticipada' && state.data) {
+        return {
+            ...baseConfig,
+            description: `Estás por anular la adjudicación del Lote ${state.data.nombre_lote} al usuario #${state.data.id_ganador}.`,
+        };
+    }
     // 2. Aprobar KYC (Admin)
     if (state.action === 'approve_kyc' && state.data) {
         const userName = state.data.nombre_completo || 'el usuario';

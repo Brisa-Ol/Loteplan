@@ -1,8 +1,6 @@
-// src/pages/client/Lotes/DetalleLote.tsx
-
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query'; // Importamos useQueryClient
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Box, Typography, Button, Stack, Chip, Divider,
   Card, CardContent, Alert, Skeleton, IconButton, useTheme, alpha,
@@ -15,10 +13,10 @@ import {
   EmojiEmotions, VerifiedUser 
 } from '@mui/icons-material';
 
-// Servicios y Tipos
+// Servicios y DTOs
 import LoteService from '../../../services/lote.service';
-import type { LoteDto } from '../../../types/dto/lote.dto';
 import ImagenService from '../../../services/imagen.service';
+import type { LoteDto } from '../../../types/dto/lote.dto';
 
 // Contextos y Hooks
 import { useAuth } from '../../../context/AuthContext';
@@ -28,10 +26,12 @@ import { useModal } from '../../../hooks/useModal';
 import { FavoritoButton } from '../../../components/common/BotonFavorito/BotonFavorito';
 import PujarModal from './components/PujarModal';
 
+// ✅ INTERFAZ CORREGIDA:
+// No redefinimos 'monto_ganador_lote' (ya está en LoteDto).
+// Solo agregamos 'ultima_puja' que suele venir de la query.
 interface LoteConPuja extends LoteDto {
-  monto_ganador_lote?: number;
   ultima_puja?: {
-      monto: number;
+      monto: string | number;
       id_usuario: number;
   };
 }
@@ -42,29 +42,87 @@ const DetalleLote: React.FC = () => {
   const location = useLocation();
   const { user, isAuthenticated } = useAuth();
   const theme = useTheme();
-  const queryClient = useQueryClient(); // ✅ Para invalidación manual si hace falta
+  const queryClient = useQueryClient();
   
   const pujarModal = useModal(); 
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
-  // 1. QUERY REAL-TIME
+  // 1. QUERY REAL-TIME (Polling)
   const { data: loteData, isLoading, error } = useQuery<LoteDto>({
     queryKey: ['lote', id],
     queryFn: async () => {
       if (!id) throw new Error('ID inválido');
-      // Forzamos la llamada al servidor para evitar caché stale
       const res = await LoteService.getByIdActive(Number(id));
       return res.data;
     },
-    // 🔥 ACTUALIZACIÓN EN TIEMPO REAL (Polling)
-    // Refresca cada 3 segundos para mantener el precio y estado sincronizados
+    // Actualiza cada 3 segundos para ver precios y ganador en tiempo real
     refetchInterval: 3000, 
-    refetchIntervalInBackground: true, // Sigue actualizando si cambias de pestaña
+    refetchIntervalInBackground: true,
     retry: false
   });
 
   const lote = loteData as LoteConPuja;
 
+  // --- LÓGICA DE NEGOCIO (MEMOIZED) ---
+  const { precioDisplay, soyGanador, hayOfertas, statusConfig } = useMemo(() => {
+    // Definición de tipos para evitar el error de "success not assignable to default"
+    type ChipColor = 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning';
+    
+    // Configuración inicial por defecto
+    let config: { 
+        label: string; 
+        color: ChipColor; 
+        icon?: React.ReactElement; // ✅ Importante: ReactElement | undefined
+    } = { 
+        label: '', 
+        color: 'default', 
+        icon: undefined 
+    };
+
+    if (!lote) return { 
+        precioDisplay: 0, soyGanador: false, hayOfertas: false, 
+        statusConfig: config 
+    };
+
+    // 1. Calcular Precio Actual
+    // Convertimos strings a números para operar
+    const montoGanador = lote.monto_ganador_lote ? Number(lote.monto_ganador_lote) : 0;
+    const montoUltimaPuja = lote.ultima_puja?.monto ? Number(lote.ultima_puja.monto) : 0;
+    
+    // La oferta más alta es la mayor entre el campo cacheado y la relación directa
+    const ofertaActual = Math.max(montoGanador, montoUltimaPuja);
+    const precioBase = Number(lote.precio_base);
+    
+    const precioDisplay = ofertaActual > 0 ? ofertaActual : precioBase;
+    const hayOfertas = ofertaActual > 0;
+
+    // 2. Verificar si el usuario logueado es el ganador
+    const soyGanador = isAuthenticated && (lote.id_ganador === user?.id);
+
+    // 3. Configuración de Estado Visual (Switch)
+    // Forzamos el label a string para evitar conflictos con tipos literales
+    config.label = lote.estado_subasta as string;
+
+    switch (lote.estado_subasta) {
+      case 'activa': 
+        config = { label: 'Subasta Activa', color: 'success', icon: <Gavel fontSize="small" /> };
+        break;
+      case 'pendiente': 
+        config = { label: 'Próximamente', color: 'warning', icon: <AccessTime fontSize="small" /> };
+        break;
+      case 'finalizada': 
+        config = { label: 'Finalizada', color: 'error', icon: <EmojiEvents fontSize="small" /> };
+        break;
+      default:
+        config.label = lote.estado_subasta;
+        break;
+    }
+
+    return { precioDisplay, soyGanador, hayOfertas, statusConfig: config };
+  }, [lote, isAuthenticated, user]);
+
+
+  // --- RENDERS DE CARGA Y ERROR ---
   if (isLoading) {
     return (
       <Box sx={{ maxWidth: 1400, mx: 'auto', p: 3 }}>
@@ -86,39 +144,16 @@ const DetalleLote: React.FC = () => {
     );
   }
 
-  // 🟢 LÓGICA DE NEGOCIO (Sincronizada con Backend)
-  // El backend puede enviar 'monto_ganador_lote' (más rápido) o relaciones 'ultima_puja'
-  // Priorizamos el campo directo del lote si existe.
-  const montoGanador = Number(lote.monto_ganador_lote);
-  const montoUltimaPujaRel = Number(lote.ultima_puja?.monto);
-  
-  // Determinamos la oferta más alta conocida
-  const ofertaActual = montoGanador > 0 ? montoGanador : (montoUltimaPujaRel > 0 ? montoUltimaPujaRel : 0);
-  
-  const precioBase = Number(lote.precio_base);
-  const precioDisplay = ofertaActual > 0 ? ofertaActual : precioBase;
-  const hayOfertas = ofertaActual > 0;
-  
-  // Verificar si soy el ganador actual
-  // IMPORTANTE: El backend actualiza 'id_ganador' en tiempo real en la tabla Lote
-  const soyGanador = isAuthenticated && (lote.id_ganador === user?.id);
-
-  const getStatusConfig = () => {
-    switch (lote.estado_subasta) {
-      case 'activa': return { label: 'Subasta Activa', color: 'success' as const, icon: <Gavel fontSize="small" /> };
-      case 'pendiente': return { label: 'Próximamente', color: 'warning' as const, icon: <AccessTime fontSize="small" /> };
-      case 'finalizada': return { label: 'Finalizada', color: 'error' as const, icon: <EmojiEvents fontSize="small" /> };
-      default: return { label: lote.estado_subasta, color: 'default' as const, icon: null };
-    }
-  };
-
-  const statusConfig = getStatusConfig();
-  
+  // --- VARIABLES VISUALES ---
   const imagenes = lote.imagenes || [];
   const mainImageUrl = imagenes.length > 0
     ? ImagenService.resolveImageUrl(imagenes[selectedImageIndex].url)
     : '/assets/placeholder-lote.jpg';
 
+  const formatCurrency = (val: number) => 
+    new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(val);
+
+  // --- HANDLERS ---
   const openMap = () => {
     if (lote.latitud && lote.longitud) {
       window.open(`http://googleusercontent.com/maps.google.com/?q=${lote.latitud},${lote.longitud}`, '_blank');
@@ -129,9 +164,6 @@ const DetalleLote: React.FC = () => {
     if (!isAuthenticated) return navigate('/login', { state: { from: location.pathname } });
     pujarModal.open();
   };
-
-  const formatCurrency = (val: number) => 
-    new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(val);
 
   return (
     <Box sx={{ maxWidth: 1400, mx: 'auto', p: { xs: 2, md: 4 } }}>
@@ -154,16 +186,22 @@ const DetalleLote: React.FC = () => {
             <Box component="img" src={mainImageUrl} alt={lote.nombre_lote} sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             
             <Box sx={{ position: 'absolute', top: 20, left: 20 }}>
-              <Chip label={statusConfig.label} color={statusConfig.color} icon={statusConfig.icon || undefined} sx={{ fontWeight: 'bold', boxShadow: 2 }} />
+              <Chip 
+                label={statusConfig.label} 
+                color={statusConfig.color} 
+                icon={statusConfig.icon} // ✅ Pasamos el icono o undefined
+                sx={{ fontWeight: 'bold', boxShadow: 2 }} 
+              />
             </Box>
             
             {soyGanador && lote.estado_subasta === 'activa' && (
                 <Box sx={{ position: 'absolute', bottom: 20, right: 20 }}>
-                  <Chip label="¡Vas Ganando!" color="success" icon={<EmojiEmotions/>} sx={{ fontWeight: 'bold', boxShadow: 3, py: 2.5, px: 2, fontSize: '1rem' }} />
+                  <Chip label="¡Vas Ganando!" color="success" icon={<EmojiEmotions/>} sx={{ fontWeight: 'bold', boxShadow: 3, py: 1, px: 2, fontSize: '1rem', height: 'auto' }} />
                 </Box>
             )}
           </Box>
 
+          {/* Galería */}
           {imagenes.length > 1 && (
             <Stack direction="row" spacing={2} mb={4} sx={{ overflowX: 'auto', py: 1 }}>
               {imagenes.map((img, idx) => (
@@ -174,6 +212,7 @@ const DetalleLote: React.FC = () => {
             </Stack>
           )}
 
+          {/* Información */}
           <Card elevation={0} sx={{ borderRadius: 3, mb: 3, border: `1px solid ${theme.palette.divider}` }}>
             <CardContent sx={{ p: 4 }}>
               <Typography variant="h5" fontWeight="bold" mb={2} display="flex" alignItems="center" gap={1}>
@@ -316,13 +355,13 @@ const DetalleLote: React.FC = () => {
         </Box>
       </Box>
 
-      {/* Modal de Puja (Conectado) */}
-      <PujarModal 
-        {...pujarModal.modalProps}
-        lote={lote} 
-        soyGanador={soyGanador}
+      {/* Modal de Puja */}
+     <PujarModal 
+        open={pujarModal.isOpen}       // Required
+        onClose={pujarModal.close}     // Required
+        lote={lote}                    // Required (Ensure 'lote' is not null/undefined when passed, or handle inside modal)
+        soyGanador={!!soyGanador}      // Optional but good practice
         onSuccess={() => {
-            // Forzar actualización inmediata al cerrar el modal
             queryClient.invalidateQueries({ queryKey: ['lote', id] });
         }}
       />

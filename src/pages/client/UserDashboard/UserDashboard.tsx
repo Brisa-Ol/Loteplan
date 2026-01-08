@@ -6,31 +6,40 @@ import {
 import { 
   AccountBalanceWallet, Warning, TrendingUp, Description, Gavel,
   ChevronRight, CheckCircle, Schedule, ReceiptLong, Assessment, EmojiEvents,
-  AccountCircle, HelpOutline, Security,
-  MonetizationOn
+  AccountCircle, HelpOutline, Security, MonetizationOn
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-
-
+import { alpha } from '@mui/material/styles';
 
 // Context & Hooks
 import { useAuth } from '../../../context/AuthContext';
 import { QueryHandler } from '../../../components/common/QueryHandler/QueryHandler';
 import { useDashboardStats } from '../../../hooks/useDashboardStats'; 
-import { alpha } from '@mui/material/styles';
 
 // DTOs
 import type { PagoDto } from '../../../types/dto/pago.dto';
 import type { SuscripcionDto } from '../../../types/dto/suscripcion.dto';
 import type { ResumenCuentaDto } from '../../../types/dto/resumenCuenta.dto';
 import type { InversionDto } from '../../../types/dto/inversion.dto';
+import type { PujaDto } from '../../../types/dto/puja.dto'; // Import PujaDto
+
+// Services
 import InversionService from '../../../services/inversion.service';
 import ResumenCuentaService from '../../../services/resumenCuenta.service';
 import MensajeService from '../../../services/mensaje.service';
 import SuscripcionService from '../../../services/suscripcion.service';
 import PagoService from '../../../services/pago.service';
 import PujaService from '../../../services/puja.service';
+
+// --- Helper Local para Días Restantes ---
+const calculateDaysRemaining = (dateString?: string): number => {
+  if (!dateString) return 90; // Default fallback
+  const today = new Date();
+  const dueDate = new Date(dateString);
+  const diffTime = dueDate.getTime() - today.getTime();
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+};
 
 const UserDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -39,26 +48,32 @@ const UserDashboard: React.FC = () => {
 
   // ========== 1. DATA FETCHING ==========
   const { data: resumenes } = useQuery<ResumenCuentaDto[]>({
-    queryKey: ['misResumenes'], queryFn: async () => (await ResumenCuentaService.getMyAccountSummaries()).data
+    queryKey: ['misResumenes'], 
+    queryFn: async () => (await ResumenCuentaService.getMyAccountSummaries()).data
   });
 
   const { data: suscripciones } = useQuery<SuscripcionDto[]>({
-    queryKey: ['misSuscripciones'], queryFn: async () => (await SuscripcionService.getMisSuscripciones()).data
+    queryKey: ['misSuscripciones'], 
+    queryFn: async () => (await SuscripcionService.getMisSuscripciones()).data
   });
 
   const { data: inversiones } = useQuery<InversionDto[]>({
-    queryKey: ['misInversiones'], queryFn: async () => (await InversionService.getMisInversiones()).data
+    queryKey: ['misInversiones'], 
+    queryFn: async () => (await InversionService.getMisInversiones()).data
   });
 
   const { data: pagos } = useQuery<PagoDto[]>({
-    queryKey: ['misPagosPendientes'], queryFn: async () => (await PagoService.getMyPayments()).data
+    queryKey: ['misPagosPendientes'], 
+    queryFn: async () => (await PagoService.getMyPayments()).data
   });
 
   const { data: mensajesData, isLoading: loadingMensajes } = useQuery<any>({
-    queryKey: ['mensajesNoLeidos'], queryFn: async () => (await MensajeService.getUnreadCount()).data
+    queryKey: ['mensajesNoLeidos'], 
+    queryFn: async () => (await MensajeService.getUnreadCount()).data
   });
 
-  const { data: misPujas } = useQuery({
+  // ✅ Corregido: Tipado explícito para misPujas
+  const { data: misPujas } = useQuery<PujaDto[]>({
     queryKey: ['misPujasCheck'], 
     queryFn: async () => (await PujaService.getMyPujas()).data,
     staleTime: 60000 
@@ -69,18 +84,19 @@ const UserDashboard: React.FC = () => {
   // ========== 2. LÓGICA CENTRALIZADA ========== 
   const stats = useDashboardStats({ resumenes, suscripciones, inversiones, pagos });
   const mensajesSinLeer = mensajesData?.conteo || 0;
+  
+  // ✅ Lógica de Pujas Ganadoras
   const pujasGanadoras = misPujas?.filter(p => p.estado_puja === 'ganadora_pendiente') || [];
   const cantidadGanadas = pujasGanadoras.length;
   
-  // Calcular días restantes para cada puja ganadora
+  // Calcular días restantes y ordenar
   const pujasConDiasRestantes = pujasGanadoras.map(puja => {
-    const diasRestantes = puja.fecha_vencimiento_pago 
-      ? PujaService.calcularDiasRestantes(puja.fecha_vencimiento_pago)
-      : 90;
+    // Usamos el helper local o el valor por defecto si no hay fecha
+    const diasRestantes = calculateDaysRemaining(puja.fecha_vencimiento_pago);
     return { ...puja, diasRestantes };
-  }).sort((a, b) => a.diasRestantes - b.diasRestantes); // Ordenar por urgencia
+  }).sort((a, b) => a.diasRestantes - b.diasRestantes);
   
-  const pujaMasUrgente = pujasConDiasRestantes[0]; // La que tiene menos días
+  const pujaMasUrgente = pujasConDiasRestantes[0]; 
   const hayPujasUrgentes = pujaMasUrgente && pujaMasUrgente.diasRestantes <= 7;
 
   return (
@@ -123,6 +139,8 @@ const UserDashboard: React.FC = () => {
         {/* ALERTAS CRÍTICAS */}
         {(stats.cantidadPagosVencidos > 0 || mensajesSinLeer > 0 || cantidadGanadas > 0) && (
           <Stack spacing={2} mb={5}>
+            
+            {/* ✅ ALERTA DE PUJAS GANADORAS */}
             {cantidadGanadas > 0 && (
                <Alert 
                 severity={hayPujasUrgentes ? "warning" : "success"} 
@@ -133,92 +151,80 @@ const UserDashboard: React.FC = () => {
                     variant="contained" 
                     color={hayPujasUrgentes ? "error" : "warning"} 
                     size="small" 
-                    onClick={() => navigate('/client/subastas')} 
-                    sx={{ fontWeight: 800 }}
+                    // ✅ Redirección correcta a la página de Mis Pujas
+                    onClick={() => navigate('/client/MisPujas')} 
+                    sx={{ fontWeight: 800, bgcolor: 'background.paper', color: 'text.primary', '&:hover': { bgcolor: 'background.default' } }}
                   >
-                    Pagar Ahora
+                    Ver Detalles
                   </Button>
                 }
                 sx={{ 
                   borderRadius: 3, 
-                  py: 2, 
-                  px: 3, 
+                  py: 2, px: 3, 
                   boxShadow: theme.shadows[4],
-                  bgcolor: hayPujasUrgentes 
-                    ? theme.palette.warning.dark 
-                    : theme.palette.success.dark
+                  // Ajuste visual para mejor contraste
+                  bgcolor: hayPujasUrgentes ? theme.palette.warning.main : theme.palette.success.main,
+                  color: '#fff'
                 }}
               >
-                <Stack spacing={1}>
-                  <Typography variant="subtitle1" fontWeight={700}>
+                <Stack spacing={0.5}>
+                  <Typography variant="subtitle1" fontWeight={800}>
                     {hayPujasUrgentes 
-                      ? `⚠️ ¡Urgente! ${cantidadGanadas} subasta${cantidadGanadas > 1 ? 's' : ''} por pagar`
-                      : `¡Felicitaciones! Ganaste ${cantidadGanadas} subasta${cantidadGanadas > 1 ? 's' : ''}`
+                      ? `⚠️ Acción Requerida: Tienes ${cantidadGanadas} subasta${cantidadGanadas > 1 ? 's' : ''} ganada${cantidadGanadas > 1 ? 's' : ''} pendiente${cantidadGanadas > 1 ? 's' : ''} de pago`
+                      : `¡Felicitaciones! Has ganado ${cantidadGanadas} subasta${cantidadGanadas > 1 ? 's' : ''}`
                     }
                   </Typography>
                   
                   {pujaMasUrgente && (
                     <Box>
-                      <Typography variant="body2" sx={{ opacity: 0.95, mb: 0.5 }}>
-                        {pujaMasUrgente.lote?.nombre_lote || `Lote #${pujaMasUrgente.id_lote}`}
+                      <Typography variant="body2" sx={{ opacity: 0.95, fontWeight: 500 }}>
+                        {/* Se asume que el backend incluye el objeto 'lote' en la respuesta de getMyPujas */}
+                        Lote: {pujaMasUrgente.lote?.nombre_lote || `ID #${pujaMasUrgente.id_lote}`}
                       </Typography>
-                      <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
+                      
+                      <Stack direction="row" spacing={1} alignItems="center" mt={0.5}>
                         <Chip 
                           label={
-                            pujaMasUrgente.diasRestantes === 0 
-                              ? "⚠️ Vence HOY" 
-                              : pujaMasUrgente.diasRestantes === 1
-                                ? "⚠️ Vence MAÑANA"
-                                : pujaMasUrgente.diasRestantes <= 7
-                                  ? `⚠️ ${pujaMasUrgente.diasRestantes} días restantes`
-                                  : `${pujaMasUrgente.diasRestantes} días restantes`
+                            pujaMasUrgente.diasRestantes <= 0 
+                              ? "¡Vence HOY!" 
+                              : `${pujaMasUrgente.diasRestantes} días para pagar`
                           }
-                          color={pujaMasUrgente.diasRestantes <= 7 ? "error" : "default"}
                           size="small"
                           sx={{ 
                             fontWeight: 700,
-                            bgcolor: pujaMasUrgente.diasRestantes <= 7 ? 'error.main' : 'rgba(255,255,255,0.2)',
-                            color: pujaMasUrgente.diasRestantes <= 7 ? 'white' : 'inherit'
+                            bgcolor: 'rgba(255,255,255,0.25)',
+                            color: '#fff',
+                            border: 'none'
                           }}
                         />
-                        {pujaMasUrgente.fecha_vencimiento_pago && (
-                          <Typography variant="caption" sx={{ opacity: 0.9 }}>
-                            Vence: {new Date(pujaMasUrgente.fecha_vencimiento_pago).toLocaleDateString('es-AR')}
-                          </Typography>
-                        )}
                       </Stack>
                     </Box>
-                  )}
-                  
-                  {cantidadGanadas > 1 && (
-                    <Typography variant="caption" sx={{ opacity: 0.85, display: 'block', mt: 0.5 }}>
-                      {cantidadGanadas - 1} {cantidadGanadas - 1 === 1 ? 'subasta más' : 'subastas más'} pendiente{cantidadGanadas - 1 > 1 ? 's' : ''} de pago
-                    </Typography>
                   )}
                 </Stack>
               </Alert>
             )}
 
+            {/* ALERTA DE PAGOS VENCIDOS */}
             {stats.cantidadPagosVencidos > 0 && (
               <Alert 
                 severity="error" 
                 variant="outlined"
                 icon={<Warning fontSize="large" />}
                 action={
-                  <Button variant="contained" color="error" onClick={() => navigate('/pagos')} sx={{ fontWeight: 500 }}>
-                    Regularizar
+                  <Button variant="contained" color="error" onClick={() => navigate('/pagos')} sx={{ fontWeight: 700 }}>
+                    Pagar Ahora
                   </Button>
                 }
-                sx={{ borderRadius: 3, bgcolor: alpha(theme.palette.error.main, 0.08), border: `1.8px solid ${theme.palette.error.main}`, py: 2 }}
+                sx={{ borderRadius: 3, bgcolor: alpha(theme.palette.error.main, 0.05), border: `1px solid ${theme.palette.error.main}`, py: 2 }}
               >
-                <Typography variant="subtitle1" fontWeight={700}>Tienes {stats.cantidadPagosVencidos} cuotas vencidas</Typography>
-                <Typography variant="body2" color="text.secondary">Evita cargos adicionales regularizando tu cuenta.</Typography>
+                <Typography variant="subtitle1" fontWeight={800}>Tienes {stats.cantidadPagosVencidos} cuotas vencidas</Typography>
+                <Typography variant="body2" color="text.secondary">Evita cargos adicionales regularizando tu cuenta hoy mismo.</Typography>
               </Alert>
             )}
           </Stack>
         )}
 
-        <QueryHandler isLoading={isLoading} error={null} loadingMessage="Generando tu resumen financiero...">
+        <QueryHandler isLoading={isLoading} error={null} loadingMessage="Cargando tu resumen...">
           
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 340px' }, gap: 4, alignItems: 'start' }}>
             
@@ -227,6 +233,7 @@ const UserDashboard: React.FC = () => {
               
               {/* KPIs HERO */}
               <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 3, mb: 5 }}>
+                {/* ... (Resto de las tarjetas de KPI se mantienen igual) ... */}
                 <Card elevation={0} sx={{ 
                   background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`, 
                   color: '#fff', borderRadius: 4, boxShadow: `0 8px 24px ${alpha(theme.palette.primary.main, 0.25)}` 
@@ -249,8 +256,8 @@ const UserDashboard: React.FC = () => {
                   <CardContent sx={{ p: 4 }}>
                     <Stack spacing={2}>
                       <Box display="flex" alignItems="center" gap={1}>
-                        <Avatar sx={{ bgcolor: alpha('#CC6333', 0.9), color: '#fff' }}><Schedule /></Avatar>
-                        <Typography variant="overline" sx={{ fontWeight: 800, letterSpacing: 2, color: '#333333' }}>Próximo Pago</Typography>
+                        <Avatar sx={{ bgcolor: alpha('#CC6333', 0.1), color: 'primary.main' }}><Schedule /></Avatar>
+                        <Typography variant="overline" sx={{ fontWeight: 800, letterSpacing: 2, color: 'text.secondary' }}>Próximo Pago</Typography>
                       </Box>
                       {stats.proximoVencimiento ? (
                         <>
@@ -259,13 +266,18 @@ const UserDashboard: React.FC = () => {
                           </Typography>
                           <Chip 
                             label={`Vence: ${new Date(stats.proximoVencimiento.fecha_vencimiento).toLocaleDateString()}`}
-                            variant="outlined" sx={{ fontWeight: 700, borderRadius: 1.5, width: 'fit-content' }}
+                            color="warning"
+                            size="small"
+                            sx={{ fontWeight: 700, borderRadius: 1.5, width: 'fit-content' }}
                           />
                         </>
                       ) : (
                         <Box display="flex" alignItems="center" gap={2} py={1}>
                           <CheckCircle color="success" sx={{ fontSize: 40 }} />
-                          <Typography variant="h5" fontWeight={700} color="success.main">Al día</Typography>
+                          <Box>
+                            <Typography variant="h6" fontWeight={700} color="success.main">¡Todo al día!</Typography>
+                            <Typography variant="body2" color="text.secondary">No tienes pagos pendientes.</Typography>
+                          </Box>
                         </Box>
                       )}
                     </Stack>
@@ -285,7 +297,10 @@ const UserDashboard: React.FC = () => {
                 ].map((s, i) => (
                   <Box key={i} sx={{ textAlign: 'center', p: 2, gridColumn: { xs: s.full ? 'span 2' : 'auto', sm: 'auto' } }}>
                     <Typography variant="h5" fontWeight={800} color="text.primary">{s.val}</Typography>
-                    <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ textTransform: 'uppercase' }}>{s.label}</Typography>
+                    <Stack direction="row" justifyContent="center" alignItems="center" gap={0.5} mt={0.5}>
+                        {s.icon}
+                        <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ textTransform: 'uppercase' }}>{s.label}</Typography>
+                    </Stack>
                   </Box>
                 ))}
               </Box>
@@ -304,7 +319,7 @@ const UserDashboard: React.FC = () => {
                   return (
                     <Card key={resumen.id} elevation={0} sx={{ 
                       borderRadius: 4, border: `1px solid ${theme.palette.divider}`,
-                      transition: 'all 0.2s', '&:hover': { transform: 'translateY(-4px)', boxShadow: theme.shadows[6], borderColor: theme.palette.primary.main }
+                      transition: 'all 0.2s', '&:hover': { transform: 'translateY(-4px)', boxShadow: theme.shadows[4], borderColor: theme.palette.primary.main }
                     }}>
                       <CardContent sx={{ p: 4 }}>
                         <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={4}>
@@ -312,10 +327,12 @@ const UserDashboard: React.FC = () => {
                             <Typography variant="h6" fontWeight={800} gutterBottom>{resumen.nombre_proyecto}</Typography>
                             <Stack direction="row" spacing={1}>
                               <Chip label={`${resumen.meses_proyecto} cuotas`} size="small" variant="outlined" sx={{ fontWeight: 600 }} />
-                              {saldoProyecto > 0 && <Chip label={`+$${saldoProyecto} a favor`} color="success" size="small" sx={{ fontWeight: 800 }} />}
+                              {saldoProyecto > 0 && <Chip label={`+$${saldoProyecto.toLocaleString()} a favor`} color="success" size="small" sx={{ fontWeight: 800 }} />}
                             </Stack>
                           </Box>
-                          <IconButton onClick={() => navigate('/MisResumenes')} color="primary"><Assessment /></IconButton>
+                          <IconButton onClick={() => navigate('/mis-resumenes')} color="primary" sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1) }}>
+                            <Assessment />
+                          </IconButton>
                         </Box>
 
                         <Box>
@@ -336,6 +353,9 @@ const UserDashboard: React.FC = () => {
                     </Card>
                   );
                 })}
+                {resumenes?.length === 0 && (
+                    <Alert severity="info" variant="outlined" sx={{ borderRadius: 3 }}>No tienes inversiones activas en este momento.</Alert>
+                )}
               </Stack>
             </Box>
 
@@ -346,13 +366,17 @@ const UserDashboard: React.FC = () => {
                 <Stack spacing={1.5}>
                   {[
                     { l: 'Pagar Cuotas', i: <AccountBalanceWallet />, r: '/pagos', v: 'contained', c: 'primary' },
+                    { l: 'Mis Subastas', i: <Gavel />, r: '/client/MisPujas' }, // ✅ Link Correcto
                     { l: 'Transacciones', i: <ReceiptLong />, r: '/client/transacciones' },
-                    { l: 'Subastas', i: <Gavel />, r: '/client/subastas' },
                     { l: 'Contratos', i: <Description />, r: '/client/contratos' }
                   ].map((btn, idx) => (
                     <Button 
-                      key={idx} variant={btn.v as any || 'outlined'} fullWidth size="large" 
-                      startIcon={btn.i} onClick={() => navigate(btn.r)}
+                      key={idx} 
+                      variant={btn.v as any || 'outlined'} 
+                      fullWidth 
+                      size="large" 
+                      startIcon={btn.i} 
+                      onClick={() => navigate(btn.r)}
                       sx={{ justifyContent: 'flex-start', py: 1.5, borderRadius: 2, fontWeight: 700 }}
                     >
                       {btn.l}

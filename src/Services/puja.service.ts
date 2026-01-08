@@ -106,10 +106,22 @@ const PujaService = {
    * Ejecuta la lógica de cierre de subasta para un lote.
    * Libera los tokens de los perdedores (excepto Top 3).
    * * @param idLote - ID del lote cuya subasta finalizó
+   * * @param idGanador - ID del ganador (necesario para el backend)
    * @remarks Backend: POST /api/pujas/gestionar_finalizacion
    */
-  manageAuctionEnd: async (idLote: number): Promise<AxiosResponse<GenericResponseDto>> => {
-    return await httpService.post(`${BASE_ENDPOINT}/gestionar_finalizacion`, { id_lote: idLote });
+  manageAuctionEnd: async (idLote: number, idGanador: number | null): Promise<AxiosResponse<GenericResponseDto>> => {
+    return await httpService.post(`${BASE_ENDPOINT}/gestionar_finalizacion`, { 
+      id_lote: idLote,
+      id_ganador: idGanador 
+    });
+  },
+
+  /**
+   * ADMIN: Cancela una puja ganadora manualmente (ej: el usuario avisa que no pagará).
+   * Backend: POST /api/pujas/cancelar_puja_ganadora/:id
+   */
+  cancelarGanadoraAnticipada: async (id: number, motivo: string): Promise<AxiosResponse<GenericResponseDto>> => {
+    return await httpService.post(`${BASE_ENDPOINT}/cancelar_puja_ganadora/${id}`, { motivo_cancelacion: motivo });
   },
 
   /**

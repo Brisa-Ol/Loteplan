@@ -7,12 +7,14 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import PujaService from '../../../../services/puja.service';
 import type { LoteDto } from '../../../../types/dto/lote.dto';
+import type { CreatePujaDto } from '../../../../types/dto/puja.dto';
 import { BaseModal } from '../../../../components/common/BaseModal/BaseModal';
 
-// Interfaz local para el DTO extendido
+// ✅ CORRECCIÓN DE INTERFAZ:
+// No redefinimos 'monto_ganador_lote' porque ya existe en LoteDto como 'string | null'.
+// Solo agregamos 'ultima_puja' que suele venir de un include o query separada.
 interface LoteConPuja extends LoteDto {
-    ultima_puja?: { monto: number; id_usuario: number; }; 
-    monto_ganador_lote?: number;
+    ultima_puja?: { monto: number | string; id_usuario: number; }; 
 }
 
 interface Props {
@@ -20,7 +22,7 @@ interface Props {
   onClose: () => void;
   lote: LoteDto | null;
   soyGanador?: boolean;
-  onSuccess?: () => void; // ✅ AGREGADO: Prop faltante
+  onSuccess?: () => void;
 }
 
 export const PujarModal: React.FC<Props> = ({ open, onClose, lote: loteProp, soyGanador = false, onSuccess }) => {
@@ -41,27 +43,28 @@ export const PujarModal: React.FC<Props> = ({ open, onClose, lote: loteProp, soy
   const mutation = useMutation({
     mutationFn: async () => {
       if (!lote) return;
-      await PujaService.create({
+      
+      const payload: CreatePujaDto = {
         id_lote: lote.id,
-        monto_puja: Number(monto)
-      });
+        monto_puja: Number(monto) // Convertimos el string del input a number para el DTO de envío
+      };
+
+      await PujaService.create(payload);
     },
     onSuccess: () => {
-      // Invalidar queries para refrescar UI
       queryClient.invalidateQueries({ queryKey: ['lotesProyecto'] }); 
-      queryClient.invalidateQueries({ queryKey: ['lote'] });
+      queryClient.invalidateQueries({ queryKey: ['lote', lote?.id?.toString()] });
       queryClient.invalidateQueries({ queryKey: ['misPujas'] });
       
       const msg = soyGanador ? '¡Has actualizado tu puja exitosamente!' : '¡Oferta realizada con éxito!';
-      // Reemplazamos alert por snackbar si lo tienes disponible, sino alert está bien por ahora
       alert(msg); 
       
-      if (onSuccess) onSuccess(); // ✅ Ejecutar callback si existe
+      if (onSuccess) onSuccess();
       handleReset();
     },
     onError: (err: any) => {
-      // Extraer mensaje de error del backend (ej: "No tienes tokens")
-      setError(err.response?.data?.error || 'Error al realizar la puja. Verifica tus tokens.');
+      const msg = err.response?.data?.error || err.message || 'Error al realizar la puja.';
+      setError(msg);
     }
   });
 
@@ -73,15 +76,23 @@ export const PujarModal: React.FC<Props> = ({ open, onClose, lote: loteProp, soy
 
   if (!lote) return null;
 
-  // Cálculos de precio
-  // Intentamos leer el monto ganador directo, o la última puja, o el precio base
-  const ultimaPujaMonto = Number(lote.monto_ganador_lote || lote.ultima_puja?.monto || 0);
-  const precioBase = Number(lote.precio_base);
+  // === CÁLCULOS DE PRECIO Y REGLAS DE NEGOCIO ===
   
-  // Precio a superar: Si hay puja, debe ser mayor. Si no, mayor o igual al base.
-  const precioA_Vencer = ultimaPujaMonto > 0 ? ultimaPujaMonto : precioBase;
-  const hayPujasPrevias = ultimaPujaMonto > 0;
+  // 1. Conversión Explícita de Tipos (String -> Number)
+  // Como tu DTO define estos campos como 'string', debemos convertirlos para comparaciones matemáticas.
+  
+  const precioBase = Number(lote.precio_base); // Viene como string del DTO
+  const montoGanadorLote = lote.monto_ganador_lote ? Number(lote.monto_ganador_lote) : 0; // Viene como string | null
+  const montoUltimaPuja = lote.ultima_puja?.monto ? Number(lote.ultima_puja.monto) : 0; // Puede venir number o string
+  
+  // 2. Determinar el "Precio de Mercado" actual
+  const precioMercado = Math.max(montoUltimaPuja, montoGanadorLote);
 
+  // 3. Determinar precio a vencer
+  const hayPujasPrevias = precioMercado > 0;
+  const precioA_Vencer = hayPujasPrevias ? precioMercado : precioBase;
+
+  // Helper de formateo visual
   const formatMoney = (amount: number) => 
     new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(amount);
 
@@ -91,8 +102,12 @@ export const PujarModal: React.FC<Props> = ({ open, onClose, lote: loteProp, soy
   };
 
   const montoNumerico = Number(monto);
-  // Validación: Si hay puja previa, debe ser estrictamente mayor. Si no, mayor o igual al base.
-  const esMontoValido = monto !== '' && (hayPujasPrevias ? montoNumerico > precioA_Vencer : montoNumerico >= precioBase);
+  
+  // === VALIDACIÓN ===
+  const esMontoValido = 
+    monto !== '' && 
+    !isNaN(montoNumerico) && 
+    (hayPujasPrevias ? montoNumerico > precioA_Vencer : montoNumerico >= precioBase);
 
   return (
     <BaseModal
@@ -111,7 +126,7 @@ export const PujarModal: React.FC<Props> = ({ open, onClose, lote: loteProp, soy
     >
       <Stack spacing={3}>
           
-          {/* Información del Lote y Precio a Vencer */}
+          {/* Panel de Información de Precios */}
           <Box 
             p={2} 
             bgcolor={soyGanador ? alpha(theme.palette.success.main, 0.05) : (hayPujasPrevias ? alpha(theme.palette.warning.main, 0.05) : alpha(theme.palette.grey[500], 0.05))} 
@@ -153,7 +168,12 @@ export const PujarModal: React.FC<Props> = ({ open, onClose, lote: loteProp, soy
               startAdornment: <InputAdornment position="start"><MonetizationOn color="action" /></InputAdornment>,
             }}
             error={!!error || (monto !== '' && !esMontoValido)}
-            helperText={error || (monto !== '' && !esMontoValido ? `Debe superar ${formatMoney(precioA_Vencer)}` : '')}
+            helperText={
+                error || 
+                (monto !== '' && !esMontoValido 
+                    ? `Debe ${hayPujasPrevias ? 'superar' : 'ser al menos'} ${formatMoney(precioA_Vencer)}` 
+                    : '')
+            }
             sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
           />
 
