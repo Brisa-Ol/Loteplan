@@ -30,9 +30,21 @@ const httpService = axios.create({
 httpService.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const token = localStorage.getItem('auth_token');
+    
+    // A. Inyección de Token
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    // B. 🟢 DETECCIÓN INTELIGENTE DE ARCHIVOS (KYC)
+    // Si estamos enviando un FormData (archivos), ELIMINAMOS el Content-Type.
+    // Esto obliga al navegador a poner 'multipart/form-data' Y el 'boundary' automáticamente.
+    if (config.data instanceof FormData) {
+      if (config.headers) {
+        delete config.headers['Content-Type'];
+      }
+    }
+
     return config;
   },
   (error) => Promise.reject(error)

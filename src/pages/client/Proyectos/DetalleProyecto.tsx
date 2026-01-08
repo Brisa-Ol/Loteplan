@@ -1,5 +1,3 @@
-// src/pages/client/Proyectos/DetalleProyecto.tsx
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -24,18 +22,17 @@ import MercadoPagoService from '../../../services/pagoMercado.service';
 
 // --- TIPOS ---
 import type { ContratoFirmadoDto } from '../../../types/dto/contrato.dto';
-import type { ApiError } from '../../../services/httpService';
 
 // --- HOOKS Y CONTEXTO ---
 import { useModal } from '../../../hooks/useModal';
 import { useAuth } from '../../../context/AuthContext';
-import { useSnackbar } from '../../../context/SnackbarContext'; // ✅ Hook Global
+import { useSnackbar } from '../../../context/SnackbarContext';
 
 // --- COMPONENTES COMUNES ---
 import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
 import TwoFactorAuthModal from '../../../components/common/TwoFactorAuthModal/TwoFactorAuthModal';
 
-// --- COMPONENTES ESPECÍFICOS DEL FLUJO ---
+// --- COMPONENTES ESPECÍFICOS ---
 import ModalFirmaContrato from '../Contratos/components/ModalFirmaContrato';
 import { VerContratoModal } from '../Contratos/components/VerContratoModal';
 import { ListaLotesProyecto } from '../Lotes/ListaLotesProyecto';
@@ -44,7 +41,7 @@ import { VerContratoFirmadoModal } from './components/VerContratoFirmadoModal';
 import { SuscribirseModal } from './components/SuscribirseModal';
 import { ConfirmarInversionModal } from './components/ConfirmarInversionModal';
 
-// Helper de Tabs (Estilizado)
+// Helper de Tabs
 interface TabPanelProps { children?: React.ReactNode; index: number; value: number; }
 function CustomTabPanel({ children, value, index, ...other }: TabPanelProps) {
   return (
@@ -61,17 +58,15 @@ const DetalleProyecto: React.FC = () => {
   const { user } = useAuth(); 
   const queryClient = useQueryClient();
   const theme = useTheme();
-  
-  // ✅ Usamos snackbar global
   const { showSuccess, showError, showInfo } = useSnackbar();
   
-  // --- ESTADOS DE UI ---
+  // --- ESTADOS ---
   const [tabValue, setTabValue] = useState(0);
   const [yaFirmo, setYaFirmo] = useState(false); 
   const [puedeFirmar, setPuedeFirmar] = useState(false);
   const [contratoFirmadoSeleccionado, setContratoFirmadoSeleccionado] = useState<ContratoFirmadoDto | null>(null);
   
-  // --- HOOKS DE MODALES ---
+  // --- MODALES ---
   const firmaModal = useModal();
   const contratoModal = useModal();     
   const firmadoModal = useModal();       
@@ -80,14 +75,14 @@ const DetalleProyecto: React.FC = () => {
   const pagoExitosoModal = useModal();
   const twoFAModal = useModal();
   
-  // --- ESTADOS DE PROCESO ---
+  // --- ESTADOS PROCESO ---
   const [verificandoPago, setVerificandoPago] = useState(false);
   const pollingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [pendingTransactionId, setPendingTransactionId] = useState<number | null>(null);
   const [error2FA, setError2FA] = useState<string | null>(null);
 
   // ==========================================
-  // 1. QUERIES (DATOS)
+  // QUERIES
   // ==========================================
   const { data: proyecto, isLoading } = useQuery({
     queryKey: ['proyecto', id],
@@ -114,10 +109,8 @@ const DetalleProyecto: React.FC = () => {
   });
 
   // ==========================================
-  // 2. EFECTOS (LÓGICA DE NEGOCIO)
+  // EFECTOS
   // ==========================================
-  
-  // Detectar si YA FIRMÓ contrato
   useEffect(() => {
     if (misContratos && proyecto) {
       const contrato = misContratos.find(c => c.id_proyecto === proyecto.id && c.estado_firma === 'FIRMADO');
@@ -125,25 +118,19 @@ const DetalleProyecto: React.FC = () => {
     }
   }, [misContratos, proyecto]);
 
-  // Detectar si PUEDE FIRMAR (Ya pagó)
   useEffect(() => {
     if (!proyecto || !user) return;
     let tienePermiso = false;
-
-    // Lógica para Inversión Directa
     if (proyecto.tipo_inversion === 'directo' && misInversiones) {
       const inv = misInversiones.find(i => i.id_proyecto === proyecto.id && i.estado === 'pagado');
       if (inv) tienePermiso = true;
-    } 
-    // Lógica para Suscripción Mensual
-    else if (proyecto.tipo_inversion === 'mensual' && misSuscripciones) {
+    } else if (proyecto.tipo_inversion === 'mensual' && misSuscripciones) {
       const sub = misSuscripciones.find(s => s.id_proyecto === proyecto.id && s.activo);
       if (sub) tienePermiso = true;
     }
     setPuedeFirmar(tienePermiso);
   }, [proyecto, user, misInversiones, misSuscripciones]);
 
-  // Polling de Mercado Pago
   useEffect(() => {
     const query = new URLSearchParams(location.search);
     const status = query.get('status');
@@ -185,13 +172,11 @@ const DetalleProyecto: React.FC = () => {
   };
 
   // ==========================================
-  // 3. MUTACIONES
+  // MUTACIONES
   // ==========================================
-
   const handleInversion = useMutation({
     mutationFn: async () => {
       if (!proyecto) throw new Error("Error de proyecto");
-
       let initResponse: any;
       let modelType: 'pago' | 'inversion';
       
@@ -206,7 +191,6 @@ const DetalleProyecto: React.FC = () => {
       }
 
       if (initResponse.redirectUrl) return initResponse;
-
       const idParaCheckout = initResponse.pagoId || initResponse.inversionId || initResponse.id;
       if (!idParaCheckout) return initResponse;
 
@@ -216,22 +200,18 @@ const DetalleProyecto: React.FC = () => {
     onSuccess: (data: any) => {
       suscribirseModal.close(); 
       inversionModal.close();
-      
       if (data.is2FARequired && data.transaccionId) {
         setPendingTransactionId(data.transaccionId);
         twoFAModal.open();
         return;
       } 
-      
       if (data.redirectUrl) {
         window.location.href = data.redirectUrl;
         return;
       } 
-      
       manejarRedireccionExito(data);
     },
-    onError: (err: any) => {
-      // El error ya sale por el interceptor, pero cerramos modales
+    onError: () => {
       suscribirseModal.close(); 
       inversionModal.close();
     }
@@ -257,9 +237,8 @@ const DetalleProyecto: React.FC = () => {
   };
 
   // ==========================================
-  // 4. HANDLERS
+  // HANDLERS & RENDER
   // ==========================================
-
   const handleContinuarAFirma = () => {
     pagoExitosoModal.close(); 
     setTimeout(() => { setPuedeFirmar(true); firmaModal.open(); }, 500);
@@ -282,15 +261,10 @@ const DetalleProyecto: React.FC = () => {
   };
 
   const is2FAMissing = !!(user && !user.is_2fa_enabled);
-
   const handleMainAction = () => {
     if (!user) return navigate('/login', { state: { from: window.location.pathname }});
-    
-    if (proyecto?.tipo_inversion === 'mensual') {
-        suscribirseModal.open();
-    } else {
-        inversionModal.open();
-    }
+    if (proyecto?.tipo_inversion === 'mensual') suscribirseModal.open();
+    else inversionModal.open();
   };
 
   const handleClickFirmar = () => {
@@ -299,9 +273,6 @@ const DetalleProyecto: React.FC = () => {
     firmaModal.open();
   };
 
-  // ==========================================
-  // 5. RENDER
-  // ==========================================
   const coverImage = proyecto?.imagenes?.[0] ? ImagenService.resolveImageUrl(proyecto.imagenes[0].url) : '/assets/placeholder-project.jpg'; 
   const porcentaje = (proyecto?.tipo_inversion === 'mensual' && proyecto?.obj_suscripciones > 0) ? (proyecto.suscripciones_actuales / proyecto.obj_suscripciones) * 100 : 0;
   const mostrarTabLotes = proyecto?.tipo_inversion === 'directo' || (proyecto?.lotes && proyecto.lotes.length > 0);
@@ -324,11 +295,11 @@ const DetalleProyecto: React.FC = () => {
         </Stack>
       </Backdrop>
 
-      {/* --- HERO IMAGE --- */}
+      {/* --- HERO IMAGE RESPONSIVE --- */}
       <Box 
         sx={{ 
             position: 'relative', 
-            height: { xs: 300, md: 450 }, 
+            height: { xs: 250, sm: 350, md: 450 }, // Altura variable
             borderRadius: 4, 
             overflow: 'hidden', 
             mb: 4, 
@@ -340,7 +311,7 @@ const DetalleProyecto: React.FC = () => {
             sx={{ 
                 position: 'absolute', bottom: 0, left: 0, right: 0, 
                 background: 'linear-gradient(to top, rgba(0,0,0,0.9), transparent)', 
-                p: { xs: 3, md: 5 }, 
+                p: { xs: 2, sm: 3, md: 5 }, // Padding adaptable
                 color: 'white' 
             }}
         >
@@ -348,23 +319,25 @@ const DetalleProyecto: React.FC = () => {
              <Chip 
                 label={proyecto.tipo_inversion === 'mensual' ? 'Plan de Ahorro' : 'Inversión Directa'} 
                 color="primary" 
+                size="small"
                 sx={{ fontWeight: 700, borderRadius: 1 }} 
              />
              <Chip 
                 label={proyecto.estado_proyecto} 
+                size="small"
                 sx={{ 
                     fontWeight: 600, borderRadius: 1,
                     bgcolor: 'rgba(255,255,255,0.2)', color: 'white', backdropFilter: 'blur(4px)'
                 }} 
              />
           </Stack>
-          <Typography variant="h3" fontWeight={800} sx={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)', fontSize: { xs: '2rem', md: '3rem' } }}>
+          <Typography variant="h3" fontWeight={800} sx={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)', fontSize: { xs: '1.8rem', sm: '2.5rem', md: '3rem' } }}>
             {proyecto.nombre_proyecto}
           </Typography>
         </Box>
       </Box>
 
-      {/* --- LAYOUT PRINCIPAL (Flex) --- */}
+      {/* --- LAYOUT PRINCIPAL (Flex Column en Mobile, Row en Desktop) --- */}
       <Box sx={{ display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, gap: 4 }}>
         
         {/* COLUMNA IZQUIERDA: Tabs de Información */}
@@ -378,6 +351,7 @@ const DetalleProyecto: React.FC = () => {
                 textColor="primary"
                 variant="scrollable"
                 scrollButtons="auto"
+                allowScrollButtonsMobile
               >
                 <Tab icon={<Info fontSize="small" />} iconPosition="start" label="Descripción" sx={{ fontWeight: 600 }} />
                 <Tab icon={<InsertPhoto fontSize="small" />} iconPosition="start" label="Galería" sx={{ fontWeight: 600 }} />
@@ -386,13 +360,13 @@ const DetalleProyecto: React.FC = () => {
               
               <CardContent sx={{ p: { xs: 2, md: 4 } }}>
                   <CustomTabPanel value={tabValue} index={0}>
-                    <Typography paragraph sx={{ whiteSpace: 'pre-line', lineHeight: 1.8, color: 'text.secondary', fontSize: '1rem' }}>
+                    <Typography paragraph sx={{ whiteSpace: 'pre-line', lineHeight: 1.8, color: 'text.secondary', fontSize: { xs: '0.9rem', md: '1rem' } }}>
                         {proyecto.descripcion}
                     </Typography>
                   </CustomTabPanel>
                   
                   <CustomTabPanel value={tabValue} index={1}>
-                      <Box display="grid" gridTemplateColumns="repeat(auto-fill, minmax(240px, 1fr))" gap={2}>
+                      <Box display="grid" gridTemplateColumns="repeat(auto-fill, minmax(280px, 1fr))" gap={2}>
                         {proyecto.imagenes?.map((img) => (
                             <Box 
                                 key={img.id} 
@@ -422,7 +396,7 @@ const DetalleProyecto: React.FC = () => {
           <Card 
             elevation={0} 
             sx={{ 
-                p: 3, 
+                p: { xs: 2, sm: 3 }, 
                 borderRadius: 3, 
                 position: { lg: 'sticky' }, top: { lg: 100 }, 
                 border: `1px solid ${theme.palette.divider}`,
@@ -444,12 +418,12 @@ const DetalleProyecto: React.FC = () => {
                      <MonetizationOn color="primary" fontSize="small" />
                      <Typography variant="body2" fontWeight={600}>Valor Total del Proyecto</Typography>
                  </Stack>
-                 <Typography variant="h4" color="primary.main" fontWeight={800}>
+                 <Typography variant="h4" color="primary.main" fontWeight={800} sx={{ fontSize: { xs: '1.8rem', md: '2.2rem' } }}>
                      {proyecto.moneda} {Number(proyecto.monto_inversion).toLocaleString()}
                  </Typography>
                </Box>
 
-               {/* Barra de Progreso (Solo Suscripciones) */}
+               {/* Barra de Progreso */}
                {proyecto.tipo_inversion === 'mensual' && (
                  <Box>
                    <Box display="flex" justifyContent="space-between" mb={1}>
@@ -504,7 +478,7 @@ const DetalleProyecto: React.FC = () => {
                      <Button 
                        variant="contained" color="success" fullWidth startIcon={<CheckCircle />}
                        onClick={handleVerContratoFirmado}
-                       sx={{ fontWeight: 700, borderRadius: 2 }}
+                       sx={{ fontWeight: 700, borderRadius: 2, py: 1.2 }}
                      >
                        Ver Contrato Firmado
                      </Button>
@@ -512,7 +486,7 @@ const DetalleProyecto: React.FC = () => {
                      <Button 
                        variant="outlined" color="success" startIcon={<GppGood />} fullWidth 
                        onClick={handleClickFirmar} disabled={is2FAMissing}
-                       sx={{ borderWidth: 2, fontWeight: 700, borderRadius: 2, '&:hover': { borderWidth: 2 } }}
+                       sx={{ borderWidth: 2, fontWeight: 700, borderRadius: 2, py: 1.2, '&:hover': { borderWidth: 2 } }}
                      >
                        Firmar Contrato (Pendiente)
                      </Button>
@@ -534,7 +508,7 @@ const DetalleProyecto: React.FC = () => {
         </Box>
       </Box>
 
-      {/* --- MODALES CONECTADOS --- */}
+      {/* --- MODALES --- */}
       {user && (
         <>
           <PagoExitosoModal open={pagoExitosoModal.isOpen} onContinuar={handleContinuarAFirma} />

@@ -26,9 +26,7 @@ import { useModal } from '../../../hooks/useModal';
 import { FavoritoButton } from '../../../components/common/BotonFavorito/BotonFavorito';
 import PujarModal from './components/PujarModal';
 
-// ✅ INTERFAZ CORREGIDA:
-// No redefinimos 'monto_ganador_lote' (ya está en LoteDto).
-// Solo agregamos 'ultima_puja' que suele venir de la query.
+// ✅ INTERFAZ CORREGIDA
 interface LoteConPuja extends LoteDto {
   ultima_puja?: {
       monto: string | number;
@@ -47,7 +45,7 @@ const DetalleLote: React.FC = () => {
   const pujarModal = useModal(); 
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
-  // 1. QUERY REAL-TIME (Polling)
+  // 1. QUERY REAL-TIME
   const { data: loteData, isLoading, error } = useQuery<LoteDto>({
     queryKey: ['lote', id],
     queryFn: async () => {
@@ -55,7 +53,6 @@ const DetalleLote: React.FC = () => {
       const res = await LoteService.getByIdActive(Number(id));
       return res.data;
     },
-    // Actualiza cada 3 segundos para ver precios y ganador en tiempo real
     refetchInterval: 3000, 
     refetchIntervalInBackground: true,
     retry: false
@@ -68,11 +65,10 @@ const DetalleLote: React.FC = () => {
     // Definición de tipos para evitar el error de "success not assignable to default"
     type ChipColor = 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning';
     
-    // Configuración inicial por defecto
     let config: { 
         label: string; 
         color: ChipColor; 
-        icon?: React.ReactElement; // ✅ Importante: ReactElement | undefined
+        icon?: React.ReactElement; 
     } = { 
         label: '', 
         color: 'default', 
@@ -84,23 +80,17 @@ const DetalleLote: React.FC = () => {
         statusConfig: config 
     };
 
-    // 1. Calcular Precio Actual
-    // Convertimos strings a números para operar
     const montoGanador = lote.monto_ganador_lote ? Number(lote.monto_ganador_lote) : 0;
     const montoUltimaPuja = lote.ultima_puja?.monto ? Number(lote.ultima_puja.monto) : 0;
     
-    // La oferta más alta es la mayor entre el campo cacheado y la relación directa
     const ofertaActual = Math.max(montoGanador, montoUltimaPuja);
     const precioBase = Number(lote.precio_base);
     
     const precioDisplay = ofertaActual > 0 ? ofertaActual : precioBase;
     const hayOfertas = ofertaActual > 0;
 
-    // 2. Verificar si el usuario logueado es el ganador
     const soyGanador = isAuthenticated && (lote.id_ganador === user?.id);
 
-    // 3. Configuración de Estado Visual (Switch)
-    // Forzamos el label a string para evitar conflictos con tipos literales
     config.label = lote.estado_subasta as string;
 
     switch (lote.estado_subasta) {
@@ -144,7 +134,6 @@ const DetalleLote: React.FC = () => {
     );
   }
 
-  // --- VARIABLES VISUALES ---
   const imagenes = lote.imagenes || [];
   const mainImageUrl = imagenes.length > 0
     ? ImagenService.resolveImageUrl(imagenes[selectedImageIndex].url)
@@ -153,7 +142,6 @@ const DetalleLote: React.FC = () => {
   const formatCurrency = (val: number) => 
     new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(val);
 
-  // --- HANDLERS ---
   const openMap = () => {
     if (lote.latitud && lote.longitud) {
       window.open(`http://googleusercontent.com/maps.google.com/?q=${lote.latitud},${lote.longitud}`, '_blank');
@@ -173,23 +161,41 @@ const DetalleLote: React.FC = () => {
         <IconButton onClick={() => navigate(-1)} sx={{ bgcolor: 'background.paper', border: `1px solid ${theme.palette.divider}` }}>
           <ArrowBack />
         </IconButton>
-        <Typography variant="body2" color="text.secondary">
-          Proyectos / {lote.proyecto?.nombre_proyecto || 'General'} / <strong>{lote.nombre_lote}</strong>
+        <Typography variant="body2" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' } }}>
+          Proyectos / {lote.proyecto?.nombre_proyecto || 'General'} /
+        </Typography>
+        <Typography variant="body2" fontWeight="bold">
+            {lote.nombre_lote}
         </Typography>
       </Stack>
 
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '2fr 1fr' }, gap: 4, alignItems: 'start' }}>
+      {/* GRID PRINCIPAL RESPONSIVE */}
+      <Box sx={{ 
+        display: 'grid', 
+        gridTemplateColumns: { xs: '1fr', lg: '2fr 1fr' }, // 1 col móvil, 2 cols desktop
+        gap: 4, 
+        alignItems: 'start' 
+      }}>
 
         {/* === COLUMNA IZQUIERDA (Visuales) === */}
         <Box component="section">
-          <Box sx={{ position: 'relative', height: { xs: 300, md: 500 }, borderRadius: 4, overflow: 'hidden', mb: 2, boxShadow: theme.shadows[2], bgcolor: 'grey.100', border: `1px solid ${theme.palette.divider}` }}>
+          <Box sx={{ 
+            position: 'relative', 
+            height: { xs: 250, sm: 400, md: 500 }, // Altura variable según pantalla
+            borderRadius: 4, 
+            overflow: 'hidden', 
+            mb: 2, 
+            boxShadow: theme.shadows[2], 
+            bgcolor: 'grey.100', 
+            border: `1px solid ${theme.palette.divider}` 
+          }}>
             <Box component="img" src={mainImageUrl} alt={lote.nombre_lote} sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             
             <Box sx={{ position: 'absolute', top: 20, left: 20 }}>
               <Chip 
                 label={statusConfig.label} 
                 color={statusConfig.color} 
-                icon={statusConfig.icon} // ✅ Pasamos el icono o undefined
+                icon={statusConfig.icon} 
                 sx={{ fontWeight: 'bold', boxShadow: 2 }} 
               />
             </Box>
@@ -201,12 +207,17 @@ const DetalleLote: React.FC = () => {
             )}
           </Box>
 
-          {/* Galería */}
+          {/* Galería Responsive (Scroll Horizontal) */}
           {imagenes.length > 1 && (
-            <Stack direction="row" spacing={2} mb={4} sx={{ overflowX: 'auto', py: 1 }}>
+            <Stack direction="row" spacing={2} mb={4} sx={{ overflowX: 'auto', py: 1, px: 1 }}>
               {imagenes.map((img, idx) => (
                 <Box key={img.id} component="img" src={ImagenService.resolveImageUrl(img.url)} alt={`Vista ${idx + 1}`} onClick={() => setSelectedImageIndex(idx)}
-                  sx={{ width: 100, height: 70, objectFit: 'cover', borderRadius: 2, cursor: 'pointer', border: selectedImageIndex === idx ? `2px solid ${theme.palette.primary.main}` : `1px solid ${theme.palette.divider}`, opacity: selectedImageIndex === idx ? 1 : 0.7, transition: 'all 0.2s', '&:hover': { opacity: 1, transform: 'scale(1.05)' } }}
+                  sx={{ 
+                    width: { xs: 80, sm: 100 }, 
+                    height: { xs: 60, sm: 70 }, 
+                    objectFit: 'cover', borderRadius: 2, cursor: 'pointer', border: selectedImageIndex === idx ? `2px solid ${theme.palette.primary.main}` : `1px solid ${theme.palette.divider}`, opacity: selectedImageIndex === idx ? 1 : 0.7, transition: 'all 0.2s', '&:hover': { opacity: 1, transform: 'scale(1.05)' },
+                    flexShrink: 0 // Evita que se aplasten
+                  }}
                 />
               ))}
             </Stack>
@@ -214,7 +225,7 @@ const DetalleLote: React.FC = () => {
 
           {/* Información */}
           <Card elevation={0} sx={{ borderRadius: 3, mb: 3, border: `1px solid ${theme.palette.divider}` }}>
-            <CardContent sx={{ p: 4 }}>
+            <CardContent sx={{ p: { xs: 2, sm: 4 } }}>
               <Typography variant="h5" fontWeight="bold" mb={2} display="flex" alignItems="center" gap={1}>
                 <InfoOutlined color="primary" /> Información del Lote
               </Typography>
@@ -228,13 +239,13 @@ const DetalleLote: React.FC = () => {
 
           {(lote.latitud || lote.longitud) && (
             <Card elevation={0} sx={{ borderRadius: 3, border: `1px solid ${theme.palette.divider}` }}>
-                <CardContent sx={{ p: 4 }}>
-                    <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
+                <CardContent sx={{ p: { xs: 3, sm: 4 } }}>
+                    <Box display="flex" flexDirection={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} gap={2}>
                         <Box>
                             <Typography variant="h6" fontWeight="bold" mb={1} display="flex" alignItems="center" gap={1}><LocationOn color="error" /> Ubicación</Typography>
                             <Typography variant="body2" color="text.secondary">Coordenadas GPS exactas disponibles.</Typography>
                         </Box>
-                        <Button variant="outlined" startIcon={<MapIcon />} onClick={openMap} sx={{ borderRadius: 2 }}>Ver en Google Maps</Button>
+                        <Button variant="outlined" startIcon={<MapIcon />} onClick={openMap} sx={{ borderRadius: 2, width: { xs: '100%', sm: 'auto' } }}>Ver en Google Maps</Button>
                     </Box>
                 </CardContent>
             </Card>
@@ -244,11 +255,11 @@ const DetalleLote: React.FC = () => {
         {/* === COLUMNA DERECHA (Acciones y Precio) === */}
         <Box component="aside">
           <Card elevation={0} sx={{ borderRadius: 3, position: { lg: 'sticky' }, top: 100, border: `1px solid ${theme.palette.divider}`, boxShadow: theme.shadows[4] }}>
-            <CardContent sx={{ p: 4 }}>
+            <CardContent sx={{ p: { xs: 3, sm: 4 } }}>
 
               <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={1}>
                 <Box>
-                    <Typography variant="h4" fontWeight="800" sx={{ lineHeight: 1.2, mb: 0.5 }}>{lote.nombre_lote}</Typography>
+                    <Typography variant="h4" fontWeight="800" sx={{ lineHeight: 1.2, mb: 0.5, fontSize: { xs: '1.8rem', md: '2.2rem' } }}>{lote.nombre_lote}</Typography>
                     <Typography variant="body2" color="text.secondary" display="flex" alignItems="center" gap={0.5}>
                         <LocationOn fontSize="small" /> {lote.proyecto?.nombre_proyecto || 'Sin Proyecto'}
                     </Typography>
@@ -269,8 +280,8 @@ const DetalleLote: React.FC = () => {
                     {soyGanador ? 'TU PUJA ACTUAL (GANADORA)' : (hayOfertas ? 'OFERTA MÁS ALTA' : 'PRECIO BASE')}
                 </Typography>
                 
-                <Stack direction="row" alignItems="baseline" spacing={1}>
-                    <Typography variant="h3" fontWeight="800" color={soyGanador ? "success.main" : (hayOfertas ? "warning.main" : "primary.main")}>
+                <Stack direction="row" alignItems="baseline" spacing={1} flexWrap="wrap">
+                    <Typography variant="h3" fontWeight="800" color={soyGanador ? "success.main" : (hayOfertas ? "warning.main" : "primary.main")} sx={{ fontSize: { xs: '2rem', md: '3rem' } }}>
                         {formatCurrency(precioDisplay)}
                     </Typography>
                     <Typography variant="h6" color="text.secondary" fontWeight={500}>ARS</Typography>
@@ -355,12 +366,11 @@ const DetalleLote: React.FC = () => {
         </Box>
       </Box>
 
-      {/* Modal de Puja */}
-     <PujarModal 
-        open={pujarModal.isOpen}       // Required
-        onClose={pujarModal.close}     // Required
-        lote={lote}                    // Required (Ensure 'lote' is not null/undefined when passed, or handle inside modal)
-        soyGanador={!!soyGanador}      // Optional but good practice
+      {/* Modal de Puja (Conectado y Tipado) */}
+      <PujarModal 
+        {...pujarModal.modalProps}
+        lote={lote} 
+        soyGanador={!!soyGanador}
         onSuccess={() => {
             queryClient.invalidateQueries({ queryKey: ['lote', id] });
         }}

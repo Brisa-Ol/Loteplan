@@ -8,22 +8,17 @@ import {
   Gavel, CheckCircle, Lock, MonetizationOn, AccessTime, CalendarMonth, LocationOn
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-
-
-
-// Contexto y Tipos
 import { useAuth } from '../../../context/AuthContext';
-import type { LoteDto } from '../../../types/dto/lote.dto';
-
-// Hooks y Componentes
 import { useModal } from '../../../hooks/useModal';
 import { useConfirmDialog } from '../../../hooks/useConfirmDialog';
-import { FavoritoButton } from '../../../components/common/BotonFavorito/BotonFavorito';
-import { PujarModal } from './components/PujarModal';
-import { ConfirmDialog } from '../../../components/common/ConfirmDialog/ConfirmDialog';
+import type { LoteDto } from '../../../types/dto/lote.dto';
 import LoteService from '../../../services/lote.service';
 import FavoritoService from '../../../services/favorito.service';
 import ImagenService from '../../../services/imagen.service';
+import { FavoritoButton } from '../../../components/common/BotonFavorito/BotonFavorito';
+import PujarModal from './components/PujarModal';
+import { ConfirmDialog } from '../../../components/common/ConfirmDialog/ConfirmDialog';
+
 
 interface Props {
   idProyecto: number;
@@ -33,7 +28,7 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const theme = useTheme(); // 🟢 Hook del tema
+  const theme = useTheme();
   
   // 1. Hooks de Modales
   const pujarModal = useModal();
@@ -42,13 +37,12 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
   // 2. Estados
   const [selectedLote, setSelectedLote] = useState<LoteDto | null>(null);
 
- const { data: lotes, isLoading, error } = useQuery<LoteDto[]>({
-  queryKey: ['lotesProyecto', idProyecto],
-  queryFn: async () => {
-
-    const res = await LoteService.getAllActive();
-    return res.data.filter(lote => lote.id_proyecto === idProyecto);
-  },
+  const { data: lotes, isLoading, error } = useQuery<LoteDto[]>({
+    queryKey: ['lotesProyecto', idProyecto],
+    queryFn: async () => {
+      const res = await LoteService.getAllActive();
+      return res.data.filter(lote => lote.id_proyecto === idProyecto);
+    },
     enabled: !!idProyecto && isAuthenticated,
     retry: 1
   });
@@ -82,11 +76,11 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
 
   if (!isAuthenticated) {
     return (
-      <Box mt={4} p={5} textAlign="center" bgcolor="background.paper" borderRadius={3} border={`1px dashed ${theme.palette.divider}`}>
-        <Lock sx={{ fontSize: 60, color: 'text.secondary', mb: 2, opacity: 0.5 }} />
+      <Box mt={4} p={{ xs: 3, md: 5 }} textAlign="center" bgcolor="background.paper" borderRadius={3} border={`1px dashed ${theme.palette.divider}`}>
+        <Lock sx={{ fontSize: { xs: 40, md: 60 }, color: 'text.secondary', mb: 2, opacity: 0.5 }} />
         <Typography variant="h6" fontWeight="bold" color="text.primary" gutterBottom>Sección Exclusiva</Typography>
         <Typography variant="body1" color="text.secondary" mb={3}>Debes iniciar sesión para ver los lotes.</Typography>
-        <Button variant="contained" onClick={() => navigate('/login')}>Iniciar Sesión</Button>
+        <Button variant="contained" onClick={() => navigate('/login')} fullWidth sx={{ maxWidth: 300 }}>Iniciar Sesión</Button>
       </Box>
     );
   }
@@ -113,11 +107,16 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
 
   return (
     <Box mt={4}>
-      <Typography variant="h5" fontWeight="bold" mb={3} color="text.primary">
+      <Typography variant="h5" fontWeight="bold" mb={3} color="text.primary" sx={{ fontSize: { xs: '1.25rem', md: '1.5rem' } }}>
         Inventario del Proyecto ({lotes.length})
       </Typography>
 
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(3, 1fr)' }, gap: 3 }}>
+      {/* GRID RESPONSIVE: 1 col (mobile), 2 cols (tablet), 3 cols (desktop) */}
+      <Box sx={{ 
+        display: 'grid', 
+        gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(3, 1fr)' }, 
+        gap: 3 
+      }}>
         {lotes.map((lote) => {
           const imgUrl = lote.imagenes && lote.imagenes.length > 0
             ? ImagenService.resolveImageUrl(lote.imagenes[0].url)
@@ -128,14 +127,17 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
               <Card
                 variant="outlined"
                 sx={{
-                  height: '100%', display: 'flex', flexDirection: 'column', borderRadius: 3,
+                  display: 'flex', flexDirection: 'column', 
+                  borderRadius: 3,
                   cursor: 'pointer', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', 
                   position: 'relative', overflow: 'visible',
                   borderColor: theme.palette.divider,
                   bgcolor: 'background.paper',
+                  // Altura mínima para uniformidad
+                  minHeight: 380,
                   '&:hover': { 
                     transform: 'translateY(-4px)', 
-                    boxShadow: theme.shadows[4], // Sombra del theme
+                    boxShadow: theme.shadows[4],
                     borderColor: 'primary.main' 
                   }
                 }}
@@ -148,7 +150,7 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
                     onError={(e) => { (e.target as HTMLImageElement).src = '/assets/placeholder-lote.jpg'; }}
                   />
                   
-                  {/* Gradiente sutil para legibilidad de chips */}
+                  {/* Gradiente sutil */}
                   <Box sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '40%', background: 'linear-gradient(to bottom, rgba(0,0,0,0.4), transparent)' }} />
 
                   <Box position="absolute" top={10} left={10}>
@@ -182,10 +184,13 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
 
                 {/* ZONA DE CONTENIDO */}
                 <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', pt: 2.5, px: 2.5 }}>
-                  <Typography variant="h6" fontWeight={700} lineHeight={1.2} mb={0.5} noWrap color="text.primary">{lote.nombre_lote}</Typography>
+                  <Typography variant="h6" fontWeight={700} lineHeight={1.2} mb={0.5} noWrap color="text.primary">
+                    {lote.nombre_lote}
+                  </Typography>
+                  
                   <Stack direction="row" spacing={0.5} alignItems="center" mb={2}>
-                     <LocationOn sx={{ fontSize: 14, color: 'text.secondary' }} />
-                     <Typography variant="caption" color="text.secondary">Lote #{lote.id}</Typography>
+                      <LocationOn sx={{ fontSize: 14, color: 'text.secondary' }} />
+                      <Typography variant="caption" color="text.secondary">Lote #{lote.id}</Typography>
                   </Stack>
 
                   {lote.estado_subasta === 'pendiente' && lote.fecha_inicio && (
@@ -195,6 +200,7 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
                     </Stack>
                   )}
 
+                  {/* Espaciador flexible para empujar el precio y botón al fondo */}
                   <Box flexGrow={1} />
 
                   <Box mb={2} p={1.5} bgcolor={alpha(theme.palette.primary.main, 0.05)} borderRadius={2} border={`1px solid ${alpha(theme.palette.primary.main, 0.1)}`}>
@@ -210,14 +216,14 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
                     <Button
                       variant="contained" fullWidth startIcon={<Gavel />}
                       onClick={(e) => { e.stopPropagation(); handlePujarClick(lote); }}
-                      sx={{ borderRadius: 2, fontWeight: 'bold', boxShadow: 'none' }}
+                      sx={{ borderRadius: 2, fontWeight: 'bold', boxShadow: 'none', py: 1.2 }}
                     >
                       Pujar Ahora
                     </Button>
                   ) : (
                     <Button
                       variant="outlined" fullWidth
-                      sx={{ borderRadius: 2, fontWeight: 'bold', borderWidth: 2, '&:hover': { borderWidth: 2 } }}
+                      sx={{ borderRadius: 2, fontWeight: 'bold', borderWidth: 2, '&:hover': { borderWidth: 2 }, py: 1.2 }}
                       onClick={(e) => { e.stopPropagation(); navigate(`/lotes/${lote.id}`); }}
                     >
                       Ver Detalles
@@ -235,7 +241,7 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
         <PujarModal open={pujarModal.isOpen} lote={selectedLote} onClose={() => { pujarModal.close(); setSelectedLote(null); }} />
       )}
 
-      {/* 🆕 Diálogo Confirmación GENÉRICO */}
+      {/* Diálogo Confirmación */}
       <ConfirmDialog 
         controller={confirmDialog}
         onConfirm={handleConfirmUnfav}
