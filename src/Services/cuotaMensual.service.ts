@@ -25,7 +25,7 @@ const CuotaMensualService = {
  * @returns cuota creada
  */
   create: async (data: CreateCuotaMensualDto): Promise<AxiosResponse<CuotaMensualDto>> => {
-    return await httpService.post('/cuotas-mensuales', data);
+    return await httpService.post('/cuotas_mensuales', data);
   },
 
   /**
@@ -35,7 +35,7 @@ const CuotaMensualService = {
   * @returns Cuota actualizada
   */
   update: async (id: number, data: UpdateCuotaMensualDto): Promise<AxiosResponse<CuotaMensualDto>> => {
-    return await httpService.put(`/cuotas-mensuales/${id}`, data);
+    return await httpService.put(`/cuotas_mensuales/${id}`, data);
   },
 
   /**
@@ -44,7 +44,7 @@ const CuotaMensualService = {
    * @returns Mensaje de confirmación
    */
   softDelete: async (id: number): Promise<AxiosResponse<GenericResponseDto>> => {
-    return await httpService.delete(`/cuotas-mensuales/${id}`);
+    return await httpService.delete(`/cuotas_mensuales/${id}`);
   },
 
   // =================================================
@@ -58,7 +58,7 @@ const CuotaMensualService = {
    */
   getByProjectId: async (idProyecto: number): Promise<AxiosResponse<CuotaMensualDto[]>> => {
 
-    return await httpService.get(`/cuotas-mensuales/proyecto/${idProyecto}`);
+    return await httpService.get(`/cuotas_mensuales/${idProyecto}`);
   },
 
   /**
@@ -67,7 +67,7 @@ const CuotaMensualService = {
    * @returns Última cuota activa
    */
   getLastByProjectId: async (idProyecto: number): Promise<AxiosResponse<CuotaMensualDto>> => {
-    return await httpService.get(`/cuotas-mensuales/proyecto/${idProyecto}/last`); // Recomendado estandarizar esta también
+    return await httpService.get(`/cuotas_mensuales/proyecto/${idProyecto}/last`); // Recomendado estandarizar esta también
   }
 };
 
