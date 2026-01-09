@@ -18,7 +18,7 @@ import ImagenService from '../../../services/imagen.service';
 import { FavoritoButton } from '../../../components/common/BotonFavorito/BotonFavorito';
 import PujarModal from './components/PujarModal';
 import { ConfirmDialog } from '../../../components/common/ConfirmDialog/ConfirmDialog';
-
+import { useSnackbar } from '../../../context/SnackbarContext'; // Importar snackbar
 
 interface Props {
   idProyecto: number;
@@ -29,6 +29,7 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const theme = useTheme();
+  const { showSuccess, showError } = useSnackbar(); // Usar snackbar
   
   // 1. Hooks de Modales
   const pujarModal = useModal();
@@ -37,11 +38,16 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
   // 2. Estados
   const [selectedLote, setSelectedLote] = useState<LoteDto | null>(null);
 
+  // Query para obtener lotes
   const { data: lotes, isLoading, error } = useQuery<LoteDto[]>({
     queryKey: ['lotesProyecto', idProyecto],
     queryFn: async () => {
+      // Nota: Si tienes un endpoint específico para lotes por proyecto, úsalo.
+      // Si no, filtrar en el cliente está bien para pocos datos.
       const res = await LoteService.getAllActive();
-      return res.data.filter(lote => lote.id_proyecto === idProyecto);
+      // Aseguramos que res.data sea un array antes de filtrar
+      const allLotes = Array.isArray(res.data) ? res.data : [];
+      return allLotes.filter(lote => lote.id_proyecto === idProyecto);
     },
     enabled: !!idProyecto && isAuthenticated,
     retry: 1
@@ -51,11 +57,19 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
   const unfavMutation = useMutation({
     mutationFn: async (loteId: number) => await FavoritoService.toggle(loteId),
     onSuccess: (_, loteId) => {
-      queryClient.setQueryData(['favorito', loteId], { es_favorito: false });
+      // Actualizamos optimísticamente el caché de este lote específico
+      queryClient.setQueryData(['checkFavorito', loteId], { es_favorito: false });
+      
+      // Invalidamos para refrescar la lista de favoritos global
       queryClient.invalidateQueries({ queryKey: ['misFavoritos'] });
+      
       confirmDialog.close();
+      showSuccess('Eliminado de favoritos');
     },
-    onError: () => alert('Error al quitar de favoritos')
+    onError: () => {
+        showError('Error al quitar de favoritos');
+        confirmDialog.close();
+    }
   });
 
   // Handlers
@@ -111,7 +125,7 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
         Inventario del Proyecto ({lotes.length})
       </Typography>
 
-      {/* GRID RESPONSIVE: 1 col (mobile), 2 cols (tablet), 3 cols (desktop) */}
+      {/* GRID RESPONSIVE */}
       <Box sx={{ 
         display: 'grid', 
         gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(3, 1fr)' }, 
@@ -133,7 +147,6 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
                   position: 'relative', overflow: 'visible',
                   borderColor: theme.palette.divider,
                   bgcolor: 'background.paper',
-                  // Altura mínima para uniformidad
                   minHeight: 380,
                   '&:hover': { 
                     transform: 'translateY(-4px)', 
@@ -200,7 +213,7 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
                     </Stack>
                   )}
 
-                  {/* Espaciador flexible para empujar el precio y botón al fondo */}
+                  {/* Espaciador flexible */}
                   <Box flexGrow={1} />
 
                   <Box mb={2} p={1.5} bgcolor={alpha(theme.palette.primary.main, 0.05)} borderRadius={2} border={`1px solid ${alpha(theme.palette.primary.main, 0.1)}`}>
