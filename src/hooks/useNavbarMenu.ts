@@ -123,7 +123,7 @@ export const useNavbarMenu = () => {
           submenu: [
             { label: "Gestion de Pagos ", path: "/admin/Pagos", icon: AttachMoneyIcon },
             { label: "Gestion Transacciones", path: "/admin/transacciones", icon: ReceiptIcon },
-            { label: "Gestion de Resumenes de Cuenta", path: "/admin/ResumenesCuenta", icon: ReceiptIcon },
+            { label: "Gestion de Resumenes de Cuenta", path: "/admin/Resumenes", icon: ReceiptIcon },
           ],
         },
         { isDivider: true, label: "" },
