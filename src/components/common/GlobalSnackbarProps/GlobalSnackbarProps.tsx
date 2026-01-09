@@ -1,37 +1,22 @@
+// src/components/common/GlobalSnackbar/GlobalSnackbar.tsx
+
 import React from 'react';
-import { Snackbar, Alert, useTheme } from '@mui/material';
+import { Snackbar, Alert, useTheme, Slide, type SlideProps } from '@mui/material';
 import type { SnackbarSeverity } from '../../../hooks/useSnackbar';
 
-
 export interface GlobalSnackbarProps {
-    /** Si el Snackbar está abierto */
     open: boolean;
-    /** Mensaje a mostrar */
     message: string;
-    /** Nivel de severidad del mensaje */
     severity: SnackbarSeverity;
-    /** Callback al cerrar el Snackbar */
     onClose: () => void;
-    /** Tiempo en ms antes de auto-cerrar (default: 4000) */
     autoHideDuration?: number;
 }
 
-/**
- * Componente Snackbar global estandarizado para toda la aplicación.
- * Usa el estilo "filled" con sombra para consistencia visual.
- * 
- * @example
- * ```tsx
- * const { snackbar, handleClose } = useSnackbar();
- * 
- * <GlobalSnackbar
- *   open={snackbar.open}
- *   message={snackbar.message}
- *   severity={snackbar.severity}
- *   onClose={handleClose}
- * />
- * ```
- */
+// Helper para la animación de deslizamiento hacia arriba
+function SlideTransition(props: SlideProps) {
+    return <Slide {...props} direction="up" />;
+}
+
 export const GlobalSnackbar: React.FC<GlobalSnackbarProps> = ({
     open,
     message,
@@ -47,15 +32,25 @@ export const GlobalSnackbar: React.FC<GlobalSnackbarProps> = ({
             autoHideDuration={autoHideDuration}
             onClose={onClose}
             anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            TransitionComponent={SlideTransition} // ✅ Mejora 1: Animación nativa
+            sx={{
+                // ✅ Mejora 2: Margen inferior para no pegar con la barra de gestos del móvil
+                bottom: { xs: 24, md: 32 } 
+            }}
         >
             <Alert
+                onClose={onClose}
                 severity={severity}
                 variant="filled"
-                onClose={onClose}
                 sx={{
-                    boxShadow: theme.shadows[4],
-                    minWidth: 280,
-                    fontWeight: 500
+                    // ✅ Mejora 3: Estética
+                    width: '100%',
+                    minWidth: { xs: '280px', md: '350px' }, // Un poco más ancho en PC
+                    boxShadow: theme.shadows[6], // Sombra más pronunciada para destacar sobre el contenido
+                    fontWeight: 500,
+                    fontSize: '0.9rem',
+                    alignItems: 'center',
+                    borderRadius: 2
                 }}
             >
                 {message}

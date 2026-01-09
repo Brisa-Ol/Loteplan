@@ -14,6 +14,7 @@ import {
   Divider,
   CircularProgress,
   useTheme,
+  useMediaQuery,
   alpha,
   type DialogProps,
 } from '@mui/material';
@@ -121,6 +122,9 @@ export const BaseModal: React.FC<BaseModalProps> = ({
   ...dialogProps
 }) => {
   const theme = useTheme();
+  
+  // ✅ DETECCIÓN MÓVIL: Si la pantalla es pequeña (sm o menor), activamos modo fullScreen
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   // Determinar el color del header según el prop
   const headerColorValue = theme.palette[headerColor].main;
@@ -145,13 +149,16 @@ export const BaseModal: React.FC<BaseModalProps> = ({
       onClose={handleClose}
       maxWidth={maxWidth}
       fullWidth
+      // ✅ RESPONSIVE: Ocupa toda la pantalla en móvil si no se especifica lo contrario
+      fullScreen={dialogProps.fullScreen ?? isMobile} 
       scroll={scroll}
       PaperProps={{
         sx: {
-          borderRadius: 3,
+          // ✅ RESPONSIVE: En móvil quitamos los bordes redondeados para que llene bien las esquinas
+          borderRadius: isMobile ? 0 : 3, 
           boxShadow: theme.shadows[10],
           overflow: 'hidden',
-          ...(scroll === 'paper' && { maxHeight: '90vh' }),
+          ...(scroll === 'paper' && { maxHeight: isMobile ? '100%' : '90vh' }),
         },
       }}
       {...dialogProps}
@@ -221,7 +228,7 @@ export const BaseModal: React.FC<BaseModalProps> = ({
       <DialogContent
         dividers={scroll === 'paper'}
         sx={{
-          p: 4,
+          p: { xs: 2, md: 4 }, // ✅ Padding adaptable (menos en móvil)
           ...(scroll === 'paper' && {
             overflow: 'auto',
           }),

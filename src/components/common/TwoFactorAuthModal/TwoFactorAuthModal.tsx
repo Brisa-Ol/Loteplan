@@ -9,7 +9,7 @@ import { VpnKey } from '@mui/icons-material';
 interface TwoFactorAuthModalProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (code: string) => void; // Función que recibe el código
+  onSubmit: (code: string) => void;
   isLoading: boolean;
   error: string | null;
   title?: string;
@@ -40,19 +40,25 @@ const TwoFactorAuthModal: React.FC<TwoFactorAuthModalProps> = ({
   };
 
   return (
-    <Dialog open={open} onClose={isLoading ? undefined : onClose} maxWidth="xs" fullWidth>
+    <Dialog 
+        open={open} 
+        onClose={isLoading ? undefined : onClose} 
+        maxWidth="xs" 
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 3 } }}
+    >
       <DialogTitle display="flex" alignItems="center" gap={1}>
         <VpnKey color="primary" /> {title}
       </DialogTitle>
       
       <form onSubmit={handleSubmit}>
         <DialogContent>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
             {description}
           </Typography>
 
           {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
+            <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>
               {error}
             </Alert>
           )}
@@ -64,12 +70,20 @@ const TwoFactorAuthModal: React.FC<TwoFactorAuthModalProps> = ({
             placeholder="000 000"
             value={code}
             onChange={(e) => {
-              // Solo números, máx 6
               const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 6);
               setCode(val);
             }}
+            // ✅ MEJORAS DE UX AQUÍ:
+            autoComplete="one-time-code" // Permite autocompletado nativo del sistema
             inputProps={{ 
-              style: { textAlign: 'center', letterSpacing: 4, fontSize: '1.2rem' },
+              inputMode: 'numeric', // Fuerza teclado numérico en móviles
+              pattern: '[0-9]*',
+              style: { 
+                  textAlign: 'center', 
+                  letterSpacing: 8, // Más espacio para que parezca un PIN
+                  fontSize: '1.5rem',
+                  fontWeight: 'bold'
+              },
               maxLength: 6 
             }}
             disabled={isLoading}
@@ -78,7 +92,7 @@ const TwoFactorAuthModal: React.FC<TwoFactorAuthModalProps> = ({
         </DialogContent>
         
         <DialogActions sx={{ px: 3, pb: 3 }}>
-          <Button onClick={onClose} color="inherit" disabled={isLoading}>
+          <Button onClick={onClose} color="inherit" disabled={isLoading} sx={{ borderRadius: 2 }}>
             Cancelar
           </Button>
           <Button 
@@ -86,6 +100,7 @@ const TwoFactorAuthModal: React.FC<TwoFactorAuthModalProps> = ({
             variant="contained" 
             disabled={code.length !== 6 || isLoading}
             startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : null}
+            sx={{ borderRadius: 2, px: 3 }}
           >
             {isLoading ? "Verificando..." : "Verificar"}
           </Button>

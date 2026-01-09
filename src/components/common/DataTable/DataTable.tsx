@@ -53,11 +53,10 @@ export const DataSwitch: React.FC<DataSwitchProps> = ({
 
 // --- Interfaces ---
 export interface DataTableColumn<T> {
-  id: string; // Se mantiene string para mayor flexibilidad (columnas calculadas)
+  id: string; 
   label: string;
   align?: 'left' | 'right' | 'center';
   minWidth?: number;
-  // ✅ CORRECCIÓN: Se tipa el value como unknown en lugar de any
   format?: (value: unknown, row: T) => React.ReactNode;
   render?: (row: T) => React.ReactNode;
 }
@@ -108,15 +107,31 @@ export function DataTable<T>({
     : data;
 
   return (
-    <TableContainer component={Paper} sx={sx}>
-      <Table>
+    <TableContainer 
+        component={Paper} 
+        sx={{
+            ...sx,
+            // Mejora Responsive: Bordes redondeados y scroll suave
+            borderRadius: 3,
+            overflowX: 'auto', 
+            '&::-webkit-scrollbar': { height: 8 },
+            '&::-webkit-scrollbar-thumb': { backgroundColor: theme.palette.divider, borderRadius: 4 }
+        }}
+    >
+      <Table size="medium"> {/* Puedes cambiar a size={isMobile ? 'small' : 'medium'} si usas useMediaQuery */}
         <TableHead>
           <TableRow>
             {columns.map((column) => (
               <TableCell
                 key={column.id}
                 align={column.align || 'left'}
-                sx={{ minWidth: column.minWidth, fontWeight: 700, color: 'text.secondary' }}
+                sx={{ 
+                    minWidth: column.minWidth, 
+                    fontWeight: 700, 
+                    color: 'text.secondary',
+                    whiteSpace: 'nowrap', // Evita que los títulos se rompan feo
+                    bgcolor: alpha(theme.palette.primary.main, 0.04) // Fondo sutil cabecera
+                }}
               >
                 {column.label}
               </TableCell>
@@ -143,11 +158,11 @@ export function DataTable<T>({
 
               const defaultRowStyles = {
                 cursor: onRowClick ? 'pointer' : 'default',
-                transition: 'background-color 0.5s ease',
+                transition: 'background-color 0.3s ease', // Transición más rápida
                 bgcolor: isHighlighted 
                   ? alpha(theme.palette.success.main, 0.12)
                   : !isActive 
-                    ? alpha(theme.palette.grey[500], 0.2)
+                    ? alpha(theme.palette.grey[500], 0.08) // Gris más sutil
                     : 'inherit',
                 '&:hover': {
                   bgcolor: isHighlighted 
@@ -166,8 +181,6 @@ export function DataTable<T>({
                   sx={{ ...defaultRowStyles, ...customStyles }}
                 >
                   {columns.map((column) => {
-                    // ✅ CORRECCIÓN DE TIPADO:
-                    // Obtenemos el valor de la celda de forma segura
                     const cellValue = (row as Record<string, unknown>)[column.id];
 
                     return (
@@ -198,6 +211,8 @@ export function DataTable<T>({
           onRowsPerPageChange={handleChangeRowsPerPage}
           labelRowsPerPage="Filas:"
           labelDisplayedRows={({ from, to, count }) => `${from}–${to} de ${count !== -1 ? count : `+${to}`}`}
+          // Mejora visual en móvil
+          sx={{ borderTop: `1px solid ${theme.palette.divider}` }} 
         />
       )}
     </TableContainer>
