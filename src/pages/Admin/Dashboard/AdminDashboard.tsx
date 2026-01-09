@@ -1,394 +1,443 @@
-import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import {
-  Box, Typography, Paper, Card, CardContent, Avatar, Stack, Alert,
-  useTheme, Button, Tabs, Tab, Chip, CardHeader, Divider, alpha, LinearProgress
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom'; // ✅ Importación crítica
+import { 
+  Box, Typography, Button, Paper, Chip, IconButton, Stack, Tooltip, 
+  TextField, MenuItem, Divider, InputAdornment, LinearProgress, Switch, 
+  CircularProgress, alpha, useTheme
 } from '@mui/material';
-import {
-  PendingActions as PendingActionsIcon, Assessment as AssessmentIcon,
-  TrendingUp as TrendingUpIcon, AttachMoney as MoneyIcon, 
-  AccountBalance as AccountBalanceIcon, Warning as WarningIcon, 
-  Cancel as CancelIcon, Star as StarIcon, Gavel as GavelIcon,
-  ReceiptLong, ArrowForward as ArrowForwardIcon,
-  Person as PersonIcon, Landscape as LandscapeIcon, Handyman as HandymanIcon
+import { 
+  Add, Edit, Warning, Collections, Search, Inventory, 
+  Gavel, AssignmentLate, CheckCircle, Person,
+  StopCircle
 } from '@mui/icons-material';
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
-  Legend, ResponsiveContainer, PieChart, Pie, Cell,
-} from 'recharts';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
-// DTOs e Interfaces
-import type { CompletionRateDTO, MonthlyProgressItem, ProyectoDto } from '../../../types/dto/proyecto.dto';
-import type { InversionPorUsuarioDTO, LiquidityRateDTO } from '../../../types/dto/inversion.dto';
-import type { CancelacionDTO, MorosidadDTO } from '../../../types/dto/suscripcion.dto';
-import type { PopularidadLoteDTO } from '../../../types/dto/favorito.dto';
-import type { KycDTO } from '../../../types/dto/kyc.dto';
-import type { PujaDto } from '../../../types/dto/puja.dto';
+// Tipos e Interfaces
+import type { CreateLoteDto, LoteDto, UpdateLoteDto } from '../../../types/dto/lote.dto';
 
-// Componentes y Servicios
+// Componentes Comunes
 import { PageContainer } from '../../../components/common/PageContainer/PageContainer';
-import { PageHeader } from '../../../components/common/PageHeader/PageHeader';
 import { QueryHandler } from '../../../components/common/QueryHandler/QueryHandler';
-import { DataTable } from '../../../components/common/DataTable/DataTable';
-import kycService from '../../../services/kyc.service';
-import proyectoService from '../../../services/proyecto.service';
-import inversionService from '../../../services/inversion.service';
-import suscripcionService from '../../../services/suscripcion.service';
-import favoritoService from '../../../services/favorito.service';
-import pujaService from '../../../services/puja.service';
+import { PageHeader } from '../../../components/common/PageHeader/PageHeader';
+import { DataTable, type DataTableColumn } from '../../../components/common/DataTable/DataTable';
+import { ConfirmDialog } from '../../../components/common/ConfirmDialog/ConfirmDialog';
 
-// --- INTERFACES ---
-interface DashboardStats {
-  pendingKYC: number;
-  totalInvertido: string;
-  totalPagado: string;
-  tasaLiquidez: string;
-  tasaMorosidad: string;
-  tasaCancelacion: string;
-  proyectosEnProceso: number;
-  proyectosEnEspera: number;
-  totalFinalizados: number;
-  subastasActivas: number;
-  cobrosPendientes: number;
-}
+// Modales y Servicios
+import ManageLoteImagesModal from './modals/ManageLoteImagesModal';
+import CreateLoteModal from './modals/CreateLoteModal';
+import EditLoteModal from './modals/EditLoteModal';
+import AuctionControlModal from './modals/AuctionControlModal';
+import ProyectoService from '../../../services/proyecto.service';
+import LoteService from '../../../services/lote.service';
 
-interface StatCardProps {
-  title: string;
-  value: string | number;
-  subtitle?: string;
-  icon: React.ReactNode;
-  color: string;
-  onClick?: () => void;
-}
+// Hooks
+import { useModal } from '../../../hooks/useModal';
+import { useConfirmDialog } from '../../../hooks/useConfirmDialog';
+import { useSnackbar } from '../../../context/SnackbarContext';
 
-const StatCard: React.FC<StatCardProps> = ({ title, value, subtitle, icon, color, onClick }) => {
+// --- KPI CARD ---
+const StatCard: React.FC<{ 
+  title: string; 
+  value: number; 
+  icon: React.ReactNode; 
+  color: string; 
+  loading?: boolean;
+}> = ({ title, value, icon, color, loading }) => {
   const theme = useTheme();
+  // Validación de seguridad para el color
+  const paletteColor = (theme.palette as any)[color] || theme.palette.primary;
+
   return (
-    <Card
-      elevation={0}
-      onClick={onClick}
-      sx={{
-        height: '100%',
-        cursor: onClick ? 'pointer' : 'default',
-        border: '1px solid',
-        borderColor: theme.palette.divider,
-        borderRadius: 3,
-        transition: 'all 0.2s ease-in-out',
-        '&:hover': onClick ? { transform: 'translateY(-4px)', boxShadow: theme.shadows[4], borderColor: color } : {},
+    <Paper 
+      elevation={0} 
+      sx={{ 
+        p: 2, display: 'flex', alignItems: 'center', gap: 2, 
+        borderRadius: 2, border: '1px solid', borderColor: 'divider',
+        flex: 1, minWidth: 0, transition: 'all 0.2s ease',
+        '&:hover': { borderColor: paletteColor.main, transform: 'translateY(-2px)' }
       }}
     >
-      <CardContent sx={{ p: 3, '&:last-child': { pb: 3 } }}>
-        <Stack direction="row" alignItems="flex-start" justifyContent="space-between" spacing={2}>
-          <Box>
-            <Typography variant="body2" color="text.secondary" fontWeight={600} gutterBottom>{title}</Typography>
-            <Typography variant="h4" fontWeight={700} sx={{ color: 'text.primary', mb: 0.5 }}>{value}</Typography>
-            {subtitle && <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>{subtitle}</Typography>}
-          </Box>
-          <Avatar
-            variant="rounded"
-            sx={{ bgcolor: alpha(color, 0.1), color: color, width: 56, height: 56, borderRadius: 2 }}
-          >
-            {icon}
-          </Avatar>
-        </Stack>
-      </CardContent>
-    </Card>
+      <Box sx={{ bgcolor: alpha(paletteColor.main, 0.1), color: paletteColor.main, p: 1.5, borderRadius: '50%', display: 'flex' }}>
+        {icon}
+      </Box>
+      <Box sx={{ width: '100%' }}>
+        {loading ? (
+          <LinearProgress color="inherit" sx={{ width: '60%', mb: 1 }} />
+        ) : (
+          <Typography variant="h5" fontWeight="bold">{value}</Typography>
+        )}
+        <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ textTransform: 'uppercase' }}>
+          {title}
+        </Typography>
+      </Box>
+    </Paper>
   );
 };
 
-const AdminDashboard: React.FC = () => {
-  const navigate = useNavigate();
+const AdminLotes: React.FC = () => {
   const theme = useTheme();
-  const [activeTab, setActiveTab] = useState(0);
+  const queryClient = useQueryClient();
+  const { showSuccess, showError } = useSnackbar();
 
-  // =================================================
-  // 🎯 QUERIES
-  // =================================================
-  const { data: pendingKYC = [], isLoading: loadingKYC } = useQuery<KycDTO[]>({
-    queryKey: ['pendingKYC'],
-    queryFn: async () => {
-      const res = await kycService.getPendingVerifications();
-      return (res as any).data || res;
+  // 1. Hook para obtener parámetros de la URL
+  const [searchParams, setSearchParams] = useSearchParams();
+  const proyectoParam = searchParams.get('proyecto');
+
+  // Hooks de Modales
+  const createModal = useModal();
+  const editModal = useModal();
+  const imagesModal = useModal();
+  const auctionModal = useModal();
+  const confirmDialog = useConfirmDialog();
+
+  // Estados
+  const [selectedLote, setSelectedLote] = useState<LoteDto | null>(null);
+  const [highlightedId, setHighlightedId] = useState<number | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  // 2. Inicializamos el filtro con el valor de la URL (si existe), o 'all'
+  const [filterProject, setFilterProject] = useState<string>(proyectoParam || 'all');
+
+  const initialStatusRef = useRef<Record<number, boolean>>({});
+
+  // 3. Efecto para mantener la URL sincronizada (sin bucles infinitos)
+  useEffect(() => {
+    // Si estamos en 'all' y hay un param en URL, lo borramos
+    if (filterProject === 'all') {
+      if (searchParams.get('proyecto')) {
+         const newParams = new URLSearchParams(searchParams);
+         newParams.delete('proyecto');
+         setSearchParams(newParams);
+      }
+    } 
+    // Si hay un filtro específico y es diferente al de la URL, actualizamos URL
+    else if (filterProject !== 'huerfano') {
+      if (searchParams.get('proyecto') !== filterProject) {
+         setSearchParams({ proyecto: filterProject });
+      }
+    }
+  }, [filterProject, searchParams, setSearchParams]);
+
+  // --- QUERIES ---
+  const { data: lotes = [], isLoading: loadingLotes, error } = useQuery({
+    queryKey: ['adminLotes'],
+    queryFn: async () => (await LoteService.findAllAdmin()).data,
+  });
+
+  const { data: proyectos = [], isLoading: loadingProyectos } = useQuery({
+    queryKey: ['adminProyectosSelect'],
+    queryFn: async () => (await ProyectoService.getAllAdmin()).data,
+  });
+
+  useEffect(() => {
+    if (lotes.length > 0) {
+      lotes.forEach(l => {
+        if (initialStatusRef.current[l.id] === undefined) initialStatusRef.current[l.id] = l.activo;
+      });
+    }
+  }, [lotes]);
+
+  // --- KPIS ---
+  const stats = useMemo(() => ({
+    total: lotes.length,
+    enSubasta: lotes.filter(l => l.estado_subasta === 'activa').length,
+    finalizados: lotes.filter(l => l.estado_subasta === 'finalizada').length,
+    huerfanos: lotes.filter(l => !l.id_proyecto).length
+  }), [lotes]);
+
+  // --- FILTRADO ---
+  const filteredLotes = useMemo(() => {
+    return lotes.filter(lote => {
+      const term = searchTerm.toLowerCase();
+      const matchesSearch = lote.nombre_lote.toLowerCase().includes(term) || lote.id.toString().includes(term);
+      
+      let matchesProject = true;
+      if (filterProject === 'huerfano') {
+          matchesProject = !lote.id_proyecto;
+      }
+      else if (filterProject !== 'all') {
+          // Nota: filterProject es string por el input, id_proyecto es number
+          matchesProject = lote.id_proyecto === Number(filterProject);
+      }
+      
+      return matchesSearch && matchesProject;
+    });
+  }, [lotes, searchTerm, filterProject]);
+
+  // --- MUTACIONES ---
+
+  const saveMutation = useMutation({
+    mutationFn: async (payload: { dto: CreateLoteDto | UpdateLoteDto; id?: number }) => {
+      if (payload.id) return await LoteService.update(payload.id, payload.dto as UpdateLoteDto);
+      return await LoteService.create(payload.dto as CreateLoteDto);
     },
-  });
-
-  const { data: completionRate, isLoading: loadingCompletion } = useQuery<CompletionRateDTO>({
-    queryKey: ['completionRate'],
-    queryFn: proyectoService.getCompletionRate
-  });
-
-  const { data: monthlyProgress = [], isLoading: loadingProgress } = useQuery<MonthlyProgressItem[]>({
-    queryKey: ['monthlyProgress'],
-    queryFn: proyectoService.getMonthlyProgress
-  });
-
-  const { data: liquidityRate, isLoading: loadingLiquidity } = useQuery<LiquidityRateDTO>({
-    queryKey: ['liquidityRate'],
-    queryFn: async () => (await inversionService.getLiquidityMetrics() as any).data || await inversionService.getLiquidityMetrics(),
-  });
-
-  const { data: inversionesPorUsuario = [], isLoading: loadingInversiones } = useQuery<InversionPorUsuarioDTO[]>({
-    queryKey: ['inversionesPorUsuario'],
-    queryFn: async () => {
-      const res = await inversionService.getAggregatedMetrics();
-      const data = (res as any).data || res;
-      return Array.isArray(data) ? data : (data.data || []);
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['adminLotes'] });
+      handleCloseAllModals();
+      const newItem = (data as any).data;
+      if (newItem?.id) {
+        setHighlightedId(newItem.id);
+        setTimeout(() => setHighlightedId(null), 2500);
+      }
+      showSuccess('Lote procesado correctamente');
     },
+    onError: (err: any) => showError(err.response?.data?.error || 'Error al guardar')
   });
 
-  const { data: morosidad, isLoading: loadingMorosidad } = useQuery<MorosidadDTO>({
-    queryKey: ['morosidad'],
-    queryFn: async () => (await suscripcionService.getMorosityMetrics() as any).data || await suscripcionService.getMorosityMetrics(),
+  const toggleActiveMutation = useMutation({
+    mutationFn: async ({ id, activo }: { id: number; activo: boolean }) => await LoteService.update(id, { activo }),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['adminLotes'] });
+      confirmDialog.close();
+      setHighlightedId(variables.id);
+      setTimeout(() => setHighlightedId(null), 2500);
+      showSuccess(variables.activo ? 'Lote visible' : 'Lote ocultado');
+    },
+    onError: (err: any) => {
+        showError(err.response?.data?.error || 'Error al cambiar estado');
+        confirmDialog.close();
+    }
   });
 
-  const { data: cancelacion, isLoading: loadingCancelacion } = useQuery<CancelacionDTO>({
-    queryKey: ['cancelacion'],
-    queryFn: async () => (await suscripcionService.getCancellationMetrics() as any).data || await suscripcionService.getCancellationMetrics(),
+  const startAuction = useMutation({
+    mutationFn: (id: number) => LoteService.startAuction(id),
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: ['adminLotes'] });
+      auctionModal.close();
+      setHighlightedId(id); 
+      setTimeout(() => setHighlightedId(null), 2500);
+      showSuccess('✅ Subasta iniciada correctamente');
+    },
+    onError: (error: any) => {
+      const statusCode = error.response?.status;
+      if (statusCode === 500) {
+        // Optimistic handling for 500 errors if operation succeeded
+        queryClient.invalidateQueries({ queryKey: ['adminLotes'] });
+        setTimeout(() => {
+          const updatedLotes = queryClient.getQueryData<LoteDto[]>(['adminLotes']);
+          const updatedLote = updatedLotes?.find(l => l.id === selectedLote?.id);
+          if (updatedLote?.estado_subasta === 'activa') {
+            auctionModal.close();
+            setHighlightedId(updatedLote.id);
+            setTimeout(() => setHighlightedId(null), 2500);
+            showSuccess('✅ Subasta iniciada correctamente (recuperado)');
+          } else {
+            showError('❌ Error del servidor al iniciar subasta.');
+          }
+        }, 1200);
+      } else {
+        const backendError = error.response?.data?.error || error.response?.data?.message;
+        const msg = backendError || error.message || 'Error al iniciar subasta';
+        showError(`❌ ${msg}`);
+      }
+    }
   });
 
-  const { data: proyectosActivos = [] } = useQuery<ProyectoDto[]>({
-    queryKey: ['proyectosActivos'],
-    queryFn: async () => (await proyectoService.getAllActive()).data,
+  const endAuction = useMutation({
+    mutationFn: (id: number) => LoteService.endAuction(id),
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: ['adminLotes'] });
+      auctionModal.close();
+      setHighlightedId(id); 
+      setTimeout(() => setHighlightedId(null), 2500);
+      showSuccess('✅ Subasta finalizada correctamente');
+    },
+    onError: (error: any) => {
+      const statusCode = error.response?.status;
+      if (statusCode === 500) {
+        queryClient.invalidateQueries({ queryKey: ['adminLotes'] });
+        setTimeout(() => {
+          const updatedLotes = queryClient.getQueryData<LoteDto[]>(['adminLotes']);
+          const updatedLote = updatedLotes?.find(l => l.id === selectedLote?.id);
+          if (updatedLote?.estado_subasta === 'finalizada') {
+            auctionModal.close();
+            setHighlightedId(updatedLote.id);
+            setTimeout(() => setHighlightedId(null), 2500);
+            showSuccess('✅ Subasta finalizada correctamente (recuperado)');
+          } else {
+            showError('❌ Error del servidor al finalizar subasta.');
+          }
+        }, 1200);
+      } else {
+        const backendError = error.response?.data?.error || error.response?.data?.message;
+        const msg = backendError || error.message || 'Error al finalizar subasta';
+        showError(`❌ ${msg}`);
+      }
+    }
   });
 
-  const defaultProyectoId = proyectosActivos[0]?.id;
+  const getStatusColor = (estado: string): 'success' | 'info' | 'default' => {
+    if (estado === 'activa') return 'success';
+    if (estado === 'finalizada') return 'info';
+    return 'default';
+  };
 
-  const { data: popularidadLotes = [], isLoading: loadingPopularidad } = useQuery<PopularidadLoteDTO[]>({
-    queryKey: ['popularidadLotes', defaultProyectoId],
-    queryFn: () => favoritoService.getPopularidadLotes(defaultProyectoId!),
-    enabled: !!defaultProyectoId
-  });
+  // --- HANDLERS ---
+  const handleToggleActive = useCallback((lote: LoteDto) => 
+    confirmDialog.confirm('toggle_lote_visibility', lote), [confirmDialog]
+  );
 
-  const { data: allPujas = [], isLoading: loadingPujas } = useQuery<PujaDto[]>({
-    queryKey: ['adminAllPujas'],
-    queryFn: async () => (await pujaService.findAll()).data,
-  });
+  const handleOpenCreate = useCallback(() => {
+    setSelectedLote(null);
+    createModal.open();
+  }, [createModal]);
 
-  const isLoading = loadingKYC || loadingCompletion || loadingProgress || loadingLiquidity || loadingInversiones || loadingMorosidad || loadingCancelacion || loadingPopularidad || loadingPujas;
+  const handleOpenEdit = useCallback((lote: LoteDto) => {
+    setSelectedLote(lote);
+    editModal.open();
+  }, [editModal]);
 
-  // =================================================
-  // 📊 DATOS PROCESADOS
-  // =================================================
-  const RECHART_COLORS = [theme.palette.primary.main, theme.palette.success.main, theme.palette.warning.main, theme.palette.error.main, theme.palette.info.main];
+  const handleManageImages = useCallback((lote: LoteDto) => {
+    setSelectedLote(lote);
+    imagesModal.open();
+  }, [imagesModal]);
 
-  const stats: DashboardStats = useMemo(() => ({
-    pendingKYC: pendingKYC.length,
-    totalInvertido: liquidityRate?.total_invertido_registrado ?? '0',
-    totalPagado: liquidityRate?.total_pagado ?? '0',
-    tasaLiquidez: liquidityRate?.tasa_liquidez ?? '0',
-    tasaMorosidad: morosidad?.tasa_morosidad ?? '0',
-    tasaCancelacion: cancelacion?.tasa_cancelacion ?? '0',
-    proyectosEnProceso: monthlyProgress.filter(p => p.estado === 'En proceso').length,
-    proyectosEnEspera: monthlyProgress.filter(p => p.estado === 'En Espera').length,
-    totalFinalizados: completionRate?.total_finalizados ?? 0,
-    subastasActivas: allPujas.filter(p => p.estado_puja === 'activa').length,
-    cobrosPendientes: allPujas.filter(p => p.estado_puja === 'ganadora_pendiente').length,
-  }), [pendingKYC, liquidityRate, morosidad, cancelacion, monthlyProgress, completionRate, allPujas]);
+  const handleAuctionClick = useCallback((lote: LoteDto) => {
+    setSelectedLote(lote);
+    auctionModal.open();
+  }, [auctionModal]);
 
-  const chartDataSuscripciones = useMemo(() => monthlyProgress.map(p => ({
-    nombre: p.nombre.length > 15 ? `${p.nombre.substring(0, 15)}...` : p.nombre,
-    avance: parseFloat(p.porcentaje_avance),
-  })), [monthlyProgress]);
+  const handleCloseAllModals = useCallback(() => {
+    createModal.close();
+    editModal.close();
+    imagesModal.close();
+    auctionModal.close();
+    setTimeout(() => setSelectedLote(null), 300);
+  }, [createModal, editModal, imagesModal, auctionModal]);
 
-  const estadosData = useMemo(() => [
-    { name: 'En Proceso', value: stats.proyectosEnProceso },
-    { name: 'En Espera', value: stats.proyectosEnEspera },
-    { name: 'Finalizados', value: stats.totalFinalizados },
-  ].filter(item => item.value > 0), [stats]);
+  const handleConfirmAction = () => {
+    if (!confirmDialog.data) return;
+    const { id, activo } = confirmDialog.data;
+    if (confirmDialog.action === 'toggle_lote_visibility') {
+        toggleActiveMutation.mutate({ id, activo: !activo });
+    }
+  };
+
+  // --- COLUMNS ---
+  const columns = useMemo<DataTableColumn<LoteDto>[]>(() => [
+    { id: 'lote', label: 'Lote / ID', minWidth: 200, render: (l) => (
+      <Box><Typography fontWeight={700} variant="body2">{l.nombre_lote}</Typography><Typography variant="caption" color="text.secondary">ID: {l.id}</Typography></Box>
+    )},
+    { id: 'proyecto', label: 'Proyecto', minWidth: 150, render: (l) => (
+      l.id_proyecto ? <Chip label={proyectos.find(p => p.id === l.id_proyecto)?.nombre_proyecto || `Proy. ${l.id_proyecto}`} size="small" variant="outlined" color="primary" /> 
+      : <Chip label="Huérfano" size="small" color="warning" icon={<Warning sx={{ fontSize: 14 }} />} variant="outlined" />
+    )},
+    { id: 'precio', label: 'Precio Base', render: (l) => <Typography variant="body2" fontWeight={700} color="primary.main">${Number(l.precio_base).toLocaleString('es-AR')}</Typography> },
+    { id: 'estado', label: 'Estado', render: (l) => <Chip label={l.estado_subasta.toUpperCase()} color={getStatusColor(l.estado_subasta)} size="small" variant={l.estado_subasta === 'pendiente' ? 'outlined' : 'filled'} sx={{ fontWeight: 700 }} /> },
+    { id: 'visibilidad', label: 'Visibilidad', align: 'center', render: (l) => (
+      <Stack direction="row" alignItems="center" spacing={1} justifyContent="center">
+        {toggleActiveMutation.isPending && confirmDialog.data?.id === l.id ? <CircularProgress size={20} /> : <Switch checked={l.activo} onChange={() => handleToggleActive(l)} size="small" color="success" />}
+      </Stack>
+    )},
+    { id: 'ganador', label: 'Ganador', render: (l) => (
+      l.id_ganador ? <Chip icon={<Person sx={{ fontSize: '14px !important' }} />} label={`Usuario ${l.id_ganador}`} size="small" color="success" variant="outlined" /> : <Typography variant="caption" color="text.disabled">-</Typography>
+    )},
+    { id: 'subasta', label: 'Control', align: 'right', render: (l) => (
+      l.id_proyecto && (
+        <Tooltip title="Gestionar Subasta">
+            <IconButton 
+                size="small" 
+                onClick={() => handleAuctionClick(l)}
+                sx={{ 
+                    color: l.estado_subasta === 'activa' ? 'error.main' : 'success.main',
+                    bgcolor: alpha(l.estado_subasta === 'activa' ? theme.palette.error.main : theme.palette.success.main, 0.1),
+                    '&:hover': { bgcolor: alpha(l.estado_subasta === 'activa' ? theme.palette.error.main : theme.palette.success.main, 0.2) }
+                }}
+            >
+                {l.estado_subasta === 'activa' ? <StopCircle /> : <Gavel />}
+            </IconButton>
+        </Tooltip>
+      )
+    )},
+    { id: 'acciones', label: 'Acciones', align: 'right', render: (l) => (
+      <Stack direction="row" justifyContent="flex-end" spacing={0.5}>
+        <Tooltip title="Imágenes"><IconButton onClick={() => handleManageImages(l)} size="small" color="primary"><Collections fontSize="small" /></IconButton></Tooltip>
+        <Tooltip title="Editar"><IconButton size="small" onClick={() => handleOpenEdit(l)}><Edit fontSize="small" /></IconButton></Tooltip>
+      </Stack>
+    )}
+  ], [proyectos, theme, toggleActiveMutation.isPending, confirmDialog.data, handleToggleActive, handleAuctionClick, handleManageImages, handleOpenEdit]);
 
   return (
     <PageContainer maxWidth="xl" sx={{ py: 3 }}>
-      <PageHeader title="Panel de Administración" subtitle="Visión general del rendimiento de la plataforma" />
+      <PageHeader title="Gestión de Lotes" subtitle="Inventario, asignación de proyectos y control de subastas." />
 
-      {/* Accesos Rápidos */}
-      <Paper elevation={0} sx={{ p: 2, mb: 4, border: '1px solid', borderColor: 'divider', borderRadius: 2, bgcolor: alpha(theme.palette.background.paper, 0.6) }}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={2}>
-          <Typography variant="subtitle1" fontWeight={600} color="text.secondary">Accesos Directos:</Typography>
-          <Stack direction="row" gap={2} flexWrap="wrap">
-            {[
-              { label: 'Usuarios', icon: <PersonIcon />, path: '/admin/usuarios' },
-              { label: 'Proyectos', icon: <HandymanIcon />, path: '/admin/proyectos' },
-              { label: 'Lotes', icon: <LandscapeIcon />, path: '/admin/lotes' },
-              { label: 'Subastas', icon: <GavelIcon />, path: '/admin/subastas' },
-              { label: 'Contratos', icon: <AssessmentIcon />, path: '/admin/plantillas' },
-            ].map(btn => (
-              <Button key={btn.label} variant="outlined" size="small" startIcon={btn.icon} onClick={() => navigate(btn.path)} sx={{ borderRadius: 2, textTransform: 'none' }}>
-                {btn.label}
-              </Button>
-            ))}
-          </Stack>
+      {/* Grid de KPIs */}
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', lg: 'repeat(4, 1fr)' }, gap: 2, mb: 4 }}>
+        <StatCard title="Total Lotes" value={stats.total} icon={<Inventory />} color="primary" loading={loadingLotes} />
+        <StatCard title="En Subasta" value={stats.enSubasta} icon={<Gavel />} color="success" loading={loadingLotes} />
+        <StatCard title="Finalizados" value={stats.finalizados} icon={<CheckCircle />} color="info" loading={loadingLotes} />
+        <StatCard title="Huérfanos" value={stats.huerfanos} icon={<AssignmentLate />} color="warning" loading={loadingLotes} />
+      </Box>
+
+      {/* Barra de Filtros */}
+      <Paper elevation={0} sx={{ p: 2, mb: 3, borderRadius: 2, border: '1px solid', borderColor: 'divider', bgcolor: alpha(theme.palette.background.paper, 0.6) }}>
+        <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="center">
+          <TextField 
+            placeholder="Buscar por nombre o ID..." size="small" sx={{ flexGrow: 1 }} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} 
+            InputProps={{ startAdornment: <InputAdornment position="start"><Search color="action"/></InputAdornment> }} 
+          />
+          <TextField 
+            select 
+            label="Filtrar Proyecto" 
+            size="small" 
+            sx={{ minWidth: 250 }} 
+            value={filterProject} 
+            onChange={(e) => setFilterProject(e.target.value)}
+          >
+            <MenuItem value="all">Todos los Lotes</MenuItem>
+            <MenuItem value="huerfano">⚠️ Sin Proyecto</MenuItem>
+            <Divider />
+            {proyectos.map((p: any) => <MenuItem key={p.id} value={p.id}>{p.nombre_proyecto}</MenuItem>)}
+          </TextField>
+          <Button variant="contained" startIcon={<Add />} onClick={handleOpenCreate}>Nuevo Lote</Button>
         </Stack>
       </Paper>
 
-      {/* KPI Cards */}
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', lg: 'repeat(4, 1fr)' }, gap: 3, mb: 4 }}>
-        <StatCard title="KYC Pendientes" value={stats.pendingKYC} icon={<PendingActionsIcon />} color={theme.palette.error.main} onClick={() => navigate('/Admin/Usuarios/AdminKYC')} />
-        <StatCard title="Total Invertido" value={`$${parseFloat(stats.totalInvertido).toLocaleString()}`} icon={<MoneyIcon />} color={theme.palette.success.main} />
-        <StatCard title="Liquidez Actual" value={`${stats.tasaLiquidez}%`} subtitle={`$${parseFloat(stats.totalPagado).toLocaleString()} pagados`} icon={<AccountBalanceIcon />} color={theme.palette.primary.main} />
-        <StatCard title="Subastas Activas" value={stats.subastasActivas} subtitle={`${stats.cobrosPendientes} por cobrar`} icon={<GavelIcon />} color={theme.palette.warning.main} onClick={() => navigate('/admin/subastas')} />
-      </Box>
-
-      <QueryHandler isLoading={isLoading} error={null} fullHeight>
-        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-          <Tabs value={activeTab} onChange={(_, v) => setActiveTab(v)} variant="scrollable" textColor="primary" indicatorColor="primary">
-            {['Proyectos', 'Suscripciones', 'Inversiones', 'Popularidad', 'Subastas'].map((label, i) => (
-              <Tab key={label} label={label} icon={i === 4 ? <GavelIcon fontSize="small" /> : undefined} iconPosition="start" />
-            ))}
-          </Tabs>
-        </Box>
-
-        {/* TAB CONTENIDO */}
-        {activeTab === 0 && (
-          <Stack spacing={3}>
-            <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, bgcolor: alpha(theme.palette.success.main, 0.05) }}>
-              <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                <Avatar sx={{ width: 64, height: 64, bgcolor: 'success.main', color: 'white' }}><TrendingUpIcon fontSize="large" /></Avatar>
-                <Box>
-                  <Typography variant="h4" fontWeight={800} color="success.dark">{completionRate?.tasa_culminacion ?? '0'}%</Typography>
-                  <Typography variant="subtitle1" fontWeight={600}>Tasa Global de Culminación de Proyectos</Typography>
-                  <Typography variant="body2" color="text.secondary">{stats.totalFinalizados} proyectos completados.</Typography>
-                </Box>
-              </CardContent>
-            </Card>
-
-            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, gap: 3 }}>
-              <Card elevation={0} sx={{ flex: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-                <CardHeader title="Avance de Suscripciones" avatar={<AssessmentIcon color="primary" />} />
-                <Divider />
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={350}>
-                    <BarChart data={chartDataSuscripciones}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <XAxis dataKey="nombre" axisLine={false} tick={{ fontSize: 12 }} />
-                      <YAxis axisLine={false} tick={{ fontSize: 12 }} />
-                      <RechartsTooltip formatter={(v: any) => [`${v}%`, 'Avance']} />
-                      <Bar dataKey="avance" fill={theme.palette.primary.main} radius={[4, 4, 0, 0]} barSize={40} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-
-              <Card elevation={0} sx={{ flex: 1, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-                <CardHeader title="Distribución de Estados" />
-                <Divider />
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie data={estadosData} cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={5} dataKey="value">
-                        {estadosData.map((_, index) => <Cell key={`cell-${index}`} fill={RECHART_COLORS[index % RECHART_COLORS.length]} />)}
-                      </Pie>
-                      <RechartsTooltip />
-                      <Legend verticalAlign="bottom" height={36} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-            </Box>
-          </Stack>
-        )}
-
-        {activeTab === 1 && (
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
-            <Card variant="outlined" sx={{ borderRadius: 2 }}>
-              <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                <Avatar sx={{ bgcolor: alpha(theme.palette.error.main, 0.1), color: 'error.main', width: 64, height: 64 }}><WarningIcon fontSize="large" /></Avatar>
-                <Box>
-                  <Typography variant="h3" fontWeight={700} color="error.main">{stats.tasaMorosidad}%</Typography>
-                  <Typography variant="h6">Tasa de Morosidad</Typography>
-                  <Chip label={`$${parseFloat(morosidad?.total_en_riesgo ?? '0').toLocaleString()} en riesgo`} color="error" size="small" variant="outlined" sx={{ mt: 1 }} />
-                </Box>
-              </CardContent>
-            </Card>
-            <Card variant="outlined" sx={{ borderRadius: 2 }}>
-              <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                <Avatar sx={{ bgcolor: alpha(theme.palette.warning.main, 0.1), color: 'warning.main', width: 64, height: 64 }}><CancelIcon fontSize="large" /></Avatar>
-                <Box>
-                  <Typography variant="h3" fontWeight={700} color="warning.main">{stats.tasaCancelacion}%</Typography>
-                  <Typography variant="h6">Tasa de Cancelación</Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>{cancelacion?.total_canceladas} suscripciones canceladas.</Typography>
-                </Box>
-              </CardContent>
-            </Card>
-          </Box>
-        )}
-
-        {activeTab === 2 && (
-          <Card variant="outlined" sx={{ borderRadius: 2 }}>
-            <CardHeader title="Top 5 Inversores" action={<Button endIcon={<ArrowForwardIcon />} size="small">Ver todos</Button>} />
-            <Divider />
-            <DataTable
-              columns={[
-                { id: 'nombre_usuario', label: 'Usuario', render: (row: InversionPorUsuarioDTO) => (
-                  <Stack direction="row" alignItems="center" spacing={2}>
-                    <Avatar sx={{ width: 32, height: 32, fontSize: 14 }}>{row.nombre_usuario.charAt(0).toUpperCase()}</Avatar>
-                    <Typography variant="body2" fontWeight={600}>{row.nombre_usuario}</Typography>
-                  </Stack>
-                )},
-                { id: 'email', label: 'Email' },
-                { id: 'monto_total_invertido', label: 'Monto Total', align: 'right', format: (v) => `$${parseFloat(v as string).toLocaleString()}` },
-                { id: 'cantidad_inversiones', label: 'Inversiones', align: 'right' },
-              ]}
-              data={inversionesPorUsuario.slice(0, 5)}
-              getRowKey={row => row.id_usuario}
-              pagination={false}
-            />
-          </Card>
-        )}
-
-        {activeTab === 3 && (
-          <Card variant="outlined" sx={{ borderRadius: 2 }}>
-            <CardHeader title="Lotes Más Populares" subheader={defaultProyectoId ? `Proyecto Actual` : "Seleccione un proyecto"} avatar={<StarIcon color="warning" />} />
-            <Divider />
-            <CardContent>
-              <Stack spacing={2}>
-                {popularidadLotes.slice(0, 5).map((lote, index) => (
-                  <Paper key={lote.id_lote} variant="outlined" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, borderRadius: 2, borderColor: index === 0 ? 'primary.main' : 'divider', bgcolor: index === 0 ? alpha(theme.palette.primary.main, 0.04) : 'transparent' }}>
-                    <Stack direction="row" alignItems="center" spacing={2}>
-                      <Avatar sx={{ bgcolor: index === 0 ? 'warning.main' : 'action.disabledBackground', color: 'white' }}><StarIcon fontSize="small" /></Avatar>
-                      <Box>
-                        <Typography variant="subtitle1" fontWeight={700}>{lote.nombre_lote}</Typography>
-                        <Typography variant="caption" color="text.secondary">Base: {favoritoService.formatPrecio(lote.precio_base)}</Typography>
-                      </Box>
-                    </Stack>
-                    <Box textAlign="right" sx={{ minWidth: 100 }}>
-                      <Typography variant="h6" fontWeight="bold" color="primary.main">{lote.cantidad_favoritos}</Typography>
-                      <LinearProgress variant="determinate" value={lote.porcentaje_popularidad} sx={{ height: 6, borderRadius: 3, mt: 0.5 }} />
-                    </Box>
-                  </Paper>
-                ))}
-              </Stack>
-            </CardContent>
-          </Card>
-        )}
-
-        {activeTab === 4 && (
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
-            <Card variant="outlined" sx={{ borderRadius: 2 }}>
-              <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                <Avatar variant="rounded" sx={{ bgcolor: alpha(theme.palette.success.main, 0.1), color: 'success.main', width: 64, height: 64 }}><TrendingUpIcon fontSize="large" /></Avatar>
-                <Box>
-                  <Typography variant="h3" fontWeight={700}>{stats.subastasActivas}</Typography>
-                  <Typography variant="subtitle1" color="text.secondary">Subastas en Curso</Typography>
-                  <Button variant="contained" size="small" sx={{ mt: 1 }} onClick={() => navigate('/admin/subastas')}>Ir a Sala</Button>
-                </Box>
-              </CardContent>
-            </Card>
-            <Card variant="outlined" sx={{ borderRadius: 2 }}>
-              <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                <Avatar variant="rounded" sx={{ bgcolor: alpha(theme.palette.warning.main, 0.1), color: 'warning.main', width: 64, height: 64 }}><ReceiptLong fontSize="large" /></Avatar>
-                <Box>
-                  <Typography variant="h3" fontWeight={700}>{stats.cobrosPendientes}</Typography>
-                  <Typography variant="subtitle1" color="text.secondary">Adjudicaciones por Cobrar</Typography>
-                  <Typography variant="caption" color="error" fontWeight={600}>Gestión administrativa requerida</Typography>
-                </Box>
-              </CardContent>
-            </Card>
-          </Box>
-        )}
+      <QueryHandler isLoading={loadingLotes} error={error as Error}>
+        <DataTable columns={columns} data={filteredLotes} getRowKey={(row) => row.id} isRowActive={(lote) => lote.activo} highlightedRowId={highlightedId} emptyMessage="No se encontraron lotes." pagination={true} defaultRowsPerPage={10} />
       </QueryHandler>
+
+      {/* --- MODALES --- */}
+      
+      <CreateLoteModal 
+        {...createModal.modalProps} 
+        onSubmit={async (data) => { await saveMutation.mutateAsync({ dto: data }); }} 
+        isLoading={saveMutation.isPending} 
+      />
+
+      <EditLoteModal 
+        {...editModal.modalProps} 
+        lote={selectedLote} 
+        onSubmit={async (id, data) => { await saveMutation.mutateAsync({ dto: data, id }); }} 
+        isLoading={saveMutation.isPending} 
+      />
+
+      {selectedLote && (
+        <ManageLoteImagesModal 
+          {...imagesModal.modalProps} 
+          lote={selectedLote} 
+        />
+      )}
+
+      {selectedLote && (
+          <AuctionControlModal 
+            open={auctionModal.isOpen}
+            onClose={auctionModal.close}
+            lote={selectedLote}
+            isLoading={startAuction.isPending || endAuction.isPending}
+            onStart={(id) => startAuction.mutate(id)}
+            onEnd={(id) => endAuction.mutate(id)}
+          />
+      )}
+
+      <ConfirmDialog 
+        controller={confirmDialog} 
+        onConfirm={handleConfirmAction} 
+        isLoading={toggleActiveMutation.isPending} 
+      />
+
     </PageContainer>
   );
 };
 
-export default AdminDashboard;
+export default AdminLotes;

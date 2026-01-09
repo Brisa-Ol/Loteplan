@@ -89,9 +89,12 @@ const ProjectLotesModal: React.FC<ProjectLotesModalProps> = ({
   // 2. CONFIGURACIÓN COLUMNAS
   // =========================================================
 
-  const formatPrice = (precio: number) => {
-    const moneda = (proyecto as any)?.moneda || 'USD';
-    return `${moneda} ${Number(precio).toLocaleString('es-AR', { 
+  // ✅ CORRECCIÓN 1: Aceptamos string o number y convertimos explícitamente
+  const formatPrice = (precio: number | string) => {
+    const moneda = proyecto?.moneda || 'USD';
+    const valorNumerico = Number(precio); // Aseguramos que sea número
+    
+    return `${moneda} ${valorNumerico.toLocaleString('es-AR', { 
       minimumFractionDigits: 0, maximumFractionDigits: 2 
     })}`;
   };
@@ -141,12 +144,13 @@ const ProjectLotesModal: React.FC<ProjectLotesModalProps> = ({
         <Stack direction="row" alignItems="center" justifyContent="flex-end" spacing={0.5}>
             <MoneyIcon fontSize="inherit" color="action" sx={{ fontSize: 14 }} />
             <Typography variant="body2" fontWeight={700} color="primary.main" fontFamily="monospace">
-            {formatPrice(row.precio_base)}
+                {/* Usamos la función corregida */}
+                {formatPrice(row.precio_base)}
             </Typography>
         </Stack>
       )
     },
-    {
+    { 
       id: 'latitud', 
       label: 'Mapa', 
       align: 'center',
@@ -156,7 +160,7 @@ const ProjectLotesModal: React.FC<ProjectLotesModalProps> = ({
              <IconButton 
                size="small" 
                color="primary" 
-               // CORRECCIÓN DE SINTAXIS DE URL
+               // ✅ CORRECCIÓN 2: URL de Google Maps válida
                href={`https://www.google.com/maps/search/?api=1&query=${row.latitud},${row.longitud}`}
                target="_blank"
                rel="noopener noreferrer"
@@ -233,12 +237,12 @@ const ProjectLotesModal: React.FC<ProjectLotesModalProps> = ({
 
   const contratoUrl = plantillaAsignada?.url_archivo;
 
-  const handleVerTodosLotes = () => {
+const handleVerTodosLotes = () => {
     if (!proyecto) return;
+    // ✅ Navegamos pasando el ID como query param "proyecto"
     navigate(`/admin/lotes?proyecto=${proyecto.id}`);
     onClose();
-  };
-
+};
   const handleVerContrato = () => {
     if (contratoUrl) window.open(contratoUrl, '_blank', 'noopener,noreferrer');
   };
@@ -396,7 +400,6 @@ const ProjectLotesModal: React.FC<ProjectLotesModalProps> = ({
                             defaultRowsPerPage={5}
                             rowsPerPageOptions={[5, 10]} 
                             emptyMessage="No se encontraron lotes asociados a este proyecto."
-                            // elevation={0} -> ELIMINADO PORQUE YA NO EXISTE EN LA INTERFAZ NUEVA
                         />
                     </Box>
                 )}

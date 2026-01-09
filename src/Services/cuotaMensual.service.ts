@@ -1,73 +1,56 @@
 import type { GenericResponseDto } from '../types/dto/auth.dto';
-import type { CreateCuotaMensualDto, CuotaMensualDto, UpdateCuotaMensualDto } from '../types/dto/cuotaMensual.dto';
+import type { 
+    CreateCuotaMensualDto, 
+    CuotaMensualDto, 
+    UpdateCuotaMensualDto,
+    CuotaBackendResponse // Importamos el nuevo tipo
+} from '../types/dto/cuotaMensual.dto';
 import httpService from './httpService';
 import type { AxiosResponse } from 'axios';
 
-
-  /**
-   * Servicio para la gestión de cuotas mensuales de proyectos.
-   * Conecta con el controlador `cuotaMensualController` del backend.
-   *  @remarks
- * - Las cuotas mensuales definen el monto y cronograma de pagos para proyectos mensuales
- * - Al crear/actualizar una cuota, el backend recalcula el monto total del proyecto
- * - Solo aplica a proyectos con tipo_inversion: 'mensual'
- * - Soft delete: activo: true/false
-   */
-  
 const CuotaMensualService = {
 
   // =================================================
-  // ⚙️ GESTIÓN ADMINISTRATIVA (Admin)
+  // ⚙️ GESTIÓN ADMINISTRATIVA
   // =================================================
-/**
- * crea una nueva cuota mensual para un proyecto.
- * @param data- Data de la cuota 
- * @returns cuota creada
- */
-  create: async (data: CreateCuotaMensualDto): Promise<AxiosResponse<CuotaMensualDto>> => {
+
+  /**
+   * Crea una nueva cuota.
+   * El back devuelve { success: true, cuota: {...}, sincronizacion: {...} }
+   */
+  create: async (data: CreateCuotaMensualDto): Promise<AxiosResponse<CuotaBackendResponse>> => {
     return await httpService.post('/cuotas_mensuales', data);
   },
 
   /**
-  * Actualiza una cuota mensual existente.
-  * @param id - ID de la cuota
-  * @param data - Datos a actualizar
-  * @returns Cuota actualizada
-  */
-  update: async (id: number, data: UpdateCuotaMensualDto): Promise<AxiosResponse<CuotaMensualDto>> => {
+   * Actualiza una cuota.
+   */
+  update: async (id: number, data: UpdateCuotaMensualDto): Promise<AxiosResponse<CuotaBackendResponse>> => {
     return await httpService.put(`/cuotas_mensuales/${id}`, data);
   },
 
-  /**
-   * Desactiva una cuota mensual (soft delete - solo administradores).
-   * @param id - ID de la cuota a desactivar
-   * @returns Mensaje de confirmación
-   */
   softDelete: async (id: number): Promise<AxiosResponse<GenericResponseDto>> => {
     return await httpService.delete(`/cuotas_mensuales/${id}`);
   },
 
   // =================================================
-  // 🔍 CONSULTAS (Usuario / Admin)
+  // 🔍 CONSULTAS
   // =================================================
 
-/**
-   * Obtiene el historial de todas las cuotas configuradas para un proyecto.
-   * @param idProyecto - ID del proyecto
-   * @returns Lista de cuotas del proyecto
+  /**
+   * Obtiene lista de cuotas (Historial).
+   * El back devuelve { success: true, cuotas: [...] }
    */
-  getByProjectId: async (idProyecto: number): Promise<AxiosResponse<CuotaMensualDto[]>> => {
-
+  getByProjectId: async (idProyecto: number): Promise<AxiosResponse<{ success: boolean, cuotas: CuotaMensualDto[] }>> => {
     return await httpService.get(`/cuotas_mensuales/${idProyecto}`);
   },
 
   /**
-  * Obtiene la última cuota activa de un proyecto.
-   * @param idProyecto - ID del proyecto
-   * @returns Última cuota activa
+   * Obtiene la última cuota activa.
+   * 🔴 CORREGIDO: Se eliminó "/proyecto" de la URL para coincidir con el backend `/:id_proyecto/last`
    */
-  getLastByProjectId: async (idProyecto: number): Promise<AxiosResponse<CuotaMensualDto>> => {
-    return await httpService.get(`/cuotas_mensuales/proyecto/${idProyecto}/last`); // Recomendado estandarizar esta también
+  getLastByProjectId: async (idProyecto: number): Promise<AxiosResponse<{ success: boolean, cuota: CuotaMensualDto }>> => {
+    return await httpService.get(`/cuotas_mensuales/${idProyecto}/last`); 
   }
 };
 

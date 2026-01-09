@@ -1,8 +1,10 @@
+// src/pages/Client/Proyectos/AdminProyectos.tsx
+
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import {
   Box, Typography, Button, Paper, Chip, IconButton, Stack, Tooltip,
-  TextField, MenuItem, InputAdornment, Switch, CircularProgress,
-  alpha, Avatar, useTheme, Divider
+  TextField, MenuItem, InputAdornment, Switch,
+  alpha, Avatar, useTheme
 } from '@mui/material';
 import {
   Add, Search, Edit,
@@ -11,8 +13,6 @@ import {
   Image as ImageIcon,
   PlayArrow,
   Apartment as ApartmentIcon,
-  CheckCircle,
-  Block
 } from '@mui/icons-material';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -28,6 +28,7 @@ import { useModal } from '../../../hooks/useModal';
 import { ConfirmDialog } from '../../../components/common/ConfirmDialog/ConfirmDialog';
 import { useConfirmDialog } from '../../../hooks/useConfirmDialog';
 import ProyectoService from '../../../services/proyecto.service';
+import CuotaMensualService from '../../../services/cuotaMensual.service';
 
 // Modales
 import CreateProyectoModal from './components/modals/CreateProyectoModal';
@@ -41,7 +42,7 @@ type TipoInversionFilter = 'all' | 'mensual' | 'directo';
 const AdminProyectos: React.FC = () => {
   const theme = useTheme();
   const queryClient = useQueryClient();
-  const { showSuccess } = useSnackbar();
+  const { showSuccess, showError } = useSnackbar();
 
   // --- HOOKS DE MODALES ---
   const createModal = useModal();
@@ -76,32 +77,18 @@ const AdminProyectos: React.FC = () => {
 
   // --- MUTACIONES ---
 
-  // 1. CREAR
-  const createMutation = useMutation({
-    mutationFn: (data: CreateProyectoDto) => ProyectoService.create(data),
-    onSuccess: (response) => { 
-      queryClient.invalidateQueries({ queryKey: ['adminProyectos'] });
-      createModal.close();
-      if (response.data?.id) {
-          setHighlightedId(response.data.id);
-          setTimeout(() => setHighlightedId(null), 2500);
-      }
-      showSuccess('Proyecto creado. Use el icono de imagen para subir la portada.');
-    }
-  });
-
-  // 2. EDITAR (Solución del error TypeScript)
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: number, data: UpdateProyectoDto }) => ProyectoService.update(id, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['adminProyectos'] });
       editModal.close(); 
+      // Pequeño delay para limpiar el state solo después de que cierre el modal
+      setTimeout(() => setSelectedProject(null), 300);
       setHighlightedId(variables.id); 
       showSuccess('Proyecto actualizado correctamente');
     }
   });
 
-  // 3. VISIBILIDAD
   const toggleActiveMutation = useMutation({
     mutationFn: async ({ id, activo }: { id: number; activo: boolean }) => ProyectoService.update(id, { activo }),
     onSuccess: (_, variables) => {
@@ -113,7 +100,6 @@ const AdminProyectos: React.FC = () => {
     }
   });
 
-  // 4. INICIAR PROCESO
   const startMutation = useMutation({
     mutationFn: (id: number) => ProyectoService.startProcess(id),
     onSuccess: () => {
@@ -123,19 +109,75 @@ const AdminProyectos: React.FC = () => {
     }
   });
 
-  // --- HANDLERS OPTIMIZADOS (useCallback) ---
-  // Estos evitan re-renders innecesarios al pasar funciones estables a los hijos
+  // --- HANDLERS ---
 
-  const handleCreateSubmit = useCallback(async (data: CreateProyectoDto) => {
-    await createMutation.mutateAsync(data);
-  }, [createMutation]);
+  const handleCreateSubmit = useCallback(async (data: any, image: File | null) => {
+    try {
+        // 1. Crear Proyecto
+        const proyectoData: CreateProyectoDto = {
+            nombre_proyecto: data.nombre_proyecto,
+            descripcion: data.descripcion,
+            tipo_inversion: data.tipo_inversion,
+            plazo_inversion: data.plazo_inversion,
+            forma_juridica: data.forma_juridica,
+            monto_inversion: data.monto_inversion,
+            moneda: data.moneda,
+            suscripciones_minimas: data.suscripciones_minimas,
+            obj_suscripciones: data.obj_suscripciones,
+            fecha_inicio: data.fecha_inicio,
+            fecha_cierre: data.fecha_cierre,
+            latitud: data.latitud || null,
+            longitud: data.longitud || null,
+        };
+
+        const resProyecto = await ProyectoService.create(proyectoData);
+        const nuevoId = resProyecto.data.id;
+
+        // 2. Crear Cuota
+        if (data.tipo_inversion === 'mensual') {
+            await CuotaMensualService.create({
+                id_proyecto: nuevoId,
+                nombre_proyecto: data.nombre_proyecto,
+                total_cuotas_proyecto: data.plazo_inversion,
+                nombre_cemento_cemento: data.nombre_cemento_cemento,
+                valor_cemento_unidades: data.valor_cemento_unidades,
+                valor_cemento: data.valor_cemento,
+                porcentaje_plan: data.porcentaje_plan,
+                porcentaje_administrativo: data.porcentaje_administrativo / 100, 
+                porcentaje_iva: data.porcentaje_iva / 100
+            });
+        }
+
+        // 3. Subir Imagen
+        if (image) {
+             console.log("Imagen lista para subir:", image.name);
+             // await ImagenService.uploadProyectoImagen(nuevoId, image);
+        }
+
+        queryClient.invalidateQueries({ queryKey: ['adminProyectos'] });
+        createModal.close();
+        setHighlightedId(nuevoId);
+        showSuccess('Proyecto creado y configurado exitosamente.');
+
+    } catch (error: any) {
+        console.error(error);
+        const msg = error.response?.data?.message || 'Error al crear el proyecto';
+        showError(msg);
+    }
+  }, [createModal, queryClient, showSuccess, showError]);
 
   const handleUpdateSubmit = useCallback(async (id: number, data: UpdateProyectoDto) => {
     await updateMutation.mutateAsync({ id, data });
   }, [updateMutation]);
 
-  const handleAction = useCallback((proyecto: ProyectoDto, action: 'edit' | 'images' | 'cuotas' | 'lotes') => {
+  // HANDLER: Abre los modales de forma segura
+  const handleAction = useCallback((proyecto: ProyectoDto, action: 'edit' | 'images' | 'cuotas' | 'lotes', e?: React.MouseEvent) => {
+    if (e) e.stopPropagation(); // Evita que clicks burbujeen a la fila
+
+    // 1. Setear proyecto
     setSelectedProject(proyecto);
+    
+    // 2. Abrir modal correspondiente
     if (action === 'edit') editModal.open();
     else if (action === 'images') imagesModal.open();
     else if (action === 'cuotas') cuotasModal.open();
@@ -154,7 +196,7 @@ const AdminProyectos: React.FC = () => {
     }
   }, [confirmDialog, startMutation, toggleActiveMutation]);
 
-  // --- FILTRADO (Memoizado) ---
+  // --- FILTRADO ---
   const filteredProyectos = useMemo(() => {
     return proyectos.filter(p => {
       const matchesSearch = p.nombre_proyecto.toLowerCase().includes(searchTerm.toLowerCase());
@@ -163,7 +205,7 @@ const AdminProyectos: React.FC = () => {
     });
   }, [proyectos, searchTerm, filterTipo]);
 
-  // --- COLUMNAS (Memoizadas) ---
+  // --- COLUMNAS ---
   const columns = useMemo<DataTableColumn<ProyectoDto>[]>(() => [
     {
       id: 'proyecto',
@@ -215,15 +257,19 @@ const AdminProyectos: React.FC = () => {
       align: 'right',
       render: (p) => (
         <Stack direction="row" spacing={0.5} justifyContent="flex-end">
-          <Tooltip title="Imágenes"><IconButton onClick={() => handleAction(p, 'images')} size="small" color="primary"><ImageIcon fontSize="small" /></IconButton></Tooltip>
+          {/* Se pasa el evento 'e' para detener propagación */}
+          <Tooltip title="Imágenes"><IconButton onClick={(e) => handleAction(p, 'images', e)} size="small" color="primary"><ImageIcon fontSize="small" /></IconButton></Tooltip>
+          
           {p.tipo_inversion === 'mensual' && (
-            <Tooltip title="Cuotas"><IconButton onClick={() => handleAction(p, 'cuotas')} size="small"><MonetizationOnIcon fontSize="small" /></IconButton></Tooltip>
+            <Tooltip title="Ver/Editar Cuotas"><IconButton onClick={(e) => handleAction(p, 'cuotas', e)} size="small"><MonetizationOnIcon fontSize="small" /></IconButton></Tooltip>
           )}
+          
           {p.tipo_inversion === 'mensual' && p.estado_proyecto === 'En Espera' && (
             <Tooltip title="Iniciar Cobros"><IconButton onClick={() => confirmDialog.confirm('start_project_process', p)} size="small" sx={{ color: "success.main" }}><PlayArrow fontSize="small" /></IconButton></Tooltip>
           )}
-          <Tooltip title="Editar"><IconButton onClick={() => handleAction(p, 'edit')} size="small"><Edit fontSize="small" /></IconButton></Tooltip>
-          <Tooltip title="Lotes"><IconButton onClick={() => handleAction(p, 'lotes')} size="small" color="info"><VisibilityIcon fontSize="small" /></IconButton></Tooltip>
+          
+          <Tooltip title="Editar"><IconButton onClick={(e) => handleAction(p, 'edit', e)} size="small"><Edit fontSize="small" /></IconButton></Tooltip>
+          <Tooltip title="Lotes"><IconButton onClick={(e) => handleAction(p, 'lotes', e)} size="small" color="info"><VisibilityIcon fontSize="small" /></IconButton></Tooltip>
         </Stack>
       )
     }
@@ -233,7 +279,6 @@ const AdminProyectos: React.FC = () => {
     <PageContainer maxWidth="xl" sx={{ py: 3 }}>
       <PageHeader title="Gestión de Proyectos" subtitle="Administra el catálogo de inversiones y estados." />
 
-      {/* Barra de Filtros */}
       <Paper elevation={0} sx={{ p: 2, mb: 3, display: 'flex', gap: 2, alignItems: 'center', borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
         <TextField 
           placeholder="Buscar..." size="small" sx={{ flexGrow: 1 }} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
@@ -248,7 +293,6 @@ const AdminProyectos: React.FC = () => {
       </Paper>
 
       <QueryHandler isLoading={isLoading} error={error as Error}>
-          {/* La tabla ya no se redibuja innecesariamente gracias a los useCallbacks */}
           <DataTable 
             columns={columns} 
             data={filteredProyectos} 
@@ -258,27 +302,41 @@ const AdminProyectos: React.FC = () => {
           />
       </QueryHandler>
 
-      {/* --- MODALES OPTIMIZADOS --- */}
-
+      {/* --- MODAL DE CREACIÓN --- */}
       <CreateProyectoModal
         {...createModal.modalProps} 
         onSubmit={handleCreateSubmit}
-        isLoading={createMutation.isPending}
       />
 
+      {/* --- MODALES DE EDICIÓN --- */}
+      {/* Se renderizan SOLO si hay proyecto seleccionado para evitar errores de null */}
       {selectedProject && (
         <>
-          <ConfigCuotasModal {...cuotasModal.modalProps} proyecto={selectedProject} />
-          
-          <EditProyectoModal 
-            {...editModal.modalProps} 
+          <ConfigCuotasModal 
+            open={cuotasModal.isOpen}
+            onClose={cuotasModal.close} // ✅ CORREGIDO
             proyecto={selectedProject} 
-            onSubmit={handleUpdateSubmit} // Usamos el callback estable
-            isLoading={updateMutation.isPending} // Usamos el estado real de la mutación
           />
           
-          <ProjectLotesModal {...lotesModal.modalProps} proyecto={selectedProject} />
-          <ManageImagesModal {...imagesModal.modalProps} proyecto={selectedProject} />
+          <EditProyectoModal 
+            open={editModal.isOpen}
+            onClose={editModal.close} // ✅ CORREGIDO
+            proyecto={selectedProject} 
+            onSubmit={handleUpdateSubmit} 
+            isLoading={updateMutation.isPending} 
+          />
+          
+          <ProjectLotesModal 
+            open={lotesModal.isOpen}
+            onClose={lotesModal.close} // ✅ CORREGIDO
+            proyecto={selectedProject} 
+          />
+          
+          <ManageImagesModal 
+            open={imagesModal.isOpen}
+            onClose={imagesModal.close} // ✅ CORREGIDO
+            proyecto={selectedProject} 
+          />
         </>
       )}
 

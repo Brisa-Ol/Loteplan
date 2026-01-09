@@ -113,8 +113,8 @@ export const useNavbarMenu = () => {
           label: "Contratos",
           icon: PaidIcon,
           submenu: [
-            { label: "Gestion de Contrato Plantilla", path: "/admin/Plantillas", icon: DescriptionIcon },
-            { label: "Gestion de Contratos Firmados", path: "/admin/Firmados", icon: AssignmentIcon },
+            { label: "Gestion de Contrato Plantilla", path: "/admin/plantillas", icon: DescriptionIcon },
+            { label: "Gestion de Contratos Firmados", path: "/admin/firmados", icon: AssignmentIcon },
           ],
         },
         {
@@ -172,7 +172,7 @@ export const useNavbarMenu = () => {
       const isVerified = kycStatus === "APROBADA" && user?.is_2fa_enabled;
 
       const clientNavItems: NavItem[] = [
-        { label: "Dashboard", path: "/client/dashboard" },
+        { label: "Dashboard", path: "/dashboard" },
         {
           label: "Como Funciona",
           icon: DescriptionIcon,
@@ -186,21 +186,21 @@ export const useNavbarMenu = () => {
             label: "Mis Finanzas",
             icon: AccountBalanceIcon,
             submenu: [
-                { label: "Inversiones", path: "/MisInversiones", icon: AttachMoneyIcon },
-                { label: "Suscripciones", path: "/client/suscripciones", icon: SupervisedUserIcon },
-                { label: "Pujas", path: "/client/MisPujas", icon: GavelIcon },
+                { label: "Inversiones", path: "/inversiones", icon: AttachMoneyIcon },
+                { label: "Suscripciones", path: "/suscripciones", icon: SupervisedUserIcon },
+                { label: "Pujas", path: "/pujas", icon: GavelIcon },
                 { isDivider: true, label: "Pagos" },
                 { label: "Cuotas a Pagar", path: "/pagos", icon: AttachMoneyIcon }, 
-                { label: "Historial Transacciones", path: "/client/transacciones", icon: ReceiptIcon }, 
-                { label: "Resumen de Cuenta", path: "/MisResumenes", icon: DescriptionIcon }, 
+                { label: "Historial Transacciones", path: "/transacciones", icon: ReceiptIcon }, 
+                { label: "Resumen de Cuenta", path: "/Resumenes", icon: DescriptionIcon }, 
             ]
         },
         {
             label: "Mi Portafolio",
             icon: AccountBalanceIcon,
             submenu: [
-                { label: "Favoritos", path: "/client/Favoritos", icon: FavoriteIcon },
-                { label: "Contratos", path: "/client/Contratos", icon: GavelIcon },
+                { label: "Favoritos", path: "/Favoritos", icon: FavoriteIcon },
+                { label: "Contratos", path: "/Contratos", icon: GavelIcon },
             ]
         },
         {
@@ -208,10 +208,10 @@ export const useNavbarMenu = () => {
             icon: AccountBalanceIcon,
             submenu: [
                 ...(!isVerified ? [
-                { label: "Verificar mi cuenta", path: "/client/kyc", icon: AdminIcon } as NavItem,
+                { label: "Verificar mi cuenta", path: "/kyc", icon: AdminIcon } as NavItem,
                 { isDivider: true, label: "" } as NavItem,
             ] : []),
-            { label: "Proteger mi acceso", path: "/client/seguridad", icon: AdminPanelSettingsIcon },
+            { label: "Proteger mi acceso", path: "/seguridad", icon: AdminPanelSettingsIcon },
             ]
         },
       ];
@@ -221,8 +221,8 @@ export const useNavbarMenu = () => {
           label: user?.nombre || "Usuario",
           icon: AccountCircleIcon,
           submenu: [
-            { label: "Mi Perfil", path: "/client/perfil", icon: AccountCircleIcon },
-            { label: "Mensajes", path: "/client/mensajes", icon: DescriptionIcon },
+            { label: "Mi Perfil", path: "/perfil", icon: AccountCircleIcon },
+            { label: "Mensajes", path: "/mensajes", icon: DescriptionIcon },
             { isDivider: true, label: "" },
             {
               label: "Cerrar Sesión",
@@ -235,7 +235,7 @@ export const useNavbarMenu = () => {
 
       return {
         logoPath: "/logo.svg",
-        homePath: "/client/dashboard",
+        homePath: "/dashboard",
         navItems: clientNavItems,
         userNavItems: clientUserNavItems,
         actionButtons: [],

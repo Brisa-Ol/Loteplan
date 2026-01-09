@@ -1,4 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+// 1. Importamos el hook para leer la URL
+import { useSearchParams } from 'react-router-dom';
 import { 
   Box, Typography, Button, Paper, Chip, IconButton, Stack, Tooltip, 
   TextField, MenuItem, Divider, InputAdornment, LinearProgress, Switch, 
@@ -77,6 +79,10 @@ const AdminLotes: React.FC = () => {
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useSnackbar();
 
+  // 2. Hook para obtener parámetros de la URL
+  const [searchParams, setSearchParams] = useSearchParams();
+  const proyectoParam = searchParams.get('proyecto');
+
   // Hooks de Modales
   const createModal = useModal();
   const editModal = useModal();
@@ -88,9 +94,28 @@ const AdminLotes: React.FC = () => {
   const [selectedLote, setSelectedLote] = useState<LoteDto | null>(null);
   const [highlightedId, setHighlightedId] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterProject, setFilterProject] = useState<string>('all');
+  
+  // 3. Inicializamos el filtro con el valor de la URL (si existe), o 'all'
+  const [filterProject, setFilterProject] = useState<string>(proyectoParam || 'all');
 
   const initialStatusRef = useRef<Record<number, boolean>>({});
+
+  // 4. Efecto opcional: Mantener la URL sincronizada si el usuario cambia el filtro manualmente
+  useEffect(() => {
+    if (filterProject === 'all') {
+      // Si selecciona "Todos", limpiamos la URL
+      if (searchParams.get('proyecto')) {
+         searchParams.delete('proyecto');
+         setSearchParams(searchParams);
+      }
+    } else if (filterProject !== 'huerfano') {
+      // Si selecciona un proyecto específico, actualizamos la URL
+      if (searchParams.get('proyecto') !== filterProject) {
+         setSearchParams({ proyecto: filterProject });
+      }
+    }
+  }, [filterProject, searchParams, setSearchParams]);
+
 
   // --- QUERIES ---
   const { data: lotes = [], isLoading: loadingLotes, error } = useQuery({
@@ -124,9 +149,12 @@ const AdminLotes: React.FC = () => {
     return lotes.filter(lote => {
       const term = searchTerm.toLowerCase();
       const matchesSearch = lote.nombre_lote.toLowerCase().includes(term) || lote.id.toString().includes(term);
+      
       let matchesProject = true;
       if (filterProject === 'huerfano') matchesProject = !lote.id_proyecto;
+      // Convertimos filterProject a Number para la comparación, ya que viene como string del select/url
       else if (filterProject !== 'all') matchesProject = lote.id_proyecto === Number(filterProject);
+      
       return matchesSearch && matchesProject;
     });
   }, [lotes, searchTerm, filterProject]);
@@ -177,30 +205,21 @@ const AdminLotes: React.FC = () => {
     },
     onError: (error: any) => {
       const statusCode = error.response?.status;
-      
-      // Si es un error 500, verificar si la operación fue exitosa de todos modos
       if (statusCode === 500) {
-        // No mostrar error inmediatamente, verificar primero el estado real
         queryClient.invalidateQueries({ queryKey: ['adminLotes'] });
-        
-        // Verificar después de un momento si la subasta se activó
         setTimeout(() => {
           const updatedLotes = queryClient.getQueryData<LoteDto[]>(['adminLotes']);
           const updatedLote = updatedLotes?.find(l => l.id === selectedLote?.id);
-          
           if (updatedLote?.estado_subasta === 'activa') {
-            // La operación fue exitosa a pesar del error 500
             auctionModal.close();
             setHighlightedId(updatedLote.id);
             setTimeout(() => setHighlightedId(null), 2500);
             showSuccess('✅ Subasta iniciada correctamente');
           } else {
-            // El error 500 fue real, mostrar error ahora
             showError('❌ Error del servidor al iniciar subasta. Intente nuevamente.');
           }
         }, 1200);
       } else {
-        // Errores de validación (400, 404, etc) - mostrar mensaje específico
         const backendError = error.response?.data?.error || error.response?.data?.message;
         const msg = backendError || error.message || 'Error al iniciar subasta';
         showError(`❌ ${msg}`);
@@ -219,15 +238,11 @@ const AdminLotes: React.FC = () => {
     },
     onError: (error: any) => {
       const statusCode = error.response?.status;
-      
-      // Si es un error 500, verificar si la operación fue exitosa de todos modos
       if (statusCode === 500) {
         queryClient.invalidateQueries({ queryKey: ['adminLotes'] });
-        
         setTimeout(() => {
           const updatedLotes = queryClient.getQueryData<LoteDto[]>(['adminLotes']);
           const updatedLote = updatedLotes?.find(l => l.id === selectedLote?.id);
-          
           if (updatedLote?.estado_subasta === 'finalizada') {
             auctionModal.close();
             setHighlightedId(updatedLote.id);
@@ -356,7 +371,14 @@ const AdminLotes: React.FC = () => {
             placeholder="Buscar por nombre o ID..." size="small" sx={{ flexGrow: 1 }} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} 
             InputProps={{ startAdornment: <InputAdornment position="start"><Search color="action"/></InputAdornment> }} 
           />
-          <TextField select label="Filtrar Proyecto" size="small" sx={{ minWidth: 250 }} value={filterProject} onChange={(e) => setFilterProject(e.target.value)}>
+          <TextField 
+            select 
+            label="Filtrar Proyecto" 
+            size="small" 
+            sx={{ minWidth: 250 }} 
+            value={filterProject} 
+            onChange={(e) => setFilterProject(e.target.value)}
+          >
             <MenuItem value="all">Todos los Lotes</MenuItem>
             <MenuItem value="huerfano">⚠️ Sin Proyecto</MenuItem>
             <Divider />

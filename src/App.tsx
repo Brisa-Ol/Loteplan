@@ -159,21 +159,21 @@ const AppContent: React.FC = () => {
 
           {/* --- C. RUTAS PROTEGIDAS (SOLO CLIENTES LOGUEADOS) --- */}
           <Route element={<ProtectedRoute allowedRoles={['cliente']} />}>
-            <Route path="/client/dashboard" element={<UserDashboard />} />
-            <Route path="/client/perfil" element={<Perfil />} />
-            <Route path="/client/kyc" element={<VerificacionKYC />} />
+            <Route path="/dashboard" element={<UserDashboard />} />
+            <Route path="/perfil" element={<Perfil />} />
+            <Route path="/kyc" element={<VerificacionKYC />} />
             <Route path="/pagos" element={<MisPagos />} />
-            <Route path="/client/mensajes" element={<MensajesPage />} />
-            <Route path="/client/seguridad" element={<SecuritySettings />} />
-            <Route path="/client/suscripciones" element={<MisSuscripciones />} />
-            <Route path="/client/favoritos" element={<MisFavoritos />} />
-            <Route path="/client/MisPujas" element={<MisPujas />} />
-            <Route path="/client/contratos" element={<HistorialContratos />} />
+            <Route path="/mensajes" element={<MensajesPage />} />
+            <Route path="/seguridad" element={<SecuritySettings />} />
+            <Route path="/suscripciones" element={<MisSuscripciones />} />
+            <Route path="/favoritos" element={<MisFavoritos />} />
+            <Route path="/pujas" element={<MisPujas />} />
+            <Route path="/contratos" element={<HistorialContratos />} />
             <Route path="/lotes/:id" element={<DetalleLote />} />
-            <Route path="/mis-inversiones" element={<MisInversiones />} />
+            <Route path="/inversiones" element={<MisInversiones />} />
             <Route path="/pago-estado" element={<PagoResult />} />
-            <Route path="/client/transacciones" element={<MisTransacciones />} />
-            <Route path="/mis-resumenes" element={<MisResumenes />} />
+            <Route path="/transacciones" element={<MisTransacciones />} />
+            <Route path="/resumenes" element={<MisResumenes />} />
           </Route>
         </Route>
 
@@ -186,8 +186,8 @@ const AppContent: React.FC = () => {
             <Route path="/admin/usuarios" element={<AdminUsuarios />} />
             <Route path="/proyectos/ProyectosAhorrista" element={<ProyectosAhorrista />} />
              <Route path="/proyectos/ProyectosInversionista" element={<ProyectosInversionista />} />
-            <Route path="/admin/contratos/plantillas" element={<AdminPlantillas />} />
-            <Route path="/admin/contratos/firmados" element={<AdminContratosFirmados />} />
+            <Route path="/admin/plantillas" element={<AdminPlantillas />} />
+            <Route path="/admin/firmados" element={<AdminContratosFirmados />} />
             
             <Route path="/admin/resumenes-cuenta" element={<AdminResumenesCuenta />} />
             <Route path="/admin/transacciones" element={<AdminTransacciones />} />
