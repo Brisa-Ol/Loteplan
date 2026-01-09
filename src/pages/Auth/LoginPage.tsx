@@ -57,7 +57,7 @@ const LoginPage: React.FC = () => {
   // Lógica de Navegación (Redirección post-login)
   const state = location.state as LocationState;
   const from = useMemo(() => {
-    if (!state?.from) return '/';
+    if (!state?.from) return '/dashboard';
     return typeof state.from === 'string' ? state.from : state.from.pathname;
   }, [state]);
 
