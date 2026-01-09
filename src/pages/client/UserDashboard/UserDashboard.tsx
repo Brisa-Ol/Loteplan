@@ -152,7 +152,7 @@ const UserDashboard: React.FC = () => {
                     color={hayPujasUrgentes ? "error" : "warning"} 
                     size="small" 
                     // ✅ Redirección correcta a la página de Mis Pujas
-                    onClick={() => navigate('/client/MisPujas')} 
+                    onClick={() => navigate('/pujas')} 
                     sx={{ fontWeight: 800, bgcolor: 'background.paper', color: 'text.primary', '&:hover': { bgcolor: 'background.default' } }}
                   >
                     Ver Detalles
@@ -308,7 +308,7 @@ const UserDashboard: React.FC = () => {
               {/* LISTADO DE PROYECTOS */}
               <Box mb={3} display="flex" justifyContent="space-between" alignItems="center">
                 <Typography variant="h5" fontWeight={800} color="text.primary">Mis Inversiones Activas</Typography>
-                <Button variant="text" endIcon={<ChevronRight />} onClick={() => navigate('/client/suscripciones')} sx={{ fontWeight: 700 }}>
+                <Button variant="text" endIcon={<ChevronRight />} onClick={() => navigate('/suscripciones')} sx={{ fontWeight: 700 }}>
                   Ver historial
                 </Button>
               </Box>
@@ -366,9 +366,9 @@ const UserDashboard: React.FC = () => {
                 <Stack spacing={1.5}>
                   {[
                     { l: 'Pagar Cuotas', i: <AccountBalanceWallet />, r: '/pagos', v: 'contained', c: 'primary' },
-                    { l: 'Mis Subastas', i: <Gavel />, r: '/client/MisPujas' }, // ✅ Link Correcto
-                    { l: 'Transacciones', i: <ReceiptLong />, r: '/client/transacciones' },
-                    { l: 'Contratos', i: <Description />, r: '/client/contratos' }
+                    { l: 'Mis Subastas', i: <Gavel />, r: '/pujas' }, // ✅ Link Correcto
+                    { l: 'Transacciones', i: <ReceiptLong />, r: '/transacciones' },
+                    { l: 'Contratos', i: <Description />, r: '/contratos' }
                   ].map((btn, idx) => (
                     <Button 
                       key={idx} 
@@ -402,7 +402,7 @@ const UserDashboard: React.FC = () => {
                   </Typography>
                   <Button 
                     size="small" variant="text" fullWidth sx={{ mt: 1, fontWeight: 800 }}
-                    onClick={() => navigate('/client/seguridad')}
+                    onClick={() => navigate('/seguridad')}
                   >
                     {user?.is_2fa_enabled ? 'Ver ajustes' : 'Activar 2FA'}
                   </Button>

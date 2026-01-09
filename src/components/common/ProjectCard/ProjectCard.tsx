@@ -10,13 +10,12 @@ import {
   Box,
   Button,
   Stack,
+  CardActionArea, // Importamos esto para hacer clickeable la imagen
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { LocationOn as LocationIcon } from "@mui/icons-material";
 import type { EstadoProyecto, ProyectoDto } from "../../../types/dto/proyecto.dto";
 import ImagenService from "../../../services/imagen.service";
-
-// Importaciones de arquitectura
 
 interface ProjectCardProps {
   project: ProyectoDto;
@@ -34,10 +33,9 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, type }) => {
 
   const projectStatus = statusMap[project.estado_proyecto] || "upcoming";
 
-  // ✅ Usamos el servicio centralizado para la URL de la imagen
   const imageUrl = project.imagenes && project.imagenes.length > 0
     ? ImagenService.resolveImageUrl(project.imagenes[0].url)
-    : "/assets/placeholder-project.jpg"; // Asegúrate de tener esta imagen en public/assets
+    : "/assets/placeholder-project.jpg";
 
   const statusColors = {
     active: "success",
@@ -51,65 +49,91 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, type }) => {
     upcoming: "Próximamente",
   };
 
+  // ✅ Helper para formatear moneda profesionalmente
+  const formatCurrency = (amount: number | string) => {
+    if (!amount) return "$ 0";
+    return new Intl.NumberFormat("es-AR", {
+      style: "currency",
+      currency: project.moneda || "USD",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(Number(amount));
+  };
+
+  const handleNavigate = () => navigate(`/proyectos/${project.id}`);
+
   return (
     <Card
+      elevation={0} // Quitamos elevación base para usar borde
       sx={{
         width: "100%",
-        height: "100%",
+        height: "100%", // Ocupa toda la altura de la celda del grid
         display: "flex",
         flexDirection: "column",
-        borderRadius: 3, // Bordes redondeados modernos
-        boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
-        overflow: "hidden",
+        borderRadius: 3,
+        border: "1px solid",
+        borderColor: "divider",
         transition: "all 0.3s ease",
         backgroundColor: "#fff",
         "&:hover": {
-          transform: "translateY(-5px)",
-          boxShadow: "0 12px 24px rgba(0,0,0,0.12)",
+          transform: "translateY(-4px)",
+          boxShadow: (theme) => theme.shadows[8],
+          borderColor: "primary.main", // Borde de color al hacer hover
         },
       }}
     >
-      <CardMedia
-        component="img"
-        height="200"
-        image={imageUrl}
-        alt={project.nombre_proyecto}
-        sx={{
-          objectFit: "cover",
-        }}
-      />
+      {/* Hacemos la imagen clickeable */}
+      <CardActionArea onClick={handleNavigate}>
+        <CardMedia
+          component="img"
+          height="200"
+          image={imageUrl}
+          alt={project.nombre_proyecto}
+          sx={{ objectFit: "cover" }}
+        />
+        
+        {/* Chip de estado flotante sobre la imagen (Estilo moderno) */}
+        <Box position="absolute" top={12} right={12}>
+             <Chip
+                label={statusLabels[projectStatus]}
+                color={statusColors[projectStatus]}
+                size="small"
+                sx={{ fontWeight: 700, boxShadow: 1 }}
+              />
+        </Box>
+      </CardActionArea>
 
       <CardContent
         sx={{
-          flexGrow: 1,
+          flexGrow: 1, // Esto empuja el contenido para llenar el espacio
           display: "flex",
           flexDirection: "column",
-          p: 3,
+          p: { xs: 2, md: 3 }, // Padding responsive
         }}
       >
-        {/* --- Estado + Ubicación --- */}
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-          <Chip
-            label={statusLabels[projectStatus]}
-            color={statusColors[projectStatus]}
-            size="small"
-            sx={{ fontWeight: 600, borderRadius: 1 }}
-          />
-          <Box display="flex" alignItems="center" gap={0.5}>
-            <LocationIcon sx={{ fontSize: 16, color: "text.secondary" }} />
-            <Typography variant="caption" color="text.secondary" noWrap maxWidth={120}>
-              {project.forma_juridica || "Ubicación N/A"}
-            </Typography>
-          </Box>
+        {/* --- Ubicación --- */}
+        <Box display="flex" alignItems="center" gap={0.5} mb={1}>
+          <LocationIcon sx={{ fontSize: 16, color: "text.secondary" }} />
+          <Typography variant="caption" color="text.secondary" noWrap>
+            {project.forma_juridica || "Ubicación N/A"}
+          </Typography>
         </Box>
 
-        {/* --- Título --- */}
+        {/* --- Título (Line Clamp 2 líneas) --- */}
         <Typography
           variant="h6"
-          fontWeight={700}
-          noWrap
+          fontWeight={800}
           gutterBottom
-          title={project.nombre_proyecto} // Tooltip nativo por si se corta
+          title={project.nombre_proyecto}
+          sx={{
+            fontSize: { xs: "1rem", md: "1.15rem" }, // Fuente responsive
+            display: "-webkit-box",
+            WebkitLineClamp: 2, // Permite 2 líneas antes de cortar
+            WebkitBoxOrient: "vertical",
+            overflow: "hidden",
+            lineHeight: 1.3,
+            minHeight: "2.6em", // Altura mínima para alinear tarjetas con títulos cortos
+          }}
         >
           {project.nombre_proyecto}
         </Typography>
@@ -119,68 +143,71 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, type }) => {
           variant="body2"
           color="text.secondary"
           sx={{
-            mb: 3,
+            mb: 2,
             display: "-webkit-box",
             WebkitLineClamp: 2,
             WebkitBoxOrient: "vertical",
             overflow: "hidden",
-            minHeight: 40, // Altura fija para alinear tarjetas
           }}
         >
-          {project.descripcion || "Sin descripción disponible para este proyecto."}
+          {project.descripcion || "Sin descripción disponible."}
         </Typography>
 
-        {/* --- Datos Financieros (Abajo) --- */}
-        <Box mt="auto">
+        {/* Espaciador para empujar datos financieros al fondo */}
+        <Box flexGrow={1} />
+
+        {/* --- Datos Financieros --- */}
+        <Box 
+            mt={2} 
+            pt={2} 
+            borderTop="1px dashed" 
+            borderColor="divider"
+        >
           {type === "ahorrista" ? (
-            // VISTA AHORRISTA
-            <Stack direction="row" justifyContent="space-between" alignItems="baseline">
+            <Stack direction="row" justifyContent="space-between" alignItems="center">
               <Box>
-                <Typography variant="caption" color="text.secondary" display="block">
-                  Cuota Mensual
+                <Typography variant="caption" color="text.secondary" display="block" fontWeight={600}>
+                  CUOTA MENSUAL
                 </Typography>
-                <Typography variant="h6" color="primary.main" fontWeight={700}>
-                  {project.moneda || "$"} {Number(project.monto_inversion).toLocaleString()}
+                <Typography variant="h6" color="primary.main" fontWeight={800} sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }}>
+                  {formatCurrency(project.monto_inversion)}
                 </Typography>
               </Box>
               <Box textAlign="right">
                 <Typography variant="caption" color="text.secondary" display="block">
                   Plazo
                 </Typography>
-                <Typography variant="body1" fontWeight={600}>
+                <Typography variant="body2" fontWeight={700}>
                   {project.plazo_inversion ?? "N/A"} meses
                 </Typography>
               </Box>
             </Stack>
           ) : (
-            // VISTA INVERSIONISTA
-            <Stack direction="row" justifyContent="space-between" alignItems="baseline">
+            <Stack direction="row" justifyContent="space-between" alignItems="center">
               <Box>
-                <Typography variant="caption" color="text.secondary" display="block">
-                  Inversión Total
+                <Typography variant="caption" color="text.secondary" display="block" fontWeight={600}>
+                  INVERSIÓN TOTAL
                 </Typography>
-                <Typography variant="h6" color="primary.main" fontWeight={700}>
-                  {project.moneda || "USD"} {Number(project.monto_inversion).toLocaleString()}
+                <Typography variant="h6" color="primary.main" fontWeight={800} sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }}>
+                  {formatCurrency(project.monto_inversion)}
                 </Typography>
               </Box>
               <Box textAlign="right">
                 <Typography variant="caption" color="text.secondary" display="block">
-                  Lotes Disp.
+                  Disponibles
                 </Typography>
-                <Typography variant="body1" fontWeight={600} color="success.main">
-                  {project.lotes ? project.lotes.length : 0}
+                <Typography variant="body2" fontWeight={700} color="success.main">
+                  {project.lotes ? project.lotes.length : 0} Lotes
                 </Typography>
               </Box>
             </Stack>
           )}
 
-          {/* --- Botón --- */}
           <Button
             variant="contained"
             fullWidth
-            size="large"
-            sx={{ mt: 3, borderRadius: 2, fontWeight: 'bold' }}
-            onClick={() => navigate(`/proyectos/${project.id}`)}
+            sx={{ mt: 2, borderRadius: 2, fontWeight: "bold", textTransform: 'none' }}
+            onClick={handleNavigate}
           >
             Ver Detalles
           </Button>

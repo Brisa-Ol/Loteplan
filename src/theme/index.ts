@@ -1,8 +1,6 @@
-// ==========================================
-// theme/index.ts - ÚNICO PUNTO DE ENTRADA
-// ==========================================
+//Src/theme/index.ts
 
-import { createTheme } from "@mui/material/styles";
+import { createTheme, responsiveFontSizes } from "@mui/material/styles";
 import type { Components, Theme } from "@mui/material/styles";
 
 // ========== COLORES ==========
@@ -51,12 +49,12 @@ const typography = {
   fontFamily: "Inter, sans-serif",
   h1: {
     fontWeight: 700,
-    fontSize: "3rem", // 48px
+    fontSize: "3rem", // 48px -> Se ajustará automáticamente
     lineHeight: 1.2,
   },
   h2: {
     fontWeight: 600,
-    fontSize: "2rem", // 32px
+    fontSize: "2rem", // 32px -> Se ajustará automáticamente
     lineHeight: 1.3,
   },
   h3: {
@@ -150,45 +148,43 @@ const components: Components<Theme> = {
       },
     },
   },
-  // --- TABLAS (NUEVO) ---
+  // --- TABLAS ---
   MuiTableContainer: {
     styleOverrides: {
       root: {
-        borderRadius: 16, // Bordes redondeados consistentes
-        border: `1px solid ${colors.secondary.main}`, // Usa el color #ECECEC
-        boxShadow: "none", // Sin sombra para un look flat/moderno
+        borderRadius: 16,
+        border: `1px solid ${colors.secondary.main}`,
+        boxShadow: "none",
         backgroundImage: "none",
-        backgroundColor: colors.background.default, // Fondo blanco
+        backgroundColor: colors.background.default,
       },
     },
   },
   MuiTableHead: {
     styleOverrides: {
       root: {
-        // Fondo gris muy suave para la cabecera (#F6F6F6)
-        backgroundColor: colors.secondary.light, 
+        backgroundColor: colors.secondary.light,
       },
     },
   },
   MuiTableCell: {
     styleOverrides: {
       head: {
-        color: colors.text.secondary, // Texto gris oscuro (#333333)
-        fontWeight: 700, // Negrita para títulos
+        color: colors.text.secondary,
+        fontWeight: 700,
         fontSize: "0.875rem",
         borderBottom: `1px solid ${colors.secondary.main}`,
       },
       root: {
-        // Bordes de filas
-        borderBottom: `1px solid ${colors.secondary.main}`, // #ECECEC
-        padding: "16px", // Espaciado cómodo
+        borderBottom: `1px solid ${colors.secondary.main}`,
+        padding: "16px",
       },
     },
   },
   MuiTablePagination: {
     styleOverrides: {
       root: {
-        borderTop: `1px solid ${colors.secondary.main}`, // Línea separadora
+        borderTop: `1px solid ${colors.secondary.main}`,
       },
     },
   },
@@ -272,7 +268,9 @@ const components: Components<Theme> = {
 };
 
 // ========== TEMA PRINCIPAL ==========
-export const theme = createTheme({
+
+// 1. Creamos la base del tema
+let theme = createTheme({
   palette: colors,
   typography,
   components,
@@ -290,5 +288,9 @@ export const theme = createTheme({
     },
   },
 });
+
+// 2. Aplicamos la utilidad de fuentes responsivas
+// Esto hará que los h1, h2, h3, etc., reduzcan su tamaño en móviles automáticamente
+theme = responsiveFontSizes(theme);
 
 export default theme;

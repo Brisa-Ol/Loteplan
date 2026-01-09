@@ -337,7 +337,7 @@ const ClientNavbar: React.FC = () => {
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                 {isAuthenticated ? (
                   <>
-                    <IconButton onClick={() => handleNavigate('/client/mensajes')} sx={{ color: 'text.secondary' }}>
+                    <IconButton onClick={() => handleNavigate('/mensajes')} sx={{ color: 'text.secondary' }}>
                       <Badge badgeContent={unreadCount} color="error">
                         <Notifications />
                       </Badge>
