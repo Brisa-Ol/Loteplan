@@ -2,30 +2,42 @@
 
 import React from 'react';
 import { Box, Container, Typography, Link, Stack, useTheme, alpha, Divider, IconButton } from '@mui/material';
-import { Facebook, Instagram, LinkedIn } from '@mui/icons-material';
+import { Facebook, Instagram, LinkedIn, Email, Phone, LocationOn } from '@mui/icons-material';
 
 const Footer: React.FC = () => {
   const theme = useTheme();
+  const currentYear = new Date().getFullYear();
 
-  // Estilo común para los títulos de sección
+  // Estilos reutilizables
   const sectionTitleStyle = {
     fontWeight: 700,
     mb: 2,
     color: 'text.primary',
     textTransform: 'uppercase',
-    fontSize: '0.875rem',
-    letterSpacing: 1
+    fontSize: '0.75rem', // Un poco más pequeño y elegante
+    letterSpacing: 1.2
   };
 
-  // Estilo para los enlaces
   const linkStyle = {
     color: 'text.secondary',
     fontWeight: 500,
     textDecoration: 'none',
-    transition: 'color 0.2s',
+    fontSize: '0.9rem',
+    transition: 'all 0.2s ease',
+    display: 'inline-block',
     '&:hover': {
       color: 'primary.main',
-      textDecoration: 'none'
+      transform: 'translateX(4px)' // Pequeña animación al hover
+    }
+  };
+
+  const socialButtonStyle = {
+    color: 'text.secondary',
+    transition: '0.2s',
+    '&:hover': { 
+        color: 'primary.main', 
+        bgcolor: alpha(theme.palette.primary.main, 0.1),
+        transform: 'translateY(-2px)'
     }
   };
 
@@ -33,91 +45,99 @@ const Footer: React.FC = () => {
     <Box 
       component="footer" 
       sx={{ 
-        bgcolor: 'background.paper', // Usa el #ECECEC de tu tema
-        pt: 8, 
+        bgcolor: 'background.paper', 
+        pt: { xs: 6, md: 8 }, 
         pb: 4, 
-        mt: 'auto', // Empuja el footer al final si el contenido es corto
+        mt: 'auto',
         borderTop: `1px solid ${theme.palette.divider}`
       }}
     >
       <Container maxWidth="xl">
-        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: { xs: 5, md: 8 } }}>
+        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: { xs: 5, md: 4 } }}>
           
-          {/* 1. Logo y descripción */}
-          <Box sx={{ flex: 1.5 }}>
+          {/* 1. Identidad de Marca */}
+          <Box sx={{ flex: { xs: 1, md: 1.5 }, maxWidth: { md: 350 } }}>
+            {/* Logo: Asegúrate de que la ruta sea correcta */}
             <Box 
               component="img"
-              src="/navbar/nav.png" // Ruta corregida para public folder
+              src="/navbar/nav.png" 
               alt="Loteplan Logo"
-              sx={{ height: 40, mb: 2, display: 'block' }}
+              sx={{ height: 36, mb: 2.5, objectFit: 'contain', objectPosition: 'left' }}
             />
-            <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 300, lineHeight: 1.6 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.7, mb: 3 }}>
               La plataforma líder para comprar, financiar y gestionar lotes de inversión. Construye tu futuro con seguridad y confianza.
             </Typography>
             
-            {/* Redes Sociales (Iconos) */}
-            <Stack direction="row" spacing={1} mt={3}>
-              <IconButton size="small" sx={{ color: 'text.secondary', '&:hover': { color: 'primary.main', bgcolor: alpha(theme.palette.primary.main, 0.1) } }}>
-                <Facebook />
+            {/* Redes Sociales */}
+            <Stack direction="row" spacing={1}>
+              <IconButton size="small" sx={socialButtonStyle} aria-label="Facebook">
+                <Facebook fontSize="small" />
               </IconButton>
-              <IconButton size="small" sx={{ color: 'text.secondary', '&:hover': { color: 'primary.main', bgcolor: alpha(theme.palette.primary.main, 0.1) } }}>
-                <Instagram />
+              <IconButton size="small" sx={socialButtonStyle} aria-label="Instagram">
+                <Instagram fontSize="small" />
               </IconButton>
-              <IconButton size="small" sx={{ color: 'text.secondary', '&:hover': { color: 'primary.main', bgcolor: alpha(theme.palette.primary.main, 0.1) } }}>
-                <LinkedIn />
+              <IconButton size="small" sx={socialButtonStyle} aria-label="LinkedIn">
+                <LinkedIn fontSize="small" />
               </IconButton>
             </Stack>
           </Box>
 
-          {/* 2. Enlaces de Empresa */}
+          {/* 2. Enlaces - Empresa */}
           <Box sx={{ flex: 1 }}>
-            <Typography sx={sectionTitleStyle} variant="subtitle2">
-                Empresa
-            </Typography>
-            <Stack spacing={1.5}>
+            <Typography sx={sectionTitleStyle} component="h6">Empresa</Typography>
+            <Stack spacing={1.2}>
               <Link href="/nosotros" sx={linkStyle}>Nosotros</Link>
               <Link href="/proyectos" sx={linkStyle}>Proyectos</Link>
-              <Link href="/blog" sx={linkStyle}>Blog</Link>
+              <Link href="/blog" sx={linkStyle}>Blog & Noticias</Link>
               <Link href="/preguntas" sx={linkStyle}>Preguntas Frecuentes</Link>
             </Stack>
           </Box>
 
-          {/* 3. Enlaces de Ayuda */}
+          {/* 3. Enlaces - Legal */}
           <Box sx={{ flex: 1 }}>
-            <Typography sx={sectionTitleStyle} variant="subtitle2">
-                Legal & Ayuda
-            </Typography>
-            <Stack spacing={1.5}>
+            <Typography sx={sectionTitleStyle} component="h6">Legal & Ayuda</Typography>
+            <Stack spacing={1.2}>
               <Link href="/contacto" sx={linkStyle}>Centro de Ayuda</Link>
-              <Link href="/terminos" sx={linkStyle}>Términos y condiciones</Link>
-              <Link href="/privacidad" sx={linkStyle}>Política de privacidad</Link>
+              <Link href="/terminos" sx={linkStyle}>Términos y Condiciones</Link>
+              <Link href="/privacidad" sx={linkStyle}>Política de Privacidad</Link>
               <Link href="/cookies" sx={linkStyle}>Política de Cookies</Link>
             </Stack>
           </Box>
 
-          {/* 4. Newsletter o Contacto Rápido (Opcional) */}
+          {/* 4. Contacto con Iconos */}
           <Box sx={{ flex: 1 }}>
-            <Typography sx={sectionTitleStyle} variant="subtitle2">
-                Contacto
-            </Typography>
-            <Stack spacing={1.5}>
-              <Typography variant="body2" color="text.secondary">info@loteplan.com</Typography>
-              <Typography variant="body2" color="text.secondary">+54 11 1234-5678</Typography>
-              <Typography variant="body2" color="text.secondary">Av. del Libertador 1000, BA</Typography>
+            <Typography sx={sectionTitleStyle} component="h6">Contacto</Typography>
+            <Stack spacing={2}>
+              <Stack direction="row" spacing={1.5} alignItems="center">
+                <Email fontSize="small" color="action" sx={{ fontSize: 18 }} />
+                <Link href="mailto:info@loteplan.com" sx={{ ...linkStyle, '&:hover': { color: 'primary.main', transform: 'none' } }}>
+                    info@loteplan.com
+                </Link>
+              </Stack>
+              <Stack direction="row" spacing={1.5} alignItems="center">
+                <Phone fontSize="small" color="action" sx={{ fontSize: 18 }} />
+                <Typography variant="body2" color="text.secondary">+54 11 1234-5678</Typography>
+              </Stack>
+              <Stack direction="row" spacing={1.5} alignItems="flex-start">
+                <LocationOn fontSize="small" color="action" sx={{ fontSize: 18, mt: 0.3 }} />
+                <Typography variant="body2" color="text.secondary">Av. del Libertador 1000,<br/>Buenos Aires, Argentina</Typography>
+              </Stack>
             </Stack>
           </Box>
         </Box>
 
         <Divider sx={{ my: 4 }} />
 
-        {/* Copyright */}
-        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: 'center', gap: 2 }}>
-          <Typography variant="body2" color="text.secondary">
-            © {new Date().getFullYear()} LotePlan. Todos los derechos reservados.
+        {/* Footer Bottom */}
+        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: 'center', gap: 2, textAlign: 'center' }}>
+          <Typography variant="caption" color="text.secondary">
+            © {currentYear} LotePlan S.A. Todos los derechos reservados.
           </Typography>
-          <Typography variant="caption" color="text.disabled">
-            v1.0.0
-          </Typography>
+          <Stack direction="row" spacing={3}>
+             {/* Enlaces legales rápidos (opcional) */}
+             <Link href="#" variant="caption" color="text.disabled" underline="hover">Mapa del sitio</Link>
+             <Typography variant="caption" color="text.disabled">v1.0.0</Typography>
+          </Stack>
         </Box>
       </Container>
     </Box>

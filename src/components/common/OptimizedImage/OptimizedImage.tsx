@@ -1,13 +1,15 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Skeleton, Box } from '@mui/material';
+import { BrokenImage as BrokenIcon } from '@mui/icons-material';
 
 interface OptimizedImageProps {
   src: string;
   alt: string;
-  height?: number;
-  width?: string;
+  height?: number | string; // Permitimos strings como '100%'
+  width?: number | string;
   style?: React.CSSProperties;
-  priority?: boolean;
+  priority?: boolean; // true = eager (carga inmediata), false = lazy
+  borderRadius?: number | string;
 }
 
 export const OptimizedImage: React.FC<OptimizedImageProps> = ({
@@ -16,53 +18,70 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
   height = 200,
   width = '100%',
   style,
-  priority = false
+  priority = false,
+  borderRadius = 3 // Usamos el radio de borde estándar de tu tema
 }) => {
-  const [isLoading, setIsLoading] = useState(!priority);
-  const [imageSrc, setImageSrc] = useState<string | undefined>(priority ? src : undefined);
-
-  useEffect(() => {
-    if (!priority) {
-      const img = new Image();
-      img.src = src;
-      img.onload = () => {
-        setImageSrc(src);
-        setIsLoading(false);
-      };
-    }
-  }, [src, priority]);
-
-  const imageStyle: React.CSSProperties = {
-    width,
-    height,
-    objectFit: 'cover',
-    borderRadius: 8,
-    opacity: isLoading ? 0 : 1,
-    transition: 'opacity 0.3s ease-in-out',
-    ...style
-  };
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [hasError, setHasError] = useState(false);
 
   return (
-    <Box position="relative" width={width} height={height}>
-      {isLoading && (
+    <Box 
+      position="relative" 
+      width={width} 
+      height={height} 
+      sx={{ 
+        overflow: 'hidden', 
+        borderRadius: borderRadius,
+        bgcolor: 'action.hover' // Fondo sutil por si la imagen es transparente
+      }}
+    >
+      {/* 1. SKELETON: Se muestra mientras NO esté cargada y NO haya error */}
+      {(!isLoaded && !hasError) && (
         <Skeleton
           variant="rectangular"
           width="100%"
-          height={height}
-          sx={{ 
-            position: 'absolute',
-            borderRadius: 2,
-            zIndex: 1
-          }}
+          height="100%"
+          animation="wave"
+          sx={{ position: 'absolute', top: 0, left: 0, zIndex: 1 }}
         />
       )}
-      {imageSrc && (
+
+      {/* 2. ESTADO DE ERROR: Si falla la carga */}
+      {hasError && (
+        <Box 
+          sx={{ 
+            width: '100%', 
+            height: '100%', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            bgcolor: 'action.selected',
+            color: 'text.disabled'
+          }}
+        >
+          <BrokenIcon />
+        </Box>
+      )}
+
+      {/* 3. IMAGEN REAL */}
+      {!hasError && (
         <img
-          src={imageSrc}
+          src={src}
           alt={alt}
-          style={imageStyle}
           loading={priority ? 'eager' : 'lazy'}
-          aria-hidden={isLoading}
+          onLoad={() => setIsLoaded(true)}
+          onError={() => {
+            setHasError(true);
+            setIsLoaded(false);
+          }}
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            opacity: isLoaded ? 1 : 0, // Transición de opacidad
+            transition: 'opacity 0.4s ease-in-out',
+            ...style
+          }}
         />
       )}
     </Box>
