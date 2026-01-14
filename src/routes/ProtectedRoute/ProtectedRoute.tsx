@@ -1,22 +1,29 @@
 // src/routes/ProtectedRoute/ProtectedRoute.tsx
-
 import React from 'react';
-import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { Box, CircularProgress } from '@mui/material';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '@/core/context/AuthContext';
 
-// Definimos los roles permitidos basados en tu DTO
+
+
+
 type AllowedRole = 'admin' | 'cliente';
 
 interface ProtectedRouteProps {
-  allowedRoles?: AllowedRole[]; 
+  children?: React.ReactNode; // ✅ Necesario para envolver componentes
+  allowedRoles?: AllowedRole[];
+  requireAdmin?: boolean; // ✅ Agregado para soportar <ProtectedRoute requireAdmin>
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) => {
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
+  children, 
+  allowedRoles = [], 
+  requireAdmin = false 
+}) => {
   const { user, isAuthenticated, isInitializing } = useAuth();
   const location = useLocation();
 
-  // 1. Estado de Carga (Verificando Token)
+  // 1. Estado de Carga
   if (isInitializing) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
@@ -25,20 +32,23 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) => {
     );
   }
 
-  // 2. No Autenticado -> Redirigir al Login
-  // Guardamos la ubicación actual en 'state.from' para volver después
+  // 2. No Autenticado -> Login
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // 3. Verificación de Rol (Autorización)
-  // Si se requieren roles específicos y el usuario no tiene uno de ellos
-  if (allowedRoles && user && !allowedRoles.includes(user.rol as AllowedRole)) {
+  // 3. Definir roles permitidos
+  // Si requireAdmin es true, forzamos que el rol sea 'admin'
+  const rolesToCheck = requireAdmin ? ['admin'] : allowedRoles;
+
+  // 4. Verificación de Rol
+  if (rolesToCheck.length > 0 && user && !rolesToCheck.includes(user.rol as any)) {
     return <Navigate to="/unauthorized" replace />;
   }
 
-  // 4. Acceso Permitido
-  return <Outlet />;
+  // 5. Renderizar el componente hijo (o Outlet si usas layout routes)
+  // El fragmento <>{children}</> permite renderizar lo que está dentro del Guard
+  return <>{children}</>;
 };
 
 export default ProtectedRoute;
