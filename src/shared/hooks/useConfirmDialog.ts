@@ -16,9 +16,12 @@ export type ConfirmAction =
   | 'delete_plantilla'
   | 'toggle_plantilla_status'
   | 'approve_kyc'
-  | 'force_confirm_transaction' // ✅ Acción para AdminTransacciones
-  | 'cancel_puja'               // ✅ Acción para MisPujas
-| 'cancel_ganadora_anticipada'
+  | 'force_confirm_transaction'
+  | 'cancel_puja'
+  | 'cancel_ganadora_anticipada'
+  | 'delete_bulk_images'        // ✅ Borrado masivo de imágenes
+  | 'delete_single_image'       // ✅ Borrado individual de imagen
+  | 'close_with_unsaved_changes' // ✅ Cerrar modal con cambios sin guardar
   | null;
 
 interface ConfirmConfig {
@@ -44,7 +47,7 @@ const CONFIRM_CONFIGS: Record<NonNullable<ConfirmAction>, ConfirmConfig> = {
     description: 'Se anulará la victoria del usuario, se devolverá su token y se marcará como intento fallido.',
     confirmText: 'Sí, Anular',
     severity: 'error',
-    requireInput: true, // Indica que necesita texto
+    requireInput: true,
     inputLabel: 'Motivo de la anulación',
     inputPlaceholder: 'Ej: El usuario notificó que no tiene fondos...'
   },
@@ -126,7 +129,6 @@ const CONFIRM_CONFIGS: Record<NonNullable<ConfirmAction>, ConfirmConfig> = {
     confirmText: 'Sí, Aprobar',
     severity: 'info', 
   },
-  // ✅ NUEVAS CONFIGURACIONES BASE AGREGADAS
   force_confirm_transaction: {
     title: '¿Forzar confirmación?',
     description: 'Esta acción marcará la transacción como pagada manualmente. Solo usar si el dinero fue verificado en banco.',
@@ -137,6 +139,24 @@ const CONFIRM_CONFIGS: Record<NonNullable<ConfirmAction>, ConfirmConfig> = {
     title: '¿Cancelar puja?',
     description: 'Tu oferta será retirada de la subasta.',
     confirmText: 'Sí, cancelar puja',
+    severity: 'warning',
+  },
+  delete_bulk_images: {
+    title: '¿Eliminar imágenes seleccionadas?',
+    description: 'Esta acción no se puede deshacer.',
+    confirmText: 'Sí, eliminar',
+    severity: 'error',
+  },
+  delete_single_image: {
+    title: '¿Eliminar imagen?',
+    description: 'La imagen será eliminada permanentemente de la galería.',
+    confirmText: 'Sí, eliminar',
+    severity: 'error',
+  },
+  close_with_unsaved_changes: {
+    title: '¿Cerrar sin guardar?',
+    description: 'Tienes imágenes pendientes de subir que se perderán.',
+    confirmText: 'Sí, cerrar',
     severity: 'warning',
   },
 };
@@ -165,7 +185,7 @@ export const useConfirmDialog = () => {
   const getConfig = (): ConfirmConfig | null => {
     if (!state.action) return null;
 
-    // Obtenemos la config base (ahora segura porque todas las keys existen)
+    // Obtenemos la config base
     const baseConfig = CONFIRM_CONFIGS[state.action];
 
     // --- LÓGICA DINÁMICA (Overrides) ---
@@ -178,13 +198,16 @@ export const useConfirmDialog = () => {
             description: `⚠️ ESTA ACCIÓN ES IRREVERSIBLE. Estás confirmando manualmente que el dinero llegó. El usuario recibirá sus activos inmediatamente.`,
         };
     }
-if (state.action === 'cancel_ganadora_anticipada' && state.data) {
+
+    // 2. Anular adjudicación anticipada
+    if (state.action === 'cancel_ganadora_anticipada' && state.data) {
         return {
             ...baseConfig,
             description: `Estás por anular la adjudicación del Lote ${state.data.nombre_lote} al usuario #${state.data.id_ganador}.`,
         };
     }
-    // 2. Aprobar KYC (Admin)
+
+    // 3. Aprobar KYC (Admin)
     if (state.action === 'approve_kyc' && state.data) {
         const userName = state.data.nombre_completo || 'el usuario';
         return {
@@ -193,7 +216,7 @@ if (state.action === 'cancel_ganadora_anticipada' && state.data) {
         };
     }
 
-    // 3. Visibilidad Proyecto (Admin)
+    // 4. Visibilidad Proyecto (Admin)
     if (state.action === 'toggle_project_visibility' && state.data) {
       const isActive = state.data.activo;
       return {
@@ -207,7 +230,7 @@ if (state.action === 'cancel_ganadora_anticipada' && state.data) {
       };
     }
 
-    // 4. Estado Usuario (Admin)
+    // 5. Estado Usuario (Admin)
     if (state.action === 'toggle_user_status' && state.data) {
       const isActive = state.data.activo;
       const userName = `${state.data.nombre} ${state.data.apellido}`;
@@ -222,7 +245,7 @@ if (state.action === 'cancel_ganadora_anticipada' && state.data) {
       };
     }
 
-    // 5. Visibilidad Lote (Admin)
+    // 6. Visibilidad Lote (Admin)
     if (state.action === 'toggle_lote_visibility' && state.data) {
       const isActive = state.data.activo;
       return {
@@ -233,7 +256,7 @@ if (state.action === 'cancel_ganadora_anticipada' && state.data) {
       };
     }
 
-    // 6. Iniciar Subasta (Admin)
+    // 7. Iniciar Subasta (Admin)
     if (state.action === 'start_auction' && state.data) {
       return {
         ...baseConfig,
@@ -241,7 +264,7 @@ if (state.action === 'cancel_ganadora_anticipada' && state.data) {
       };
     }
 
-    // 7. Finalizar Subasta (Admin)
+    // 8. Finalizar Subasta (Admin)
     if (state.action === 'end_auction' && state.data) {
       return {
         ...baseConfig,
@@ -249,7 +272,7 @@ if (state.action === 'cancel_ganadora_anticipada' && state.data) {
       };
     }
 
-    // 8. Borrar Plantilla (Admin)
+    // 9. Borrar Plantilla (Admin)
     if (state.action === 'delete_plantilla' && state.data) {
       return {
         ...baseConfig,
@@ -257,7 +280,7 @@ if (state.action === 'cancel_ganadora_anticipada' && state.data) {
       };
     }
 
-    // 9. Estado Plantilla (Admin)
+    // 10. Estado Plantilla (Admin)
     if (state.action === 'toggle_plantilla_status' && state.data) {
       const isActive = state.data.activo;
       return {
@@ -268,7 +291,7 @@ if (state.action === 'cancel_ganadora_anticipada' && state.data) {
       };
     }
 
-    // 10. Cancelar Suscripción (Admin)
+    // 11. Cancelar Suscripción (Admin)
     if (state.action === 'admin_cancel_subscription' && state.data) {
       const userName = state.data.usuario ? `${state.data.usuario.nombre} ${state.data.usuario.apellido}` : 'el usuario';
       const lote = state.data.nombre_lote || `ID ${state.data.id}`;
@@ -279,9 +302,8 @@ if (state.action === 'cancel_ganadora_anticipada' && state.data) {
       };
     }
 
-    // 11. Cancelar Puja (Cliente)
+    // 12. Cancelar Puja (Cliente)
     if (state.action === 'cancel_puja' && state.data) {
-        // Formatear moneda si es posible, sino usar valor crudo
         const monto = state.data.monto_puja 
             ? new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(state.data.monto_puja)
             : 'tu monto';
@@ -291,6 +313,30 @@ if (state.action === 'cancel_ganadora_anticipada' && state.data) {
         return {
             ...baseConfig,
             description: `Estás a punto de cancelar tu oferta de ${monto} para ${nombreLote}. El token será devuelto a tu cuenta.`,
+        };
+    }
+
+    // 13. Borrado Masivo de Imágenes
+    if (state.action === 'delete_bulk_images' && state.data) {
+        return {
+            ...baseConfig,
+            description: `Se eliminarán ${state.data.count} imagen${state.data.count > 1 ? 'es' : ''} permanentemente. Esta acción no se puede deshacer.`,
+        };
+    }
+
+    // 14. Borrado Individual de Imagen
+    if (state.action === 'delete_single_image' && state.data) {
+        return {
+            ...baseConfig,
+            description: `La imagen "${state.data.imagen?.descripcion || 'Sin nombre'}" será eliminada permanentemente.`,
+        };
+    }
+
+    // 15. Cerrar con cambios sin guardar
+    if (state.action === 'close_with_unsaved_changes' && state.data) {
+        return {
+            ...baseConfig,
+            description: `Tienes ${state.data.count} imagen${state.data.count > 1 ? 'es' : ''} pendiente${state.data.count > 1 ? 's' : ''} de subir. Si cierras ahora, se perderán.`,
         };
     }
 

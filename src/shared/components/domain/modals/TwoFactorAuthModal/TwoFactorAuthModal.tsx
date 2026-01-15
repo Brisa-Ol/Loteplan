@@ -11,7 +11,7 @@ interface TwoFactorAuthModalProps {
   onClose: () => void;
   onSubmit: (code: string) => void;
   isLoading: boolean;
-  error: string | null;
+  error?: string | null;
   title?: string;
   description?: string;
 }

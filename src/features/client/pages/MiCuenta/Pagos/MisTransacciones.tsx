@@ -13,15 +13,7 @@ import {
   Search, MonetizationOn, Warning, SwapHoriz
 } from '@mui/icons-material';
 
-// Servicios y Tipos
-import type { TransaccionDto } from '../../../../types/dto/transaccion.dto';
-import type { ApiError } from '../../../../services/httpService';
-import TransaccionService from '../../../../services/transaccion.service';
-import MercadoPagoService from '../../../../services/pagoMercado.service';
 
-// Contexto y Configuración
-import { env } from '../../../../config/env';
-import { useSnackbar } from '../../../../context/SnackbarContext';
 
 // Componentes Comunes
 import { PageContainer } from '../../../../../shared/components/layout/containers/PageContainer/PageContainer';
@@ -29,6 +21,12 @@ import { PageHeader } from '../../../../../shared/components/layout/headers/Page
 import { QueryHandler } from '../../../../../shared/components/data-grid/QueryHandler/QueryHandler';
 import { DataTable, type DataTableColumn } from '../../../../../shared/components/data-grid/DataTable/DataTable';
 import { StatCard } from '../../../../../shared/components/domain/cards/StatCard/StatCard';
+import useSnackbar from '@/shared/hooks/useSnackbar';
+import type { TransaccionDto } from '@/core/types/dto/transaccion.dto';
+import TransaccionService from '@/core/api/services/transaccion.service';
+import MercadoPagoService from '@/core/api/services/pagoMercado.service';
+import type { ApiError } from '@/core/api/httpService';
+import { env } from '@/core/config/env';
 
 const MisTransacciones: React.FC = () => {
   const theme = useTheme();

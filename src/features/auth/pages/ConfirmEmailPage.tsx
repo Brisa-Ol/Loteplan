@@ -14,8 +14,9 @@ import {
   alpha
 } from '@mui/material';
 import { CheckCircle, ErrorOutline, VerifiedUser } from '@mui/icons-material';
-import AuthService from '../../services/auth.service';
+
 import AuthFormContainer from './components/AuthFormContainer/AuthFormContainer'; // Import the container
+import AuthService from '@/core/api/services/auth.service';
 
 const ConfirmEmailPage: React.FC = () => {
   const { token } = useParams<{ token: string }>();

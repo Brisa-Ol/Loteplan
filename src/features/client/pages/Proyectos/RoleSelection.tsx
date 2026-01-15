@@ -1,13 +1,9 @@
 import {
-  Business,
+
   TrendingUp,
   Savings,
   Home as HomeIcon, // Usado para el icono de Ahorrista
-  Search,
-  ArrowForward,
-  LocationOn,
-  AttachMoney,
-  CalendarToday,
+
   CheckCircle // Usado para estado finalizado
 } from "@mui/icons-material";
 import {
@@ -21,20 +17,19 @@ import {
   alpha,
   useTheme,
   Button,
-  Container,
-  Card,
-  CardMedia,
-  CardContent
+  Container
 } from "@mui/material";
 import { useQuery } from '@tanstack/react-query';
 import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../../context/AuthContext";
+
 
 // Asumo que estos componentes existen
 import { QueryHandler } from "../../../../shared/components/data-grid/QueryHandler/QueryHandler";
-import proyectoService from '../../../services/proyecto.service';
+
 import { ProjectCard } from "./components/ProjectCard";
+import proyectoService from "@/core/api/services/proyecto.service";
+import { useAuth } from "@/core/context/AuthContext";
 
 // ==========================================
 // COMPONENTE: Highlights (Estilo Metodología)

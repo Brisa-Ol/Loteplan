@@ -4,12 +4,11 @@ import React from 'react';
 import { Box, CircularProgress, Alert } from '@mui/material';
 import { Description as DescriptionIcon } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
-
-// Componentes y Servicios
-import { BaseModal } from '../../../../shared/components/ui/cards/BaseModal/BaseModal';
-import ContratoPlantillaService from '../../../../services/contrato-plantilla.service';
-import ImagenService from '../../../../services/imagen.service';
+import ContratoPlantillaService from '@/core/api/services/contrato-plantilla.service';
+import BaseModal from '@/shared/components/domain/modals/BaseModal/BaseModal';
 import PDFViewerMejorado from './PDFViewerMejorado';
+import ImagenService from '@/core/api/services/imagen.service';
+
 
 interface Props {
   open: boolean;

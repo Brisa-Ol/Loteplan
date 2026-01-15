@@ -24,13 +24,10 @@ import { DataTable, type DataTableColumn } from '../../../../shared/components/d
 import { PageContainer } from '../../../../shared/components/layout/containers/PageContainer/PageContainer';
 import { PageHeader } from '../../../../shared/components/layout/headers/PageHeader/PageHeader';
 import { QueryHandler } from '../../../../shared/components/data-grid/QueryHandler/QueryHandler';
+import PujaService from '@/core/api/services/puja.service';
+import { env } from '@/core/config/env';
+import type { PujaDto } from '@/core/types/dto/puja.dto';
 
-// Servicios y Tipos
-import PujaService from '../../../services/puja.service';
-import type { PujaDto } from '../../../types/dto/puja.dto';
-
-// ✅ Importamos configuración centralizada
-import { env } from '../../../config/env';
 
 const MisPujas: React.FC = () => {
   const navigate = useNavigate();

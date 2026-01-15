@@ -4,11 +4,12 @@ import {
 } from '@mui/material';
 import { Gavel, MonetizationOn, Token, TrendingUp, VerifiedUser } from '@mui/icons-material';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import type { LoteDto } from '@/core/types/dto/lote.dto';
+import type { CreatePujaDto } from '@/core/types/dto/puja.dto';
+import PujaService from '@/core/api/services/puja.service';
+import BaseModal from '@/shared/components/domain/modals/BaseModal/BaseModal';
 
-import PujaService from '../../../../services/puja.service';
-import type { LoteDto } from '../../../../types/dto/lote.dto';
-import type { CreatePujaDto } from '../../../../types/dto/puja.dto';
-import { BaseModal } from '../../../../shared/components/ui/cards/BaseModal/BaseModal';
+
 
 // ✅ CORRECCIÓN DE INTERFAZ:
 // No redefinimos 'monto_ganador_lote' porque ya existe en LoteDto como 'string | null'.

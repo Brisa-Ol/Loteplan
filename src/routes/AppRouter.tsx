@@ -6,16 +6,14 @@ import { CircularProgress, Box } from '@mui/material';
 // Guards
 import ProtectedRoute from './ProtectedRoute/ProtectedRoute';
 import { ROUTES } from '.';
-import ClientNavbar from '@/shared/components/layout/navigation/ClientNavbar';
-
 
 // ============ LAZY LOADING ============
 
 // Layouts
-const AdminLayout = lazy(() => import('@/shared/layouts/AdminLayout'));
-// ✅ IMPORTANTE: Agregamos el ClientLayout (Asegúrate de haber creado el archivo del paso 1)
+const AdminLayout = lazy(() => import('@/shared/layouts/AdminLayout')); // Asegúrate de la ruta correcta
+const ClientLayout = lazy(() => import('@/shared/layouts/ClientLayout')); 
 
-// Auth Pages (No usan layout, o usan uno simple)
+// Auth Pages
 const LoginPage = lazy(() => import('@/features/auth/pages/LoginPage'));
 const Register = lazy(() => import('@/features/auth/pages/Register'));
 const ForgotPassword = lazy(() => import('@/features/auth/pages/ForgotPassword'));
@@ -29,13 +27,13 @@ const ComoFunciona = lazy(() => import('@/features/public/ComoFunciona/ComoFunci
 const Nosotros = lazy(() => import('@/features/public/Nosotros/Nosotros'));
 const Preguntas = lazy(() => import('@/features/public/Preguntas/Preguntas'));
 
-// Proyectos (Shared / Client)
+// Proyectos
 const RoleSelection = lazy(() => import('@/features/client/pages/Proyectos/RoleSelection'));
 const ProyectosAhorrista = lazy(() => import('@/features/client/pages/Proyectos/ProyectosAhorrista'));
 const ProyectosInversionista = lazy(() => import('@/features/client/pages/Proyectos/ProyectosInversionista'));
 const DetalleProyecto = lazy(() => import('@/features/client/pages/Proyectos/DetalleProyecto'));
 
-// Client - Dashboard & Features
+// Client Dashboard & Features
 const UserDashboard = lazy(() => import('@/features/client/pages/UserDashboard/UserDashboard'));
 const MisPagos = lazy(() => import('@/features/client/pages/MiCuenta/Pagos/MisPagos'));
 const MisInversiones = lazy(() => import('@/features/client/pages/MiCuenta/MisInversiones'));
@@ -80,35 +78,44 @@ const AppRouter = () => {
       <Routes>
         
         {/* ==========================================================
-            1. RUTAS STANDALONE (Sin Navbar ni Sidebar)
-           ========================================================== */}
-        <Route path={ROUTES.LOGIN} element={<LoginPage />} />
-        <Route path={ROUTES.REGISTER} element={<Register />} />
-        <Route path={ROUTES.FORGOT_PASSWORD} element={<ForgotPassword />} />
-        <Route path={ROUTES.RESET_PASSWORD} element={<ResetPasswordPage />} />
-        <Route path={ROUTES.CONFIRM_EMAIL} element={<ConfirmEmailPage />} />
-        <Route path={ROUTES.UNAUTHORIZED} element={<Unauthorized />} />
-
-        {/* ==========================================================
-            2. RUTAS PÚBLICAS Y DE CLIENTE (Usan ClientLayout)
-           ========================================================== */}
-        <Route element={<ClientNavbar />}>
+            1. RUTAS CLIENTE / PÚBLICAS (Usan ClientLayout)
+            ========================================================== */}
+        <Route element={<ClientLayout />}>
           
-          {/* Rutas Públicas */}
+          {/* ---- RUTAS PÚBLICAS (Sin Login) ---- */}
           <Route path={ROUTES.PUBLIC.HOME} element={<Home />} />
           <Route path={ROUTES.PUBLIC.COMO_FUNCIONA} element={<ComoFunciona />} />
           <Route path={ROUTES.PUBLIC.NOSOTROS} element={<Nosotros />} />
           <Route path={ROUTES.PUBLIC.PREGUNTAS} element={<Preguntas />} />
+          
+          {/* ✅ SELECCIÓN DE ROL AHORA ES PÚBLICA (Movida aquí) */}
+          <Route path={ROUTES.PROYECTOS.SELECCION_ROL} element={<RoleSelection />} />
 
-          {/* Rutas Protegidas de Cliente (Requieren Auth) */}
-          {/* Proyectos */}
-          <Route path={ROUTES.PROYECTOS.SELECCION_ROL} element={<ProtectedRoute><RoleSelection /></ProtectedRoute>} />
+          {/* Login y Registro con Navbar Pública */}
+          <Route path={ROUTES.LOGIN} element={<LoginPage />} />
+          <Route path={ROUTES.REGISTER} element={<Register />} />
+          <Route path={ROUTES.FORGOT_PASSWORD} element={<ForgotPassword />} />
+          <Route path={ROUTES.RESET_PASSWORD} element={<ResetPasswordPage />} />
+          <Route path={ROUTES.CONFIRM_EMAIL} element={<ConfirmEmailPage />} />
+          <Route path={ROUTES.UNAUTHORIZED} element={<Unauthorized />} />
+
+
+          {/* ---- RUTAS PRIVADAS CLIENTE (Requieren Login) ---- */}
+          
+          {/* ✅ DETALLE DE PROYECTO SIGUE PROTEGIDO */}
+          <Route path={ROUTES.PROYECTOS.DETALLE} element={<ProtectedRoute><DetalleProyecto /></ProtectedRoute>} />
+          
           <Route path={ROUTES.PROYECTOS.AHORRISTA} element={<ProtectedRoute><ProyectosAhorrista /></ProtectedRoute>} />
           <Route path={ROUTES.PROYECTOS.INVERSIONISTA} element={<ProtectedRoute><ProyectosInversionista /></ProtectedRoute>} />
-          <Route path={ROUTES.PROYECTOS.DETALLE} element={<ProtectedRoute><DetalleProyecto /></ProtectedRoute>} />
 
-          {/* Dashboard Cliente */}
+          {/* Dashboard y Cuenta */}
           <Route path={ROUTES.CLIENT.DASHBOARD} element={<ProtectedRoute><UserDashboard /></ProtectedRoute>} />
+          <Route path={ROUTES.CLIENT.CUENTA.PERFIL} element={<ProtectedRoute><Perfil /></ProtectedRoute>} />
+          <Route path={ROUTES.CLIENT.CUENTA.KYC} element={<ProtectedRoute><VerificacionKYC /></ProtectedRoute>} />
+          <Route path={ROUTES.CLIENT.CUENTA.MENSAJES} element={<ProtectedRoute><MensajesPage /></ProtectedRoute>} />
+          <Route path={ROUTES.CLIENT.CUENTA.SEGURIDAD} element={<ProtectedRoute><SecuritySettings /></ProtectedRoute>} />
+          <Route path={ROUTES.CLIENT.CUENTA.FAVORITOS} element={<ProtectedRoute><MisFavoritos /></ProtectedRoute>} />
+          <Route path={ROUTES.CLIENT.CUENTA.CONTRATOS} element={<ProtectedRoute><Historialcontratos /></ProtectedRoute>} />
 
           {/* Finanzas */}
           <Route path={ROUTES.CLIENT.FINANZAS.PAGOS} element={<ProtectedRoute><MisPagos /></ProtectedRoute>} />
@@ -119,21 +126,14 @@ const AppRouter = () => {
           <Route path={ROUTES.CLIENT.FINANZAS.RESUMENES} element={<ProtectedRoute><MisResumenes /></ProtectedRoute>} />
           <Route path={ROUTES.CLIENT.FINANZAS.PAGO_ESTADO} element={<ProtectedRoute><PagoResult /></ProtectedRoute>} />
 
-          {/* Cuenta */}
-          <Route path={ROUTES.CLIENT.CUENTA.PERFIL} element={<ProtectedRoute><Perfil /></ProtectedRoute>} />
-          <Route path={ROUTES.CLIENT.CUENTA.KYC} element={<ProtectedRoute><VerificacionKYC /></ProtectedRoute>} />
-          <Route path={ROUTES.CLIENT.CUENTA.MENSAJES} element={<ProtectedRoute><MensajesPage /></ProtectedRoute>} />
-          <Route path={ROUTES.CLIENT.CUENTA.SEGURIDAD} element={<ProtectedRoute><SecuritySettings /></ProtectedRoute>} />
-          <Route path={ROUTES.CLIENT.CUENTA.FAVORITOS} element={<ProtectedRoute><MisFavoritos /></ProtectedRoute>} />
-          <Route path={ROUTES.CLIENT.CUENTA.HISTORIAL_CONTRATOS} element={<ProtectedRoute><Historialcontratos /></ProtectedRoute>} />
-
           {/* Lotes */}
           <Route path={ROUTES.CLIENT.LOTES.DETALLE} element={<ProtectedRoute><DetalleLote /></ProtectedRoute>} />
         </Route>
 
+
         {/* ==========================================================
-            3. RUTAS DE ADMINISTRADOR (Usan AdminLayout)
-           ========================================================== */}
+            2. RUTAS DE ADMINISTRADOR (Usan AdminLayout)
+            ========================================================== */}
         <Route path="/admin/*" element={
             <ProtectedRoute requireAdmin>
               <AdminLayout />
@@ -141,21 +141,16 @@ const AppRouter = () => {
           }
         >
           <Route path="dashboard" element={<AdminDashboard />} />
-          
           <Route path="usuarios" element={<AdminUsuarios />} />
           <Route path="kyc" element={<AdminKYC />} />
-          
           <Route path="proyectos" element={<AdminProyectos />} />
           <Route path="suscripciones" element={<AdminSuscripciones />} />
           <Route path="inversiones" element={<AdminInversiones />} />
-          
           <Route path="lotes" element={<AdminLotes />} />
           <Route path="lote-pagos" element={<AdminLotePagos />} />
           <Route path="pujas" element={<AdminPujas />} />
-          
           <Route path="plantillas" element={<AdminPlantillas />} />
           <Route path="firmados" element={<AdminContratosFirmados />} />
-          
           <Route path="pagos" element={<AdminPagos />} />
           <Route path="transacciones" element={<AdminTransacciones />} />
           <Route path="resumenes" element={<AdminResumenesCuenta />} />

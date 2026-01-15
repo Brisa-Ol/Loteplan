@@ -1,7 +1,8 @@
 import React from 'react';
 import { Typography, Box, Zoom, useTheme, alpha, Stack, Avatar } from '@mui/material';
 import { CheckCircle, ArrowForward } from '@mui/icons-material';
-import { BaseModal } from '../../../../shared/components/ui/cards/BaseModal/BaseModal';
+import BaseModal from '@/shared/components/domain/modals/BaseModal/BaseModal';
+
 
 interface Props {
   open: boolean;

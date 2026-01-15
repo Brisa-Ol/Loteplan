@@ -13,18 +13,16 @@ import {
   EmojiEmotions, VerifiedUser 
 } from '@mui/icons-material';
 
-// Servicios y DTOs
-import LoteService from '../../../services/lote.service';
-import ImagenService from '../../../services/imagen.service';
-import type { LoteDto } from '../../../types/dto/lote.dto';
 
-// Contextos y Hooks
-import { useAuth } from '../../../context/AuthContext';
 import { useModal } from '../../../../shared/hooks/useModal';
 
 // Componentes
 import { FavoritoButton } from '../../../../shared/components/ui/buttons/BotonFavorito/BotonFavorito';
 import PujarModal from './components/PujarModal';
+import LoteService from '@/core/api/services/lote.service';
+import type { LoteDto } from '@/core/types/dto/lote.dto';
+import { useAuth } from '@/core/context/AuthContext';
+import ImagenService from '@/core/api/services/imagen.service';
 
 // ✅ INTERFAZ CORREGIDA
 interface LoteConPuja extends LoteDto {

@@ -1,11 +1,9 @@
-// src/services/httpService.ts
 import axios, { type AxiosResponse, type InternalAxiosRequestConfig } from 'axios';
 import { env } from '../config/env'; 
 import { secureStorage } from '../../shared/utils/secureStorage';
 import { notifyError, notifyWarning } from '../../shared/utils/snackbarUtils';
 
-
-// Definición robusta de errores
+// Definición de tipos
 export interface ApiError {
   status: number;
   message: string;
@@ -18,157 +16,78 @@ export interface ApiError {
 
 const httpService = axios.create({
   baseURL: env.apiBaseUrl, 
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  headers: { 'Content-Type': 'application/json' },
 });
 
-// =================================================================
-// 📤 REQUEST INTERCEPTOR (Inyección de Token Segura)
-// =================================================================
+// 📤 Request Interceptor
 httpService.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    // ✅ 1. Usamos tu clase segura.
-    // Al llamar a getToken(), tu clase valida automáticamente si expiró o si el UserAgent cambió.
     const token = secureStorage.getToken(); 
-    
-    // A. Inyección de Token
-    if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-
-    // B. 🟢 DETECCIÓN INTELIGENTE DE ARCHIVOS (FormData)
-    if (config.data instanceof FormData && config.headers) {
-      delete config.headers['Content-Type'];
-    }
-
+    if (token && config.headers) config.headers.Authorization = `Bearer ${token}`;
+    if (config.data instanceof FormData && config.headers) delete config.headers['Content-Type'];
     return config;
   },
   (error) => Promise.reject(error)
 );
 
-// =================================================================
-// 📥 RESPONSE INTERCEPTOR (Manejo Global de Errores y Alertas)
-// =================================================================
+// 📥 Response Interceptor
 httpService.interceptors.response.use(
   (response: AxiosResponse) => {
-    // ---------------------------------------------------------------
-    // 1. Manejo de "Soft Errors"
-    // ---------------------------------------------------------------
+    // Manejar soft-errors { success: false }
     const data = response.data;
-    
-    if (data && typeof data === 'object' && 'success' in data) {
-      if (data.success === false) {
-        const message = data.error || 'Error en la operación';
-        notifyError(message);
-
-        return Promise.reject({
-          status: response.status,
-          message: message,
-          type: 'VALIDATION_ERROR',
-          code: data.code,
-          originalError: data
-        } as ApiError);
+    if (data && typeof data === 'object' && 'success' in data && data.success === false) {
+      const message = data.error || 'Error en la operación';
+      // No mostramos toast si es login, dejamos que el componente maneje el error
+      if (!response.config.url?.includes('/auth/login')) {
+         notifyError(message);
       }
+      return Promise.reject({ status: response.status, message: message, type: 'VALIDATION_ERROR', originalError: data } as ApiError);
     }
-    
     return response;
   },
   (error) => {
-    // ---------------------------------------------------------------
-    // 2. Manejo de Errores
-    // ---------------------------------------------------------------
-
-    // A) Sin conexión
+    // A) Error de Red
     if (!error.response) {
-      const msg = 'No se pudo conectar con el servidor. Verifica tu conexión.';
-      notifyError(msg); 
-      return Promise.reject({
-        status: 0,
-        message: msg,
-        type: 'UNKNOWN',
-        originalError: error
-      } as ApiError);
+      notifyError('No se pudo conectar con el servidor.'); 
+      return Promise.reject({ status: 0, message: 'Error de conexión', type: 'UNKNOWN', originalError: error } as ApiError);
     }
 
     const status = error.response.status;
     const data = error.response.data;
+    const url = error.config?.url || '';
+    
+    // Detectar si es una petición de Login
+    const isLoginEndpoint = url.includes('/auth/login') || url.includes('/auth/2fa/verify');
+    const msg = data.error || data.message || 'Error desconocido';
 
-    // B) Rate Limit
-    if (status === 429) {
-      const msg = data.error || 'Has excedido el límite de intentos.';
-      notifyError(msg); 
-      return Promise.reject({
-        status: 429,
-        message: msg,
-        type: 'RATE_LIMIT',
-        originalError: error
-      } as ApiError);
-    }
-
-    // C) 🔒 401: Sesión Expirada
+    // B) 401: Credenciales o Sesión
     if (status === 401) {
-      const isLoginEndpoint = error.config.url?.includes('/auth/login') || error.config.url?.includes('/auth/2fa/verify');
-      const msg = data.error || 'Credenciales inválidas o sesión expirada.';
-      
-      notifyError(msg);
-
-      if (!isLoginEndpoint && !window.location.pathname.includes('/login')) {
-        // ✅ CAMBIO IMPORTANTE:
-        // Tu clase usa 'clearToken', NO 'removeToken'.
-       secureStorage.clearToken(); 
-    
-    setTimeout(() => {
-         window.location.href = '/login'; 
-    }, 1000);
-  }
-      
-      return Promise.reject({
-        status: 401,
-        message: msg,
-        type: 'AUTH_ERROR',
-        originalError: error
-      } as ApiError);
-    }
-
-    // D) 403: Forbidden
-    if (status === 403) {
-      if (data.action_required) {
-        notifyWarning(data.error || 'Acción de seguridad requerida');
-        return Promise.reject({
-          status: 403,
-          message: data.error,
-          type: 'SECURITY_ACTION',
-          action_required: data.action_required,
-          kyc_status: data.kyc_status,
-          originalError: error
-        } as ApiError);
+      // Si es Login -> Devolver error al formulario (SIN REDIRECT, SIN TOAST)
+      if (isLoginEndpoint) {
+        return Promise.reject({ status: 401, message: msg, type: 'AUTH_ERROR', originalError: error } as ApiError);
       }
-      
-      const msg = data.error || 'No tienes permisos.';
-      notifyError(msg);
-      return Promise.reject({
-        status: 403,
-        message: msg,
-        type: 'ROLE_RESTRICTION',
-        originalError: error
-      } as ApiError);
+      // Si es Navegación -> Redirect al Login
+      if (!window.location.pathname.includes('/login')) {
+        secureStorage.clearToken();
+        setTimeout(() => window.location.href = '/login', 1000);
+      }
+      return Promise.reject({ status: 401, message: msg, type: 'AUTH_ERROR', originalError: error } as ApiError);
     }
 
-    // E) Genéricos
-    const errorMessage = data?.success === false 
-      ? data.error 
-      : (data?.error || data?.message || 'Ocurrió un error inesperado.');
-    
-    notifyError(errorMessage);
+    // C) 403: Cuenta no activada (según tu backend)
+    if (status === 403) {
+      // Si es Login y dice "cuenta no activada", devolver al formulario
+      if (isLoginEndpoint && msg.toLowerCase().includes('cuenta no activada')) {
+        return Promise.reject({ status: 403, message: msg, type: 'AUTH_ERROR', originalError: error } as ApiError);
+      }
+      // Otros 403
+      notifyError(msg);
+      return Promise.reject({ status: 403, message: msg, type: 'ROLE_RESTRICTION', originalError: error } as ApiError);
+    }
 
-    return Promise.reject({
-      status: status,
-      message: errorMessage,
-      type: 'VALIDATION_ERROR',
-      code: data?.code,
-      originalError: error
-    } as ApiError);
+    // D) Otros errores
+    notifyError(msg);
+    return Promise.reject({ status: status, message: msg, type: 'VALIDATION_ERROR', originalError: error } as ApiError);
   }
 );
 

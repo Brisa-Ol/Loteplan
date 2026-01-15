@@ -1,8 +1,9 @@
+import { useAuth } from '@/core/context/AuthContext';
 import { ArrowBack, GppBad } from '@mui/icons-material';
 import { Button, Container, Paper, Typography } from '@mui/material';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+
 
 const Unauthorized: React.FC = () => {
   const navigate = useNavigate();

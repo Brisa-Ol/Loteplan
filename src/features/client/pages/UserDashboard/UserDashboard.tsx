@@ -12,25 +12,23 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { alpha } from '@mui/material/styles';
 
-// Context & Hooks
-import { useAuth } from '../../../context/AuthContext';
+
 import { QueryHandler } from '../../../../shared/components/data-grid/QueryHandler/QueryHandler';
 import { useDashboardStats } from '../../hooks/useDashboardStats'; 
+import { useAuth } from '@/core/context/AuthContext';
+import type { ResumenCuentaDto } from '@/core/types/dto/resumenCuenta.dto';
+import ResumenCuentaService from '@/core/api/services/resumenCuenta.service';
+import MensajeService from '@/core/api/services/mensaje.service';
+import type { InversionDto } from '@/core/types/dto/inversion.dto';
+import PagoService from '@/core/api/services/pago.service';
+import InversionService from '@/core/api/services/inversion.service';
+import PujaService from '@/core/api/services/puja.service';
+import type { PujaDto } from '@/core/types/dto/puja.dto';
+import SuscripcionService from '@/core/api/services/suscripcion.service';
+import type { SuscripcionDto } from '@/core/types/dto/suscripcion.dto';
+import type { PagoDto } from '@/core/types/dto/pago.dto';
 
 // DTOs
-import type { PagoDto } from '../../../types/dto/pago.dto';
-import type { SuscripcionDto } from '../../../types/dto/suscripcion.dto';
-import type { ResumenCuentaDto } from '../../../types/dto/resumenCuenta.dto';
-import type { InversionDto } from '../../../types/dto/inversion.dto';
-import type { PujaDto } from '../../../types/dto/puja.dto';
-
-// Services
-import InversionService from '../../../services/inversion.service';
-import ResumenCuentaService from '../../../services/resumenCuenta.service';
-import MensajeService from '../../../services/mensaje.service';
-import SuscripcionService from '../../../services/suscripcion.service';
-import PagoService from '../../../services/pago.service';
-import PujaService from '../../../services/puja.service';
 
 // --- Helper Local para Días Restantes ---
 const calculateDaysRemaining = (dateString?: string): number => {
@@ -142,7 +140,7 @@ const UserDashboard: React.FC = () => {
               <Button 
                 variant="outlined" 
                 size="large" 
-                onClick={() => navigate('/ComoFunciona')}
+                onClick={() => navigate('/como-funciona')}
                 sx={{ py: 1.5, px: 4, fontWeight: 700, fontSize: '1rem', borderRadius: 2, borderWidth: 2, '&:hover': { borderWidth: 2 } }}
               >
                 Cómo funciona

@@ -11,11 +11,12 @@ import {
   CheckCircle, Error, HourglassEmpty, Refresh, 
   Home, History, ReceiptLong 
 } from '@mui/icons-material';
-import MercadoPagoService from '../../../../services/pagoMercado.service';
-import { PageContainer } from '../../../../../shared/components/layout/containers/PageContainer/PageContainer';
 
-// ✅ Importamos configuración centralizada
-import { env } from '../../../../config/env';
+import { PageContainer } from '../../../../../shared/components/layout/containers/PageContainer/PageContainer';
+import { env } from '@/core/config/env';
+import MercadoPagoService from '@/core/api/services/pagoMercado.service';
+
+
 
 const PagoResult: React.FC = () => {
   const theme = useTheme();

@@ -58,13 +58,13 @@ import {
   useTheme
 } from '@mui/material';
 
-// Lógica y Contexto
-import { useAuth } from '../../../context/AuthContext';
-import type { ApiError } from '../../../services/httpService';
+
 
 // Componentes Propios
 import { PageContainer } from '../../../../shared/components/layout/containers/PageContainer/PageContainer';
 import { PageHeader } from '../../../../shared/components/layout/headers/PageHeader/PageHeader';
+import { useAuth } from '@/core/context/AuthContext';
+import type { ApiError } from '@/core/api/httpService';
 
 /**
  * Componente SecuritySettings

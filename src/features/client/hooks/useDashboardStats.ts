@@ -1,8 +1,9 @@
+import type { InversionDto } from '@/core/types/dto/inversion.dto';
+import type { PagoDto } from '@/core/types/dto/pago.dto';
+import type { ResumenCuentaDto } from '@/core/types/dto/resumenCuenta.dto';
+import type { SuscripcionDto } from '@/core/types/dto/suscripcion.dto';
 import { useMemo } from 'react';
-import type { ResumenCuentaDto } from '../types/dto/resumenCuenta.dto';
-import type { SuscripcionDto } from '../types/dto/suscripcion.dto';
-import type { InversionDto } from '../types/dto/inversion.dto';
-import type { PagoDto } from '../types/dto/pago.dto';
+
 
 interface DashboardStatsInput {
   resumenes?: ResumenCuentaDto[];

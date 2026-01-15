@@ -6,8 +6,9 @@ import {
 } from '@mui/material';
 import { Warning, Lock } from '@mui/icons-material';
 import { useMutation } from '@tanstack/react-query';
-import { useAuth } from '../../../../context/AuthContext';
-import { BaseModal } from '../../../../shared/components/ui/cards/BaseModal/BaseModal';
+import { useAuth } from '@/core/context/AuthContext';
+import BaseModal from '@/shared/components/domain/modals/BaseModal/BaseModal';
+
 
 interface Props {
   open: boolean;

@@ -1,17 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useAuth } from '../context/AuthContext';
+
 import useSnackbar from '../../../shared/hooks/useSnackbar';
-import type { ContratoFirmadoDto } from '../types/dto/contrato.dto';
-import { useModal } from '../../../shared/hooks/useModal';
-import ProyectoService from '../services/proyecto.service';
-import InversionService from '../services/inversion.service';
-import ContratoService from '../services/contrato.service';
-import SuscripcionService from '../services/suscripcion.service';
-import ImagenService from '../services/imagen.service';
-import TransaccionService from '../services/transaccion.service';
-import MercadoPagoService from '../services/pagoMercado.service';
+import { useAuth } from '@/core/context/AuthContext';
+import { useModal } from '@/shared/hooks/useModal';
+import ContratoService from '@/core/api/services/contrato.service';
+import ImagenService from '@/core/api/services/imagen.service';
+import InversionService from '@/core/api/services/inversion.service';
+import type { ContratoFirmadoDto } from '@/core/types/dto/contrato-firmado.dto';
+import TransaccionService from '@/core/api/services/transaccion.service';
+import ProyectoService from '@/core/api/services/proyecto.service';
+import SuscripcionService from '@/core/api/services/suscripcion.service';
+import MercadoPagoService from '@/core/api/services/pagoMercado.service';
+
 
 
 export const useDetalleProyecto = () => {

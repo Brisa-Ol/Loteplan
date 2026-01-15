@@ -32,9 +32,9 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 // Servicios y Contexto
 import { PageContainer } from '../../../../shared/components/layout/containers/PageContainer/PageContainer';
 import { PageHeader } from '../../../../shared/components/layout/headers/PageHeader/PageHeader';
-import { useAuth } from '../../../context/AuthContext';
-import MensajeService from '../../../services/mensaje.service';
-import type { MensajeDto } from '../../../types/dto/mensaje';
+import { useAuth } from '@/core/context/AuthContext';
+import MensajeService from '@/core/api/services/mensaje.service';
+import type { MensajeDto } from '@/core/types/dto/mensaje';
 
 // ✅ Importamos configuración
 

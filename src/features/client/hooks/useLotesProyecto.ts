@@ -4,11 +4,12 @@ import { useState, useMemo, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useModal } from '../../../shared/hooks/useModal';
 import { useConfirmDialog } from '../../../shared/hooks/useConfirmDialog';
-import type { LoteDto } from '../types/dto/lote.dto';
-import LoteService from '../services/lote.service';
-import FavoritoService from '../services/favorito.service';
-import SuscripcionService from '../services/suscripcion.service';
+
 import useSnackbar from '../../../shared/hooks/useSnackbar'; 
+import type { LoteDto } from '@/core/types/dto/lote.dto';
+import SuscripcionService from '@/core/api/services/suscripcion.service';
+import LoteService from '@/core/api/services/lote.service';
+import FavoritoService from '@/core/api/services/favorito.service';
 
 export const useLotesProyecto = (idProyecto: number, isAuthenticated: boolean) => {
   const queryClient = useQueryClient();

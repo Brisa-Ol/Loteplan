@@ -16,12 +16,14 @@ interface ImageUploadZoneProps {
   maxFiles?: number;
   maxSizeMB?: number;
   disabled?: boolean;
+  accept?: string;
 }
 
 const ImageUploadZone: React.FC<ImageUploadZoneProps> = ({
   images,
   onChange,
   maxFiles = 5,
+  accept = "image/*",
   maxSizeMB = 15,
   disabled = false,
 }) => {
@@ -29,10 +31,15 @@ const ImageUploadZone: React.FC<ImageUploadZoneProps> = ({
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Validar tipo y tamaño
+// 🔄 ACTUALIZAR VALIDACIÓN
   const validateFile = useCallback((file: File): boolean => {
-    if (!file.type.startsWith('image/')) {
-      setError(`El archivo "${file.name}" no es una imagen válida.`);
+    // Si aceptamos video y el archivo es video, pasa
+    if (accept.includes('video') && file.type.startsWith('video/')) {
+        // Validación extra de tamaño para video si quieres
+    } 
+    // Si aceptamos imagen y el archivo no es imagen
+    else if (!accept.includes('video') && !file.type.startsWith('image/')) {
+      setError(`El archivo "${file.name}" no es un formato válido.`);
       return false;
     }
 
@@ -42,7 +49,7 @@ const ImageUploadZone: React.FC<ImageUploadZoneProps> = ({
     }
 
     return true;
-  }, [maxSizeMB]);
+  }, [maxSizeMB, accept]);
 
   // Procesar archivos (Drop o Input)
   const handleFiles = useCallback(
@@ -116,9 +123,9 @@ const ImageUploadZone: React.FC<ImageUploadZoneProps> = ({
           } : {}
         }}
       >
-        <input
+       <input
           type="file"
-          accept="image/*"
+          accept={accept} // 👈 Úsalo aquí
           multiple
           id="image-upload-input"
           onChange={(e) => handleFiles(e.target.files)}
@@ -145,7 +152,10 @@ const ImageUploadZone: React.FC<ImageUploadZoneProps> = ({
                 {dragActive ? '¡Suelta los archivos aquí!' : 'Haz clic o arrastra imágenes'}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
-                Soporta: JPG, PNG, WEBP • Máx {maxFiles} archivos • {maxSizeMB}MB c/u
+               {accept.includes('video') 
+             ? `Soporta video MP4, WEBM • Máx ${maxSizeMB}MB` 
+             : `Soporta JPG, PNG, WEBP • Máx ${maxSizeMB}MB`
+           }
                 </Typography>
             </Box>
 

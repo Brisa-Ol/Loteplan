@@ -17,19 +17,18 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 
-import imagenService from '../../../services/imagen.service';
-import FavoritoService from '../../../services/favorito.service';
-import type { LoteDto } from '../../../types/dto/lote.dto';
 import { PageContainer } from '../../../../shared/components/layout/containers/PageContainer/PageContainer';
 import { PageHeader } from '../../../../shared/components/layout/headers/PageHeader/PageHeader';
 
 // ✅ Importamos Hook y Componente de Confirmación
 import { useConfirmDialog } from '../../../../shared/hooks/useConfirmDialog';
-import { ConfirmDialog } from '../../../shared/components/ui/cards/ConfirmDialog/ConfirmDialog';
 
-// ✅ Hook Global de Snackbar y Configuración
-import { useSnackbar } from '../../../context/SnackbarContext';
-import { env } from '../../../config/env';
+import imagenService from '@/core/api/services/imagen.service';
+import FavoritoService from '@/core/api/services/favorito.service';
+import { env } from '@/core/config/env';
+import useSnackbar from '@/shared/hooks/useSnackbar';
+import type { LoteDto } from '@/core/types/dto/lote.dto';
+import { ConfirmDialog } from '@/shared/components/domain/modals/ConfirmDialog/ConfirmDialog';
 
 // --- Card Component ---
 const LoteFavoritoCard: React.FC<{

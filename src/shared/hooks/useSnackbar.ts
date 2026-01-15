@@ -1,3 +1,5 @@
+// src/hooks/useSnackbar.ts
+
 import { useState, useCallback } from 'react';
 
 export type SnackbarSeverity = 'success' | 'error' | 'warning' | 'info';
@@ -30,7 +32,6 @@ export const useSnackbar = (): UseSnackbarReturn => {
 
     const showSnackbar = useCallback((message: string, severity: SnackbarSeverity = 'success') => {
         // ✅ OPTIMIZACIÓN: Cerrar el anterior antes de abrir uno nuevo
-        // Esto evita que se acumulen y mejora la UX
         setSnackbar({ open: false, message: '', severity: 'success' });
         
         // Pequeño delay para permitir la animación de cierre

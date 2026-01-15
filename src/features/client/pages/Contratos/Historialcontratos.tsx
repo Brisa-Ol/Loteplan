@@ -23,9 +23,6 @@ import {
   alpha, useTheme
 } from '@mui/material';
 
-// --- SERVICIOS Y TIPOS ---
-import ContratoGeneralService from '../../../services/contrato-general.service';
-import type { ContratoFirmadoDto } from '../../../types/dto/contrato-general.dto';
 
 // --- COMPONENTES ---
 import { DataTable, type DataTableColumn } from '../../../../shared/components/data-grid/DataTable/DataTable';
@@ -35,7 +32,9 @@ import { QueryHandler } from '../../../../shared/components/data-grid/QueryHandl
 import { useModal } from '../../../../shared/hooks/useModal';
 
 // ✅ IMPORTAMOS EL MODAL REUTILIZABLE
-import { VerContratoFirmadoModal } from '../Proyectos/components/VerContratoFirmadoModal';
+import { VerContratoFirmadoModal } from '../Proyectos/modals/VerContratoFirmadoModal';
+import type { ContratoFirmadoDto } from '@/core/types/dto/contrato-firmado.dto';
+import ContratoGeneralService from '@/core/api/services/contrato-general.service';
 
 const HistorialContratos: React.FC = () => {
   const theme = useTheme();

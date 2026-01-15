@@ -59,7 +59,7 @@ interface FullProjectFormValues {
 interface CreateProyectoModalProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (data: FullProjectFormValues, image: File | null) => Promise<void>;
+  onSubmit: (data: any, image: File | null) => Promise<void>;
   isLoading?: boolean;
 }
 
@@ -70,9 +70,16 @@ const projectSchema = Yup.object({
   tipo_inversion: Yup.string().required('Requerido'),
   monto_inversion: Yup.number().min(0, 'Debe ser mayor a 0').required('Requerido'),
   moneda: Yup.string().required('Requerido'),
-  fecha_inicio: Yup.date().required('Requerido'),
-  fecha_cierre: Yup.date().required('Requerido')
-    .min(Yup.ref('fecha_inicio'), 'La fecha de cierre debe ser posterior al inicio'),
+  
+  // 📅 VALIDACIÓN DE FECHAS
+  fecha_inicio: Yup.date()
+    .required('Requerido')
+    .min(new Date(new Date().setHours(0,0,0,0)), 'La fecha no puede ser en el pasado'), // Opcional: Evitar pasado
+    
+  fecha_cierre: Yup.date()
+    .required('Requerido')
+    .min(Yup.ref('fecha_inicio'), 'La fecha de cierre debe ser posterior al inicio'), // 👈 Regla Clave
+
   plazo_inversion: Yup.number().when('tipo_inversion', {
     is: 'mensual',
     then: (s) => s.min(1, 'Mínimo 1 mes').required('Requerido para proyectos mensuales'),
@@ -84,8 +91,21 @@ const projectSchema = Yup.object({
     otherwise: (s) => s.nullable(),
   }),
   suscripciones_minimas: Yup.number().min(0).nullable(),
-  latitud: Yup.number().typeError('Debe ser un número').min(-90).max(90).nullable(),
-  longitud: Yup.number().typeError('Debe ser un número').min(-180).max(180).nullable(),
+  
+  // Ubicación Opcional
+  latitud: Yup.number()
+    .transform((value, originalValue) => (String(originalValue).trim() === '' ? null : value))
+    .nullable()
+    .notRequired()
+    .min(-90, 'Latitud inválida')
+    .max(90, 'Latitud inválida'),
+    
+  longitud: Yup.number()
+    .transform((value, originalValue) => (String(originalValue).trim() === '' ? null : value))
+    .nullable()
+    .notRequired()
+    .min(-180, 'Longitud inválida')
+    .max(180, 'Longitud inválida'),
 });
 
 const quotaSchema = Yup.object({
@@ -102,6 +122,9 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
   const theme = useTheme();
   const [activeStep, setActiveStep] = useState(0);
   const [image, setImage] = useState<File | null>(null);
+
+  // Fecha de hoy para el mínimo del input (formato YYYY-MM-DD)
+  const today = new Date().toISOString().split('T')[0];
 
   const formik = useFormik<FullProjectFormValues>({
     initialValues: {
@@ -123,7 +146,14 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
     validateOnBlur: false,
     validateOnChange: false,
     onSubmit: async (values) => {
-      await onSubmit(values, image); 
+      // Limpieza de datos antes de enviar
+      const cleanData = {
+          ...values,
+          latitud: values.latitud === '' ? null : values.latitud,
+          longitud: values.longitud === '' ? null : values.longitud,
+      };
+
+      await onSubmit(cleanData, image); 
       handleReset(); 
     },
   });
@@ -144,7 +174,7 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
   }, [formik.values.tipo_inversion]);
 
   // =====================================================================
-  // 🧮 CÁLCULOS VISUALES (Alineados con Backend y ConfigCuotasModal)
+  // 🧮 CÁLCULOS VISUALES
   // =====================================================================
   
   const plazo = formik.values.plazo_inversion || 1;
@@ -154,22 +184,11 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
   const pctAdmin = formik.values.porcentaje_administrativo || 0;
   const pctIva = formik.values.porcentaje_iva || 0;
 
-  // 1. Valor Móvil Total
   const valorMovil = unidades * precioUnitario;
-
-  // 2. Total del Plan (Capital real que paga el cliente)
   const totalDelPlan = valorMovil * (pctPlan / 100);
-  
-  // 3. Cuota Pura (Mensual) - Base para gastos admin
   const valorMensual = totalDelPlan / plazo;
-
-  // 4. Carga Administrativa (Sobre la cuota mensual)
   const cargaAdministrativa = valorMensual * (pctAdmin / 100);
-
-  // 5. IVA (Sobre Carga Administrativa)
   const ivaCarga = cargaAdministrativa * (pctIva / 100);
-  
-  // 6. Total Final
   const valorMensualFinal = valorMensual + cargaAdministrativa + ivaCarga;
 
   // --- NAVEGACIÓN ---
@@ -263,7 +282,6 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
         {activeStep === 0 && (
             <Box>
                 <Stack spacing={2}>
-                    {/* Fila 1: Nombre y Forma Jurídica */}
                     <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
                         <TextField
                             fullWidth label="Nombre del Proyecto"
@@ -289,7 +307,6 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
 
                     <Divider />
                     
-                    {/* Configuración Financiera */}
                     <Typography variant="subtitle2" sx={sectionTitleSx}><MonetizationIcon fontSize="inherit"/> Configuración Financiera</Typography>
                     
                     <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
@@ -323,7 +340,6 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
                         />
                     </Stack>
 
-                    {/* Suscripciones y Plazo (Solo Mensual) */}
                     {formik.values.tipo_inversion === 'mensual' && (
                         <Paper variant="outlined" sx={{ p: 2, bgcolor: alpha(theme.palette.primary.main, 0.02) }}>
                             <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
@@ -352,12 +368,14 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
                         </Paper>
                     )}
 
-                    {/* Fechas */}
+                    {/* ✅ FECHAS CON RESTRICCIONES VISUALES */}
                     <Typography variant="subtitle2" sx={sectionTitleSx}><CalendarIcon fontSize="inherit"/> Cronograma</Typography>
                     <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
                         <TextField
                             fullWidth type="date" label="Inicio Suscripciones" InputLabelProps={{ shrink: true }}
                             {...formik.getFieldProps('fecha_inicio')}
+                            // Restringe visualmente fechas pasadas
+                            inputProps={{ min: today }} 
                             error={Boolean(formik.touched.fecha_inicio && formik.errors.fecha_inicio)}
                             helperText={formik.touched.fecha_inicio && (formik.errors.fecha_inicio as string)}
                             sx={commonInputSx}
@@ -365,13 +383,14 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
                         <TextField
                             fullWidth type="date" label="Cierre Suscripciones" InputLabelProps={{ shrink: true }}
                             {...formik.getFieldProps('fecha_cierre')}
+                            // 🔒 Restringe visualmente fechas anteriores a la de inicio
+                            inputProps={{ min: formik.values.fecha_inicio || today }} 
                             error={Boolean(formik.touched.fecha_cierre && formik.errors.fecha_cierre)}
                             helperText={formik.touched.fecha_cierre && (formik.errors.fecha_cierre as string)}
                             sx={commonInputSx}
                         />
                     </Stack>
 
-                    {/* Ubicación */}
                     <Typography variant="subtitle2" sx={sectionTitleSx}><LocationIcon fontSize="inherit"/> Ubicación (Opcional)</Typography>
                     <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
                         <TextField
@@ -455,7 +474,6 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
                         </Stack>
                     </Box>
 
-                    {/* Previsualización del Cálculo */}
                     <Alert severity="success" icon={<SavingsIcon fontSize="inherit"/>} variant="outlined">
                         <Typography variant="subtitle2" gutterBottom>Simulación de Cuota Inicial:</Typography>
                         <Stack direction="row" justifyContent="space-between" alignItems="baseline">

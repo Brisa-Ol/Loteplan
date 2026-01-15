@@ -28,18 +28,20 @@ import * as Yup from 'yup';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 
-// Servicios y Contexto
-import { useAuth } from '../../../context/AuthContext';
-import { useSnackbar } from '../../../context/SnackbarContext';
+
 import { PageContainer } from '../../../../shared/components/layout/containers/PageContainer/PageContainer';
-import type { UpdateUserMeDto } from '../../../types/dto/usuario.dto';
+
 
 // Hooks y Componentes
 import { useConfirmDialog } from '../../../../shared/hooks/useConfirmDialog';
 import DeleteAccountModal from './components/DeleteAccountModal';
 import SecuritySettings from './SecuritySettings';
-import kycService from '../../../services/kyc.service';
-import UsuarioService from '../../../services/usuario.service';
+import type { UpdateUserMeDto } from '@/core/types/dto/usuario.dto';
+import useSnackbar from '@/shared/hooks/useSnackbar';
+import { useAuth } from '@/core/context/AuthContext';
+import kycService from '@/core/api/services/kyc.service';
+import UsuarioService from '@/core/api/services/usuario.service';
+
 
 // --- SUB-COMPONENTES (Para mejor organización) ---
 
@@ -468,7 +470,7 @@ const Perfil: React.FC = () => {
                       No puedes desactivar tu cuenta. Debes regularizar tu situación financiera primero.
                     </Typography>
                   )}
-                  <Button size="small" color="warning" variant="contained" onClick={() => navigate('/client/suscripciones')} sx={{ fontWeight: 700, borderRadius: 2 }}>
+                  <Button size="small" color="warning" variant="contained" onClick={() => navigate('/client/finanzas/suscripciones')} sx={{ fontWeight: 700, borderRadius: 2 }}>
                     Ir a Mis Suscripciones
                   </Button>
                 </Alert>

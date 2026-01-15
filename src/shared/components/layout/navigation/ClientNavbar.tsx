@@ -1,7 +1,7 @@
-// src/components/layout/ClientNavbar/ClientNavbar.tsx
+// src/components/layout/navigation/ClientNavbar.tsx
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation, Link as RouterLink, Outlet } from 'react-router-dom';
+import { useNavigate, useLocation, Link as RouterLink } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 
 // Material UI
@@ -15,16 +15,17 @@ import {
   Menu as MenuIcon, Close, Notifications, ExpandMore, CheckCircle,
   Search as SearchIcon, ExpandLess, Warning
 } from '@mui/icons-material';
+
+// Hooks & Services
 import { NAVBAR_HEIGHT, useNavbarMenu, type NavItem } from '@/shared/hooks/useNavbarMenu';
 import { useAuth } from '@/core/context/AuthContext';
 import MensajeService from '@/core/api/services/mensaje.service';
-import Footer from './Footer';
+
+// Components
 import { ConfirmDialog } from '../../domain/modals/ConfirmDialog/ConfirmDialog';
 
-
-
 // =================================================================
-// SUB-COMPONENTE: NAV DROPDOWN (Escritorio)
+// SUB-COMPONENTE: NAV DROPDOWN (Lo mantengo aquí por simplicidad)
 // =================================================================
 const NavDropdown: React.FC<{ item: NavItem }> = ({ item }) => {
   const navigate = useNavigate();
@@ -86,7 +87,6 @@ const NavDropdown: React.FC<{ item: NavItem }> = ({ item }) => {
       >
         {item.submenu?.map((sub, idx) => {
           if (sub.isDivider) return <Divider key={`div-${idx}`} />;
-          
           const Icon = sub.icon;
           const isSelected = sub.path ? location.pathname === sub.path : false;
 
@@ -137,11 +137,11 @@ const ClientNavbar: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [openMenus, setOpenMenus] = useState<string[]>([]);
 
-  // ✅ Estado de verificación
+  // Estados derivados
   const kycStatus = (user as any)?.estado_kyc || 'SIN_INICIAR';
   const isVerified = kycStatus === "APROBADA" && user?.is_2fa_enabled;
 
-  // ✅ Query de mensajes no leídos
+  // React Query: Mensajes no leídos
   const { data: unreadData, isLoading: loadingMessages } = useQuery({
     queryKey: ['mensajesNoLeidos'],
     queryFn: async () => (await MensajeService.getUnreadCount()).data,
@@ -152,11 +152,9 @@ const ClientNavbar: React.FC = () => {
 
   const unreadCount = unreadData?.cantidad || 0;
 
-  // ✅ Efecto de scroll para sombra dinámica
+  // Efecto de scroll
   useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 10);
-    };
+    const handleScroll = () => setScrolled(window.scrollY > 10);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
@@ -178,7 +176,6 @@ const ClientNavbar: React.FC = () => {
     );
   };
 
-  // ✅ Filtrado de búsqueda
   const filteredNavItems = searchQuery.trim()
     ? navItems.map(item => {
         const query = searchQuery.toLowerCase();
@@ -186,7 +183,6 @@ const ClientNavbar: React.FC = () => {
         const filteredSubmenu = item.submenu?.filter(sub => 
           !sub.isDivider && sub.label.toLowerCase().includes(query)
         );
-
         if (parentMatch || (filteredSubmenu && filteredSubmenu.length > 0)) {
           return { ...item, submenu: parentMatch ? item.submenu : filteredSubmenu };
         }
@@ -194,37 +190,22 @@ const ClientNavbar: React.FC = () => {
       }).filter(Boolean) as NavItem[]
     : navItems;
 
-  // ✅ Accesos rápidos para móvil
   const quickAccessItems = isAuthenticated ? [
     { label: 'Inicio', path: '/dashboard', icon: navItems[0]?.icon },
     { label: 'Proyectos', path: '/proyectos/rol-seleccion', icon: navItems[1]?.icon },
-    ...(unreadCount > 0 ? [{ 
-      label: 'Mensajes', 
-      path: '/mensajes', 
-      icon: undefined as any,
-      badge: unreadCount 
-    }] : [])
+    ...(unreadCount > 0 ? [{ label: 'Mensajes', path: '/mensajes', icon: undefined as any, badge: unreadCount }] : [])
   ] : [];
 
-  // --- DRAWER MOBILE ---
+  // --- DRAWER MOBILE (Contenido) ---
   const mobileDrawer = (
     <Box sx={{ width: 280, height: '100%', display: 'flex', flexDirection: 'column', bgcolor: 'background.paper' }}>
-      {/* Header */}
-      <Box sx={{ 
-        p: 2, 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'space-between', 
-        borderBottom: '1px solid', 
-        borderColor: 'divider' 
-      }}>
+      {/* Header Mobile */}
+      <Box sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid', borderColor: 'divider' }}>
         <Box component="img" src="/navbar/nav.png" alt="Logo" sx={{ height: 32 }} />
-        <IconButton onClick={() => setMobileOpen(false)}>
-          <Close />
-        </IconButton>
+        <IconButton onClick={() => setMobileOpen(false)}><Close /></IconButton>
       </Box>
 
-      {/* Perfil de Usuario */}
+      {/* Perfil Mobile */}
       {isAuthenticated && user && (
         <Box sx={{ p: 3, bgcolor: alpha(theme.palette.primary.main, 0.05) }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -232,62 +213,27 @@ const ClientNavbar: React.FC = () => {
               overlap="circular"
               anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
               badgeContent={
-                user?.is_2fa_enabled ? (
-                  <CheckCircle sx={{ 
-                    width: 16, 
-                    height: 16, 
-                    color: theme.palette.success.main,
-                    bgcolor: 'white',
-                    borderRadius: '50%',
-                    border: '2px solid white'
-                  }} />
-                ) : (
-                  <Warning sx={{ 
-                    width: 16, 
-                    height: 16, 
-                    color: theme.palette.warning.main,
-                    bgcolor: 'white',
-                    borderRadius: '50%',
-                    border: '2px solid white'
-                  }} />
-                )
+                user?.is_2fa_enabled ? 
+                <CheckCircle sx={{ width: 16, height: 16, color: theme.palette.success.main, bgcolor: 'white', borderRadius: '50%', border: '2px solid white' }} /> : 
+                <Warning sx={{ width: 16, height: 16, color: theme.palette.warning.main, bgcolor: 'white', borderRadius: '50%', border: '2px solid white' }} />
               }
             >
-              <Avatar sx={{ 
-                bgcolor: 'primary.main', 
-                fontWeight: 700,
-                border: '2px solid white',
-                boxShadow: `0 2px 8px ${alpha(theme.palette.primary.main, 0.2)}`
-              }}>
+              <Avatar sx={{ bgcolor: 'primary.main', fontWeight: 700, border: '2px solid white', boxShadow: `0 2px 8px ${alpha(theme.palette.primary.main, 0.2)}` }}>
                 {user.nombre?.charAt(0)}
               </Avatar>
             </Badge>
             <Box>
-              <Typography variant="subtitle1" fontWeight={700} noWrap>
-                {user.nombre} {user.apellido}
-              </Typography>
-              <Typography variant="caption" color="text.secondary" noWrap>
-                {user.email}
-              </Typography>
+              <Typography variant="subtitle1" fontWeight={700} noWrap>{user.nombre} {user.apellido}</Typography>
+              <Typography variant="caption" color="text.secondary" noWrap>{user.email}</Typography>
             </Box>
           </Box>
           {!isVerified && (
-            <Chip
-              icon={<Warning fontSize="small" />}
-              label="Verificar cuenta"
-              size="small"
-              color="warning"
-              onClick={() => {
-                setMobileOpen(false);
-                navigate('/kyc');
-              }}
-              sx={{ mt: 2, width: '100%', fontWeight: 600 }}
-            />
+            <Chip icon={<Warning fontSize="small" />} label="Verificar cuenta" size="small" color="warning" onClick={() => { setMobileOpen(false); navigate('/kyc'); }} sx={{ mt: 2, width: '100%', fontWeight: 600 }} />
           )}
         </Box>
       )}
 
-      {/* Buscador */}
+      {/* Buscador Mobile */}
       {isAuthenticated && (
         <Box sx={{ px: 2, pt: 2, pb: 1 }}>
           <TextField
@@ -296,74 +242,24 @@ const ClientNavbar: React.FC = () => {
             fullWidth
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon fontSize="small" sx={{ color: 'text.secondary' }} />
-                </InputAdornment>
-              )
-            }}
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                bgcolor: alpha(theme.palette.primary.main, 0.02),
-                '&:hover': {
-                  bgcolor: alpha(theme.palette.primary.main, 0.04),
-                }
-              }
-            }}
+            InputProps={{ startAdornment: (<InputAdornment position="start"><SearchIcon fontSize="small" sx={{ color: 'text.secondary' }} /></InputAdornment>) }}
+            sx={{ '& .MuiOutlinedInput-root': { bgcolor: alpha(theme.palette.primary.main, 0.02) } }}
           />
         </Box>
       )}
 
-      {/* Accesos Rápidos */}
+      {/* Accesos Rápidos Mobile */}
       {isAuthenticated && !searchQuery && quickAccessItems.length > 0 && (
         <Box sx={{ px: 2, pb: 1 }}>
-          <Typography 
-            variant="caption" 
-            sx={{ 
-              px: 1, 
-              fontWeight: 600, 
-              color: 'text.secondary',
-              textTransform: 'uppercase',
-              letterSpacing: 0.5
-            }}
-          >
-            Acceso Rápido
-          </Typography>
+          <Typography variant="caption" sx={{ px: 1, fontWeight: 600, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: 0.5 }}>Acceso Rápido</Typography>
           <List dense sx={{ mt: 0.5 }}>
             {quickAccessItems.map((item, idx) => {
               const Icon = item.icon;
               const isQuickActive = isActive(item.path);
-              
               return (
-                <ListItemButton
-                  key={idx}
-                  onClick={() => handleNavigate(item.path!)}
-                  selected={isQuickActive}
-                  sx={{
-                    borderRadius: 2,
-                    mb: 0.5,
-                    transition: 'all 0.15s ease-in-out',
-                    '&.Mui-selected': { 
-                      bgcolor: alpha(theme.palette.primary.main, 0.08) 
-                    }
-                  }}
-                >
-                  {Icon && (
-                    <ListItemIcon sx={{ minWidth: 36 }}>
-                      <Badge badgeContent={item.badge} color="error">
-                        <Icon fontSize="small" />
-                      </Badge>
-                    </ListItemIcon>
-                  )}
-                  <ListItemText 
-                    primary={item.label}
-                    primaryTypographyProps={{
-                      variant: 'body2',
-                      fontSize: '0.85rem',
-                      fontWeight: isQuickActive ? 600 : 400
-                    }}
-                  />
+                <ListItemButton key={idx} onClick={() => handleNavigate(item.path!)} selected={isQuickActive} sx={{ borderRadius: 2, mb: 0.5, '&.Mui-selected': { bgcolor: alpha(theme.palette.primary.main, 0.08) } }}>
+                  {Icon && <ListItemIcon sx={{ minWidth: 36 }}><Badge badgeContent={item.badge} color="error"><Icon fontSize="small" /></Badge></ListItemIcon>}
+                  <ListItemText primary={item.label} primaryTypographyProps={{ variant: 'body2', fontSize: '0.85rem', fontWeight: isQuickActive ? 600 : 400 }} />
                 </ListItemButton>
               );
             })}
@@ -372,7 +268,7 @@ const ClientNavbar: React.FC = () => {
         </Box>
       )}
 
-      {/* Navegación Principal */}
+      {/* Navegación Principal Mobile */}
       <List sx={{ flex: 1, py: 2, overflowY: 'auto' }}>
         {filteredNavItems.map((item, idx) => {
           const Icon = item.icon;
@@ -382,19 +278,9 @@ const ClientNavbar: React.FC = () => {
           if (hasSubmenu && !item.path) {
             return (
               <React.Fragment key={idx}>
-                <ListItemButton
-                  onClick={() => handleToggleMenu(item.label)}
-                  sx={{ px: 2 }}
-                >
-                  {Icon && (
-                    <ListItemIcon sx={{ minWidth: 40 }}>
-                      <Icon />
-                    </ListItemIcon>
-                  )}
-                  <ListItemText 
-                    primary={item.label} 
-                    primaryTypographyProps={{ fontWeight: 600 }}
-                  />
+                <ListItemButton onClick={() => handleToggleMenu(item.label)} sx={{ px: 2 }}>
+                  {Icon && <ListItemIcon sx={{ minWidth: 40 }}><Icon /></ListItemIcon>}
+                  <ListItemText primary={item.label} primaryTypographyProps={{ fontWeight: 600 }} />
                   {isOpen ? <ExpandLess /> : <ExpandMore />}
                 </ListItemButton>
                 <Collapse in={isOpen} timeout="auto" unmountOnExit>
@@ -403,34 +289,10 @@ const ClientNavbar: React.FC = () => {
                       if (sub.isDivider) return null;
                       const SubIcon = sub.icon;
                       const active = isActive(sub.path);
-                      
                       return (
-                        <ListItemButton
-                          key={sIdx}
-                          onClick={() => {
-                            setMobileOpen(false);
-                            sub.action ? sub.action() : sub.path && handleNavigate(sub.path);
-                          }}
-                          selected={active}
-                          sx={{ 
-                            pl: 6,
-                            borderLeft: active ? `4px solid ${theme.palette.primary.main}` : '4px solid transparent',
-                            transition: 'all 0.15s ease-in-out',
-                            '&.Mui-selected': { bgcolor: alpha(theme.palette.primary.main, 0.08) }
-                          }}
-                        >
-                          {SubIcon && (
-                            <ListItemIcon sx={{ color: active ? 'primary.main' : 'inherit', minWidth: 40 }}>
-                              <SubIcon fontSize="small" />
-                            </ListItemIcon>
-                          )}
-                          <ListItemText 
-                            primary={sub.label} 
-                            primaryTypographyProps={{ 
-                              fontWeight: active ? 600 : 400, 
-                              color: active ? 'primary.main' : 'text.primary' 
-                            }}
-                          />
+                        <ListItemButton key={sIdx} onClick={() => { setMobileOpen(false); sub.action ? sub.action() : sub.path && handleNavigate(sub.path); }} selected={active} sx={{ pl: 6, borderLeft: active ? `4px solid ${theme.palette.primary.main}` : '4px solid transparent', '&.Mui-selected': { bgcolor: alpha(theme.palette.primary.main, 0.08) } }}>
+                          {SubIcon && <ListItemIcon sx={{ color: active ? 'primary.main' : 'inherit', minWidth: 40 }}><SubIcon fontSize="small" /></ListItemIcon>}
+                          <ListItemText primary={sub.label} primaryTypographyProps={{ fontWeight: active ? 600 : 400, color: active ? 'primary.main' : 'text.primary' }} />
                         </ListItemButton>
                       );
                     })}
@@ -440,50 +302,23 @@ const ClientNavbar: React.FC = () => {
               </React.Fragment>
             );
           }
-
           const active = isActive(item.path);
           return (
             <ListItem key={idx} disablePadding>
-              <ListItemButton 
-                onClick={() => handleNavigate(item.path || '')} 
-                selected={active}
-                sx={{ 
-                  px: 2,
-                  borderLeft: active ? `4px solid ${theme.palette.primary.main}` : '4px solid transparent',
-                  transition: 'all 0.15s ease-in-out',
-                  '&.Mui-selected': { bgcolor: alpha(theme.palette.primary.main, 0.08) }
-                }}
-              >
-                {Icon && (
-                  <ListItemIcon sx={{ color: active ? 'primary.main' : 'inherit', minWidth: 40 }}>
-                    <Icon />
-                  </ListItemIcon>
-                )}
-                <ListItemText 
-                  primary={item.label} 
-                  primaryTypographyProps={{ 
-                    fontWeight: active ? 600 : 400, 
-                    color: active ? 'primary.main' : 'text.primary' 
-                  }}
-                />
+              <ListItemButton onClick={() => handleNavigate(item.path || '')} selected={active} sx={{ px: 2, borderLeft: active ? `4px solid ${theme.palette.primary.main}` : '4px solid transparent', '&.Mui-selected': { bgcolor: alpha(theme.palette.primary.main, 0.08) } }}>
+                {Icon && <ListItemIcon sx={{ color: active ? 'primary.main' : 'inherit', minWidth: 40 }}><Icon /></ListItemIcon>}
+                <ListItemText primary={item.label} primaryTypographyProps={{ fontWeight: active ? 600 : 400, color: active ? 'primary.main' : 'text.primary' }} />
               </ListItemButton>
             </ListItem>
           );
         })}
       </List>
 
-      {/* Footer con acciones */}
+      {/* Footer Mobile (Acciones) */}
       {!isAuthenticated && (
         <Box sx={{ p: 3, borderTop: '1px solid', borderColor: 'divider', display: 'flex', flexDirection: 'column', gap: 2 }}>
           {actionButtons.map((btn, idx) => (
-            <Button
-              key={idx}
-              variant={btn.variant || 'outlined'}
-              fullWidth
-              color={btn.variant === 'contained' ? 'primary' : 'inherit'}
-              onClick={() => handleNavigate(btn.path || '')}
-              sx={{ py: 1.5, borderRadius: 2, fontWeight: 700 }}
-            >
+            <Button key={idx} variant={btn.variant || 'outlined'} fullWidth color={btn.variant === 'contained' ? 'primary' : 'inherit'} onClick={() => handleNavigate(btn.path || '')} sx={{ py: 1.5, borderRadius: 2, fontWeight: 700 }}>
               {btn.label}
             </Button>
           ))}
@@ -492,9 +327,9 @@ const ClientNavbar: React.FC = () => {
     </Box>
   );
 
+  // --- RENDER PRINCIPAL (Desktop) ---
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: 'background.default' }}>
-      
+    <>
       <AppBar 
         position="sticky" 
         elevation={scrolled ? 4 : 0}
@@ -510,10 +345,12 @@ const ClientNavbar: React.FC = () => {
         <Container maxWidth="xl">
           <Toolbar sx={{ px: { xs: 0 }, minHeight: { xs: NAVBAR_HEIGHT.mobile, md: NAVBAR_HEIGHT.desktop } }}>
             
+            {/* Logo */}
             <Box component={RouterLink} to="/" sx={{ display: 'flex', alignItems: 'center', gap: 1, textDecoration: 'none', mr: 4 }}>
               <Box component="img" src="/navbar/nav.png" alt="Logo" sx={{ height: { xs: 28, md: 36 } }} />
             </Box>
 
+            {/* Menu Desktop */}
             {!isMobile && (
               <Box sx={{ display: 'flex', gap: 1, flex: 1, justifyContent: 'center' }}>
                 {navItems.map((link) => {
@@ -533,22 +370,11 @@ const ClientNavbar: React.FC = () => {
                         position: 'relative',
                         transition: 'all 0.2s ease-in-out',
                         '&::after': active ? {
-                          content: '""', 
-                          position: 'absolute', 
-                          bottom: 0, 
-                          left: '50%',
-                          transform: 'translateX(-50%)', 
-                          width: '70%', 
-                          height: 4,
-                          bgcolor: 'primary.main', 
-                          borderRadius: '4px 4px 0 0',
+                          content: '""', position: 'absolute', bottom: 0, left: '50%', transform: 'translateX(-50%)', 
+                          width: '70%', height: 4, bgcolor: 'primary.main', borderRadius: '4px 4px 0 0', 
                           boxShadow: `0 -2px 8px ${alpha(theme.palette.primary.main, 0.3)}`
                         } : {},
-                        '&:hover': { 
-                          color: 'primary.main', 
-                          bgcolor: alpha(theme.palette.primary.main, 0.05),
-                          transform: 'translateY(-2px)'
-                        }
+                        '&:hover': { color: 'primary.main', bgcolor: alpha(theme.palette.primary.main, 0.05), transform: 'translateY(-2px)' }
                       }}
                     >
                       {link.label}
@@ -560,6 +386,7 @@ const ClientNavbar: React.FC = () => {
 
             {isMobile && <Box sx={{ flex: 1 }} />}
 
+            {/* Iconos y Perfil Desktop */}
             {!isMobile && (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                 {isAuthenticated ? (
@@ -567,41 +394,8 @@ const ClientNavbar: React.FC = () => {
                     {loadingMessages ? (
                       <Skeleton variant="circular" width={40} height={40} />
                     ) : (
-                      <IconButton 
-                        onClick={() => handleNavigate('/mensajes')} 
-                        sx={{ 
-                          color: 'text.secondary',
-                          transition: 'all 0.2s ease-in-out',
-                          '&:hover': {
-                            color: 'primary.main',
-                            transform: 'scale(1.1)',
-                            bgcolor: alpha(theme.palette.primary.main, 0.05)
-                          }
-                        }}
-                      >
-                        <Badge 
-                          badgeContent={unreadCount} 
-                          color="error"
-                          sx={{
-                            '& .MuiBadge-badge': {
-                              animation: unreadCount > 0 ? 'pulse 2s infinite' : 'none',
-                              fontWeight: 700,
-                              fontSize: '0.65rem',
-                              minWidth: '18px',
-                              height: '18px',
-                              '@keyframes pulse': {
-                                '0%, 100%': { 
-                                  transform: 'scale(1)',
-                                  boxShadow: `0 0 0 0 ${alpha(theme.palette.error.main, 0.7)}`
-                                },
-                                '50%': { 
-                                  transform: 'scale(1.05)',
-                                  boxShadow: `0 0 0 4px ${alpha(theme.palette.error.main, 0)}`
-                                }
-                              }
-                            }
-                          }}
-                        >
+                      <IconButton onClick={() => handleNavigate('/mensajes')} sx={{ color: 'text.secondary', transition: 'all 0.2s', '&:hover': { color: 'primary.main', transform: 'scale(1.1)', bgcolor: alpha(theme.palette.primary.main, 0.05) } }}>
+                        <Badge badgeContent={unreadCount} color="error" sx={{ '& .MuiBadge-badge': { fontWeight: 700 } }}>
                           <Notifications />
                         </Badge>
                       </IconButton>
@@ -609,74 +403,17 @@ const ClientNavbar: React.FC = () => {
 
                     <Button
                       onClick={(e) => setUserMenuAnchor(e.currentTarget)}
-                      sx={{ 
-                        textTransform: 'none', 
-                        color: 'text.primary', 
-                        pl: 1, 
-                        pr: 1.5, 
-                        py: 0.75,
-                        borderRadius: 2,
-                        border: '1px solid',
-                        borderColor: alpha(theme.palette.primary.main, 0.1),
-                        transition: 'all 0.2s ease-in-out',
-                        '&:hover': { 
-                          bgcolor: alpha(theme.palette.primary.main, 0.05),
-                          borderColor: alpha(theme.palette.primary.main, 0.3),
-                          transform: 'translateY(-1px)',
-                          boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.15)}`
-                        }
-                      }}
+                      sx={{ textTransform: 'none', color: 'text.primary', pl: 1, pr: 1.5, py: 0.75, borderRadius: 2, border: '1px solid', borderColor: alpha(theme.palette.primary.main, 0.1), '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.05), borderColor: alpha(theme.palette.primary.main, 0.3), transform: 'translateY(-1px)', boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.15)}` } }}
                       endIcon={<ExpandMore />}
                     >
-                      <Badge
-                        overlap="circular"
-                        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-                        badgeContent={
-                          user?.is_2fa_enabled ? (
-                            <CheckCircle 
-                              sx={{ 
-                                width: 16, 
-                                height: 16, 
-                                color: theme.palette.success.main,
-                                bgcolor: 'white',
-                                borderRadius: '50%',
-                                border: '2px solid white'
-                              }} 
-                            />
-                          ) : (
-                            <Warning 
-                              sx={{ 
-                                width: 16, 
-                                height: 16, 
-                                color: theme.palette.warning.main,
-                                bgcolor: 'white',
-                                borderRadius: '50%',
-                                border: '2px solid white'
-                              }} 
-                            />
-                          )
-                        }
-                      >
-                        <Avatar 
-                          sx={{ 
-                            width: 36, 
-                            height: 36, 
-                            bgcolor: 'primary.main', 
-                            mr: 1.5,
-                            border: '2px solid white',
-                            boxShadow: `0 2px 8px ${alpha(theme.palette.primary.main, 0.2)}`
-                          }}
-                        >
+                      <Badge overlap="circular" anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }} badgeContent={user?.is_2fa_enabled ? <CheckCircle sx={{ width: 16, height: 16, color: theme.palette.success.main, bgcolor: 'white', borderRadius: '50%', border: '2px solid white' }} /> : <Warning sx={{ width: 16, height: 16, color: theme.palette.warning.main, bgcolor: 'white', borderRadius: '50%', border: '2px solid white' }} />}>
+                        <Avatar sx={{ width: 36, height: 36, bgcolor: 'primary.main', mr: 1.5, border: '2px solid white', boxShadow: `0 2px 8px ${alpha(theme.palette.primary.main, 0.2)}` }}>
                           {user?.nombre?.charAt(0) || 'U'}
                         </Avatar>
                       </Badge>
                       <Box textAlign="left">
-                        <Typography variant="body2" fontWeight={700} lineHeight={1.2}>
-                          {user?.nombre?.split(' ')[0]}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary" lineHeight={1}>
-                          Cuenta
-                        </Typography>
+                        <Typography variant="body2" fontWeight={700} lineHeight={1.2}>{user?.nombre?.split(' ')[0]}</Typography>
+                        <Typography variant="caption" color="text.secondary" lineHeight={1}>Cuenta</Typography>
                       </Box>
                     </Button>
 
@@ -686,18 +423,7 @@ const ClientNavbar: React.FC = () => {
                       onClose={() => setUserMenuAnchor(null)}
                       TransitionComponent={Fade}
                       transitionDuration={200}
-                      PaperProps={{ 
-                        elevation: 8,
-                        sx: { 
-                          mt: 1.5, 
-                          minWidth: 240, 
-                          borderRadius: 2.5,
-                          overflow: 'hidden',
-                          border: '1px solid',
-                          borderColor: alpha(theme.palette.primary.main, 0.08),
-                          boxShadow: `0 8px 24px ${alpha('#000', 0.12)}`
-                        } 
-                      }}
+                      PaperProps={{ elevation: 8, sx: { mt: 1.5, minWidth: 240, borderRadius: 2.5, overflow: 'hidden', border: '1px solid', borderColor: alpha(theme.palette.primary.main, 0.08), boxShadow: `0 8px 24px ${alpha('#000', 0.12)}` } }}
                     >
                       {userNavItems[0]?.submenu?.map((item, idx) => {
                         if (item.isDivider) return <Divider key={idx} />;
@@ -705,33 +431,9 @@ const ClientNavbar: React.FC = () => {
                         const isLogout = item.label === 'Cerrar Sesión';
                         const isKYC = item.label.includes('Verificar');
                         return (
-                          <MenuItem
-                            key={idx}
-                            onClick={() => {
-                              item.action ? item.action() : item.path && handleNavigate(item.path);
-                              setUserMenuAnchor(null);
-                            }}
-                            sx={{
-                              py: 1.5,
-                              color: isLogout ? 'error.main' : isKYC ? 'warning.main' : 'text.primary',
-                              transition: 'all 0.15s ease-in-out',
-                              '&:hover': { 
-                                bgcolor: isLogout 
-                                  ? alpha(theme.palette.error.main, 0.05) 
-                                  : isKYC
-                                  ? alpha(theme.palette.warning.main, 0.05)
-                                  : alpha(theme.palette.action.active, 0.05) 
-                              }
-                            }}
-                          >
-                            {ItemIcon && (
-                              <ListItemIcon sx={{ color: isLogout ? 'error.main' : isKYC ? 'warning.main' : 'inherit' }}>
-                                <ItemIcon fontSize="small" />
-                              </ListItemIcon>
-                            )}
-                            <Typography variant="body2" fontWeight={isLogout || isKYC ? 600 : 400}>
-                              {item.label}
-                            </Typography>
+                          <MenuItem key={idx} onClick={() => { item.action ? item.action() : item.path && handleNavigate(item.path); setUserMenuAnchor(null); }} sx={{ py: 1.5, color: isLogout ? 'error.main' : isKYC ? 'warning.main' : 'text.primary', '&:hover': { bgcolor: isLogout ? alpha(theme.palette.error.main, 0.05) : isKYC ? alpha(theme.palette.warning.main, 0.05) : alpha(theme.palette.action.active, 0.05) } }}>
+                            {ItemIcon && <ListItemIcon sx={{ color: isLogout ? 'error.main' : isKYC ? 'warning.main' : 'inherit' }}><ItemIcon fontSize="small" /></ListItemIcon>}
+                            <Typography variant="body2" fontWeight={isLogout || isKYC ? 600 : 400}>{item.label}</Typography>
                           </MenuItem>
                         );
                       })}
@@ -740,25 +442,7 @@ const ClientNavbar: React.FC = () => {
                 ) : (
                   <>
                     {actionButtons.map((btn, idx) => (
-                      <Button
-                        key={idx}
-                        variant={btn.variant || 'text'}
-                        color={btn.variant === 'contained' ? 'primary' : 'inherit'}
-                        onClick={() => handleNavigate(btn.path || '')}
-                        sx={{ 
-                          borderRadius: 2, 
-                          fontWeight: 700, 
-                          px: 3,
-                          mr: idx === 0 ? 1 : 0,
-                          transition: 'all 0.2s ease-in-out',
-                          '&:hover': {
-                            transform: 'translateY(-2px)',
-                            boxShadow: btn.variant === 'contained' 
-                              ? `0 4px 12px ${alpha(theme.palette.primary.main, 0.3)}`
-                              : 'none'
-                          }
-                        }}
-                      >
+                      <Button key={idx} variant={btn.variant || 'text'} color={btn.variant === 'contained' ? 'primary' : 'inherit'} onClick={() => handleNavigate(btn.path || '')} sx={{ borderRadius: 2, fontWeight: 700, px: 3, mr: idx === 0 ? 1 : 0, '&:hover': { transform: 'translateY(-2px)', boxShadow: btn.variant === 'contained' ? `0 4px 12px ${alpha(theme.palette.primary.main, 0.3)}` : 'none' } }}>
                         {btn.label}
                       </Button>
                     ))}
@@ -767,42 +451,17 @@ const ClientNavbar: React.FC = () => {
               </Box>
             )}
 
+            {/* Hamburguesa Mobile */}
             {isMobile && (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 {isAuthenticated && (
-                  <IconButton 
-                    onClick={() => handleNavigate('/mensajes')}
-                    sx={{
-                      transition: 'all 0.2s ease-in-out',
-                      '&:hover': {
-                        transform: 'scale(1.1)'
-                      }
-                    }}
-                  >
-                    <Badge 
-                      badgeContent={unreadCount} 
-                      color="error"
-                      sx={{
-                        '& .MuiBadge-badge': {
-                          animation: unreadCount > 0 ? 'pulse 2s infinite' : 'none'
-                        }
-                      }}
-                    >
+                  <IconButton onClick={() => handleNavigate('/mensajes')} sx={{ '&:hover': { transform: 'scale(1.1)' } }}>
+                    <Badge badgeContent={unreadCount} color="error" sx={{ '& .MuiBadge-badge': { animation: unreadCount > 0 ? 'pulse 2s infinite' : 'none' } }}>
                       <Notifications />
                     </Badge>
                   </IconButton>
                 )}
-                <IconButton 
-                  onClick={() => setMobileOpen(true)} 
-                  sx={{ 
-                    color: 'text.primary',
-                    transition: 'all 0.2s ease-in-out',
-                    '&:hover': {
-                      color: 'primary.main',
-                      transform: 'rotate(90deg)'
-                    }
-                  }}
-                >
+                <IconButton onClick={() => setMobileOpen(true)} sx={{ color: 'text.primary', '&:hover': { color: 'primary.main', transform: 'rotate(90deg)' } }}>
                   <MenuIcon />
                 </IconButton>
               </Box>
@@ -815,37 +474,15 @@ const ClientNavbar: React.FC = () => {
         anchor="right"
         open={mobileOpen}
         onClose={() => setMobileOpen(false)}
-        PaperProps={{ 
-          sx: { 
-            width: 280,
-            borderLeft: 'none',
-            boxShadow: theme.shadows[16]
-          } 
-        }}
-        ModalProps={{
-          BackdropProps: {
-            sx: {
-              bgcolor: alpha('#000', 0.6),
-              backdropFilter: 'blur(4px)'
-            }
-          }
-        }}
+        PaperProps={{ sx: { width: 280, borderLeft: 'none', boxShadow: theme.shadows[16] } }}
+        ModalProps={{ BackdropProps: { sx: { bgcolor: alpha('#000', 0.6), backdropFilter: 'blur(4px)' } } }}
         transitionDuration={300}
       >
         {mobileDrawer}
       </Drawer>
 
-      {/* Contenido Principal */}
-      <Box component="main" sx={{ flexGrow: 1, width: '100%', py: 3 }}>
-        <Outlet />
-      </Box>
-
-      {/* Footer */}
-      <Footer />
-
-      {/* Modal de Confirmación */}
       <ConfirmDialog {...logoutDialogProps} />
-    </Box>
+    </>
   );
 };
 

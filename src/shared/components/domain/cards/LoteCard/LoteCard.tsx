@@ -7,9 +7,10 @@ import {
   Gavel, CheckCircle, AccessTime, LocationOn, 
   ArrowForward, Visibility, LocalOffer, CalendarMonth 
 } from '@mui/icons-material';
-import type { LoteDto } from '../../../types/dto/lote.dto';
-import ImagenService from '../../../services/imagen.service';
+
 import { FavoritoButton } from '../../../ui/buttons/BotonFavorito/BotonFavorito';
+import type { LoteDto } from '@/core/types/dto/lote.dto';
+import ImagenService from '@/core/api/services/imagen.service';
 
 
 interface LoteCardProps {

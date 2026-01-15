@@ -11,13 +11,7 @@ import {
   Tab, Tabs, Typography, useTheme
 } from '@mui/material';
 
-// --- SERVICIOS Y TIPOS ---
-import type { ApiError } from '../../../../services/httpService';
-import PagoService from '../../../../services/pago.service';
-import MercadoPagoService from '../../../../services/pagoMercado.service';
-import SuscripcionService from '../../../../services/suscripcion.service';
-import type { PagoDto } from '../../../../types/dto/pago.dto';
-import type { SuscripcionDto } from '../../../../types/dto/suscripcion.dto';
+
 
 // --- COMPONENTES ---
 import { DataTable, type DataTableColumn } from '../../../../../shared/components/data-grid/DataTable/DataTable';
@@ -28,9 +22,15 @@ import { StatCard } from '../../../../../shared/components/domain/cards/StatCard
 import TwoFactorAuthModal from '../../../../../shared/components/domain/modals/TwoFactorAuthModal/TwoFactorAuthModal';
 import { useModal } from '../../../../../shared/hooks/useModal';
 import { HistorialPagosAgrupado } from './HistorialAgrupado';
+import PagoService from '@/core/api/services/pago.service';
+import type { PagoDto } from '@/core/types/dto/pago.dto';
+import SuscripcionService from '@/core/api/services/suscripcion.service';
+import type { SuscripcionDto } from '@/core/types/dto/suscripcion.dto';
+import { env } from '@/core/config/env';
+import MercadoPagoService from '@/core/api/services/pagoMercado.service';
+import type { ApiError } from '@/core/api/httpService';
 
-// --- CONTEXTO ---
-import { env } from '../../../../config/env';
+
 
 // Helper de Estados (Fuera del componente para evitar recreación)
 const getStatusConfig = (status: string) => {
@@ -45,14 +45,14 @@ const getStatusConfig = (status: string) => {
 
 const MisPagos: React.FC = () => {
   const theme = useTheme();
-  
+
   // Hooks
   const twoFaModal = useModal();
-  
+
   // Estados
   const [selectedPagoId, setSelectedPagoId] = useState<number | null>(null);
   const [twoFAError, setTwoFAError] = useState<string | null>(null);
-  const [currentTab, setCurrentTab] = useState(0); 
+  const [currentTab, setCurrentTab] = useState(0);
 
   // Queries
   const pagosQuery = useQuery<PagoDto[]>({
@@ -64,7 +64,7 @@ const MisPagos: React.FC = () => {
   const suscripcionesQuery = useQuery<SuscripcionDto[]>({
     queryKey: ['misSuscripciones'],
     queryFn: async () => (await SuscripcionService.getMisSuscripciones()).data,
-    staleTime: 1000 * 60 * 5 
+    staleTime: 1000 * 60 * 5
   });
 
   const isLoading = pagosQuery.isLoading || suscripcionesQuery.isLoading;
@@ -83,15 +83,15 @@ const MisPagos: React.FC = () => {
 
   const getNombreProyecto = (idProyecto: number) => proyectosMap.get(idProyecto) || `Proyecto #${idProyecto}`;
 
-  const formatCurrency = (val: number) => 
-    new Intl.NumberFormat(env.defaultLocale, { 
-        style: 'currency', currency: env.defaultCurrency, maximumFractionDigits: 0 
+  const formatCurrency = (val: number) =>
+    new Intl.NumberFormat(env.defaultLocale, {
+      style: 'currency', currency: env.defaultCurrency, maximumFractionDigits: 0
     }).format(val);
 
   // Filtrado y Stats
   const { filteredData, counts, historialData, stats } = useMemo(() => {
     const data = pagosQuery.data || [];
-    
+
     const counts = {
       pendientes: data.filter(p => p.estado_pago === 'pendiente').length,
       vencidas: data.filter(p => p.estado_pago === 'vencido').length,
@@ -99,11 +99,11 @@ const MisPagos: React.FC = () => {
     };
 
     const stats = {
-        deudaVencida: data.filter(p => p.estado_pago === 'vencido').reduce((acc, curr) => acc + Number(curr.monto), 0),
-        proximosVencimientos: data.filter(p => p.estado_pago === 'pendiente').reduce((acc, curr) => acc + Number(curr.monto), 0)
+      deudaVencida: data.filter(p => p.estado_pago === 'vencido').reduce((acc, curr) => acc + Number(curr.monto), 0),
+      proximosVencimientos: data.filter(p => p.estado_pago === 'pendiente').reduce((acc, curr) => acc + Number(curr.monto), 0)
     };
 
-    const sorted = [...data].sort((a, b) => 
+    const sorted = [...data].sort((a, b) =>
       new Date(a.fecha_vencimiento).getTime() - new Date(b.fecha_vencimiento).getTime()
     );
 
@@ -111,8 +111,8 @@ const MisPagos: React.FC = () => {
     if (currentTab === 0) filtered = sorted.filter(p => p.estado_pago === 'pendiente');
     if (currentTab === 1) filtered = sorted.filter(p => p.estado_pago === 'vencido');
 
-    const historialData = sorted.filter(p => 
-        p.estado_pago === 'pagado' || p.estado_pago === 'cubierto_por_puja'
+    const historialData = sorted.filter(p =>
+      p.estado_pago === 'pagado' || p.estado_pago === 'cubierto_por_puja'
     );
 
     return { filteredData: filtered, counts, historialData, stats };
@@ -150,8 +150,8 @@ const MisPagos: React.FC = () => {
       twoFaModal.close();
     },
     onError: (err: unknown) => {
-        const apiError = err as ApiError;
-        setTwoFAError(apiError.message || "Código inválido.");
+      const apiError = err as ApiError;
+      setTwoFAError(apiError.message || "Código inválido.");
     }
   });
 
@@ -161,30 +161,30 @@ const MisPagos: React.FC = () => {
       id: 'proyecto', label: 'Proyecto', minWidth: 180,
       render: (row) => (
         <Stack spacing={0.5}>
-            <Typography variant="body2" fontWeight="bold" color="text.primary">
+          <Typography variant="body2" fontWeight="bold" color="text.primary">
             {getNombreProyecto(row.id_proyecto ?? 0)}
-            </Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
-             ID Suscripción: #{row.id_suscripcion}
-            </Typography>
+          </Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
+            ID Suscripción: #{row.id_suscripcion}
+          </Typography>
         </Stack>
       )
     },
     {
       id: 'mes', label: 'Cuota', minWidth: 100, align: 'center',
       render: (row) => (
-        <Chip 
-            label={`Cuota ${row.mes}`} size="small" variant="outlined" 
-            sx={{ fontWeight: 600, borderColor: theme.palette.divider }}
+        <Chip
+          label={`Cuota ${row.mes}`} size="small" variant="outlined"
+          sx={{ fontWeight: 600, borderColor: theme.palette.divider }}
         />
       )
     },
     {
       id: 'fecha_vencimiento', label: 'Vencimiento', minWidth: 120,
       render: (row) => (
-          <Typography variant="body2">
-              {new Date(row.fecha_vencimiento).toLocaleDateString(env.defaultLocale)}
-          </Typography>
+        <Typography variant="body2">
+          {new Date(row.fecha_vencimiento).toLocaleDateString(env.defaultLocale)}
+        </Typography>
       )
     },
     {
@@ -200,10 +200,10 @@ const MisPagos: React.FC = () => {
       render: (row) => {
         const config = getStatusConfig(row.estado_pago);
         return (
-          <Chip 
-            label={config.label} 
-            color={config.color} 
-            size="small" variant="filled" 
+          <Chip
+            label={config.label}
+            color={config.color}
+            size="small" variant="filled"
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             icon={config.icon as any}
             sx={{ fontWeight: 600 }}
@@ -234,7 +234,7 @@ const MisPagos: React.FC = () => {
         );
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   ], [proyectosMap, iniciarPagoMutation.isPending, selectedPagoId, theme]);
 
   return (
@@ -242,27 +242,27 @@ const MisPagos: React.FC = () => {
       <PageHeader title="Mis Cuotas" subtitle="Gestiona tus obligaciones mensuales y visualiza el progreso de tus planes." />
 
       {/* KPI SUMMARY */}
-      <Box 
-        mb={4} 
-        display="grid" 
-        gridTemplateColumns={{ xs: '1fr', sm: '1fr 1fr' }} 
+      <Box
+        mb={4}
+        display="grid"
+        gridTemplateColumns={{ xs: '1fr', sm: '1fr 1fr' }}
         gap={3}
       >
-         <StatCard 
-            title="Próximos a Vencer" 
-            value={formatCurrency(stats.proximosVencimientos)} 
-            subtitle={`${counts.pendientes} cuotas pendientes`} 
-            icon={<Schedule />} 
-            color="info" 
-            loading={isLoading}
+        <StatCard
+          title="Próximos a Vencer"
+          value={formatCurrency(stats.proximosVencimientos)}
+          subtitle={`${counts.pendientes} cuotas pendientes`}
+          icon={<Schedule />}
+          color="info"
+          loading={isLoading}
         />
-        <StatCard 
-            title="Deuda Vencida" 
-            value={formatCurrency(stats.deudaVencida)} 
-            subtitle={`${counts.vencidas} cuotas vencidas`} 
-            icon={<Warning />} 
-            color="error" 
-            loading={isLoading}
+        <StatCard
+          title="Deuda Vencida"
+          value={formatCurrency(stats.deudaVencida)}
+          subtitle={`${counts.vencidas} cuotas vencidas`}
+          icon={<Warning />}
+          color="error"
+          loading={isLoading}
         />
       </Box>
 
@@ -277,34 +277,34 @@ const MisPagos: React.FC = () => {
 
       <QueryHandler isLoading={isLoading} error={error as Error | null}>
         <Box>
-            {currentTab === 2 ? (
-                <HistorialPagosAgrupado pagos={historialData} suscripciones={suscripcionesQuery.data || []} />
-            ) : (
-                <DataTable
-                    columns={columns}
-                    data={filteredData}
-                    getRowKey={(row) => row.id}
-                    pagination={true}
-                    defaultRowsPerPage={10}
-                    emptyMessage={currentTab === 0 ? "¡Todo al día! No tienes pagos pendientes." : "¡Excelente! No tienes cuotas vencidas."}
-                    getRowSx={(row) => ({
-                        bgcolor: row.estado_pago === 'vencido' ? alpha(theme.palette.error.main, 0.05) : 'inherit',
-                        transition: 'background-color 0.3s',
-                        '&:hover': {
-                            bgcolor: row.estado_pago === 'vencido' ? alpha(theme.palette.error.main, 0.1) : alpha(theme.palette.action.hover, 0.05)
-                        }
-                    })}
-                />
-            )}
+          {currentTab === 2 ? (
+            <HistorialPagosAgrupado pagos={historialData} suscripciones={suscripcionesQuery.data || []} />
+          ) : (
+            <DataTable
+              columns={columns}
+              data={filteredData}
+              getRowKey={(row) => row.id}
+              pagination={true}
+              defaultRowsPerPage={10}
+              emptyMessage={currentTab === 0 ? "¡Todo al día! No tienes pagos pendientes." : "¡Excelente! No tienes cuotas vencidas."}
+              getRowSx={(row) => ({
+                bgcolor: row.estado_pago === 'vencido' ? alpha(theme.palette.error.main, 0.05) : 'inherit',
+                transition: 'background-color 0.3s',
+                '&:hover': {
+                  bgcolor: row.estado_pago === 'vencido' ? alpha(theme.palette.error.main, 0.1) : alpha(theme.palette.action.hover, 0.05)
+                }
+              })}
+            />
+          )}
         </Box>
       </QueryHandler>
 
       {/* MODAL 2FA */}
-      <TwoFactorAuthModal 
-        open={twoFaModal.isOpen} 
-        onClose={() => { twoFaModal.close(); setSelectedPagoId(null); setTwoFAError(null); }} 
-        onSubmit={(code) => confirmar2FAMutation.mutate(code)} 
-        isLoading={confirmar2FAMutation.isPending} 
+      <TwoFactorAuthModal
+        open={twoFaModal.isOpen}
+        onClose={() => { twoFaModal.close(); setSelectedPagoId(null); setTwoFAError(null); }}
+        onSubmit={(code) => confirmar2FAMutation.mutate(code)}
+        isLoading={confirmar2FAMutation.isPending}
         error={twoFAError}
         title="Confirmar Pago Seguro"
         description="Por seguridad, ingresa el código de tu autenticador para procesar este pago."

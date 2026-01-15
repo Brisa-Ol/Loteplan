@@ -3,32 +3,27 @@ import React, {
   useEffect,
   useContext,
   useCallback,
+  useState,
   type ReactNode,
 } from 'react';
 
-// DTOs
-import type {
-  LoginRequestDto,
-  RegisterRequestDto,
-  UserDto,
-  LoginResponseDto,
-  LoginSuccessResponse,
-} from '@/core/types/dto/auth.dto';
+// DTOs (Asumiendo que existen en tu proyecto)
+import type { LoginRequestDto, RegisterRequestDto, UserDto, LoginResponseDto, LoginSuccessResponse } from '@/core/types/dto/auth.dto';
+import type { Generate2faSecretResponseDto } from '@/core/types/dto/auth2fa.dto';
 
-import type {
-  Generate2faSecretResponseDto
-} from '@/core/types/dto/auth2fa.dto';
-
-// Hooks (Usando alias @ para evitar errores de ruta relativa)
+// Hooks
 import { use2FAManagement } from '@/features/auth/hooks/use2FAManagement';
 import { useAccountActions } from '@/features/auth/hooks/useAccountActions';
 import { useAuthCore } from '@/features/auth/hooks/useAuthCore';
 
-// ==========================================
-// INTERFAZ DEL CONTEXTO
-// ==========================================
+export type AuthErrorType = 
+  | 'invalid_credentials' 
+  | 'session_expired' 
+  | 'account_not_activated' 
+  | 'generic' 
+  | null;
+
 interface AuthContextType {
-  // Estado
   user: UserDto | null;
   isAuthenticated: boolean;
   isLoading: boolean;
@@ -36,21 +31,16 @@ interface AuthContextType {
   requires2FA: boolean;
   twoFaToken: string | null;
   error: string | null;
-  
-  // Acciones Básicas
+  authErrorType: AuthErrorType;
   clearError: () => void;
   login: (credentials: LoginRequestDto) => Promise<LoginResponseDto>;
   logout: () => void;
   register: (data: RegisterRequestDto) => Promise<void>;
   refetchUser: () => Promise<void>;
-  
-  // Acciones 2FA
   verify2FA: (code: string) => Promise<LoginSuccessResponse>;
   generate2FASecret: () => Promise<Generate2faSecretResponseDto>;
   enable2FA: (code: string) => Promise<void>;
   disable2FA: (password: string, code: string) => Promise<void>;
-  
-  // Acciones de Cuenta
   deleteAccount: (twofaCode?: string) => Promise<void>;
   resendConfirmation: (email: string) => Promise<void>;
   forgotPassword: (email: string) => Promise<void>;
@@ -58,39 +48,64 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// 🔍 HELPER DE CLASIFICACIÓN (Sincronizado con tu Backend)
+const classifyError = (errorMsg: string | null): AuthErrorType => {
+  if (!errorMsg) return null;
+  const errorLower = errorMsg.toLowerCase();
+
+  // Backend: "Cuenta no activada." (Viene como 403, pero el texto manda)
+  if (errorLower.includes('cuenta no activada') || 
+      errorLower.includes('no confirmado') ||
+      errorLower.includes('email no verificado')) {
+    return 'account_not_activated';
+  }
+
+  // Backend: "Credenciales incorrectas." (Viene como 401)
+  if (errorLower.includes('credenciales incorrectas') ||
+      errorLower.includes('usuario o contraseña') ||
+      errorLower.includes('invalid credentials')) {
+    return 'invalid_credentials';
+  }
+
+  // Frontend: Sesión expirada por interceptor
+  if (errorLower.includes('sesión expirada') || errorLower.includes('token expirado')) {
+    return 'session_expired';
+  }
+
+  return 'generic';
+};
+
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  // Inicialización de Hooks Modulares
   const authCore = useAuthCore();
   const twoFA = use2FAManagement();
   const accountActions = useAccountActions(authCore.logout);
-
-  // ==========================================
-  // CARGA INICIAL
-  // ==========================================
+  const [authErrorType, setAuthErrorType] = useState<AuthErrorType>(null);
   const { loadUser } = authCore;
 
-  useEffect(() => {
-    loadUser();
-  }, [loadUser]);
+  useEffect(() => { loadUser(); }, [loadUser]);
 
-  // ==========================================
-  // WRAPPERS DE LÓGICA
-  // ==========================================
+  const combinedError = authCore.error || twoFA.error || accountActions.error;
+  const isLoading = authCore.isLoading || twoFA.isLoading || accountActions.isLoading;
+
+  // Clasificar error automáticamente
+  useEffect(() => {
+    setAuthErrorType(classifyError(combinedError));
+  }, [combinedError]);
 
   const login = useCallback(async (credentials: LoginRequestDto): Promise<LoginResponseDto> => {
-    const response = await authCore.login(credentials);
+    // Limpiamos errores previos al intentar loguear
+    authCore.clearError(); 
+    setAuthErrorType(null);
     
-    // Si el backend pide 2FA, actualizamos el estado del hook de 2FA
+    const response = await authCore.login(credentials);
     if ('is2FARequired' in response && response.is2FARequired) {
       twoFA.setRequires2FA(true);
       twoFA.setTwoFaToken(response.twoFaToken);
     }
-    
     return response;
   }, [authCore, twoFA]);
 
   const verify2FA = useCallback(async (code: string): Promise<LoginSuccessResponse> => {
-    // Al verificar 2FA con éxito, recargamos el usuario
     return twoFA.verify2FA(code, authCore.loadUser);
   }, [twoFA, authCore.loadUser]);
 
@@ -105,22 +120,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const logout = useCallback(() => {
     twoFA.reset2FAState();
     authCore.logout();
+    setAuthErrorType(null);
   }, [twoFA, authCore]);
 
   const clearError = useCallback(() => {
     authCore.clearError();
     twoFA.clearError();
     accountActions.clearError();
+    setAuthErrorType(null);
   }, [authCore, twoFA, accountActions]);
-
-  // Unificación de estados
-  const combinedError = authCore.error || twoFA.error || accountActions.error;
-  const isLoading = authCore.isLoading || twoFA.isLoading || accountActions.isLoading;
 
   return (
     <AuthContext.Provider
       value={{
-        // Estado
         user: authCore.user,
         isAuthenticated: authCore.isAuthenticated,
         isLoading,
@@ -128,8 +140,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         requires2FA: twoFA.requires2FA,
         twoFaToken: twoFA.twoFaToken,
         error: combinedError,
-        
-        // Métodos
+        authErrorType,
         login,
         verify2FA,
         register: authCore.register,
@@ -149,13 +160,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   );
 };
 
-// ==========================================
-// EXPORTACIÓN DEL HOOK
-// ==========================================
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth debe ser usado dentro de un AuthProvider');
-  }
+  if (!context) throw new Error('useAuth debe ser usado dentro de un AuthProvider');
   return context;
 };

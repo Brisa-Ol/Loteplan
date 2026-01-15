@@ -2,9 +2,10 @@ import React from 'react';
 import { 
   Typography, Box, Divider, Stack, Alert, Paper, useTheme, alpha 
 } from '@mui/material';
-import { MonetizationOn, Business, Info, Lock } from '@mui/icons-material';
-import { BaseModal } from '../../../../shared/components/ui/cards/BaseModal/BaseModal';
-import type { ProyectoDto } from '../../../../types/dto/proyecto.dto';
+import { MonetizationOn, VerifiedUser, Info, Lock } from '@mui/icons-material';
+import type { ProyectoDto } from '@/core/types/dto/proyecto.dto';
+import BaseModal from '@/shared/components/domain/modals/BaseModal/BaseModal';
+
 
 interface Props {
   open: boolean;
@@ -14,13 +15,14 @@ interface Props {
   isLoading: boolean;
 }
 
-export const ConfirmarInversionModal: React.FC<Props> = ({ 
+export const SuscribirseModal: React.FC<Props> = ({ 
   open, onClose, onConfirm, proyecto, isLoading 
 }) => {
   const theme = useTheme();
 
   if (!proyecto) return null;
 
+  // Formateador de moneda consistente
   const montoFormateado = new Intl.NumberFormat('es-AR', {
     style: 'currency',
     currency: proyecto.moneda === 'USD' ? 'USD' : 'ARS',
@@ -31,9 +33,9 @@ export const ConfirmarInversionModal: React.FC<Props> = ({
     <BaseModal
       open={open}
       onClose={onClose}
-      title="Confirmar Inversión"
-      subtitle="Estás invirtiendo como Inversionista"
-      icon={<Business />}
+      title="Confirmar Suscripción"
+      subtitle="Estás suscribiéndote como Ahorrista"
+      icon={<VerifiedUser />}
       headerColor="primary"
       maxWidth="sm"
       confirmText="Ir a Pagar"
@@ -44,10 +46,10 @@ export const ConfirmarInversionModal: React.FC<Props> = ({
     >
       <Stack spacing={3}>
         
-        {/* Título del Proyecto */}
+        {/* Título y Contexto */}
         <Box>
           <Typography variant="body1" color="text.secondary" gutterBottom>
-            Estás a punto de realizar una inversión directa en el proyecto:
+            Estás a punto de iniciar tu plan de ahorro para:
           </Typography>
           <Typography variant="h5" fontWeight={800} color="text.primary" sx={{ letterSpacing: -0.5 }}>
             {proyecto.nombre_proyecto}
@@ -67,7 +69,7 @@ export const ConfirmarInversionModal: React.FC<Props> = ({
           <Stack spacing={2}>
             <Box display="flex" justifyContent="space-between" alignItems="center">
               <Typography variant="body2" color="text.secondary" fontWeight={500}>Concepto</Typography>
-              <Typography variant="body2" fontWeight={700}>Pago Único de Inversión</Typography>
+              <Typography variant="body2" fontWeight={700}>Pago Inicial (Cuota 1)</Typography>
             </Box>
             
             <Divider />
@@ -84,16 +86,17 @@ export const ConfirmarInversionModal: React.FC<Props> = ({
           </Stack>
         </Paper>
 
-        {/* Aviso de Redirección */}
+        {/* Pasos a seguir */}
         <Alert 
             severity="info" 
             icon={<Info fontSize="inherit" />} 
             variant="outlined"
             sx={{ borderRadius: 2 }}
         >
-          <Typography variant="body2" fontWeight={500}>
-             Al confirmar, serás redirigido a la pasarela de pagos segura.
-             Ten listo tu método de autenticación (2FA).
+          <Typography variant="body2" component="div" fontWeight={500}>
+            <Box component="span" display="block" mb={0.5}><strong>1.</strong> Serás redirigido a la pasarela de pagos.</Box>
+            <Box component="span" display="block" mb={0.5}><strong>2.</strong> Al confirmar, tu suscripción se activará.</Box>
+            <Box component="span" display="block"><strong>3.</strong> Podrás firmar tu contrato desde el panel.</Box>
           </Typography>
         </Alert>
 

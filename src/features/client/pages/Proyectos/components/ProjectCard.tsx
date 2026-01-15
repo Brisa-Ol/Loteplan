@@ -7,8 +7,8 @@ import {
   ArrowForward, CalendarMonth, MonetizationOn, MapsHomeWork,
   GppGood, Group, AccessTime, LocalOffer
 } from "@mui/icons-material";
-import ImagenService from "../../../../services/imagen.service";
-import type { ProyectoDto } from "../../../../types/dto/proyecto.dto";
+import ImagenService from "@/core/api/services/imagen.service";
+import type { ProyectoDto } from "@/core/types/dto/proyecto.dto";
 
 // ==========================================
 // 1. HELPERS & UTILS
@@ -32,6 +32,7 @@ const formatMoney = (amount: number, currency: string) => {
 };
 
 const getDaysRemaining = (dateString: string) => {
+  if (!dateString) return 0;
   const end = new Date(dateString);
   const now = new Date();
   const diff = end.getTime() - now.getTime();
@@ -42,7 +43,6 @@ const getDaysRemaining = (dateString: string) => {
 // 2. SUB-COMPONENTES
 // ==========================================
 
-// --- StatItem: Reutilizable para datos financieros ---
 const StatItem: React.FC<{ label: string; icon: React.ReactNode; value: string | number; align?: 'left' | 'right' }> = ({ label, icon, value, align = 'left' }) => (
   <Box textAlign={align}>
     <Typography variant="caption" color="text.secondary" display="block" mb={0.5}>
@@ -57,12 +57,14 @@ const StatItem: React.FC<{ label: string; icon: React.ReactNode; value: string |
   </Box>
 );
 
-// --- Header: Imagen, Estado y Badge de "Pack" ---
+// --- Header Mejorado: Manejo robusto de imágenes ---
 const CardHeader: React.FC<{ project: ProyectoDto }> = ({ project }) => {
   const { label, color } = getStatusConfig(project.estado_proyecto);
-  const imageUrl = project.imagenes?.[0] 
+
+  // 1. Resolvemos la URL usando tu Service actualizado
+  const imageUrl = project.imagenes && project.imagenes.length > 0
     ? ImagenService.resolveImageUrl(project.imagenes[0].url) 
-    : '/assets/placeholder-project.jpg';
+    : '/assets/placeholder-project.jpg'; // Ruta por defecto si no hay array
 
   return (
     <Box sx={{ position: 'relative', height: 200, overflow: 'hidden' }}>
@@ -71,25 +73,38 @@ const CardHeader: React.FC<{ project: ProyectoDto }> = ({ project }) => {
         height="100%"
         image={imageUrl}
         alt={project.nombre_proyecto}
-        sx={{ objectFit: 'cover' }}
+        sx={{ objectFit: 'cover', transition: 'transform 0.3s ease' }}
+        
+        // ✅ 2. Manejador de Error BLINDADO
+        onError={(e) => {
+            const img = e.target as HTMLImageElement;
+            const fallback = '/assets/placeholder-project.jpg';
+            
+            // Evitar bucle infinito: Si ya intentamos cargar el placeholder y falló, no hacemos nada más.
+            if (img.src.includes('placeholder-project.jpg')) return;
+            
+            console.warn(`Falló carga de imagen para ${project.nombre_proyecto}. Usando fallback.`);
+            img.src = fallback; 
+        }}
       />
-      {/* Overlay */}
+      
+      {/* Overlay Gradiente */}
       <Box sx={{
         position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
-        background: 'linear-gradient(180deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0) 60%)',
+        background: 'linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0) 50%)',
         pointerEvents: 'none'
       }} />
       
-      {/* Badge Estado (Derecha) */}
+      {/* Badge Estado */}
       <Chip
         label={label}
         color={color}
         size="small"
         variant="filled"
-        sx={{ position: 'absolute', top: 12, right: 12, fontWeight: 700, boxShadow: 2, height: 24 }}
+        sx={{ position: 'absolute', top: 12, right: 12, fontWeight: 700, boxShadow: 3, height: 24 }}
       />
 
-      {/* Badge Pack (Izquierda) - Nuevo Dato */}
+      {/* Badge Pack */}
       {project.pack_de_lotes && (
         <Chip
           icon={<LocalOffer sx={{ fontSize: '14px !important', color: 'white !important' }} />}
@@ -97,7 +112,7 @@ const CardHeader: React.FC<{ project: ProyectoDto }> = ({ project }) => {
           size="small"
           sx={{ 
             position: 'absolute', top: 12, left: 12, 
-            fontWeight: 700, boxShadow: 2, height: 24,
+            fontWeight: 700, boxShadow: 3, height: 24,
             bgcolor: 'secondary.main', color: 'white'
           }}
         />
@@ -106,11 +121,9 @@ const CardHeader: React.FC<{ project: ProyectoDto }> = ({ project }) => {
   );
 };
 
-// --- Info: Título, Seguridad, Progreso y Urgencia ---
 const CardInfo: React.FC<{ project: ProyectoDto; type: "ahorrista" | "inversionista" }> = ({ project, type }) => {
   const theme = useTheme();
   
-  // Cálculos
   const daysLeft = getDaysRemaining(project.fecha_cierre);
   const percent = project.obj_suscripciones > 0 
     ? (project.suscripciones_actuales / project.obj_suscripciones) * 100 
@@ -119,7 +132,6 @@ const CardInfo: React.FC<{ project: ProyectoDto; type: "ahorrista" | "inversioni
   return (
     <>
       <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
-        {/* Tipo de Inversión */}
         <Chip
           label={type === "ahorrista" ? "Plan Ahorro" : "Inversión"}
           size="small"
@@ -131,7 +143,6 @@ const CardInfo: React.FC<{ project: ProyectoDto; type: "ahorrista" | "inversioni
           }}
         />
 
-        {/* Urgencia (Countdown) - Nuevo Dato */}
         {daysLeft > 0 && daysLeft <= 30 && project.estado_proyecto === 'En proceso' && (
           <Tooltip title={`Cierra el ${new Date(project.fecha_cierre).toLocaleDateString()}`}>
              <Chip 
@@ -150,7 +161,6 @@ const CardInfo: React.FC<{ project: ProyectoDto; type: "ahorrista" | "inversioni
         {project.nombre_proyecto}
       </Typography>
 
-      {/* Seguridad y Social Proof - Nuevos Datos */}
       <Stack direction="row" spacing={2} mb={1.5} alignItems="center">
         {project.forma_juridica && (
           <Tooltip title="Respaldo Legal">
@@ -174,7 +184,6 @@ const CardInfo: React.FC<{ project: ProyectoDto; type: "ahorrista" | "inversioni
         )}
       </Stack>
 
-      {/* Barra de Progreso (Solo Plan Ahorro) - Nuevo Dato */}
       {type === 'ahorrista' && project.estado_proyecto === 'En proceso' && project.obj_suscripciones > 0 && (
         <Box sx={{ mb: 2 }}>
            <Stack direction="row" justifyContent="space-between" mb={0.5}>
@@ -190,7 +199,6 @@ const CardInfo: React.FC<{ project: ProyectoDto; type: "ahorrista" | "inversioni
         </Box>
       )}
 
-      {/* Descripción (si no hay barra de progreso, damos más espacio a la descripción) */}
       {type !== 'ahorrista' && (
         <Typography variant="body2" color="text.secondary" mb={2} sx={{
           display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
@@ -203,7 +211,6 @@ const CardInfo: React.FC<{ project: ProyectoDto; type: "ahorrista" | "inversioni
   );
 };
 
-// --- Financials: Datos monetarios ---
 const CardFinancials: React.FC<{ project: ProyectoDto; type: "ahorrista" | "inversionista"; onClick?: () => void }> = ({ project, type, onClick }) => {
   const monto = formatMoney(Number(project.monto_inversion), project.moneda);
 

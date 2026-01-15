@@ -3,13 +3,16 @@ import { Box, Typography, Paper, Divider, Stack, Tabs, Tab, Avatar } from "@mui/
 import { Savings, Key } from "@mui/icons-material";
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../../context/AuthContext";
 
-import { PageContainer, PageHeader, SectionTitle } from "../../../shared/components/ui/cards";
 import { QueryHandler } from "../../../../shared/components/data-grid/QueryHandler/QueryHandler";
 
-import proyectoService from '../../../services/proyecto.service'; 
+
 import { ProjectCard } from "./components/ProjectCard";
+import proyectoService from "@/core/api/services/proyecto.service";
+import { useAuth } from "@/core/context/AuthContext";
+import { PageContainer } from "@/shared/components/layout/containers/PageContainer/PageContainer";
+import { SectionTitle } from "@/shared/components/layout/containers/SectionTitle/SectionTitle";
+import { PageHeader } from "@/shared/components/layout/headers/PageHeader/PageHeader";
 
 // --- COMPONENTE VISUAL: Highlights ---
 const ProjectHighlights: React.FC = () => (

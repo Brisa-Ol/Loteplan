@@ -27,12 +27,12 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { PDFDocument } from 'pdf-lib';
 import React, { useEffect, useRef, useState } from 'react';
 
-// Componentes y Servicios
-import { BaseModal } from '../../../../shared/components/ui/cards/BaseModal/BaseModal';
-import ContratoFirmadoService from '../../../../services/contrato-firmado.service';
-import ContratoPlantillaService from '../../../../services/contrato-plantilla.service';
-import ImagenService from '../../../../services/imagen.service';
+
 import PDFViewerMejorado from './PDFViewerMejorado';
+import ContratoPlantillaService from '@/core/api/services/contrato-plantilla.service';
+import ContratoFirmadoService from '@/core/api/services/contrato-firmado.service';
+import ImagenService from '@/core/api/services/imagen.service';
+import BaseModal from '@/shared/components/domain/modals/BaseModal/BaseModal';
 
 interface ModalFirmaContratoProps {
   open: boolean;

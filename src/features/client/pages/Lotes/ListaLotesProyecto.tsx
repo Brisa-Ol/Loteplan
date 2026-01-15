@@ -4,19 +4,21 @@ import {
   Tabs, Tab, Chip, Button
 } from '@mui/material';
 import { 
-  Lock, Gavel, AccessTime, CheckCircle, EmojiEvents, Apps 
+  Lock, Gavel, AccessTime, EmojiEvents, Apps 
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 
 // Contexts & Hooks
-import { useAuth } from '../../../context/AuthContext';
+
 import { useLotesProyecto } from '../../hooks/useLotesProyecto';
 
 // Components
 import PujarModal from './components/PujarModal';
-import { ConfirmDialog } from '../../../shared/components/ui/cards/ConfirmDialog/ConfirmDialog';
+
 import LoteCard from '../../../../shared/components/domain/cards/LoteCard/LoteCard'; // Importar el componente memorizado
 import { GlobalSnackbar } from '../../../../shared/components/ui/feedback/GlobalSnackbarProps/GlobalSnackbarProps';
+import { useAuth } from '@/core/context/AuthContext';
+import { ConfirmDialog } from '@/shared/components/domain/modals/ConfirmDialog/ConfirmDialog';
 
 
 interface Props {

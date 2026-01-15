@@ -2,14 +2,14 @@ import React, { useMemo } from 'react';
 import { Download as DownloadIcon, VerifiedUser as VerifiedIcon } from '@mui/icons-material';
 import { alpha, Box, Chip, Typography, useTheme, Stack } from '@mui/material';
 
-// Componentes y Servicios
-import { BaseModal } from '../../../../shared/components/ui/cards/BaseModal/BaseModal';
-import ContratoService from '../../../../services/contrato.service';
-import ImagenService from '../../../../services/imagen.service';
-import PDFViewerMejorado from '../../Contratos/components/PDFViewerMejorado';
 
-// Tipos
-import type { ContratoFirmadoDto } from '../../../../types/dto/contrato.dto';
+import PDFViewerMejorado from '../../Contratos/components/PDFViewerMejorado';
+import type { ContratoFirmadoDto } from '@/core/types/dto/contrato-firmado.dto';
+import ImagenService from '@/core/api/services/imagen.service';
+import ContratoService from '@/core/api/services/contrato.service';
+import BaseModal from '@/shared/components/domain/modals/BaseModal/BaseModal';
+
+
 
 interface Props {
   open: boolean;

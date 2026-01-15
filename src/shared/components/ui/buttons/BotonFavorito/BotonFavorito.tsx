@@ -4,16 +4,14 @@ import React from 'react';
 import { IconButton, Tooltip, CircularProgress, Zoom } from '@mui/material';
 import { Favorite, FavoriteBorder } from '@mui/icons-material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@/core/context/AuthContext';
+import useSnackbar from '@/shared/hooks/useSnackbar';
+import FavoritoService from '@/core/api/services/favorito.service';
+import type { CheckFavoritoResponseDto } from '@/core/types/dto/favorito.dto';
+import SuscripcionService from '@/core/api/services/suscripcion.service';
+import LoteService from '@/core/api/services/lote.service';
 
-// Servicios y Tipos
-import FavoritoService from '../../../services/favorito.service';
-import SuscripcionService from '../../../services/suscripcion.service';
-import LoteService from '../../../services/lote.service';
-import { useAuth } from '../../../context/AuthContext';
-import type { CheckFavoritoResponseDto } from '../../../types/dto/favorito.dto';
 
-// Hook Global
-import { useSnackbar } from '../../../context/SnackbarContext';
 
 interface FavoritoButtonProps {
   loteId: number;

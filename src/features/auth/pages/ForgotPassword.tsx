@@ -19,10 +19,10 @@ import {
 } from "@mui/material";
 import { MarkEmailRead, ArrowBack, Send as SendIcon, LockReset } from "@mui/icons-material";
 
-// Contexto y Componentes
-import { useAuth } from "../../context/AuthContext";
+
 import AuthFormContainer from "./components/AuthFormContainer/AuthFormContainer";
 import FormTextField from "../../../shared/components/forms/inputs/FormTextField/FormTextField";
+import { useAuth } from "@/core/context/AuthContext";
 
 const ForgotPasswordPage: React.FC = () => {
   const navigate = useNavigate();
