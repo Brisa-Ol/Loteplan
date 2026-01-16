@@ -6,7 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 
 // Componentes y Hooks compartidos
 import { DataTable, type DataTableColumn } from '../../../../shared/components/data-grid/DataTable/DataTable';
-import { PageHeader } from '../../../../shared/components/layout/headers/PageHeader/PageHeader';
+import { PageHeader } from '../../../../shared/components/layout/headers/PageHeader';
 import { StatCard } from '../../../../shared/components/domain/cards/StatCard/StatCard';
 import { PageContainer } from '../../../../shared/components/layout/containers/PageContainer/PageContainer';
 import { QueryHandler } from '../../../../shared/components/data-grid/QueryHandler/QueryHandler';

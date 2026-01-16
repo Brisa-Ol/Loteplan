@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Dialog, DialogTitle, DialogContent, DialogActions, 
   Button, TextField, Typography, Alert, CircularProgress, 
-  Box
+  Box, Stack, useTheme, useMediaQuery, alpha
 } from '@mui/material';
 import { VpnKey } from '@mui/icons-material';
 
@@ -25,9 +25,12 @@ const TwoFactorAuthModal: React.FC<TwoFactorAuthModalProps> = ({
   title = "Verificación de Seguridad",
   description = "Tu cuenta tiene activada la autenticación de dos factores. Ingresa el código de 6 dígitos de tu aplicación."
 }) => {
+  const theme = useTheme();
+  // ✅ Usamos la detección móvil estándar para coherencia con tus otros modales
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  
   const [code, setCode] = useState('');
 
-  // Limpiar el input cuando se abre/cierra el modal
   useEffect(() => {
     if (open) setCode('');
   }, [open]);
@@ -42,161 +45,127 @@ const TwoFactorAuthModal: React.FC<TwoFactorAuthModalProps> = ({
   return (
     <Dialog 
       open={open} 
+      // Si está cargando, bloqueamos el cierre
       onClose={isLoading ? undefined : onClose} 
       maxWidth="xs" 
       fullWidth
-      PaperProps={{ 
-        sx: { 
-          borderRadius: { xs: 2, sm: 3 },
-          mx: { xs: 2, sm: 4 },
-          width: { xs: 'calc(100% - 32px)', sm: '100%' }
-        } 
-      }}
+      // ✅ LIMPIEZA: Eliminamos PaperProps manuales.
+      // El theme ya define borderRadius (12px/8px) y márgenes correctos.
     >
       <DialogTitle 
         sx={{ 
-          display: "flex", 
-          alignItems: "center", 
-          gap: { xs: 1, sm: 1.5 },
-          pb: { xs: 2, sm: 2.5 },
-          pt: { xs: 2.5, sm: 3 },
-          px: { xs: 2.5, sm: 3 },
-          fontSize: { xs: '1.125rem', sm: '1.25rem' }
+            display: "flex", 
+            alignItems: "center", 
+            gap: 2,
+            // ✅ Fondo sutil en el header para darle importancia (opcional, pero consistente)
+            bgcolor: alpha(theme.palette.primary.main, 0.04),
+            borderBottom: `1px solid ${theme.palette.divider}`
         }}
       >
-        <VpnKey 
-          color="primary" 
-          sx={{ fontSize: { xs: '1.5rem', sm: '1.75rem' } }} 
-        />
-        {title}
+        <VpnKey color="primary" sx={{ fontSize: 28 }} />
+        <Typography variant="h6" component="span" fontWeight={700}>
+            {title}
+        </Typography>
       </DialogTitle>
       
       <form onSubmit={handleSubmit}>
-        <DialogContent 
-          sx={{ 
-            px: { xs: 2.5, sm: 3 },
-            py: { xs: 1.5, sm: 2 }
-          }}
-        >
-          <Typography 
-            variant="body2" 
-            color="text.secondary" 
-            sx={{ 
-              mb: { xs: 2.5, sm: 3 },
-              fontSize: { xs: '0.875rem', sm: '0.9375rem' },
-              lineHeight: 1.6
-            }}
-          >
-            {description}
-          </Typography>
+        <DialogContent sx={{ pt: 3 }}> {/* Un poco de padding top extra para separar del header */}
+          <Stack spacing={3}>
+            
+            <Typography variant="body1" color="text.secondary">
+                {description}
+            </Typography>
 
-          {error && (
-            <Alert 
-              severity="error" 
-              sx={{ 
-                mb: { xs: 2.5, sm: 3 }, 
-                borderRadius: 2,
-                fontSize: { xs: '0.8125rem', sm: '0.875rem' }
-              }}
-            >
-              {error}
-            </Alert>
-          )}
+            {error && (
+                <Alert severity="error" sx={{ borderRadius: 2 }}>
+                {error}
+                </Alert>
+            )}
 
-          <TextField
-            autoFocus
-            fullWidth
-            label="Código 2FA"
-            placeholder="000 000"
-            value={code}
-            onChange={(e) => {
-              const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 6);
-              setCode(val);
-            }}
-            autoComplete="one-time-code"
-            inputProps={{ 
-              inputMode: 'numeric',
-              pattern: '[0-9]*',
-              style: { 
-                textAlign: 'center', 
-                letterSpacing: 8,
-                fontSize: 'clamp(1.25rem, 4vw, 1.5rem)', // Tamaño fluido
-                fontWeight: 'bold'
-              },
-              maxLength: 6 
-            }}
-            InputLabelProps={{
-              sx: { fontSize: { xs: '0.9375rem', sm: '1rem' } }
-            }}
-            disabled={isLoading}
-            error={!!error}
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                py: { xs: 1, sm: 1.5 }
-              }
-            }}
-          />
-
-          <Box 
-            sx={{ 
-              mt: { xs: 2, sm: 2.5 },
-              display: 'flex',
-              justifyContent: 'center',
-              gap: 1
-            }}
-          >
-            {[...Array(6)].map((_, i) => (
-              <Box
-                key={i}
-                sx={{
-                  width: { xs: 8, sm: 10 },
-                  height: { xs: 8, sm: 10 },
-                  borderRadius: '50%',
-                  bgcolor: i < code.length ? 'primary.main' : 'grey.300',
-                  transition: 'all 0.2s ease'
+            {/* Input Grande tipo OTP */}
+            <TextField
+                autoFocus
+                fullWidth
+                placeholder="000 000"
+                value={code}
+                onChange={(e) => {
+                    const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 6);
+                    setCode(val);
                 }}
-              />
-            ))}
-          </Box>
+                autoComplete="one-time-code"
+                inputProps={{ 
+                    inputMode: 'numeric',
+                    pattern: '[0-9]*',
+                    maxLength: 6,
+                    style: { 
+                        textAlign: 'center', 
+                        letterSpacing: '0.5em', // Espaciado amplio para números
+                        fontSize: '1.5rem', 
+                        fontWeight: 700,
+                        padding: '16px' 
+                    }
+                }}
+                disabled={isLoading}
+                error={!!error}
+                // Usamos el color primario para el foco
+                color="primary"
+            />
+
+            {/* Indicadores visuales (puntos) */}
+            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1.5, pb: 1 }}>
+                {[...Array(6)].map((_, i) => (
+                    <Box
+                        key={i}
+                        sx={{
+                            width: 10,
+                            height: 10,
+                            borderRadius: '50%',
+                            // ✅ Usamos colores del theme en lugar de 'grey.300' hardcodeado
+                            bgcolor: i < code.length 
+                                ? 'primary.main' 
+                                : alpha(theme.palette.text.disabled, 0.3),
+                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                            transform: i < code.length ? 'scale(1.2)' : 'scale(1)'
+                        }}
+                    />
+                ))}
+            </Box>
+          </Stack>
         </DialogContent>
         
         <DialogActions 
-          sx={{ 
-            px: { xs: 2.5, sm: 3 }, 
-            pb: { xs: 2.5, sm: 3 },
-            pt: { xs: 1.5, sm: 2 },
-            gap: { xs: 1, sm: 1.5 },
-            flexDirection: { xs: 'column', sm: 'row' }
-          }}
+            sx={{ 
+                // ✅ Layout responsivo de botones igual que en LogoutDialog
+                flexDirection: isMobile ? 'column-reverse' : 'row',
+                gap: 2,
+                px: 3, 
+                pb: 3,
+                pt: 2,
+                borderTop: `1px solid ${theme.palette.divider}`,
+                bgcolor: alpha(theme.palette.background.default, 0.5)
+            }}
         >
-          <Button 
-            onClick={onClose} 
-            color="inherit" 
-            disabled={isLoading} 
-            sx={{ 
-              borderRadius: 2,
-              width: { xs: '100%', sm: 'auto' },
-              order: { xs: 2, sm: 1 },
-              py: { xs: 1.25, sm: 1 }
-            }}
-          >
-            Cancelar
-          </Button>
-          <Button 
-            type="submit" 
-            variant="contained" 
-            disabled={code.length !== 6 || isLoading}
-            startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : null}
-            sx={{ 
-              borderRadius: 2, 
-              px: { xs: 4, sm: 3 },
-              py: { xs: 1.25, sm: 1 },
-              width: { xs: '100%', sm: 'auto' },
-              order: { xs: 1, sm: 2 }
-            }}
-          >
-            {isLoading ? "Verificando..." : "Verificar"}
-          </Button>
+            <Button 
+                onClick={onClose} 
+                color="inherit" 
+                disabled={isLoading} 
+                fullWidth={isMobile}
+                // El theme ya pone el borderRadius y fontWeight
+            >
+                Cancelar
+            </Button>
+            
+            <Button 
+                type="submit" 
+                variant="contained" 
+                fullWidth={isMobile}
+                disabled={code.length !== 6 || isLoading}
+                disableElevation
+                startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : null}
+                sx={{ px: 4 }}
+            >
+                {isLoading ? "Verificando..." : "Verificar"}
+            </Button>
         </DialogActions>
       </form>
     </Dialog>

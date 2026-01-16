@@ -1,11 +1,10 @@
-import {
+// src/features/client/pages/Proyectos/ProyectosUnificados.tsx
 
-  TrendingUp,
-  Savings,
-  Home as HomeIcon, // Usado para el icono de Ahorrista
+import React, { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useQuery } from '@tanstack/react-query';
 
-  CheckCircle // Usado para estado finalizado
-} from "@mui/icons-material";
+// Material UI
 import {
   Box,
   Chip,
@@ -17,24 +16,26 @@ import {
   alpha,
   useTheme,
   Button,
-  Container
+  Container,
+  Fade
 } from "@mui/material";
-import { useQuery } from '@tanstack/react-query';
-import React, { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 
+// Iconos
+import {
+  TrendingUp,
+  Savings,
+  Home as HomeIcon,
+  CheckCircle,
+  FilterListOff
+} from "@mui/icons-material";
 
-// Asumo que estos componentes existen
-import { QueryHandler } from "../../../../shared/components/data-grid/QueryHandler/QueryHandler";
-
-import { ProjectCard } from "./components/ProjectCard";
+// Servicios y Contexto
 import proyectoService from "@/core/api/services/proyecto.service";
 import { useAuth } from "@/core/context/AuthContext";
 
-// ==========================================
-// COMPONENTE: Highlights (Estilo Metodología)
-// ==========================================
-// ... (Mismo código de UnifiedHighlights que tenías antes, lo omito para ahorrar espacio) ...
+// Componentes
+import { QueryHandler } from "../../../../shared/components/data-grid/QueryHandler/QueryHandler";
+import { ProjectCard } from "./components/ProjectCard"; 
 
 // ==========================================
 // COMPONENTE PRINCIPAL
@@ -45,46 +46,47 @@ const ProyectosUnificados: React.FC = () => {
   const { isAuthenticated } = useAuth();
 
   // ==========================================
-  // ESTADOS DE FILTRO (REESTRUCTURADOS)
+  // ESTADOS
   // ==========================================
-  // 1. Perfil (El toggle grande de la imagen): 'ahorrista' o 'inversionista'
   const [perfilSeleccionado, setPerfilSeleccionado] = useState<'ahorrista' | 'inversionista'>('ahorrista');
-  
-  // 2. Estado (Los tabs de abajo): 'activos' o 'finalizados'
   const [estadoTab, setEstadoTab] = useState<'activos' | 'finalizados'>('activos');
-  
   const [itemsVisibles, setItemsVisibles] = useState(9);
 
   // ==========================================
-  // QUERIES
+  // DATA FETCHING
   // ==========================================
   const { data: proyectosInv, isLoading: loadingInv } = useQuery({
     queryKey: ['proyectosInversionista'],
-    queryFn: async () => (await proyectoService.getInversionistasActive()).data
+    queryFn: async () => (await proyectoService.getInversionistasActive()).data,
+    staleTime: 5 * 60 * 1000, 
   });
 
   const { data: proyectosAho, isLoading: loadingAho } = useQuery({
     queryKey: ['proyectosAhorrista'],
-    queryFn: async () => (await proyectoService.getAhorristasActive()).data
+    queryFn: async () => (await proyectoService.getAhorristasActive()).data,
+    staleTime: 5 * 60 * 1000,
   });
 
   const isLoading = loadingInv || loadingAho;
 
   // ==========================================
-  // LÓGICA DE FILTRADO
+  // LÓGICA DE FILTRADO (MEMOIZED)
   // ==========================================
+  
+  // 1. Unificar listas y etiquetar
   const proyectosCombinados = useMemo(() => {
     const inversionista = (proyectosInv || []).map(p => ({ ...p, perfil: 'inversionista' as const }));
     const ahorrista = (proyectosAho || []).map(p => ({ ...p, perfil: 'ahorrista' as const }));
     return [...inversionista, ...ahorrista];
   }, [proyectosInv, proyectosAho]);
 
+  // 2. Aplicar filtros (Perfil y Estado)
   const proyectosFiltrados = useMemo(() => {
     return proyectosCombinados.filter(project => {
-      // 1. Filtro estricto por Perfil (Toggle Grande)
+      // A. Filtro por Perfil (Toggle Grande)
       const cumplePerfil = project.perfil === perfilSeleccionado;
 
-      // 2. Filtro por Estado (Tabs de abajo)
+      // B. Filtro por Estado (Tabs)
       const cumpleEstado = estadoTab === 'activos'
         ? project.estado_proyecto !== 'Finalizado'
         : project.estado_proyecto === 'Finalizado';
@@ -93,9 +95,13 @@ const ProyectosUnificados: React.FC = () => {
     });
   }, [proyectosCombinados, estadoTab, perfilSeleccionado]);
 
+  // 3. Paginación local
   const proyectosVisibles = proyectosFiltrados.slice(0, itemsVisibles);
   const hayMasProyectos = proyectosFiltrados.length > itemsVisibles;
 
+  // ==========================================
+  // HANDLERS
+  // ==========================================
   const handleProjectClick = (projectId: number | string) => {
     const targetPath = `/proyectos/${projectId}`;
     if (isAuthenticated) {
@@ -105,8 +111,11 @@ const ProyectosUnificados: React.FC = () => {
     }
   };
 
-  const cargarMas = () => {
-    setItemsVisibles(prev => prev + 9);
+  const handleCambioPerfil = (nuevoPerfil: 'ahorrista' | 'inversionista') => {
+    setPerfilSeleccionado(nuevoPerfil);
+    setItemsVisibles(9);
+    // UX: Scroll suave hacia arriba para no perder el foco
+    window.scrollTo({ top: 300, behavior: 'smooth' });
   };
 
   // ==========================================
@@ -115,158 +124,153 @@ const ProyectosUnificados: React.FC = () => {
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
       
-      {/* HEADER HERO */}
+      {/* 1. HERO HEADER */}
       <Box
         sx={{
           background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
           color: 'primary.contrastText',
           py: { xs: 6, md: 8 },
           textAlign: 'center',
-          mb: 6
+          mb: 6,
+          borderBottomLeftRadius: { xs: 24, md: 48 },
+          borderBottomRightRadius: { xs: 24, md: 48 },
+          boxShadow: 3
         }}
       >
         <Container maxWidth="lg">
-          <Typography variant="h3" component="h1" fontWeight={800} gutterBottom>
-            Explora Oportunidades
+          <Typography variant="h3" component="h1" fontWeight={800} gutterBottom sx={{ letterSpacing: -1 }}>
+           Explora Oportunidades
           </Typography>
           <Typography variant="h6" sx={{ maxWidth: 'md', mx: 'auto', opacity: 0.9, fontWeight: 400 }}>
-            Inversiones estratégicas y planes de ahorro en un solo lugar.
+            Encuentra el proyecto ideal para hacer crecer tu capital o asegurar tu futuro lote.
           </Typography>
         </Container>
       </Box>
 
       <Container maxWidth="xl" sx={{ pb: 12 }}>
         
-        {/* ==========================================
-            1. TOGGLE GRANDE (ESTILO IMAGEN)
-            ========================================== */}
-        <Box sx={{ maxWidth: 800, mx: 'auto', mb: 4 }}>
+        {/* 2. CONTROLES DE FILTRADO */}
+        <Stack spacing={4} mb={6} alignItems="center">
+          
+          {/* A. Toggle Grande (Pill Shape) */}
           <Paper
-            elevation={3}
+            elevation={4}
             sx={{
               p: 0.8,
-              borderRadius: 50, // Bordes muy redondos (Pill shape)
-              bgcolor: 'grey.200', // Fondo gris claro contenedor
+              borderRadius: 50,
+              bgcolor: 'background.paper',
               display: 'flex',
-              position: 'relative'
+              maxWidth: 600,
+              width: '100%',
+              border: `1px solid ${theme.palette.divider}`
             }}
           >
-            {/* Opción AHORRISTA */}
             <Button
-              onClick={() => {
-                setPerfilSeleccionado('ahorrista');
-                setItemsVisibles(9);
-              }}
+              onClick={() => handleCambioPerfil('ahorrista')}
               fullWidth
               startIcon={<HomeIcon />}
               sx={{
                 borderRadius: 50,
                 py: 1.5,
-                fontSize: { xs: '1rem', md: '1.2rem' },
-                fontWeight: 700,
+                fontSize: { xs: '0.9rem', md: '1.1rem' },
                 textTransform: 'none',
                 transition: 'all 0.3s ease',
                 ...(perfilSeleccionado === 'ahorrista' ? {
-                  bgcolor: 'primary.main', // Naranja
+                  bgcolor: 'primary.main',
                   color: 'white',
-                  boxShadow: '0 4px 12px rgba(204, 99, 51, 0.4)',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
                   '&:hover': { bgcolor: 'primary.dark' }
                 } : {
                   color: 'text.secondary',
-                  '&:hover': { bgcolor: 'rgba(0,0,0,0.05)' }
+                  '&:hover': { bgcolor: 'action.hover' }
                 })
               }}
             >
               Modo Ahorrista
             </Button>
 
-            {/* Opción INVERSIONISTA */}
             <Button
-              onClick={() => {
-                setPerfilSeleccionado('inversionista');
-                setItemsVisibles(9);
-              }}
+              onClick={() => handleCambioPerfil('inversionista')}
               fullWidth
               startIcon={<TrendingUp />}
               sx={{
                 borderRadius: 50,
                 py: 1.5,
-                fontSize: { xs: '1rem', md: '1.2rem' },
-                fontWeight: 700,
+                fontSize: { xs: '0.9rem', md: '1.1rem' },
                 textTransform: 'none',
                 transition: 'all 0.3s ease',
                 ...(perfilSeleccionado === 'inversionista' ? {
-                  bgcolor: 'primary.main', // Naranja
+                  bgcolor: 'primary.main',
                   color: 'white',
-                  boxShadow: '0 4px 12px rgba(204, 99, 51, 0.4)',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
                   '&:hover': { bgcolor: 'primary.dark' }
                 } : {
                   color: 'text.secondary',
-                  '&:hover': { bgcolor: 'rgba(0,0,0,0.05)' }
+                  '&:hover': { bgcolor: 'action.hover' }
                 })
               }}
             >
               Modo Inversionista
             </Button>
           </Paper>
-        </Box>
 
-        {/* ==========================================
-            2. TABS DE ESTADO (ABAJO)
-            ========================================== */}
-        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 6 }}>
-          <Tabs
-            value={estadoTab}
-            onChange={(_, newVal) => {
-              setEstadoTab(newVal);
-              setItemsVisibles(9);
-            }}
-            textColor="primary"
-            indicatorColor="primary"
-            centered
-            sx={{
-              '& .MuiTab-root': {
-                textTransform: 'none',
-                fontWeight: 600,
-                fontSize: '1rem',
-                minWidth: 120,
-                px: 4
-              }
-            }}
-          >
-            <Tab label="Proyectos Activos" value="activos" />
-            <Tab 
-              label={
-                <Stack direction="row" alignItems="center" gap={1}>
-                  Finalizados <CheckCircle fontSize="small" />
-                </Stack>
-              } 
-              value="finalizados" 
-            />
-          </Tabs>
-        </Box>
+          {/* B. Tabs Activos/Finalizados (Centrados) */}
+          <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+            <Tabs
+              value={estadoTab}
+              onChange={(_, val) => { setEstadoTab(val); setItemsVisibles(9); }}
+              textColor="primary"
+              indicatorColor="primary"
+              centered
+              sx={{
+                '& .MuiTab-root': { 
+                    textTransform: 'none', 
+                    fontWeight: 600, 
+                    fontSize: '1rem',
+                    px: { xs: 2, md: 4 }
+                }
+              }}
+            >
+              <Tab label="Proyectos Activos" value="activos" />
+              <Tab 
+                label={
+                  <Stack direction="row" alignItems="center" gap={1}>
+                    Finalizados <CheckCircle fontSize="small" />
+                  </Stack>
+                } 
+                value="finalizados" 
+              />
+            </Tabs>
+          </Box>
+        </Stack>
 
-        {/* ==========================================
-            3. GRID DE PROYECTOS
-            ========================================== */}
+        {/* 3. GRID DE RESULTADOS */}
         <QueryHandler
           isLoading={isLoading}
           error={null}
-          loadingMessage="Cargando proyectos..."
+          loadingMessage="Buscando las mejores oportunidades..."
           fullHeight={true}
         >
           <>
             <Box mb={2}>
                <Typography variant="body2" color="text.secondary" textAlign="center">
-                  Mostrando {proyectosVisibles.length} proyectos de {perfilSeleccionado === 'ahorrista' ? 'ahorro' : 'inversión'} {estadoTab}
+                  Mostrando {proyectosVisibles.length} de {proyectosFiltrados.length} proyectos encontrados
                </Typography>
             </Box>
 
             {proyectosFiltrados.length === 0 ? (
-              <Box textAlign="center" py={10} bgcolor="action.hover" borderRadius={4}>
-                <Typography variant="h5" color="text.secondary" fontWeight={500} gutterBottom>
-                  No hay proyectos {estadoTab} en modo {perfilSeleccionado}.
+              <Box textAlign="center" py={8} bgcolor="action.hover" borderRadius={4} border={`1px dashed ${theme.palette.divider}`}>
+                <FilterListOff sx={{ fontSize: 60, color: 'text.disabled', mb: 2 }} />
+                <Typography variant="h6" color="text.secondary" fontWeight={500}>
+                  No hay proyectos disponibles en esta categoría.
                 </Typography>
+                <Button 
+                  variant="text" 
+                  onClick={() => setEstadoTab('activos')}
+                  sx={{ mt: 2 }}
+                >
+                  Ver proyectos activos
+                </Button>
               </Box>
             ) : (
               <Box
@@ -278,66 +282,69 @@ const ProyectosUnificados: React.FC = () => {
                 }}
               >
                 {proyectosVisibles.map((project) => (
-                  <Box 
-                    key={`${project.perfil}-${project.id}`} 
-                    position="relative"
-                    sx={{
-                      height: '100%',
-                      transition: 'transform 0.3s',
-                      '&:hover': { transform: 'translateY(-8px)' }
-                    }}
-                  >
-                    {/* Badge de Perfil sobre la tarjeta */}
-                    <Chip
-                      icon={project.perfil === 'inversionista' ? <TrendingUp style={{ color: 'white' }} /> : <Savings style={{ color: 'white' }} />}
-                      label={project.perfil === 'inversionista' ? 'Inversión' : 'Ahorro'}
-                      size="small"
-                      sx={{
-                        position: 'absolute',
-                        top: 16,
-                        left: 16,
-                        zIndex: 10,
-                        fontWeight: 700,
-                        backdropFilter: 'blur(8px)',
-                        bgcolor: project.perfil === 'inversionista'
-                          ? alpha(theme.palette.info.main, 0.9)
-                          : alpha(theme.palette.success.main, 0.9),
-                        color: 'white',
-                        boxShadow: 2
-                      }}
-                    />
-
+                  <Fade in={true} key={`${project.perfil}-${project.id}`} timeout={500}>
                     <Box 
-                      sx={{ 
-                        height: '100%', 
-                        '& > *': { height: '100%' },
-                        boxShadow: '0 10px 30px -10px rgba(0,0,0,0.1)',
-                        borderRadius: 4,
-                        overflow: 'hidden'
+                      position="relative"
+                      sx={{
+                        height: '100%',
+                        transition: 'transform 0.3s',
+                        '&:hover': { transform: 'translateY(-8px)' }
                       }}
                     >
-                      <ProjectCard
-                        project={project}
-                        type={project.perfil}
-                        onClick={() => handleProjectClick(project.id)}
+                      {/* Badge Flotante (UX: Reafirmar contexto) */}
+                      <Chip
+                        icon={project.perfil === 'inversionista' ? <TrendingUp style={{ color: 'white' }} /> : <Savings style={{ color: 'white' }} />}
+                        label={project.perfil === 'inversionista' ? 'Inversión' : 'Ahorro'}
+                        size="small"
+                        sx={{
+                          position: 'absolute',
+                          top: 16,
+                          left: 16,
+                          zIndex: 10,
+                          fontWeight: 700,
+                          backdropFilter: 'blur(8px)',
+                          bgcolor: project.perfil === 'inversionista'
+                            ? alpha(theme.palette.info.main, 0.9)
+                            : alpha(theme.palette.success.main, 0.9),
+                          color: 'white',
+                          boxShadow: 2
+                        }}
                       />
+
+                      <Box 
+                        sx={{ 
+                          height: '100%', 
+                          '& > *': { height: '100%' },
+                          boxShadow: '0 10px 30px -10px rgba(0,0,0,0.1)',
+                          borderRadius: 4,
+                          overflow: 'hidden'
+                        }}
+                      >
+                        <ProjectCard
+                          project={project}
+                          type={project.perfil}
+                          onClick={() => handleProjectClick(project.id)}
+                        />
+                      </Box>
                     </Box>
-                  </Box>
+                  </Fade>
                 ))}
               </Box>
             )}
 
+            {/* Botón Cargar Más */}
             {hayMasProyectos && (
               <Box textAlign="center" py={6}>
                 <Button
                   variant="outlined"
                   size="large"
-                  onClick={cargarMas}
+                  onClick={() => setItemsVisibles(prev => prev + 9)}
                   sx={{
                     px: 4,
                     py: 1.5,
                     borderWidth: 2,
                     fontWeight: 700,
+                    borderRadius: 50,
                     '&:hover': { borderWidth: 2 }
                   }}
                 >

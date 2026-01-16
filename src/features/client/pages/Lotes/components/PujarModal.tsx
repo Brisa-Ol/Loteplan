@@ -9,11 +9,7 @@ import type { CreatePujaDto } from '@/core/types/dto/puja.dto';
 import PujaService from '@/core/api/services/puja.service';
 import BaseModal from '@/shared/components/domain/modals/BaseModal/BaseModal';
 
-
-
-// ✅ CORRECCIÓN DE INTERFAZ:
-// No redefinimos 'monto_ganador_lote' porque ya existe en LoteDto como 'string | null'.
-// Solo agregamos 'ultima_puja' que suele venir de un include o query separada.
+// Extensión de la interfaz para incluir datos calculados o anidados
 interface LoteConPuja extends LoteDto {
     ultima_puja?: { monto: number | string; id_usuario: number; }; 
 }
@@ -34,6 +30,7 @@ export const PujarModal: React.FC<Props> = ({ open, onClose, lote: loteProp, soy
   
   const lote = loteProp as LoteConPuja | null;
 
+  // Reset del estado al abrir
   useEffect(() => {
     if (open) {
       setMonto('');
@@ -47,20 +44,21 @@ export const PujarModal: React.FC<Props> = ({ open, onClose, lote: loteProp, soy
       
       const payload: CreatePujaDto = {
         id_lote: lote.id,
-        monto_puja: Number(monto) // Convertimos el string del input a number para el DTO de envío
+        monto_puja: Number(monto)
       };
 
       await PujaService.create(payload);
     },
     onSuccess: () => {
+      // 1. Invalidar queries para actualizar datos en tiempo real
       queryClient.invalidateQueries({ queryKey: ['lotesProyecto'] }); 
       queryClient.invalidateQueries({ queryKey: ['lote', lote?.id?.toString()] });
       queryClient.invalidateQueries({ queryKey: ['misPujas'] });
       
-      const msg = soyGanador ? '¡Has actualizado tu puja exitosamente!' : '¡Oferta realizada con éxito!';
-      alert(msg); 
-      
+      // 2. Feedback al usuario (Delegado al padre o Snackbar global)
       if (onSuccess) onSuccess();
+      
+      // 3. Cerrar y limpiar
       handleReset();
     },
     onError: (err: any) => {
@@ -79,21 +77,18 @@ export const PujarModal: React.FC<Props> = ({ open, onClose, lote: loteProp, soy
 
   // === CÁLCULOS DE PRECIO Y REGLAS DE NEGOCIO ===
   
-  // 1. Conversión Explícita de Tipos (String -> Number)
-  // Como tu DTO define estos campos como 'string', debemos convertirlos para comparaciones matemáticas.
+  const precioBase = Number(lote.precio_base);
+  const montoGanadorLote = lote.monto_ganador_lote ? Number(lote.monto_ganador_lote) : 0;
+  const montoUltimaPuja = lote.ultima_puja?.monto ? Number(lote.ultima_puja.monto) : 0;
   
-  const precioBase = Number(lote.precio_base); // Viene como string del DTO
-  const montoGanadorLote = lote.monto_ganador_lote ? Number(lote.monto_ganador_lote) : 0; // Viene como string | null
-  const montoUltimaPuja = lote.ultima_puja?.monto ? Number(lote.ultima_puja.monto) : 0; // Puede venir number o string
-  
-  // 2. Determinar el "Precio de Mercado" actual
+  // Precio más alto registrado actualmente en el sistema
   const precioMercado = Math.max(montoUltimaPuja, montoGanadorLote);
 
-  // 3. Determinar precio a vencer
+  // Precio a superar
   const hayPujasPrevias = precioMercado > 0;
   const precioA_Vencer = hayPujasPrevias ? precioMercado : precioBase;
 
-  // Helper de formateo visual
+  // Helper de formateo
   const formatMoney = (amount: number) => 
     new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(amount);
 
@@ -105,6 +100,7 @@ export const PujarModal: React.FC<Props> = ({ open, onClose, lote: loteProp, soy
   const montoNumerico = Number(monto);
   
   // === VALIDACIÓN ===
+  // Regla: Si hay pujas, debe ser estrictamente MAYOR. Si no, al menos IGUAL al base.
   const esMontoValido = 
     monto !== '' && 
     !isNaN(montoNumerico) && 
@@ -159,6 +155,7 @@ export const PujarModal: React.FC<Props> = ({ open, onClose, lote: loteProp, soy
             label="Tu Nueva Oferta"
             placeholder={hayPujasPrevias ? `Mayor a ${formatMoney(precioA_Vencer)}` : `Mínimo ${formatMoney(precioBase)}`}
             type="number"
+            autoComplete='off'
             value={monto}
             onChange={(e) => {
               setMonto(e.target.value);

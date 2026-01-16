@@ -20,7 +20,7 @@ import {
 import { PageContainer } from '../../../../shared/components/layout/containers/PageContainer/PageContainer';
 import { QueryHandler } from '../../../../shared/components/data-grid/QueryHandler/QueryHandler';
 import { FileUploadCard } from './components/FileUploadCard';
-import { PageHeader } from '../../../../shared/components/layout/headers/PageHeader/PageHeader';
+import { PageHeader } from '../../../../shared/components/layout/headers/PageHeader';
 import type { TipoDocumento } from '@/core/types/dto/kyc.dto';
 import kycService from '@/core/api/services/kyc.service';
 import { env } from '@/core/config/env';

@@ -1,47 +1,75 @@
 // src/components/common/StepsContainer/StepsContainer.tsx
 
 import React from "react";
-import { Box, useTheme } from "@mui/material";
+import { Box, useTheme, type Theme } from "@mui/material";
 
 interface StepsContainerProps {
   children: React.ReactNode;
+  /**
+   * Altura en píxeles donde se ubicará la línea conectora (desde arriba).
+   * Debe coincidir con la mitad de la altura del ícono/avatar de los pasos.
+   * Default: 28 (para un ícono de 56px)
+   */
+  lineOffsetTop?: number;
 }
 
-export const StepsContainer: React.FC<StepsContainerProps> = ({ children }) => {
+export const StepsContainer: React.FC<StepsContainerProps> = ({ 
+  children,
+  lineOffsetTop = 28 
+}) => {
   const theme = useTheme();
 
   return (
     <Box
       sx={{
         display: "flex",
-        // Lógica Responsive: Columna en móvil, Fila en escritorio
-        flexDirection: { xs: "column", md: "row" },
-        justifyContent: "center",
-        // 'stretch' asegura que todas las cards tengan la misma altura
-        alignItems: "stretch", 
         position: "relative",
-        mb: 4,
-        gap: { xs: 4, md: 0 } // Espacio extra en móvil entre pasos si el margen de la card no es suficiente
+        // ✅ RESPONSIVE: Columna en móvil, Fila en escritorio
+        flexDirection: { xs: "column", md: "row" },
+        // Distribución equitativa
+        justifyContent: "space-between", 
+        // ✅ UX: 'stretch' hace que todas las cajas tengan la misma altura (bueno para bordes)
+        alignItems: "stretch", 
+        
+        // Espaciado vertical en móvil
+        gap: { xs: 4, md: 2 },
+        mb: { xs: 4, md: 6 },
+        width: "100%",
       }}
     >
-      {/* Línea horizontal conectora (Solo Desktop) */}
+      {/* LÍNEA CONECTORA (Solo Desktop)
+        Se renderiza como un elemento decorativo absoluto detrás de los hijos.
+      */}
       <Box
         sx={{
           position: "absolute",
-          // El círculo mide 56px, el centro es 28px
-          top: 28, 
-          // Márgenes laterales para que la línea no toque los bordes de la pantalla
-          left: { md: 40, lg: 80 }, 
-          right: { md: 40, lg: 80 },
+          top: lineOffsetTop, // ✅ Configurable via prop
           height: 2,
-          // Usamos un color gris suave o secundario
-          backgroundColor: theme.palette.divider, 
-          zIndex: 0, // Debe estar detrás de las cards (que tienen zIndex 1 o 2)
+          backgroundColor: theme.palette.divider,
+          
+          // Ajuste de capas: Detrás del contenido
+          zIndex: 0, 
+          
+          // ✅ Lógica de márgenes laterales:
+          // Dejamos un margen del 5-10% para asegurar que la línea 
+          // nazca desde el centro del primer item y muera en el último,
+          // no desde el borde de la pantalla.
+          left: { md: '10%', lg: '8%' }, 
+          right: { md: '10%', lg: '8%' },
+          
+          // Solo visible en desktop
           display: { xs: "none", md: "block" },
         }}
       />
       
-      {children}
+      {/* Renderizamos los hijos con un zIndex superior para que tapen la línea 
+        si tienen fondo sólido, creando el efecto de "conexión".
+      */}
+      {React.Children.map(children, (child) => (
+        <Box sx={{ zIndex: 1, flex: 1, display: 'flex', justifyContent: 'center' }}>
+          {child}
+        </Box>
+      ))}
     </Box>
   );
 };

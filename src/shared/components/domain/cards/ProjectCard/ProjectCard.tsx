@@ -14,8 +14,9 @@ import {
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { LocationOn as LocationIcon } from "@mui/icons-material";
-import type { EstadoProyecto, ProyectoDto } from "../../../types/dto/proyecto.dto";
-import ImagenService from "../../../services/imagen.service";
+import type { EstadoProyecto, ProyectoDto } from "@/core/types/dto/proyecto.dto";
+import ImagenService from "@/core/api/services/imagen.service";
+
 
 interface ProjectCardProps {
   project: ProyectoDto;

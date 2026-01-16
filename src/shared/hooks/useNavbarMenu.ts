@@ -1,94 +1,93 @@
+// src/shared/hooks/useNavbarMenu.tsx
+
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-
-import { useConfirmDialog } from "./useConfirmDialog";
-
 import {
-  // Navegación Principal
+  // Navegación General
   Dashboard as DashboardIcon,
   Construction as ConstructionIcon,
   HelpOutline as HelpOutlineIcon,
   
-  // Finanzas
+  // Finanzas & Pagos
   AccountBalance as AccountBalanceIcon,
   AttachMoney as AttachMoneyIcon,
   Receipt as ReceiptIcon,
-  Description as DescriptionIcon,
   
-  // Productos
+  // Gestión & Documentos
+  Description as DescriptionIcon,
+  Folder as FolderIcon,
+  Assignment as AssignmentIcon,
+  
+  // Productos / Social
   SupervisedUserCircle as SupervisedUserIcon,
   Gavel as GavelIcon,
   Favorite as FavoriteIcon,
+  Terrain as TerrainIcon,
   
-  // Usuario y Configuración
+  // Usuario & Seguridad
   AccountCircle as AccountCircleIcon,
   Message as MessageIcon,
   Settings as SettingsIcon,
   Security as SecurityIcon,
-  VerifiedUser as VerifiedUserIcon,
   Logout as LogoutIcon,
   
-  // Administración
+  // Estados / Feedback (Para KYC y 2FA)
+  VerifiedUser as VerifiedUserIcon,
+  Badge as BadgeIcon,
+  Lock as LockIcon,
+  LockOpen as LockOpenIcon,
+  CheckCircle as CheckCircleIcon,
+  Error as ErrorIcon,
   Person as PersonIcon,
-  Terrain as TerrainIcon,
-  Assignment as AssignmentIcon,
-  
-  // Utilidades
-  Folder as FolderIcon,
   MoreHoriz as MoreHorizIcon,
-  
+
+  // Tipo
   type SvgIconComponent
 } from "@mui/icons-material";
+
 import { useAuth } from "../../core/context/AuthContext";
 import { ROUTES } from "@/routes";
-
+import { useConfirmDialog } from "./useConfirmDialog";
 
 // ════════════════════════════════════════════════════════
-// INTERFACES MEJORADAS CON DOCUMENTACIÓN
+// INTERFACES
 // ════════════════════════════════════════════════════════
 
-/** Elemento de navegación individual */
 export interface NavItem {
-  /** Texto visible del item */
+  /** Texto visible */
   label: string;
-  /** Ruta de navegación (opcional si tiene submenu o action) */
+  /** Ruta de navegación */
   path?: string;
   /** Icono del item */
-  icon?: SvgIconComponent;
-  /** Acción personalizada al hacer clic (alternativa a path) */
+  icon?: SvgIconComponent | React.ElementType;
+  /** Acción personalizada (ej: logout) */
   action?: () => void;
-  /** Items anidados (para dropdown/accordion) */
+  /** Submenú recursivo */
   submenu?: NavItem[];
-  /** Indica si es un divisor visual (Divider) */
+  /** Divisor visual */
   isDivider?: boolean;
-  /** Contador de notificaciones/alertas */
+  /** Contador de notificaciones */
   badge?: number;
-  /** Estilo del botón (solo para actionButtons) */
+  /** Variante de botón (solo para actionButtons) */
   variant?: "text" | "outlined" | "contained";
-  /** Indica si requiere verificación KYC */
+  /** Si requiere KYC aprobado para verse/usarse */
   requiresKYC?: boolean;
-  /** Descripción para tooltips/accesibilidad */
+  /** Descripción para menús detallados */
   description?: string;
+  color?: "default" | "primary" | "secondary" | "error" | "warning" | "success" | "info";
 }
 
-/** Configuración completa del navbar */
 export interface NavbarConfig {
-  /** Ruta del logo */
   logoPath: string;
-  /** Ruta de inicio/home */
   homePath: string;
-  /** Items de navegación principal */
   navItems: NavItem[];
-  /** Items del menú de usuario (avatar dropdown) */
   userNavItems: NavItem[];
-  /** Botones de acción (Login/Register para público) */
   actionButtons: NavItem[];
-  /** Items de acceso rápido (para mobile drawer) */
   quickAccess?: NavItem[];
 }
 
 // ════════════════════════════════════════════════════════
-// CONSTANTES DE ALTURA
+// CONSTANTES
 // ════════════════════════════════════════════════════════
 export const NAVBAR_HEIGHT = {
   mobile: 64,
@@ -103,12 +102,13 @@ export const useNavbarMenu = () => {
   const navigate = useNavigate();
   const confirmLogout = useConfirmDialog();
 
+  // Configuración del diálogo de cierre de sesión
   const logoutDialogProps = {
     controller: confirmLogout,
     onConfirm: () => {
       confirmLogout.close();
       logout();
-      navigate(ROUTES.LOGIN); // ✅ Constante
+      navigate(ROUTES.LOGIN);
     }
   };
 
@@ -117,484 +117,249 @@ export const useNavbarMenu = () => {
       confirmLogout.confirm('logout');
     };
 
-    // ════════════════════════════════════════════════════════
+    // ----------------------------------------------------------------------
     // A. ADMINISTRADOR
-    // ════════════════════════════════════════════════════════
+    // ----------------------------------------------------------------------
     if (user?.rol === "admin") {
-      const adminNavItems: NavItem[] = [
-        { 
-          label: "Dashboard", 
-          path: ROUTES.ADMIN.DASHBOARD, // ✅ Constante
-          icon: DashboardIcon,
-          description: "Panel de control principal"
-        },
-        { 
-          label: "Gestión de Usuarios",
-          icon: PersonIcon,
-          description: "Administrar usuarios y verificaciones",
-          submenu: [
-            { 
-              label: "Gestión Usuarios", 
-              path: ROUTES.ADMIN.USUARIOS.LISTA, // ✅ Constante
-              icon: PersonIcon, 
-              description: "Listado y administración de usuarios"
-            },
-            { 
-              label: "Verificación de Usuarios", 
-              path: ROUTES.ADMIN.USUARIOS.KYC, // ✅ Constante
-              icon: VerifiedUserIcon, 
-              description: "Revisar solicitudes KYC"
-            },
-          ],
-        },
-        { 
-          label: "Proyectos",
-          icon: ConstructionIcon,
-          description: "Gestión de proyectos inmobiliarios",
-          submenu: [
-            { 
-              label: "Gestión Proyectos", 
-              path: ROUTES.ADMIN.PROYECTOS.LISTA, // ✅ Constante
-              icon: ConstructionIcon, 
-              description: "Administrar proyectos"
-            },
-            { 
-              label: "Planes de Ahorro", 
-              path: ROUTES.ADMIN.PROYECTOS.PLANES_AHORRO, // ✅ Constante
-              icon: SupervisedUserIcon, 
-              description: "Gestionar planes de ahorro"
-            },
-            { 
-              label: "Inversiones", 
-              path: ROUTES.ADMIN.PROYECTOS.INVERSIONES, // ✅ Constante
-              icon: AttachMoneyIcon, 
-              description: "Gestionar inversiones"
-            },
-          ],
-        },
-        {
-          label: "Lotes",
-          icon: TerrainIcon,
-          description: "Administración de lotes y pujas",
-          submenu: [
-            { 
-              label: "Gestión de Lotes", 
-              path: ROUTES.ADMIN.LOTES.LISTA, // ✅ Constante
-              icon: TerrainIcon, 
-              description: "Administrar lotes disponibles"
-            },
-            { 
-              label: "Gestión de Pagos", 
-              path: ROUTES.ADMIN.LOTES.PAGOS, // ✅ Constante
-              icon: AttachMoneyIcon, 
-              description: "Pagos de lotes"
-            },
-            { isDivider: true, label: "" },
-            { 
-              label: "Gestión de Pujas", 
-              path: ROUTES.ADMIN.LOTES.PUJAS, // ✅ Constante
-              icon: GavelIcon, 
-              description: "Administrar pujas activas"
-            },
-          ],
-        },
-        {
-          label: "Contratos",
-          icon: DescriptionIcon,
-          description: "Gestión de contratos",
-          submenu: [
-            { 
-              label: "Plantillas de Contratos", 
-              path: ROUTES.ADMIN.CONTRATOS.PLANTILLAS, // ✅ Constante
-              icon: DescriptionIcon, 
-              description: "Administrar plantillas"
-            },
-            { 
-              label: "Contratos Firmados", 
-              path: ROUTES.ADMIN.CONTRATOS.FIRMADOS, // ✅ Constante
-              icon: AssignmentIcon, 
-              description: "Ver contratos firmados"
-            },
-          ],
-        },
-        {
-          label: "Finanzas",
-          icon: AccountBalanceIcon,
-          description: "Gestión financiera",
-          submenu: [
-            { 
-              label: "Gestión de Pagos", 
-              path: ROUTES.ADMIN.FINANZAS.PAGOS, // ✅ Constante
-              icon: AttachMoneyIcon, 
-              description: "Administrar pagos"
-            },
-            { 
-              label: "Transacciones", 
-              path: ROUTES.ADMIN.FINANZAS.TRANSACCIONES, // ✅ Constante
-              icon: ReceiptIcon, 
-              description: "Historial de transacciones"
-            },
-            { 
-              label: "Estados de Cuenta", 
-              path: ROUTES.ADMIN.FINANZAS.RESUMENES, // ✅ Constante
-              icon: DescriptionIcon, 
-              description: "Generar reportes"
-            },
-          ],
-        },
-        { isDivider: true, label: "" },
-        {
-          label: "Vista Cliente",
-          icon: AccountCircleIcon,
-          description: "Previsualizar como cliente",
-          submenu: [
-            { 
-              label: "Como Ahorrista", 
-              path: ROUTES.PROYECTOS.AHORRISTA, // ✅ Constante
-              icon: SupervisedUserIcon 
-            },
-            { 
-              label: "Como Inversionista", 
-              path: ROUTES.PROYECTOS.INVERSIONISTA, // ✅ Constante
-              icon: AttachMoneyIcon 
-            },
-          ],
-        },
-      ];
-
-      const adminUserNavItems: NavItem[] = [
-        {
-          label: user?.nombre || "Admin",
-          icon: AccountCircleIcon,
-          submenu: [
-            { 
-              label: "Mi Perfil", 
-              path: ROUTES.ADMIN.USUARIOS.PERFIL, // ✅ Constante
-              icon: AccountCircleIcon, 
-              description: "Ver y editar perfil"
-            },
-            { 
-              label: "Configuración", 
-              path: ROUTES.ADMIN.USUARIOS.CONFIGURACION, // ✅ Constante
-              icon: SettingsIcon, 
-              description: "Ajustes del sistema"
-            },
-            { isDivider: true, label: "" },
-            { 
-              label: "Cerrar Sesión", 
-              icon: LogoutIcon, 
-              action: handleLogoutClick 
-            },
-          ],
-        },
-      ];
-
       return {
         logoPath: "/logo.svg",
-        homePath: ROUTES.ADMIN.DASHBOARD, // ✅ Constante
-        navItems: adminNavItems,
-        userNavItems: adminUserNavItems,
+        homePath: ROUTES.ADMIN.DASHBOARD,
         actionButtons: [],
+        navItems: [
+          { 
+            label: "Dashboard", 
+            path: ROUTES.ADMIN.DASHBOARD, 
+            icon: DashboardIcon 
+          },
+          { 
+            label: "Gestión Usuarios",
+            icon: PersonIcon,
+            submenu: [
+              { label: "Lista de Usuarios", path: ROUTES.ADMIN.USUARIOS.LISTA, icon: PersonIcon },
+              { label: "Verificaciones KYC", path: ROUTES.ADMIN.USUARIOS.KYC, icon: VerifiedUserIcon, badge: 0 }, // Aquí podrías pasar un prop de conteo
+            ]
+          },
+          { 
+            label: "Proyectos",
+            icon: ConstructionIcon,
+            submenu: [
+              { label: "Gestión Proyectos", path: ROUTES.ADMIN.PROYECTOS.LISTA, icon: ConstructionIcon },
+              { label: "Planes de Ahorro", path: ROUTES.ADMIN.PROYECTOS.PLANES_AHORRO, icon: SupervisedUserIcon },
+              { label: "Inversiones", path: ROUTES.ADMIN.PROYECTOS.INVERSIONES, icon: AttachMoneyIcon },
+            ]
+          },
+          {
+            label: "Lotes",
+            icon: TerrainIcon,
+            submenu: [
+              { label: "Gestión Lotes", path: ROUTES.ADMIN.LOTES.LISTA, icon: TerrainIcon },
+              { label: "Gestión Pagos", path: ROUTES.ADMIN.LOTES.PAGOS, icon: AttachMoneyIcon },
+              { label: "Gestión Pujas", path: ROUTES.ADMIN.LOTES.PUJAS, icon: GavelIcon },
+            ]
+          },
+          {
+            label: "Finanzas",
+            icon: AccountBalanceIcon,
+            submenu: [
+              { label: "Transacciones", path: ROUTES.ADMIN.FINANZAS.TRANSACCIONES, icon: ReceiptIcon },
+              { label: "Reportes", path: ROUTES.ADMIN.FINANZAS.RESUMENES, icon: DescriptionIcon },
+            ]
+          },
+          {
+            label: "Contratos",
+            icon: DescriptionIcon,
+            submenu: [
+              { label: "Plantillas", path: ROUTES.ADMIN.CONTRATOS.PLANTILLAS, icon: DescriptionIcon },
+              { label: "Firmados", path: ROUTES.ADMIN.CONTRATOS.FIRMADOS, icon: AssignmentIcon },
+            ]
+          }
+        ],
+        userNavItems: [
+          {
+            label: user.nombre || "Admin",
+            icon: AccountCircleIcon,
+            submenu: [
+              { label: "Mi Perfil", path: ROUTES.ADMIN.USUARIOS.PERFIL, icon: AccountCircleIcon },
+              { label: "Configuración", path: ROUTES.ADMIN.USUARIOS.CONFIGURACION, icon: SettingsIcon },
+              { isDivider: true, label: "" },
+              { label: "Cerrar Sesión", icon: LogoutIcon, action: handleLogoutClick }
+            ]
+          }
+        ],
         quickAccess: [
-          { label: "Dashboard", path: ROUTES.ADMIN.DASHBOARD, icon: DashboardIcon },
-          { label: "Usuarios", path: ROUTES.ADMIN.USUARIOS.LISTA, icon: PersonIcon },
-          { label: "Proyectos", path: ROUTES.ADMIN.PROYECTOS.LISTA, icon: ConstructionIcon },
+            { label: "Dashboard", path: ROUTES.ADMIN.DASHBOARD, icon: DashboardIcon },
+            { label: "Usuarios", path: ROUTES.ADMIN.USUARIOS.LISTA, icon: PersonIcon },
         ]
       };
     }
 
-    // ════════════════════════════════════════════════════════
-    // B. CLIENTE - ESTRUCTURA OPTIMIZADA
-    // ════════════════════════════════════════════════════════
+    // ----------------------------------------------------------------------
+    // B. CLIENTE (Estructura Optimizada + Perfil con Seguridad)
+    // ----------------------------------------------------------------------
     if (user?.rol === "cliente") {
-      const kycStatus = (user as any)?.estado_kyc || 'SIN_INICIAR';
-      const isVerified = kycStatus === "APROBADA" && user?.is_2fa_enabled;
-
-      const clientNavItems: NavItem[] = [
-        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        // 🏠 INICIO - Acceso principal
-        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        { 
-          label: "Inicio", 
-          path: ROUTES.CLIENT.DASHBOARD, // ✅ Constante
-          icon: DashboardIcon,
-          description: "Dashboard principal"
-        },
-        
-        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        // 🏗️ PROYECTOS - Explorar oportunidades
-        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        { 
-          label: "Proyectos", 
-          path: ROUTES.PROYECTOS.SELECCION_ROL, // ✅ Constante
-          icon: ConstructionIcon,
-          description: "Explorar proyectos disponibles"
-        },
-
-        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        // 💰 MIS FINANZAS - Productos y pagos
-        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        {
-          label: "Mis Finanzas",
-          icon: AccountBalanceIcon,
-          description: "Administrar productos financieros",
-          submenu: [
-            // === Productos Activos ===
-            { 
-              label: "Planes de Ahorro", 
-              path: ROUTES.CLIENT.FINANZAS.SUSCRIPCIONES, // ✅ Constante
-              icon: SupervisedUserIcon, 
-              description: "Ver mis planes de ahorro",
-              requiresKYC: true
-            },
-            { 
-              label: "Inversiones", 
-              path: ROUTES.CLIENT.FINANZAS.INVERSIONES, // ✅ Constante
-              icon: AttachMoneyIcon, 
-              description: "Ver mis inversiones",
-              requiresKYC: true
-            },
-            { 
-              label: "Mis Pujas", 
-              path: ROUTES.CLIENT.FINANZAS.PUJAS, // ✅ Constante
-              icon: GavelIcon, 
-              description: "Pujas activas y historial",
-              requiresKYC: true
-            },
-            { isDivider: true, label: "" },
-            // === Acción Prioritaria ===
-            { 
-              label: "Pagar Cuotas", 
-              path: ROUTES.CLIENT.FINANZAS.PAGOS, // ✅ Constante
-              icon: ReceiptIcon, 
-              description: "Realizar pagos de cuotas",
-              requiresKYC: true
-            }, 
-          ]
-        },
-
-        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        // 📂 MI PORTAFOLIO - Assets personales
-        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        {
-          label: "Mi Portafolio",
-          icon: FolderIcon,
-          description: "Mis documentos y favoritos",
-          submenu: [
-            { 
-              label: "Lotes Favoritos", 
-              path: ROUTES.CLIENT.CUENTA.FAVORITOS, // ✅ Constante
-              icon: FavoriteIcon, 
-              description: "Lotes guardados"
-            },
-            { 
-              label: "Mis Contratos", 
-              path: ROUTES.CLIENT.CUENTA.CONTRATOS, // ✅ Constante
-              icon: DescriptionIcon, 
-              description: "Contratos y documentos",
-              requiresKYC: true
-            },
-          ]
-        },
-
-        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        // ⋯ MÁS - Funciones secundarias (Overflow menu)
-        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        {
-          label: "Más",
-          icon: MoreHorizIcon,
-          description: "Más opciones y configuración",
-          submenu: [
-            // === Reportes y Consultas ===
-            { 
-              label: "Movimientos", 
-              path: ROUTES.CLIENT.FINANZAS.TRANSACCIONES, // ✅ Constante
-              icon: ReceiptIcon, 
-              description: "Historial de transacciones"
-            }, 
-            { 
-              label: "Estado de Cuenta", 
-              path: ROUTES.CLIENT.FINANZAS.RESUMENES, // ✅ Constante
-              icon: DescriptionIcon, 
-              description: "Ver resumen de cuenta"
-            },
-            { isDivider: true, label: "" },
-            
-            // === Información y Ayuda ===
-            {
-              label: "Cómo Funciona",
-              icon: HelpOutlineIcon,
-              description: "Guías y tutoriales",
-              submenu: [
-                { 
-                  label: "Para Ahorristas", 
-                  path: ROUTES.PUBLIC.COMO_FUNCIONA_AHORRISTA, // ✅ Constante
-                  icon: SupervisedUserIcon, 
-                  description: "Guía para ahorristas"
-                },
-                { 
-                  label: "Para Inversionistas", 
-                  path: ROUTES.PUBLIC.COMO_FUNCIONA_INVERSIONISTA, // ✅ Constante
-                  icon: AttachMoneyIcon, 
-                  description: "Guía para inversionistas"
-                },
-              ],
-            },
-            { isDivider: true, label: "" },
-            
-            // === Seguridad ===
-            { 
-              label: "Configuración de Seguridad", 
-              path: ROUTES.CLIENT.CUENTA.SEGURIDAD, // ✅ Constante
-              icon: SecurityIcon, 
-              description: "Administrar seguridad de la cuenta"
-            },
-          ]
-        },
-      ];
-
-      const clientUserNavItems: NavItem[] = [
-        {
-          label: user?.nombre || "Usuario",
-          icon: AccountCircleIcon,
-          badge: !isVerified ? 1 : undefined,
-          submenu: [
-            { 
-              label: "Mi Perfil", 
-              path: ROUTES.CLIENT.CUENTA.PERFIL, // ✅ Constante
-              icon: AccountCircleIcon, 
-              description: "Ver y editar perfil"
-            },
-            { 
-              label: "Mis Mensajes", 
-              path: ROUTES.CLIENT.CUENTA.MENSAJES, // ✅ Constante
-              icon: MessageIcon, 
-              description: "Centro de notificaciones"
-            },
-            
-            // === Alerta de Verificación (solo si no está verificado) ===
-            ...(!isVerified ? [
-              { isDivider: true, label: "" } as NavItem,
-              { 
-                label: "⚠️ Verificar mi Cuenta", 
-                path: ROUTES.CLIENT.CUENTA.KYC, // ✅ Constante
-                icon: VerifiedUserIcon, 
-                description: "Completar verificación KYC",
-                badge: 1
-              } as NavItem,
-            ] : []),
-            
-            { isDivider: true, label: "" },
-            { 
-              label: "Cerrar Sesión", 
-              icon: LogoutIcon, 
-              action: handleLogoutClick 
-            },
-          ],
-        },
-      ];
+      // Analizar Estados de Seguridad
+     const rawKycStatus = (user as any)?.estado_kyc || 'SIN_INICIAR';
+const kycStatus = rawKycStatus.toUpperCase();
+      const isKycApproved = kycStatus === "APROBADA";
+      const isKycPending = kycStatus === "PENDIENTE";
+      const is2faEnabled = user?.is_2fa_enabled;
 
       return {
         logoPath: "/logo.svg",
-        homePath: ROUTES.CLIENT.DASHBOARD, // ✅ Constante
-        navItems: clientNavItems,
-        userNavItems: clientUserNavItems,
+        homePath: ROUTES.CLIENT.DASHBOARD,
         actionButtons: [],
+        
+        // 1. MENÚ PRINCIPAL (Izquierda)
+        navItems: [
+          { 
+            label: "Inicio", 
+            path: ROUTES.CLIENT.DASHBOARD, 
+            icon: DashboardIcon,
+            description: "Resumen de cuenta"
+          },
+          { 
+            label: "Oportunidades", // Mejor que "Invertir" o "Proyectos"
+            path: ROUTES.PROYECTOS.SELECCION_ROL, 
+            icon: ConstructionIcon,
+            description: "Explorar catálogo de inversiones"
+          },
+          {
+            label: "Mis Activos",
+            icon: FolderIcon,
+            description: "Gestión de propiedades",
+            submenu: [
+              { label: "Planes de Ahorro", path: ROUTES.CLIENT.FINANZAS.SUSCRIPCIONES, icon: SupervisedUserIcon, description: "Mis suscripciones activas" },
+              { label: "Mis Inversiones", path: ROUTES.CLIENT.FINANZAS.INVERSIONES, icon: TerrainIcon, description: "Lotes y participaciones" },
+              { label: "Mis Pujas", path: ROUTES.CLIENT.FINANZAS.PUJAS, icon: GavelIcon, description: "Subastas en curso" },
+              { isDivider: true, label: "" },
+              { label: "Mis Contratos", path: ROUTES.CLIENT.CUENTA.CONTRATOS, icon: DescriptionIcon, description: "Documentación legal" },
+            ]
+          },
+          {
+            label: "Billetera",
+            icon: AccountBalanceIcon,
+            description: "Pagos y movimientos",
+            submenu: [
+              { label: "Pagar Cuotas", path: ROUTES.CLIENT.FINANZAS.PAGOS, icon: ReceiptIcon, description: "Pagos pendientes", badge: 1 },
+              { label: "Movimientos", path: ROUTES.CLIENT.FINANZAS.TRANSACCIONES, icon: ReceiptIcon, description: "Historial de transacciones" },
+              { label: "Estado de Cuenta", path: ROUTES.CLIENT.FINANZAS.RESUMENES, icon: DescriptionIcon, description: "Resúmenes mensuales" },
+            ]
+          },
+          {
+            label: "Más",
+            icon: MoreHorizIcon,
+            submenu: [
+               { label: "Lotes Favoritos", path: ROUTES.CLIENT.CUENTA.FAVORITOS, icon: FavoriteIcon },
+               { isDivider: true, label: "" },
+               { label: "Ayuda Ahorristas", path: ROUTES.PUBLIC.COMO_FUNCIONA_AHORRISTA, icon: HelpOutlineIcon },
+               { label: "Ayuda Inversores", path: ROUTES.PUBLIC.COMO_FUNCIONA_INVERSIONISTA, icon: HelpOutlineIcon },
+            ]
+          }
+        ],
+
+        // 2. MENÚ DE USUARIO (Perfil + Seguridad Mejorada)
+        userNavItems: [
+          {
+            label: user?.nombre || "Mi Cuenta",
+            icon: AccountCircleIcon,
+            // Badge en el avatar si falta algo crítico
+            badge: (!isKycApproved || !is2faEnabled) ? 1 : undefined, 
+            submenu: [
+              // --- Datos ---
+              { 
+                label: "Mi Perfil", 
+                path: ROUTES.CLIENT.CUENTA.PERFIL, 
+                icon: AccountCircleIcon, 
+                description: "Datos personales" 
+              },
+              { 
+                label: "Mis Mensajes", 
+                path: ROUTES.CLIENT.CUENTA.MENSAJES, 
+                icon: MessageIcon, 
+                description: "Centro de notificaciones" 
+              },
+              
+              { isDivider: true, label: "" },
+
+              // --- Seguridad (Semáforo) ---
+              {
+                label: isKycApproved ? "Identidad Verificada" : "Verificar Identidad",
+                path: ROUTES.CLIENT.CUENTA.KYC,
+                // Si está aprobado: Check Verde. Si no: Escudo con alerta o Badge.
+                icon: isKycApproved ? VerifiedUserIcon : BadgeIcon,
+                description: isKycApproved 
+                  ? "Cuenta validada correctamente" 
+                  : (isKycPending ? "Verificación en revisión" : "Requerido para operar"),
+                // Si no está aprobado, mostramos badge para llamar la atención
+               color: isKycApproved ? "success" : "warning", 
+                badge: !isKycApproved ? 1 : undefined
+              },
+              {
+                label: is2faEnabled ? "2FA Activo" : "Activar 2FA",
+                path: ROUTES.CLIENT.CUENTA.SEGURIDAD,
+                // Candado cerrado (seguro) vs Candado abierto (inseguro)
+                icon: is2faEnabled ? LockIcon : LockOpenIcon,
+                description: is2faEnabled 
+                  ? "Cuenta protegida" 
+                  : "Recomendado para seguridad",
+                // Opcional: Badge si quieres forzar la seguridad
+                // badge: !is2faEnabled ? 1 : undefined
+                color: is2faEnabled ? "success" : "warning"
+              },
+
+              { isDivider: true, label: "" },
+
+              // --- Salida ---
+              { 
+                label: "Cerrar Sesión", 
+                icon: LogoutIcon, 
+                action: handleLogoutClick 
+              }
+            ]
+          }
+        ],
+
+        // 3. ACCESO RÁPIDO (Mobile Drawer)
         quickAccess: [
           { label: "Inicio", path: ROUTES.CLIENT.DASHBOARD, icon: DashboardIcon },
-          { label: "Proyectos", path: ROUTES.PROYECTOS.SELECCION_ROL, icon: ConstructionIcon },
-          { label: "Pagar Cuotas", path: ROUTES.CLIENT.FINANZAS.PAGOS, icon: ReceiptIcon },
+          { label: "Oportunidades", path: ROUTES.PROYECTOS.SELECCION_ROL, icon: ConstructionIcon },
+          { label: "Pagar", path: ROUTES.CLIENT.FINANZAS.PAGOS, icon: ReceiptIcon },
         ]
       };
     }
 
-    // ════════════════════════════════════════════════════════
-    // C. PÚBLICO (DEFAULT) - Landing page
-    // ════════════════════════════════════════════════════════
+    // ----------------------------------------------------------------------
+    // C. PÚBLICO (Sin sesión)
+    // ----------------------------------------------------------------------
     return {
       logoPath: "/",
-      homePath: ROUTES.PUBLIC.HOME, // ✅ Constante
+      homePath: ROUTES.PUBLIC.HOME,
       navItems: [
-        { 
-          label: "Inicio", 
-          path: ROUTES.PUBLIC.HOME, // ✅ Constante
-          description: "Página principal"
-        },
-        { 
-          label: "Cómo Funciona", 
-          path: ROUTES.PUBLIC.COMO_FUNCIONA, // ✅ Constante
-          icon: HelpOutlineIcon, 
-          description: "Información sobre nuestros servicios"
-        },
-        { 
-          label: "Proyectos", 
-          path: ROUTES.PROYECTOS.SELECCION_ROL, // ✅ Constante
-          description: "Ver proyectos disponibles"
-        },
-        { 
-          label: "Nosotros", 
-          path: ROUTES.PUBLIC.NOSOTROS, // ✅ Constante
-          description: "Sobre la empresa"
-        },
+        { label: "Inicio", path: ROUTES.PUBLIC.HOME },
+        { label: "Cómo Funciona", path: ROUTES.PUBLIC.COMO_FUNCIONA },
+        { label: "Proyectos", path: ROUTES.PROYECTOS.SELECCION_ROL },
+        { label: "Nosotros", path: ROUTES.PUBLIC.NOSOTROS },
       ],
       userNavItems: [],
       actionButtons: [
-        { 
-          label: "Iniciar Sesión", 
-          variant: "outlined", 
-          path: ROUTES.LOGIN, // ✅ Constante
-          description: "Acceder a tu cuenta"
-        },
-        { 
-          label: "Registrarse", 
-          variant: "contained", 
-          path: ROUTES.REGISTER, // ✅ Constante
-          description: "Crear una cuenta nueva"
-        },
+        { label: "Iniciar Sesión", path: ROUTES.LOGIN, variant: "outlined" },
+        { label: "Registrarse", path: ROUTES.REGISTER, variant: "contained" },
       ],
       quickAccess: []
     };
+
   }, [user, navigate, confirmLogout]);
 
   return { config, logoutDialogProps };
 };
 
 // ════════════════════════════════════════════════════════
-// UTILIDADES ADICIONALES
+// UTILIDADES
 // ════════════════════════════════════════════════════════
 
-/**
- * Filtra items de navegación que requieren KYC según el estado del usuario
- */
-export const filterByKYCStatus = (
-  items: NavItem[], 
-  isVerified: boolean
-): NavItem[] => {
-  return items.map(item => {
-    if (item.submenu) {
-      return {
-        ...item,
-        submenu: item.submenu.filter(sub => 
-          !sub.requiresKYC || (sub.requiresKYC && isVerified)
-        )
-      };
-    }
-    return item;
-  }).filter(item => 
-    !item.requiresKYC || (item.requiresKYC && isVerified)
-  );
-};
-
-/**
- * Obtiene el path activo basado en la ruta actual
- */
-export const getActiveNavItem = (
-  pathname: string, 
-  navItems: NavItem[]
-): NavItem | null => {
+export const getActiveNavItem = (pathname: string, navItems: NavItem[]): NavItem | null => {
   for (const item of navItems) {
     if (item.path === pathname) return item;
-    
     if (item.submenu) {
       const subItem = getActiveNavItem(pathname, item.submenu);
       if (subItem) return subItem;

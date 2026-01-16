@@ -1,31 +1,33 @@
 // src/components/layout/navigation/ClientNavbar.tsx
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation, Link as RouterLink } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 
 // Material UI
 import {
-  AppBar, Toolbar, Box, Button, IconButton, Drawer, List, ListItem,
+  AppBar, Toolbar, Box, Button, IconButton, Drawer, List,
   ListItemButton, ListItemText, ListItemIcon, Typography, Avatar,
   Menu, MenuItem, Divider, Badge, useMediaQuery, useTheme, Container, 
-  alpha, Collapse, InputAdornment, TextField, Chip, Skeleton, Fade
+  alpha, Collapse, InputAdornment, TextField, Skeleton, Fade, Stack, Tooltip
 } from '@mui/material';
+
+// Iconos
 import {
   Menu as MenuIcon, Close, Notifications, ExpandMore, CheckCircle,
-  Search as SearchIcon, ExpandLess, Warning
+  Search as SearchIcon, ExpandLess, Warning, Clear, VerifiedUser,
+  FavoriteBorder, Favorite
 } from '@mui/icons-material';
 
 // Hooks & Services
 import { NAVBAR_HEIGHT, useNavbarMenu, type NavItem } from '@/shared/hooks/useNavbarMenu';
 import { useAuth } from '@/core/context/AuthContext';
 import MensajeService from '@/core/api/services/mensaje.service';
-
-// Components
 import { ConfirmDialog } from '../../domain/modals/ConfirmDialog/ConfirmDialog';
+import { ROUTES } from '@/routes'; // Asegúrate de tener tus rutas importadas
 
 // =================================================================
-// SUB-COMPONENTE: NAV DROPDOWN (Lo mantengo aquí por simplicidad)
+// SUB-COMPONENTE: NAV DROPDOWN (Estilo Mega-Menu Simple)
 // =================================================================
 const NavDropdown: React.FC<{ item: NavItem }> = ({ item }) => {
   const navigate = useNavigate();
@@ -34,34 +36,22 @@ const NavDropdown: React.FC<{ item: NavItem }> = ({ item }) => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
 
-  const isChildActive = item.submenu?.some(sub =>
-    sub.path && location.pathname.startsWith(sub.path)
-  );
+  // Detectar si algún hijo está activo
+  const isChildActive = item.submenu?.some(sub => sub.path && location.pathname.startsWith(sub.path));
 
   const handleClose = () => setAnchorEl(null);
-
-  const handleItemClick = (path?: string, action?: () => void) => {
-    if (action) action();
-    else if (path) navigate(path);
-    handleClose();
-  };
 
   return (
     <>
       <Button
         onClick={(e) => setAnchorEl(e.currentTarget)}
-        endIcon={<ExpandMore />}
+        endIcon={<ExpandMore sx={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition: '0.2s' }} />}
         sx={{
           color: isChildActive ? 'primary.main' : 'text.secondary',
           fontWeight: isChildActive ? 700 : 500,
           textTransform: 'none',
           fontSize: '0.95rem',
-          transition: 'all 0.2s ease-in-out',
-          '&:hover': { 
-            color: 'primary.main', 
-            bgcolor: alpha(theme.palette.primary.main, 0.05),
-            transform: 'translateY(-2px)'
-          }
+          '&:hover': { color: 'primary.main', bgcolor: alpha(theme.palette.primary.main, 0.04) }
         }}
       >
         {item.label}
@@ -71,46 +61,53 @@ const NavDropdown: React.FC<{ item: NavItem }> = ({ item }) => {
         open={open}
         onClose={handleClose}
         TransitionComponent={Fade}
-        transitionDuration={200}
         PaperProps={{ 
-          elevation: 8,
+          elevation: 4,
           sx: { 
             mt: 1.5, 
-            minWidth: 200, 
-            borderRadius: 2.5,
-            overflow: 'hidden',
-            border: '1px solid',
-            borderColor: alpha(theme.palette.primary.main, 0.08),
-            boxShadow: `0 8px 24px ${alpha('#000', 0.12)}`
+            minWidth: 260, // Un poco más ancho para las descripciones
+            borderRadius: 3, 
+            border: `1px solid ${theme.palette.divider}`,
+            p: 1
           } 
         }}
       >
         {item.submenu?.map((sub, idx) => {
-          if (sub.isDivider) return <Divider key={`div-${idx}`} />;
+          if (sub.isDivider) return <Divider key={idx} sx={{ my: 1 }} />;
           const Icon = sub.icon;
-          const isSelected = sub.path ? location.pathname === sub.path : false;
-
+          
           return (
             <MenuItem
-              key={`item-${idx}`}
-              onClick={() => handleItemClick(sub.path, sub.action)}
-              selected={isSelected}
+              key={idx}
+              onClick={() => {
+                if (sub.action) sub.action();
+                else if (sub.path) navigate(sub.path);
+                handleClose();
+              }}
               sx={{
                 py: 1.5,
-                color: isSelected ? 'primary.main' : 'text.primary',
-                transition: 'all 0.15s ease-in-out',
-                '&.Mui-selected': { bgcolor: alpha(theme.palette.primary.main, 0.08) },
+                borderRadius: 2,
+                mb: 0.5,
+                alignItems: 'flex-start', // Alinear icono arriba si hay descripción
                 '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.04) }
               }}
             >
               {Icon && (
-                <ListItemIcon sx={{ color: isSelected ? 'primary.main' : 'inherit' }}>
+                <ListItemIcon sx={{ color: 'primary.main', minWidth: 36, mt: 0.5 }}>
                   <Icon fontSize="small" />
                 </ListItemIcon>
               )}
-              <Typography variant="body2" fontWeight={isSelected ? 600 : 400}>
-                {sub.label}
-              </Typography>
+              <Box>
+                <Typography variant="body2" fontWeight={600} color="text.primary">
+                  {sub.label}
+                </Typography>
+                {/* ✅ UX: Descripción para guiar al usuario */}
+                {sub.description && (
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', lineHeight: 1.3, mt: 0.5 }}>
+                    {sub.description}
+                  </Typography>
+                )}
+              </Box>
             </MenuItem>
           );
         })}
@@ -128,355 +125,474 @@ const ClientNavbar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading: isLoadingAuth } = useAuth();
   const { config: { navItems, userNavItems, actionButtons }, logoutDialogProps } = useNavbarMenu();
 
+  // Estados UI
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuAnchor, setUserMenuAnchor] = useState<null | HTMLElement>(null);
   const [scrolled, setScrolled] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [openMenus, setOpenMenus] = useState<string[]>([]);
 
-  // Estados derivados
+  // Estados Derivados
   const kycStatus = (user as any)?.estado_kyc || 'SIN_INICIAR';
   const isVerified = kycStatus === "APROBADA" && user?.is_2fa_enabled;
 
-  // React Query: Mensajes no leídos
-  const { data: unreadData, isLoading: loadingMessages } = useQuery({
+  // --- DATA FETCHING ---
+  // 1. Mensajes no leídos
+  const { data: unreadData } = useQuery({
     queryKey: ['mensajesNoLeidos'],
     queryFn: async () => (await MensajeService.getUnreadCount()).data,
     refetchInterval: 60000,
     enabled: !!user && isAuthenticated,
     retry: false
   });
-
   const unreadCount = unreadData?.cantidad || 0;
 
-  // Efecto de scroll
+  // 2. Favoritos (Mock o Hook real)
+  // const { data: favoritesCount = 0 } = useFavoritesCount(); // Tu hook aquí
+  const favoritesCount = 0; // Placeholder
+
+  // Efecto Scroll
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 10);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Handlers
   const handleNavigate = (path: string) => {
     navigate(path);
     setMobileOpen(false);
     setUserMenuAnchor(null);
   };
 
-  const isActive = (path?: string) => {
-    if (!path) return false;
-    return path === '/' ? location.pathname === '/' : location.pathname.startsWith(path);
-  };
+  const isActive = (path?: string) => path ? (path === '/' ? location.pathname === '/' : location.pathname.startsWith(path)) : false;
 
   const handleToggleMenu = (label: string) => {
-    setOpenMenus(prev =>
-      prev.includes(label) ? prev.filter(m => m !== label) : [...prev, label]
-    );
+    setOpenMenus(prev => prev.includes(label) ? prev.filter(m => m !== label) : [...prev, label]);
   };
 
-  const filteredNavItems = searchQuery.trim()
-    ? navItems.map(item => {
-        const query = searchQuery.toLowerCase();
+  // Filtrado de menú móvil
+  const filteredNavItems = useMemo(() => {
+      if (!searchQuery.trim()) return navItems;
+      const query = searchQuery.toLowerCase();
+      return navItems.map(item => {
         const parentMatch = item.label.toLowerCase().includes(query);
-        const filteredSubmenu = item.submenu?.filter(sub => 
-          !sub.isDivider && sub.label.toLowerCase().includes(query)
-        );
+        const filteredSubmenu = item.submenu?.filter(sub => !sub.isDivider && sub.label.toLowerCase().includes(query));
         if (parentMatch || (filteredSubmenu && filteredSubmenu.length > 0)) {
           return { ...item, submenu: parentMatch ? item.submenu : filteredSubmenu };
         }
         return null;
-      }).filter(Boolean) as NavItem[]
-    : navItems;
+      }).filter(Boolean) as NavItem[];
+  }, [navItems, searchQuery]);
 
-  const quickAccessItems = isAuthenticated ? [
-    { label: 'Inicio', path: '/dashboard', icon: navItems[0]?.icon },
-    { label: 'Proyectos', path: '/proyectos/rol-seleccion', icon: navItems[1]?.icon },
-    ...(unreadCount > 0 ? [{ label: 'Mensajes', path: '/mensajes', icon: undefined as any, badge: unreadCount }] : [])
-  ] : [];
-
-  // --- DRAWER MOBILE (Contenido) ---
+  // -------------------------------------------------------------
+  // RENDER: DRAWER MÓVIL
+  // -------------------------------------------------------------
   const mobileDrawer = (
     <Box sx={{ width: 280, height: '100%', display: 'flex', flexDirection: 'column', bgcolor: 'background.paper' }}>
-      {/* Header Mobile */}
-      <Box sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid', borderColor: 'divider' }}>
-        <Box component="img" src="/navbar/nav.png" alt="Logo" sx={{ height: 32 }} />
+      {/* Header Drawer */}
+      <Box sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${theme.palette.divider}` }}>
+        <Box component="img" src="/navbar/nav.png" alt="Logo" sx={{ height: 32, objectFit: 'contain' }} />
         <IconButton onClick={() => setMobileOpen(false)}><Close /></IconButton>
       </Box>
 
-      {/* Perfil Mobile */}
-      {isAuthenticated && user && (
-        <Box sx={{ p: 3, bgcolor: alpha(theme.palette.primary.main, 0.05) }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Badge
-              overlap="circular"
-              anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-              badgeContent={
-                user?.is_2fa_enabled ? 
-                <CheckCircle sx={{ width: 16, height: 16, color: theme.palette.success.main, bgcolor: 'white', borderRadius: '50%', border: '2px solid white' }} /> : 
-                <Warning sx={{ width: 16, height: 16, color: theme.palette.warning.main, bgcolor: 'white', borderRadius: '50%', border: '2px solid white' }} />
-              }
-            >
-              <Avatar sx={{ bgcolor: 'primary.main', fontWeight: 700, border: '2px solid white', boxShadow: `0 2px 8px ${alpha(theme.palette.primary.main, 0.2)}` }}>
-                {user.nombre?.charAt(0)}
-              </Avatar>
-            </Badge>
-            <Box>
-              <Typography variant="subtitle1" fontWeight={700} noWrap>{user.nombre} {user.apellido}</Typography>
-              <Typography variant="caption" color="text.secondary" noWrap>{user.email}</Typography>
-            </Box>
-          </Box>
-          {!isVerified && (
-            <Chip icon={<Warning fontSize="small" />} label="Verificar cuenta" size="small" color="warning" onClick={() => { setMobileOpen(false); navigate('/kyc'); }} sx={{ mt: 2, width: '100%', fontWeight: 600 }} />
+      {/* Perfil (Con Skeleton) */}
+      {isAuthenticated && (
+        <Box sx={{ p: 3, bgcolor: alpha(theme.palette.primary.main, 0.04) }}>
+          {isLoadingAuth ? (
+             <Stack direction="row" spacing={2} alignItems="center">
+                <Skeleton variant="circular" width={40} height={40} />
+                <Box>
+                   <Skeleton variant="text" width={100} />
+                   <Skeleton variant="text" width={140} height={12} />
+                </Box>
+             </Stack>
+          ) : (
+            <>
+              <Stack direction="row" spacing={2} alignItems="center">
+                 <Badge
+                  overlap="circular"
+                  anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                  badgeContent={isVerified ? <CheckCircle color="success" sx={{ bgcolor: 'white', borderRadius: '50%', fontSize: 16 }} /> : <Warning color="warning" sx={{ bgcolor: 'white', borderRadius: '50%', fontSize: 16 }} />}
+                 >
+                    <Avatar sx={{ bgcolor: 'primary.main', fontWeight: 700 }}>{user?.nombre?.charAt(0)}</Avatar>
+                 </Badge>
+                 <Box sx={{ overflow: 'hidden' }}>
+                    <Typography variant="subtitle2" fontWeight={700} noWrap>{user?.nombre}</Typography>
+                    <Typography variant="caption" color="text.secondary" noWrap display="block">{user?.email}</Typography>
+                 </Box>
+              </Stack>
+              {!isVerified && (
+                 <Button 
+                    startIcon={<VerifiedUser />} 
+                    variant="contained" 
+                    color="warning" 
+                    size="small" 
+                    fullWidth 
+                    onClick={() => handleNavigate('/kyc')} 
+                    sx={{ mt: 2, borderRadius: 2, textTransform: 'none' }}
+                 >
+                    Verificar ahora
+                 </Button>
+              )}
+            </>
           )}
         </Box>
       )}
 
-      {/* Buscador Mobile */}
+      {/* Buscador Móvil */}
       {isAuthenticated && (
-        <Box sx={{ px: 2, pt: 2, pb: 1 }}>
+        <Box sx={{ px: 2, pt: 2 }}>
           <TextField
             size="small"
-            placeholder="Buscar menú..."
+            placeholder="Buscar sección..."
             fullWidth
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            InputProps={{ startAdornment: (<InputAdornment position="start"><SearchIcon fontSize="small" sx={{ color: 'text.secondary' }} /></InputAdornment>) }}
-            sx={{ '& .MuiOutlinedInput-root': { bgcolor: alpha(theme.palette.primary.main, 0.02) } }}
+            InputProps={{ 
+              startAdornment: (<InputAdornment position="start"><SearchIcon color="action" fontSize="small" /></InputAdornment>),
+              endAdornment: searchQuery && (
+                <InputAdornment position="end">
+                  <IconButton size="small" onClick={() => setSearchQuery('')}><Clear fontSize="small" /></IconButton>
+                </InputAdornment>
+              ),
+              sx: { borderRadius: 2, bgcolor: 'background.default' }
+            }}
           />
         </Box>
       )}
 
-      {/* Accesos Rápidos Mobile */}
-      {isAuthenticated && !searchQuery && quickAccessItems.length > 0 && (
-        <Box sx={{ px: 2, pb: 1 }}>
-          <Typography variant="caption" sx={{ px: 1, fontWeight: 600, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: 0.5 }}>Acceso Rápido</Typography>
-          <List dense sx={{ mt: 0.5 }}>
-            {quickAccessItems.map((item, idx) => {
-              const Icon = item.icon;
-              const isQuickActive = isActive(item.path);
-              return (
-                <ListItemButton key={idx} onClick={() => handleNavigate(item.path!)} selected={isQuickActive} sx={{ borderRadius: 2, mb: 0.5, '&.Mui-selected': { bgcolor: alpha(theme.palette.primary.main, 0.08) } }}>
-                  {Icon && <ListItemIcon sx={{ minWidth: 36 }}><Badge badgeContent={item.badge} color="error"><Icon fontSize="small" /></Badge></ListItemIcon>}
-                  <ListItemText primary={item.label} primaryTypographyProps={{ variant: 'body2', fontSize: '0.85rem', fontWeight: isQuickActive ? 600 : 400 }} />
-                </ListItemButton>
-              );
-            })}
-          </List>
-          <Divider sx={{ my: 1 }} />
-        </Box>
-      )}
-
-      {/* Navegación Principal Mobile */}
-      <List sx={{ flex: 1, py: 2, overflowY: 'auto' }}>
+      {/* Navegación Móvil */}
+      <List sx={{ flex: 1, overflowY: 'auto', px: 0 }}>
         {filteredNavItems.map((item, idx) => {
           const Icon = item.icon;
           const hasSubmenu = (item.submenu?.length || 0) > 0;
           const isOpen = openMenus.includes(item.label);
+          const active = isActive(item.path);
 
           if (hasSubmenu && !item.path) {
             return (
               <React.Fragment key={idx}>
-                <ListItemButton onClick={() => handleToggleMenu(item.label)} sx={{ px: 2 }}>
-                  {Icon && <ListItemIcon sx={{ minWidth: 40 }}><Icon /></ListItemIcon>}
+                <ListItemButton onClick={() => handleToggleMenu(item.label)} sx={{ px: 3 }}>
+                  {Icon && <ListItemIcon sx={{ minWidth: 36, color: 'text.secondary' }}><Icon /></ListItemIcon>}
                   <ListItemText primary={item.label} primaryTypographyProps={{ fontWeight: 600 }} />
-                  {isOpen ? <ExpandLess /> : <ExpandMore />}
+                  {isOpen ? <ExpandLess color="action" /> : <ExpandMore color="action" />}
                 </ListItemButton>
                 <Collapse in={isOpen} timeout="auto" unmountOnExit>
                   <List disablePadding>
                     {item.submenu?.map((sub, sIdx) => {
-                      if (sub.isDivider) return null;
-                      const SubIcon = sub.icon;
-                      const active = isActive(sub.path);
-                      return (
-                        <ListItemButton key={sIdx} onClick={() => { setMobileOpen(false); sub.action ? sub.action() : sub.path && handleNavigate(sub.path); }} selected={active} sx={{ pl: 6, borderLeft: active ? `4px solid ${theme.palette.primary.main}` : '4px solid transparent', '&.Mui-selected': { bgcolor: alpha(theme.palette.primary.main, 0.08) } }}>
-                          {SubIcon && <ListItemIcon sx={{ color: active ? 'primary.main' : 'inherit', minWidth: 40 }}><SubIcon fontSize="small" /></ListItemIcon>}
-                          <ListItemText primary={sub.label} primaryTypographyProps={{ fontWeight: active ? 600 : 400, color: active ? 'primary.main' : 'text.primary' }} />
-                        </ListItemButton>
-                      );
+                       if (sub.isDivider) return null;
+                       const subActive = isActive(sub.path);
+                       return (
+                         <ListItemButton 
+                            key={sIdx} 
+                            onClick={() => { setMobileOpen(false); sub.action ? sub.action() : sub.path && handleNavigate(sub.path); }} 
+                            selected={subActive}
+                            sx={{ pl: 7, borderLeft: subActive ? `4px solid ${theme.palette.primary.main}` : '4px solid transparent' }}
+                         >
+                            <ListItemText 
+                                primary={sub.label} 
+                                secondary={sub.description} // Mostrar descripción en móvil también
+                                secondaryTypographyProps={{ fontSize: '0.75rem', noWrap: true }}
+                                primaryTypographyProps={{ fontSize: '0.9rem', color: subActive ? 'primary.main' : 'text.primary', fontWeight: subActive ? 600 : 400 }} 
+                            />
+                         </ListItemButton>
+                       )
                     })}
                   </List>
                 </Collapse>
-                <Divider sx={{ my: 1 }} />
               </React.Fragment>
             );
           }
-          const active = isActive(item.path);
           return (
-            <ListItem key={idx} disablePadding>
-              <ListItemButton onClick={() => handleNavigate(item.path || '')} selected={active} sx={{ px: 2, borderLeft: active ? `4px solid ${theme.palette.primary.main}` : '4px solid transparent', '&.Mui-selected': { bgcolor: alpha(theme.palette.primary.main, 0.08) } }}>
-                {Icon && <ListItemIcon sx={{ color: active ? 'primary.main' : 'inherit', minWidth: 40 }}><Icon /></ListItemIcon>}
-                <ListItemText primary={item.label} primaryTypographyProps={{ fontWeight: active ? 600 : 400, color: active ? 'primary.main' : 'text.primary' }} />
-              </ListItemButton>
-            </ListItem>
+            <ListItemButton key={idx} onClick={() => handleNavigate(item.path || '')} selected={active} sx={{ px: 3, borderLeft: active ? `4px solid ${theme.palette.primary.main}` : '4px solid transparent' }}>
+               {Icon && <ListItemIcon sx={{ minWidth: 36, color: active ? 'primary.main' : 'text.secondary' }}><Icon /></ListItemIcon>}
+               <ListItemText primary={item.label} primaryTypographyProps={{ fontWeight: active ? 700 : 500, color: active ? 'primary.main' : 'text.primary' }} />
+            </ListItemButton>
           );
         })}
       </List>
-
-      {/* Footer Mobile (Acciones) */}
+      
+      {/* Footer Móvil (Login/Register) */}
       {!isAuthenticated && (
-        <Box sx={{ p: 3, borderTop: '1px solid', borderColor: 'divider', display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {actionButtons.map((btn, idx) => (
-            <Button key={idx} variant={btn.variant || 'outlined'} fullWidth color={btn.variant === 'contained' ? 'primary' : 'inherit'} onClick={() => handleNavigate(btn.path || '')} sx={{ py: 1.5, borderRadius: 2, fontWeight: 700 }}>
-              {btn.label}
-            </Button>
-          ))}
-        </Box>
+         <Box sx={{ p: 2, borderTop: `1px solid ${theme.palette.divider}` }}>
+            <Stack spacing={2}>
+               {actionButtons.map((btn, idx) => (
+                  <Button key={idx} variant={btn.variant || 'outlined'} fullWidth onClick={() => handleNavigate(btn.path || '')}>
+                     {btn.label}
+                  </Button>
+               ))}
+            </Stack>
+         </Box>
       )}
     </Box>
   );
 
-  // --- RENDER PRINCIPAL (Desktop) ---
+  // -------------------------------------------------------------
+  // RENDER: DESKTOP APPBAR
+  // -------------------------------------------------------------
   return (
     <>
       <AppBar 
         position="sticky" 
+        color="inherit"
         elevation={scrolled ? 4 : 0}
         sx={{ 
           bgcolor: 'background.paper', 
-          borderBottom: '1px solid', 
-          borderColor: 'divider',
-          color: 'text.primary',
-          transition: 'all 0.3s ease-in-out',
-          boxShadow: scrolled ? `0 4px 12px ${alpha('#000', 0.08)}` : 'none'
+          borderBottom: `1px solid ${theme.palette.divider}`,
+          transition: 'all 0.3s ease'
         }}
       >
         <Container maxWidth="xl">
-          <Toolbar sx={{ px: { xs: 0 }, minHeight: { xs: NAVBAR_HEIGHT.mobile, md: NAVBAR_HEIGHT.desktop } }}>
+          <Toolbar disableGutters sx={{ minHeight: { xs: NAVBAR_HEIGHT.mobile, md: NAVBAR_HEIGHT.desktop } }}>
             
-            {/* Logo */}
-            <Box component={RouterLink} to="/" sx={{ display: 'flex', alignItems: 'center', gap: 1, textDecoration: 'none', mr: 4 }}>
-              <Box component="img" src="/navbar/nav.png" alt="Logo" sx={{ height: { xs: 28, md: 36 } }} />
+            {/* 1. LOGO */}
+            <Box component={RouterLink} to="/" sx={{ display: 'flex', alignItems: 'center', mr: 4, textDecoration: 'none' }}>
+              <Box component="img" src="/navbar/nav.png" alt="Logo" sx={{ height: { xs: 28, md: 36 }, objectFit: 'contain' }} />
             </Box>
 
-            {/* Menu Desktop */}
+            {/* 2. MENÚ PRINCIPAL */}
             {!isMobile && (
-              <Box sx={{ display: 'flex', gap: 1, flex: 1, justifyContent: 'center' }}>
+              <Stack direction="row" spacing={1} sx={{ flex: 1 }}>
                 {navItems.map((link) => {
-                  if (link.submenu && !link.path) {
-                    return <NavDropdown key={link.label} item={link} />;
-                  }
+                  // Dropdown
+                  if (link.submenu && !link.path) return <NavDropdown key={link.label} item={link} />;
+                  
+                  // Botón Simple
                   const active = isActive(link.path);
+                  // UX: Detectar si es CTA ("Invertir")
+                  const isCTA = link.label === "Invertir" || link.label === "Proyectos";
+
                   return (
                     <Button
                       key={link.label}
                       onClick={() => handleNavigate(link.path || '')}
                       sx={{
                         color: active ? 'primary.main' : 'text.secondary',
-                        fontWeight: active ? 700 : 500,
+                        fontWeight: active || isCTA ? 700 : 500,
                         textTransform: 'none',
                         fontSize: '0.95rem',
+                        px: 2,
+                        // Estilo CTA sutil
+                        bgcolor: isCTA ? alpha(theme.palette.primary.main, 0.08) : 'transparent',
+                        
+                        // Línea indicadora animada
                         position: 'relative',
-                        transition: 'all 0.2s ease-in-out',
-                        '&::after': active ? {
-                          content: '""', position: 'absolute', bottom: 0, left: '50%', transform: 'translateX(-50%)', 
-                          width: '70%', height: 4, bgcolor: 'primary.main', borderRadius: '4px 4px 0 0', 
-                          boxShadow: `0 -2px 8px ${alpha(theme.palette.primary.main, 0.3)}`
-                        } : {},
-                        '&:hover': { color: 'primary.main', bgcolor: alpha(theme.palette.primary.main, 0.05), transform: 'translateY(-2px)' }
+                        '&::after': {
+                           content: '""', position: 'absolute', bottom: 0, left: '50%', 
+                           transform: active ? 'translateX(-50%) scaleX(1)' : 'translateX(-50%) scaleX(0)',
+                           width: '60%', height: 3, bgcolor: 'primary.main', borderRadius: '4px 4px 0 0', 
+                           transition: 'transform 0.2s ease'
+                        },
+                        '&:hover': { 
+                            bgcolor: isCTA ? alpha(theme.palette.primary.main, 0.15) : 'transparent',
+                            color: 'primary.main' 
+                        }
                       }}
                     >
                       {link.label}
                     </Button>
                   );
                 })}
-              </Box>
+              </Stack>
             )}
 
             {isMobile && <Box sx={{ flex: 1 }} />}
 
-            {/* Iconos y Perfil Desktop */}
-            {!isMobile && (
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                {isAuthenticated ? (
-                  <>
-                    {loadingMessages ? (
-                      <Skeleton variant="circular" width={40} height={40} />
-                    ) : (
-                      <IconButton onClick={() => handleNavigate('/mensajes')} sx={{ color: 'text.secondary', transition: 'all 0.2s', '&:hover': { color: 'primary.main', transform: 'scale(1.1)', bgcolor: alpha(theme.palette.primary.main, 0.05) } }}>
-                        <Badge badgeContent={unreadCount} color="error" sx={{ '& .MuiBadge-badge': { fontWeight: 700 } }}>
-                          <Notifications />
-                        </Badge>
-                      </IconButton>
-                    )}
+            {/* 3. ICONOS Y PERFIL (Derecha) */}
+            <Stack direction="row" spacing={0.5} alignItems="center">
+               
+               {isAuthenticated && !isMobile && (
+                   <>
+                       {/* Favoritos (E-commerce Style) */}
+                       <Tooltip title="Mis Favoritos">
+                           <IconButton onClick={() => handleNavigate(ROUTES.CLIENT.CUENTA.FAVORITOS)} sx={{ color: 'text.secondary', '&:hover': { color: 'error.main' } }}>
+                               <Badge badgeContent={favoritesCount} color="primary">
+                                   {favoritesCount > 0 ? <Favorite color="error" /> : <FavoriteBorder />}
+                               </Badge>
+                           </IconButton>
+                       </Tooltip>
 
-                    <Button
-                      onClick={(e) => setUserMenuAnchor(e.currentTarget)}
-                      sx={{ textTransform: 'none', color: 'text.primary', pl: 1, pr: 1.5, py: 0.75, borderRadius: 2, border: '1px solid', borderColor: alpha(theme.palette.primary.main, 0.1), '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.05), borderColor: alpha(theme.palette.primary.main, 0.3), transform: 'translateY(-1px)', boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.15)}` } }}
-                      endIcon={<ExpandMore />}
-                    >
-                      <Badge overlap="circular" anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }} badgeContent={user?.is_2fa_enabled ? <CheckCircle sx={{ width: 16, height: 16, color: theme.palette.success.main, bgcolor: 'white', borderRadius: '50%', border: '2px solid white' }} /> : <Warning sx={{ width: 16, height: 16, color: theme.palette.warning.main, bgcolor: 'white', borderRadius: '50%', border: '2px solid white' }} />}>
-                        <Avatar sx={{ width: 36, height: 36, bgcolor: 'primary.main', mr: 1.5, border: '2px solid white', boxShadow: `0 2px 8px ${alpha(theme.palette.primary.main, 0.2)}` }}>
-                          {user?.nombre?.charAt(0) || 'U'}
-                        </Avatar>
-                      </Badge>
-                      <Box textAlign="left">
-                        <Typography variant="body2" fontWeight={700} lineHeight={1.2}>{user?.nombre?.split(' ')[0]}</Typography>
-                        <Typography variant="caption" color="text.secondary" lineHeight={1}>Cuenta</Typography>
-                      </Box>
-                    </Button>
+                       {/* Notificaciones */}
+                       <Tooltip title="Notificaciones">
+                           <IconButton onClick={() => handleNavigate('/mensajes')} sx={{ color: 'text.secondary', '&:hover': { color: 'primary.main' } }}>
+                              <Badge badgeContent={unreadCount} color="error">
+                                  <Notifications />
+                              </Badge>
+                           </IconButton>
+                       </Tooltip>
+                       
+                       <Divider orientation="vertical" flexItem sx={{ mx: 1, height: 24, alignSelf: 'center' }} />
+                   </>
+               )}
 
-                    <Menu
-                      anchorEl={userMenuAnchor}
-                      open={Boolean(userMenuAnchor)}
-                      onClose={() => setUserMenuAnchor(null)}
-                      TransitionComponent={Fade}
-                      transitionDuration={200}
-                      PaperProps={{ elevation: 8, sx: { mt: 1.5, minWidth: 240, borderRadius: 2.5, overflow: 'hidden', border: '1px solid', borderColor: alpha(theme.palette.primary.main, 0.08), boxShadow: `0 8px 24px ${alpha('#000', 0.12)}` } }}
-                    >
-                      {userNavItems[0]?.submenu?.map((item, idx) => {
-                        if (item.isDivider) return <Divider key={idx} />;
-                        const ItemIcon = item.icon;
-                        const isLogout = item.label === 'Cerrar Sesión';
-                        const isKYC = item.label.includes('Verificar');
-                        return (
-                          <MenuItem key={idx} onClick={() => { item.action ? item.action() : item.path && handleNavigate(item.path); setUserMenuAnchor(null); }} sx={{ py: 1.5, color: isLogout ? 'error.main' : isKYC ? 'warning.main' : 'text.primary', '&:hover': { bgcolor: isLogout ? alpha(theme.palette.error.main, 0.05) : isKYC ? alpha(theme.palette.warning.main, 0.05) : alpha(theme.palette.action.active, 0.05) } }}>
-                            {ItemIcon && <ListItemIcon sx={{ color: isLogout ? 'error.main' : isKYC ? 'warning.main' : 'inherit' }}><ItemIcon fontSize="small" /></ListItemIcon>}
-                            <Typography variant="body2" fontWeight={isLogout || isKYC ? 600 : 400}>{item.label}</Typography>
-                          </MenuItem>
-                        );
-                      })}
-                    </Menu>
-                  </>
-                ) : (
-                  <>
-                    {actionButtons.map((btn, idx) => (
-                      <Button key={idx} variant={btn.variant || 'text'} color={btn.variant === 'contained' ? 'primary' : 'inherit'} onClick={() => handleNavigate(btn.path || '')} sx={{ borderRadius: 2, fontWeight: 700, px: 3, mr: idx === 0 ? 1 : 0, '&:hover': { transform: 'translateY(-2px)', boxShadow: btn.variant === 'contained' ? `0 4px 12px ${alpha(theme.palette.primary.main, 0.3)}` : 'none' } }}>
-                        {btn.label}
-                      </Button>
-                    ))}
-                  </>
-                )}
-              </Box>
-            )}
-
-            {/* Hamburguesa Mobile */}
-            {isMobile && (
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                {isAuthenticated && (
-                  <IconButton onClick={() => handleNavigate('/mensajes')} sx={{ '&:hover': { transform: 'scale(1.1)' } }}>
-                    <Badge badgeContent={unreadCount} color="error" sx={{ '& .MuiBadge-badge': { animation: unreadCount > 0 ? 'pulse 2s infinite' : 'none' } }}>
-                      <Notifications />
-                    </Badge>
+               {/* Botón Menú Móvil */}
+               {isMobile && (
+                  <IconButton onClick={() => setMobileOpen(true)} color="primary">
+                     <MenuIcon />
                   </IconButton>
-                )}
-                <IconButton onClick={() => setMobileOpen(true)} sx={{ color: 'text.primary', '&:hover': { color: 'primary.main', transform: 'rotate(90deg)' } }}>
-                  <MenuIcon />
-                </IconButton>
-              </Box>
+               )}
+
+               {/* Menú Usuario Desktop */}
+               {!isMobile && (
+                  <>
+                     {isAuthenticated ? (
+                        <>
+                           {isLoadingAuth ? (
+                              <Skeleton variant="circular" width={40} height={40} />
+                           ) : (
+                             <Button
+                                onClick={(e) => setUserMenuAnchor(e.currentTarget)}
+                                sx={{ 
+                                   textTransform: 'none', color: 'text.primary', border: `1px solid ${theme.palette.divider}`,
+                                   borderRadius: 8, pl: 0.5, pr: 1.5, ml: 1, py: 0.5,
+                                   transition: 'all 0.2s',
+                                   '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.04), borderColor: 'primary.main', boxShadow: theme.shadows[2] }
+                                }}
+                             >
+                                <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main', mr: 1, fontSize: '0.9rem', fontWeight: 700 }}>
+                                    {user?.nombre?.charAt(0)}
+                                </Avatar>
+                                <Box textAlign="left" sx={{ mr: 1 }}>
+                                   <Typography variant="body2" fontWeight={700} lineHeight={1}>{user?.nombre?.split(' ')[0]}</Typography>
+                                </Box>
+                                <ExpandMore fontSize="small" color="action" />
+                             </Button>
+                           )}
+
+                           <Menu
+                              anchorEl={userMenuAnchor}
+                              open={Boolean(userMenuAnchor)}
+                              onClose={() => setUserMenuAnchor(null)}
+                              TransitionComponent={Fade}
+                              PaperProps={{ 
+                                elevation: 8, 
+                                sx: { mt: 1.5, minWidth: 240, borderRadius: 3, border: `1px solid ${theme.palette.divider}` } 
+                              }}
+                           >
+                              {/* Header Menú Usuario */}
+                              <Box sx={{ px: 2, py: 1.5, bgcolor: alpha(theme.palette.primary.main, 0.04) }}>
+                                 <Typography variant="subtitle2" fontWeight={700}>Mi Cuenta</Typography>
+                                 <Typography variant="caption" color="text.secondary" noWrap>{user?.email}</Typography>
+                              </Box>
+                              <Divider />
+                              
+                              {userNavItems[0]?.submenu?.map((item, idx) => {
+    if (item.isDivider) return <Divider key={idx} sx={{ my: 1 }} />;
+    
+    const Icon = item.icon;
+    const isLogout = item.label === 'Cerrar Sesión';
+    
+    // 1. Determinar el color base
+    // Si viene un color explícito del hook (success/warning), úsalo.
+    // Si es logout, usa error. Si no, text.primary.
+    const itemColorProp = item.color || (isLogout ? 'error' : 'inherit');
+    
+    // 2. Mapear a colores del tema MUI
+    const getColorValue = (colorKey: string) => {
+        switch(colorKey) {
+            case 'success': return theme.palette.success.main;
+            case 'warning': return theme.palette.warning.main;
+            case 'error': return theme.palette.error.main;
+            case 'primary': return theme.palette.primary.main;
+            default: return theme.palette.text.primary;
+        }
+    };
+
+    const finalColor = getColorValue(itemColorProp);
+
+    return (
+    <MenuItem 
+        key={idx} 
+        onClick={() => { 
+            if (item.action) item.action(); 
+            else if (item.path) handleNavigate(item.path); 
+            setUserMenuAnchor(null); 
+        }} 
+        sx={{ 
+            py: 1.5, 
+            mx: 1, 
+            mb: 0.5, 
+            borderRadius: 2, 
+            // Fondo suave al hacer hover según el color del ítem
+            '&:hover': { 
+                bgcolor: alpha(finalColor, 0.08) 
+            } 
+        }}
+    >
+        {Icon && (
+            <ListItemIcon sx={{ 
+                color: finalColor, // APLICAR COLOR AL ÍCONO
+                minWidth: 36,
+                mt: item.description ? 0.5 : 0 // Ajuste fino si hay descripción
+            }}>
+                <Icon fontSize="small" />
+            </ListItemIcon>
+        )}
+        <Box>
+            <Typography 
+                variant="body2" 
+                fontWeight={600} 
+                sx={{ color: finalColor }} // APLICAR COLOR AL TÍTULO
+            >
+                {item.label}
+            </Typography>
+            
+            {item.description && (
+                <Typography 
+                    variant="caption" 
+                    color="text.secondary" 
+                    sx={{ display: 'block', lineHeight: 1.2 }}
+                >
+                    {item.description}
+                </Typography>
             )}
+        </Box>
+        
+        {/* Badge opcional si lo necesitas dentro del ítem */}
+        {item.badge && (
+             <Box sx={{ ml: 'auto', pl: 2 }}>
+                <Badge badgeContent={item.badge} color="error" />
+             </Box>
+        )}
+    </MenuItem>
+    )
+})}
+                           </Menu>
+                        </>
+                     ) : (
+                        // Botones Login (Público)
+                        <Stack direction="row" spacing={1} ml={2}>
+                           {actionButtons.map((btn, idx) => (
+                              <Button 
+                                key={idx} 
+                                variant={btn.variant || 'text'} 
+                                color={btn.variant === 'contained' ? 'primary' : 'inherit'}
+                                onClick={() => handleNavigate(btn.path || '')}
+                                sx={{ fontWeight: 700 }}
+                              >
+                                 {btn.label}
+                              </Button>
+                           ))}
+                        </Stack>
+                     )}
+                  </>
+               )}
+            </Stack>
+
           </Toolbar>
         </Container>
       </AppBar>
 
+      {/* Drawer Móvil (Montado externamente) */}
       <Drawer
         anchor="right"
         open={mobileOpen}
         onClose={() => setMobileOpen(false)}
-        PaperProps={{ sx: { width: 280, borderLeft: 'none', boxShadow: theme.shadows[16] } }}
-        ModalProps={{ BackdropProps: { sx: { bgcolor: alpha('#000', 0.6), backdropFilter: 'blur(4px)' } } }}
-        transitionDuration={300}
+        ModalProps={{ keepMounted: true }}
       >
         {mobileDrawer}
       </Drawer>

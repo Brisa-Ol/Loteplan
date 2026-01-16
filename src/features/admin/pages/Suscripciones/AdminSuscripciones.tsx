@@ -13,7 +13,7 @@ import {
 // Componentes
 import { PageContainer } from '../../../../shared/components/layout/containers/PageContainer/PageContainer';
 import { QueryHandler } from '../../../../shared/components/data-grid/QueryHandler/QueryHandler';
-import { PageHeader } from '../../../../shared/components/layout/headers/PageHeader/PageHeader';
+import { PageHeader } from '../../../../shared/components/layout/headers/PageHeader';
 import { DataTable, type DataTableColumn } from '../../../../shared/components/data-grid/DataTable/DataTable';
 import { StatCard } from '../../../../shared/components/domain/cards/StatCard/StatCard';
 

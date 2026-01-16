@@ -263,7 +263,7 @@ const UserDashboard: React.FC = () => {
                           variant="contained" 
                           color={hayPujasUrgentes ? "error" : "warning"} 
                           size="small" 
-                          onClick={() => navigate('/pujas')} 
+                          onClick={() => navigate('/client/finanzas/pujas')} 
                           sx={{ fontWeight: 800, bgcolor: 'background.paper', color: 'text.primary', '&:hover': { bgcolor: 'background.default' } }}
                         >
                           Ver Detalles
@@ -310,7 +310,7 @@ const UserDashboard: React.FC = () => {
                       variant="outlined"
                       icon={<Warning fontSize="large" />}
                       action={
-                        <Button variant="contained" color="error" onClick={() => navigate('/pagos')} sx={{ fontWeight: 700 }}>
+                        <Button variant="contained" color="error" onClick={() => navigate('/client/finanzas/pagos')} sx={{ fontWeight: 700 }}>
                           Pagar Ahora
                         </Button>
                       }
@@ -403,7 +403,7 @@ const UserDashboard: React.FC = () => {
                   {/* Lista de Proyectos */}
                   <Box mb={3} display="flex" justifyContent="space-between" alignItems="center">
                     <Typography variant="h5" fontWeight={800} color="text.primary">Mis Inversiones Activas</Typography>
-                    <Button variant="text" endIcon={<ChevronRight />} onClick={() => navigate('/suscripciones')} sx={{ fontWeight: 700 }}>
+                    <Button variant="text" endIcon={<ChevronRight />} onClick={() => navigate('/client/finanzas/suscripciones')} sx={{ fontWeight: 700 }}>
                       Ver historial
                     </Button>
                   </Box>
@@ -425,7 +425,7 @@ const UserDashboard: React.FC = () => {
                                   {saldoProyecto > 0 && <Chip label={`+$${saldoProyecto.toLocaleString()} a favor`} color="success" size="small" sx={{ fontWeight: 800 }} />}
                                 </Stack>
                               </Box>
-                              <IconButton onClick={() => navigate('/mis-resumenes')} color="primary" sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1) }}>
+                              <IconButton onClick={() => navigate('/client/finanzas/resumenes')} color="primary" sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1) }}>
                                 <Assessment />
                               </IconButton>
                             </Box>
@@ -460,10 +460,10 @@ const UserDashboard: React.FC = () => {
                     <Typography variant="h6" fontWeight={800} mb={3}>Acceso Rápido</Typography>
                     <Stack spacing={1.5}>
                       {[
-                        { l: 'Pagar Cuotas', i: <AccountBalanceWallet />, r: '/pagos', v: 'contained', c: 'primary' },
-                        { l: 'Mis Subastas', i: <Gavel />, r: '/pujas' },
-                        { l: 'Transacciones', i: <ReceiptLong />, r: '/transacciones' },
-                        { l: 'Contratos', i: <Description />, r: '/contratos' }
+                        { l: 'Pagar Cuotas', i: <AccountBalanceWallet />, r: '/client/finanzas/pagos', v: 'contained', c: 'primary' },
+                        { l: 'Mis Subastas', i: <Gavel />, r: '/client/finanzas/pujas' },
+                        { l: 'Transacciones', i: <ReceiptLong />, r: '/client/finanzas/transacciones' },
+                        { l: 'Contratos', i: <Description />, r: '/client/contratos' }
                       ].map((btn, idx) => (
                         <Button 
                           key={idx} 
@@ -497,7 +497,7 @@ const UserDashboard: React.FC = () => {
                       </Typography>
                       <Button 
                         size="small" variant="text" fullWidth sx={{ mt: 1, fontWeight: 800 }}
-                        onClick={() => navigate('/seguridad')}
+                        onClick={() => navigate('/client/seguridad')}
                       >
                         {user?.is_2fa_enabled ? 'Ver ajustes' : 'Activar 2FA'}
                       </Button>

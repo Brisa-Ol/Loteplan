@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography,
-  Avatar, useTheme, alpha, TextField, Stack
+  Avatar, useTheme, alpha, TextField, Stack, useMediaQuery
 } from '@mui/material';
 import { Warning, Help, CheckCircle, ErrorOutline } from '@mui/icons-material';
 import type { useConfirmDialog } from '../../../../hooks/useConfirmDialog';
@@ -18,10 +18,13 @@ export const ConfirmDialog: React.FC<Props> = ({
   controller, onConfirm, isLoading, title, description
 }) => {
   const theme = useTheme();
-  const { open, close, config } = controller;
   
+  // ✅ DETECCIÓN MÓVIL: Para ajustar los botones
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  
+  const { open, close, config } = controller;
   const [inputValue, setInputValue] = useState('');
-  const [touched, setTouched] = useState(false); // Para mostrar error solo si tocó
+  const [touched, setTouched] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -65,14 +68,14 @@ export const ConfirmDialog: React.FC<Props> = ({
       onClose={isLoading ? undefined : close} 
       maxWidth="xs" 
       fullWidth
-      PaperProps={{
-        sx: { borderRadius: 3, boxShadow: theme.shadows[10], overflow: 'hidden' }
-      }}
+      // ✅ LIMPIEZA: Eliminamos PaperProps con borderRadius hardcodeado.
+      // El theme ya se encarga de darle bordes (12px desk / 8px mobile) y sombras.
     >
       <DialogTitle sx={{ 
-          pb: 2, pt: 3, px: 3,
+          // ✅ MANTENEMOS solo lo cosmético/color, el padding lo maneja el theme
           display: 'flex', alignItems: 'center', gap: 2,
-          bgcolor: alpha(severityColor, 0.04)
+          bgcolor: alpha(severityColor, 0.04),
+          borderBottom: `1px solid ${alpha(severityColor, 0.1)}` // Sutil separador
       }}>
           <Avatar variant="rounded" sx={{ bgcolor: alpha(severityColor, 0.1), color: severityColor, width: 40, height: 40 }}>
             {severityIcon}
@@ -82,8 +85,9 @@ export const ConfirmDialog: React.FC<Props> = ({
           </Typography>
       </DialogTitle>
       
-      <DialogContent sx={{ px: 3, py: 3 }}>
-        <Stack spacing={2}>
+      {/* ✅ LIMPIEZA: Quitamos sx={{ px: 3 }} porque el theme ya pone el padding correcto */}
+      <DialogContent>
+        <Stack spacing={2} sx={{ mt: 1 }}> 
             <Typography variant="body1" color="text.secondary">
             {displayDesc}
             </Typography>
@@ -103,18 +107,33 @@ export const ConfirmDialog: React.FC<Props> = ({
                     onBlur={() => setTouched(true)}
                     error={isInputInvalid}
                     helperText={isInputInvalid ? "Este campo es requerido (mínimo 3 caracteres)" : ""}
-                    size="small"
+                    size="small" // El theme ya ajusta las fuentes en mobile
                     multiline
                     minRows={2}
                     maxRows={4}
-                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
                 />
             )}
         </Stack>
       </DialogContent>
       
-      <DialogActions sx={{ p: 3, bgcolor: alpha(theme.palette.background.default, 0.5), borderTop: `1px solid ${theme.palette.divider}` }}>
-        <Button onClick={close} disabled={isLoading} color="inherit" sx={{ borderRadius: 2, fontWeight: 600, mr: 'auto' }}>
+      <DialogActions sx={{ 
+          bgcolor: alpha(theme.palette.background.default, 0.5), 
+          borderTop: `1px solid ${theme.palette.divider}`,
+          // ✅ MEJORA UX: En móvil cambiamos la dirección de los botones
+          flexDirection: isMobile ? 'column-reverse' : 'row',
+          gap: isMobile ? 2 : 0,
+      }}>
+        <Button 
+            onClick={close} 
+            disabled={isLoading} 
+            color="inherit" 
+            fullWidth={isMobile} // Botón ancho completo en móvil
+            sx={{ 
+                borderRadius: 2, 
+                fontWeight: 600, 
+                mr: isMobile ? 0 : 'auto' // Quitamos el margen derecho en móvil al estar en columna
+            }}
+        >
           Cancelar
         </Button>
         <Button 
@@ -122,6 +141,7 @@ export const ConfirmDialog: React.FC<Props> = ({
           disabled={isConfirmDisabled}
           variant="contained" 
           color={btnColor}
+          fullWidth={isMobile} // Botón ancho completo en móvil
           disableElevation
           sx={{ borderRadius: 2, fontWeight: 700, px: 3 }}
         >

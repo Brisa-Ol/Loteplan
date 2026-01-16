@@ -12,7 +12,7 @@ import proyectoService from "@/core/api/services/proyecto.service";
 import { useAuth } from "@/core/context/AuthContext";
 import { PageContainer } from "@/shared/components/layout/containers/PageContainer/PageContainer";
 import { SectionTitle } from "@/shared/components/layout/containers/SectionTitle/SectionTitle";
-import { PageHeader } from "@/shared/components/layout/headers/PageHeader/PageHeader";
+import { PageHeader } from "@/shared/components/layout/headers/PageHeader";
 
 // --- COMPONENTE VISUAL: Highlights ---
 const ProjectHighlights: React.FC = () => (

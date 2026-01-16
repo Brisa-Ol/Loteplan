@@ -8,9 +8,9 @@ import {
   ArrowForward, Visibility, LocalOffer, CalendarMonth 
 } from '@mui/icons-material';
 
-import { FavoritoButton } from '../../../ui/buttons/BotonFavorito/BotonFavorito';
 import type { LoteDto } from '@/core/types/dto/lote.dto';
 import ImagenService from '@/core/api/services/imagen.service';
+import { FavoritoButton } from '@/shared/components/ui/buttons/BotonFavorito';
 
 
 interface LoteCardProps {

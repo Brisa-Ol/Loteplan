@@ -18,7 +18,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 
 import { PageContainer } from '../../../../shared/components/layout/containers/PageContainer/PageContainer';
-import { PageHeader } from '../../../../shared/components/layout/headers/PageHeader/PageHeader';
+import { PageHeader } from '../../../../shared/components/layout/headers/PageHeader';
 
 // ✅ Importamos Hook y Componente de Confirmación
 import { useConfirmDialog } from '../../../../shared/hooks/useConfirmDialog';

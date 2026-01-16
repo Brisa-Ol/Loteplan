@@ -45,10 +45,16 @@ const getDaysRemaining = (dateString: string) => {
 
 const StatItem: React.FC<{ label: string; icon: React.ReactNode; value: string | number; align?: 'left' | 'right' }> = ({ label, icon, value, align = 'left' }) => (
   <Box textAlign={align}>
-    <Typography variant="caption" color="text.secondary" display="block" mb={0.5}>
+    <Typography variant="caption" color="text.secondary" display="block" mb={0.5} sx={{ fontSize: '0.7rem' }}>
       {label}
     </Typography>
-    <Stack direction="row" spacing={0.5} alignItems="center" justifyContent={align === 'right' ? 'flex-end' : 'flex-start'} color={align === 'left' ? "primary.main" : "text.primary"}>
+    <Stack 
+      direction="row" 
+      spacing={0.5} 
+      alignItems="center" 
+      justifyContent={align === 'right' ? 'flex-end' : 'flex-start'} 
+      color={align === 'left' ? "primary.main" : "text.primary"}
+    >
       {icon}
       <Typography variant={align === 'left' ? "subtitle1" : "subtitle2"} fontWeight={align === 'left' ? 800 : 700}>
         {value}
@@ -57,14 +63,12 @@ const StatItem: React.FC<{ label: string; icon: React.ReactNode; value: string |
   </Box>
 );
 
-// --- Header Mejorado: Manejo robusto de imágenes ---
 const CardHeader: React.FC<{ project: ProyectoDto }> = ({ project }) => {
   const { label, color } = getStatusConfig(project.estado_proyecto);
 
-  // 1. Resolvemos la URL usando tu Service actualizado
   const imageUrl = project.imagenes && project.imagenes.length > 0
     ? ImagenService.resolveImageUrl(project.imagenes[0].url) 
-    : '/assets/placeholder-project.jpg'; // Ruta por defecto si no hay array
+    : '/assets/placeholder-project.jpg'; 
 
   return (
     <Box sx={{ position: 'relative', height: 200, overflow: 'hidden' }}>
@@ -73,25 +77,19 @@ const CardHeader: React.FC<{ project: ProyectoDto }> = ({ project }) => {
         height="100%"
         image={imageUrl}
         alt={project.nombre_proyecto}
-        sx={{ objectFit: 'cover', transition: 'transform 0.3s ease' }}
-        
-        // ✅ 2. Manejador de Error BLINDADO
+        sx={{ objectFit: 'cover', transition: 'transform 0.5s ease' }}
         onError={(e) => {
             const img = e.target as HTMLImageElement;
             const fallback = '/assets/placeholder-project.jpg';
-            
-            // Evitar bucle infinito: Si ya intentamos cargar el placeholder y falló, no hacemos nada más.
             if (img.src.includes('placeholder-project.jpg')) return;
-            
-            console.warn(`Falló carga de imagen para ${project.nombre_proyecto}. Usando fallback.`);
             img.src = fallback; 
         }}
       />
       
-      {/* Overlay Gradiente */}
+      {/* Overlay Gradiente para mejorar lectura de textos sobre imagen */}
       <Box sx={{
         position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
-        background: 'linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0) 50%)',
+        background: 'linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0) 60%)',
         pointerEvents: 'none'
       }} />
       
@@ -101,19 +99,20 @@ const CardHeader: React.FC<{ project: ProyectoDto }> = ({ project }) => {
         color={color}
         size="small"
         variant="filled"
-        sx={{ position: 'absolute', top: 12, right: 12, fontWeight: 700, boxShadow: 3, height: 24 }}
+        sx={{ position: 'absolute', top: 12, right: 12, fontWeight: 700, boxShadow: 2, height: 24 }}
       />
 
       {/* Badge Pack */}
       {project.pack_de_lotes && (
         <Chip
-          icon={<LocalOffer sx={{ fontSize: '14px !important', color: 'white !important' }} />}
+          icon={<LocalOffer sx={{ fontSize: '14px !important', color: 'inherit !important' }} />}
           label="Pack Lotes"
           size="small"
           sx={{ 
             position: 'absolute', top: 12, left: 12, 
-            fontWeight: 700, boxShadow: 3, height: 24,
-            bgcolor: 'secondary.main', color: 'white'
+            fontWeight: 700, boxShadow: 2, height: 24,
+            bgcolor: 'secondary.main', 
+            color: 'secondary.contrastText' // Ajuste fino: usa el color de texto correcto según el tema
           }}
         />
       )}
@@ -138,7 +137,8 @@ const CardInfo: React.FC<{ project: ProyectoDto; type: "ahorrista" | "inversioni
           variant="outlined"
           sx={{
             borderRadius: 1, height: 20, fontSize: '0.65rem', fontWeight: 700,
-            borderColor: theme.palette.primary.main, color: theme.palette.primary.main,
+            borderColor: theme.palette.primary.main, 
+            color: theme.palette.primary.main,
             bgcolor: alpha(theme.palette.primary.main, 0.05)
           }}
         />
@@ -184,6 +184,7 @@ const CardInfo: React.FC<{ project: ProyectoDto; type: "ahorrista" | "inversioni
         )}
       </Stack>
 
+      {/* Barra de progreso solo para ahorristas en proceso */}
       {type === 'ahorrista' && project.estado_proyecto === 'En proceso' && project.obj_suscripciones > 0 && (
         <Box sx={{ mb: 2 }}>
            <Stack direction="row" justifyContent="space-between" mb={0.5}>
@@ -199,10 +200,16 @@ const CardInfo: React.FC<{ project: ProyectoDto; type: "ahorrista" | "inversioni
         </Box>
       )}
 
+      {/* Descripción corta para inversionistas */}
       {type !== 'ahorrista' && (
         <Typography variant="body2" color="text.secondary" mb={2} sx={{
-          display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
-          overflow: 'hidden', minHeight: 40, fontSize: '0.875rem', lineHeight: 1.5
+          display: '-webkit-box', 
+          WebkitLineClamp: 2, 
+          WebkitBoxOrient: 'vertical',
+          overflow: 'hidden', 
+          minHeight: 40, // Altura mínima para alinear tarjetas
+          fontSize: '0.875rem', 
+          lineHeight: 1.5
         }}>
           {project.descripcion || 'Sin descripción disponible.'}
         </Typography>
@@ -216,7 +223,7 @@ const CardFinancials: React.FC<{ project: ProyectoDto; type: "ahorrista" | "inve
 
   return (
     <Box mt="auto">
-      <Stack direction="row" justifyContent="space-between" alignItems="flex-end">
+      <Stack direction="row" justifyContent="space-between" alignItems="flex-end" flexWrap="nowrap">
         <StatItem 
           label={type === "ahorrista" ? "Valor de Cuota" : "Inversión Total"}
           icon={<MonetizationOn sx={{ fontSize: 18 }} />}
@@ -232,10 +239,20 @@ const CardFinancials: React.FC<{ project: ProyectoDto; type: "ahorrista" | "inve
       </Stack>
 
       <Button
-        variant="contained" fullWidth disableElevation
+        variant="contained" 
+        fullWidth 
+        disableElevation
         endIcon={<ArrowForward />}
         onClick={onClick}
-        sx={{ mt: 3, fontWeight: 700, borderRadius: 2, textTransform: 'none', py: 1.2 }}
+        sx={{ 
+            mt: 3, 
+            fontWeight: 700, 
+            borderRadius: 2, 
+            textTransform: 'none', 
+            py: 1.2,
+            transition: 'transform 0.2s',
+            '&:active': { transform: 'scale(0.98)' } 
+        }}
       >
         Ver Oportunidad
       </Button>
@@ -260,20 +277,28 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, type, onClick
     <Card
       elevation={0}
       sx={{
-        height: "100%", display: "flex", flexDirection: "column",
-        borderRadius: 3, border: `1px solid ${theme.palette.divider}`,
-        bgcolor: 'background.paper', transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+        height: "100%", // Vital para grids
+        display: "flex", 
+        flexDirection: "column",
+        borderRadius: 4, // Un poco más redondeado (moderno)
+        border: `1px solid ${theme.palette.divider}`,
+        bgcolor: 'background.paper', 
+        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
         position: 'relative',
+        overflow: 'hidden',
         "&:hover": {
-          transform: "translateY(-4px)",
+          transform: "translateY(-6px)", // Salto suave
           boxShadow: theme.shadows[8],
-          borderColor: theme.palette.primary.main
+          borderColor: theme.palette.primary.main,
+          '& img': { // Efecto zoom en la imagen al hacer hover en la card
+             transform: 'scale(1.05)'
+          }
         },
       }}
     >
       <CardHeader project={project} />
       
-      <CardContent sx={{ flexGrow: 1, display: "flex", flexDirection: "column", p: 2.5 }}>
+      <CardContent sx={{ flexGrow: 1, display: "flex", flexDirection: "column", p: 3 }}>
         <CardInfo project={project} type={type} />
         
         <Divider sx={{ my: 2, borderStyle: 'dashed' }} />

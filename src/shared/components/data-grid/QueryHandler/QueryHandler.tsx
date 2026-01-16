@@ -1,7 +1,8 @@
-// src/components/common/QueryHandler/QueryHandler.tsx (CORREGIDO)
+// src/components/common/QueryHandler/QueryHandler.tsx
 import React from 'react';
 import { Box, CircularProgress, Typography, Alert } from '@mui/material';
 
+// 🔥 CORRECCIÓN 1: Definir la interfaz
 interface QueryHandlerProps {
   isLoading: boolean;
   error: Error | null;
@@ -9,7 +10,7 @@ interface QueryHandlerProps {
   loadingMessage?: string;
   errorMessage?: string;
   noLoader?: boolean;
-  fullHeight?: boolean; // para ocupar toda la pantalla
+  fullHeight?: boolean;
 }
 
 export const QueryHandler: React.FC<QueryHandlerProps> = ({
@@ -24,9 +25,8 @@ export const QueryHandler: React.FC<QueryHandlerProps> = ({
 
   // --- 1. Estado de Carga ---
   if (isLoading) {
-    if (noLoader) return null; // No muestra nada si así se lo pedimos
+    if (noLoader) return null;
 
-    // 👇 CORRECCIÓN: Se eliminaron los ``` que estaban aquí
     return (
       <Box
         sx={{
@@ -34,23 +34,49 @@ export const QueryHandler: React.FC<QueryHandlerProps> = ({
           flexDirection: "column",
           justifyContent: "center",
           alignItems: "center",
-          minHeight: fullHeight ? "100vh" : "60vh", // Cambia según prop
+          minHeight: fullHeight 
+            ? "100vh" 
+            : { xs: "40vh", sm: "50vh", md: "60vh" },
+          px: { xs: 2, sm: 3 },
         }}
       >
-        <CircularProgress />
-        <Typography sx={{ mt: 2, color: "text.secondary" }}>
+        {/* 🔥 CORRECCIÓN 2: CircularProgress no acepta objetos en size */}
+        <CircularProgress 
+          sx={{ 
+            width: { xs: 40, sm: 48 }, 
+            height: { xs: 40, sm: 48 } 
+          }} 
+        />
+        <Typography 
+          variant="body2"
+          sx={{ 
+            mt: 3,
+            color: "text.secondary",
+            fontSize: { xs: "0.875rem", sm: "1rem" }
+          }}
+        >
           {loadingMessage}
         </Typography>
       </Box>
     );
-    // 👆 CORRECCIÓN: Se eliminaron los ``` que estaban aquí
   }
 
   // --- 2. Estado de Error ---
   if (error) {
     return (
-      <Box sx={{ textAlign: "center", mt: 4 }}>
-        <Alert severity="error">
+      <Box sx={{ 
+        textAlign: "center", 
+        mt: { xs: 2, sm: 4 },
+        px: { xs: 2, sm: 0 },
+        maxWidth: "600px",
+        mx: "auto"
+      }}>
+        <Alert 
+          severity="error"
+          sx={{
+            fontSize: { xs: "0.875rem", sm: "1rem" }
+          }}
+        >
           {errorMessage || error.message || "Ocurrió un error al cargar los datos."}
         </Alert>
       </Box>
@@ -58,9 +84,5 @@ export const QueryHandler: React.FC<QueryHandlerProps> = ({
   }
 
   // --- 3. Éxito ---
-  // Si no está cargando y no hay error, muestra el contenido
   return <>{children}</>;
 };
-
-// No olvides exportarlo si usas 'export const'
-// export default QueryHandler;

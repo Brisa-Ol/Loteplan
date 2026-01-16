@@ -16,7 +16,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 // --- Componentes Comunes ---
 import { PageContainer } from '../../../../shared/components/layout/containers/PageContainer/PageContainer';
 import { QueryHandler } from '../../../../shared/components/data-grid/QueryHandler/QueryHandler';
-import { PageHeader } from '../../../../shared/components/layout/headers/PageHeader/PageHeader';
+import { PageHeader } from '../../../../shared/components/layout/headers/PageHeader';
 import { DataTable, type DataTableColumn } from '../../../../shared/components/data-grid/DataTable/DataTable';
 import { useModal } from '../../../../shared/hooks/useModal';
 import { useConfirmDialog } from '../../../../shared/hooks/useConfirmDialog';

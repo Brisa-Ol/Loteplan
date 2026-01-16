@@ -62,7 +62,7 @@ import {
 
 // Componentes Propios
 import { PageContainer } from '../../../../shared/components/layout/containers/PageContainer/PageContainer';
-import { PageHeader } from '../../../../shared/components/layout/headers/PageHeader/PageHeader';
+import { PageHeader } from '../../../../shared/components/layout/headers/PageHeader';
 import { useAuth } from '@/core/context/AuthContext';
 import type { ApiError } from '@/core/api/httpService';
 

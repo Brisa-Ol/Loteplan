@@ -1,26 +1,35 @@
 // src/components/layout/AdminSidebar/AdminSidebar.tsx
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Box, Drawer, List, ListItemButton, ListItemIcon, ListItemText,
   Collapse, Typography, Divider, Avatar, IconButton, Tooltip, Badge,
-  useTheme, alpha, TextField, InputAdornment, Popover, Chip
+  useTheme, alpha, TextField, InputAdornment, useMediaQuery, styled
 } from '@mui/material';
 import {
-  ExpandLess, ExpandMore, ChevronLeft, ChevronRight, Logout,
-  Search as SearchIcon
+  ExpandLess, ExpandMore, Logout,
+  Search as SearchIcon, ChevronLeft
 } from '@mui/icons-material';
 
 import { useNavbarMenu, NAVBAR_HEIGHT } from '../../../hooks/useNavbarMenu';
 import { useAuth } from '@/core/context/AuthContext';
 import { ConfirmDialog } from '../../domain/modals/ConfirmDialog/ConfirmDialog';
 
+// ✅ Ancho fijo constante
+const DRAWER_WIDTH = 280;
 
-const DRAWER_WIDTH = 260;
-const DRAWER_COLLAPSED = 72;
+// Header simple del Drawer
+const DrawerHeader = styled('div')(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between', // Espacio entre logo y botón cerrar (solo móvil)
+  padding: theme.spacing(0, 2),
+  height: NAVBAR_HEIGHT.desktop,
+  ...theme.mixins.toolbar,
+}));
 
-// --- INTERFACES DE TIPADO ---
+// --- INTERFACES ---
 interface NavSubItem {
   label: string;
   path?: string;
@@ -40,526 +49,272 @@ interface NavItem {
 
 interface AdminSidebarProps {
   pendingKYC?: number;
+  mobileOpen?: boolean;
+  onMobileClose?: () => void;
 }
 
-const AdminSidebar: React.FC<AdminSidebarProps> = ({ pendingKYC = 0 }) => {
+const AdminSidebar: React.FC<AdminSidebarProps> = ({ 
+  pendingKYC = 0,
+  mobileOpen = false,
+  onMobileClose
+}) => {
   const theme = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
+  
+  // Detectar móvil
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   const { config: { navItems, userNavItems }, logoutDialogProps } = useNavbarMenu();
 
-  // ✅ Estado persistente en localStorage
-  const [collapsed, setCollapsed] = useState(() => {
-    const saved = localStorage.getItem('admin-sidebar-collapsed');
-    return saved ? JSON.parse(saved) : false;
-  });
-
-  const [openMenus, setOpenMenus] = useState<string[]>(() => {
-    const saved = localStorage.getItem('admin-sidebar-menus');
-    return saved ? JSON.parse(saved) : [];
-  });
-
+  const [openMenus, setOpenMenus] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [hoveredItem, setHoveredItem] = useState<string | null>(null);
-  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
 
-  // Guardar estado en localStorage
-  useEffect(() => {
-    localStorage.setItem('admin-sidebar-collapsed', JSON.stringify(collapsed));
-  }, [collapsed]);
+  // Lógica de navegación activa
+  const isActive = (path?: string) => path ? location.pathname === path : false;
+  const isChildActive = (submenu?: NavSubItem[]) => submenu?.some(child => child.path && location.pathname === child.path);
 
-  useEffect(() => {
-    localStorage.setItem('admin-sidebar-menus', JSON.stringify(openMenus));
-  }, [openMenus]);
-
-  const isActive = (path?: string) => {
-    return path ? location.pathname === path : false;
-  };
-
-  const isChildActive = (submenu?: NavSubItem[]) => {
-    return submenu?.some(child => child.path && location.pathname === child.path);
-  };
-
+  // Handlers
   const handleToggleMenu = (label: string) => {
-    setOpenMenus(prev =>
-      prev.includes(label) ? prev.filter(m => m !== label) : [...prev, label]
-    );
+    setOpenMenus(prev => prev.includes(label) ? prev.filter(m => m !== label) : [...prev, label]);
   };
 
   const handleNavigate = (path?: string) => {
-    if (path) navigate(path);
+    if (path) {
+        navigate(path);
+        if (isMobile && onMobileClose) onMobileClose();
+    }
   };
 
   const handleLogoutClick = () => {
     const logoutItem = userNavItems[0]?.submenu?.find(s => s.label === 'Cerrar Sesión');
-    if (logoutItem?.action) {
-      logoutItem.action();
-    }
+    if (logoutItem?.action) logoutItem.action();
   };
 
-  // ✅ Filtrado de búsqueda
+  // Filtrado de items
   const filteredNavItems = useMemo(() => {
     if (!searchQuery.trim()) return navItems;
-
     const query = searchQuery.toLowerCase();
+    
     return navItems.map(item => {
-      // Buscar en el item padre
       const parentMatch = item.label.toLowerCase().includes(query);
-      
-      // Buscar en subitems
       const filteredSubmenu = item.submenu?.filter(sub => 
         !sub.isDivider && sub.label.toLowerCase().includes(query)
       );
-
-      // Si hay match en padre o hijos, incluir el item
+      
       if (parentMatch || (filteredSubmenu && filteredSubmenu.length > 0)) {
-        return {
-          ...item,
-          submenu: parentMatch ? item.submenu : filteredSubmenu
-        };
+        return { ...item, submenu: parentMatch ? item.submenu : filteredSubmenu };
       }
       return null;
     }).filter(Boolean) as NavItem[];
   }, [navItems, searchQuery]);
 
-  // ✅ Accesos rápidos (items más importantes)
-  const quickAccessItems = useMemo(() => {
-    const items: NavSubItem[] = [];
-    
-    if (pendingKYC > 0) {
-      items.push({
-        label: 'KYC Pendientes',
-        path: '/admin/KYC',
-        icon: navItems.find(i => i.label === 'Gestión de Usuarios')?.submenu?.[1]?.icon,
-        badge: pendingKYC
-      });
-    }
+  // Renderizado de items (Simplificado: Siempre muestra texto)
+  const renderItem = (item: NavItem) => {
+    const active = isActive(item.path) || isChildActive(item.submenu);
+    const hasSubmenu = (item.submenu?.length || 0) > 0;
+    const isOpen = openMenus.includes(item.label) || !!searchQuery;
+    const IconComponent = item.icon;
+    const itemBadge = item.badge || (item.label === 'Gestión de Usuarios' ? pendingKYC : 0);
 
-    // Agregar dashboard siempre
-    const dashboard = navItems.find(i => i.label === 'Dashboard');
-    if (dashboard) {
-      items.unshift({
-        label: dashboard.label,
-        path: dashboard.path,
-        icon: dashboard.icon
-      });
-    }
+    return (
+      <Box key={item.label}>
+        <ListItemButton
+          onClick={() => hasSubmenu ? handleToggleMenu(item.label) : handleNavigate(item.path)}
+          selected={active}
+          sx={{
+            minHeight: 48,
+            px: 2.5,
+            mx: 1.5,
+            borderRadius: 2,
+            mb: 0.5,
+            borderLeft: active ? `4px solid ${theme.palette.primary.main}` : '4px solid transparent',
+            bgcolor: active ? alpha(theme.palette.primary.main, 0.08) : 'transparent',
+            '&:hover': {
+              bgcolor: active ? alpha(theme.palette.primary.main, 0.12) : alpha(theme.palette.text.primary, 0.04),
+            }
+          }}
+        >
+          <ListItemIcon sx={{ minWidth: 36, color: active ? 'primary.main' : 'text.secondary' }}>
+            <Badge badgeContent={itemBadge} color="error">
+              {IconComponent && <IconComponent />}
+            </Badge>
+          </ListItemIcon>
+          
+          <ListItemText 
+              primary={item.label} 
+              primaryTypographyProps={{ 
+                  fontWeight: active ? 700 : 500,
+                  color: active ? 'primary.main' : 'text.primary',
+                  fontSize: '0.9rem'
+              }} 
+          />
+          {hasSubmenu && (isOpen ? <ExpandLess sx={{ color: 'text.secondary' }} /> : <ExpandMore sx={{ color: 'text.disabled' }} />)}
+        </ListItemButton>
 
-    return items;
-  }, [navItems, pendingKYC]);
-
-  // ✅ Manejo de hover para modo collapsed
-  const handleMouseEnter = (event: React.MouseEvent<HTMLElement>, label: string, hasSubmenu: boolean) => {
-    if (collapsed && hasSubmenu) {
-      setHoveredItem(label);
-      setAnchorEl(event.currentTarget);
-    }
-  };
-
-  const handleMouseLeave = () => {
-    setHoveredItem(null);
-    setAnchorEl(null);
-  };
-
-  const renderNavItems = (items: NavItem[]) => {
-    return items.map((item, index) => {
-      const active = isActive(item.path) || isChildActive(item.submenu);
-     const hasSubmenu = (item.submenu?.length || 0) > 0;
-      const isOpen = openMenus.includes(item.label);
-      const IconComponent = item.icon;
-      const itemBadge = item.badge || (item.label === 'Gestión de Usuarios' ? pendingKYC : 0);
-
-      return (
-        <Box key={`${item.label}-${index}`}>
-          <Tooltip title={collapsed ? item.label : ''} placement="right">
-            <ListItemButton
-              onMouseEnter={(e) => handleMouseEnter(e, item.label, hasSubmenu)}
-              onMouseLeave={handleMouseLeave}
-              onClick={() => {
-                if (hasSubmenu && !collapsed) {
-                  handleToggleMenu(item.label);
-                } else if (!hasSubmenu) {
-                  handleNavigate(item.path);
-                }
-              }}
-              selected={active}
-              sx={{
-                mx: 1,
-                borderRadius: 2,
-                mb: 0.5,
-                transition: 'all 0.2s ease-in-out',
-                borderLeft: active ? `4px solid ${theme.palette.primary.main}` : '4px solid transparent',
-                '&.Mui-selected': { 
-                  bgcolor: alpha(theme.palette.primary.main, 0.08),
-                  transform: 'translateX(4px)',
-                },
-                '&:hover': { 
-                  bgcolor: alpha(theme.palette.primary.main, 0.04),
-                  transform: 'translateX(2px)',
-                }
-              }}
-            >
-              <ListItemIcon sx={{
-                minWidth: collapsed ? 0 : 40,
-                color: active ? 'primary.main' : 'text.secondary',
-                justifyContent: collapsed ? 'center' : 'flex-start'
-              }}>
-                <Badge 
-                  badgeContent={itemBadge > 0 ? itemBadge : 0} 
-                  color="error"
-                  sx={{
-                    '& .MuiBadge-badge': {
-                      animation: itemBadge > 5 ? 'pulse 2s infinite' : 'none',
-                      '@keyframes pulse': {
-                        '0%, 100%': { transform: 'scale(1)' },
-                        '50%': { transform: 'scale(1.1)' }
-                      }
-                    }
-                  }}
-                >
-                  {IconComponent && <IconComponent />}
-                </Badge>
-              </ListItemIcon>
-
-              {!collapsed && (
-                <>
-                  <ListItemText
-                    primary={item.label}
-                    primaryTypographyProps={{
-                      variant: 'body2',
-                      fontWeight: active ? 700 : 600,
-                      fontSize: '0.9rem',
-                      color: active ? 'primary.main' : 'text.primary'
-                    }}
-                  />
-                  {hasSubmenu && (isOpen ? <ExpandLess /> : <ExpandMore />)}
-                </>
-              )}
-            </ListItemButton>
-          </Tooltip>
-
-          {/* Submenu normal (no collapsed) */}
-          {!collapsed && hasSubmenu && (
+        {/* Submenú */}
+        {hasSubmenu && (
             <Collapse in={isOpen} timeout="auto" unmountOnExit>
-              <List disablePadding>
-                {item.submenu?.map((subItem: NavSubItem, subIndex: number) => {
-                  if (subItem.isDivider) return <Divider key={subIndex} sx={{ my: 1 }} />;
-                  const SubIcon = subItem.icon;
-                  const isSubActive = isActive(subItem.path);
-                  const subBadge = subItem.badge || 0;
-
-                  return (
-                    <ListItemButton
-                      key={subItem.label || subIndex}
-                      onClick={() => subItem.action ? subItem.action() : handleNavigate(subItem.path)}
-                      selected={isSubActive}
-                      sx={{
-                        pl: 6,
-                        py: 0.75,
-                        mx: 1,
-                        borderRadius: 2,
-                        transition: 'all 0.15s ease-in-out',
-                        '&.Mui-selected': { 
-                          bgcolor: alpha(theme.palette.primary.main, 0.12),
-                          transform: 'translateX(4px)',
-                        },
-                        '&:hover': { 
-                          bgcolor: alpha(theme.palette.primary.main, 0.04),
-                          transform: 'translateX(2px)',
-                        }
-                      }}
-                    >
-                      {SubIcon && (
-                        <ListItemIcon sx={{ minWidth: 30, color: isSubActive ? 'primary.main' : 'text.secondary' }}>
-                          <Badge badgeContent={subBadge} color="error">
-                            <SubIcon fontSize="small" />
-                          </Badge>
-                        </ListItemIcon>
-                      )}
-                      <ListItemText
-                        primary={subItem.label}
-                        primaryTypographyProps={{
-                          variant: 'body2',
-                          fontWeight: isSubActive ? 600 : 400,
-                          fontSize: '0.85rem',
-                          color: isSubActive ? 'primary.main' : 'text.secondary'
-                        }}
-                      />
-                    </ListItemButton>
-                  );
-                })}
-              </List>
-            </Collapse>
-          )}
-
-          {/* Popover para modo collapsed */}
-          {collapsed && hasSubmenu && (
-            <Popover
-              open={hoveredItem === item.label}
-              anchorEl={anchorEl}
-              onClose={handleMouseLeave}
-              anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-              transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-              sx={{
-                pointerEvents: 'none',
-                '& .MuiPopover-paper': {
-                  pointerEvents: 'auto',
-                  ml: 1,
-                  boxShadow: theme.shadows[8]
-                }
-              }}
-              disableRestoreFocus
-            >
-              <Box 
-                sx={{ minWidth: 200, p: 1 }}
-                onMouseEnter={() => setHoveredItem(item.label)}
-                onMouseLeave={handleMouseLeave}
-              >
-                <Typography variant="caption" sx={{ px: 2, py: 1, fontWeight: 600, color: 'text.secondary' }}>
-                  {item.label}
-                </Typography>
-                <List dense>
-                  {item.submenu?.map((subItem: NavSubItem, subIndex: number) => {
-                    if (subItem.isDivider) return <Divider key={subIndex} sx={{ my: 0.5 }} />;
-                    const SubIcon = subItem.icon;
-                    const isSubActive = isActive(subItem.path);
-
-                    return (
-                      <ListItemButton
-                        key={subItem.label || subIndex}
-                        onClick={() => {
-                          handleMouseLeave();
-                          subItem.action ? subItem.action() : handleNavigate(subItem.path);
-                        }}
-                        selected={isSubActive}
-                        sx={{
-                          borderRadius: 1,
-                          '&.Mui-selected': { bgcolor: alpha(theme.palette.primary.main, 0.12) }
-                        }}
-                      >
-                        {SubIcon && (
-                          <ListItemIcon sx={{ minWidth: 36 }}>
-                            <SubIcon fontSize="small" />
-                          </ListItemIcon>
-                        )}
-                        <ListItemText
-                          primary={subItem.label}
-                          primaryTypographyProps={{
-                            variant: 'body2',
-                            fontSize: '0.85rem'
-                          }}
-                        />
-                      </ListItemButton>
-                    );
-                  })}
+                <List component="div" disablePadding>
+                    {item.submenu?.map((sub, idx) => {
+                        if (sub.isDivider) return <Divider key={idx} sx={{ my: 1, borderColor: 'divider' }} />;
+                        const SubIcon = sub.icon;
+                        const subActive = isActive(sub.path);
+                        return (
+                            <ListItemButton
+                                key={sub.label}
+                                selected={subActive}
+                                onClick={() => sub.action ? sub.action() : handleNavigate(sub.path)}
+                                sx={{
+                                    pl: 4, 
+                                    mx: 1.5, 
+                                    borderRadius: 2,
+                                    mb: 0.25,
+                                    '&.Mui-selected': { bgcolor: alpha(theme.palette.primary.main, 0.08) }
+                                }}
+                            >
+                                {SubIcon && (
+                                    <ListItemIcon sx={{ minWidth: 30, color: subActive ? 'primary.main' : 'text.secondary' }}>
+                                        <SubIcon fontSize="small" />
+                                    </ListItemIcon>
+                                )}
+                                <ListItemText 
+                                    primary={sub.label} 
+                                    primaryTypographyProps={{ 
+                                        fontSize: '0.85rem',
+                                        fontWeight: subActive ? 600 : 400
+                                    }}
+                                />
+                            </ListItemButton>
+                        )
+                    })}
                 </List>
-              </Box>
-            </Popover>
-          )}
-        </Box>
-      );
-    });
+            </Collapse>
+        )}
+      </Box>
+    );
   };
+
+  // Contenido interno del Drawer
+  const drawerContent = (
+    <>
+      <DrawerHeader>
+         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Box 
+               component="img"
+               src={"/navbar/nav.png"} // O la ruta "/navbar/nav.png"
+               alt="Logo"
+               sx={{ 
+                 height: 40, // Altura fija para que entre en el header (ajusta según necesites)
+                 maxWidth: 180, // Ancho máximo para que no rompa el diseño
+                 objectFit: 'contain', // Asegura que se vea TODO el logo sin recortes
+                 // Si quieres que ocupe todo el ancho disponible y empuje el texto:
+                 // flexGrow: 1 
+               }} 
+             />
+            
+          
+         </Box>
+         
+         {/* Solo mostramos botón de cerrar en móvil */}
+         {isMobile && (
+             <IconButton onClick={onMobileClose}>
+                <ChevronLeft />
+             </IconButton>
+         )}
+      </DrawerHeader>
+      
+      <Divider />
+
+      <Box sx={{ p: 2 }}>
+        <TextField
+            fullWidth
+            size="small"
+            placeholder="Buscar..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            InputProps={{
+                startAdornment: <InputAdornment position="start"><SearchIcon color="action" /></InputAdornment>,
+                sx: { borderRadius: 2, bgcolor: alpha(theme.palette.background.default, 0.5) }
+            }}
+        />
+      </Box>
+
+      {/* Lista Principal */}
+      <List sx={{ flex: 1, overflowY: 'auto', px: 0 }}>
+        {filteredNavItems.map(item => renderItem(item))}
+      </List>
+
+      <Divider />
+
+      {/* Footer Usuario */}
+      <Box sx={{ p: 2 }}>
+        <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: 2.5,
+            p: 2.5, 
+            borderRadius: 4,
+            bgcolor: alpha(theme.palette.background.default, 0.5),
+            border: `1px solid ${theme.palette.divider}`
+        }}>
+            <Avatar sx={{ bgcolor: 'primary.main', width: 36, height: 36, fontWeight: 'bold' }}>
+                {user?.nombre?.charAt(0) || 'A'}
+            </Avatar>
+            
+            <Box sx={{ flex: 1, overflow: 'hidden' }}>
+                <Typography variant="subtitle2" noWrap>{user?.nombre}</Typography>
+                <Typography variant="caption" color="text.secondary">Admin</Typography>
+            </Box>
+            
+            <Tooltip title="Cerrar sesión">
+                <IconButton onClick={handleLogoutClick} size="small" color="error">
+                    <Logout fontSize="small" />
+                </IconButton>
+            </Tooltip>
+        </Box>
+      </Box>
+    </>
+  );
 
   return (
     <>
-      <Drawer
-        variant="permanent"
-        sx={{
-          width: collapsed ? DRAWER_COLLAPSED : DRAWER_WIDTH,
-          flexShrink: 0,
-          '& .MuiDrawer-paper': {
-            width: collapsed ? DRAWER_COLLAPSED : DRAWER_WIDTH,
-            boxSizing: 'border-box',
-            transition: 'width 0.2s ease-in-out',
-            overflowX: 'hidden',
-            borderRight: '1px solid',
-            borderColor: 'divider',
-            bgcolor: 'background.paper'
-          }
-        }}
-      >
-        {/* Header con logo y toggle */}
-        <Box sx={{ 
-          p: 2, 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: collapsed ? 'center' : 'space-between', 
-          minHeight: NAVBAR_HEIGHT.desktop,
-          borderBottom: '1px solid',
-          borderColor: 'divider'
-        }}>
-          {!collapsed && (
-            <Box component="img" src="/navbar/nav.png" alt="Logo" sx={{ height: 32 }} />
-          )}
-          <IconButton onClick={() => setCollapsed(!collapsed)}>
-            {collapsed ? <ChevronRight /> : <ChevronLeft />}
-          </IconButton>
-        </Box>
-
-        {/* Buscador */}
-        {!collapsed && (
-          <Box sx={{ px: 2, pt: 2, pb: 1 }}>
-            <TextField
-              size="small"
-              placeholder="Buscar menú..."
-              fullWidth
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon fontSize="small" sx={{ color: 'text.secondary' }} />
-                  </InputAdornment>
-                )
-              }}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  bgcolor: alpha(theme.palette.primary.main, 0.02),
-                  '&:hover': {
-                    bgcolor: alpha(theme.palette.primary.main, 0.04),
-                  }
-                }
-              }}
-            />
-          </Box>
-        )}
-
-        {/* Accesos Rápidos */}
-        {!collapsed && !searchQuery && quickAccessItems.length > 0 && (
-          <Box sx={{ px: 2, pb: 1 }}>
-            <Typography 
-              variant="caption" 
-              sx={{ 
-                px: 1, 
-                fontWeight: 600, 
-                color: 'text.secondary',
-                textTransform: 'uppercase',
-                letterSpacing: 0.5
-              }}
-            >
-              Acceso Rápido
-            </Typography>
-            <List dense sx={{ mt: 0.5 }}>
-              {quickAccessItems.map((item, idx) => {
-                const Icon = item.icon;
-                const isQuickActive = isActive(item.path);
-                
-                return (
-                  <ListItemButton
-                    key={idx}
-                    onClick={() => handleNavigate(item.path)}
-                    selected={isQuickActive}
-                    sx={{
-                      borderRadius: 2,
-                      mb: 0.5,
-                      '&.Mui-selected': { 
-                        bgcolor: alpha(theme.palette.primary.main, 0.08) 
-                      }
-                    }}
-                  >
-                    <ListItemIcon sx={{ minWidth: 36 }}>
-                      <Badge badgeContent={item.badge} color="error">
-                        {Icon && <Icon fontSize="small" />}
-                      </Badge>
-                    </ListItemIcon>
-                    <ListItemText 
-                      primary={item.label}
-                      primaryTypographyProps={{
-                        variant: 'body2',
-                        fontSize: '0.85rem',
-                        fontWeight: isQuickActive ? 600 : 400
-                      }}
-                    />
-                    {item.badge && item.badge > 0 && (
-                      <Chip 
-                        label={item.badge} 
-                        size="small" 
-                        color="error" 
-                        sx={{ height: 20, fontSize: '0.7rem' }}
-                      />
-                    )}
-                  </ListItemButton>
-                );
-              })}
-            </List>
-            <Divider sx={{ my: 1 }} />
-          </Box>
-        )}
-
-        {/* Navegación Principal */}
-        <Box sx={{ flex: 1, py: 1, overflowY: 'auto' }}>
-          {!collapsed && searchQuery && (
-            <Typography 
-              variant="caption" 
-              sx={{ px: 3, pb: 1, color: 'text.secondary', display: 'block' }}
-            >
-              {filteredNavItems.length} resultado(s)
-            </Typography>
-          )}
-          <List disablePadding>
-            {renderNavItems(filteredNavItems as NavItem[])}
-          </List>
-        </Box>
-
-        <Divider />
-
-        {/* Footer con Usuario */}
-        <Box sx={{ p: 2 }}>
-          {!collapsed ? (
-            <Box sx={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: 1.5, 
-              p: 1.5, 
-              borderRadius: 2, 
-              bgcolor: alpha(theme.palette.primary.main, 0.05),
-              border: '1px solid',
-              borderColor: alpha(theme.palette.primary.main, 0.1)
-            }}>
-              <Avatar sx={{ width: 36, height: 36, bgcolor: 'primary.main', fontWeight: 700 }}>
-                {user?.nombre?.charAt(0) || 'A'}
-              </Avatar>
-              <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Typography variant="body2" fontWeight={700} noWrap>
-                  {user?.nombre}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Administrador
-                </Typography>
-              </Box>
-              <Tooltip title="Cerrar Sesión">
-                <IconButton 
-                  size="small" 
-                  onClick={handleLogoutClick} 
-                  sx={{ 
-                    color: 'error.main',
-                    '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.08) }
-                  }}
-                >
-                  <Logout fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            </Box>
-          ) : (
-            <Tooltip title="Cerrar Sesión">
-              <IconButton
-                sx={{ 
-                  width: '100%', 
-                  color: 'error.main',
-                  '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.08) }
+      <Box component="nav" sx={{ width: { md: DRAWER_WIDTH }, flexShrink: { md: 0 } }}>
+        {/* 1. MÓVIL: Temporary (Overlay) */}
+        {isMobile ? (
+            <Drawer
+                variant="temporary"
+                open={mobileOpen}
+                onClose={onMobileClose}
+                ModalProps={{ keepMounted: true }}
+                sx={{
+                    display: { xs: 'block', md: 'none' },
+                    '& .MuiDrawer-paper': { boxSizing: 'border-box', width: DRAWER_WIDTH },
                 }}
-                onClick={handleLogoutClick}
-              >
-                <Logout />
-              </IconButton>
-            </Tooltip>
-          )}
-        </Box>
-      </Drawer>
-
+            >
+                {drawerContent}
+            </Drawer>
+        ) : (
+        /* 2. DESKTOP: Permanent (Fijo, sin colapsar) */
+            <Drawer
+                variant="permanent"
+                sx={{
+                    display: { xs: 'none', md: 'block' },
+                    '& .MuiDrawer-paper': {
+                        boxSizing: 'border-box',
+                        width: DRAWER_WIDTH, // Ancho fijo siempre
+                        borderRight: '1px solid',
+                        borderColor: 'divider',
+                        bgcolor: 'background.paper'
+                    },
+                }}
+            >
+                {drawerContent}
+            </Drawer>
+        )}
+      </Box>
+      
       <ConfirmDialog {...logoutDialogProps} />
     </>
   );

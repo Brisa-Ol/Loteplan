@@ -24,7 +24,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { DataTable, type DataTableColumn } from '../../../../../shared/components/data-grid/DataTable/DataTable';
 
 import { PageContainer } from '../../../../../shared/components/layout/containers/PageContainer/PageContainer';
-import { PageHeader } from '../../../../../shared/components/layout/headers/PageHeader/PageHeader';
+import { PageHeader } from '../../../../../shared/components/layout/headers/PageHeader';
 import { QueryHandler } from '../../../../../shared/components/data-grid/QueryHandler/QueryHandler';
 import { useModal } from '../../../../../shared/hooks/useModal';
 
