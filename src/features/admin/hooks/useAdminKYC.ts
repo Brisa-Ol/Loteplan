@@ -1,23 +1,21 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import useSnackbar from '../../../shared/hooks/useSnackbar';
 
-import { useModal } from '../../../shared/hooks/useModal';
-
-import { useConfirmDialog } from '../../../shared/hooks/useConfirmDialog';
 import type { KycDTO } from '@/core/types/dto/kyc.dto';
 import kycService from '@/core/api/services/kyc.service';
-
+import useSnackbar from '@/shared/hooks/useSnackbar';
+import { useModal } from '@/shared/hooks/useModal';
+import { useConfirmDialog } from '@/shared/hooks/useConfirmDialog';
+import { useSortedData } from './useSortedData';
 
 export type TabValue = 'pendiente' | 'aprobada' | 'rechazada' | 'todas';
 
 export const useAdminKYC = () => {
   const queryClient = useQueryClient();
-  const { showSuccess } = useSnackbar();
+  const { showSuccess, showError } = useSnackbar();
 
   // --- ESTADOS ---
   const [currentTab, setCurrentTab] = useState<TabValue>('pendiente');
-  const [lastActionId, setLastActionId] = useState<number | string | null>(null);
   const [selectedKyc, setSelectedKyc] = useState<KycDTO | null>(null);
   
   // Estado para rechazo manual
@@ -30,21 +28,26 @@ export const useAdminKYC = () => {
   const confirmDialog = useConfirmDialog();
 
   // --- QUERIES ---
-  const { data: pendingKYCs = [], isLoading: loadingPending, error: errorPending } = useQuery({
+  // Capturamos los errores de cada query individualmente
+  const { data: pendingKYCs = [], isLoading: l1, error: e1 } = useQuery({
     queryKey: ['kycPending'], queryFn: kycService.getPendingVerifications, enabled: currentTab === 'pendiente',
   });
-  const { data: approvedKYCs = [], isLoading: loadingApproved, error: errorApproved } = useQuery({
+  const { data: approvedKYCs = [], isLoading: l2, error: e2 } = useQuery({
     queryKey: ['kycApproved'], queryFn: kycService.getApprovedVerifications, enabled: currentTab === 'aprobada',
   });
-  const { data: rejectedKYCs = [], isLoading: loadingRejected, error: errorRejected } = useQuery({
+  const { data: rejectedKYCs = [], isLoading: l3, error: e3 } = useQuery({
     queryKey: ['kycRejected'], queryFn: kycService.getRejectedVerifications, enabled: currentTab === 'rechazada',
   });
-  const { data: allKYCs = [], isLoading: loadingAll, error: errorAll } = useQuery({
+  const { data: allKYCs = [], isLoading: l4, error: e4 } = useQuery({
     queryKey: ['kycAll'], queryFn: kycService.getAllProcessedVerifications, enabled: currentTab === 'todas',
   });
 
-  // Datos Computados
-  const currentData = useMemo(() => {
+  // Unificamos estados de carga y error
+  const isLoading = l1 || l2 || l3 || l4;
+  const error = e1 || e2 || e3 || e4;
+
+  // 1. SELECCIÓN DE DATA SEGÚN TAB (Data Cruda)
+  const rawData = useMemo(() => {
     switch (currentTab) {
       case 'pendiente': return pendingKYCs;
       case 'aprobada': return approvedKYCs;
@@ -54,19 +57,13 @@ export const useAdminKYC = () => {
     }
   }, [currentTab, pendingKYCs, approvedKYCs, rejectedKYCs, allKYCs]);
 
-  const isLoading = loadingPending || loadingApproved || loadingRejected || loadingAll;
-  const error = errorPending || errorApproved || errorRejected || errorAll;
-
-  // Limpiar resaltado al cambiar tab
-  useEffect(() => { setLastActionId(null); }, [currentTab]);
+  // ✨ 2. APLICAR HOOK DE UX (Ordenamiento + Highlight)
+  const { sortedData: kycList, highlightedId, triggerHighlight } = useSortedData(rawData);
 
   // --- MUTACIONES ---
   const approveMutation = useMutation({
     mutationFn: (idUsuario: number) => kycService.approveVerification(idUsuario),
-    onSuccess: () => {
-      if (confirmDialog.data?.id) setLastActionId(confirmDialog.data.id);
-      
-      // Invalidar todas las listas posibles
+    onSuccess: (_, idUsuario) => {
       queryClient.invalidateQueries({ queryKey: ['kycPending'] });
       queryClient.invalidateQueries({ queryKey: ['kycApproved'] });
       queryClient.invalidateQueries({ queryKey: ['kycAll'] });
@@ -74,16 +71,19 @@ export const useAdminKYC = () => {
       showSuccess('✅ Verificación aprobada correctamente');
       confirmDialog.close();
       detailsModal.close();
+
+      if (confirmDialog.data?.id) triggerHighlight(confirmDialog.data.id);
     },
-    onError: () => confirmDialog.close(),
+    onError: (err: any) => {
+        confirmDialog.close();
+        showError(err.response?.data?.message || 'Error al aprobar');
+    }
   });
 
   const rejectMutation = useMutation({
     mutationFn: ({ idUsuario, motivo }: { idUsuario: number; motivo: string }) =>
       kycService.rejectVerification(idUsuario, { motivo_rechazo: motivo }),
     onSuccess: () => {
-      if (kycToReject?.id) setLastActionId(kycToReject.id);
-
       queryClient.invalidateQueries({ queryKey: ['kycPending'] });
       queryClient.invalidateQueries({ queryKey: ['kycRejected'] });
       queryClient.invalidateQueries({ queryKey: ['kycAll'] });
@@ -92,7 +92,10 @@ export const useAdminKYC = () => {
       rejectModal.close();
       detailsModal.close();
       setRejectReason('');
+
+      if (kycToReject?.id) triggerHighlight(kycToReject.id);
     },
+    onError: (err: any) => showError(err.response?.data?.message || 'Error al rechazar')
   });
 
   // --- HANDLERS ---
@@ -126,10 +129,15 @@ export const useAdminKYC = () => {
     // State
     currentTab,
     setCurrentTab,
-    currentData,
+    
+    // ✨ Data procesada
+    kycList, 
+    highlightedId,
+
+    // Estado unificado
     isLoading,
-    error,
-    lastActionId,
+    error, // ✅ AHORA SÍ SE EXPORTA
+
     selectedKyc,
     rejectReason,
     setRejectReason,
@@ -139,7 +147,7 @@ export const useAdminKYC = () => {
     rejectModal,
     confirmDialog,
     
-    // Mutaciones Status
+    // Status
     isApproving: approveMutation.isPending,
     isRejecting: rejectMutation.isPending,
 

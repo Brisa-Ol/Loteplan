@@ -1,6 +1,6 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 
-// 1. Definimos todas las acciones posibles en la app
+// 1. Tipos de acciones
 export type ConfirmAction =
   | 'cancel_subscription'
   | 'admin_cancel_subscription'
@@ -19,158 +19,62 @@ export type ConfirmAction =
   | 'force_confirm_transaction'
   | 'cancel_puja'
   | 'cancel_ganadora_anticipada'
-  | 'delete_bulk_images'        // ✅ Borrado masivo de imágenes
-  | 'delete_single_image'       // ✅ Borrado individual de imagen
-  | 'close_with_unsaved_changes' // ✅ Cerrar modal con cambios sin guardar
+  | 'delete_bulk_images'
+  | 'delete_single_image'
+  | 'close_with_unsaved_changes'
   | null;
 
-interface ConfirmConfig {
+export interface ConfirmConfig {
   title: string;
   description: string;
   confirmText: string;
   severity: 'error' | 'warning' | 'info' | 'success';
-  requireInput?: boolean; 
+  requireInput?: boolean;
   inputLabel?: string;
   inputPlaceholder?: string;
 }
 
-// 2. Configuración centralizada (Fallbacks y textos estáticos)
-const CONFIRM_CONFIGS: Record<NonNullable<ConfirmAction>, ConfirmConfig> = {
-  cancel_subscription: {
-    title: '¿Cancelar suscripción?',
-    description: 'Perderás tu progreso de antigüedad, tokens acumulados y se detendrán los cobros futuros. Esta acción es irreversible.',
-    confirmText: 'Sí, cancelar definitivamente',
-    severity: 'error',
-  },
-  cancel_ganadora_anticipada: {
-    title: '¿Anular adjudicación?',
-    description: 'Se anulará la victoria del usuario, se devolverá su token y se marcará como intento fallido.',
-    confirmText: 'Sí, Anular',
-    severity: 'error',
-    requireInput: true,
-    inputLabel: 'Motivo de la anulación',
-    inputPlaceholder: 'Ej: El usuario notificó que no tiene fondos...'
-  },
-  admin_cancel_subscription: {
-    title: '¿Forzar cancelación?',
-    description: 'Se cancelará la suscripción del usuario inmediatamente.', 
-    confirmText: 'Sí, cancelar suscripción',
-    severity: 'error',
-  },
-  remove_favorite: {
-    title: '¿Quitar de favoritos?',
-    description: 'El lote se eliminará de tu lista de seguimiento.',
-    confirmText: 'Sí, quitar',
-    severity: 'warning',
-  },
-  delete_account: {
-    title: '¿Eliminar cuenta?',
-    description: 'Se eliminarán todos tus datos permanentemente. Esta acción NO se puede deshacer.',
-    confirmText: 'Sí, eliminar mi cuenta',
-    severity: 'error',
-  },
-  logout: {
-    title: '¿Cerrar sesión?',
-    description: 'Tendrás que ingresar tus credenciales nuevamente para acceder.',
-    confirmText: 'Sí, salir',
-    severity: 'info',
-  },
-  toggle_project_visibility: {
-    title: '¿Cambiar visibilidad?',
-    description: 'Esto afectará si los usuarios pueden ver el proyecto.', 
-    confirmText: 'Confirmar',
-    severity: 'warning',
-  },
-  toggle_user_status: {
-    title: '¿Cambiar estado del usuario?',
-    description: 'Afectará el acceso del usuario a la plataforma.', 
-    confirmText: 'Confirmar',
-    severity: 'warning',
-  },
-  toggle_lote_visibility: {
-    title: '¿Cambiar visibilidad del lote?',
-    description: 'Esto ocultará o mostrará el lote en el listado público.', 
-    confirmText: 'Confirmar',
-    severity: 'warning',
-  },
-  start_project_process: {
-    title: '¿Iniciar proceso de cobro?',
-    description: 'Esto activará el conteo de meses y generará las cuotas para todos los suscriptores. Esta acción notificará a los usuarios.',
-    confirmText: 'Sí, iniciar ahora',
-    severity: 'warning',
-  },
-  start_auction: {
-    title: '¿Iniciar subasta?',
-    description: 'Los usuarios podrán comenzar a pujar inmediatamente.', 
-    confirmText: 'Sí, iniciar',
-    severity: 'warning',
-  },
-  end_auction: {
-    title: '¿Finalizar subasta?',
-    description: 'Se cerrará la subasta y se determinará un ganador. Esta acción es irreversible.', 
-    confirmText: 'Sí, finalizar',
-    severity: 'error',
-  },
-  delete_plantilla: {
-    title: '¿Eliminar plantilla?',
-    description: 'El archivo se moverá a la papelera.', 
-    confirmText: 'Sí, eliminar',
-    severity: 'error',
-  },
-  toggle_plantilla_status: {
-    title: '¿Cambiar estado?',
-    description: 'Afectará la disponibilidad de la plantilla para nuevos contratos.', 
-    confirmText: 'Confirmar',
-    severity: 'warning',
-  },
-  approve_kyc: {
-    title: '¿Aprobar verificación?',
-    description: 'El usuario será habilitado para operar.',
-    confirmText: 'Sí, Aprobar',
-    severity: 'info', 
-  },
-  force_confirm_transaction: {
-    title: '¿Forzar confirmación?',
-    description: 'Esta acción marcará la transacción como pagada manualmente. Solo usar si el dinero fue verificado en banco.',
-    confirmText: 'Sí, Forzar Pago',
-    severity: 'error',
-  },
-  cancel_puja: {
-    title: '¿Cancelar puja?',
-    description: 'Tu oferta será retirada de la subasta.',
-    confirmText: 'Sí, cancelar puja',
-    severity: 'warning',
-  },
-  delete_bulk_images: {
-    title: '¿Eliminar imágenes seleccionadas?',
-    description: 'Esta acción no se puede deshacer.',
-    confirmText: 'Sí, eliminar',
-    severity: 'error',
-  },
-  delete_single_image: {
-    title: '¿Eliminar imagen?',
-    description: 'La imagen será eliminada permanentemente de la galería.',
-    confirmText: 'Sí, eliminar',
-    severity: 'error',
-  },
-  close_with_unsaved_changes: {
-    title: '¿Cerrar sin guardar?',
-    description: 'Tienes imágenes pendientes de subir que se perderán.',
-    confirmText: 'Sí, cerrar',
-    severity: 'warning',
-  },
+// 2. Configuración Base Estática
+const BASE_CONFIGS: Record<string, Partial<ConfirmConfig>> = {
+  // Destructivas (Rojo/Error)
+  delete_account: { title: '¿Eliminar cuenta?', confirmText: 'Sí, eliminar mi cuenta', severity: 'error' },
+  admin_cancel_subscription: { title: '¿Forzar cancelación?', confirmText: 'Sí, cancelar suscripción', severity: 'error' },
+  end_auction: { title: '¿Finalizar subasta?', confirmText: 'Sí, finalizar', severity: 'error' },
+  delete_plantilla: { title: '¿Eliminar plantilla?', confirmText: 'Sí, eliminar', severity: 'error' },
+  force_confirm_transaction: { title: '¿Forzar confirmación?', confirmText: 'Sí, Forzar Pago', severity: 'error' },
+  cancel_ganadora_anticipada: { title: '¿Anular adjudicación?', confirmText: 'Sí, Anular', severity: 'error', requireInput: true },
+  delete_bulk_images: { title: '¿Eliminar imágenes?', confirmText: 'Sí, eliminar', severity: 'error' },
+  delete_single_image: { title: '¿Eliminar imagen?', confirmText: 'Sí, eliminar', severity: 'error' },
+  cancel_subscription: { title: '¿Cancelar suscripción?', confirmText: 'Sí, cancelar definitivamente', severity: 'error' },
+
+  // Advertencias / Decisiones (Naranja/Warning - Se verán como Primary)
+  close_with_unsaved_changes: { title: '¿Cerrar sin guardar?', confirmText: 'Sí, cerrar', severity: 'warning' },
+  logout: { title: '¿Cerrar sesión?', confirmText: 'Sí, salir', severity: 'info' }, // Info usa Primary por defecto
+  remove_favorite: { title: '¿Quitar de favoritos?', confirmText: 'Sí, quitar', severity: 'warning' },
+  cancel_puja: { title: '¿Cancelar puja?', confirmText: 'Sí, cancelar puja', severity: 'warning' },
+  
+  // Toggles (Warning)
+  toggle_project_visibility: { severity: 'warning' },
+  toggle_user_status: { severity: 'warning' },
+  toggle_lote_visibility: { severity: 'warning' },
+  toggle_plantilla_status: { severity: 'warning' },
+  
+  // Acciones Operativas (Info/Success)
+  start_project_process: { title: '¿Iniciar proceso de cobro?', confirmText: 'Sí, iniciar ahora', severity: 'warning' },
+  start_auction: { title: '¿Iniciar subasta?', confirmText: 'Sí, iniciar', severity: 'warning' },
+  approve_kyc: { title: '¿Aprobar verificación?', confirmText: 'Sí, Aprobar', severity: 'info' },
 };
 
-// 3. El Hook
+// 3. El Hook Optimizado
 export const useConfirmDialog = () => {
   const [state, setState] = useState<{
     open: boolean;
     action: ConfirmAction;
     data: any;
-  }>({ 
-    open: false, 
-    action: null, 
-    data: null 
+  }>({
+    open: false,
+    action: null,
+    data: null,
   });
 
   const confirm = useCallback((action: NonNullable<ConfirmAction>, data?: any) => {
@@ -181,171 +85,105 @@ export const useConfirmDialog = () => {
     setState({ open: false, action: null, data: null });
   }, []);
 
-  // Obtenemos la configuración dinámica basada en la acción y los datos
-  const getConfig = (): ConfirmConfig | null => {
+  // Lógica dinámica para resolver textos
+  const config = useMemo((): ConfirmConfig | null => {
     if (!state.action) return null;
 
-    // Obtenemos la config base
-    const baseConfig = CONFIRM_CONFIGS[state.action];
+    const base = BASE_CONFIGS[state.action] || {};
+    const data = state.data || {};
+    
+    // Valores por defecto seguros
+    let title = base.title || '¿Estás seguro?';
+    let description = base.description || 'Esta acción podría tener consecuencias.';
+    let confirmText = base.confirmText || 'Confirmar';
+    let severity = base.severity || 'info';
 
-    // --- LÓGICA DINÁMICA (Overrides) ---
+    // --- Lógica Dinámica Específica ---
+    switch (state.action) {
+      case 'logout':
+        description = 'Tendrás que ingresar tus credenciales nuevamente para acceder.';
+        break;
+      case 'close_with_unsaved_changes':
+        description = `Tienes ${data.count} imagen${data.count > 1 ? 'es' : ''} pendiente${data.count > 1 ? 's' : ''} de subir. Si cierras ahora, se perderán.`;
+        break;
+      case 'delete_single_image':
+        description = `La imagen "${data.imagen?.descripcion || 'seleccionada'}" será eliminada permanentemente.`;
+        break;
+      case 'delete_bulk_images':
+        description = `Se eliminarán ${data.count} imágenes permanentemente.`;
+        break;
+      case 'delete_account':
+        description = 'Se eliminarán todos tus datos permanentemente. Esta acción NO se puede deshacer.';
+        break;
+      case 'cancel_subscription':
+        description = 'Perderás tu progreso de antigüedad y tokens. Esta acción es irreversible.';
+        break;
+      case 'cancel_puja':
+        const monto = data.monto_puja ? `$${data.monto_puja}` : 'tu monto';
+        description = `Estás a punto de cancelar tu oferta de ${monto} para ${data.lote?.nombre_lote || 'este lote'}.`;
+        break;
+      
+      // Toggles Genéricos (Visibilidad/Estado)
+      case 'toggle_project_visibility':
+      case 'toggle_lote_visibility':
+      case 'toggle_user_status':
+      case 'toggle_plantilla_status':
+        const isActive = data.activo;
+        const entity = state.action.split('_')[1]; // project, lote, user, plantilla
+        const actionVerb = isActive ? 'Ocultar' : 'Mostrar';
+        const actionVerbUser = isActive ? 'Desactivar' : 'Activar'; // Caso especial usuario/plantilla
+        
+        if (state.action === 'toggle_user_status' || state.action === 'toggle_plantilla_status') {
+            title = `¿${actionVerbUser} ${entity}?`;
+            confirmText = `Sí, ${actionVerbUser.toLowerCase()}`;
+            description = isActive 
+                ? `El ${entity} quedará inhabilitado para operar.`
+                : `El ${entity} recuperará el acceso/disponibilidad.`;
+            if(isActive) severity = 'error'; // Desactivar usuario es grave
+        } else {
+            title = `¿${actionVerb} ${entity}?`;
+            confirmText = `Sí, ${actionVerb.toLowerCase()}`;
+            description = isActive 
+                ? `El ${entity} dejará de ser visible públicamente.`
+                : `El ${entity} será visible para todos los usuarios.`;
+        }
+        break;
 
-    // 1. Forzar transacción (Admin)
-    if (state.action === 'force_confirm_transaction' && state.data) {
-        return {
-            ...baseConfig,
-            title: `¿Forzar transacción #${state.data.id}?`,
-            description: `⚠️ ESTA ACCIÓN ES IRREVERSIBLE. Estás confirmando manualmente que el dinero llegó. El usuario recibirá sus activos inmediatamente.`,
-        };
+      case 'admin_cancel_subscription':
+        const user = data.usuario ? `${data.usuario.nombre} ${data.usuario.apellido}` : 'el usuario';
+        description = `Cancelarás la suscripción de ${user}. Se generará deuda por el saldo restante.`;
+        break;
+
+      case 'start_auction':
+        description = `Se iniciará la subasta para "${data.nombre_lote}". Los usuarios podrán pujar inmediatamente.`;
+        break;
+      case 'end_auction':
+        description = `Se cerrará la subasta para "${data.nombre_lote}". Se determinará un ganador automáticamente.`;
+        break;
+        
+      case 'approve_kyc':
+        description = `Estás a punto de validar la identidad de ${data.nombre_completo}. Quedará habilitado.`;
+        break;
+        
+      case 'force_confirm_transaction':
+        description = `⚠️ IRREVERSIBLE. Confirmas manualmente que el dinero llegó (Transacción #${data.id}).`;
+        break;
     }
 
-    // 2. Anular adjudicación anticipada
-    if (state.action === 'cancel_ganadora_anticipada' && state.data) {
-        return {
-            ...baseConfig,
-            description: `Estás por anular la adjudicación del Lote ${state.data.nombre_lote} al usuario #${state.data.id_ganador}.`,
-        };
-    }
-
-    // 3. Aprobar KYC (Admin)
-    if (state.action === 'approve_kyc' && state.data) {
-        const userName = state.data.nombre_completo || 'el usuario';
-        return {
-            ...baseConfig,
-            description: `Estás a punto de validar la identidad de ${userName}. Quedará habilitado para operar.`,
-        };
-    }
-
-    // 4. Visibilidad Proyecto (Admin)
-    if (state.action === 'toggle_project_visibility' && state.data) {
-      const isActive = state.data.activo;
-      return {
-        ...baseConfig,
-        title: isActive ? '¿Ocultar proyecto?' : '¿Mostrar proyecto?',
-        description: isActive 
-          ? 'El proyecto dejará de ser visible para los usuarios.'
-          : 'El proyecto será visible para todos los usuarios. Asegúrate de que esté listo.',
-        confirmText: isActive ? 'Sí, ocultar' : 'Sí, mostrar',
-        severity: isActive ? 'warning' : 'info',
-      };
-    }
-
-    // 5. Estado Usuario (Admin)
-    if (state.action === 'toggle_user_status' && state.data) {
-      const isActive = state.data.activo;
-      const userName = `${state.data.nombre} ${state.data.apellido}`;
-      return {
-        ...baseConfig,
-        title: isActive ? '¿Desactivar usuario?' : '¿Activar usuario?',
-        description: isActive 
-          ? `${userName} no podrá iniciar sesión hasta que sea reactivado manualmente.`
-          : `${userName} recuperará el acceso completo a la plataforma.`,
-        confirmText: isActive ? 'Sí, Desactivar' : 'Sí, Activar',
-        severity: isActive ? 'error' : 'info',
-      };
-    }
-
-    // 6. Visibilidad Lote (Admin)
-    if (state.action === 'toggle_lote_visibility' && state.data) {
-      const isActive = state.data.activo;
-      return {
-        ...baseConfig,
-        title: isActive ? '¿Ocultar lote?' : '¿Mostrar lote?',
-        confirmText: isActive ? 'Sí, ocultar' : 'Sí, mostrar',
-        severity: isActive ? 'warning' : 'info',
-      };
-    }
-
-    // 7. Iniciar Subasta (Admin)
-    if (state.action === 'start_auction' && state.data) {
-      return {
-        ...baseConfig,
-        description: `Se iniciará la subasta para "${state.data.nombre_lote}". Los usuarios podrán pujar inmediatamente.`,
-      };
-    }
-
-    // 8. Finalizar Subasta (Admin)
-    if (state.action === 'end_auction' && state.data) {
-      return {
-        ...baseConfig,
-        description: `Se finalizará la subasta para "${state.data.nombre_lote}". Se determinará un ganador y se bloquearán nuevas ofertas.`,
-      };
-    }
-
-    // 9. Borrar Plantilla (Admin)
-    if (state.action === 'delete_plantilla' && state.data) {
-      return {
-        ...baseConfig,
-        description: `La plantilla "${state.data.nombre_archivo}" será movida a la papelera.`,
-      };
-    }
-
-    // 10. Estado Plantilla (Admin)
-    if (state.action === 'toggle_plantilla_status' && state.data) {
-      const isActive = state.data.activo;
-      return {
-        ...baseConfig,
-        title: isActive ? '¿Desactivar plantilla?' : '¿Activar plantilla?',
-        confirmText: isActive ? 'Sí, desactivar' : 'Sí, activar',
-        severity: isActive ? 'warning' : 'info',
-      };
-    }
-
-    // 11. Cancelar Suscripción (Admin)
-    if (state.action === 'admin_cancel_subscription' && state.data) {
-      const userName = state.data.usuario ? `${state.data.usuario.nombre} ${state.data.usuario.apellido}` : 'el usuario';
-      const lote = state.data.nombre_lote || `ID ${state.data.id}`;
-      return {
-        ...baseConfig,
-        title: `¿Cancelar suscripción #${state.data.id}?`,
-        description: `Estás a punto de cancelar la suscripción de ${userName} para el lote ${lote}. Se generará deuda por el saldo restante.`,
-      };
-    }
-
-    // 12. Cancelar Puja (Cliente)
-    if (state.action === 'cancel_puja' && state.data) {
-        const monto = state.data.monto_puja 
-            ? new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(state.data.monto_puja)
-            : 'tu monto';
-            
-        const nombreLote = state.data.lote?.nombre_lote || 'este lote';
-
-        return {
-            ...baseConfig,
-            description: `Estás a punto de cancelar tu oferta de ${monto} para ${nombreLote}. El token será devuelto a tu cuenta.`,
-        };
-    }
-
-    // 13. Borrado Masivo de Imágenes
-    if (state.action === 'delete_bulk_images' && state.data) {
-        return {
-            ...baseConfig,
-            description: `Se eliminarán ${state.data.count} imagen${state.data.count > 1 ? 'es' : ''} permanentemente. Esta acción no se puede deshacer.`,
-        };
-    }
-
-    // 14. Borrado Individual de Imagen
-    if (state.action === 'delete_single_image' && state.data) {
-        return {
-            ...baseConfig,
-            description: `La imagen "${state.data.imagen?.descripcion || 'Sin nombre'}" será eliminada permanentemente.`,
-        };
-    }
-
-    // 15. Cerrar con cambios sin guardar
-    if (state.action === 'close_with_unsaved_changes' && state.data) {
-        return {
-            ...baseConfig,
-            description: `Tienes ${state.data.count} imagen${state.data.count > 1 ? 'es' : ''} pendiente${state.data.count > 1 ? 's' : ''} de subir. Si cierras ahora, se perderán.`,
-        };
-    }
-
-    return baseConfig;
-  };
+    return {
+      title,
+      description,
+      confirmText,
+      severity,
+      requireInput: base.requireInput,
+      inputLabel: base.inputLabel,
+      inputPlaceholder: base.inputPlaceholder,
+    };
+  }, [state.action, state.data]);
 
   return {
     ...state,
-    config: getConfig(),
+    config,
     confirm,
     close,
   };

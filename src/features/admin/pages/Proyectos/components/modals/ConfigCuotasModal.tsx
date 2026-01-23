@@ -21,14 +21,13 @@ import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { addMonths } from 'date-fns'; 
-import type { ProyectoDto } from '../../../../../../core/types/dto/proyecto.dto';
-import useSnackbar from '../../../../../../shared/hooks/useSnackbar';
-import CuotaMensualService from '../../../../../../core/api/services/cuotaMensual.service';
-import type { CreateCuotaMensualDto } from '../../../../../../core/types/dto/cuotaMensual.dto';
-import BaseModal from '../../../../../../shared/components/domain/modals/BaseModal/BaseModal';
+
+import type { ProyectoDto } from '@/core/types/dto/proyecto.dto';
+import useSnackbar from '@/shared/hooks/useSnackbar';
+import CuotaMensualService from '@/core/api/services/cuotaMensual.service';
+import type { CreateCuotaMensualDto } from '@/core/types/dto/cuotaMensual.dto';
+import BaseModal from '@/shared/components/domain/modals/BaseModal/BaseModal';
 import ProyectoPriceHistory from '../ProyectoPriceHistory';
-
-
 
 interface ConfigCuotasModalProps {
   open: boolean;
@@ -48,11 +47,13 @@ const validationSchema = Yup.object({
 const ConfigCuotasModal: React.FC<ConfigCuotasModalProps> = ({ open, onClose, proyecto }) => {
   const theme = useTheme();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState(0); 
-  const [showHistory, setShowHistory] = useState(false);
   const { showSuccess, showError } = useSnackbar();
 
-  // 1. QUERY: Obtener la última configuración
+  // --- 1. HOOKS (SIEMPRE PRIMERO) ---
+  const [activeTab, setActiveTab] = useState(0); 
+  const [showHistory, setShowHistory] = useState(false);
+
+  // Query: Obtener configuración
   const { data: responseBackend, isLoading: isLoadingData } = useQuery({
     queryKey: ['cuotaActive', proyecto?.id],
     queryFn: async () => {
@@ -64,10 +65,12 @@ const ConfigCuotasModal: React.FC<ConfigCuotasModalProps> = ({ open, onClose, pr
             return null;
         }
     },
+    // Solo se ejecuta si hay proyecto Y es mensual
     enabled: open && !!proyecto && proyecto.tipo_inversion === 'mensual',
     retry: false 
   });
 
+  // Mutation: Crear Configuración
   const createMutation = useMutation({
     mutationFn: async (data: CreateCuotaMensualDto) => (await CuotaMensualService.create(data)).data,
     onSuccess: (response) => {
@@ -88,6 +91,7 @@ const ConfigCuotasModal: React.FC<ConfigCuotasModalProps> = ({ open, onClose, pr
     }
   });
 
+  // Formik
   const formik = useFormik<CreateCuotaMensualDto>({
     initialValues: {
       id_proyecto: proyecto?.id || 0,
@@ -110,8 +114,7 @@ const ConfigCuotasModal: React.FC<ConfigCuotasModalProps> = ({ open, onClose, pr
           id_proyecto: proyecto.id,
           nombre_proyecto: proyecto.nombre_proyecto,
           total_cuotas_proyecto: proyecto.plazo_inversion || 12,
-          
-          // 🔥 ENVÍO AL BACKEND: Dividimos por 100 para enviar decimales (0.19)
+          // Conversión a decimal para backend
           porcentaje_administrativo: values.porcentaje_administrativo / 100,
           porcentaje_iva: values.porcentaje_iva / 100,
           porcentaje_plan: values.porcentaje_plan / 100
@@ -122,10 +125,9 @@ const ConfigCuotasModal: React.FC<ConfigCuotasModalProps> = ({ open, onClose, pr
     },
   });
 
-  // Efecto para cargar datos del backend
+  // Efecto: Cargar datos iniciales
   useEffect(() => {
     const cuotaData = responseBackend?.cuota; 
-
     if (cuotaData) {
         const pPlan = Number(cuotaData.porcentaje_plan);
         const pAdmin = Number(cuotaData.porcentaje_administrativo);
@@ -138,73 +140,39 @@ const ConfigCuotasModal: React.FC<ConfigCuotasModalProps> = ({ open, onClose, pr
             nombre_cemento_cemento: cuotaData.nombre_cemento_cemento || '',
             valor_cemento_unidades: Number(cuotaData.valor_cemento_unidades) || 0,
             valor_cemento: Number(cuotaData.valor_cemento) || 0,
-            
-            // 🔥 RECIBIR DEL BACKEND: Multiplicamos por 100 para mostrar enteros (19)
+            // Conversión a entero para input
             porcentaje_plan: pPlan <= 1 ? pPlan * 100 : pPlan,
             porcentaje_administrativo: pAdmin <= 1 ? pAdmin * 100 : pAdmin,
             porcentaje_iva: pIva <= 1 ? pIva * 100 : pIva,
         });
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [responseBackend, proyecto]);
 
-  const handleClose = () => {
-    formik.resetForm();
-    setShowHistory(false);
-    setActiveTab(0);
-    onClose(); 
-  };
-
-  if (!proyecto) return null;
-
-  if (proyecto.tipo_inversion !== 'mensual') {
-    return (
-      <BaseModal open={open} onClose={handleClose} title="No Disponible" icon={<WarningIcon />} hideConfirmButton cancelText="Cerrar">
-        <Typography>Solo para proyectos mensuales.</Typography>
-      </BaseModal>
-    );
-  }
-
-  // =========================================================
-  // 🧮 LÓGICA DE CÁLCULO VISUAL (EXACTA AL BACKEND)
-  // =========================================================
+  // --- CÁLCULOS (HOOKS DEBEN ESTAR AQUÍ ANTES DE CUALQUIER RETURN) ---
   
-  const plazo = proyecto.plazo_inversion || 1;
+  const plazo = proyecto?.plazo_inversion || 1;
   const unidades = Number(formik.values.valor_cemento_unidades) || 0;
   const precioUnitario = Number(formik.values.valor_cemento) || 0;
   
-  // 1. Convertimos inputs (enteros) a decimales para operar igual que el back
   const pctPlanDecimal = Number(formik.values.porcentaje_plan) / 100;
   const pctAdminDecimal = Number(formik.values.porcentaje_administrativo) / 100;
   const pctIvaDecimal = Number(formik.values.porcentaje_iva) / 100;
 
-  // 2. Valor Móvil Total
   const valorMovil = unidades * precioUnitario;
-  
-  // 3. Valor Mensual FULL (Base 100% para admin)
   const valorMensualFull = valorMovil / plazo;
-
-  // 4. Valor Mensual del Plan (Capital)
-  // Backend: const total_del_plan = valor_movil * (porcentaje_plan decimal);
   const totalDelPlan = valorMovil * pctPlanDecimal;
-  // Backend: const valor_mensual_plan = total_del_plan / plazo;
   const valorMensualPlan = totalDelPlan / plazo;
-
-  // 5. Carga Administrativa (Sobre FULL)
-  // Backend: const carga_administrativa = valor_mensual_full * (porcentaje_administrativo decimal);
   const cargaAdministrativa = valorMensualFull * pctAdminDecimal;
-  
-  // 6. IVA (Sobre carga)
-  // Backend: const iva_carga_administrativa = carga_administrativa * (porcentaje_iva decimal);
   const ivaCarga = cargaAdministrativa * pctIvaDecimal;
-  
-  // 7. Total Final
   const valorMensualFinal = valorMensualPlan + cargaAdministrativa + ivaCarga;
 
-  // --- GENERACIÓN DE CRONOGRAMA PROYECTADO ---
+  // useMemo: Cronograma (EL QUE DABA ERROR)
   const cronogramaProyectado = useMemo(() => {
+      // 🛡️ Guarda de seguridad DENTRO del hook
+      if (!proyecto || !proyecto.fecha_inicio) return [];
+
       const cuotas = [];
-      const fechaInicio = proyecto.fecha_inicio ? new Date(proyecto.fecha_inicio) : new Date();
+      const fechaInicio = new Date(proyecto.fecha_inicio);
       
       for (let i = 1; i <= plazo; i++) {
           const fechaCuota = addMonths(fechaInicio, i);
@@ -217,10 +185,30 @@ const ConfigCuotasModal: React.FC<ConfigCuotasModalProps> = ({ open, onClose, pr
           });
       }
       return cuotas;
-  }, [plazo, proyecto.fecha_inicio, valorMensualFinal, valorMensualPlan, cargaAdministrativa, ivaCarga]);
+  }, [plazo, proyecto?.fecha_inicio, valorMensualFinal, valorMensualPlan, cargaAdministrativa, ivaCarga]);
+
+  // --- HANDLERS ---
+  const handleClose = () => {
+    formik.resetForm();
+    setShowHistory(false);
+    setActiveTab(0);
+    onClose(); 
+  };
 
   const sectionTitleSx = { fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', mb: 2, display: 'flex', alignItems: 'center', gap: 1, fontSize: '0.75rem' };
 
+  // --- 2. EARLY RETURNS (AHORA SÍ ES SEGURO) ---
+  if (!proyecto) return null;
+
+  if (proyecto.tipo_inversion !== 'mensual') {
+    return (
+      <BaseModal open={open} onClose={handleClose} title="No Disponible" icon={<WarningIcon />} hideConfirmButton cancelText="Cerrar">
+        <Typography>Solo para proyectos mensuales.</Typography>
+      </BaseModal>
+    );
+  }
+
+  // --- 3. RENDER ---
   return (
     <BaseModal
       open={open}

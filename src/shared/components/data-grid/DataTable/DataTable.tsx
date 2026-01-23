@@ -20,7 +20,7 @@ import {
   alpha
 } from '@mui/material';
 
-// --- DataSwitch (Sin cambios funcionales) ---
+// --- DataSwitch ---
 interface DataSwitchProps {
   active: boolean;
   onChange: () => void;
@@ -104,15 +104,11 @@ export function DataTable<T>({
   const visibleColumns = columns.filter(col => !(isMobile && col.hideOnMobile));
 
   return (
-    // 🧹 LIMPIEZA: Quitados borderRadius, boxShadow y borders manuales. 
-    // El Theme (MuiTableContainer) ya define el borde gris y el radius de 16px.
     <TableContainer component={Paper} sx={{ ...sx }}>
       <Table size={isMobile ? 'small' : 'medium'}>
         <TableHead>
           <TableRow>
             {visibleColumns.map((column) => (
-              // 🧹 LIMPIEZA: Quitados bg color, font weights, borders y colores de texto.
-              // El Theme (MuiTableCell.styleOverrides.head) ya hace todo esto.
               <TableCell
                 key={column.id}
                 align={column.align || 'left'}
@@ -137,20 +133,28 @@ export function DataTable<T>({
               const isHighlighted = highlightedRowId === rowKey;
               const isActive = isRowActive ? isRowActive(row) : true;
 
-              // Lógica dinámica de colores (esto SÍ se queda porque depende del estado de la fila)
               const defaultRowStyles: SxProps<Theme> = {
                 cursor: onRowClick ? 'pointer' : 'default',
                 transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                
+                // 1. Fondo (Verde si nuevo, Gris si inactivo)
                 bgcolor: isHighlighted 
                   ? alpha(theme.palette.success.main, 0.12)
                   : !isActive 
                     ? alpha(theme.palette.grey[500], 0.06)
                     : 'inherit',
+                
+                // 2. ✨ NUEVO: Opacidad (Atenúa todo el contenido si está inactivo)
+                // ESTO ES LO QUE FALTABA
+                opacity: !isActive ? 0.6 : 1,
+
                 '&:hover': {
                   bgcolor: isHighlighted 
                     ? alpha(theme.palette.success.main, 0.18)
-                    : alpha(theme.palette.primary.main, 0.08), // Hover suave naranja
+                    : alpha(theme.palette.primary.main, 0.08),
                   transform: onRowClick ? 'translateX(2px)' : 'none',
+                  // Al hacer hover, recuperamos un poco la opacidad para que sea legible
+                  opacity: !isActive ? 0.85 : 1, 
                 },
               };
 
@@ -182,7 +186,6 @@ export function DataTable<T>({
         </TableBody>
       </Table>
 
-      {/* 🧹 LIMPIEZA: El borde superior ya lo maneja el Theme (MuiTablePagination) */}
       {pagination && data.length > 0 && (
         <TablePagination
           rowsPerPageOptions={rowsPerPageOptions}

@@ -12,7 +12,6 @@ import type { LoteDto } from "./lote.dto";
  * - Los proyectos directos tienen monto_inversion fijo
  * - Soft delete: activo: true/false
  * 
- * @see {@link https://github.com/.../models/proyecto.js} Modelo Backend
  */
 
 // ==========================================

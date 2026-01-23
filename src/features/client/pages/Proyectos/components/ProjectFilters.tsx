@@ -1,58 +1,83 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { 
   Box, TextField, MenuItem, Button, Stack, InputAdornment, 
-  Paper, useTheme, alpha 
+  Paper, useTheme, alpha, IconButton, Tooltip, Typography, Chip
 } from "@mui/material";
 import { 
   FilterList as FilterIcon, 
   Search as SearchIcon, 
   Clear as ClearIcon,
-  LocationOn,
-  Category
+  Category,
 } from "@mui/icons-material";
 
+import type { EstadoProyecto } from "@/core/types/dto/proyecto.dto";
+
 interface ProjectFiltersProps {
-  onFilter: (filters: { location: string; status: string; search: string }) => void;
+  onFilter: (filters: { status: string; search: string }) => void;
 }
 
 export const ProjectFilters: React.FC<ProjectFiltersProps> = ({ onFilter }) => {
   const theme = useTheme();
   
-  const [search, setSearch] = useState("");
-  const [location, setLocation] = useState("");
-  const [status, setStatus] = useState("todos");
+  // Estado local para input (actualización inmediata)
+  const [localSearch, setLocalSearch] = useState("");
+  
+  // Estado para filtros aplicados (con debounce)
+  const [status, setStatus] = useState<EstadoProyecto | "todos">("todos");
+  
+  // ✅ MEJORA 1: Debounce para búsqueda (300ms)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const debouncedSearch = useCallback(
+    (() => {
+      let timeoutId: NodeJS.Timeout;
+      return (value: string) => {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => {
+          onFilter({ status, search: value });
+        }, 300);
+      };
+    })(),
+    [status, onFilter]
+  );
 
-  const handleApplyFilters = () => {
-    onFilter({ 
-        location, 
-        status: status === "todos" ? "" : status,
-        search 
-    });
+  // Efecto para aplicar debounce cuando cambia localSearch
+  useEffect(() => {
+    debouncedSearch(localSearch);
+  }, [localSearch, debouncedSearch]);
+
+  // Handler para cambio de estado (sin debounce, es un select)
+  const handleStatusChange = (newStatus: EstadoProyecto | "todos") => {
+    setStatus(newStatus);
+    onFilter({ status: newStatus, search: localSearch });
   };
 
   const handleClearFilters = () => {
-    setSearch("");
-    setLocation("");
+    setLocalSearch("");
     setStatus("todos");
-    onFilter({ location: "", status: "", search: "" });
+    onFilter({ status: "todos", search: "" });
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') handleApplyFilters();
-  };
+  // ✅ MEJORA 2: Indicador visual de filtros activos
+  const tieneFiltrosActivos = localSearch || status !== 'todos';
 
   return (
-    <Box sx={{ display: "flex", justifyContent: "center", mb: 5, width: "100%", px: 2 }}>
+    <Box sx={{ display: "flex", justifyContent: "center", mb: 5, width: "100%", px: { xs: 2, md: 0 } }}>
       <Paper
         elevation={0}
         sx={{
           p: 2,
           borderRadius: 4, 
-          boxShadow: theme.shadows[4], // Sombra flotante suave
+          boxShadow: `0 8px 32px ${alpha(theme.palette.common.black, 0.08)}`,
           border: `1px solid ${theme.palette.divider}`,
-          maxWidth: 1100,
+          maxWidth: 900,
           width: "100%",
-          bgcolor: 'background.paper'
+          bgcolor: 'background.paper',
+          transition: 'all 0.3s ease',
+          '&:focus-within': {
+            transform: 'translateY(-2px)',
+            boxShadow: `0 12px 40px ${alpha(theme.palette.primary.main, 0.15)}`,
+            borderColor: theme.palette.primary.main
+          }
         }}
       >
         <Stack 
@@ -60,12 +85,11 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({ onFilter }) => {
           spacing={2} 
           alignItems="center"
         >
-          {/* 🔍 Búsqueda por Nombre */}
+          {/* 🔍 Búsqueda con Debounce */}
           <TextField
-            placeholder="Buscar proyecto..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            onKeyPress={handleKeyPress}
+            placeholder="Buscar proyecto por nombre..."
+            value={localSearch}
+            onChange={(e) => setLocalSearch(e.target.value)}
             fullWidth
             size="small"
             InputProps={{
@@ -74,26 +98,18 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({ onFilter }) => {
                   <SearchIcon color="action" />
                 </InputAdornment>
               ),
-              sx: { borderRadius: 2 }
-            }}
-          />
-
-          {/* 📍 Filtro por Ubicación */}
-          <TextField
-            placeholder="Ubicación / Zona"
-            value={location}
-            onChange={(e) => setLocation(e.target.value)}
-            onKeyPress={handleKeyPress}
-            fullWidth
-            size="small"
-            sx={{ maxWidth: { md: 280 } }}
-            InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <LocationOn color="action" fontSize="small" />
-                  </InputAdornment>
-                ),
-                sx: { borderRadius: 2 }
+              // ✅ MEJORA 3: Botón para limpiar búsqueda
+              endAdornment: localSearch && (
+                <InputAdornment position="end">
+                  <IconButton
+                    size="small"
+                    onClick={() => setLocalSearch("")}
+                    edge="end"
+                  >
+                    <ClearIcon fontSize="small" />
+                  </IconButton>
+                </InputAdornment>
+              ),
             }}
           />
 
@@ -101,67 +117,92 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({ onFilter }) => {
           <TextField
             select
             value={status}
-            onChange={(e) => setStatus(e.target.value)}
+            onChange={(e) => handleStatusChange(e.target.value as EstadoProyecto | "todos")}
             fullWidth
             size="small"
-            sx={{ maxWidth: { md: 220 } }}
+            sx={{ maxWidth: { md: 250 } }}
             InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
                     <Category color="action" fontSize="small" />
                   </InputAdornment>
                 ),
-                sx: { borderRadius: 2 }
             }}
           >
-            <MenuItem value="todos">Todos los Estados</MenuItem>
-            <MenuItem value="En proceso">En Proceso (Activos)</MenuItem>
-            <MenuItem value="En Espera">Próximamente</MenuItem>
-            <MenuItem value="Finalizado">Finalizados</MenuItem>
+            <MenuItem value="todos">
+                <Typography variant="body2" fontWeight={500}>Todos los estados</Typography>
+            </MenuItem>
+            
+            <MenuItem value="En proceso">
+                <Box display="flex" alignItems="center" gap={1}>
+                    <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'success.main' }} />
+                    <Typography variant="body2">En proceso</Typography>
+                </Box>
+            </MenuItem>
+            
+            <MenuItem value="En Espera">
+                <Box display="flex" alignItems="center" gap={1}>
+                    <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'warning.main' }} />
+                    <Typography variant="body2">Próximamente</Typography>
+                </Box>
+            </MenuItem>
+            
+            <MenuItem value="Finalizado">
+                <Box display="flex" alignItems="center" gap={1}>
+                    <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'text.disabled' }} />
+                    <Typography variant="body2">Finalizados</Typography>
+                </Box>
+            </MenuItem>
           </TextField>
 
-          {/* Botones de Acción */}
-          <Stack direction="row" spacing={1} sx={{ minWidth: { xs: '100%', md: 'auto' } }}>
-            <Button
-              variant="contained"
-              startIcon={<FilterIcon />}
-              onClick={handleApplyFilters}
-              fullWidth
-              disableElevation
-              sx={{ 
-                  py: 1, 
-                  fontWeight: 700, 
-                  borderRadius: 2,
-                  textTransform: 'none',
-                  whiteSpace: 'nowrap',
-                  px: 3
-              }}
-            >
-              Aplicar Filtros
-            </Button>
-            
-            {(search || location || status !== 'todos') && (
-                <Button 
-                    variant="outlined" 
-                    onClick={handleClearFilters}
-                    sx={{ 
-                        minWidth: 50, 
-                        px: 1, 
-                        borderRadius: 2,
-                        borderColor: theme.palette.divider,
-                        color: 'text.secondary',
-                        '&:hover': {
-                            borderColor: theme.palette.error.main,
-                            color: theme.palette.error.main,
-                            bgcolor: alpha(theme.palette.error.main, 0.05)
-                        }
-                    }}
-                >
-                <ClearIcon />
-                </Button>
+          {/* ✅ MEJORA 4: Botón de limpiar solo cuando hay filtros */}
+          {tieneFiltrosActivos && (
+            <Tooltip title="Limpiar todos los filtros">
+              <IconButton 
+                onClick={handleClearFilters}
+                size="small"
+                sx={{ 
+                    border: `1px solid ${theme.palette.divider}`,
+                    borderRadius: 2,
+                    color: 'text.secondary',
+                    minWidth: 40,
+                    height: 40,
+                    '&:hover': {
+                        borderColor: theme.palette.error.main,
+                        color: theme.palette.error.main,
+                        bgcolor: alpha(theme.palette.error.main, 0.05)
+                    }
+                }}
+              >
+               <ClearIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+        </Stack>
+
+        {/* ✅ MEJORA 5: Chips de filtros activos */}
+        {tieneFiltrosActivos && (
+          <Stack direction="row" spacing={1} mt={2} flexWrap="wrap" useFlexGap>
+            {localSearch && (
+              <Chip
+                label={`Búsqueda: "${localSearch}"`}
+                size="small"
+                onDelete={() => setLocalSearch("")}
+                color="primary"
+                variant="outlined"
+              />
+            )}
+            {status !== 'todos' && (
+              <Chip
+                label={`Estado: ${status}`}
+                size="small"
+                onDelete={() => handleStatusChange("todos")}
+                color="primary"
+                variant="outlined"
+              />
             )}
           </Stack>
-        </Stack>
+        )}
       </Paper>
     </Box>
   );

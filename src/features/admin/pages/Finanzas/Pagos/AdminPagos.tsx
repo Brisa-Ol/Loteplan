@@ -10,23 +10,19 @@ import {
 } from '@mui/icons-material';
 
 import { DataTable, type DataTableColumn } from '../../../../../shared/components/data-grid/DataTable/DataTable';
-
 import { PageContainer } from '../../../../../shared/components/layout/containers/PageContainer/PageContainer';
 import { PageHeader } from '../../../../../shared/components/layout/headers/PageHeader';
 import { StatCard } from '../../../../../shared/components/domain/cards/StatCard/StatCard';
-
 import { QueryHandler } from '../../../../../shared/components/data-grid/QueryHandler/QueryHandler';
+import { FilterBar, FilterSelect } from '../../../../../shared/components/forms/filters/FilterBar/FilterBar';
+
 import DetallePagoModal from './components/DetallePagoModal';
 import { useAdminPagos } from '../../../hooks/useAdminPagos';
 import type { PagoDto } from '../../../../../core/types/dto/pago.dto';
-import { FilterBar, FilterSelect } from '../../../../../shared/components/forms/filters/FilterBar/FilterBar';
-
-
 
 const AdminPagos: React.FC = () => {
-  const logic = useAdminPagos(); // Hook
+  const logic = useAdminPagos(); 
 
-  // Columnas (Memoizadas aquí para acceder a theme y helpers del hook)
   const columns = useMemo<DataTableColumn<PagoDto>[]>(() => [
     { 
       id: 'id', label: 'ID', minWidth: 50,
@@ -167,9 +163,13 @@ const AdminPagos: React.FC = () => {
       <QueryHandler isLoading={logic.isLoading} error={logic.error as Error | null}>
         <DataTable
             columns={columns}
+            // ✨ Datos ordenados
             data={logic.filteredPagos}
             getRowKey={(p) => p.id}
+            
+            // ✨ Highlight visual
             highlightedRowId={logic.highlightedId}
+            
             isRowActive={(p) => p.estado_pago !== 'cancelado' && p.estado_pago !== 'cubierto_por_puja'}
             emptyMessage="No se encontraron pagos con estos filtros."
             pagination={true}

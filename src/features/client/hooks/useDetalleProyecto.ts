@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+// src/features/client/hooks/useDetalleProyecto.ts
+
+import { useEffect, useMemo, useRef, useState, type SyntheticEvent } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
@@ -13,8 +15,6 @@ import TransaccionService from '@/core/api/services/transaccion.service';
 import ProyectoService from '@/core/api/services/proyecto.service';
 import SuscripcionService from '@/core/api/services/suscripcion.service';
 import MercadoPagoService from '@/core/api/services/pagoMercado.service';
-
-
 
 export const useDetalleProyecto = () => {
   const { id } = useParams<{ id: string }>();
@@ -43,32 +43,44 @@ export const useDetalleProyecto = () => {
     twoFA: useModal(),
   };
 
-  // --- QUERIES ---
+  // --- QUERIES OPTIMIZADAS ---
+  
+  // ✅ OPTIMIZACIÓN 1: Query principal con staleTime agresivo
   const { data: proyecto, isLoading: loadingProyecto } = useQuery({
     queryKey: ['proyecto', id],
     queryFn: async () => (await ProyectoService.getByIdActive(Number(id))).data,
-    retry: false,
+    retry: 1, // Solo 1 reintento en lugar de 3
+    staleTime: 5 * 60 * 1000, // 5 minutos (los proyectos no cambian tan rápido)
+    gcTime: 10 * 60 * 1000, // Mantener en caché 10 minutos
   });
 
+  // ✅ OPTIMIZACIÓN 2: Queries condicionales solo si hay usuario
   const { data: misContratos } = useQuery({
     queryKey: ['misContratos'],
     queryFn: async () => (await ContratoService.getMyContracts()).data,
     enabled: !!user,
+    staleTime: 3 * 60 * 1000, // 3 minutos
+    gcTime: 5 * 60 * 1000,
   });
 
+  // ✅ OPTIMIZACIÓN 3: Queries separadas según tipo de proyecto
   const { data: misInversiones } = useQuery({
     queryKey: ['misInversiones'],
     queryFn: async () => (await InversionService.getMisInversiones()).data,
     enabled: !!user && proyecto?.tipo_inversion === 'directo',
+    staleTime: 2 * 60 * 1000,
+    gcTime: 5 * 60 * 1000,
   });
 
   const { data: misSuscripciones } = useQuery({
     queryKey: ['misSuscripciones'],
     queryFn: async () => (await SuscripcionService.getMisSuscripciones()).data,
     enabled: !!user && proyecto?.tipo_inversion === 'mensual',
+    staleTime: 2 * 60 * 1000,
+    gcTime: 5 * 60 * 1000,
   });
 
-  // --- ESTADOS DERIVADOS ---
+  // --- ESTADOS DERIVADOS (Memoizados) ---
   const yaFirmo = useMemo(() => {
     if (!misContratos || !proyecto) return false;
     return !!misContratos.find(c => c.id_proyecto === proyecto.id && c.estado_firma === 'FIRMADO');
@@ -111,11 +123,15 @@ export const useDetalleProyecto = () => {
       showError("El pago fue rechazado o no se completó.");
       limpiarUrl();
     }
-    return () => { if (pollingTimeoutRef.current) clearTimeout(pollingTimeoutRef.current); };
-  }, [location]);
+    
+    return () => { 
+      if (pollingTimeoutRef.current) clearTimeout(pollingTimeoutRef.current); 
+    };
+  }, [location.search]); // ✅ OPTIMIZACIÓN 4: Solo depende de search, no de todo location
 
   const limpiarUrl = () => window.history.replaceState({}, document.title, window.location.pathname);
 
+  // ✅ OPTIMIZACIÓN 5: Polling con límite de intentos y backoff
   const verificarEstadoPago = async (transaccionId: number, intentos = 0) => {
     setVerificandoPago(true);
     try {
@@ -123,12 +139,20 @@ export const useDetalleProyecto = () => {
       if (data.estado_transaccion === 'pagado') {
         setVerificandoPago(false);
         limpiarUrl();
-        queryClient.invalidateQueries({ queryKey: ['misInversiones'] });
-        queryClient.invalidateQueries({ queryKey: ['misSuscripciones'] });
+        
+        // ✅ Invalidación específica según tipo
+        if (proyecto?.tipo_inversion === 'directo') {
+          queryClient.invalidateQueries({ queryKey: ['misInversiones'] });
+        } else {
+          queryClient.invalidateQueries({ queryKey: ['misSuscripciones'] });
+        }
+        
         modales.pagoExitoso.open();
       } else {
-        if (intentos < 10) {
-          pollingTimeoutRef.current = setTimeout(() => verificarEstadoPago(transaccionId, intentos + 1), 3000);
+        if (intentos < 8) { // Reducido de 10 a 8
+          // Backoff progresivo: 3s, 4s, 5s...
+          const delay = 3000 + (intentos * 1000);
+          pollingTimeoutRef.current = setTimeout(() => verificarEstadoPago(transaccionId, intentos + 1), delay);
         } else {
           setVerificandoPago(false);
           showInfo("Pago aprobado en MP. Espera unos minutos a que impacte en el sistema.");
@@ -137,10 +161,11 @@ export const useDetalleProyecto = () => {
       }
     } catch (error) {
       setVerificandoPago(false);
+      showError("Error al verificar el pago. Intenta refrescar la página.");
     }
   };
 
-  // --- MUTACIONES ---
+  // --- MUTACIONES OPTIMIZADAS ---
   const handleInversion = useMutation({
     mutationFn: async () => {
       if (!proyecto) throw new Error("Proyecto no cargado");
@@ -174,8 +199,14 @@ export const useDetalleProyecto = () => {
         window.location.href = data.redirectUrl;
         return;
       }
-      queryClient.invalidateQueries({ queryKey: ['misInversiones'] });
-      queryClient.invalidateQueries({ queryKey: ['misSuscripciones'] });
+      
+      // ✅ Invalidación selectiva
+      if (proyecto?.tipo_inversion === 'directo') {
+        queryClient.invalidateQueries({ queryKey: ['misInversiones'] });
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['misSuscripciones'] });
+      }
+      
       modales.pagoExitoso.open();
     },
     onError: () => {
@@ -192,10 +223,15 @@ export const useDetalleProyecto = () => {
     onSuccess: (data: any) => {
       modales.twoFA.close();
       setError2FA(null);
-      if (data.redirectUrl) window.location.href = data.redirectUrl;
-      else {
-        queryClient.invalidateQueries({ queryKey: ['misInversiones'] });
-        queryClient.invalidateQueries({ queryKey: ['misSuscripciones'] });
+      if (data.redirectUrl) {
+        window.location.href = data.redirectUrl;
+      } else {
+        // ✅ Invalidación selectiva
+        if (proyecto?.tipo_inversion === 'directo') {
+          queryClient.invalidateQueries({ queryKey: ['misInversiones'] });
+        } else {
+          queryClient.invalidateQueries({ queryKey: ['misSuscripciones'] });
+        }
         modales.pagoExitoso.open();
       }
     },
@@ -203,6 +239,10 @@ export const useDetalleProyecto = () => {
   });
 
   // --- HANDLERS UI ---
+  const handleTabChange = (event: SyntheticEvent, newValue: number) => {
+    setTabValue(newValue);
+  };
+
   const handleContinuarAFirma = () => {
     modales.pagoExitoso.close();
     setTimeout(() => { modales.firma.open(); }, 500);
@@ -242,6 +282,7 @@ export const useDetalleProyecto = () => {
     loadingProyecto,
     tabValue,
     setTabValue,
+    handleTabChange,
     yaFirmo,
     puedeFirmar,
     is2FAMissing,

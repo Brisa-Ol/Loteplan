@@ -26,7 +26,6 @@ import {
   Tooltip as RechartsTooltip, ResponsiveContainer, XAxis, YAxis,
 } from 'recharts';
 
-
 import { DataTable } from '../../../../shared/components/data-grid/DataTable/DataTable';
 import { PageContainer } from '../../../../shared/components/layout/containers/PageContainer/PageContainer';
 import { PageHeader } from '../../../../shared/components/layout/headers/PageHeader';
@@ -71,7 +70,7 @@ const AdminDashboard: React.FC = () => {
             icon={<PendingActionsIcon />} 
             color="error" 
             loading={logic.isLoading}
-            onClick={() => logic.navigate('/Admin/Usuarios/AdminKYC')} 
+            onClick={() => logic.navigate('/admin/kyc')} 
         />
         <StatCard 
             title="Total Invertido" 
@@ -95,7 +94,7 @@ const AdminDashboard: React.FC = () => {
             icon={<GavelIcon />} 
             color="warning" 
             loading={logic.isLoading}
-            onClick={() => logic.navigate('/admin/subastas')} 
+            onClick={() => logic.navigate('/admin/pujas')} 
         />
       </Box>
 
@@ -189,6 +188,7 @@ const AdminDashboard: React.FC = () => {
             <Divider />
             <DataTable
               columns={[
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 { id: 'nombre_usuario', label: 'Usuario', render: (row: any) => (
                   <Stack direction="row" alignItems="center" spacing={2}>
                     <Avatar sx={{ width: 32, height: 32, fontSize: 14 }}>{row.nombre_usuario.charAt(0).toUpperCase()}</Avatar>
@@ -230,6 +230,7 @@ const AdminDashboard: React.FC = () => {
             />
             <Divider />
             <CardContent>
+              {/* Se podría refactorizar esto a un subcomponente si crece más */}
               {logic.loadingPopularidad ? (
                   <Stack alignItems="center" py={4}><CircularProgress /></Stack>
               ) : logic.popularidadLotes.length > 0 ? (

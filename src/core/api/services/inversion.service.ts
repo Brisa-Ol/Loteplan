@@ -14,7 +14,7 @@ interface BackendResponse<T> {
 
 const InversionService = {
 
-  // ... (Métodos de Gestión de Inversiones - SIN CAMBIOS) ...
+  
   iniciar: async (data: CreateInversionDto): Promise<AxiosResponse<InversionInitResponse>> => {
     return await httpService.post(`${BASE_ENDPOINT}`, data);
   },
@@ -35,7 +35,7 @@ const InversionService = {
     return await httpService.get(`${BASE_ENDPOINT}/${id}`);
   },
 
-  // ... (Métodos Administrativos - SIN CAMBIOS) ...
+ 
   findAll: async (): Promise<AxiosResponse<InversionDto[]>> => {
     return await httpService.get(BASE_ENDPOINT);
   },
@@ -53,7 +53,7 @@ const InversionService = {
   },
 
   // =================================================
-  // 📊 MÉTRICAS (ADMIN) - KPIs [CORREGIDO]
+  // 📊 MÉTRICAS (ADMIN) - KPIs 
   // =================================================
 
   /**

@@ -1,118 +1,137 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Card, CardMedia, CardContent, Typography, Chip, Box, Button,
-  useTheme, alpha, Divider, Stack, LinearProgress, Tooltip
+  useTheme, alpha, Divider, Stack, LinearProgress
 } from "@mui/material";
 import {
-  ArrowForward, CalendarMonth, MonetizationOn, MapsHomeWork,
-  GppGood, Group, AccessTime, LocalOffer
+  ArrowForward, CalendarMonth, GppGood, Group, 
+  AccessTime, LocalOffer, Map, BusinessCenter, BrokenImage
 } from "@mui/icons-material";
-import ImagenService from "@/core/api/services/imagen.service";
 import type { ProyectoDto } from "@/core/types/dto/proyecto.dto";
+import { useProyectoHelpers } from "@/features/client/hooks/useProyectoHelpers";
 
 // ==========================================
-// 1. HELPERS & UTILS
+// SUBCOMPONENTES VISUALES
 // ==========================================
 
-const getStatusConfig = (status: string) => {
-  switch (status) {
-    case 'En proceso': return { label: 'Activo', color: 'success' as const };
-    case 'Finalizado': return { label: 'Finalizado', color: 'default' as const };
-    default: return { label: 'Próximamente', color: 'info' as const };
-  }
-};
-
-const formatMoney = (amount: number, currency: string) => {
-  return new Intl.NumberFormat('es-AR', {
-    style: 'currency',
-    currency: currency === 'USD' ? 'USD' : 'ARS',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0
-  }).format(amount);
-};
-
-const getDaysRemaining = (dateString: string) => {
-  if (!dateString) return 0;
-  const end = new Date(dateString);
-  const now = new Date();
-  const diff = end.getTime() - now.getTime();
-  return Math.ceil(diff / (1000 * 3600 * 24));
-};
-
-// ==========================================
-// 2. SUB-COMPONENTES
-// ==========================================
-
-const StatItem: React.FC<{ label: string; icon: React.ReactNode; value: string | number; align?: 'left' | 'right' }> = ({ label, icon, value, align = 'left' }) => (
-  <Box textAlign={align}>
-    <Typography variant="caption" color="text.secondary" display="block" mb={0.5} sx={{ fontSize: '0.7rem' }}>
-      {label}
-    </Typography>
-    <Stack 
-      direction="row" 
-      spacing={0.5} 
-      alignItems="center" 
-      justifyContent={align === 'right' ? 'flex-end' : 'flex-start'} 
-      color={align === 'left' ? "primary.main" : "text.primary"}
-    >
-      {icon}
-      <Typography variant={align === 'left' ? "subtitle1" : "subtitle2"} fontWeight={align === 'left' ? 800 : 700}>
-        {value}
-      </Typography>
-    </Stack>
-  </Box>
-);
-
-const CardHeader: React.FC<{ project: ProyectoDto }> = ({ project }) => {
-  const { label, color } = getStatusConfig(project.estado_proyecto);
-
-  const imageUrl = project.imagenes && project.imagenes.length > 0
-    ? ImagenService.resolveImageUrl(project.imagenes[0].url) 
-    : '/assets/placeholder-project.jpg'; 
+const CardHeader: React.FC<{ 
+  imagenPrincipal: string; 
+  badge: any; 
+  esPack: boolean;
+  estadoConfig: { label: string; color: string };
+  diasRestantes: number;
+  esUrgente: boolean;
+  nombreProyecto: string;
+  onImageError: () => void;
+}> = ({ imagenPrincipal, badge, esPack, estadoConfig, diasRestantes, esUrgente, nombreProyecto, onImageError }) => {
+  const theme = useTheme();
+  const BadgeIcon = badge.icon;
+  const [imageLoaded, setImageLoaded] = useState(false);
 
   return (
-    <Box sx={{ position: 'relative', height: 200, overflow: 'hidden' }}>
-      <CardMedia
-        component="img"
-        height="100%"
-        image={imageUrl}
-        alt={project.nombre_proyecto}
-        sx={{ objectFit: 'cover', transition: 'transform 0.5s ease' }}
-        onError={(e) => {
-            const img = e.target as HTMLImageElement;
-            const fallback = '/assets/placeholder-project.jpg';
-            if (img.src.includes('placeholder-project.jpg')) return;
-            img.src = fallback; 
+    <Box sx={{ position: 'relative', height: 200, overflow: 'hidden', bgcolor: 'grey.100' }}>
+      {/* ✅ MEJORA 1: Lazy loading de imágenes */}
+      <CardMedia 
+        component="img" 
+        height="100%" 
+        image={imagenPrincipal} 
+        alt={nombreProyecto}
+        loading="lazy"
+        onLoad={() => setImageLoaded(true)}
+        onError={onImageError}
+        sx={{ 
+          objectFit: 'cover', 
+          transition: 'all 0.5s ease',
+          opacity: imageLoaded ? 1 : 0,
+          '&:hover': { transform: 'scale(1.05)' }
+        }} 
+      />
+
+      {/* ✅ MEJORA 2: Placeholder mientras carga */}
+      {!imageLoaded && (
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            bgcolor: 'grey.200'
+          }}
+        >
+          <BrokenImage sx={{ fontSize: 48, color: 'grey.400' }} />
+        </Box>
+      )}
+      
+      {/* Gradiente superior para legibilidad */}
+      <Box sx={{ 
+        position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
+        background: 'linear-gradient(180deg, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0) 40%)',
+        pointerEvents: 'none' 
+      }} />
+      
+      {/* Badge tipo inversión (Izquierda) */}
+      <Chip 
+        icon={<BadgeIcon sx={{ fontSize: '16px !important', color: 'inherit' }} />}
+        label={badge.label}
+        size="small"
+        color="primary"
+        sx={{ 
+          position: 'absolute', top: 12, left: 12,
+          boxShadow: 2, fontSize: '0.75rem'
         }}
       />
       
-      {/* Overlay Gradiente para mejorar lectura de textos sobre imagen */}
-      <Box sx={{
-        position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
-        background: 'linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0) 60%)',
-        pointerEvents: 'none'
-      }} />
-      
-      {/* Badge Estado */}
-      <Chip
-        label={label}
-        color={color}
-        size="small"
-        variant="filled"
-        sx={{ position: 'absolute', top: 12, right: 12, fontWeight: 700, boxShadow: 2, height: 24 }}
-      />
-
-      {/* Badge Pack */}
-      {project.pack_de_lotes && (
-        <Chip
-          icon={<LocalOffer sx={{ fontSize: '14px !important', color: 'inherit !important' }} />}
-          label="Pack Lotes"
+      {/* Stack Superior Derecho: Estado + Pack */}
+      <Stack 
+        direction="column" 
+        spacing={0.5} 
+        alignItems="flex-end"
+        sx={{ position: 'absolute', top: 12, right: 12 }}
+      >
+        {/* Badge de Estado */}
+        <Chip 
+          label={estadoConfig.label}
+          color={estadoConfig.color as any} 
           size="small"
           sx={{ 
-            position: 'absolute', top: 12, left: 12, 
-            fontWeight: 700, boxShadow: 2, height: 24,
-            bgcolor: 'secondary.main', 
-            color: 'secondary.contrastText' // Ajuste fino: usa el color de texto correcto según el tema
+            color: 'white', 
+            boxShadow: 2,
+            fontSize: '0.75rem',
+            ...(estadoConfig.color === 'default' && {
+               bgcolor: alpha(theme.palette.common.black, 0.6),
+               backdropFilter: 'blur(4px)'
+            })
+          }}
+        />
+
+        {/* Badge Pack */}
+        {esPack && (
+          <Chip 
+            icon={<LocalOffer sx={{ fontSize: '16px !important' }}/>}
+            label="PACK"
+            color="warning"
+            size="small"
+            sx={{ boxShadow: 2 }}
+          />
+        )}
+      </Stack>
+      
+      {/* Badge Urgencia */}
+      {esUrgente && (
+        <Chip 
+          icon={<AccessTime sx={{ fontSize: '16px !important' }}/>}
+          label={`${diasRestantes} días`}
+          size="small"
+          sx={{ 
+            position: 'absolute', bottom: 12, right: 12,
+            bgcolor: 'rgba(0,0,0,0.7)', 
+            color: 'white',
+            backdropFilter: 'blur(4px)',
+            border: 'none'
           }}
         />
       )}
@@ -120,190 +139,239 @@ const CardHeader: React.FC<{ project: ProyectoDto }> = ({ project }) => {
   );
 };
 
-const CardInfo: React.FC<{ project: ProyectoDto; type: "ahorrista" | "inversionista" }> = ({ project, type }) => {
+const CardInfo: React.FC<{ 
+  nombreProyecto: string;
+  descripcion: string;
+  esMensual: boolean;
+  progreso: any;
+  formaJuridica?: string;
+  tieneUbicacion: boolean;
+  cantidadLotes: number;
+}> = ({ nombreProyecto, descripcion, esMensual, progreso, formaJuridica, tieneUbicacion, cantidadLotes }) => {
   const theme = useTheme();
-  
-  const daysLeft = getDaysRemaining(project.fecha_cierre);
-  const percent = project.obj_suscripciones > 0 
-    ? (project.suscripciones_actuales / project.obj_suscripciones) * 100 
-    : 0;
 
   return (
-    <>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
-        <Chip
-          label={type === "ahorrista" ? "Plan Ahorro" : "Inversión"}
-          size="small"
-          variant="outlined"
-          sx={{
-            borderRadius: 1, height: 20, fontSize: '0.65rem', fontWeight: 700,
-            borderColor: theme.palette.primary.main, 
-            color: theme.palette.primary.main,
-            bgcolor: alpha(theme.palette.primary.main, 0.05)
-          }}
-        />
-
-        {daysLeft > 0 && daysLeft <= 30 && project.estado_proyecto === 'En proceso' && (
-          <Tooltip title={`Cierra el ${new Date(project.fecha_cierre).toLocaleDateString()}`}>
-             <Chip 
-                icon={<AccessTime sx={{ fontSize: '14px !important' }} />}
-                label={`${daysLeft} días rest.`}
-                size="small"
-                color="warning"
-                variant="outlined"
-                sx={{ height: 20, fontSize: '0.65rem', border: 'none', bgcolor: alpha(theme.palette.warning.main, 0.1) }}
-             />
-          </Tooltip>
-        )}
-      </Stack>
-
-      <Typography variant="h6" gutterBottom fontWeight={700} noWrap title={project.nombre_proyecto} sx={{ mb: 0.5 }}>
-        {project.nombre_proyecto}
+    <Box>
+      <Typography 
+        variant="h6" 
+        gutterBottom 
+        fontWeight={700} 
+        sx={{ 
+          lineHeight: 1.2, height: 48, overflow: 'hidden',
+          display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical'
+        }}
+      >
+        {nombreProyecto}
       </Typography>
-
-      <Stack direction="row" spacing={2} mb={1.5} alignItems="center">
-        {project.forma_juridica && (
-          <Tooltip title="Respaldo Legal">
-             <Stack direction="row" spacing={0.5} alignItems="center" color="text.secondary">
-               <GppGood sx={{ fontSize: 16, color: 'success.main' }} />
-               <Typography variant="caption" fontWeight={500} noWrap sx={{ maxWidth: 100 }}>
-                 {project.forma_juridica}
-               </Typography>
-             </Stack>
-          </Tooltip>
-        )}
-        {project.suscripciones_actuales > 0 && (
-           <Tooltip title="Inversores actuales">
-             <Stack direction="row" spacing={0.5} alignItems="center" color="text.secondary">
-               <Group sx={{ fontSize: 16, color: 'action.active' }} />
-               <Typography variant="caption" fontWeight={500}>
-                 {project.suscripciones_actuales} inv.
-               </Typography>
-             </Stack>
-           </Tooltip>
-        )}
-      </Stack>
-
-      {/* Barra de progreso solo para ahorristas en proceso */}
-      {type === 'ahorrista' && project.estado_proyecto === 'En proceso' && project.obj_suscripciones > 0 && (
-        <Box sx={{ mb: 2 }}>
-           <Stack direction="row" justifyContent="space-between" mb={0.5}>
-              <Typography variant="caption" fontWeight={700} color="primary.main" fontSize="0.7rem">
-                 {Math.round(percent)}% Financiado
+      
+      <Typography 
+        variant="body2" 
+        color="text.secondary" 
+        mb={2}
+        sx={{ 
+          display: '-webkit-box', WebkitLineClamp: 2,
+          WebkitBoxOrient: 'vertical', overflow: 'hidden',
+          minHeight: 40
+        }}
+      >
+        {descripcion || 'Oportunidad de inversión disponible.'}
+      </Typography>
+      
+      {/* Progreso para planes mensuales */}
+      {esMensual && progreso && (
+        <Box sx={{ 
+          mb: 2, p: 1.5,
+          bgcolor: alpha(theme.palette.primary.main, 0.04),
+          borderRadius: 2
+        }}>
+          <Stack direction="row" justifyContent="space-between" mb={0.5} alignItems="center">
+            <Stack direction="row" spacing={0.5} alignItems="center">
+              <Group fontSize="small" color="primary" sx={{ fontSize: 16 }} />
+              <Typography variant="caption" fontWeight={700} color="primary.dark">
+                Cupos
               </Typography>
-           </Stack>
-           <LinearProgress 
-              variant="determinate" 
-              value={percent > 100 ? 100 : percent} 
-              sx={{ height: 6, borderRadius: 3, bgcolor: alpha(theme.palette.primary.main, 0.1) }} 
-           />
+            </Stack>
+            <Typography variant="caption" fontWeight={700} color="primary.main">
+              {progreso.actual} / {progreso.meta}
+            </Typography>
+          </Stack>
+          <LinearProgress 
+            variant="determinate" 
+            value={progreso.porcentaje}
+            sx={{ height: 6, borderRadius: 3 }}
+          />
         </Box>
       )}
-
-      {/* Descripción corta para inversionistas */}
-      {type !== 'ahorrista' && (
-        <Typography variant="body2" color="text.secondary" mb={2} sx={{
-          display: '-webkit-box', 
-          WebkitLineClamp: 2, 
-          WebkitBoxOrient: 'vertical',
-          overflow: 'hidden', 
-          minHeight: 40, // Altura mínima para alinear tarjetas
-          fontSize: '0.875rem', 
-          lineHeight: 1.5
-        }}>
-          {project.descripcion || 'Sin descripción disponible.'}
-        </Typography>
+      
+      {/* Info para inversión directa */}
+      {!esMensual && (
+        <Stack direction="row" spacing={1} mb={3}>
+          {tieneUbicacion && (
+            <Chip 
+              label="Mapa"
+              size="small"
+              icon={<Map fontSize="small"/>}
+              sx={{ 
+                bgcolor: alpha(theme.palette.primary.main, 0.08),
+                color: 'primary.dark',
+                border: 'none'
+              }}
+            />
+          )}
+          <Chip 
+            label={cantidadLotes > 0 ? `${cantidadLotes} Disp.` : "Consultar"}
+            size="small"
+            variant="outlined"
+            color="primary"
+            icon={<BusinessCenter fontSize="small"/>}
+          />
+        </Stack>
       )}
-    </>
+      
+      {/* Forma jurídica */}
+      {formaJuridica && (
+        <Stack direction="row" spacing={0.5} alignItems="center" mb={1}>
+          <GppGood color="success" sx={{ fontSize: 16 }} />
+          <Typography variant="caption" color="text.secondary" fontWeight={500}>
+            {formaJuridica}
+          </Typography>
+        </Stack>
+      )}
+    </Box>
   );
 };
 
-const CardFinancials: React.FC<{ project: ProyectoDto; type: "ahorrista" | "inversionista"; onClick?: () => void }> = ({ project, type, onClick }) => {
-  const monto = formatMoney(Number(project.monto_inversion), project.moneda);
-
+const CardFinancials: React.FC<{ 
+  esMensual: boolean;
+  precioFormateado: string;
+  plazoTexto: string;
+  estaFinalizado: boolean;
+  onClick?: () => void;
+}> = ({ esMensual, precioFormateado, plazoTexto, estaFinalizado, onClick }) => {
   return (
     <Box mt="auto">
-      <Stack direction="row" justifyContent="space-between" alignItems="flex-end" flexWrap="nowrap">
-        <StatItem 
-          label={type === "ahorrista" ? "Valor de Cuota" : "Inversión Total"}
-          icon={<MonetizationOn sx={{ fontSize: 18 }} />}
-          value={monto}
-        />
+      <Divider sx={{ mb: 2 }} />
+      
+      <Stack direction="row" justifyContent="space-between" alignItems="center">
+        <Box>
+          <Typography variant="caption" color="text.secondary" fontWeight={600} display="block">
+            {esMensual ? 'Valor de Suscripción' : 'Valor de Inversión'}
+          </Typography>
+          <Typography 
+            variant="h6" 
+            color="primary.main" 
+            fontWeight={700}
+            sx={{ letterSpacing: -0.5 }}
+          >
+            {precioFormateado}
+          </Typography>
+        </Box>
         
-        <StatItem 
-          align="right"
-          label={type === "ahorrista" ? "Plazo Total" : "Disponibilidad"}
-          icon={type === "ahorrista" ? <CalendarMonth sx={{ fontSize: 16, color: 'text.secondary' }} /> : <MapsHomeWork sx={{ fontSize: 16, color: 'text.secondary' }} />}
-          value={type === "ahorrista" ? `${project.plazo_inversion} meses` : `${project.lotes?.length || 0} Lotes`}
-        />
+        <Box textAlign="right">
+          <Typography variant="caption" color="text.secondary" fontWeight={600} display="block">
+            Modalidad
+          </Typography>
+          <Stack direction="row" alignItems="center" justifyContent="flex-end" spacing={0.5}>
+            {esMensual && <CalendarMonth sx={{ fontSize: 16, color: 'text.secondary' }} />}
+            <Typography variant="body2" fontWeight={600}>
+              {plazoTexto}
+            </Typography>
+          </Stack>
+        </Box>
       </Stack>
-
-      <Button
-        variant="contained" 
-        fullWidth 
+      
+      <Button 
+        variant="contained"
+        fullWidth
         disableElevation
-        endIcon={<ArrowForward />}
+        disabled={estaFinalizado}
+        endIcon={!estaFinalizado && <ArrowForward />}
         onClick={onClick}
-        sx={{ 
-            mt: 3, 
-            fontWeight: 700, 
-            borderRadius: 2, 
-            textTransform: 'none', 
-            py: 1.2,
-            transition: 'transform 0.2s',
-            '&:active': { transform: 'scale(0.98)' } 
-        }}
+        sx={{ mt: 2 }}
       >
-        Ver Oportunidad
+        {estaFinalizado 
+          ? 'Convocatoria Finalizada' 
+          : (esMensual ? 'Suscribirme al Plan' : 'Ver Disponibilidad')
+        }
       </Button>
     </Box>
   );
 };
 
 // ==========================================
-// 3. COMPONENTE PRINCIPAL
+// COMPONENTE PRINCIPAL
 // ==========================================
 
 export interface ProjectCardProps {
   project: ProyectoDto;
-  type: "ahorrista" | "inversionista";
   onClick?: () => void;
 }
 
-export const ProjectCard: React.FC<ProjectCardProps> = ({ project, type, onClick }) => {
+export const ProjectCard: React.FC<ProjectCardProps> = ({ project, onClick }) => {
   const theme = useTheme();
+  const helpers = useProyectoHelpers(project);
+  
+  // ✅ MEJORA 3: Estado para manejar error de imagen
+  const [imageError, setImageError] = useState(false);
+
+  // ✅ MEJORA 4: Handler para error de imagen
+  const handleImageError = () => {
+    setImageError(true);
+  };
+
+  // Si hay error, usar placeholder
+  const imagenFinal = imageError ? '/assets/placeholder-project.jpg' : helpers.imagenPrincipal;
 
   return (
     <Card
-      elevation={0}
       sx={{
-        height: "100%", // Vital para grids
+        height: "100%",
         display: "flex", 
         flexDirection: "column",
-        borderRadius: 4, // Un poco más redondeado (moderno)
+        bgcolor: 'background.paper',
         border: `1px solid ${theme.palette.divider}`,
-        bgcolor: 'background.paper', 
-        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-        position: 'relative',
-        overflow: 'hidden',
+        transition: 'all 0.3s ease',
         "&:hover": {
-          transform: "translateY(-6px)", // Salto suave
-          boxShadow: theme.shadows[8],
+          transform: "translateY(-4px)",
           borderColor: theme.palette.primary.main,
-          '& img': { // Efecto zoom en la imagen al hacer hover en la card
-             transform: 'scale(1.05)'
-          }
+          boxShadow: theme.shadows[8]
         },
       }}
     >
-      <CardHeader project={project} />
+      <CardHeader 
+        imagenPrincipal={imagenFinal}
+        badge={helpers.badge}
+        esPack={!!project.pack_de_lotes}
+        estadoConfig={helpers.estadoConfig}
+        diasRestantes={helpers.diasRestantes}
+        esUrgente={helpers.esUrgente && project.estado_proyecto === 'En proceso'}
+        nombreProyecto={project.nombre_proyecto}
+        onImageError={handleImageError}
+      />
       
-      <CardContent sx={{ flexGrow: 1, display: "flex", flexDirection: "column", p: 3 }}>
-        <CardInfo project={project} type={type} />
+      <CardContent sx={{ 
+        flexGrow: 1, 
+        display: "flex", 
+        flexDirection: "column", 
+        p: 3 
+      }}>
+        <CardInfo 
+          nombreProyecto={project.nombre_proyecto}
+          descripcion={project.descripcion}
+          esMensual={helpers.esMensual}
+          progreso={helpers.progreso}
+          formaJuridica={project.forma_juridica}
+          tieneUbicacion={!!(project.latitud && project.longitud)}
+          cantidadLotes={helpers.cantidadLotes}
+        />
         
-        <Divider sx={{ my: 2, borderStyle: 'dashed' }} />
-        
-        <CardFinancials project={project} type={type} onClick={onClick} />
+        <CardFinancials 
+          esMensual={helpers.esMensual}
+          precioFormateado={helpers.precioFormateado}
+          plazoTexto={helpers.plazoTexto}
+          estaFinalizado={helpers.estaFinalizado}
+          onClick={onClick}
+        />
       </CardContent>
     </Card>
   );

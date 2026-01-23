@@ -1,8 +1,7 @@
 import React from 'react';
-import { Typography, Box, Zoom, useTheme, alpha, Stack, Avatar } from '@mui/material';
+import { Typography, Box, Zoom, useTheme, alpha, Avatar } from '@mui/material';
 import { CheckCircle, ArrowForward } from '@mui/icons-material';
 import BaseModal from '@/shared/components/domain/modals/BaseModal/BaseModal';
-
 
 interface Props {
   open: boolean;
@@ -15,50 +14,62 @@ export const PagoExitosoModal: React.FC<Props> = ({ open, onContinuar }) => {
   return (
     <BaseModal
       open={open}
-      // No pasamos onClose para obligar a la acción positiva, o pasamos una función vacía si BaseModal lo requiere obligatoriamente.
-      onClose={() => {}} 
+      onClose={() => {}} // Función vacía intencional (Modal bloqueante)
+      disableClose // Evita cierre por ESC o click afuera
       title="¡Pago Acreditado!"
       subtitle="Tu inversión ha sido procesada correctamente"
       headerColor="success"
       icon={<CheckCircle />}
       maxWidth="xs"
-      // Configuración del botón principal
+      // Configuración del botón de acción
       confirmText="Firmar Contrato Ahora"
       confirmButtonIcon={<ArrowForward />}
       confirmButtonColor="primary"
       onConfirm={onContinuar}
-      // Ocultamos elementos distractores
       hideCancelButton
-      disableClose // Evita cierre con ESC o click afuera
     >
-      <Box textAlign="center" py={2}>
+      <Box sx={{ textAlign: 'center', py: 3 }}>
         
-        {/* Animación del Icono Central (Opcional, adicional al del header) */}
-        <Box display="flex" justifyContent="center" mb={3}>
-          <Zoom in={open} style={{ transitionDelay: '200ms' }}>
+        {/* Animación del Icono Central */}
+        <Zoom in={open} style={{ transitionDelay: '200ms' }}>
+          <Box sx={{ display: 'inline-flex', position: 'relative', mb: 3 }}>
+            {/* Efecto de "Halo" externo */}
+            <Box 
+              sx={{
+                position: 'absolute',
+                inset: -8,
+                borderRadius: '50%',
+                bgcolor: alpha(theme.palette.success.main, 0.05),
+                zIndex: 0
+              }} 
+            />
             <Avatar 
               sx={{ 
-                width: 88, 
-                height: 88,
+                width: 80, 
+                height: 80,
                 bgcolor: alpha(theme.palette.success.main, 0.1), 
-                color: theme.palette.success.main,
-                boxShadow: `0 0 0 12px ${alpha(theme.palette.success.main, 0.05)}`
+                color: 'success.main',
+                position: 'relative',
+                zIndex: 1
               }}
             >
-              <CheckCircle sx={{ fontSize: 48 }} />
+              <CheckCircle sx={{ fontSize: 40 }} />
             </Avatar>
-          </Zoom>
-        </Box>
+          </Box>
+        </Zoom>
         
-        <Typography variant="body1" color="text.secondary" paragraph sx={{ px: 1, mb: 1, lineHeight: 1.6 }}>
+        <Typography 
+          variant="body1" 
+          color="text.secondary" 
+          paragraph 
+          sx={{ maxWidth: '280px', mx: 'auto', mb: 4, lineHeight: 1.6 }}
+        >
           Para finalizar el proceso legal y asegurar tu lote, necesitamos tu firma digital en el contrato.
         </Typography>
 
-        <Stack spacing={1} mt={4}>
-            <Typography variant="caption" color="text.disabled">
-                Paso final del proceso de inversión
-            </Typography>
-        </Stack>
+        <Typography variant="caption" color="text.disabled" display="block">
+            Paso final del proceso de inversión
+        </Typography>
 
       </Box>
     </BaseModal>

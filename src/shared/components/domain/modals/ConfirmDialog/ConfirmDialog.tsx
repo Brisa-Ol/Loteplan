@@ -18,8 +18,7 @@ export const ConfirmDialog: React.FC<Props> = ({
   controller, onConfirm, isLoading, title, description
 }) => {
   const theme = useTheme();
-  
-  // ✅ DETECCIÓN MÓVIL: Para ajustar los botones
+  // Detectar si es móvil para ajustar botones
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   
   const { open, close, config } = controller;
@@ -37,19 +36,49 @@ export const ConfirmDialog: React.FC<Props> = ({
 
   const displayTitle = title || config.title;
   const displayDesc = description || config.description;
-  const severity = config.severity || 'info';
+  const severity = config.severity || 'info'; 
   const confirmText = config.confirmText || 'Confirmar';
 
+  // 🎨 CONFIGURACIÓN VISUAL OPTIMIZADA PARA TU TEMA
   const getSeverityData = () => {
     switch(severity) {
-      case 'error': return { color: theme.palette.error.main, icon: <ErrorOutline />, btnColor: 'error' as const };
-      case 'warning': return { color: theme.palette.warning.main, icon: <Warning />, btnColor: 'warning' as const };
-      case 'success': return { color: theme.palette.success.main, icon: <CheckCircle />, btnColor: 'success' as const };
-      default: return { color: theme.palette.primary.main, icon: <Help />, btnColor: 'primary' as const };
+      case 'error': 
+        return { 
+            // Rojo para acciones destructivas (Borrar)
+            color: theme.palette.error.main, 
+            icon: <ErrorOutline />, 
+            btnColor: 'error' as const,
+            bgAlpha: 0.08
+        };
+      case 'success': 
+        return { 
+            // Verde para éxito
+            color: theme.palette.success.main, 
+            icon: <CheckCircle />, 
+            btnColor: 'success' as const,
+            bgAlpha: 0.08
+        };
+      case 'warning': 
+        // 🌟 CAMBIO CLAVE:
+        // Aunque semánticamente es 'warning', visualmente usamos el estilo PRIMARY (Tu Naranja)
+        // para que se vea igual que el de "Cerrar sesión".
+        return { 
+            color: theme.palette.primary.main, 
+            icon: <Help />, // Usamos el signo de interrogación para mantener consistencia
+            btnColor: 'primary' as const, 
+            bgAlpha: 0.08
+        };
+      default: // info
+        return { 
+            color: theme.palette.primary.main, 
+            icon: <Help />, 
+            btnColor: 'primary' as const,
+            bgAlpha: 0.08
+        };
     }
   };
 
-  const { color: severityColor, icon: severityIcon, btnColor } = getSeverityData();
+  const { color: severityColor, icon: severityIcon, btnColor, bgAlpha } = getSeverityData();
 
   const handleConfirmClick = () => {
     if (config.requireInput && inputValue.trim().length < 3) {
@@ -68,16 +97,23 @@ export const ConfirmDialog: React.FC<Props> = ({
       onClose={isLoading ? undefined : close} 
       maxWidth="xs" 
       fullWidth
-      // ✅ LIMPIEZA: Eliminamos PaperProps con borderRadius hardcodeado.
-      // El theme ya se encarga de darle bordes (12px desk / 8px mobile) y sombras.
+      PaperProps={{
+        elevation: 0,
+        sx: {
+            // Usamos el borde definido en tu tema (borderRadius: 12 según tu theme.ts)
+            borderRadius: 3, 
+            boxShadow: theme.shadows[8], // Sombra suave
+            overflow: 'hidden'
+        }
+      }}
     >
+      {/* HEADER CON COLOR DE FONDO SUAVE */}
       <DialogTitle sx={{ 
-          // ✅ MANTENEMOS solo lo cosmético/color, el padding lo maneja el theme
           display: 'flex', alignItems: 'center', gap: 2,
-          bgcolor: alpha(severityColor, 0.04),
-          borderBottom: `1px solid ${alpha(severityColor, 0.1)}` // Sutil separador
+          bgcolor: alpha(severityColor, bgAlpha), // Fondo sutil del color principal
+          pt: 3, pb: 2, px: 3
       }}>
-          <Avatar variant="rounded" sx={{ bgcolor: alpha(severityColor, 0.1), color: severityColor, width: 40, height: 40 }}>
+          <Avatar variant="rounded" sx={{ bgcolor: alpha(severityColor, 0.15), color: severityColor, width: 42, height: 42, borderRadius: 2 }}>
             {severityIcon}
           </Avatar>
           <Typography variant="h6" component="span" fontWeight={800} color="text.primary" sx={{ lineHeight: 1.2 }}>
@@ -85,11 +121,11 @@ export const ConfirmDialog: React.FC<Props> = ({
           </Typography>
       </DialogTitle>
       
-      {/* ✅ LIMPIEZA: Quitamos sx={{ px: 3 }} porque el theme ya pone el padding correcto */}
-      <DialogContent>
-        <Stack spacing={2} sx={{ mt: 1 }}> 
-            <Typography variant="body1" color="text.secondary">
-            {displayDesc}
+      <DialogContent sx={{ px: 3, pb: 1, pt: 2 }}>
+        <Stack spacing={2}> 
+            {/* Aumentamos un poco el peso de la fuente para mejor legibilidad */}
+            <Typography variant="body1" color="text.secondary" sx={{ fontWeight: 500 }}>
+                {displayDesc}
             </Typography>
 
             {config.requireInput && (
@@ -107,7 +143,7 @@ export const ConfirmDialog: React.FC<Props> = ({
                     onBlur={() => setTouched(true)}
                     error={isInputInvalid}
                     helperText={isInputInvalid ? "Este campo es requerido (mínimo 3 caracteres)" : ""}
-                    size="small" // El theme ya ajusta las fuentes en mobile
+                    size="small"
                     multiline
                     minRows={2}
                     maxRows={4}
@@ -117,33 +153,44 @@ export const ConfirmDialog: React.FC<Props> = ({
       </DialogContent>
       
       <DialogActions sx={{ 
-          bgcolor: alpha(theme.palette.background.default, 0.5), 
-          borderTop: `1px solid ${theme.palette.divider}`,
-          // ✅ MEJORA UX: En móvil cambiamos la dirección de los botones
+          p: 3,
+          pt: 2,
+          // En móvil apilamos los botones, en escritorio van en fila
           flexDirection: isMobile ? 'column-reverse' : 'row',
-          gap: isMobile ? 2 : 0,
+          gap: isMobile ? 1.5 : 1,
       }}>
         <Button 
             onClick={close} 
             disabled={isLoading} 
             color="inherit" 
-            fullWidth={isMobile} // Botón ancho completo en móvil
+            fullWidth={isMobile}
             sx={{ 
                 borderRadius: 2, 
                 fontWeight: 600, 
-                mr: isMobile ? 0 : 'auto' // Quitamos el margen derecho en móvil al estar en columna
+                color: 'text.secondary',
+                mr: isMobile ? 0 : 'auto', 
+                px: 3,
+                '&:hover': {
+                    backgroundColor: theme.palette.action.hover
+                }
             }}
         >
           Cancelar
         </Button>
         <Button 
-          onClick={handleConfirmClick} 
-          disabled={isConfirmDisabled}
-          variant="contained" 
-          color={btnColor}
-          fullWidth={isMobile} // Botón ancho completo en móvil
-          disableElevation
-          sx={{ borderRadius: 2, fontWeight: 700, px: 3 }}
+            onClick={handleConfirmClick} 
+            disabled={isConfirmDisabled}
+            variant="contained" 
+            color={btnColor} 
+            fullWidth={isMobile}
+            disableElevation
+            sx={{ 
+                borderRadius: 2, 
+                fontWeight: 700, 
+                px: 4, 
+                py: 1.2,
+                boxShadow: theme.shadows[4]
+            }}
         >
           {isLoading ? 'Procesando...' : confirmText}
         </Button>

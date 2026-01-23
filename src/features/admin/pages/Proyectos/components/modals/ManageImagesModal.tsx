@@ -1,10 +1,10 @@
 // src/components/Admin/Proyectos/Components/modals/ManageImagesModal.tsx
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button,
   CircularProgress, Typography, IconButton, Tooltip, Paper, Divider, Alert, Box,
-  Stack, useTheme, alpha, Avatar, LinearProgress, Chip, Grid
+  Stack, useTheme, alpha, Avatar, LinearProgress, Chip
 } from '@mui/material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -16,18 +16,19 @@ import {
 } from '@mui/icons-material';
 
 // --- SERVICIOS Y TIPOS ---
-import type { ProyectoDto } from '../../../../../../core/types/dto/proyecto.dto';
-import imagenService from '../../../../../../core/api/services/imagen.service';
-import type { CreateImagenDto, ImagenDto } from '../../../../../../core/types/dto/imagen.dto';
+import type { ProyectoDto } from '@/core/types/dto/proyecto.dto';
+import imagenService from '@/core/api/services/imagen.service';
+import type { CreateImagenDto, ImagenDto } from '@/core/types/dto/imagen.dto';
 
 // --- COMPONENTES SHARED ---
-import { QueryHandler } from '../../../../../../shared/components/data-grid/QueryHandler/QueryHandler';
-import ImageUploadZone from '../../../../../../shared/components/forms/upload/ImageUploadZone/ImageUploadZone';
-import { ConfirmDialog } from '../../../../../../shared/components/domain/modals/ConfirmDialog/ConfirmDialog';
+import { QueryHandler } from '@/shared/components/data-grid/QueryHandler/QueryHandler';
+import ImageUploadZone from '@/shared/components/forms/upload/ImageUploadZone/ImageUploadZone';
+import { ConfirmDialog } from '@/shared/components/domain/modals/ConfirmDialog/ConfirmDialog';
 
 // --- HOOKS ---
 import { useConfirmDialog } from '@/shared/hooks/useConfirmDialog';
 import useSnackbar from '@/shared/hooks/useSnackbar';
+import { env } from '@/core/config/env';
 
 const MAX_TOTAL_IMAGES = 10;
 
@@ -37,8 +38,6 @@ interface ManageImagesModalProps {
   proyecto: ProyectoDto;
 }
 
-const getQueryKey = (proyectoId: number) => ['projectImages', proyectoId];
-
 const ManageImagesModal: React.FC<ManageImagesModalProps> = ({
   open,
   onClose,
@@ -46,19 +45,17 @@ const ManageImagesModal: React.FC<ManageImagesModalProps> = ({
 }) => {
   const theme = useTheme();
   const queryClient = useQueryClient();
-  const queryKey = getQueryKey(proyecto.id);
+  const queryKey = ['projectImages', proyecto.id];
   
   // 🎯 HOOKS UX
-  const { showSuccess, showError, showWarning, showInfo } = useSnackbar();
+  const { showSuccess, showError, showWarning } = useSnackbar();
   const confirmDialog = useConfirmDialog();
 
   // 📦 ESTADO
-  const [stagedFiles, setStagedFiles] = useState<File[]>([]); // Archivos pendientes
+  const [stagedFiles, setStagedFiles] = useState<File[]>([]);
   const [uploadError, setUploadError] = useState<string | null>(null);
-  
-  // Estado para borrado individual (para mostrar spinner en la imagen específica)
   const [deletingImageId, setDeletingImageId] = useState<number | null>(null);
-
+  
   // Estado de carga global (Guardar)
   const [isSaving, setIsSaving] = useState(false);
   const [progress, setProgress] = useState<{ current: number, total: number } | null>(null);
@@ -84,11 +81,12 @@ const ManageImagesModal: React.FC<ManageImagesModalProps> = ({
     onMutate: (id) => setDeletingImageId(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKey });
-      queryClient.invalidateQueries({ queryKey: ['adminProyectos'] });
       setDeletingImageId(null);
+      showSuccess('Imagen eliminada correctamente');
     },
     onError: () => {
       setDeletingImageId(null);
+      showError('Error al eliminar la imagen');
     }
   });
 
@@ -103,14 +101,10 @@ const ManageImagesModal: React.FC<ManageImagesModalProps> = ({
       };
       return imagenService.create(imagenData);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKey });
-      queryClient.invalidateQueries({ queryKey: ['adminProyectos'] });
-    }
   });
 
   // =======================================================================
-  // 🎬 HANDLERS DE BORRADO INDIVIDUAL
+  // 🎬 HANDLERS
   // =======================================================================
 
   const handleDeleteSingleClick = (imagenId: number) => {
@@ -118,27 +112,27 @@ const ManageImagesModal: React.FC<ManageImagesModalProps> = ({
     confirmDialog.confirm('delete_single_image', { imagen });
   };
 
-  // =======================================================================
-  // 🎬 HANDLERS DE SUBIDA (STAGING)
-  // =======================================================================
-
   const handleFilesSelected = (files: File[]) => {
     setUploadError(null);
     
-    // 1. Validación de Duplicados (Nombre)
+    // Validación de Duplicados y Tamaño
+    const uniqueFiles: File[] = [];
+    const duplicateNames: string[] = [];
+
     const existingNames = new Set([
         ...serverImages.map(img => {
-            const nameFromDesc = img.descripcion || "";
             const nameFromUrl = img.url.split('/').pop() || "";
-            return (nameFromDesc || nameFromUrl).toLowerCase().trim();
+            return (img.descripcion || nameFromUrl).toLowerCase().trim();
         }), 
         ...stagedFiles.map(f => f.name.toLowerCase().trim())
     ]);
 
-    const uniqueFiles: File[] = [];
-    const duplicateNames: string[] = [];
-
     files.forEach(file => {
+        if (file.size > env.maxFileSize) {
+             showWarning(`El archivo ${file.name} excede el tamaño máximo.`);
+             return;
+        }
+
         const normalizedName = file.name.toLowerCase().trim();
         if (existingNames.has(normalizedName)) {
             duplicateNames.push(file.name);
@@ -149,21 +143,17 @@ const ManageImagesModal: React.FC<ManageImagesModalProps> = ({
     });
 
     if (duplicateNames.length > 0) {
-        setUploadError(`${duplicateNames.length} archivo(s) ignorado(s) por nombre duplicado.`);
+        showWarning(`${duplicateNames.length} archivo(s) ignorado(s) por nombre duplicado.`);
     }
 
     if (uniqueFiles.length === 0) return;
 
-    // 2. Validación de Límite
     if (uniqueFiles.length > remainingSlots) {
         showWarning(`Solo puedes agregar ${remainingSlots} más. Se recortó la selección.`);
         const allowed = uniqueFiles.slice(0, remainingSlots);
         setStagedFiles(prev => [...prev, ...allowed]);
     } else {
         setStagedFiles(prev => [...prev, ...uniqueFiles]);
-        if (duplicateNames.length === 0) {
-             showSuccess(`${uniqueFiles.length} imágenes listas para subir.`);
-        }
     }
   };
 
@@ -195,6 +185,7 @@ const ManageImagesModal: React.FC<ManageImagesModalProps> = ({
       }
     }
 
+    queryClient.invalidateQueries({ queryKey: queryKey });
     setIsSaving(false);
     setProgress(null);
     
@@ -202,22 +193,23 @@ const ManageImagesModal: React.FC<ManageImagesModalProps> = ({
         setUploadError(`Hubo error al subir ${failedFiles.length} imágenes.`);
         setStagedFiles(failedFiles);
     } else {
-        showSuccess(`¡${successCount} imágenes guardadas correctamente!`);
+        showSuccess(`¡${successCount} imágenes guardadas!`);
         setStagedFiles([]); 
+        onClose(); // Cerrar al éxito total
     }
   };
 
   // =======================================================================
-  // 🎬 CIERRE Y CONFIRMACIÓN GLOBAL
+  // 🎬 CIERRE
   // =======================================================================
 
-  const performClose = () => {
+  const performClose = useCallback(() => {
     setStagedFiles([]);
     setProgress(null);
     setUploadError(null);
     setDeletingImageId(null);
     onClose();
-  };
+  }, [onClose]);
 
   const handleCloseAttempt = () => {
     if (stagedFiles.length > 0) {
@@ -231,15 +223,9 @@ const ManageImagesModal: React.FC<ManageImagesModalProps> = ({
     const { action, data } = confirmDialog;
     confirmDialog.close();
 
-    // 1. Borrado Individual
     if (action === 'delete_single_image' && data?.imagen) {
-        deleteMutation.mutate(data.imagen.id, {
-            onSuccess: () => showSuccess('Imagen eliminada.'),
-            onError: () => showError('No se pudo eliminar la imagen.')
-        });
-    }
-    // 2. Cerrar sin guardar
-    else if (action === 'close_with_unsaved_changes') {
+        deleteMutation.mutate(data.imagen.id);
+    } else if (action === 'close_with_unsaved_changes') {
         performClose();
     }
   };
@@ -256,24 +242,30 @@ const ManageImagesModal: React.FC<ManageImagesModalProps> = ({
         fullWidth
         PaperProps={{
           elevation: 0,
-          sx: { borderRadius: 3, boxShadow: theme.shadows[10], overflow: 'hidden' }
+          sx: { 
+            // Theme radius (12px = 1.5 * 8)
+            borderRadius: 1.5, 
+            boxShadow: theme.shadows[8], 
+            overflow: 'hidden' 
+          }
         }}
       >
         {/* --- HEADER --- */}
         <DialogTitle sx={{
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          py: 2.5, px: 3, bgcolor: alpha(theme.palette.primary.main, 0.04),
+          py: 2, px: 3, 
+          bgcolor: 'background.paper',
           borderBottom: `1px solid ${theme.palette.divider}`
         }}>
           <Stack direction="row" alignItems="center" spacing={2}>
-            <Avatar variant="rounded" sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: theme.palette.primary.main }}>
+            <Avatar variant="rounded" sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: theme.palette.primary.main, borderRadius: 1 }}>
               <GalleryIcon />
             </Avatar>
             <Box>
-              <Typography variant="h6" color="text.primary">Galería de Imágenes</Typography>
+              <Typography variant="h6" fontWeight={700}>Galería del Proyecto</Typography>
               <Stack direction="row" spacing={1} alignItems="center">
-                  <Typography variant="body2" color="text.secondary">
-                  {proyecto.nombre_proyecto}
+                  <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                    {proyecto.nombre_proyecto}
                   </Typography>
                   <Chip 
                       label={`${totalCount} / ${MAX_TOTAL_IMAGES}`} 
@@ -297,17 +289,18 @@ const ManageImagesModal: React.FC<ManageImagesModalProps> = ({
               <Box sx={{ width: '100%', position: 'absolute', top: 0, zIndex: 10 }}>
                   <LinearProgress 
                       variant="determinate" 
-                      value={progress ? (progress.current / progress.total) * 100 : 0} 
+                      value={(progress.current / progress.total) * 100} 
+                      sx={{ height: 4 }}
                   />
               </Box>
           )}
 
-          <Stack spacing={0} divider={<Divider />}>
+          <Stack spacing={0}>
 
             {/* 1. ZONA DE UPLOAD */}
             <Box sx={{ p: 3, bgcolor: 'background.paper' }}>
                {uploadError && (
-                  <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }} onClose={() => setUploadError(null)}>
+                  <Alert severity="error" sx={{ mb: 2, borderRadius: 1 }} onClose={() => setUploadError(null)}>
                       {uploadError}
                   </Alert>
                )}
@@ -321,7 +314,7 @@ const ManageImagesModal: React.FC<ManageImagesModalProps> = ({
                       disabled={isWorking}
                    />
                ) : (
-                   <Alert severity="warning" variant="outlined" sx={{ borderRadius: 2 }}>
+                   <Alert severity="warning" variant="outlined" sx={{ borderRadius: 1 }}>
                       Has alcanzado el límite de imágenes. Elimina algunas para subir nuevas.
                    </Alert>
                )}
@@ -329,13 +322,12 @@ const ManageImagesModal: React.FC<ManageImagesModalProps> = ({
 
             {/* 2. PREVISUALIZACIÓN DE CAMBIOS (Staged Files) */}
             {stagedFiles.length > 0 && (
-                <Box sx={{ p: 3, bgcolor: alpha(theme.palette.warning.main, 0.03) }}>
+                <Box sx={{ p: 3, bgcolor: alpha(theme.palette.warning.main, 0.04), borderTop: `1px dashed ${alpha(theme.palette.warning.main, 0.3)}` }}>
                     <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'warning.main', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                         <NewImageIcon fontSize="small" /> NUEVAS IMÁGENES (Pendiente de guardar)
                     </Typography>
                     
-                    {/* CSS GRID NATIVO (Box) */}
-                    <Box display="grid" gridTemplateColumns="repeat(auto-fill, minmax(120px, 1fr))" gap={2}>
+                    <Box display="grid" gridTemplateColumns="repeat(auto-fill, minmax(100px, 1fr))" gap={2}>
                         {stagedFiles.map((file, index) => (
                             <Box key={`staged-${index}`} sx={{ 
                                     position: 'relative', borderRadius: 2, overflow: 'hidden', 
@@ -343,7 +335,7 @@ const ManageImagesModal: React.FC<ManageImagesModalProps> = ({
                                     aspectRatio: '1/1'
                                 }}>
                                     <Box component="img" src={URL.createObjectURL(file)} 
-                                        sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', opacity: 0.8 }} 
+                                        sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', opacity: 0.85 }} 
                                     />
                                     <IconButton 
                                         size="small" 
@@ -357,71 +349,76 @@ const ManageImagesModal: React.FC<ManageImagesModalProps> = ({
                                     >
                                         <CloseIcon fontSize="small" />
                                     </IconButton>
-                                    <Box sx={{ position: 'absolute', bottom: 0, width: '100%', bgcolor: 'warning.main', color: 'warning.contrastText', px: 1, py: 0.5 }}>
-                                        <Typography variant="caption" fontWeight={700} noWrap display="block">Nueva</Typography>
-                                    </Box>
                                 </Box>
                         ))}
                     </Box>
                 </Box>
             )}
 
+            <Divider />
+
             {/* 3. GALERÍA EXISTENTE (Server) */}
             <Box sx={{ p: 3, bgcolor: 'background.default', minHeight: 250 }}>
               <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'text.secondary', mb: 2 }}>
-                  EN GALERÍA ({serverImages.length})
+                  GALERÍA ACTUAL
               </Typography>
 
               <QueryHandler isLoading={isLoading} error={error as Error | null}>
                 {serverImages.length === 0 ? (
-                  <Typography variant="body2" color="text.secondary" fontStyle="italic" align="center" mt={4}>
-                      No hay imágenes guardadas aún.
-                  </Typography>
+                  <Box display="flex" justifyContent="center" alignItems="center" height={100} border={`1px dashed ${theme.palette.divider}`} borderRadius={2}>
+                      <Typography variant="body2" color="text.disabled">
+                          No hay imágenes publicadas.
+                      </Typography>
+                  </Box>
                 ) : (
-                  // CSS GRID NATIVO
                   <Box display="grid" gridTemplateColumns="repeat(auto-fill, minmax(140px, 1fr))" gap={2}>
                     {serverImages.map((img) => (
-                          <Box key={img.id} 
+                          <Paper key={img.id} 
+                              elevation={0}
                               sx={{ 
                                   position: 'relative', borderRadius: 2, overflow: 'hidden', 
-                                  boxShadow: theme.shadows[1],
                                   border: `1px solid ${theme.palette.divider}`,
                                   bgcolor: 'background.paper',
                                   aspectRatio: '1/1', 
-                                  '&:hover .delete-btn': { opacity: 1 } // Mostrar botón al hover
+                                  transition: 'all 0.2s',
+                                  '&:hover': { 
+                                      boxShadow: theme.shadows[4],
+                                      borderColor: theme.palette.primary.main,
+                                      '& .delete-btn': { opacity: 1 } 
+                                  }
                               }}
                           >
                               <Box component="img" src={resolveUrl(img.url)} 
                                   sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} 
                               />
                               
-                              {/* Botón Borrar Individual */}
-                              <IconButton 
-                                    className="delete-btn"
-                                    size="small"
-                                    onClick={() => handleDeleteSingleClick(img.id)}
-                                    disabled={deletingImageId === img.id || isSaving}
-                                    sx={{ 
-                                        position: 'absolute', top: 4, right: 4, 
-                                        opacity: 0, // Oculto por defecto
-                                        transition: 'opacity 0.2s',
-                                        bgcolor: 'rgba(255,255,255,0.9)', color: 'error.main',
-                                        '&:hover': { bgcolor: 'error.main', color: 'white' }
-                                    }}
-                                >
-                                    {deletingImageId === img.id ? <CircularProgress size={16} /> : <DeleteIcon fontSize="small" />}
-                                </IconButton>
+                              <Tooltip title="Eliminar imagen">
+                                  <IconButton 
+                                      className="delete-btn"
+                                      size="small"
+                                      onClick={() => handleDeleteSingleClick(img.id)}
+                                      disabled={deletingImageId === img.id || isSaving}
+                                      sx={{ 
+                                          position: 'absolute', top: 4, right: 4, 
+                                          opacity: 0, 
+                                          transition: 'opacity 0.2s',
+                                          bgcolor: 'rgba(255,255,255,0.9)', color: 'error.main',
+                                          '&:hover': { bgcolor: 'error.main', color: 'white' }
+                                      }}
+                                  >
+                                      {deletingImageId === img.id ? <CircularProgress size={16} color="inherit" /> : <DeleteIcon fontSize="small" />}
+                                  </IconButton>
+                              </Tooltip>
 
-                                {/* Descripción / ID opcional */}
-                                <Box sx={{ 
-                                    position: 'absolute', bottom: 0, left: 0, right: 0, 
-                                    bgcolor: 'rgba(0,0,0,0.6)', p: 0.5 
-                                }}>
-                                    <Typography variant="caption" color="white" noWrap display="block" align="center">
-                                        {img.descripcion || `ID: ${img.id}`}
-                                    </Typography>
-                                </Box>
-                          </Box>
+                              <Box sx={{ 
+                                  position: 'absolute', bottom: 0, left: 0, right: 0, 
+                                  bgcolor: 'rgba(0,0,0,0.6)', px: 1, py: 0.5 
+                              }}>
+                                  <Typography variant="caption" color="white" noWrap display="block" align="center" fontSize="0.7rem">
+                                      {img.descripcion || `IMG #${img.id}`}
+                                  </Typography>
+                              </Box>
+                          </Paper>
                     ))}
                   </Box>
                 )}
@@ -434,21 +431,21 @@ const ManageImagesModal: React.FC<ManageImagesModalProps> = ({
         {/* FOOTER */}
         <DialogActions sx={{ p: 2, borderTop: `1px solid ${theme.palette.divider}`, bgcolor: 'background.paper' }}>
           <Button onClick={handleCloseAttempt} color="inherit" disabled={isWorking}>
-              Cancelar
+              Cerrar
           </Button>
           <Button 
               variant="contained" 
               onClick={handleSaveChanges} 
               disabled={stagedFiles.length === 0 || isWorking}
               startIcon={isSaving ? <CircularProgress size={18} color="inherit" /> : <SaveIcon />}
+              disableElevation
               sx={{ px: 3, fontWeight: 700 }}
           >
-              {isSaving ? 'Guardando...' : `Guardar Nuevas (${stagedFiles.length})`}
+              {isSaving ? 'Guardando...' : `Guardar Cambios`}
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* DIÁLOGO DE CONFIRMACIÓN */}
       <ConfirmDialog 
         controller={confirmDialog} 
         onConfirm={handleDialogConfirm}

@@ -13,8 +13,6 @@ export const ROUTES = {
   PUBLIC: {
     HOME: '/',
     COMO_FUNCIONA: '/como-funciona',
-    COMO_FUNCIONA_AHORRISTA: '/como-funciona/ahorrista',     // ✅ Agregado para tu hook
-    COMO_FUNCIONA_INVERSIONISTA: '/como-funciona/inversionista', // ✅ Agregado para tu hook
     NOSOTROS: '/nosotros',
     PREGUNTAS: '/preguntas',
   },

@@ -11,6 +11,30 @@ const BASE_HISTORIAL = '/suscripcionesCanceladas';
 const SuscripcionService = {
 
   // =================================================
+  // 🔍 VALIDACIÓN PARA PUJAS (LÓGICA CLAVE)
+  // =================================================
+
+  /**
+   * Verifica si el usuario actual tiene una suscripción ACTIVA para un proyecto específico.
+   * * @param proyectoId - El ID del proyecto del lote.
+   * @returns La suscripción completa si existe, o null si no está suscripto.
+   */
+  checkEstadoSuscripcion: async (proyectoId: number): Promise<SuscripcionDto | null> => {
+    try {
+      // 1. Llamamos al endpoint que devuelve SOLO mis suscripciones activas
+      const { data } = await httpService.get<SuscripcionDto[]>(`${BASE_PRINCIPAL}/mis_suscripciones`);
+      
+      // 2. Buscamos en el array si existe el proyecto
+      const suscripcion = data.find(s => s.id_proyecto === Number(proyectoId));
+
+      return suscripcion || null;
+    } catch (error) {
+      console.error("Error verificando suscripción:", error);
+      return null;
+    }
+  },
+
+  // =================================================
   // 👤 GESTIÓN USUARIO (Operaciones normales)
   // =================================================
   
@@ -54,6 +78,9 @@ const SuscripcionService = {
   cancelar: async (id: number): Promise<AxiosResponse<{ mensaje: string }>> => {
     return await httpService.put(`${BASE_HISTORIAL}/${id}/cancelar`);
   },
+
+
+  
 
   // =================================================
   // 👮 GESTIÓN ADMIN - PRINCIPAL

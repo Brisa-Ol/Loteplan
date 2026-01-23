@@ -21,11 +21,10 @@ import type { TransaccionDto } from '../../../../../core/types/dto/transaccion.d
 import { FilterBar, FilterSearch, FilterSelect } from '../../../../../shared/components/forms/filters/FilterBar/FilterBar';
 import { ConfirmDialog } from '../../../../../shared/components/domain/modals/ConfirmDialog/ConfirmDialog';
 
-
 const AdminTransacciones: React.FC = () => {
   const logic = useAdminTransacciones(); // Hook
 
-  // Columnas (Memoizadas aquí para acceder a theme y handlers)
+  // Columnas
   const columns = useMemo<DataTableColumn<TransaccionDto>[]>(() => [
     {
       id: 'id', label: 'ID', minWidth: 50,
@@ -85,7 +84,6 @@ const AdminTransacciones: React.FC = () => {
         <Box display="flex" alignItems="center" gap={1}>
             <Chip 
                 label={row.estado_transaccion} 
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 color={logic.getStatusColor(row.estado_transaccion) as any} 
                 size="small" 
                 variant={row.estado_transaccion === 'pagado' ? 'filled' : 'outlined'}
@@ -168,15 +166,17 @@ const AdminTransacciones: React.FC = () => {
             columns={columns}
             data={logic.filteredData}
             getRowKey={(row) => row.id}
+            
+            // ✨ UX
             highlightedRowId={logic.highlightedId}
             isRowActive={(row) => !['fallido', 'rechazado_por_capacidad', 'rechazado_proyecto_cerrado', 'expirado'].includes(row.estado_transaccion)}
+            
             emptyMessage="No se encontraron transacciones."
             pagination={true}
             defaultRowsPerPage={10}
         />
       </QueryHandler>
 
-      {/* Modales */}
       <ModalDetalleTransaccion 
         open={logic.modales.detail.isOpen}
         transaccion={logic.selectedTransaccion}

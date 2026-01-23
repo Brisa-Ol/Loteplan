@@ -1,13 +1,19 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTheme } from '@mui/material';
-import useSnackbar from '@/shared/hooks/useSnackbar';
-import type { CreateProyectoDto, ProyectoDto, UpdateProyectoDto } from '@/core/types/dto/proyecto.dto';
+
+// Servicios
 import ProyectoService from '@/core/api/services/proyecto.service';
+import CuotaMensualService from '@/core/api/services/cuotaMensual.service';
+import ImagenService from '@/core/api/services/imagen.service';
+
+// Hooks y Tipos
+import useSnackbar from '@/shared/hooks/useSnackbar';
 import { useConfirmDialog } from '@/shared/hooks/useConfirmDialog';
 import { useModal } from '@/shared/hooks/useModal';
-import CuotaMensualService from '@/core/api/services/cuotaMensual.service';
 
+import type { CreateProyectoDto, ProyectoDto, UpdateProyectoDto } from '@/core/types/dto/proyecto.dto';
+import { useSortedData } from './useSortedData';
 
 
 export type TipoInversionFilter = 'all' | 'mensual' | 'directo';
@@ -15,15 +21,13 @@ export type TipoInversionFilter = 'all' | 'mensual' | 'directo';
 export const useAdminProyectos = () => {
   const theme = useTheme();
   const queryClient = useQueryClient();
-  const { showSuccess, showError } = useSnackbar();
+  const { showSuccess, showError, showWarning } = useSnackbar();
 
   // --- ESTADOS LOCALES ---
   const [selectedProject, setSelectedProject] = useState<ProyectoDto | null>(null);
-  const [highlightedId, setHighlightedId] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterTipo, setFilterTipo] = useState<TipoInversionFilter>('all');
-  const initialStatusRef = useRef<Record<number, boolean>>({});
-
+  
   // --- MODALES ---
   const modales = {
     create: useModal(),
@@ -35,20 +39,14 @@ export const useAdminProyectos = () => {
   };
 
   // --- QUERIES ---
-  const { data: proyectos = [], isLoading, error } = useQuery({
+  const { data: proyectosRaw = [], isLoading, error } = useQuery({
     queryKey: ['adminProyectos'],
     queryFn: async () => (await ProyectoService.getAllAdmin()).data
   });
 
-  useEffect(() => {
-    if (proyectos.length > 0) {
-      proyectos.forEach(p => {
-        if (initialStatusRef.current[p.id] === undefined) {
-          initialStatusRef.current[p.id] = p.activo;
-        }
-      });
-    }
-  }, [proyectos]);
+  // ✨ 1. ORDENAMIENTO + HIGHLIGHT
+  // useSortedData se encarga de ordenar por ID desc y manejar el efecto visual
+  const { sortedData: proyectosOrdenados, highlightedId, triggerHighlight } = useSortedData(proyectosRaw);
 
   // --- MUTACIONES ---
   const updateMutation = useMutation({
@@ -57,7 +55,9 @@ export const useAdminProyectos = () => {
       queryClient.invalidateQueries({ queryKey: ['adminProyectos'] });
       modales.edit.close(); 
       setTimeout(() => setSelectedProject(null), 300);
-      setHighlightedId(variables.id); 
+      
+      // ✨ Activar Highlight
+      triggerHighlight(variables.id); 
       showSuccess('Proyecto actualizado correctamente');
     }
   });
@@ -67,28 +67,37 @@ export const useAdminProyectos = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['adminProyectos'] });
       modales.confirmDialog.close();
-      setHighlightedId(variables.id);
-      setTimeout(() => setHighlightedId(null), 2500);
+      
+      // ✨ Activar Highlight
+      triggerHighlight(variables.id);
       showSuccess(variables.activo ? 'Proyecto ahora es visible' : 'Proyecto ocultado');
     }
   });
 
   const startMutation = useMutation({
     mutationFn: (id: number) => ProyectoService.startProcess(id),
-    onSuccess: () => {
+    onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ['adminProyectos'] });
       modales.confirmDialog.close();
+      
+      // ✨ Activar Highlight
+      triggerHighlight(id);
       showSuccess('Proceso de cobros iniciado');
     }
   });
 
   // --- HANDLERS ---
+
   const handleCreateSubmit = useCallback(async (data: any, image: File | null) => {
     try {
+        // 1. Crear el Proyecto
         const proyectoData: CreateProyectoDto = { ...data };
         const resProyecto = await ProyectoService.create(proyectoData);
-        const nuevoId = resProyecto.data.id;
+        
+        const nuevoProyecto = resProyecto.data;
+        const nuevoId = nuevoProyecto.id;
 
+        // 2. Configurar Cuota (Solo para mensuales)
         if (data.tipo_inversion === 'mensual') {
             await CuotaMensualService.create({
                 id_proyecto: nuevoId,
@@ -103,19 +112,40 @@ export const useAdminProyectos = () => {
             });
         }
 
-        // if (image) await ImagenService.uploadProyectoImagen(nuevoId, image);
+        // 3. Subir Imagen
+        if (image) {
+            try {
+                await ImagenService.create({
+                    file: image,
+                    descripcion: 'Portada del Proyecto',
+                    id_proyecto: nuevoId,
+                    id_lote: null 
+                });
+            } catch (imgError) {
+                console.error("Error al subir imagen inicial:", imgError);
+                showWarning('El proyecto se creó, pero hubo un error al subir la imagen.');
+            }
+        }
 
+        // 4. Finalizar
         queryClient.invalidateQueries({ queryKey: ['adminProyectos'] });
         modales.create.close();
-        setHighlightedId(nuevoId);
-        showSuccess('Proyecto creado y configurado exitosamente.');
+        
+        // ✨ Activar Highlight
+        triggerHighlight(nuevoId);
+        
+        if (!image) {
+            showSuccess('Proyecto creado exitosamente.');
+        } else {
+            showSuccess('Proyecto e imagen creados exitosamente.');
+        }
 
     } catch (error: any) {
         console.error(error);
         const msg = error.response?.data?.message || 'Error al crear el proyecto';
         showError(msg);
     }
-  }, [modales.create, queryClient, showSuccess, showError]);
+  }, [modales.create, queryClient, showSuccess, showError, showWarning, triggerHighlight]);
 
   const handleUpdateSubmit = useCallback(async (id: number, data: UpdateProyectoDto) => {
     await updateMutation.mutateAsync({ id, data });
@@ -143,14 +173,14 @@ export const useAdminProyectos = () => {
     }
   }, [modales.confirmDialog, startMutation, toggleActiveMutation]);
 
-  // --- FILTRADO (Memo) ---
+  // --- FILTRADO (Sobre la data ya ordenada por useSortedData) ---
   const filteredProyectos = useMemo(() => {
-    return proyectos.filter(p => {
+    return proyectosOrdenados.filter(p => {
       const matchesSearch = p.nombre_proyecto.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesType = filterTipo === 'all' || p.tipo_inversion === filterTipo;
       return matchesSearch && matchesType;
     });
-  }, [proyectos, searchTerm, filterTipo]);
+  }, [proyectosOrdenados, searchTerm, filterTipo]);
 
   return {
     theme,
@@ -158,9 +188,11 @@ export const useAdminProyectos = () => {
     searchTerm, setSearchTerm,
     filterTipo, setFilterTipo,
     selectedProject, setSelectedProject,
+    
+    // ✨ Exportamos el Highlight ID para la tabla
     highlightedId,
     
-    // Data
+    // Data (Ya filtrada y ordenada)
     filteredProyectos,
     isLoading,
     error,

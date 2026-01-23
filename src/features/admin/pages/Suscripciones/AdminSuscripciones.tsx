@@ -8,35 +8,28 @@ import {
   MonetizationOn, TrendingDown, Warning, Groups,
 } from '@mui/icons-material';
 
-
-
-// Componentes
 import { PageContainer } from '../../../../shared/components/layout/containers/PageContainer/PageContainer';
 import { QueryHandler } from '../../../../shared/components/data-grid/QueryHandler/QueryHandler';
 import { PageHeader } from '../../../../shared/components/layout/headers/PageHeader';
 import { DataTable, type DataTableColumn } from '../../../../shared/components/data-grid/DataTable/DataTable';
 import { StatCard } from '../../../../shared/components/domain/cards/StatCard/StatCard';
-
-
-
 import { FilterBar, FilterSelect } from '../../../../shared/components/forms/filters/FilterBar/FilterBar';
-import { useAdminSuscripciones } from '../../hooks/useAdminSuscripciones';
-import type { SuscripcionDto } from '../../../../core/types/dto/suscripcion.dto';
 import { ConfirmDialog } from '../../../../shared/components/domain/modals/ConfirmDialog/ConfirmDialog';
+
 import DetalleSuscripcionModal from './components/DetalleSuscripcionModal';
 import CancelacionesTab from './components/CancelacionesTab';
 
-
+import { useAdminSuscripciones } from '../../hooks/useAdminSuscripciones';
+import type { SuscripcionDto } from '../../../../core/types/dto/suscripcion.dto';
 
 const AdminSuscripciones: React.FC = () => {
-  const logic = useAdminSuscripciones(); // Hook
+  const logic = useAdminSuscripciones();
 
-  // Columnas (Memoizadas aquí para acceder a theme y handlers)
   const columns = useMemo<DataTableColumn<SuscripcionDto>[]>(() => [
     {
       id: 'usuario', label: 'ID / Usuario', minWidth: 240,
       render: (s) => (
-        <Stack direction="row" spacing={2} alignItems="center">
+        <Stack direction="row" spacing={2} alignItems="center" sx={{ opacity: s.activo ? 1 : 0.6 }}>
           <Avatar sx={{
             width: 36, height: 36,
             bgcolor: s.activo ? alpha(logic.theme.palette.primary.main, 0.1) : logic.theme.palette.action.disabledBackground,
@@ -58,7 +51,7 @@ const AdminSuscripciones: React.FC = () => {
     },
     {
       id: 'proyecto', label: 'Proyecto', minWidth: 150,
-      render: (s) => <Typography variant="body2" fontWeight={500}>{s.proyectoAsociado?.nombre_proyecto}</Typography>
+      render: (s) => <Typography variant="body2" fontWeight={500} sx={{ opacity: s.activo ? 1 : 0.6 }}>{s.proyectoAsociado?.nombre_proyecto}</Typography>
     },
     {
       id: 'deuda', label: 'Estado Deuda',
@@ -71,7 +64,7 @@ const AdminSuscripciones: React.FC = () => {
           <Chip
             label={s.meses_a_pagar === 0 ? 'Al día' : `${s.meses_a_pagar} cuota(s) pend.`}
             size="small" color={color} variant={s.meses_a_pagar > 0 ? 'filled' : 'outlined'}
-            sx={{ fontWeight: 600, borderColor: 'divider' }}
+            sx={{ fontWeight: 600, borderColor: 'divider', opacity: s.activo ? 1 : 0.6 }}
           />
         );
       }
@@ -79,14 +72,14 @@ const AdminSuscripciones: React.FC = () => {
     {
       id: 'pagado', label: 'Monto Pagado',
       render: (s) => (
-        <Typography variant="body2" fontWeight={700} sx={{ fontFamily: 'monospace' }}>
+        <Typography variant="body2" fontWeight={700} sx={{ fontFamily: 'monospace', opacity: s.activo ? 1 : 0.6 }}>
           ${Number(s.monto_total_pagado).toLocaleString('es-AR')}
         </Typography>
       )
     },
     {
       id: 'tokens', label: 'Tokens',
-      render: (s) => <Chip label={s.tokens_disponibles} size="small" variant="outlined" sx={{ color: 'text.secondary', borderColor: 'divider' }} />
+      render: (s) => <Chip label={s.tokens_disponibles} size="small" variant="outlined" sx={{ color: 'text.secondary', borderColor: 'divider', opacity: s.activo ? 1 : 0.6 }} />
     },
     {
       id: 'estado', label: 'Estado',
@@ -96,7 +89,7 @@ const AdminSuscripciones: React.FC = () => {
           size="small"
           color={s.activo ? 'success' : 'default'}
           variant={s.activo ? 'filled' : 'outlined'}
-          sx={{ fontWeight: 600 }}
+          sx={{ fontWeight: 600, opacity: s.activo ? 1 : 0.7 }}
         />
       )
     },
@@ -162,45 +155,49 @@ const AdminSuscripciones: React.FC = () => {
 
             {/* FILTROS */}
             <FilterBar>
-                <TextField
-                  placeholder="Buscar por usuario, email o ID..."
-                  size="small" sx={{ flexGrow: 1 }}
-                  value={logic.searchTerm} onChange={(e) => logic.setSearchTerm(e.target.value)}
-                  InputProps={{ startAdornment: (<InputAdornment position="start"><Search color="action" /></InputAdornment>) }}
-                />
-                <Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', md: 'block' } }} />
-                
-                <FilterSelect
-                  label="Proyecto" value={logic.filterProject} 
-                  onChange={(e) => logic.setFilterProject(e.target.value)}
-                  sx={{ minWidth: 200 }}
-                >
-                  <MenuItem value="all">Todos</MenuItem>
-                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                  {logic.proyectos.filter((p: any) => p.tipo_inversion === 'mensual').map((p: any) => (
-                    <MenuItem key={p.id} value={p.id}>{p.nombre_proyecto}</MenuItem>
-                  ))}
-                </FilterSelect>
+              <TextField
+                placeholder="Buscar por usuario, email o ID..."
+                size="small" sx={{ flexGrow: 1 }}
+                value={logic.searchTerm} onChange={(e) => logic.setSearchTerm(e.target.value)}
+                InputProps={{ startAdornment: (<InputAdornment position="start"><Search color="action" /></InputAdornment>) }}
+              />
+              <Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', md: 'block' } }} />
 
-                <FilterSelect
-                  label="Estado" value={logic.filterStatus} 
-                  onChange={(e) => logic.setFilterStatus(e.target.value as any)}
-                  sx={{ minWidth: 180 }}
-                >
-                  <MenuItem value="activas">Solo Activas</MenuItem>
-                  <MenuItem value="inactivas">Solo Canceladas</MenuItem>
-                  <MenuItem value="all">Todas</MenuItem>
-                </FilterSelect>
+              <FilterSelect
+                label="Proyecto" value={logic.filterProject}
+                onChange={(e) => logic.setFilterProject(e.target.value)}
+                sx={{ minWidth: 200 }}
+              >
+                <MenuItem value="all">Todos</MenuItem>
+                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                {logic.proyectos.filter((p: any) => p.tipo_inversion === 'mensual').map((p: any) => (
+                  <MenuItem key={p.id} value={p.id}>{p.nombre_proyecto}</MenuItem>
+                ))}
+              </FilterSelect>
+
+              <FilterSelect
+                label="Estado" value={logic.filterStatus}
+                onChange={(e) => logic.setFilterStatus(e.target.value as any)}
+                sx={{ minWidth: 180 }}
+              >
+                <MenuItem value="activas">Solo Activas</MenuItem>
+                <MenuItem value="inactivas">Solo Canceladas</MenuItem>
+                <MenuItem value="all">Todas</MenuItem>
+              </FilterSelect>
             </FilterBar>
 
             {/* TABLA */}
             <QueryHandler isLoading={logic.isLoading} error={logic.error as Error | null}>
               <DataTable
                 columns={columns}
+                // ✨ Datos Ordenados
                 data={logic.filteredSuscripciones}
                 getRowKey={(s) => s.id}
+
+                // ✨ UX Props
                 highlightedRowId={logic.highlightedId}
                 isRowActive={(s) => s.activo}
+
                 emptyMessage="No se encontraron suscripciones con los filtros actuales."
                 pagination={true}
                 defaultRowsPerPage={10}

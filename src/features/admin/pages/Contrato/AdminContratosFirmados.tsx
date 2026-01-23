@@ -1,84 +1,35 @@
-// src/pages/Admin/Contratos/AdminContratosFirmados.tsx
-
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useMemo } from 'react';
 import {
-  Box, Typography, Paper, Chip, IconButton, Tooltip,
-  TextField, InputAdornment, Stack, useTheme, alpha, Avatar,
-  CircularProgress
+  Box, Typography, Chip, IconButton, Tooltip,
+  Stack, useTheme, alpha, Avatar, CircularProgress
 } from '@mui/material';
 import {
-  Search,
   Download as DownloadIcon,
   Fingerprint,
   Business,
-  Person,
-  Description as ContractIcon,
+  Person
 } from '@mui/icons-material';
-import { useQuery } from '@tanstack/react-query';
 
 // Utils
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-
 
 // Componentes Comunes
 import { PageContainer } from '../../../../shared/components/layout/containers/PageContainer/PageContainer';
 import { PageHeader } from '../../../../shared/components/layout/headers/PageHeader';
 import { QueryHandler } from '../../../../shared/components/data-grid/QueryHandler/QueryHandler';
 import { DataTable, type DataTableColumn } from '../../../../shared/components/data-grid/DataTable/DataTable';
-import useSnackbar from '../../../../shared/hooks/useSnackbar';
-import ContratoService from '../../../../core/api/services/contrato.service';
-import type { ContratoFirmadoDto } from '../../../../core/types/dto/contrato-firmado.dto';
+import { FilterBar, FilterSearch } from '../../../../shared/components/forms/filters/FilterBar/FilterBar';
 
+
+import type { ContratoFirmadoDto } from '../../../../core/types/dto/contrato-firmado.dto';
+import { useAdminContratosFirmados } from '../../hooks/useAdminContratosFirmados';
 
 const AdminContratosFirmados: React.FC = () => {
   const theme = useTheme();
-  const { showError } = useSnackbar();
+  const logic = useAdminContratosFirmados(); // Hook Lógica
 
-  // Estados
-  const [searchTerm, setSearchTerm] = useState('');
-  const [downloadingId, setDownloadingId] = useState<number | null>(null);
-
-  // ✅ Feedback Visual: Flash verde al terminar descarga
-  const [highlightedId, setHighlightedId] = useState<number | null>(null);
-
-  // 1. Query: Obtener TODOS los contratos firmados
-  const { data: contratos = [], isLoading, error } = useQuery<ContratoFirmadoDto[]>({
-    queryKey: ['adminContratosFirmados'],
-    queryFn: async () => {
-      const res = await ContratoService.findAllSigned();
-      return res.data;
-    }
-  });
-
-  // 2. Filtrado en Cliente (Memoizado)
-  const filteredContratos = useMemo(() => {
-    const term = searchTerm.toLowerCase();
-    return contratos.filter(c =>
-      c.nombre_archivo.toLowerCase().includes(term) ||
-      c.id_usuario_firmante.toString().includes(term) ||
-      c.id_proyecto.toString().includes(term)
-    );
-  }, [contratos, searchTerm]);
-
-  // 3. Manejo de Descarga (Callback)
-  const handleDownload = useCallback(async (contrato: ContratoFirmadoDto) => {
-    try {
-      setDownloadingId(contrato.id);
-      await ContratoService.downloadAndSave(contrato.id, contrato.nombre_archivo);
-
-      // ✅ Feedback Visual: Flash de éxito
-      setHighlightedId(contrato.id);
-      setTimeout(() => setHighlightedId(null), 2500);
-
-    } catch (error) {
-      showError("Error al descargar el archivo. Verifica tu conexión.");
-    } finally {
-      setDownloadingId(null);
-    }
-  }, []);
-
-  // 4. Definición de Columnas
+  // Definición de Columnas
   const columns = useMemo<DataTableColumn<ContratoFirmadoDto>[]>(() => [
     {
       id: 'id',
@@ -163,21 +114,21 @@ const AdminContratosFirmados: React.FC = () => {
           <span>
             <IconButton
               color="primary"
-              onClick={() => handleDownload(row)}
-              disabled={downloadingId === row.id}
+              onClick={() => logic.handleDownload(row)}
+              disabled={logic.downloadingId === row.id}
               size="small"
               sx={{
                 bgcolor: alpha(theme.palette.primary.main, 0.1),
                 '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) }
               }}
             >
-              {downloadingId === row.id ? <CircularProgress size={20} color="inherit" /> : <DownloadIcon fontSize="small" />}
+              {logic.downloadingId === row.id ? <CircularProgress size={20} color="inherit" /> : <DownloadIcon fontSize="small" />}
             </IconButton>
           </span>
         </Tooltip>
       )
     }
-  ], [theme, downloadingId, handleDownload]);
+  ], [theme, logic]);
 
   return (
     <PageContainer maxWidth="xl">
@@ -187,41 +138,25 @@ const AdminContratosFirmados: React.FC = () => {
         subtitle="Visualiza y descarga los contratos legalizados por los usuarios."
       />
 
-      {/* Toolbar */}
-      <Paper
-        elevation={0}
-        sx={{
-          p: 2, mb: 3,
-          borderRadius: 2,
-          border: '1px solid', borderColor: 'divider',
-          bgcolor: alpha(theme.palette.background.paper, 0.6)
-        }}
-      >
-        <Stack direction="row" alignItems="center" spacing={2}>
-          <ContractIcon color="action" />
-          <TextField
-            placeholder="Buscar por archivo, ID usuario o ID proyecto..."
-            size="small"
+      {/* Toolbar Estandarizada */}
+      <FilterBar>
+        <FilterSearch 
+            placeholder="Buscar por archivo, ID usuario o ID proyecto..." 
+            value={logic.searchTerm} 
+            onSearch={logic.setSearchTerm} 
             sx={{ flexGrow: 1 }}
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            InputProps={{
-              startAdornment: <InputAdornment position="start"><Search color="action" /></InputAdornment>,
-              sx: { borderRadius: 2 }
-            }}
-          />
-        </Stack>
-      </Paper>
+        />
+      </FilterBar>
 
       {/* DataTable */}
-      <QueryHandler isLoading={isLoading} error={error as Error | null}>
+      <QueryHandler isLoading={logic.isLoading} error={logic.error as Error | null}>
         <DataTable
           columns={columns}
-          data={filteredContratos}
+          data={logic.filteredContratos}
           getRowKey={(row) => row.id}
 
-          // ✅ Feedback Visual al descargar
-          highlightedRowId={highlightedId}
+          // ✅ Feedback Visual
+          highlightedRowId={logic.highlightedId}
 
           emptyMessage="No se encontraron contratos firmados."
           pagination={true}

@@ -1,17 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  TextField, Typography, Alert, Box, Stack, Divider, InputAdornment, useTheme, alpha 
+  TextField, Typography, Alert, Box, Stack, Divider, InputAdornment, useTheme, alpha, CircularProgress 
 } from '@mui/material';
 import { Gavel, MonetizationOn, Token, TrendingUp, VerifiedUser } from '@mui/icons-material';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+
 import type { LoteDto } from '@/core/types/dto/lote.dto';
 import type { CreatePujaDto } from '@/core/types/dto/puja.dto';
 import PujaService from '@/core/api/services/puja.service';
 import BaseModal from '@/shared/components/domain/modals/BaseModal/BaseModal';
 
-// Extensión de la interfaz para incluir datos calculados o anidados
+// Extendemos para soportar datos anidados que el backend pueda enviar (ej: includes)
 interface LoteConPuja extends LoteDto {
-    ultima_puja?: { monto: number | string; id_usuario: number; }; 
+    ultima_puja?: { 
+        monto: string | number; 
+        id_usuario?: number; 
+    }; 
 }
 
 interface Props {
@@ -24,13 +28,14 @@ interface Props {
 
 export const PujarModal: React.FC<Props> = ({ open, onClose, lote: loteProp, soyGanador = false, onSuccess }) => {
   const theme = useTheme();
+  const queryClient = useQueryClient();
+  
   const [monto, setMonto] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const queryClient = useQueryClient();
   
   const lote = loteProp as LoteConPuja | null;
 
-  // Reset del estado al abrir
+  // Reset al abrir
   useEffect(() => {
     if (open) {
       setMonto('');
@@ -44,21 +49,19 @@ export const PujarModal: React.FC<Props> = ({ open, onClose, lote: loteProp, soy
       
       const payload: CreatePujaDto = {
         id_lote: lote.id,
-        monto_puja: Number(monto)
+        monto_puja: Number(monto) // Convertimos a número para el DTO
       };
 
       await PujaService.create(payload);
     },
     onSuccess: () => {
-      // 1. Invalidar queries para actualizar datos en tiempo real
+      // Invalidar queries clave para refrescar la UI inmediatamente
       queryClient.invalidateQueries({ queryKey: ['lotesProyecto'] }); 
       queryClient.invalidateQueries({ queryKey: ['lote', lote?.id?.toString()] });
       queryClient.invalidateQueries({ queryKey: ['misPujas'] });
+      queryClient.invalidateQueries({ queryKey: ['activePujas'] });
       
-      // 2. Feedback al usuario (Delegado al padre o Snackbar global)
       if (onSuccess) onSuccess();
-      
-      // 3. Cerrar y limpiar
       handleReset();
     },
     onError: (err: any) => {
@@ -73,87 +76,133 @@ export const PujarModal: React.FC<Props> = ({ open, onClose, lote: loteProp, soy
       onClose();
   };
 
-  if (!lote) return null;
-
-  // === CÁLCULOS DE PRECIO Y REGLAS DE NEGOCIO ===
+  // === 🧮 LÓGICA DE PRECIOS Y VALIDACIÓN ===
   
-  const precioBase = Number(lote.precio_base);
-  const montoGanadorLote = lote.monto_ganador_lote ? Number(lote.monto_ganador_lote) : 0;
-  const montoUltimaPuja = lote.ultima_puja?.monto ? Number(lote.ultima_puja.monto) : 0;
-  
-  // Precio más alto registrado actualmente en el sistema
-  const precioMercado = Math.max(montoUltimaPuja, montoGanadorLote);
+  const { precioBase, precioActualMercado, precioMinimoRequerido, esPrimerPuja } = useMemo(() => {
+      if (!lote) return { precioBase: 0, precioActualMercado: 0, precioMinimoRequerido: 0, esPrimerPuja: true };
 
-  // Precio a superar
-  const hayPujasPrevias = precioMercado > 0;
-  const precioA_Vencer = hayPujasPrevias ? precioMercado : precioBase;
+      // 1. Parseo seguro de Decimales (vienen como string del backend usualmente)
+      const base = parseFloat(lote.precio_base.toString());
+      
+      // 2. Determinar la puja más alta actual
+      // Prioridad: 
+      // A. 'ultima_puja.monto' (si el backend hace include)
+      // B. 'monto_ganador_lote' (si el backend actualiza la columna en Lote)
+      // C. 0 (Nadie ha pujado)
+      let actual = 0;
+      if (lote.ultima_puja?.monto) {
+          actual = parseFloat(lote.ultima_puja.monto.toString());
+      } else if (lote.monto_ganador_lote) {
+          actual = parseFloat(lote.monto_ganador_lote.toString());
+      }
 
-  // Helper de formateo
+      const hayPujas = actual > 0;
+
+      // 3. Regla del Backend:
+      // - Si hay puja previa: Nueva > Actual
+      // - Si NO hay puja previa: Nueva >= Base
+      // Nota: Para simplificar UX, en subastas activas solemos pedir > Actual.
+      // Pero si nadie ha pujado, debe ser >= Base.
+      
+      let minimo = 0;
+      if (hayPujas) {
+          // Si ya hay pujas, debo superar estrictamente la actual.
+          // En la UI, sugerimos al menos un incremento mínimo (ej: +1 centavo o +100 pesos), 
+          // pero la validación estricta es > actual.
+          minimo = actual + 0.01; 
+      } else {
+          minimo = base;
+      }
+
+      return {
+          precioBase: base,
+          precioActualMercado: actual,
+          precioMinimoRequerido: minimo,
+          esPrimerPuja: !hayPujas
+      };
+  }, [lote]);
+
   const formatMoney = (amount: number) => 
     new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(amount);
 
   const handleSubmit = () => {
-    if (!monto) return;
+    if (!monto || !esMontoValido) return;
     mutation.mutate();
   };
 
-  const montoNumerico = Number(monto);
+  if (!lote) return null;
+
+  const montoNumerico = parseFloat(monto);
   
-  // === VALIDACIÓN ===
-  // Regla: Si hay pujas, debe ser estrictamente MAYOR. Si no, al menos IGUAL al base.
+  // Validación estricta contra NaN y reglas de negocio
   const esMontoValido = 
     monto !== '' && 
     !isNaN(montoNumerico) && 
-    (hayPujasPrevias ? montoNumerico > precioA_Vencer : montoNumerico >= precioBase);
+    montoNumerico >= precioMinimoRequerido;
 
   return (
     <BaseModal
         open={open}
         onClose={handleReset}
-        title={soyGanador ? 'Actualizar Oferta' : 'Realizar Oferta'}
-        subtitle={lote.nombre_lote}
+        title={soyGanador ? 'Defender mi Posición' : 'Realizar Oferta'}
+        subtitle={`Lote: ${lote.nombre_lote}`}
         icon={soyGanador ? <VerifiedUser /> : <Gavel />}
         headerColor={soyGanador ? 'success' : 'primary'}
         maxWidth="xs"
         confirmText={soyGanador ? 'Actualizar Puja' : 'Confirmar Oferta'}
         confirmButtonColor={soyGanador ? 'success' : 'primary'}
+        confirmButtonIcon={mutation.isPending ? <CircularProgress size={20} color="inherit"/> : undefined}
         onConfirm={handleSubmit}
         isLoading={mutation.isPending}
         disableConfirm={!esMontoValido || mutation.isPending}
     >
       <Stack spacing={3}>
           
-          {/* Panel de Información de Precios */}
+          {/* 📊 PANEL DE PRECIOS */}
           <Box 
             p={2} 
-            bgcolor={soyGanador ? alpha(theme.palette.success.main, 0.05) : (hayPujasPrevias ? alpha(theme.palette.warning.main, 0.05) : alpha(theme.palette.grey[500], 0.05))} 
+            bgcolor={soyGanador ? alpha(theme.palette.success.main, 0.05) : alpha(theme.palette.background.paper, 0.5)} 
             borderRadius={2} 
             border="1px solid" 
             borderColor={soyGanador ? 'success.main' : 'divider'}
           >
-            <Stack direction="row" justifyContent="space-between" alignItems="center">
-              <Typography variant="body2" color="text.secondary" display="flex" alignItems="center" gap={0.5} fontWeight={600}>
-                {soyGanador ? <VerifiedUser fontSize="inherit" color="success"/> : (hayPujasPrevias ? <TrendingUp fontSize="inherit"/> : <MonetizationOn fontSize="inherit"/>)}
-                {soyGanador ? 'Tu Puja Actual:' : (hayPujasPrevias ? 'Puja Más Alta:' : 'Precio Base:')}
-              </Typography>
-              <Typography variant="h6" color={soyGanador ? "success.main" : (hayPujasPrevias ? "warning.main" : "primary.main")} fontWeight={800}>
-                {formatMoney(precioA_Vencer)}
-              </Typography>
+            <Stack spacing={1}>
+                {/* Fila 1: Precio Base (Referencia) */}
+                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Typography variant="caption" color="text.secondary">Precio Base</Typography>
+                    <Typography variant="body2" fontWeight={500} color="text.secondary">{formatMoney(precioBase)}</Typography>
+                </Stack>
+
+                <Divider sx={{ borderStyle: 'dashed' }} />
+
+                {/* Fila 2: Situación Actual */}
+                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Typography variant="body2" color="text.primary" display="flex" alignItems="center" gap={0.5} fontWeight={600}>
+                        {soyGanador 
+                            ? <><VerifiedUser fontSize="inherit" color="success"/> Tu Puja Actual</> 
+                            : (esPrimerPuja ? <><MonetizationOn fontSize="inherit"/> Sin Ofertas</> : <><TrendingUp fontSize="inherit" color="warning"/> Oferta Más Alta</>)
+                        }
+                    </Typography>
+                    <Typography variant="h6" color={soyGanador ? "success.main" : (esPrimerPuja ? "text.primary" : "warning.main")} fontWeight={800}>
+                        {esPrimerPuja ? '--' : formatMoney(precioActualMercado)}
+                    </Typography>
+                </Stack>
             </Stack>
 
             {soyGanador && (
-               <Typography variant="caption" color="success.main" display="block" mt={1} fontWeight={500}>
-                 ¡Vas ganando! Sube tu oferta para proteger tu posición.
+               <Typography variant="caption" color="success.main" display="block" mt={1} fontWeight={500} textAlign="center">
+                 ¡Vas ganando! Puedes subir tu oferta para asegurar el lote.
                </Typography>
             )}
           </Box>
 
-          {/* Input de Oferta */}
+          {/* ⌨️ INPUT DE OFERTA */}
           <TextField
             autoFocus
             fullWidth
-            label="Tu Nueva Oferta"
-            placeholder={hayPujasPrevias ? `Mayor a ${formatMoney(precioA_Vencer)}` : `Mínimo ${formatMoney(precioBase)}`}
+            label={soyGanador ? "Mejorar mi oferta" : "Tu oferta"}
+            // Placeholder dinámico según reglas
+            placeholder={`Mínimo ${formatMoney(precioMinimoRequerido)}`}
             type="number"
             autoComplete='off'
             value={monto}
@@ -169,25 +218,26 @@ export const PujarModal: React.FC<Props> = ({ open, onClose, lote: loteProp, soy
             helperText={
                 error || 
                 (monto !== '' && !esMontoValido 
-                    ? `Debe ${hayPujasPrevias ? 'superar' : 'ser al menos'} ${formatMoney(precioA_Vencer)}` 
-                    : '')
+                    ? `La oferta debe ser mayor o igual a ${formatMoney(precioMinimoRequerido)}` 
+                    : 'Ingresa el monto que estás dispuesto a pagar.')
             }
-            sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+            sx={{ 
+                '& .MuiOutlinedInput-root': { borderRadius: 2 },
+                '& input[type=number]': { MozAppearance: 'textfield' } // Quita flechas en Firefox
+            }}
           />
 
-          <Divider />
-
-          {/* Aviso de Token Inteligente */}
+          {/* ℹ️ AVISO DE TOKENS */}
           {soyGanador ? (
-            <Alert severity="info" icon={<Token fontSize="inherit" />} sx={{ alignItems: 'center', borderRadius: 2 }}>
-                <Typography variant="caption" display="block">
-                  Al actualizar tu propia puja ganadora, <strong>no se consumen tokens adicionales</strong>.
+            <Alert severity="info" icon={<Token fontSize="inherit" />} variant="outlined" sx={{ borderRadius: 2 }}>
+                <Typography variant="caption" display="block" lineHeight={1.3}>
+                  Actualizar tu propia puja ganadora es <strong>gratis</strong> (no consume tokens extra).
                 </Typography>
             </Alert>
           ) : (
-            <Alert severity="warning" icon={<Token fontSize="inherit" />} sx={{ alignItems: 'center', borderRadius: 2 }}>
-                <Typography variant="caption" display="block">
-                  Esta acción consumirá <strong>1 Token de Subasta</strong> si es tu primera participación en este lote.
+            <Alert severity="warning" icon={<Token fontSize="inherit" />} variant="outlined" sx={{ borderRadius: 2 }}>
+                <Typography variant="caption" display="block" lineHeight={1.3}>
+                  Al confirmar, se consumirá <strong>1 Token de Subasta</strong> de tu suscripción.
                 </Typography>
             </Alert>
           )}

@@ -9,10 +9,6 @@ export interface ImagenDto extends BaseDTO {
   url: string;         // Ej: '/uploads/imagenes/foto-123.jpg'
   descripcion?: string;
   
-  // Nota: 'es_principal' no estaba en tu modelo Sequelize original compartido,
-  // pero lo usas en el frontend. Si no existe en BD, será undefined.
-  es_principal?: boolean; 
-  
   // Relaciones
   id_proyecto: number | null;
   id_lote: number | null;
@@ -46,7 +42,5 @@ export interface UpdateImagenDto {
   id_proyecto?: number | null;
   id_lote?: number | null;
   
-  // Si tuvieras lógica de "imagen principal" en BD, iría aquí
-  es_principal?: boolean; 
   activo?: boolean;
 }

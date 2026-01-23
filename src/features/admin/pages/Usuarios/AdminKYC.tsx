@@ -15,23 +15,18 @@ import {
   Badge as BadgeIcon
 } from '@mui/icons-material';
 
-
 import { PageContainer } from '../../../../shared/components/layout/containers/PageContainer/PageContainer';
 import { PageHeader } from '../../../../shared/components/layout/headers/PageHeader';
 import { QueryHandler } from '../../../../shared/components/data-grid/QueryHandler/QueryHandler';
 import { DataTable, type DataTableColumn } from '../../../../shared/components/data-grid/DataTable/DataTable';
+import { ConfirmDialog } from '../../../../shared/components/domain/modals/ConfirmDialog/ConfirmDialog';
 
 import KycDetailModal from './modals/KycDetailModal';
-
-
 import { useAdminKYC } from '../../hooks/useAdminKYC';
-import { ConfirmDialog } from '../../../../shared/components/domain/modals/ConfirmDialog/ConfirmDialog';
 import type { KycDTO } from '../../../../core/types/dto/kyc.dto';
 
 const AdminKYC: React.FC = () => {
   const theme = useTheme();
-  
-  // ✅ Usamos el Hook para obtener toda la lógica y estado
   const logic = useAdminKYC();
 
   // DEFINICIÓN DE COLUMNAS
@@ -58,13 +53,13 @@ const AdminKYC: React.FC = () => {
       id: 'documento', label: 'Documentación',
       render: (kyc) => (
         <Stack direction="row" alignItems="center" spacing={1}>
-           <BadgeIcon fontSize="small" color="action" />
-           <Box>
+          <BadgeIcon fontSize="small" color="action" />
+          <Box>
             <Typography variant="body2" fontWeight={600} color="text.primary">{kyc.tipo_documento}</Typography>
             <Typography variant="caption" sx={{ fontFamily: 'monospace', bgcolor: 'action.hover', px: 0.5, borderRadius: 1 }}>
-                {kyc.numero_documento}
+              {kyc.numero_documento}
             </Typography>
-           </Box>
+          </Box>
         </Stack>
       )
     },
@@ -81,14 +76,14 @@ const AdminKYC: React.FC = () => {
       render: (kyc) => {
         let color: 'success' | 'error' | 'warning' = 'warning';
         let icon = <PendingIcon fontSize="small" />;
-        
+
         if (kyc.estado_verificacion === 'APROBADA') { color = 'success'; icon = <ApprovedIcon fontSize="small" />; }
         if (kyc.estado_verificacion === 'RECHAZADA') { color = 'error'; icon = <RejectedIcon fontSize="small" />; }
 
         return (
-          <Chip 
-            label={kyc.estado_verificacion} 
-            size="small" 
+          <Chip
+            label={kyc.estado_verificacion}
+            size="small"
             icon={icon}
             color={color}
             sx={{ fontWeight: 700, minWidth: 100, justifyContent: 'flex-start' }}
@@ -102,34 +97,34 @@ const AdminKYC: React.FC = () => {
       render: (kyc) => (
         <Stack direction="row" justifyContent="flex-end" spacing={0.5}>
           <Tooltip title="Ver Detalles">
-            <IconButton 
-                size="small" 
-                onClick={() => logic.handleOpenDetails(kyc)}
-                sx={{ color: 'info.main', '&:hover': { bgcolor: alpha(theme.palette.info.main, 0.1) } }}
+            <IconButton
+              size="small"
+              onClick={() => logic.handleOpenDetails(kyc)}
+              sx={{ color: 'info.main', '&:hover': { bgcolor: alpha(theme.palette.info.main, 0.1) } }}
             >
-                <VisibilityIcon fontSize="small" />
+              <VisibilityIcon fontSize="small" />
             </IconButton>
           </Tooltip>
-          
+
           {kyc.estado_verificacion === 'PENDIENTE' && (
             <>
               <Tooltip title="Aprobar">
-                <IconButton 
-                    size="small" 
-                    onClick={() => logic.handleApproveClick(kyc)}
-                    disabled={logic.isApproving}
-                    sx={{ color: 'success.main', '&:hover': { bgcolor: alpha(theme.palette.success.main, 0.1) } }}
+                <IconButton
+                  size="small"
+                  onClick={() => logic.handleApproveClick(kyc)}
+                  disabled={logic.isApproving}
+                  sx={{ color: 'success.main', '&:hover': { bgcolor: alpha(theme.palette.success.main, 0.1) } }}
                 >
-                    <CheckCircleIcon fontSize="small" />
+                  <CheckCircleIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
               <Tooltip title="Rechazar">
-                <IconButton 
-                    size="small" 
-                    onClick={() => logic.handleOpenRejectInput(kyc)}
-                    sx={{ color: 'error.main', '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.1) } }}
+                <IconButton
+                  size="small"
+                  onClick={() => logic.handleOpenRejectInput(kyc)}
+                  sx={{ color: 'error.main', '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.1) } }}
                 >
-                    <CancelIcon fontSize="small" />
+                  <CancelIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
             </>
@@ -142,18 +137,18 @@ const AdminKYC: React.FC = () => {
   return (
     <PageContainer maxWidth="xl" sx={{ py: 3 }}>
       <PageHeader title="Gestión KYC" subtitle="Validación de identidad y documentación de usuarios" />
-      
+
       {/* Tabs */}
-      <Paper 
-        elevation={0} 
-        sx={{ mb: 3, borderRadius: 2, border: '1px solid', borderColor: 'divider', bgcolor: alpha(theme.palette.background.paper, 0.6), p: 0.5 }} 
+      <Paper
+        elevation={0}
+        sx={{ mb: 3, borderRadius: 2, border: '1px solid', borderColor: 'divider', bgcolor: alpha(theme.palette.background.paper, 0.6), p: 0.5 }}
       >
-        <Tabs 
-            value={logic.currentTab} 
-            onChange={(_, v) => logic.setCurrentTab(v)} 
-            variant="standard" 
-            indicatorColor="primary" 
-            textColor="primary"
+        <Tabs
+          value={logic.currentTab}
+          onChange={(_, v) => logic.setCurrentTab(v)}
+          variant="standard"
+          indicatorColor="primary"
+          textColor="primary"
         >
           <Tab icon={<PendingIcon />} iconPosition="start" label="Pendientes" value="pendiente" />
           <Tab icon={<ApprovedIcon />} iconPosition="start" label="Aprobadas" value="aprobada" />
@@ -164,38 +159,42 @@ const AdminKYC: React.FC = () => {
 
       <QueryHandler isLoading={logic.isLoading} error={logic.error as Error}>
         <DataTable
-            columns={columns}
-            data={(logic.currentData as KycDTO[]) || []} 
-            getRowKey={(row) => row.id} 
-            emptyMessage={`No hay solicitudes en estado: ${logic.currentTab}.`}
-            highlightedRowId={logic.lastActionId}
-            pagination 
-            defaultRowsPerPage={10}
+          columns={columns}
+          // ✨ Usamos la lista ordenada del hook
+          data={logic.kycList}
+          getRowKey={(row) => row.id}
+
+          // ✨ Props de UX
+          highlightedRowId={logic.highlightedId}
+
+          emptyMessage={`No hay solicitudes en estado: ${logic.currentTab}.`}
+          pagination
+          defaultRowsPerPage={10}
         />
       </QueryHandler>
 
       {/* --- MODALES --- */}
-      
+
       {/* 1. Detalle KYC */}
-      <KycDetailModal 
-        open={logic.detailsModal.isOpen} 
-        onClose={logic.detailsModal.close} 
+      <KycDetailModal
+        open={logic.detailsModal.isOpen}
+        onClose={logic.detailsModal.close}
         kyc={logic.selectedKyc}
-        onApprove={logic.handleApproveClick} 
+        onApprove={logic.handleApproveClick}
         onReject={logic.handleOpenRejectInput}
       />
 
       {/* 2. Confirmación Aprobación */}
-      <ConfirmDialog 
+      <ConfirmDialog
         controller={logic.confirmDialog}
         onConfirm={logic.handleConfirmApprove}
         isLoading={logic.isApproving}
       />
 
       {/* 3. Rechazo Manual */}
-      <Dialog 
-        open={logic.rejectModal.isOpen} 
-        onClose={logic.rejectModal.close} 
+      <Dialog
+        open={logic.rejectModal.isOpen}
+        onClose={logic.rejectModal.close}
         maxWidth="sm" fullWidth
         PaperProps={{ sx: { borderRadius: 3 } }}
       >
@@ -204,20 +203,20 @@ const AdminKYC: React.FC = () => {
           <Alert severity="warning" variant="outlined" sx={{ mb: 2 }}>
             El usuario deberá volver a subir la documentación.
           </Alert>
-          <TextField 
-            autoFocus fullWidth multiline rows={3} 
-            label="Motivo del rechazo" 
+          <TextField
+            autoFocus fullWidth multiline rows={3}
+            label="Motivo del rechazo"
             placeholder="Ej: Documento ilegible..."
             variant="outlined"
-            value={logic.rejectReason} 
+            value={logic.rejectReason}
             onChange={(e) => logic.setRejectReason(e.target.value)}
           />
         </DialogContent>
         <DialogActions sx={{ p: 2.5 }}>
           <Button onClick={logic.rejectModal.close} color="inherit">Cancelar</Button>
-          <Button 
-            variant="contained" color="error" 
-            onClick={logic.handleConfirmReject} 
+          <Button
+            variant="contained" color="error"
+            onClick={logic.handleConfirmReject}
             disabled={!logic.rejectReason.trim() || logic.isRejecting}
           >
             {logic.isRejecting ? 'Procesando...' : 'Rechazar'}

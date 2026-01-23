@@ -2,12 +2,13 @@ import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTheme } from '@mui/material';
 import useSnackbar from '@/shared/hooks/useSnackbar';
-import type { SuscripcionDto } from '@/core/types/dto/suscripcion.dto';
 import { useModal } from '@/shared/hooks/useModal';
 import { useConfirmDialog } from '@/shared/hooks/useConfirmDialog';
+
+import type { SuscripcionDto } from '@/core/types/dto/suscripcion.dto';
 import SuscripcionService from '@/core/api/services/suscripcion.service';
 import ProyectoService from '@/core/api/services/proyecto.service';
-
+import { useSortedData } from './useSortedData';
 
 export const useAdminSuscripciones = () => {
   const queryClient = useQueryClient();
@@ -20,9 +21,8 @@ export const useAdminSuscripciones = () => {
   const [filterProject, setFilterProject] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | 'activas' | 'inactivas'>('activas');
   
-  // Selección y Feedback
+  // Selección
   const [selectedSuscripcion, setSelectedSuscripcion] = useState<SuscripcionDto | null>(null);
-  const [highlightedId, setHighlightedId] = useState<number | null>(null);
 
   // Modales
   const modales = {
@@ -31,7 +31,7 @@ export const useAdminSuscripciones = () => {
   };
 
   // --- QUERIES ---
-  const { data: suscripciones = [], isLoading: loadingSuscripciones, error } = useQuery({
+  const { data: suscripcionesRaw = [], isLoading: l1, error } = useQuery({
     queryKey: ['adminSuscripciones', filterStatus],
     queryFn: async () => {
       if (filterStatus === 'activas') {
@@ -42,21 +42,52 @@ export const useAdminSuscripciones = () => {
     refetchInterval: 30000,
   });
 
+  // ✨ 1. ORDENAMIENTO + HIGHLIGHT
+  const { sortedData: suscripcionesOrdenadas, highlightedId, triggerHighlight } = useSortedData(suscripcionesRaw);
+
   const { data: proyectos = [] } = useQuery({
     queryKey: ['adminProyectosSelect'],
     queryFn: async () => (await ProyectoService.getAllAdmin()).data,
     staleTime: 60000,
   });
 
-  const { data: morosidadStats, isLoading: loadMorosidad } = useQuery({
+  const { data: morosidadStats, isLoading: l2 } = useQuery({
     queryKey: ['metricsMorosidad'],
     queryFn: async () => (await SuscripcionService.getMorosityMetrics()).data,
   });
 
-  const { data: cancelacionStats, isLoading: loadCancelacion } = useQuery({
+  const { data: cancelacionStats, isLoading: l3 } = useQuery({
     queryKey: ['metricsCancelacionMetrics'],
     queryFn: async () => (await SuscripcionService.getCancellationMetrics()).data,
   });
+
+  const isLoading = l1 || l2 || l3;
+
+  // Filtrado (Sobre data ordenada)
+  const filteredSuscripciones = useMemo(() => {
+    return suscripcionesOrdenadas.filter(suscripcion => {
+      const term = searchTerm.toLowerCase();
+      const matchesSearch =
+        suscripcion.usuario?.nombre.toLowerCase().includes(term) ||
+        suscripcion.usuario?.apellido.toLowerCase().includes(term) ||
+        suscripcion.usuario?.email.toLowerCase().includes(term) ||
+        suscripcion.proyectoAsociado?.nombre_proyecto.toLowerCase().includes(term) ||
+        suscripcion.id.toString().includes(term);
+
+      let matchesProject = true;
+      if (filterProject !== 'all') {
+        matchesProject = suscripcion.id_proyecto === Number(filterProject);
+      }
+
+      let matchesStatus = true;
+      // Nota: El filtro de estado ya viene pre-filtrado por la query si usas el endpoint findAllActivas,
+      // pero mantenemos esto por si usas findAll y filtras en cliente.
+      if (filterStatus === 'activas') matchesStatus = suscripcion.activo === true;
+      if (filterStatus === 'inactivas') matchesStatus = suscripcion.activo === false;
+
+      return matchesSearch && matchesProject && matchesStatus;
+    });
+  }, [suscripcionesOrdenadas, searchTerm, filterProject, filterStatus]);
 
   // Cálculos Stats
   const stats = useMemo(() => {
@@ -73,30 +104,6 @@ export const useAdminSuscripciones = () => {
       };
   }, [cancelacionStats, morosidadStats]);
 
-  // Filtrado
-  const filteredSuscripciones = useMemo(() => {
-    return suscripciones.filter(suscripcion => {
-      const term = searchTerm.toLowerCase();
-      const matchesSearch =
-        suscripcion.usuario?.nombre.toLowerCase().includes(term) ||
-        suscripcion.usuario?.apellido.toLowerCase().includes(term) ||
-        suscripcion.usuario?.email.toLowerCase().includes(term) ||
-        suscripcion.proyectoAsociado?.nombre_proyecto.toLowerCase().includes(term) ||
-        suscripcion.id.toString().includes(term);
-
-      let matchesProject = true;
-      if (filterProject !== 'all') {
-        matchesProject = suscripcion.id_proyecto === Number(filterProject);
-      }
-
-      let matchesStatus = true;
-      if (filterStatus === 'activas') matchesStatus = suscripcion.activo === true;
-      if (filterStatus === 'inactivas') matchesStatus = suscripcion.activo === false;
-
-      return matchesSearch && matchesProject && matchesStatus;
-    });
-  }, [suscripciones, searchTerm, filterProject, filterStatus]);
-
   // --- MUTACIONES ---
   const cancelarMutation = useMutation({
     mutationFn: async (id: number) => await SuscripcionService.cancelarAdmin(id),
@@ -106,8 +113,9 @@ export const useAdminSuscripciones = () => {
       queryClient.invalidateQueries({ queryKey: ['metricsMorosidad'] });
 
       modales.confirm.close();
-      setHighlightedId(id);
-      setTimeout(() => setHighlightedId(null), 2500);
+      
+      // ✨ Highlight Automático (Visualizar qué se canceló)
+      triggerHighlight(id);
       showSuccess('Suscripción cancelada correctamente.');
     },
     onError: (err: any) => {
@@ -149,6 +157,8 @@ export const useAdminSuscripciones = () => {
     filterProject, setFilterProject,
     filterStatus, setFilterStatus,
     selectedSuscripcion,
+    
+    // ✨ UX Props
     highlightedId,
     
     // Data & Stats
@@ -157,8 +167,8 @@ export const useAdminSuscripciones = () => {
     filteredSuscripciones,
     
     // Loading
-    isLoading: loadingSuscripciones,
-    isLoadingStats: loadMorosidad || loadCancelacion,
+    isLoading,
+    isLoadingStats: l2 || l3,
     isCancelling: cancelarMutation.isPending,
     error,
 

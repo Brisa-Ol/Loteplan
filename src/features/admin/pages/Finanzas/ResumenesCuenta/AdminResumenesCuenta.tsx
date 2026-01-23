@@ -1,5 +1,4 @@
-// src/pages/Admin/Finanzas/ResumenesCuenta/AdminResumenesCuenta.tsx
-
+import React, { useMemo } from 'react';
 import {
   AccessTime,
   AccountBalanceWallet,
@@ -18,76 +17,21 @@ import {
   Typography,
   useTheme
 } from '@mui/material';
-import { useQuery } from '@tanstack/react-query';
-import React, { useCallback, useMemo, useState } from 'react';
 
 import { DataTable, type DataTableColumn } from '../../../../../shared/components/data-grid/DataTable/DataTable';
-
 import { PageContainer } from '../../../../../shared/components/layout/containers/PageContainer/PageContainer';
 import { PageHeader } from '../../../../../shared/components/layout/headers/PageHeader';
 import { QueryHandler } from '../../../../../shared/components/data-grid/QueryHandler/QueryHandler';
-import { useModal } from '../../../../../shared/hooks/useModal';
+import { FilterBar, FilterSearch, FilterSelect } from '../../../../../shared/components/forms/filters/FilterBar/FilterBar';
 
 import DetalleResumenModal from './modals/DetalleResumenModal';
-import ResumenCuentaService from '../../../../../core/api/services/resumenCuenta.service';
+
 import type { ResumenCuentaDto } from '../../../../../core/types/dto/resumenCuenta.dto';
-import { FilterBar, FilterSearch, FilterSelect } from '../../../../../shared/components/forms/filters/FilterBar/FilterBar';
+import { useAdminResumenes } from '@/features/admin/hooks/useAdminResumenes';
 
 const AdminResumenesCuenta: React.FC = () => {
   const theme = useTheme();
-
-  // --- ESTADOS DE FILTRO ---
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterState, setFilterState] = useState<'all' | 'active' | 'completed' | 'overdue'>('all');
-  
-  // ✅ CORRECCIÓN: Eliminado estado 'highlightedId' que no se usaba
-  // const [highlightedId, setHighlightedId] = useState<number | null>(null);
-
-  // Hooks
-  const detalleModal = useModal();
-  const [selectedResumen, setSelectedResumen] = useState<ResumenCuentaDto | null>(null);
-
-  // --- QUERY ---
-  const { data: resumenes = [], isLoading, error } = useQuery({
-    queryKey: ['adminResumenes'],
-    queryFn: async () => {
-      const response = await ResumenCuentaService.findAll();
-      return response.data;
-    },
-  });
-
-  // --- FILTRADO (Memoized) ---
-  const filteredResumenes = useMemo(() => {
-    return resumenes.filter(resumen => {
-      const term = searchTerm.toLowerCase();
-      const matchesSearch =
-        resumen.nombre_proyecto.toLowerCase().includes(term) ||
-        resumen.id.toString().includes(term) ||
-        resumen.id_suscripcion.toString().includes(term);
-
-      let matchesState = true;
-      if (filterState === 'active') {
-        matchesState = resumen.porcentaje_pagado < 100 && resumen.cuotas_vencidas === 0;
-      } else if (filterState === 'completed') {
-        matchesState = resumen.porcentaje_pagado >= 100;
-      } else if (filterState === 'overdue') {
-        matchesState = resumen.cuotas_vencidas > 0;
-      }
-
-      return matchesSearch && matchesState;
-    });
-  }, [resumenes, searchTerm, filterState]);
-
-  // Handlers (Callback para rendimiento)
-  const handleVerDetalle = useCallback((resumen: ResumenCuentaDto) => {
-    setSelectedResumen(resumen);
-    detalleModal.open();
-  }, [detalleModal]);
-
-  const handleCloseModal = useCallback(() => {
-    detalleModal.close();
-    setTimeout(() => setSelectedResumen(null), 300);
-  }, [detalleModal]);
+  const logic = useAdminResumenes(); // Usamos el hook
 
   // --- COLUMNAS ---
   const columns = useMemo<DataTableColumn<ResumenCuentaDto>[]>(() => [
@@ -210,7 +154,7 @@ const AdminResumenesCuenta: React.FC = () => {
         <Tooltip title="Ver Detalle Completo">
           <IconButton
             size="small"
-            onClick={() => handleVerDetalle(resumen)}
+            onClick={() => logic.handleVerDetalle(resumen)}
             sx={{ 
                 color: 'primary.main', 
                 bgcolor: alpha(theme.palette.primary.main, 0.1),
@@ -222,7 +166,7 @@ const AdminResumenesCuenta: React.FC = () => {
         </Tooltip>
       )
     }
-  ], [theme, handleVerDetalle]);
+  ], [theme, logic]);
 
   return (
     <PageContainer maxWidth="xl">
@@ -232,19 +176,19 @@ const AdminResumenesCuenta: React.FC = () => {
         subtitle="Visualiza el estado de todos los planes de pago y suscripciones activas."
       />
 
-      {/* Barra de Filtros Estandarizada */}
+      {/* Barra de Filtros */}
       <FilterBar>
         <FilterSearch
           placeholder="Buscar por proyecto, ID resumen o ID suscripción..."
-          value={searchTerm} 
-          onSearch={setSearchTerm} 
+          value={logic.searchTerm} 
+          onSearch={logic.setSearchTerm} 
           sx={{ flexGrow: 2, minWidth: 300 }}
         />
 
         <FilterSelect
           label="Filtrar por Estado"
-          value={filterState}
-          onChange={(e) => setFilterState(e.target.value as any)}
+          value={logic.filterState}
+          onChange={(e) => logic.setFilterState(e.target.value as any)}
           sx={{ minWidth: 200 }}
         >
           <MenuItem value="all">Todos los Estados</MenuItem>
@@ -255,13 +199,14 @@ const AdminResumenesCuenta: React.FC = () => {
       </FilterBar>
 
       {/* Tabla */}
-      <QueryHandler isLoading={isLoading} error={error as Error}>
+      <QueryHandler isLoading={logic.isLoading} error={logic.error as Error}>
         <DataTable
           columns={columns}
-          data={filteredResumenes}
+          data={logic.filteredResumenes}
           getRowKey={(row) => row.id} 
           isRowActive={(row) => row.porcentaje_pagado < 100} 
-          // highlightedRowId eliminado
+          // ✨ Highlight (aunque no se use mucho aquí, está listo si agregas ediciones futuras)
+          highlightedRowId={logic.highlightedId} 
           emptyMessage="No se encontraron resúmenes de cuenta con los filtros actuales."
           pagination={true}
           defaultRowsPerPage={10}
@@ -270,9 +215,9 @@ const AdminResumenesCuenta: React.FC = () => {
 
       {/* Modal Detalle */}
       <DetalleResumenModal
-        open={detalleModal.isOpen}
-        onClose={handleCloseModal}
-        resumen={selectedResumen}
+        open={logic.detalleModal.isOpen}
+        onClose={logic.handleCloseModal}
+        resumen={logic.selectedResumen}
       />
     </PageContainer>
   );

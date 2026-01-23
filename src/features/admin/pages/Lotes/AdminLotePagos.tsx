@@ -1,5 +1,3 @@
-// src/pages/Admin/Lotes/ControlPagos.tsx
-
 import React, { useMemo } from 'react';
 import {
   Box, Typography, Paper, Stack, Chip, LinearProgress, Alert, Divider,
@@ -18,6 +16,7 @@ import { DataTable, type DataTableColumn } from '../../../../shared/components/d
 import type { LoteDto } from '../../../../core/types/dto/lote.dto';
 import LoteService from '../../../../core/api/services/lote.service';
 import imagenService from '../../../../core/api/services/imagen.service';
+import { useSortedData } from '../../hooks/useSortedData';
 
 
 // --- COMPONENTE KPI (Estandarizado) ---
@@ -89,14 +88,19 @@ const calcularDiasRestantes = (lote: LoteDto): number => {
 const AdminLotePagos: React.FC = () => {
   const theme = useTheme();
   
-  const { data: lotes = [], isLoading, error } = useQuery<LoteDto[]>({
+  // 1. QUERY (Data cruda)
+  const { data: lotesRaw = [], isLoading, error } = useQuery<LoteDto[]>({
     queryKey: ['adminLotes'],
     queryFn: async () => (await LoteService.findAllAdmin()).data,
     refetchInterval: 15000,
   });
 
+  // 2. HOOK: Ordenamiento (Aunque filtraremos después, esto garantiza consistencia si la tabla crece)
+  const { sortedData: lotes, highlightedId } = useSortedData(lotesRaw);
+
   // Análisis de datos
   const analytics = useMemo(() => {
+    // Usamos 'lotes' (que ya vienen ordenados por ID desc) para filtrar
     const finalizados = lotes.filter(l => l.estado_subasta === 'finalizada' && l.id_ganador);
     
     // Pendientes: intentos > 0 y < 3
@@ -109,6 +113,11 @@ const AdminLotePagos: React.FC = () => {
     const proximosVencer = pendientesPago.filter(l => calcularDiasRestantes(l) <= 10);
     const capitalEnRiesgo = riesgoCritico.reduce((acc, l) => acc + Number(l.precio_base), 0);
     
+    // 3. MEJORA: Ordenamiento Específico de Negocio para esta tabla
+    // Aunque el hook ordena por fecha de creación, para "Control de Pagos" 
+    // es más importante ver arriba los de "Mayor Riesgo" (más intentos fallidos).
+    const detallesOrdenados = [...pendientesPago].sort((a, b) => (b.intentos_fallidos_pago || 0) - (a.intentos_fallidos_pago || 0));
+
     return {
       totalFinalizados: finalizados.length,
       pendientesPago: pendientesPago.length,
@@ -116,7 +125,7 @@ const AdminLotePagos: React.FC = () => {
       primerIntento: primerIntento.length,
       proximosVencer: proximosVencer.length,
       capitalEnRiesgo,
-      detalles: pendientesPago.sort((a, b) => (b.intentos_fallidos_pago || 0) - (a.intentos_fallidos_pago || 0))
+      detalles: detallesOrdenados
     };
   }, [lotes]);
 
@@ -328,12 +337,15 @@ const AdminLotePagos: React.FC = () => {
         <QueryHandler isLoading={isLoading} error={error as Error}>
             <DataTable
                 columns={columns}
-                data={analytics.detalles}
+                data={analytics.detalles} // Datos ordenados por riesgo
                 getRowKey={(row) => row.id}
                 emptyMessage="¡Excelente! No hay pendientes de pago con intentos fallidos."
                 pagination={true}
                 defaultRowsPerPage={5}
-                // No usamos highlightedRowId ni isRowActive porque es un monitor pasivo
+                
+                // 4. MEJORA: Aunque no editamos aquí, si el sistema detecta cambios en tiempo real
+                // (por el refetchInterval), el highlight visual mostraría qué fila cambió si se dispara un evento.
+                highlightedRowId={highlightedId} 
             />
         </QueryHandler>
       </Box>

@@ -22,15 +22,14 @@ const ConfirmEmailPage = lazy(() => import('@/features/auth/pages/ConfirmEmailPa
 const Unauthorized = lazy(() => import('@/features/auth/pages/Unauthorized'));
 
 // Public
-const Home = lazy(() => import('@/features/public/Home/Home'));
-const ComoFunciona = lazy(() => import('@/features/public/ComoFunciona/ComoFunciona'));
-const Nosotros = lazy(() => import('@/features/public/Nosotros/Nosotros'));
-const Preguntas = lazy(() => import('@/features/public/Preguntas/Preguntas'));
+const Home = lazy(() => import('@/features/public/Home'));
+const ComoFunciona = lazy(() => import('@/features/public/ComoFunciona'));
+const Nosotros = lazy(() => import('@/features/public/Nosotros'));
+
 
 // Proyectos
 const RoleSelection = lazy(() => import('@/features/client/pages/Proyectos/RoleSelection'));
-const ProyectosAhorrista = lazy(() => import('@/features/client/pages/Proyectos/ProyectosAhorrista'));
-const ProyectosInversionista = lazy(() => import('@/features/client/pages/Proyectos/ProyectosInversionista'));
+
 const DetalleProyecto = lazy(() => import('@/features/client/pages/Proyectos/DetalleProyecto'));
 
 // Client Dashboard & Features
@@ -86,7 +85,7 @@ const AppRouter = () => {
           <Route path={ROUTES.PUBLIC.HOME} element={<Home />} />
           <Route path={ROUTES.PUBLIC.COMO_FUNCIONA} element={<ComoFunciona />} />
           <Route path={ROUTES.PUBLIC.NOSOTROS} element={<Nosotros />} />
-          <Route path={ROUTES.PUBLIC.PREGUNTAS} element={<Preguntas />} />
+          
           
           {/* ✅ SELECCIÓN DE ROL AHORA ES PÚBLICA (Movida aquí) */}
           <Route path={ROUTES.PROYECTOS.SELECCION_ROL} element={<RoleSelection />} />
@@ -105,8 +104,7 @@ const AppRouter = () => {
           {/* ✅ DETALLE DE PROYECTO SIGUE PROTEGIDO */}
           <Route path={ROUTES.PROYECTOS.DETALLE} element={<ProtectedRoute><DetalleProyecto /></ProtectedRoute>} />
           
-          <Route path={ROUTES.PROYECTOS.AHORRISTA} element={<ProtectedRoute><ProyectosAhorrista /></ProtectedRoute>} />
-          <Route path={ROUTES.PROYECTOS.INVERSIONISTA} element={<ProtectedRoute><ProyectosInversionista /></ProtectedRoute>} />
+      
 
           {/* Dashboard y Cuenta */}
           <Route path={ROUTES.CLIENT.DASHBOARD} element={<ProtectedRoute><UserDashboard /></ProtectedRoute>} />

@@ -3,11 +3,12 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTheme } from '@mui/material';
 import useSnackbar from '@/shared/hooks/useSnackbar';
 import { useModal } from '@/shared/hooks/useModal';
+
 import type { PagoDto } from '@/core/types/dto/pago.dto';
 import UsuarioService from '@/core/api/services/usuario.service';
 import PagoService from '@/core/api/services/pago.service';
 import ProyectoService from '@/core/api/services/proyecto.service';
-
+import { useSortedData } from './useSortedData';
 
 export const useAdminPagos = () => {
   const theme = useTheme();
@@ -19,20 +20,25 @@ export const useAdminPagos = () => {
   const [filterState, setFilterState] = useState('all');
   const [dateStart, setDateStart] = useState('');
   const [dateEnd, setDateEnd] = useState('');
-  const [highlightedId, setHighlightedId] = useState<number | null>(null);
 
   // Modales
   const detalleModal = useModal();
   const [selectedPago, setSelectedPago] = useState<PagoDto | null>(null);
 
   // --- QUERIES ---
-  const { data: pagos = [], isLoading: loadingPagos, error } = useQuery({
+  
+  // 1. Pagos (Data Cruda)
+  const { data: pagosRaw = [], isLoading: l1, error: e1 } = useQuery({
     queryKey: ['adminPagos'],
     queryFn: async () => (await PagoService.findAll()).data,
   });
 
+  // ✨ 2. ORDENAMIENTO + HIGHLIGHT
+  // Ordenamos los pagos (más recientes primero)
+  const { sortedData: pagosOrdenados, highlightedId, triggerHighlight } = useSortedData(pagosRaw);
+
   const today = new Date();
-  const { data: metricsData, isLoading: loadingMetrics } = useQuery({
+  const { data: metricsData, isLoading: l2, error: e2 } = useQuery({
     queryKey: ['adminPagosMetrics', today.getMonth() + 1, today.getFullYear()],
     queryFn: async () => (await PagoService.getMonthlyMetrics(today.getMonth() + 1, today.getFullYear())).data,
   });
@@ -49,6 +55,9 @@ export const useAdminPagos = () => {
     queryFn: async () => (await ProyectoService.getAllAdmin()).data,
     staleTime: 300000,
   });
+
+  const isLoading = l1 || l2;
+  const error = e1 || e2;
 
   // --- HELPERS (Memoized Maps) ---
   const usuariosMap = useMemo(() => new Map(usuarios.map(u => [u.id, u])), [usuarios]);
@@ -74,28 +83,28 @@ export const useAdminPagos = () => {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(now.getDate() - 30);
 
-    const dueSoon = pagos.filter(p => {
+    const dueSoon = pagosOrdenados.filter(p => {
       const d = new Date(p.fecha_vencimiento);
       return p.estado_pago === 'pendiente' && d >= now && d <= threeDaysLater;
     });
 
-    const veryOverdue = pagos.filter(p => {
+    const veryOverdue = pagosOrdenados.filter(p => {
       const d = new Date(p.fecha_vencimiento);
       return (p.estado_pago === 'vencido' || (p.estado_pago === 'pendiente' && d < now)) && d < thirtyDaysAgo;
     });
 
     return { dueSoon, veryOverdue };
-  }, [pagos]);
+  }, [pagosOrdenados]);
 
   const globalStats = useMemo(() => {
-    const totalPendiente = pagos
+    const totalPendiente = pagosOrdenados
       .filter(p => p.estado_pago === 'pendiente')
       .reduce((sum, p) => sum + Number(p.monto), 0);
     return { totalPendiente };
-  }, [pagos]);
+  }, [pagosOrdenados]);
 
   const filteredPagos = useMemo(() => {
-    return pagos.filter(pago => {
+    return pagosOrdenados.filter(pago => {
       const uName = getUserName(pago.id_usuario).toLowerCase();
       const pName = getProjectName(pago.id_proyecto).toLowerCase();
       const term = searchTerm.toLowerCase();
@@ -120,20 +129,20 @@ export const useAdminPagos = () => {
 
       return matchesSearch && matchesState && matchesDate;
     });
-  }, [pagos, searchTerm, filterState, dateStart, dateEnd, getUserName, getProjectName]);
+  }, [pagosOrdenados, searchTerm, filterState, dateStart, dateEnd, getUserName, getProjectName]);
 
   // --- HANDLERS ---
   const handleUpdate = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['adminPagos'] });
     queryClient.invalidateQueries({ queryKey: ['adminPagosMetrics'] });
     
+    // ✨ Highlight Automático
     if (selectedPago?.id) {
-        setHighlightedId(selectedPago.id);
-        setTimeout(() => setHighlightedId(null), 2500);
+        triggerHighlight(selectedPago.id);
     }
     
     showSuccess('Estado de pago actualizado correctamente');
-  }, [queryClient, selectedPago, showSuccess]);
+  }, [queryClient, selectedPago, showSuccess, triggerHighlight]);
 
   const handleVerDetalle = useCallback((pago: PagoDto) => {
     setSelectedPago(pago);
@@ -152,18 +161,21 @@ export const useAdminPagos = () => {
     filterState, setFilterState,
     dateStart, setDateStart,
     dateEnd, setDateEnd,
+    
+    // ✨ UX Props
     highlightedId,
+    
     selectedPago,
 
     // Data
-    pagos,
+    pagos: pagosOrdenados, // Exportamos la lista ordenada
     filteredPagos,
     metrics,
     alerts,
     globalStats,
     
     // Loading
-    isLoading: loadingPagos || loadingMetrics,
+    isLoading,
     error,
 
     // Helpers

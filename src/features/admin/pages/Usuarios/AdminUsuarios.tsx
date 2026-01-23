@@ -10,7 +10,6 @@ import {
   PhonelinkLock as TwoFaIcon, CheckCircle, Block as BlockIcon
 } from '@mui/icons-material';
 
-// Components
 import { PageContainer } from '../../../../shared/components/layout/containers/PageContainer/PageContainer';
 import { PageHeader } from '../../../../shared/components/layout/headers/PageHeader';
 import { QueryHandler } from '../../../../shared/components/data-grid/QueryHandler/QueryHandler';
@@ -19,11 +18,9 @@ import { StatCard } from '../../../../shared/components/domain/cards/StatCard/St
 import { FilterBar } from '../../../../shared/components/forms/filters/FilterBar/FilterBar';
 import { ConfirmDialog } from '../../../../shared/components/domain/modals/ConfirmDialog/ConfirmDialog';
 
-// Modals
 import CreateUserModal from './modals/CreateUserModal';
 import EditUserModal from './modals/EditUserModal';
 
-// Logic & Types
 import { useAdminUsuarios } from '../../hooks/useAdminUsuarios';
 import type { UsuarioDto } from '../../../../core/types/dto/usuario.dto';
 
@@ -36,8 +33,8 @@ const AdminUsuarios: React.FC = () => {
     {
       id: 'usuario', label: 'Usuario', minWidth: 250,
       render: (user) => (
+        // 🧹 LIMPIEZA: Quitamos sx={{ opacity }} manual.
         <Stack direction="row" alignItems="center" spacing={2}>
-          {/* El Avatar usa colores dinámicos, eso se queda aquí */}
           <Avatar sx={{
             width: 40, height: 40, fontWeight: 'bold',
             bgcolor: user.activo ? alpha(theme.palette.primary.main, 0.1) : theme.palette.action.disabledBackground,
@@ -50,10 +47,7 @@ const AdminUsuarios: React.FC = () => {
               <Typography variant="body2" fontWeight={600} color={user.activo ? 'text.primary' : 'text.disabled'}>
                 {user.nombre_usuario}
               </Typography>
-              {/* 🧹 LIMPIEZA: Quitados height manual y fontSize innecesario si el Theme Chip small está bien configurado */}
-              {user.id === logic.currentUser?.id && (
-                <Chip label="TÚ" size="small" color="primary" sx={{ height: 20 }} />
-              )}
+              {user.id === logic.currentUser?.id && <Chip label="TÚ" size="small" color="primary" sx={{ height: 20 }} />}
               {user.confirmado_email && <Tooltip title="Email Verificado"><VerifiedUserIcon color="success" sx={{ fontSize: 16 }} /></Tooltip>}
               {user.is_2fa_enabled && <Tooltip title="2FA Activo"><TwoFaIcon color="info" sx={{ fontSize: 16 }} /></Tooltip>}
             </Stack>
@@ -62,12 +56,12 @@ const AdminUsuarios: React.FC = () => {
         </Stack>
       )
     },
-    { id: 'email', label: 'Email', minWidth: 200 },
+    // 🧹 LIMPIEZA: Eliminamos el Box con opacity manual.
+    { id: 'email', label: 'Email', minWidth: 200 }, 
     {
       id: 'rol', label: 'Rol',
       render: (user) => {
         const isAdmin = user.rol === 'admin';
-        // 🧹 LIMPIEZA: Quitados fontWeight y borders manuales. MuiChip en theme ya tiene borderRadius 8 y weight 600.
         return (
           <Chip
             label={user.rol} size="small"
@@ -75,16 +69,16 @@ const AdminUsuarios: React.FC = () => {
               textTransform: 'capitalize',
               bgcolor: isAdmin ? alpha(theme.palette.primary.main, 0.1) : alpha(theme.palette.info.main, 0.1),
               color: isAdmin ? 'primary.main' : 'info.main',
-              // Solo dejamos el borde porque es específico para este estado (diferente al default)
               border: '1px solid', 
-              borderColor: isAdmin ? alpha(theme.palette.primary.main, 0.2) : alpha(theme.palette.info.main, 0.2)
+              borderColor: isAdmin ? alpha(theme.palette.primary.main, 0.2) : alpha(theme.palette.info.main, 0.2),
+              // 🧹 LIMPIEZA: Opacidad eliminada
             }}
           />
         );
       }
     },
     {
-      id: 'acceso', label: 'Estado y Acceso', align: 'center',
+      id: 'acceso', label: 'Estado', align: 'center',
       render: (user) => {
         const isSelf = user.id === logic.currentUser?.id;
         const isAdminAndActive = user.rol === 'admin' && user.activo;
@@ -103,11 +97,11 @@ const AdminUsuarios: React.FC = () => {
               />
             )}
             {!isProcessing && (
-              // 🧹 LIMPIEZA: Chip confía en el theme
               <Chip
                 label={user.activo ? 'Activo' : 'Inactivo'} size="small" variant="outlined"
                 icon={user.activo ? <CheckCircle sx={{ fontSize: '14px !important' }} /> : <BlockIcon sx={{ fontSize: '14px !important' }} />}
                 color={user.activo ? 'success' : 'default'}
+                // Aquí MANTENEMOS la opacidad solo si es 'isSelf', como lógica especial de negocio (no se puede editar uno mismo)
                 sx={{ opacity: isSelf ? 0.5 : 1 }}
               />
             )}
@@ -148,7 +142,6 @@ const AdminUsuarios: React.FC = () => {
       </Box>
 
       <FilterBar>
-        {/* 🧹 LIMPIEZA: Quitados borderRadius manuales en inputs. Theme MuiOutlinedInput ya tiene radius 8 */}
         <TextField
           placeholder="Buscar por nombre, email o usuario..."
           size="small" sx={{ flexGrow: 1, minWidth: 200 }}
@@ -166,12 +159,11 @@ const AdminUsuarios: React.FC = () => {
         </TextField>
         <Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', md: 'block' }, mx: 1 }} />
         
-        {/* 🧹 LIMPIEZA: El botón ya no necesita estilos manuales. El theme le da el color naranja, radio 8, bold y sin mayúsculas */}
         <Button
           variant="contained" 
           startIcon={<PersonAdd />} 
           onClick={logic.createModal.open}
-          sx={{ whiteSpace: 'nowrap' }} // Solo dejamos layout
+          sx={{ whiteSpace: 'nowrap' }} 
         >
           Nuevo Usuario
         </Button>
@@ -182,15 +174,17 @@ const AdminUsuarios: React.FC = () => {
           columns={columns}
           data={logic.users}
           getRowKey={(user) => user.id}
+          
+          // ✨ La clave: pasamos isRowActive para que DataTable aplique los estilos (fondo + opacidad)
           isRowActive={(user) => user.activo}
           highlightedRowId={logic.highlightedUserId}
+          
           emptyMessage="No se encontraron usuarios registrados."
           pagination
           defaultRowsPerPage={10}
         />
       </QueryHandler>
 
-      {/* Modales... (sin cambios) */}
       <CreateUserModal
         open={logic.createModal.isOpen}
         onClose={logic.createModal.close}

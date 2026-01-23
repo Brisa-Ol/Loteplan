@@ -1,8 +1,6 @@
-// src/components/common/QueryHandler/QueryHandler.tsx
 import React from 'react';
-import { Box, CircularProgress, Typography, Alert } from '@mui/material';
+import { Box, CircularProgress, Typography, Alert, Skeleton, Stack } from '@mui/material';
 
-// 🔥 CORRECCIÓN 1: Definir la interfaz
 interface QueryHandlerProps {
   isLoading: boolean;
   error: Error | null;
@@ -11,7 +9,69 @@ interface QueryHandlerProps {
   errorMessage?: string;
   noLoader?: boolean;
   fullHeight?: boolean;
+  // ✅ MEJORA 1: Opción para usar skeleton en lugar de spinner
+  useSkeleton?: boolean;
+  skeletonCount?: number;
 }
+
+// ✅ MEJORA 2: Componente Skeleton reutilizable para ProjectCard
+export const ProjectCardSkeleton: React.FC = () => (
+  <Box>
+    {/* Imagen */}
+    <Skeleton 
+      variant="rectangular" 
+      height={200} 
+      sx={{ borderRadius: 2, mb: 2 }} 
+      animation="wave"
+    />
+    
+    {/* Título */}
+    <Skeleton 
+      variant="text" 
+      height={32} 
+      width="90%" 
+      sx={{ mb: 1 }} 
+      animation="wave"
+    />
+    
+    {/* Descripción (2 líneas) */}
+    <Skeleton 
+      variant="text" 
+      height={20} 
+      width="100%" 
+      animation="wave"
+    />
+    <Skeleton 
+      variant="text" 
+      height={20} 
+      width="75%" 
+      sx={{ mb: 2 }} 
+      animation="wave"
+    />
+    
+    {/* Barra de progreso o chips */}
+    <Skeleton 
+      variant="rectangular" 
+      height={40} 
+      sx={{ borderRadius: 2, mb: 2 }} 
+      animation="wave"
+    />
+    
+    {/* Precio y botón */}
+    <Stack direction="row" justifyContent="space-between" alignItems="center">
+      <Skeleton variant="text" width={100} height={32} animation="wave" />
+      <Skeleton variant="text" width={80} height={32} animation="wave" />
+    </Stack>
+    
+    {/* Botón CTA */}
+    <Skeleton 
+      variant="rectangular" 
+      height={42} 
+      sx={{ borderRadius: 25, mt: 2 }} 
+      animation="wave"
+    />
+  </Box>
+);
 
 export const QueryHandler: React.FC<QueryHandlerProps> = ({
   isLoading,
@@ -21,12 +81,38 @@ export const QueryHandler: React.FC<QueryHandlerProps> = ({
   errorMessage,
   noLoader = false,
   fullHeight = false,
+  useSkeleton = false,
+  skeletonCount = 6,
 }) => {
 
   // --- 1. Estado de Carga ---
   if (isLoading) {
     if (noLoader) return null;
 
+    // ✅ MEJORA 3: Skeleton loading para mejor UX
+    if (useSkeleton) {
+      return (
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: { 
+              xs: "1fr", 
+              sm: "repeat(2, 1fr)", 
+              md: "repeat(3, 1fr)" 
+            },
+            gap: 4,
+            width: "100%",
+            px: { xs: 2, md: 0 }
+          }}
+        >
+          {[...Array(skeletonCount)].map((_, index) => (
+            <ProjectCardSkeleton key={index} />
+          ))}
+        </Box>
+      );
+    }
+
+    // Spinner clásico (fallback)
     return (
       <Box
         sx={{
@@ -40,13 +126,7 @@ export const QueryHandler: React.FC<QueryHandlerProps> = ({
           px: { xs: 2, sm: 3 },
         }}
       >
-        {/* 🔥 CORRECCIÓN 2: CircularProgress no acepta objetos en size */}
-        <CircularProgress 
-          sx={{ 
-            width: { xs: 40, sm: 48 }, 
-            height: { xs: 40, sm: 48 } 
-          }} 
-        />
+        <CircularProgress size={48} />
         <Typography 
           variant="body2"
           sx={{ 

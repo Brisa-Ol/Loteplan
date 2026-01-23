@@ -1,15 +1,12 @@
-// src/pages/Admin/Inventario/modals/EditLoteModal.tsx
-
 import React, { useEffect } from 'react';
-import { TextField, Stack, Box, Typography, MenuItem, Alert, useTheme, alpha } from '@mui/material';
-import { Save as SaveIcon, Edit as EditIcon, Inventory as InventoryIcon, Link as LinkIcon } from '@mui/icons-material';
+import { TextField, Stack, Box, Typography, MenuItem, Alert, useTheme, alpha, InputAdornment, Divider } from '@mui/material';
+import { Save as SaveIcon, Edit as EditIcon, Inventory as InventoryIcon, Link as LinkIcon, LocationOn, MonetizationOn } from '@mui/icons-material';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { useQuery } from '@tanstack/react-query';
 import type { LoteDto, UpdateLoteDto } from '../../../../../core/types/dto/lote.dto';
 import ProyectoService from '../../../../../core/api/services/proyecto.service';
 import BaseModal from '../../../../../shared/components/domain/modals/BaseModal/BaseModal';
-
 
 interface EditLoteModalProps {
   open: boolean;
@@ -23,52 +20,76 @@ const validationSchema = Yup.object({
   nombre_lote: Yup.string().min(3, 'Mínimo 3 caracteres').required('Requerido'),
   precio_base: Yup.number().min(0, 'Debe ser positivo').required('Requerido'),
   id_proyecto: Yup.mixed().nullable(),
+  latitud: Yup.number().nullable(),
+  longitud: Yup.number().nullable(),
 });
 
 const EditLoteModal: React.FC<EditLoteModalProps> = ({ open, onClose, onSubmit, lote, isLoading = false }) => {
-  const theme = useTheme(); // ✅ Inicializamos el tema para los colores del scroll
+  const theme = useTheme();
 
   const { data: proyectos = [] } = useQuery({
     queryKey: ['adminProyectosSelect'],
     queryFn: async () => (await ProyectoService.getAllAdmin()).data,
     enabled: open,
+    staleTime: 1000 * 60 * 5, 
   });
 
-  const formik = useFormik<UpdateLoteDto>({
-    initialValues: { nombre_lote: '', id_proyecto: null, latitud: 0, longitud: 0 },
+  const formik = useFormik<any>({
+    initialValues: { 
+        nombre_lote: '', 
+        precio_base: '', // Para edición también usamos string vacío inicial si es necesario
+        id_proyecto: null, 
+        latitud: 0, 
+        longitud: 0 
+    },
     validationSchema,
     enableReinitialize: true,
     onSubmit: async (values) => {
       if (!lote) return;
-      await onSubmit(lote.id, {
-        ...values,
+      
+      const payload: UpdateLoteDto = {
+        nombre_lote: values.nombre_lote,
+        precio_base: String(values.precio_base),
         id_proyecto: values.id_proyecto ? Number(values.id_proyecto) : null,
-      });
+        latitud: values.latitud ? Number(values.latitud) : null,
+        longitud: values.longitud ? Number(values.longitud) : null,
+      };
+
+      await onSubmit(lote.id, payload);
     },
   });
 
   useEffect(() => {
     if (lote && open) {
       formik.setValues({
-        nombre_lote: lote.nombre_lote,
+        nombre_lote: lote.nombre_lote || '',
+        precio_base: lote.precio_base, // Cargamos el precio existente
         id_proyecto: lote.id_proyecto,
-        latitud: lote.latitud || 0,
-        longitud: lote.longitud || 0,
+        latitud: lote.latitud,
+        longitud: lote.longitud,
       });
+      formik.setErrors({});
+      formik.setTouched({});
     }
-  }, [lote, open]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lote, open]); 
 
   if (!lote) return null;
 
   const subastaActiva = lote.estado_subasta === 'activa';
   const sectionTitleSx = { textTransform: 'uppercase', fontWeight: 800, color: 'text.secondary', fontSize: '0.7rem', mb: 1.5, display: 'flex', alignItems: 'center', gap: 1 };
 
+  const formatPreview = (val: any) => {
+    if (!val || isNaN(Number(val))) return '';
+    return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(Number(val));
+  };
+
   return (
     <BaseModal
       open={open}
       onClose={onClose}
       title={`Editar Lote #${lote.id}`}
-      subtitle="Modifique la información básica del lote."
+      subtitle="Modifique la información básica, precio y ubicación."
       icon={<EditIcon />}
       onConfirm={formik.submitForm}
       isLoading={isLoading}
@@ -77,49 +98,64 @@ const EditLoteModal: React.FC<EditLoteModalProps> = ({ open, onClose, onSubmit, 
       maxWidth="md"
     >
       <Stack spacing={3}>
+        
+        {/* SECCIÓN 1: INFO BÁSICA Y PRECIO (Stack Responsive) */}
         <Box>
-          <Typography sx={sectionTitleSx}><InventoryIcon fontSize="inherit"/> INFORMACIÓN BÁSICA</Typography>
-          <Stack direction="row" spacing={2}>
-            <TextField fullWidth label="Nombre" {...formik.getFieldProps('nombre_lote')} error={formik.touched.nombre_lote && !!formik.errors.nombre_lote} />
-            {/* Aquí podrías agregar el campo de precio si lo necesitas, o dejarlo oculto como en tu código original */}
+          <Typography sx={sectionTitleSx}><InventoryIcon fontSize="inherit"/> INFORMACIÓN PRINCIPAL</Typography>
+          <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
+             <TextField 
+                fullWidth label="Nombre del Lote" 
+                {...formik.getFieldProps('nombre_lote')} 
+                error={formik.touched.nombre_lote && !!formik.errors.nombre_lote}
+                helperText={formik.touched.nombre_lote && (formik.errors.nombre_lote as string)}
+             />
+             <TextField 
+                fullWidth label="Precio Base" type="number"
+                {...formik.getFieldProps('precio_base')}
+                disabled={subastaActiva} // Bloqueado si está en subasta
+                error={formik.touched.precio_base && !!formik.errors.precio_base}
+                helperText={
+                    (formik.touched.precio_base && formik.errors.precio_base) 
+                    ? (formik.errors.precio_base as string)
+                    : formik.values.precio_base ? `Actual: ${formatPreview(formik.values.precio_base)}` : ""
+                }
+                InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }}
+             />
           </Stack>
-          {subastaActiva && <Alert severity="warning" sx={{ mt: 1 }}>No se puede editar el precio en subastas activas.</Alert>}
+          {subastaActiva && <Alert severity="warning" sx={{ mt: 1, py: 0 }}>El precio no se puede editar durante una subasta activa.</Alert>}
         </Box>
 
+        <Divider />
+
+        {/* SECCIÓN 2: ASOCIACIÓN */}
         <Box>
           <Typography sx={sectionTitleSx}><LinkIcon fontSize="inherit"/> ASOCIACIÓN</Typography>
           <TextField 
-            select 
-            fullWidth 
-            label="Proyecto" 
-            {...formik.getFieldProps('id_proyecto')} 
+            select fullWidth label="Proyecto Asociado" 
+            name="id_proyecto"
             value={formik.values.id_proyecto ?? ''} 
-            disabled={lote.estado_subasta !== 'pendiente'}
-            // ✅ APLICACIÓN DEL SCROLL PERSONALIZADO
+            onChange={formik.handleChange}
+            onBlur={formik.handleBlur}
+            disabled={lote.estado_subasta !== 'pendiente'} 
+            error={formik.touched.id_proyecto && !!formik.errors.id_proyecto}
             SelectProps={{
-                MenuProps: {
-                    PaperProps: {
-                        sx: {
-                            maxHeight: 300,
-                            '&::-webkit-scrollbar': { width: '8px' },
-                            '&::-webkit-scrollbar-thumb': {
-                                backgroundColor: alpha(theme.palette.primary.main, 0.2),
-                                borderRadius: '4px',
-                            },
-                            '&::-webkit-scrollbar-track': {
-                                backgroundColor: 'transparent',
-                            }
-                        }
-                    }
-                }
+                MenuProps: { PaperProps: { sx: { maxHeight: 300, '&::-webkit-scrollbar': { width: '8px' }, '&::-webkit-scrollbar-thumb': { backgroundColor: alpha(theme.palette.primary.main, 0.2), borderRadius: '4px' } } } }
             }}
           >
-            <MenuItem value=""><em>Sin Asignar</em></MenuItem>
+            <MenuItem value=""><em>Sin Asignar (General)</em></MenuItem>
             {proyectos.map(p => <MenuItem key={p.id} value={p.id}>{p.nombre_proyecto}</MenuItem>)}
           </TextField>
         </Box>
-        
-        {/* Se eliminó la sección de fechas */}
+
+        {/* SECCIÓN 3: UBICACIÓN */}
+        <Box>
+            <Typography sx={sectionTitleSx}><LocationOn fontSize="inherit"/> COORDENADAS GEOGRÁFICAS</Typography>
+            <Stack direction="row" spacing={2}>
+                <TextField fullWidth label="Latitud" type="number" {...formik.getFieldProps('latitud')} value={formik.values.latitud ?? ''} InputLabelProps={{ shrink: true }} inputProps={{ step: "any" }} />
+                <TextField fullWidth label="Longitud" type="number" {...formik.getFieldProps('longitud')} value={formik.values.longitud ?? ''} InputLabelProps={{ shrink: true }} inputProps={{ step: "any" }} />
+            </Stack>
+        </Box>
+
       </Stack>
     </BaseModal>
   );

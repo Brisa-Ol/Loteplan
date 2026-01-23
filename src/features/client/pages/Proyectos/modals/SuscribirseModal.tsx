@@ -6,7 +6,6 @@ import { MonetizationOn, VerifiedUser, Info, Lock } from '@mui/icons-material';
 import type { ProyectoDto } from '@/core/types/dto/proyecto.dto';
 import BaseModal from '@/shared/components/domain/modals/BaseModal/BaseModal';
 
-
 interface Props {
   open: boolean;
   onClose: () => void;
@@ -22,7 +21,6 @@ export const SuscribirseModal: React.FC<Props> = ({
 
   if (!proyecto) return null;
 
-  // Formateador de moneda consistente
   const montoFormateado = new Intl.NumberFormat('es-AR', {
     style: 'currency',
     currency: proyecto.moneda === 'USD' ? 'USD' : 'ARS',
@@ -51,7 +49,7 @@ export const SuscribirseModal: React.FC<Props> = ({
           <Typography variant="body1" color="text.secondary" gutterBottom>
             Estás a punto de iniciar tu plan de ahorro para:
           </Typography>
-          <Typography variant="h5" fontWeight={800} color="text.primary" sx={{ letterSpacing: -0.5 }}>
+          <Typography variant="h5" fontWeight={700} color="text.primary">
             {proyecto.nombre_proyecto}
           </Typography>
         </Box>
@@ -61,7 +59,7 @@ export const SuscribirseModal: React.FC<Props> = ({
             elevation={0} 
             sx={{ 
                 p: 3, 
-                borderRadius: 3, 
+                borderRadius: 2, 
                 bgcolor: alpha(theme.palette.background.paper, 0.5),
                 border: `1px dashed ${theme.palette.divider}`
             }}
@@ -79,7 +77,7 @@ export const SuscribirseModal: React.FC<Props> = ({
                 <MonetizationOn fontSize="small" color="success" />
                 <Typography variant="body1" fontWeight={600}>Total a Pagar</Typography>
               </Stack>
-              <Typography variant="h4" fontWeight={800} color="success.main">
+              <Typography variant="h4" fontWeight={700} color="success.main">
                 {montoFormateado}
               </Typography>
             </Box>
@@ -91,13 +89,12 @@ export const SuscribirseModal: React.FC<Props> = ({
             severity="info" 
             icon={<Info fontSize="inherit" />} 
             variant="outlined"
-            sx={{ borderRadius: 2 }}
         >
-          <Typography variant="body2" component="div" fontWeight={500}>
-            <Box component="span" display="block" mb={0.5}><strong>1.</strong> Serás redirigido a la pasarela de pagos.</Box>
-            <Box component="span" display="block" mb={0.5}><strong>2.</strong> Al confirmar, tu suscripción se activará.</Box>
-            <Box component="span" display="block"><strong>3.</strong> Podrás firmar tu contrato desde el panel.</Box>
-          </Typography>
+          <Stack spacing={0.5}>
+            <Typography variant="body2" fontWeight={500}>1. Serás redirigido a la pasarela de pagos.</Typography>
+            <Typography variant="body2" fontWeight={500}>2. Al confirmar, tu suscripción se activará.</Typography>
+            <Typography variant="body2" fontWeight={500}>3. Podrás firmar tu contrato desde el panel.</Typography>
+          </Stack>
         </Alert>
 
       </Stack>

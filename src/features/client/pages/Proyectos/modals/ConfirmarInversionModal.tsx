@@ -49,7 +49,7 @@ export const ConfirmarInversionModal: React.FC<Props> = ({
           <Typography variant="body1" color="text.secondary" gutterBottom>
             Estás a punto de realizar una inversión directa en el proyecto:
           </Typography>
-          <Typography variant="h5" fontWeight={800} color="text.primary" sx={{ letterSpacing: -0.5 }}>
+          <Typography variant="h5" fontWeight={800} color="text.primary">
             {proyecto.nombre_proyecto}
           </Typography>
         </Box>
@@ -59,7 +59,8 @@ export const ConfirmarInversionModal: React.FC<Props> = ({
             elevation={0} 
             sx={{ 
                 p: 3, 
-                borderRadius: 3, 
+                // El theme tiene borderRadius de 8/12px, aquí forzamos un poco más para estilo ticket
+                borderRadius: 2, 
                 bgcolor: alpha(theme.palette.background.paper, 0.5),
                 border: `1px dashed ${theme.palette.divider}`
             }}
@@ -89,7 +90,7 @@ export const ConfirmarInversionModal: React.FC<Props> = ({
             severity="info" 
             icon={<Info fontSize="inherit" />} 
             variant="outlined"
-            sx={{ borderRadius: 2 }}
+            // El theme ya maneja el radius del Alert, no hace falta forzarlo
         >
           <Typography variant="body2" fontWeight={500}>
              Al confirmar, serás redirigido a la pasarela de pagos segura.

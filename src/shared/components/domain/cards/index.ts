@@ -1,5 +1,5 @@
 export * from './IconCard/IconCard';
-export * from './LoteCard/LoteCard';
+export * from '../../../../features/client/pages/Lotes/components/LoteCard';
 export * from './OverlayCard/OverlayCard';
 export * from './ProjectCard/ProjectCard';
 export * from './StatCard/StatCard';

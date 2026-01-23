@@ -20,13 +20,13 @@ import {
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 
-// Importaciones
-import SingleImageUpload from '../../../../../../shared/components/forms/upload/singleImageUpload/SingleImageUpload';
-import BaseModal from '../../../../../../shared/components/domain/modals/BaseModal/BaseModal';
+// Componentes Shared
+import SingleImageUpload from '@/shared/components/forms/upload/singleImageUpload/SingleImageUpload';
+import BaseModal from '@/shared/components/domain/modals/BaseModal/BaseModal';
 
-// Tipos combinados para el formulario
+// Interfaces
 interface FullProjectFormValues {
-  // --- Proyecto ---
+  // Proyecto
   nombre_proyecto: string;
   descripcion: string;
   tipo_inversion: 'directo' | 'mensual';
@@ -34,20 +34,16 @@ interface FullProjectFormValues {
   forma_juridica: string;
   monto_inversion: number;
   moneda: string;
-  
-  // Suscripciones
+  // Suscripción
   suscripciones_minimas: number;
   obj_suscripciones: number;
-  
   // Fechas
   fecha_inicio: string;
   fecha_cierre: string;
-  
   // Ubicación
   latitud: number | ''; 
   longitud: number | '';
-  
-  // --- Cuota (Solo mensual) ---
+  // Cuota (Solo mensual)
   nombre_cemento_cemento?: string;
   valor_cemento_unidades?: number;
   valor_cemento?: number;
@@ -63,7 +59,7 @@ interface CreateProyectoModalProps {
   isLoading?: boolean;
 }
 
-// ✅ VALIDACIONES
+// ✅ ESQUEMAS DE VALIDACIÓN
 const projectSchema = Yup.object({
   nombre_proyecto: Yup.string().min(5, 'Mínimo 5 caracteres').required('Requerido'),
   descripcion: Yup.string().nullable(),
@@ -71,18 +67,14 @@ const projectSchema = Yup.object({
   monto_inversion: Yup.number().min(0, 'Debe ser mayor a 0').required('Requerido'),
   moneda: Yup.string().required('Requerido'),
   
-  // 📅 VALIDACIÓN DE FECHAS
-  fecha_inicio: Yup.date()
-    .required('Requerido')
-    .min(new Date(new Date().setHours(0,0,0,0)), 'La fecha no puede ser en el pasado'), // Opcional: Evitar pasado
-    
+  fecha_inicio: Yup.date().required('Requerido'),
   fecha_cierre: Yup.date()
     .required('Requerido')
-    .min(Yup.ref('fecha_inicio'), 'La fecha de cierre debe ser posterior al inicio'), // 👈 Regla Clave
+    .min(Yup.ref('fecha_inicio'), 'La fecha de cierre debe ser posterior al inicio'),
 
   plazo_inversion: Yup.number().when('tipo_inversion', {
     is: 'mensual',
-    then: (s) => s.min(1, 'Mínimo 1 mes').required('Requerido para proyectos mensuales'),
+    then: (s) => s.min(1, 'Mínimo 1 mes').required('Requerido'),
     otherwise: (s) => s.nullable(),
   }),
   obj_suscripciones: Yup.number().when('tipo_inversion', {
@@ -90,22 +82,9 @@ const projectSchema = Yup.object({
     then: (s) => s.min(1, 'Mínimo 1').required('Requerido'),
     otherwise: (s) => s.nullable(),
   }),
-  suscripciones_minimas: Yup.number().min(0).nullable(),
   
-  // Ubicación Opcional
-  latitud: Yup.number()
-    .transform((value, originalValue) => (String(originalValue).trim() === '' ? null : value))
-    .nullable()
-    .notRequired()
-    .min(-90, 'Latitud inválida')
-    .max(90, 'Latitud inválida'),
-    
-  longitud: Yup.number()
-    .transform((value, originalValue) => (String(originalValue).trim() === '' ? null : value))
-    .nullable()
-    .notRequired()
-    .min(-180, 'Longitud inválida')
-    .max(180, 'Longitud inválida'),
+  latitud: Yup.number().nullable().notRequired().min(-90).max(90),
+  longitud: Yup.number().nullable().notRequired().min(-180).max(180),
 });
 
 const quotaSchema = Yup.object({
@@ -123,36 +102,26 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
   const [activeStep, setActiveStep] = useState(0);
   const [image, setImage] = useState<File | null>(null);
 
-  // Fecha de hoy para el mínimo del input (formato YYYY-MM-DD)
-  const today = new Date().toISOString().split('T')[0];
-
   const formik = useFormik<FullProjectFormValues>({
     initialValues: {
-      // Proyecto Defaults
       nombre_proyecto: '', descripcion: '', tipo_inversion: 'mensual',
       plazo_inversion: 12, forma_juridica: 'Fideicomiso', monto_inversion: 0,
       moneda: 'ARS', suscripciones_minimas: 1, obj_suscripciones: 10,
       fecha_inicio: '', fecha_cierre: '', 
       latitud: '', longitud: '',
-      
       // Cuota Defaults
-      nombre_cemento_cemento: '',
-      valor_cemento_unidades: 1,
-      valor_cemento: 0,
-      porcentaje_plan: 70,
-      porcentaje_administrativo: 10,
-      porcentaje_iva: 21,
+      nombre_cemento_cemento: '', valor_cemento_unidades: 1, valor_cemento: 0,
+      porcentaje_plan: 70, porcentaje_administrativo: 10, porcentaje_iva: 21,
     },
     validateOnBlur: false,
     validateOnChange: false,
     onSubmit: async (values) => {
-      // Limpieza de datos antes de enviar
+      // Limpieza de datos (vacíos a null)
       const cleanData = {
           ...values,
           latitud: values.latitud === '' ? null : values.latitud,
           longitud: values.longitud === '' ? null : values.longitud,
       };
-
       await onSubmit(cleanData, image); 
       handleReset(); 
     },
@@ -165,6 +134,7 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
     onClose();
   };
 
+  // Cambio automático de moneda
   useEffect(() => {
     if (formik.values.tipo_inversion === 'mensual') {
       formik.setFieldValue('moneda', 'ARS');
@@ -173,10 +143,7 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
     }
   }, [formik.values.tipo_inversion]);
 
-  // =====================================================================
-  // 🧮 CÁLCULOS VISUALES
-  // =====================================================================
-  
+  // 🧮 CÁLCULOS VISUALES EN TIEMPO REAL
   const plazo = formik.values.plazo_inversion || 1;
   const unidades = formik.values.valor_cemento_unidades || 0;
   const precioUnitario = formik.values.valor_cemento || 0;
@@ -193,30 +160,21 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
 
   // --- NAVEGACIÓN ---
   const handleNext = async () => {
-    if (activeStep === 0) {
-      try {
+    try {
+      if (activeStep === 0) {
         await projectSchema.validate(formik.values, { abortEarly: false });
-        if (formik.values.tipo_inversion === 'directo') {
-            setActiveStep(2); 
-        } else {
-            setActiveStep(1); 
-        }
-      } catch (err: any) {
-        const errors: any = {};
-        err.inner.forEach((e: any) => { errors[e.path] = e.message; });
-        formik.setErrors(errors);
-        formik.setTouched(errors);
-      }
-    } else if (activeStep === 1) {
-       try {
+        // Si es directo, saltamos la configuración de cuota
+        if (formik.values.tipo_inversion === 'directo') setActiveStep(2); 
+        else setActiveStep(1); 
+      } else if (activeStep === 1) {
         await quotaSchema.validate(formik.values, { abortEarly: false });
         setActiveStep(2);
-       } catch (err: any) {
-         const errors: any = {};
-         err.inner.forEach((e: any) => { errors[e.path] = e.message; });
-         formik.setErrors(errors);
-         formik.setTouched(errors);
-       }
+      }
+    } catch (err: any) {
+      const errors: any = {};
+      err.inner.forEach((e: any) => { errors[e.path] = e.message; });
+      formik.setErrors(errors);
+      formik.setTouched(errors);
     }
   };
 
@@ -232,14 +190,25 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
     ? ['Datos Proyecto', 'Configurar Cuota', 'Imagen'] 
     : ['Datos Proyecto', 'Imagen'];
 
+  // Ajuste visual del índice del stepper
   const getStepIndex = () => {
       if (activeStep === 0) return 0;
       if (activeStep === 2) return formik.values.tipo_inversion === 'mensual' ? 2 : 1;
       return 1;
   };
 
-  const commonInputSx = { '& .MuiOutlinedInput-root': { borderRadius: 2 } };
-  const sectionTitleSx = { fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', mb: 2, display: 'flex', alignItems: 'center', gap: 1, fontSize: '0.75rem' };
+  // Estilo reutilizable para títulos de sección
+  const sectionTitleSx = { 
+    fontWeight: 700, 
+    color: 'text.secondary', 
+    textTransform: 'uppercase', 
+    mb: 2, 
+    mt: 1,
+    display: 'flex', 
+    alignItems: 'center', 
+    gap: 1, 
+    fontSize: '0.75rem' 
+  };
 
   return (
     <BaseModal
@@ -288,21 +257,20 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
                             {...formik.getFieldProps('nombre_proyecto')}
                             error={Boolean(formik.touched.nombre_proyecto && formik.errors.nombre_proyecto)}
                             helperText={formik.touched.nombre_proyecto && formik.errors.nombre_proyecto}
-                            sx={{ flex: 2, ...commonInputSx }}
+                            sx={{ flex: 2 }}
                         />
                         <TextField
                             fullWidth label="Forma Jurídica"
                             {...formik.getFieldProps('forma_juridica')}
                             error={Boolean(formik.touched.forma_juridica && formik.errors.forma_juridica)}
                             helperText={formik.touched.forma_juridica && formik.errors.forma_juridica}
-                            sx={{ flex: 1, ...commonInputSx }}
+                            sx={{ flex: 1 }}
                         />
                     </Stack>
 
                     <TextField
                         fullWidth multiline rows={2} label="Descripción Comercial"
                         {...formik.getFieldProps('descripcion')}
-                        sx={commonInputSx}
                     />
 
                     <Divider />
@@ -313,7 +281,6 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
                         <TextField
                             fullWidth select label="Tipo de Inversión"
                             {...formik.getFieldProps('tipo_inversion')}
-                            sx={commonInputSx}
                         >
                             <MenuItem value="mensual">Ahorro (Mensual)</MenuItem>
                             <MenuItem value="directo">Inversión (Directo)</MenuItem>
@@ -323,7 +290,6 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
                             fullWidth select label="Moneda"
                             {...formik.getFieldProps('moneda')}
                             disabled
-                            sx={commonInputSx}
                         >
                             <MenuItem value="ARS">ARS</MenuItem>
                             <MenuItem value="USD">USD</MenuItem>
@@ -336,7 +302,6 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
                             {...formik.getFieldProps('monto_inversion')}
                             error={Boolean(formik.touched.monto_inversion && formik.errors.monto_inversion)}
                             helperText={formik.touched.monto_inversion && formik.errors.monto_inversion}
-                            sx={commonInputSx}
                         />
                     </Stack>
 
@@ -348,46 +313,34 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
                                     {...formik.getFieldProps('plazo_inversion')}
                                     error={Boolean(formik.touched.plazo_inversion && formik.errors.plazo_inversion)}
                                     helperText={formik.touched.plazo_inversion && formik.errors.plazo_inversion}
-                                    sx={commonInputSx}
                                 />
                                 <TextField
                                     fullWidth type="number" label="Obj. Suscripciones"
                                     {...formik.getFieldProps('obj_suscripciones')}
                                     error={Boolean(formik.touched.obj_suscripciones && formik.errors.obj_suscripciones)}
                                     helperText={formik.touched.obj_suscripciones && formik.errors.obj_suscripciones}
-                                    sx={commonInputSx}
                                 />
                                 <TextField
                                     fullWidth type="number" label="Mínimo Suscripciones"
                                     {...formik.getFieldProps('suscripciones_minimas')}
-                                    error={Boolean(formik.touched.suscripciones_minimas && formik.errors.suscripciones_minimas)}
-                                    helperText={formik.touched.suscripciones_minimas && formik.errors.suscripciones_minimas}
-                                    sx={commonInputSx}
                                 />
                             </Stack>
                         </Paper>
                     )}
 
-                    {/* ✅ FECHAS CON RESTRICCIONES VISUALES */}
                     <Typography variant="subtitle2" sx={sectionTitleSx}><CalendarIcon fontSize="inherit"/> Cronograma</Typography>
                     <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
                         <TextField
                             fullWidth type="date" label="Inicio Suscripciones" InputLabelProps={{ shrink: true }}
                             {...formik.getFieldProps('fecha_inicio')}
-                            // Restringe visualmente fechas pasadas
-                            inputProps={{ min: today }} 
                             error={Boolean(formik.touched.fecha_inicio && formik.errors.fecha_inicio)}
                             helperText={formik.touched.fecha_inicio && (formik.errors.fecha_inicio as string)}
-                            sx={commonInputSx}
                         />
                         <TextField
                             fullWidth type="date" label="Cierre Suscripciones" InputLabelProps={{ shrink: true }}
                             {...formik.getFieldProps('fecha_cierre')}
-                            // 🔒 Restringe visualmente fechas anteriores a la de inicio
-                            inputProps={{ min: formik.values.fecha_inicio || today }} 
                             error={Boolean(formik.touched.fecha_cierre && formik.errors.fecha_cierre)}
                             helperText={formik.touched.fecha_cierre && (formik.errors.fecha_cierre as string)}
-                            sx={commonInputSx}
                         />
                     </Stack>
 
@@ -398,14 +351,12 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
                             {...formik.getFieldProps('latitud')}
                             error={Boolean(formik.touched.latitud && formik.errors.latitud)}
                             helperText={formik.touched.latitud && formik.errors.latitud}
-                            sx={commonInputSx}
                         />
                         <TextField
                             fullWidth type="number" label="Longitud" placeholder="-58.12345"
                             {...formik.getFieldProps('longitud')}
                             error={Boolean(formik.touched.longitud && formik.errors.longitud)}
                             helperText={formik.touched.longitud && formik.errors.longitud}
-                            sx={commonInputSx}
                         />
                     </Stack>
 
@@ -416,7 +367,7 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
         {/* === PASO 1: CONFIGURAR CUOTA (SOLO MENSUAL) === */}
         {activeStep === 1 && (
             <Box>
-                <Alert severity="info" sx={{ mb: 2 }}>Define los valores base para la primera cuota del proyecto.</Alert>
+                <Alert severity="info" variant="outlined" sx={{ mb: 2 }}>Define los valores base para la primera cuota del proyecto.</Alert>
                 
                 <Stack spacing={3}>
                     <Box>
@@ -425,7 +376,6 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
                             <TextField
                                 fullWidth label="Referencia (Ej: Bolsa 50kg)"
                                 {...formik.getFieldProps('nombre_cemento_cemento')}
-                                sx={commonInputSx}
                             />
                             <Stack direction="row" spacing={2}>
                                 <TextField
@@ -433,7 +383,6 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
                                     {...formik.getFieldProps('valor_cemento_unidades')}
                                     error={Boolean(formik.touched.valor_cemento_unidades && formik.errors.valor_cemento_unidades)}
                                     helperText={formik.touched.valor_cemento_unidades && formik.errors.valor_cemento_unidades}
-                                    sx={commonInputSx}
                                 />
                                 <TextField
                                     fullWidth type="number" label="Precio Unitario"
@@ -441,7 +390,6 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
                                     {...formik.getFieldProps('valor_cemento')}
                                     error={Boolean(formik.touched.valor_cemento && formik.errors.valor_cemento)}
                                     helperText={formik.touched.valor_cemento && formik.errors.valor_cemento}
-                                    sx={commonInputSx}
                                 />
                             </Stack>
                         </Stack>
@@ -454,21 +402,18 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
                                 fullWidth type="number" label="% Plan" 
                                 {...formik.getFieldProps('porcentaje_plan')} 
                                 error={Boolean(formik.touched.porcentaje_plan && formik.errors.porcentaje_plan)}
-                                sx={commonInputSx} 
                                 InputProps={{ endAdornment: <InputAdornment position="end">%</InputAdornment> }} 
                             />
                             <TextField 
                                 fullWidth type="number" label="% Admin" 
                                 {...formik.getFieldProps('porcentaje_administrativo')} 
                                 error={Boolean(formik.touched.porcentaje_administrativo && formik.errors.porcentaje_administrativo)}
-                                sx={commonInputSx} 
                                 InputProps={{ endAdornment: <InputAdornment position="end">%</InputAdornment> }} 
                             />
                             <TextField 
                                 fullWidth type="number" label="% IVA" 
                                 {...formik.getFieldProps('porcentaje_iva')} 
                                 error={Boolean(formik.touched.porcentaje_iva && formik.errors.porcentaje_iva)}
-                                sx={commonInputSx} 
                                 InputProps={{ endAdornment: <InputAdornment position="end">%</InputAdornment> }} 
                             />
                         </Stack>

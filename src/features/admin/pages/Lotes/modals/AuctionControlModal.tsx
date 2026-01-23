@@ -1,27 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { Stack, Typography, Alert, Box, TextField } from '@mui/material';
-import { PlayCircleFilled, StopCircle, Gavel } from '@mui/icons-material';
+import { Stack, Typography, Alert, Box, TextField, Button, Chip } from '@mui/material';
+import { PlayCircleFilled, StopCircle, Gavel, AccessTime, Update as UpdateIcon } from '@mui/icons-material';
 import type { LoteDto } from '../../../../../core/types/dto/lote.dto';
 import BaseModal from '../../../../../shared/components/domain/modals/BaseModal/BaseModal';
-
 
 interface Props {
   open: boolean;
   onClose: () => void;
   lote: LoteDto | null;
-  // Actualizamos la firma: ahora los datos son obligatorios al iniciar
   onStart: (id: number, dates: { fecha_inicio: string; fecha_fin: string }) => void;
   onEnd: (id: number) => void;
   isLoading: boolean;
 }
 
 const AuctionControlModal: React.FC<Props> = ({ open, onClose, lote, onStart, onEnd, isLoading }) => {
-  const [formData, setFormData] = useState({
-    fecha_inicio: '',
-    fecha_fin: ''
-  });
-
-  // Estado para validar lógica de fechas (Fin > Inicio)
+  const [formData, setFormData] = useState({ fecha_inicio: '', fecha_fin: '' });
   const [dateError, setDateError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -31,7 +24,7 @@ const AuctionControlModal: React.FC<Props> = ({ open, onClose, lote, onStart, on
     }
   }, [open, lote]);
 
-  // Validación en tiempo real
+  // Validación en tiempo real: Fin > Inicio
   useEffect(() => {
     if (formData.fecha_inicio && formData.fecha_fin) {
       if (new Date(formData.fecha_fin) <= new Date(formData.fecha_inicio)) {
@@ -47,19 +40,30 @@ const AuctionControlModal: React.FC<Props> = ({ open, onClose, lote, onStart, on
   const isPending = lote.estado_subasta === 'pendiente';
   const isActive = lote.estado_subasta === 'activa';
   const isFinished = lote.estado_subasta === 'finalizada';
-
-  // Validamos que los campos no estén vacíos y no haya errores de lógica
   const isFormValid = formData.fecha_inicio !== '' && formData.fecha_fin !== '' && !dateError;
+
+  // ✨ UX FEATURE: Helper para configurar fechas rápidas ajustadas a zona horaria local
+  const setQuickDuration = (days: number) => {
+      const now = new Date();
+      const end = new Date();
+      end.setDate(now.getDate() + days);
+
+      // Truco para ajustar UTC a Local ISO string compatible con input datetime-local
+      const toLocalISO = (d: Date) => {
+        const offset = d.getTimezoneOffset() * 60000;
+        return new Date(d.getTime() - offset).toISOString().slice(0, 16);
+      };
+
+      setFormData({
+          fecha_inicio: toLocalISO(now),
+          fecha_fin: toLocalISO(end)
+      });
+  };
 
   const handleConfirm = () => {
     if (isPending) {
-      // Como validamos isFormValid en el botón, aquí enviamos los datos directamente
-      onStart(lote.id, { 
-        fecha_inicio: formData.fecha_inicio, 
-        fecha_fin: formData.fecha_fin 
-      });
-    } 
-    else if (isActive) {
+      onStart(lote.id, { fecha_inicio: formData.fecha_inicio, fecha_fin: formData.fecha_fin });
+    } else if (isActive) {
       onEnd(lote.id);
     }
   };
@@ -67,17 +71,13 @@ const AuctionControlModal: React.FC<Props> = ({ open, onClose, lote, onStart, on
   const getModalConfig = () => {
     if (isPending) return {
         title: `Iniciar Subasta: ${lote.nombre_lote}`,
-        icon: <PlayCircleFilled />,
-        color: 'success',
-        btnText: 'Iniciar Ahora',
-        desc: 'Configure las fechas para dar inicio y a la subasta.'
+        icon: <PlayCircleFilled />, color: 'success', btnText: 'Confirmar Inicio',
+        desc: 'Defina el periodo. Una vez iniciada, los usuarios habilitados podrán ofertar.'
     };
     if (isActive) return {
         title: `Finalizar Subasta: ${lote.nombre_lote}`,
-        icon: <StopCircle />,
-        color: 'error',
-        btnText: 'Finalizar Ahora',
-        desc: 'Al confirmar, se cerrará la subasta y se determinará el ganador automáticamente.'
+        icon: <StopCircle />, color: 'error', btnText: 'Finalizar Ahora',
+        desc: 'Se cerrará la subasta inmediatamente y se adjudicará al ganador actual.'
     };
     return { title: 'Subasta Finalizada', icon: <Gavel />, color: 'primary', btnText: 'Cerrar', desc: 'Esta subasta ya terminó.' };
   };
@@ -86,24 +86,15 @@ const AuctionControlModal: React.FC<Props> = ({ open, onClose, lote, onStart, on
 
   return (
     <BaseModal
-      open={open}
-      onClose={onClose}
-      title={config.title}
-      subtitle={`ID: ${lote.id}`}
-      icon={config.icon}
-      headerColor={config.color as any}
-      confirmText={config.btnText}
-      confirmButtonColor={config.color as any}
-      onConfirm={isFinished ? undefined : handleConfirm}
-      isLoading={isLoading}
-      maxWidth="sm"
-      hideConfirmButton={isFinished}
-      // Bloqueamos el botón si es pendiente y el formulario no es válido
-      disableConfirm={isPending && !isFormValid}
+      open={open} onClose={onClose}
+      title={config.title} subtitle={`ID: ${lote.id}`} icon={config.icon}
+      headerColor={config.color as any} confirmText={config.btnText} confirmButtonColor={config.color as any}
+      onConfirm={isFinished ? undefined : handleConfirm} isLoading={isLoading}
+      maxWidth="sm" hideConfirmButton={isFinished} disableConfirm={isPending && !isFormValid}
       cancelText="Cerrar"
     >
       <Stack spacing={2}>
-        <Alert severity={config.color as any} variant="filled">{config.desc}</Alert>
+        <Alert severity={config.color as any} variant="filled" icon={config.icon}>{config.desc}</Alert>
         
         <Box bgcolor="background.paper" p={2} borderRadius={2} border="1px solid #eee">
              <Typography variant="caption" color="text.secondary" fontWeight={700}>PRECIO BASE</Typography>
@@ -111,32 +102,34 @@ const AuctionControlModal: React.FC<Props> = ({ open, onClose, lote, onStart, on
         </Box>
 
         {isPending && (
-          <Stack spacing={2} sx={{ mt: 2 }}>
-            <TextField
-              label="Fecha de Inicio"
-              type="datetime-local"
-              value={formData.fecha_inicio}
-              onChange={(e) => setFormData({ ...formData, fecha_inicio: e.target.value })}
-              InputLabelProps={{ shrink: true }}
-              fullWidth
-              required // Marca visual de obligatorio
-              error={formData.fecha_inicio === ''} // Rojo si está vacío (opcional, puede ser agresivo al inicio)
-            />
+          <Box>
+            <Typography variant="caption" fontWeight={700} color="text.secondary" mb={1} display="block">
+                CONFIGURACIÓN RÁPIDA
+            </Typography>
+            <Stack direction="row" spacing={1} mb={2}>
+                <Chip icon={<AccessTime />} label="24 Horas" onClick={() => setQuickDuration(1)} clickable color="primary" variant="outlined" />
+                <Chip icon={<AccessTime />} label="3 Días" onClick={() => setQuickDuration(3)} clickable color="primary" variant="outlined" />
+                <Chip icon={<AccessTime />} label="1 Semana" onClick={() => setQuickDuration(7)} clickable color="primary" variant="outlined" />
+            </Stack>
 
-            <TextField
-              label="Fecha de Fin"
-              type="datetime-local"
-              value={formData.fecha_fin}
-              onChange={(e) => setFormData({ ...formData, fecha_fin: e.target.value })}
-              InputLabelProps={{ shrink: true }}
-              fullWidth
-              required
-              error={!!dateError}
-              helperText={dateError}
-            />
-          </Stack>
+            <Stack direction="row" spacing={2}>
+                <TextField
+                  label="Inicio" type="datetime-local" fullWidth required
+                  value={formData.fecha_inicio}
+                  onChange={(e) => setFormData({ ...formData, fecha_inicio: e.target.value })}
+                  InputLabelProps={{ shrink: true }}
+                  error={formData.fecha_inicio === ''}
+                />
+                <TextField
+                  label="Fin" type="datetime-local" fullWidth required
+                  value={formData.fecha_fin}
+                  onChange={(e) => setFormData({ ...formData, fecha_fin: e.target.value })}
+                  InputLabelProps={{ shrink: true }}
+                  error={!!dateError} helperText={dateError}
+                />
+            </Stack>
+          </Box>
         )}
-
       </Stack>
     </BaseModal>
   );

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react'; // 1. Importar useCallback
+import React, { useState, useMemo, useCallback } from 'react';
 import { 
   Box, Typography, Stack, Skeleton, Alert, useTheme, Fade, 
   Tabs, Tab, Chip, Button
@@ -8,17 +8,14 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 
-// Contexts & Hooks
-
 import { useLotesProyecto } from '../../hooks/useLotesProyecto';
-
-// Components
 import PujarModal from './components/PujarModal';
-
-import LoteCard from '../../../../shared/components/domain/cards/LoteCard/LoteCard'; // Importar el componente memorizado
+import LoteCard from './components/LoteCard'; 
 import { GlobalSnackbar } from '../../../../shared/components/ui/feedback/GlobalSnackbarProps/GlobalSnackbarProps';
 import { useAuth } from '@/core/context/AuthContext';
 import { ConfirmDialog } from '@/shared/components/domain/modals/ConfirmDialog/ConfirmDialog';
+import { ROUTES } from '@/routes';
+import { useVerificarSuscripcion } from '../../hooks/useVerificarSuscripcion';
 
 
 interface Props {
@@ -43,6 +40,9 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
 
   const logic = useLotesProyecto(idProyecto, isAuthenticated);
 
+  // 1. VERIFICAR SUSCRIPCIÓN EN EL PADRE
+  const { estaSuscripto, isLoading: loadingSub } = useVerificarSuscripcion(idProyecto);
+
   const { filteredLotes, counts } = useMemo(() => {
     if (!logic.lotes) return { filteredLotes: [], counts: { todos: 0, activa: 0, pendiente: 0, finalizada: 0 } };
 
@@ -65,11 +65,9 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
     return { filteredLotes: result, counts };
   }, [logic.lotes, tabValue]);
 
-  // ✅ 2. CREAMOS UN HANDLER ESTABLE PARA LA NAVEGACIÓN
-  // Al usar useCallback, esta función no cambia entre renders,
-  // permitiendo que React.memo(LoteCard) funcione correctamente.
   const handleNavigate = useCallback((id: number) => {
-    navigate(`/lotes/${id}`);
+    const ruta = ROUTES.CLIENT.LOTES.DETALLE.replace(':id', String(id));
+    navigate(ruta);
   }, [navigate]);
 
   const gridStyles = {
@@ -114,44 +112,13 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
 
   return (
     <Box mt={{ xs: 3, md: 4 }}>
-      
-      {/* HEADER CON PESTAÑAS */}
+      {/* HEADER CON PESTAÑAS (Igual) */}
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-        <Tabs 
-          value={tabValue} 
-          onChange={(_, newValue) => setTabValue(newValue)} 
-          variant="scrollable"
-          scrollButtons="auto"
-          allowScrollButtonsMobile
-          sx={{ '& .MuiTab-root': { minHeight: 60, fontWeight: 600 }, '& .Mui-selected': { color: 'primary.main' } }}
-        >
-          <Tab 
-            value="todos" 
-            label={<Stack direction="row" gap={1} alignItems="center">Todos <Chip label={counts.todos} size="small" sx={{ height: 20, fontSize: '0.7rem', cursor: 'pointer' }} /></Stack>}
-            icon={<Apps fontSize="small" />} 
-            iconPosition="start"
-          />
-          <Tab 
-            value="activa" 
-            label={<Stack direction="row" gap={1} alignItems="center">En Curso <Chip label={counts.activa} color="success" size="small" sx={{ height: 20, fontSize: '0.7rem', cursor: 'pointer' }} /></Stack>}
-            icon={<Gavel fontSize="small" />} 
-            iconPosition="start"
-            disabled={counts.activa === 0} 
-          />
-          <Tab 
-            value="pendiente" 
-            label={<Stack direction="row" gap={1} alignItems="center">Próximos <Chip label={counts.pendiente} color="warning" size="small" sx={{ height: 20, fontSize: '0.7rem', cursor: 'pointer' }} /></Stack>}
-            icon={<AccessTime fontSize="small" />} 
-            iconPosition="start"
-            disabled={counts.pendiente === 0}
-          />
-          <Tab 
-            value="finalizada" 
-            label={<Stack direction="row" gap={1} alignItems="center">Finalizados <Chip label={counts.finalizada} size="small" sx={{ height: 20, fontSize: '0.7rem', cursor: 'pointer' }} /></Stack>}
-            icon={<EmojiEvents fontSize="small" />} 
-            iconPosition="start"
-            disabled={counts.finalizada === 0}
-          />
+        <Tabs value={tabValue} onChange={(_, newValue) => setTabValue(newValue)} variant="scrollable" scrollButtons="auto" allowScrollButtonsMobile sx={{ '& .MuiTab-root': { minHeight: 60, fontWeight: 600 }, '& .Mui-selected': { color: 'primary.main' } }}>
+          <Tab value="todos" label={<Stack direction="row" gap={1} alignItems="center">Todos <Chip label={counts.todos} size="small" sx={{ height: 20, fontSize: '0.7rem', cursor: 'pointer' }} /></Stack>} icon={<Apps fontSize="small" />} iconPosition="start" />
+          <Tab value="activa" label={<Stack direction="row" gap={1} alignItems="center">En Curso <Chip label={counts.activa} color="success" size="small" sx={{ height: 20, fontSize: '0.7rem', cursor: 'pointer' }} /></Stack>} icon={<Gavel fontSize="small" />} iconPosition="start" disabled={counts.activa === 0} />
+          <Tab value="pendiente" label={<Stack direction="row" gap={1} alignItems="center">Próximos <Chip label={counts.pendiente} color="warning" size="small" sx={{ height: 20, fontSize: '0.7rem', cursor: 'pointer' }} /></Stack>} icon={<AccessTime fontSize="small" />} iconPosition="start" disabled={counts.pendiente === 0} />
+          <Tab value="finalizada" label={<Stack direction="row" gap={1} alignItems="center">Finalizados <Chip label={counts.finalizada} size="small" sx={{ height: 20, fontSize: '0.7rem', cursor: 'pointer' }} /></Stack>} icon={<EmojiEvents fontSize="small" />} iconPosition="start" disabled={counts.finalizada === 0} />
         </Tabs>
       </Box>
 
@@ -163,10 +130,12 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
               <LoteCard 
                 key={lote.id}
                 lote={lote}
-                // ✅ 3. USAMOS EL HANDLER ESTABLE
                 onNavigate={handleNavigate}
                 onPujar={logic.handleOpenPujar} 
                 onRemoveFav={logic.handleRequestUnfav}
+                // 2. PASAR PROPS AL HIJO
+                isSubscribed={estaSuscripto}
+                isLoadingSub={loadingSub}
               />
             ))}
           </Box>
@@ -187,19 +156,8 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
         />
       )}
 
-      <ConfirmDialog 
-        controller={logic.confirmDialog}
-        onConfirm={logic.executeUnfav}
-        isLoading={logic.unfavPending}
-      />
-
-      {/* RENDER DEL SNACKBAR */}
-      <GlobalSnackbar 
-        open={logic.snackbar.open}
-        message={logic.snackbar.message}
-        severity={logic.snackbar.severity}
-        onClose={logic.closeSnackbar}
-      />
+      <ConfirmDialog controller={logic.confirmDialog} onConfirm={logic.executeUnfav} isLoading={logic.unfavPending} />
+      <GlobalSnackbar open={logic.snackbar.open} message={logic.snackbar.message} severity={logic.snackbar.severity} onClose={logic.closeSnackbar} />
     </Box>
   );
 };

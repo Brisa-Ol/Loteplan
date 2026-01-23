@@ -1,99 +1,358 @@
-import React from 'react';
-import { Card, Typography, Divider, Stack, Box, LinearProgress, Alert, Button, Tooltip, alpha, useTheme } from '@mui/material';
-import { MonetizationOn, Security, ArrowForward, CheckCircle, GppGood, Description } from '@mui/icons-material';
+// src/features/client/pages/Proyectos/components/ProjectSidebar.tsx
 
-// Nota: Define una interfaz para el "logic" si quieres ser estricto con TS, 
-// o pasa props individuales si prefieres desacoplarlo.
-export const ProjectSidebar: React.FC<{ logic: any; proyecto: any }> = ({ logic, proyecto }) => {
+import React from 'react';
+import { 
+  Card, Box, Stack, Alert, Button, LinearProgress, 
+  Typography, useTheme, alpha, Divider 
+} from '@mui/material';
+import { 
+  ArrowForward, HistoryEdu, CheckCircle, Description, 
+  GppGood, MonetizationOn, Download, CalendarMonth
+} from '@mui/icons-material';
+
+import type { ProyectoDto } from '@/core/types/dto/proyecto.dto';
+import { useProyectoHelpers } from '@/features/client/hooks/useProyectoHelpers';
+
+// ==========================================
+// 1. INTERFACES
+// ==========================================
+
+export interface ProjectSidebarLogic {
+  user: any | null; 
+  puedeFirmar: boolean;
+  yaFirmo: boolean;
+  handleMainAction: () => void;
+  handleClickFirmar: () => void;
+  handleVerContratoFirmado: () => void;
+  handleInversion: {
+    isPending: boolean;
+    mutate: () => void;
+  };
+  modales: {
+    contrato: { open: () => void };
+  };
+}
+
+interface ProjectSidebarProps {
+  logic: ProjectSidebarLogic;
+  proyecto: ProyectoDto;
+  onVerLotesClick?: () => void;
+}
+
+// ==========================================
+// 2. SUBCOMPONENTE: Stepper Visual
+// ==========================================
+
+const ProcessStepper: React.FC<{
+  paso1Completo: boolean;
+  paso2Completo: boolean;
+  esMensual: boolean;
+}> = ({ paso1Completo, paso2Completo, esMensual }) => {
   const theme = useTheme();
+  
+  const steps = [
+    {
+      icon: paso1Completo ? CheckCircle : MonetizationOn,
+      label: esMensual ? 'Suscripción al Plan' : 'Pago del Lote',
+      completed: paso1Completo,
+      active: !paso1Completo
+    },
+    {
+      icon: paso2Completo ? CheckCircle : HistoryEdu,
+      label: 'Firma de Contrato',
+      completed: paso2Completo,
+      active: paso1Completo && !paso2Completo
+    }
+  ];
 
   return (
-    <Card elevation={0} sx={{ 
-        p: { xs: 2, sm: 3 }, borderRadius: 3, 
-        position: { lg: 'sticky' }, top: { lg: 100 }, 
-        border: `1px solid ${theme.palette.divider}`, boxShadow: theme.shadows[2] 
+    <Box sx={{ 
+      bgcolor: alpha(theme.palette.primary.main, 0.05), 
+      p: 2.5, 
+      borderRadius: 2, // Usa el shape del tema (16px según theme overrides o 8px default)
+      border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}` 
     }}>
-      <Typography variant="h6" fontWeight="bold" gutterBottom>Resumen de Inversión</Typography>
-      <Divider sx={{ my: 2 }} />
+      <Typography variant="subtitle2" fontWeight={700} mb={2} color="primary.main" sx={{ letterSpacing: 0.5 }}>
+        TU PROCESO DE INVERSIÓN
+      </Typography>
       
-      <Stack spacing={3}>
-        {/* Precio */}
-        <Box sx={{ 
-            position: 'relative', overflow: 'hidden', bgcolor: 'background.paper', p: 3, borderRadius: 3, 
-            border: `1px solid ${alpha(theme.palette.primary.main, 0.3)}`, boxShadow: `0 8px 30px ${alpha(theme.palette.primary.main, 0.12)}`
-        }}>
-            <Box sx={{ position: 'absolute', top: -30, right: -30, width: 120, height: 120, bgcolor: alpha(theme.palette.primary.main, 0.08), borderRadius: '50%' }} />
-            <Stack direction="row" spacing={1} alignItems="center" color="text.secondary" mb={1}>
-                <MonetizationOn color="primary" fontSize="small" />
-                <Typography variant="overline" fontWeight={700}>Valor del Proyecto</Typography>
-            </Stack>
-            <Typography variant="h3" color="primary.main" fontWeight={800} sx={{ fontSize: { xs: '2rem', md: '2.5rem' }, letterSpacing: -1 }}>
-                {Number(proyecto.monto_inversion).toLocaleString()}
-                <Typography component="span" variant="h6" color="text.secondary" fontWeight={600} ml={1}>{proyecto.moneda}</Typography>
-            </Typography>
-        </Box>
-
-        {/* Progreso */}
-        {proyecto.tipo_inversion === 'mensual' && (
-            <Box>
-                <Box display="flex" justifyContent="space-between" mb={1}>
-                    <Typography variant="caption" fontWeight="bold" color="text.secondary">PROGRESO DE FONDEO</Typography>
-                    <Typography variant="caption" fontWeight="bold" color="primary">{logic.porcentaje.toFixed(0)}%</Typography>
+      <Stack spacing={2}>
+        {steps.map((step, idx) => {
+          const Icon = step.icon;
+          const isLast = idx === steps.length - 1;
+          
+          return (
+            <React.Fragment key={idx}>
+              <Box display="flex" alignItems="center" gap={2}>
+                {/* Círculo del ícono */}
+                <Box sx={{ 
+                  width: 40, height: 40, minWidth: 40, borderRadius: '50%', 
+                  bgcolor: step.completed ? 'success.main' : step.active ? 'primary.main' : alpha(theme.palette.text.disabled, 0.1), 
+                  color: step.completed || step.active ? 'white' : 'text.disabled', 
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                  boxShadow: step.active ? `0 4px 12px ${alpha(theme.palette.primary.main, 0.3)}` : 'none',
+                  transition: 'all 0.3s ease'
+                }}>
+                  <Icon fontSize="small"/>
                 </Box>
-                <LinearProgress variant="determinate" value={logic.porcentaje} sx={{ height: 10, borderRadius: 5, bgcolor: alpha(theme.palette.primary.main, 0.1), '& .MuiLinearProgress-bar': { borderRadius: 5 } }} />
-            </Box>
-        )}
-
-        {/* Alerta 2FA */}
-        {logic.is2FAMissing && logic.user && (
-            <Alert severity="warning" icon={<Security fontSize="inherit" />} sx={{ borderRadius: 2 }}>
-                <Typography variant="body2" fontWeight="bold">Seguridad Requerida</Typography>
-                <Button size="small" color="warning" onClick={logic.handleClickFirmar} sx={{ mt: 1, textTransform: 'none', fontWeight: 600 }}>Configurar 2FA ahora</Button>
-            </Alert>
-        )}
-
-        {/* Botón Principal (Invertir) */}
-        {!logic.yaFirmo && !logic.puedeFirmar && (
-            <Tooltip title={logic.is2FAMissing && logic.user ? "Activa 2FA para continuar" : ""}>
-                <Box>
-                    <Button 
-                        variant="contained" size="large" fullWidth 
-                        disabled={logic.handleInversion.isPending || (logic.is2FAMissing && !!logic.user)}
-                        onClick={logic.handleMainAction}
-                        endIcon={!logic.handleInversion.isPending && <ArrowForward />}
-                        sx={{ py: 1.5, fontSize: '1rem', fontWeight: 700, borderRadius: 2, boxShadow: theme.shadows[4] }}
-                    >
-                        {logic.handleInversion.isPending ? 'Procesando...' : proyecto.tipo_inversion === 'mensual' ? 'Suscribirme Ahora' : 'Invertir Ahora'}
-                    </Button>
-                </Box>
-            </Tooltip>
-        )}
-
-        {/* Botones de Gestión (Firmar/Ver) */}
-        {logic.user && (proyecto.tipo_inversion === 'mensual' || proyecto.tipo_inversion === 'directo') && (
-            <Stack spacing={2}>
-                {logic.yaFirmo ? (
-                    <Button variant="contained" color="success" fullWidth startIcon={<CheckCircle />} onClick={logic.handleVerContratoFirmado} sx={{ fontWeight: 700, borderRadius: 2 }}>
-                        Ver Contrato Firmado
-                    </Button>
-                ) : logic.puedeFirmar ? (
-                    <Button variant="outlined" color="success" startIcon={<GppGood />} fullWidth onClick={logic.handleClickFirmar} disabled={logic.is2FAMissing} sx={{ borderWidth: 2, fontWeight: 700, borderRadius: 2 }}>
-                        Firmar Contrato (Pendiente)
-                    </Button>
-                ) : (
-                    <Alert severity="info" sx={{ borderRadius: 2 }}>
-                        <Typography variant="caption">Realiza el pago inicial para habilitar la firma.</Typography>
-                    </Alert>
-                )}
                 
-                {!logic.yaFirmo && (
-                    <Button variant="text" fullWidth startIcon={<Description />} onClick={logic.modales.contrato.open} sx={{ color: 'text.secondary', borderRadius: 2 }}>
-                        Ver Modelo de Contrato
-                    </Button>
+                {/* Texto */}
+                <Box flex={1}>
+                  <Typography variant="body2" fontWeight={step.active ? 700 : 500} sx={{ 
+                    textDecoration: step.completed ? 'line-through' : 'none', 
+                    color: step.completed ? 'text.secondary' : step.active ? 'text.primary' : 'text.disabled' 
+                  }}>
+                    {step.label}
+                  </Typography>
+                </Box>
+              </Box>
+              
+              {/* Línea conectora */}
+              {!isLast && (
+                <Box sx={{ 
+                  ml: 2.4, height: 24, 
+                  borderLeft: `2px solid ${step.completed ? theme.palette.success.main : alpha(theme.palette.text.disabled, 0.2)}` 
+                }} />
+              )}
+            </React.Fragment>
+          );
+        })}
+      </Stack>
+    </Box>
+  );
+};
+
+// ==========================================
+// 3. SUBCOMPONENTE: Header de Precios
+// ==========================================
+
+const PriceHeader: React.FC<{ 
+  helpers: ReturnType<typeof useProyectoHelpers>; 
+}> = ({ helpers }) => {
+    const BadgeIcon = helpers.badge.icon;
+    const bgHeader = helpers.badge.color === 'success' ? 'success.main' : 'primary.main';
+
+    return (
+        <Box sx={{ 
+            bgcolor: bgHeader, 
+            p: 3, 
+            color: 'white', 
+            // Alineado con el borderRadius del tema para MuiCard (12px)
+            borderRadius: '12px 12px 0 0', 
+            position: 'relative', 
+            overflow: 'hidden' 
+        }}>
+             {/* Decoración sutil */}
+             <Box sx={{ position: 'absolute', top: -30, right: -30, width: 140, height: 140, borderRadius: '50%', bgcolor: 'rgba(255,255,255,0.08)', pointerEvents: 'none' }} />
+
+             <Stack direction="row" justifyContent="space-between" alignItems="start" mb={2}>
+                <Box sx={{ bgcolor: 'rgba(255,255,255,0.2)', px: 1.5, py: 0.5, borderRadius: 1, display: 'flex', alignItems: 'center', gap: 0.8, backdropFilter: 'blur(4px)' }}>
+                    <BadgeIcon sx={{ fontSize: 18 }} />
+                    <Typography variant="caption" fontWeight={700} color="inherit">{helpers.badge.label}</Typography>
+                </Box>
+                
+                {helpers.estaActivo && (
+                    <Box sx={{ bgcolor: 'rgba(0,0,0,0.2)', px: 1.5, py: 0.5, borderRadius: 1 }}>
+                        <Typography variant="caption" fontWeight={700} color="inherit">ACTIVO</Typography>
+                    </Box>
                 )}
             </Stack>
-        )}
-      </Stack>
+
+            <Typography variant="caption" sx={{ opacity: 0.9, fontWeight: 500, display: 'block', mb: 0.5, color: 'inherit' }}>
+                {helpers.esMensual ? 'VALOR DE CUOTA MENSUAL' : 'VALOR DE INVERSIÓN'}
+            </Typography>
+            
+            <Typography variant="h3" fontWeight={700} sx={{ mb: 1, color: 'inherit' }}>
+                {helpers.precioFormateado}
+            </Typography>
+
+            {helpers.esMensual ? (
+                <Stack direction="row" alignItems="center" gap={1} sx={{ opacity: 0.95 }}>
+                    <CalendarMonth fontSize="small" />
+                    <Typography variant="body2" fontWeight={600} color="inherit">{helpers.plazoTexto}</Typography>
+                </Stack>
+            ) : (
+                helpers.hayLotes && (
+                    <Stack direction="row" alignItems="center" gap={1} sx={{ opacity: 0.95 }}>
+                        <Description fontSize="small" />
+                        <Typography variant="body2" fontWeight={600} color="inherit">{helpers.cantidadLotes} lotes disponibles</Typography>
+                    </Stack>
+                )
+            )}
+        </Box>
+    );
+};
+
+// ==========================================
+// 4. COMPONENTE PRINCIPAL
+// ==========================================
+
+export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({ 
+  logic, 
+  proyecto, 
+  onVerLotesClick 
+}) => {
+  const theme = useTheme();
+  const helpers = useProyectoHelpers(proyecto); 
+
+  const user = logic.user;
+  const paso1Completo = logic.puedeFirmar || logic.yaFirmo;
+  const paso2Completo = logic.yaFirmo;
+
+  return (
+    // MuiCard ya tiene definidos shadow, radius y hover en theme.ts
+    // Solo agregamos sticky y overflow visible
+    <Card 
+      sx={{ 
+        position: { lg: 'sticky' }, 
+        top: { lg: 100 }, 
+        overflow: 'visible' 
+      }}
+    >
+      
+      {/* --- HEADER --- */}
+      <PriceHeader helpers={helpers} />
+
+      {/* --- BODY --- */}
+      <Box p={3}>
+        <Stack spacing={3}>
+          
+          {/* Stepper (Solo si está logueado) */}
+          {user && (
+            <ProcessStepper 
+                paso1Completo={paso1Completo} 
+                paso2Completo={paso2Completo} 
+                esMensual={helpers.esMensual} 
+            />
+          )}
+
+          {/* Área de Botones y Acción */}
+          <Box>
+            {!user ? (
+              // CASO 0: No Logueado
+              <Button 
+                variant="contained" fullWidth size="large" 
+                onClick={logic.handleMainAction} 
+                startIcon={<ArrowForward />} 
+              >
+                Ingresar para Invertir
+              </Button>
+            ) : (
+              <>
+                {/* CASO 1: Logueado, No ha pagado */}
+                {!paso1Completo && (
+                  <Stack spacing={2}>
+                    <Button 
+                        variant="contained" fullWidth size="large" 
+                        onClick={helpers.esMensual ? logic.handleMainAction : onVerLotesClick}
+                        disabled={logic.handleInversion.isPending}
+                        endIcon={!logic.handleInversion.isPending && <ArrowForward />}
+                    >
+                      {logic.handleInversion.isPending 
+                        ? 'Procesando...' 
+                        : helpers.esMensual ? 'Suscribirme al Plan' : 'Ver Lotes Disponibles'
+                      }
+                    </Button>
+                    
+                    {/* Barra de progreso de cupos (Solo Mensuales) */}
+                    {helpers.esMensual && helpers.progreso && helpers.progreso.disponibles > 0 && (
+                        <Box sx={{ p: 2, bgcolor: alpha(theme.palette.success.main, 0.08), borderRadius: 2 }}>
+                            <Stack direction="row" justifyContent="space-between" mb={1}>
+                                <Typography variant="caption" fontWeight={700} color="success.dark">
+                                    Cupos Disponibles
+                                </Typography>
+                                <Typography variant="caption" fontWeight={800} color="success.main">
+                                    {helpers.progreso.disponibles}
+                                </Typography>
+                            </Stack>
+                            <LinearProgress 
+                                variant="determinate" 
+                                value={helpers.progreso.porcentaje} 
+                                color="success" 
+                                sx={{ height: 6, borderRadius: 3 }} 
+                            />
+                        </Box>
+                    )}
+                  </Stack>
+                )}
+
+                {/* CASO 2: Pagó, Falta Firmar */}
+                {paso1Completo && !paso2Completo && (
+                  <Stack spacing={2}>
+                    {/* MuiAlert ya tiene radius y estilos en theme.ts */}
+                    <Alert severity="warning" icon={<HistoryEdu />}>
+                        Pago confirmado. Firma tu contrato para finalizar.
+                    </Alert>
+                    
+                    <Button 
+                        variant="contained" color="warning" fullWidth size="large" 
+                        onClick={logic.handleClickFirmar} 
+                        sx={{ color: 'white' }}
+                    >
+                      Firmar Contrato Digital
+                    </Button>
+                    
+                    <Button variant="text" size="small" onClick={logic.modales.contrato.open}>
+                        Ver borrador del contrato
+                    </Button>
+                  </Stack>
+                )}
+
+                {/* CASO 3: Proceso Terminado */}
+                {paso2Completo && (
+                  <Stack spacing={2}>
+                    <Alert severity="success" icon={<CheckCircle />}>
+                        ¡Inversión completada exitosamente!
+                    </Alert>
+                    
+                    <Button 
+                        variant="outlined" color="success" fullWidth 
+                        onClick={logic.handleVerContratoFirmado} 
+                        startIcon={<Download />} 
+                    >
+                      Descargar Contrato Firmado
+                    </Button>
+                  </Stack>
+                )}
+              </>
+            )}
+          </Box>
+          
+          <Divider />
+          
+          {/* Footer Informativo de Confianza */}
+          <Stack spacing={1.5}>
+             <Stack direction="row" alignItems="center" gap={1.5}>
+                <Box sx={{ bgcolor: alpha(theme.palette.success.main, 0.1), p: 1, borderRadius: 1.5, display: 'flex' }}>
+                    <GppGood color="success" fontSize="small" />
+                </Box>
+                <Box>
+                    <Typography variant="subtitle2" color="text.primary" display="block">
+                        Operación Legal
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                        Protección jurídica garantizada
+                    </Typography>
+                </Box>
+             </Stack>
+             
+             <Stack direction="row" alignItems="center" gap={1.5}>
+                <Box sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), p: 1, borderRadius: 1.5, display: 'flex' }}>
+                    <Description color="primary" fontSize="small" />
+                </Box>
+                <Box>
+                    <Typography variant="subtitle2" color="text.primary" display="block">
+                        Contrato Digital
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                        Firma electrónica válida
+                    </Typography>
+                </Box>
+             </Stack>
+          </Stack>
+
+        </Stack>
+      </Box>
     </Card>
   );
 };
