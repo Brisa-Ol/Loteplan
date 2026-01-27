@@ -1,9 +1,4 @@
-// src/config/env.ts
 
-/**
- * Configuración centralizada de variables de entorno
- * con validación y valores por defecto
- */
 class EnvConfig {
   // API
   readonly apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';

@@ -14,8 +14,6 @@ import { StatCard } from '../../../../shared/components/domain/cards/StatCard/St
 import { useResumenesCuenta } from '../../hooks/useResumenesCuenta';
 import { getResumenColumns } from '../config/resumenColumns';
 
-
-
 const MisResumenes: React.FC = () => {
     const theme = useTheme();
 
@@ -27,26 +25,35 @@ const MisResumenes: React.FC = () => {
 
     // 2. Column Config
     const columns = useMemo(() => getResumenColumns(theme, {
-        // ✅ CORRECCIÓN: Pasamos el 'row' completo (ResumenCuentaDto)
         onViewDetail: (row) => openModal(row)
     }), [theme, openModal]);
 
     return (
         <PageContainer maxWidth="lg">
+            
+            {/* ✅ HEADER SIMÉTRICO */}
             <PageHeader
                 title="Resumen de Cuenta"
-                subtitle="Analiza el progreso de tus planes y la composición financiera de tus cuotas."
+                subtitle="Analiza el estado de tus planes y tu progreso financiero."
             />
 
             {/* KPI SECTION */}
             <Box mb={4} display="grid" gridTemplateColumns={{ xs: '1fr', sm: 'repeat(3, 1fr)' }} gap={3}>
                 <StatCard
-                    title="Total Planes" value={stats.totalPlanes.toString()}
-                    icon={<Business />} color="primary" loading={isLoading} subtitle="Planes Activos"
+                    title="Total Planes" 
+                    value={stats.totalPlanes.toString()}
+                    icon={<Business />} 
+                    color="primary" 
+                    loading={isLoading} 
+                    subtitle="Planes Activos"
                 />
                 <StatCard
-                    title="Avance Promedio" value={`${stats.promedioAvance.toFixed(0)}%`}
-                    icon={<Percent />} color="secondary" loading={isLoading} subtitle="Avance Global"
+                    title="Avance Promedio" 
+                    value={`${stats.promedioAvance.toFixed(0)}%`}
+                    icon={<Percent />} 
+                    color="info" 
+                    loading={isLoading} 
+                    subtitle="Avance Global"
                 />
                 <StatCard
                     title={stats.cuotasVencidasTotal > 0 ? "Cuotas Vencidas" : "Estado Deuda"}
@@ -86,7 +93,6 @@ const MisResumenes: React.FC = () => {
             </QueryHandler>
 
             {/* MODAL */}
-            {/* ✅ CORRECCIÓN: Pasamos la prop 'resumen' con el objeto completo */}
             <DetalleCuotaModal
                 open={isModalOpen}
                 onClose={closeModal}

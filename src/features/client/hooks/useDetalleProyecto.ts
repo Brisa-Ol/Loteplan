@@ -4,17 +4,21 @@ import { useEffect, useMemo, useRef, useState, type SyntheticEvent } from 'react
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import useSnackbar from '../../../shared/hooks/useSnackbar';
+import useSnackbar from '@/shared/hooks/useSnackbar';
 import { useAuth } from '@/core/context/AuthContext';
 import { useModal } from '@/shared/hooks/useModal';
+
+// Services
 import ContratoService from '@/core/api/services/contrato.service';
 import ImagenService from '@/core/api/services/imagen.service';
 import InversionService from '@/core/api/services/inversion.service';
-import type { ContratoFirmadoDto } from '@/core/types/dto/contrato-firmado.dto';
-import TransaccionService from '@/core/api/services/transaccion.service';
 import ProyectoService from '@/core/api/services/proyecto.service';
 import SuscripcionService from '@/core/api/services/suscripcion.service';
 import MercadoPagoService from '@/core/api/services/pagoMercado.service';
+import TransaccionService from '@/core/api/services/transaccion.service';
+
+// Types
+import type { ContratoFirmadoDto } from '@/core/types/dto/contrato-firmado.dto';
 
 export const useDetalleProyecto = () => {
   const { id } = useParams<{ id: string }>();
@@ -30,57 +34,43 @@ export const useDetalleProyecto = () => {
   const [pendingTransactionId, setPendingTransactionId] = useState<number | null>(null);
   const [error2FA, setError2FA] = useState<string | null>(null);
   const [contratoFirmadoSeleccionado, setContratoFirmadoSeleccionado] = useState<ContratoFirmadoDto | null>(null);
+  
   const pollingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // --- MODALES ---
   const modales = {
-    firma: useModal(),
-    contrato: useModal(),
+    checkoutWizard: useModal(),
     firmado: useModal(),
-    suscribirse: useModal(),
-    inversion: useModal(),
-    pagoExitoso: useModal(),
-    twoFA: useModal(),
+    contrato: useModal(),
   };
 
-  // --- QUERIES OPTIMIZADAS ---
-  
-  // ✅ OPTIMIZACIÓN 1: Query principal con staleTime agresivo
+  // --- QUERIES ---
   const { data: proyecto, isLoading: loadingProyecto } = useQuery({
     queryKey: ['proyecto', id],
     queryFn: async () => (await ProyectoService.getByIdActive(Number(id))).data,
-    retry: 1, // Solo 1 reintento en lugar de 3
-    staleTime: 5 * 60 * 1000, // 5 minutos (los proyectos no cambian tan rápido)
-    gcTime: 10 * 60 * 1000, // Mantener en caché 10 minutos
+    retry: 1,
+    staleTime: 5 * 60 * 1000,
   });
 
-  // ✅ OPTIMIZACIÓN 2: Queries condicionales solo si hay usuario
   const { data: misContratos } = useQuery({
     queryKey: ['misContratos'],
     queryFn: async () => (await ContratoService.getMyContracts()).data,
     enabled: !!user,
-    staleTime: 3 * 60 * 1000, // 3 minutos
-    gcTime: 5 * 60 * 1000,
   });
 
-  // ✅ OPTIMIZACIÓN 3: Queries separadas según tipo de proyecto
   const { data: misInversiones } = useQuery({
     queryKey: ['misInversiones'],
     queryFn: async () => (await InversionService.getMisInversiones()).data,
     enabled: !!user && proyecto?.tipo_inversion === 'directo',
-    staleTime: 2 * 60 * 1000,
-    gcTime: 5 * 60 * 1000,
   });
 
   const { data: misSuscripciones } = useQuery({
     queryKey: ['misSuscripciones'],
     queryFn: async () => (await SuscripcionService.getMisSuscripciones()).data,
     enabled: !!user && proyecto?.tipo_inversion === 'mensual',
-    staleTime: 2 * 60 * 1000,
-    gcTime: 5 * 60 * 1000,
   });
 
-  // --- ESTADOS DERIVADOS (Memoizados) ---
+  // --- ESTADOS DERIVADOS ---
   const yaFirmo = useMemo(() => {
     if (!misContratos || !proyecto) return false;
     return !!misContratos.find(c => c.id_proyecto === proyecto.id && c.estado_firma === 'FIRMADO');
@@ -96,8 +86,6 @@ export const useDetalleProyecto = () => {
     return false;
   }, [proyecto, user, misInversiones, misSuscripciones]);
 
-  const is2FAMissing = !!(user && !user.is_2fa_enabled);
-
   const coverImage = useMemo(() => 
     proyecto?.imagenes?.[0] ? ImagenService.resolveImageUrl(proyecto.imagenes[0].url) : '/assets/placeholder-project.jpg',
   [proyecto]);
@@ -110,14 +98,15 @@ export const useDetalleProyecto = () => {
   }, [proyecto]);
 
   const mostrarTabLotes = proyecto?.tipo_inversion === 'directo' || (proyecto?.lotes && proyecto.lotes.length > 0);
+  const is2FAMissing = !!(user && !user.is_2fa_enabled);
 
-  // --- EFECTOS (PAGO MP) ---
+  // --- EFECTOS (RETORNO DE MERCADO PAGO) ---
   useEffect(() => {
     const query = new URLSearchParams(location.search);
     const status = query.get('status');
     const externalReference = query.get('external_reference');
 
-    if (status === 'approved' && externalReference && !modales.pagoExitoso.isOpen) {
+    if (status === 'approved' && externalReference) {
       verificarEstadoPago(Number(externalReference));
     } else if (status === 'failure' || status === 'rejected') {
       showError("El pago fue rechazado o no se completó.");
@@ -127,11 +116,10 @@ export const useDetalleProyecto = () => {
     return () => { 
       if (pollingTimeoutRef.current) clearTimeout(pollingTimeoutRef.current); 
     };
-  }, [location.search]); // ✅ OPTIMIZACIÓN 4: Solo depende de search, no de todo location
+  }, [location.search]);
 
   const limpiarUrl = () => window.history.replaceState({}, document.title, window.location.pathname);
 
-  // ✅ OPTIMIZACIÓN 5: Polling con límite de intentos y backoff
   const verificarEstadoPago = async (transaccionId: number, intentos = 0) => {
     setVerificandoPago(true);
     try {
@@ -139,20 +127,14 @@ export const useDetalleProyecto = () => {
       if (data.estado_transaccion === 'pagado') {
         setVerificandoPago(false);
         limpiarUrl();
+        queryClient.invalidateQueries({ queryKey: ['misInversiones'] });
+        queryClient.invalidateQueries({ queryKey: ['misSuscripciones'] });
         
-        // ✅ Invalidación específica según tipo
-        if (proyecto?.tipo_inversion === 'directo') {
-          queryClient.invalidateQueries({ queryKey: ['misInversiones'] });
-        } else {
-          queryClient.invalidateQueries({ queryKey: ['misSuscripciones'] });
-        }
-        
-        modales.pagoExitoso.open();
+        sessionStorage.setItem('checkout_step', '4');
+        modales.checkoutWizard.open();
       } else {
-        if (intentos < 8) { // Reducido de 10 a 8
-          // Backoff progresivo: 3s, 4s, 5s...
-          const delay = 3000 + (intentos * 1000);
-          pollingTimeoutRef.current = setTimeout(() => verificarEstadoPago(transaccionId, intentos + 1), delay);
+        if (intentos < 8) {
+          pollingTimeoutRef.current = setTimeout(() => verificarEstadoPago(transaccionId, intentos + 1), 3000 + (intentos * 1000));
         } else {
           setVerificandoPago(false);
           showInfo("Pago aprobado en MP. Espera unos minutos a que impacte en el sistema.");
@@ -161,97 +143,85 @@ export const useDetalleProyecto = () => {
       }
     } catch (error) {
       setVerificandoPago(false);
-      showError("Error al verificar el pago. Intenta refrescar la página.");
+      showError("Error al verificar el pago.");
     }
   };
 
-  // --- MUTACIONES OPTIMIZADAS ---
-  const handleInversion = useMutation({
+  // --- MUTACIONES (WIZARD) ---
+  const handleConfirmInvestment = useMutation({
     mutationFn: async () => {
       if (!proyecto) throw new Error("Proyecto no cargado");
-      let initResponse: any;
-      const modelType = proyecto.tipo_inversion === 'mensual' ? 'pago' : 'inversion';
-
+      let response: any;
       if (proyecto.tipo_inversion === 'mensual') {
-        initResponse = (await SuscripcionService.iniciar({ id_proyecto: proyecto.id })).data;
+        response = (await SuscripcionService.iniciar({ id_proyecto: proyecto.id })).data;
       } else {
-        initResponse = (await InversionService.iniciar({ id_proyecto: proyecto.id })).data;
+        response = (await InversionService.iniciar({ id_proyecto: proyecto.id })).data;
       }
-
-      if (initResponse.redirectUrl) return initResponse;
-      
-      const idParaCheckout = initResponse.pagoId || initResponse.inversionId || initResponse.id;
-      if (!idParaCheckout) return initResponse;
-
-      const checkoutRes = await MercadoPagoService.iniciarCheckoutModelo(modelType, idParaCheckout);
-      return { ...initResponse, ...checkoutRes.data };
+      return response;
     },
     onSuccess: (data: any) => {
-      modales.suscribirse.close();
-      modales.inversion.close();
-      
-      if (data.is2FARequired && data.transaccionId) {
-        setPendingTransactionId(data.transaccionId);
-        modales.twoFA.open();
-        return;
-      }
-      if (data.redirectUrl) {
-        window.location.href = data.redirectUrl;
-        return;
-      }
-      
-      // ✅ Invalidación selectiva
-      if (proyecto?.tipo_inversion === 'directo') {
-        queryClient.invalidateQueries({ queryKey: ['misInversiones'] });
-      } else {
-        queryClient.invalidateQueries({ queryKey: ['misSuscripciones'] });
-      }
-      
-      modales.pagoExitoso.open();
+      const txId = data.transaccionId || data.id || data.data?.id;
+      if (txId) setPendingTransactionId(txId);
+      showSuccess('Operación iniciada correctamente');
     },
-    onError: () => {
-      modales.suscribirse.close();
-      modales.inversion.close();
+    onError: (error: any) => showError(error.response?.data?.message || 'Error al iniciar la operación')
+  });
+
+  const handleSubmit2FA = useMutation({
+    mutationFn: async (codigo: string) => {
+      if (!pendingTransactionId) throw new Error("ID de transacción perdido.");
+      if (!proyecto) throw new Error("Datos de proyecto no disponibles.");
+      
+      if (proyecto.tipo_inversion === 'mensual') {
+        await SuscripcionService.confirmar2FA({ transaccionId: pendingTransactionId, codigo_2fa: codigo });
+      } else {
+        await InversionService.confirmar2FA({ inversionId: pendingTransactionId, codigo_2fa: codigo });
+      }
+      
+      const modelType = proyecto.tipo_inversion === 'mensual' ? 'pago' : 'inversion';
+      const checkoutRes = await MercadoPagoService.iniciarCheckoutModelo(modelType, pendingTransactionId);
+      return checkoutRes.data;
+    },
+    onSuccess: (data: any) => {
+      setError2FA(null);
+      if (data.redirectUrl || data.init_point) {
+         sessionStorage.setItem('checkout_step', '3');
+         sessionStorage.setItem('checkout_proyecto_id', String(proyecto?.id));
+      }
+    },
+    onError: (err: any) => {
+      setError2FA(err.response?.data?.message || "Código incorrecto.");
+      throw err;
     }
   });
 
-  const confirmar2FAMutation = useMutation({
-    mutationFn: async (codigo: string) => {
-      if (!pendingTransactionId) throw new Error("ID perdido");
-      return (await SuscripcionService.confirmar2FA({ transaccionId: pendingTransactionId, codigo_2fa: codigo })).data;
+  const handleSignContract = useMutation({
+    mutationFn: async (signatureData: any) => {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      return { success: true };
     },
-    onSuccess: (data: any) => {
-      modales.twoFA.close();
-      setError2FA(null);
-      if (data.redirectUrl) {
-        window.location.href = data.redirectUrl;
-      } else {
-        // ✅ Invalidación selectiva
-        if (proyecto?.tipo_inversion === 'directo') {
-          queryClient.invalidateQueries({ queryKey: ['misInversiones'] });
-        } else {
-          queryClient.invalidateQueries({ queryKey: ['misSuscripciones'] });
-        }
-        modales.pagoExitoso.open();
-      }
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['misContratos'] });
+      showSuccess("Contrato firmado correctamente");
+      modales.checkoutWizard.close();
+      sessionStorage.removeItem('checkout_step');
+      sessionStorage.removeItem('checkout_proyecto_id');
     },
-    onError: (err: any) => setError2FA(err.response?.data?.message || "Código incorrecto")
+    onError: () => showError('Error al firmar el contrato')
   });
 
-  // --- HANDLERS UI ---
-  const handleTabChange = (event: SyntheticEvent, newValue: number) => {
-    setTabValue(newValue);
-  };
+  // --- ACTIONS ---
+  const handleTabChange = (_: SyntheticEvent, newValue: number) => setTabValue(newValue);
 
-  const handleContinuarAFirma = () => {
-    modales.pagoExitoso.close();
-    setTimeout(() => { modales.firma.open(); }, 500);
-  };
-
-  const handleFirmaExitosa = () => {
-    modales.firma.close();
-    queryClient.invalidateQueries({ queryKey: ['misContratos'] });
-    showSuccess("Contrato firmado correctamente");
+  // ✅ Acción Principal: Abre el Wizard
+  const handleMainAction = () => {
+    if (!user) return navigate('/login', { state: { from: location.pathname } });
+    if (is2FAMissing) return navigate('/client/MiCuenta/SecuritySettings');
+    
+    sessionStorage.removeItem('checkout_step');
+    setError2FA(null);
+    setPendingTransactionId(null);
+    modales.checkoutWizard.open();
   };
 
   const handleVerContratoFirmado = () => {
@@ -263,44 +233,52 @@ export const useDetalleProyecto = () => {
     }
   };
 
-  const handleMainAction = () => {
-    if (!user) return navigate('/login', { state: { from: location.pathname } });
-    if (proyecto?.tipo_inversion === 'mensual') modales.suscribirse.open();
-    else modales.inversion.open();
-  };
-
-  const handleClickFirmar = () => {
-    if (!user) return;
-    if (is2FAMissing) { navigate('/client/MiCuenta/SecuritySettings'); return; }
-    modales.firma.open();
-  };
-
-  return {
+return {
+    // Datos
     id,
     user,
     proyecto,
     loadingProyecto,
     tabValue,
-    setTabValue,
-    handleTabChange,
-    yaFirmo,
-    puedeFirmar,
-    is2FAMissing,
     coverImage,
     porcentaje,
     mostrarTabLotes,
+    
+    // Estados UI
     verificandoPago,
-    handleInversion,
-    confirmar2FAMutation,
-    modales,
-    handleContinuarAFirma,
-    handleFirmaExitosa,
-    handleVerContratoFirmado,
-    handleMainAction,
-    handleClickFirmar,
-    contratoFirmadoSeleccionado,
-    setContratoFirmadoSeleccionado,
+    yaFirmo,
+    puedeFirmar,
+    is2FAMissing,
     error2FA,
-    setError2FA
+    contratoFirmadoSeleccionado,
+    modales,
+    setContratoFirmadoSeleccionado,
+    
+    // Handlers
+    setTabValue,
+    handleTabChange,
+    handleMainAction,
+    handleVerContratoFirmado,
+    setError2FA,
+
+    // ✅ COMPATIBILIDAD CON SIDEBAR ARREGLADA
+    // El Sidebar espera un objeto tipo Mutation para handleInversion
+    handleClickFirmar: handleMainAction, 
+    
+    handleInversion: {
+      isPending: false, // El sidebar no carga, abre el modal inmediatamente
+      mutate: handleMainAction // Al hacer click (mutate), abrimos el wizard
+    }, 
+
+    // ✅ DATA PARA WIZARD
+    inversionId: proyecto?.tipo_inversion === 'directo' ? pendingTransactionId ?? undefined : undefined,
+    pagoId: proyecto?.tipo_inversion === 'mensual' ? pendingTransactionId ?? undefined : undefined,
+
+    wizardCallbacks: {
+      onConfirmInvestment: async () => await handleConfirmInvestment.mutateAsync(),
+      onSubmit2FA: async (code: string) => await handleSubmit2FA.mutateAsync(code),
+      onSignContract: async (signatureData: any) => await handleSignContract.mutateAsync(signatureData)
+    },
+    isProcessingWizard: handleConfirmInvestment.isPending || handleSubmit2FA.isPending || handleSignContract.isPending
   };
 };

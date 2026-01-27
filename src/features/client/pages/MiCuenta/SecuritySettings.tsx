@@ -1,86 +1,29 @@
 // src/pages/client/MiCuenta/SecuritySettings.tsx
 
-// ==========================================
-// 1. IMPORTS
-// ==========================================
 import React, { useEffect, useState } from 'react';
-
-// Librerías Externas
 import QRCode from 'qrcode';
-
-// Iconos Material UI
 import {
-  Close,
-  ContentCopy,
-  GppGood,
-  GppMaybe,
-  Lock,
-  QrCode2,
-  Security,
-  Info,
-  Smartphone,
-  Timer,
-  Payment,
-  SupportAgent,
-  VisibilityOff,
-  Visibility
+  Close, ContentCopy, GppGood, GppMaybe, Lock, QrCode2, Security, Info,
+  Smartphone, Timer, Payment, SupportAgent, VisibilityOff, Visibility
 } from '@mui/icons-material';
-
-// Componentes Material UI
 import {
-  Alert,
-  Avatar,
-  Box,
-  Button,
-  Card,
-  CardContent,
-  Chip,
-  CircularProgress,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  Divider,
-  IconButton,
-  InputAdornment,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
-  Stack,
-  Step,
-  StepLabel,
-  Stepper,
-  TextField,
-  Tooltip,
-  Typography,
-  alpha,
-  useTheme
+  Alert, Avatar, Box, Button, Card, CardContent, Chip, CircularProgress,
+  Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton,
+  InputAdornment, List, ListItem, ListItemIcon, ListItemText, Stack, Step,
+  StepLabel, Stepper, TextField, Tooltip, Typography, alpha, useTheme
 } from '@mui/material';
-
-
 
 // Componentes Propios
 import { PageContainer } from '../../../../shared/components/layout/containers/PageContainer/PageContainer';
-import { PageHeader } from '../../../../shared/components/layout/headers/PageHeader';
+import { PageHeader } from '../../../../shared/components/layout/headers/PageHeader'; // ✅ Importado
 import { useAuth } from '@/core/context/AuthContext';
 import type { ApiError } from '@/core/api/httpService';
 
-/**
- * Componente SecuritySettings
- * ---------------------------
- * Gestiona la configuración de seguridad del usuario (2FA) e informa sobre su uso.
- */
 const SecuritySettings: React.FC = () => {
-  // Hooks Globales
   const { user, disable2FA, generate2FASecret, enable2FA, isLoading: authLoading } = useAuth();
   const theme = useTheme();
 
-  // ==========================================
-  // 2. ESTADOS
-  // ==========================================
-
-  // --- A. Estados del Flujo de Activación (Setup) ---
+  // --- ESTADOS ---
   const [isEnabling, setIsEnabling] = useState(false);
   const [activeStep, setActiveStep] = useState(0);
   const [secret, setSecret] = useState<string | null>(null);
@@ -90,26 +33,20 @@ const SecuritySettings: React.FC = () => {
   const [setupLoading, setSetupLoading] = useState(false);
   const [setupError, setSetupError] = useState<string | null>(null);
 
-  // --- B. Estados del Flujo de Desactivación ---
   const [isDisabling, setIsDisabling] = useState(false);
   const [disablePassword, setDisablePassword] = useState('');
   const [disableCode, setDisableCode] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [disableLoading, setDisableLoading] = useState(false);
 
-  // --- C. Feedback y Utilidades ---
   const [localError, setLocalError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [copiedSecret, setCopiedSecret] = useState(false);
 
-  // Variables derivadas
   const is2FAEnabled = user?.is_2fa_enabled || false;
   const isLoading = authLoading || setupLoading || disableLoading;
   const displayError = setupError || localError;
 
-  // ==========================================
-  // 3. EFECTOS
-  // ==========================================
   useEffect(() => {
     if (otpAuthUrl) {
       QRCode.toDataURL(otpAuthUrl)
@@ -118,10 +55,7 @@ const SecuritySettings: React.FC = () => {
     }
   }, [otpAuthUrl]);
 
-  // ==========================================
-  // 4. HANDLERS
-  // ==========================================
-
+  // --- HANDLERS ---
   const handleStartEnable = async () => {
     setLocalError(null);
     setSetupError(null);
@@ -200,20 +134,20 @@ const SecuritySettings: React.FC = () => {
     }
   };
 
-  // ==========================================
-  // 5. RENDERIZADO
-  // ==========================================
+  // --- RENDER ---
   return (
     <PageContainer maxWidth="md">
+      
+      {/* ✅ HEADER UNIFICADO */}
       <PageHeader
         title="Seguridad de la Cuenta"
         subtitle="Gestiona la autenticación de dos factores y protege el acceso a tu cuenta."
       />
 
-      <Box sx={{ width: '100%', maxWidth: 800, mx: 'auto', mt: 2 }}>
+      <Box sx={{ width: '100%', maxWidth: 800, mx: 'auto' }}>
         
         {successMessage && (
-          <Alert severity="success" onClose={() => setSuccessMessage(null)} sx={{ mb: 3 }}>
+          <Alert severity="success" onClose={() => setSuccessMessage(null)} sx={{ mb: 3, borderRadius: 2 }}>
             {successMessage}
           </Alert>
         )}
@@ -266,14 +200,13 @@ const SecuritySettings: React.FC = () => {
         <Card elevation={0} sx={{ mb: 4, borderRadius: 3, border: `1px solid ${theme.palette.divider}` }}>
           <CardContent sx={{ p: 4 }}>
             
-            {/* CSS Grid para Layout */}
             <Box sx={{ 
               display: 'grid', 
               gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, 
-              gap: 6 // Aumenté el gap para mejor separación
+              gap: 6 
             }}>
               
-              {/* Columna Izquierda: Instrucciones Paso a Paso */}
+              {/* Columna Izquierda */}
               <Box>
                 <Box display="flex" alignItems="center" gap={1} mb={3}>
                   <Info color="primary" />
@@ -281,30 +214,24 @@ const SecuritySettings: React.FC = () => {
                 </Box>
 
                 <Stack spacing={3}>
-                  {/* Paso 1 */}
                   <Box>
                     <Typography variant="subtitle2" fontWeight={700} gutterBottom>
                       1. Descarga "Google Authenticator" en tu celular
                     </Typography>
                     
                     <Box display="flex" alignItems="center" gap={2} mb={1}>
-                      {/* Logo Google Authenticator */}
                       <Box 
                         component="img" 
                         src="https://play-lh.googleusercontent.com/NntMALIH4odanPPYSqUOXsX8zy_giiK2olJiqkcxwFIOOspVrhMi9Miv6LYdRnKIg-3R=w480-h960-rw" 
                         alt="Google Authenticator Logo"
                         sx={{ width: 48, height: 48 }}
                       />
-                      
-                      
                     </Box>
-                     <Typography variant="subtitle2" fontWeight={400} gutterBottom>
+                      <Typography variant="subtitle2" fontWeight={400} gutterBottom>
                       Disponible en Google Play y App Store
                     </Typography>
-                  
                   </Box>
 
-                  {/* Pasos 2 y 3 */}
                   <Box>
                     <Typography variant="subtitle2" fontWeight={700}>2. Inicia sesión</Typography>
                     <Typography variant="body2" color="text.secondary">
@@ -319,7 +246,6 @@ const SecuritySettings: React.FC = () => {
                     </Typography>
                   </Box>
 
-                  {/* Paso 4 (Alerta) */}
                   <Alert severity="warning" sx={{ borderRadius: 2 }}>
                     <Typography variant="caption" fontWeight={700} display="block">
                       4. IMPORTANTE:
@@ -331,7 +257,7 @@ const SecuritySettings: React.FC = () => {
                 </Stack>
               </Box>
 
-              {/* Columna Derecha: Reglas de Uso */}
+              {/* Columna Derecha */}
               <Box>
                 <Box display="flex" alignItems="center" gap={1} mb={3}>
                   <Security color="primary" />
@@ -423,7 +349,7 @@ const SecuritySettings: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* --- SECCIÓN DE AYUDA / SOPORTE --- */}
+        {/* --- SECCIÓN DE AYUDA --- */}
         <Box sx={{ textAlign: 'center', p: 3, bgcolor: alpha(theme.palette.info.main, 0.05), borderRadius: 3 }}>
           <Stack direction="row" justifyContent="center" alignItems="center" gap={1} mb={1}>
             <SupportAgent color="info" />
@@ -439,11 +365,7 @@ const SecuritySettings: React.FC = () => {
 
       </Box>
 
-      {/* ========================================== */}
-      {/* 6. MODALES (Dialogs)                       */}
-      {/* ========================================== */}
-
-      {/* --- MODAL ACTIVACIÓN (Setup) --- */}
+      {/* --- MODALES --- */}
       <Dialog open={isEnabling} onClose={handleCloseEnableDialog} maxWidth="sm" fullWidth>
         <DialogTitle display="flex" justifyContent="space-between" alignItems="center" sx={{ borderBottom: `1px solid ${theme.palette.divider}` }}>
           Configurar 2FA
@@ -521,7 +443,6 @@ const SecuritySettings: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* --- MODAL DESACTIVACIÓN --- */}
       <Dialog open={isDisabling} onClose={handleCloseDisableDialog} maxWidth="xs" fullWidth>
         <DialogTitle display="flex" justifyContent="space-between" alignItems="center" sx={{ borderBottom: `1px solid ${theme.palette.divider}` }}>
           Desactivar 2FA

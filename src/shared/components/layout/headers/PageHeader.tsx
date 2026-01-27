@@ -1,14 +1,26 @@
 // src/components/common/PageHeader/PageHeader.tsx
+
 import React from "react";
-import { Box, Typography, Stack, useTheme } from "@mui/material";
+import { Box, Typography, useTheme } from "@mui/material";
+import { SectionTitle } from "../containers/SectionTitle/SectionTitle";
 
 interface PageHeaderProps {
   title: string;
   subtitle?: string;
   action?: React.ReactNode;
+  /**
+   * Opcional: Permite controlar si el título usa gradiente
+   * Default: true (para que los headers de página resalten)
+   */
+  useGradient?: boolean; 
 }
 
-export const PageHeader: React.FC<PageHeaderProps> = ({ title, subtitle, action }) => {
+export const PageHeader: React.FC<PageHeaderProps> = ({ 
+  title, 
+  subtitle, 
+  action,
+  useGradient = true // Por defecto activamos el modo "premium" en los headers
+}) => {
   const theme = useTheme();
 
   return (
@@ -16,37 +28,31 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ title, subtitle, action 
       component="header"
       sx={{ 
         mb: { xs: 4, md: 6, lg: 8 },
-        // ✅ LAYOUT INTELIGENTE (Grid):
-        // Mobile: 1 sola columna (todo apilado).
-        // Desktop: 3 columnas [Espacio Vacío] [Contenido Central] [Botón Derecha].
-        // La magia de '1fr auto 1fr' es que el centro siempre queda en el medio.
         display: "grid",
+        // Grid de 3 columnas: [Espacio] [Centro] [Botón]
         gridTemplateColumns: { xs: "1fr", md: "1fr minmax(auto, 60%) 1fr" },
         gap: { xs: 3, md: 2 },
-        alignItems: "start", // Alineación vertical superior para evitar saltos raros
+        alignItems: "start", 
       }}
     >
       
-      {/* 1. ESPACIO IZQUIERDO (Solo visible en Desktop para equilibrar la grid) */}
+      {/* 1. ESPACIO IZQUIERDO (Equilibrio visual en desktop) */}
       <Box sx={{ display: { xs: "none", md: "block" } }} aria-hidden="true" />
 
-      {/* 2. CONTENIDO CENTRAL (Título y Subtítulo) */}
+      {/* 2. CONTENIDO CENTRAL */}
       <Box sx={{ textAlign: "center", width: "100%" }}>
-        <Typography
+        
+        {/* ✨ AQUÍ LA MEJORA: Reemplazamos Typography por SectionTitle */}
+        <SectionTitle
           variant="h2"
-          component="h1" // Semántica correcta para SEO
-          sx={{
-            color: "primary.main",
-            fontWeight: 800, // Un poco más grueso para destacar
-            mb: 2,
-            // Eliminamos textShadow manual para un look más limpio/moderno,
-            // pero si tu diseño lo exige, puedes descomentarlo.
-            // textShadow: "0px 4px 12px rgba(0,0,0,0.05)",
-            wordBreak: "break-word",
-          }}
+          component="h1" // Importante para SEO
+          align="center"
+          useGradient={useGradient}
+          lineWidth={100} // Un poco más ancha para títulos de página
+          sx={{ mb: 2 }}  // Margen inferior para separarlo del subtítulo
         >
           {title}
-        </Typography>
+        </SectionTitle>
 
         {subtitle && (
           <Typography
@@ -54,8 +60,14 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ title, subtitle, action 
             color="text.secondary"
             sx={{ 
               maxWidth: "md",
-              mx: "auto", // Centrado horizontal del bloque de texto
+              mx: "auto",
               lineHeight: 1.6,
+              // Animación de entrada suave para el subtítulo (opcional)
+              animation: "fadeIn 0.5s ease-in",
+              "@keyframes fadeIn": {
+                 "0%": { opacity: 0, transform: "translateY(5px)" },
+                 "100%": { opacity: 1, transform: "translateY(0)" }
+              }
             }}
           >
             {subtitle}
@@ -68,9 +80,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ title, subtitle, action 
         <Box 
           sx={{ 
             display: "flex",
-            // Mobile: Centrado. Desktop: Justificado a la derecha.
             justifyContent: { xs: "center", md: "flex-end" },
-            // Mobile: Botón ancho completo (opcional, mejora UX).
             "& > *": { width: { xs: "100%", sm: "auto" } } 
           }}
         >

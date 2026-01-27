@@ -1,4 +1,6 @@
-import React, { useState, useMemo, useEffect } from 'react';
+// src/pages/Client/Proyectos/DetalleLote.tsx
+
+import React, { useState, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -17,9 +19,10 @@ import LoteService from '@/core/api/services/lote.service';
 import type { LoteDto } from '@/core/types/dto/lote.dto';
 import { useAuth } from '@/core/context/AuthContext';
 import ImagenService from '@/core/api/services/imagen.service';
-import { FavoritoButton } from '@/shared/components/ui/buttons/BotonFavorito';
-import { useVerificarSuscripcion } from '../../hooks/useVerificarSuscripcion';
 
+
+import { useVerificarSuscripcion } from '../../hooks/useVerificarSuscripcion';
+import { FavoritoButton } from '@/shared/components/ui/buttons/BotonFavorito';
 
 // --- ANIMACIONES CSS ---
 const pulse = keyframes`
@@ -61,8 +64,8 @@ const DetalleLote: React.FC = () => {
 
   const lote = loteData as LoteConPuja;
 
-  // 2. QUERY VERIFICACIÓN SUSCRIPCIÓN (NUEVO)
-const { estaSuscripto, isLoading: loadingSub } = useVerificarSuscripcion(lote?.id_proyecto ?? undefined);
+  // 2. QUERY VERIFICACIÓN SUSCRIPCIÓN
+  const { estaSuscripto, isLoading: loadingSub } = useVerificarSuscripcion(lote?.id_proyecto ?? undefined);
 
   // --- LÓGICA DE NEGOCIO (MEMOIZED) ---
   const { precioDisplay, soyGanador, hayOfertas, statusConfig } = useMemo(() => {
@@ -133,13 +136,11 @@ const { estaSuscripto, isLoading: loadingSub } = useVerificarSuscripcion(lote?.i
     }
   };
 
-  // 3. LÓGICA DE BOTÓN PRINCIPAL ACTUALIZADA
+  // 3. LÓGICA DE BOTÓN PRINCIPAL
   const handleBotonAccion = () => {
     if (!isAuthenticated) return navigate('/login', { state: { from: location.pathname } });
     
-    // Si NO está suscripto, redirigir a la vista del proyecto para suscribirse
     if (!estaSuscripto) {
-        // Asumiendo ruta de detalle de proyecto
         return navigate(`/cliente/proyectos/${lote.id_proyecto}`); 
     }
 
@@ -163,7 +164,8 @@ const { estaSuscripto, isLoading: loadingSub } = useVerificarSuscripcion(lote?.i
 
   return (
     <Box sx={{ maxWidth: 1400, mx: 'auto', p: { xs: 2, md: 4 }, pb: 12 }}>
-      {/* HEADER ... (Sin cambios) */}
+      
+      {/* HEADER */}
       <Stack direction="row" alignItems="center" justifyContent="space-between" mb={3}>
         <Stack direction="row" alignItems="center" spacing={2}>
             <IconButton onClick={() => navigate(-1)} sx={{ bgcolor: 'background.paper', border: `1px solid ${theme.palette.divider}`, boxShadow: 1 }}>
@@ -182,13 +184,16 @@ const { estaSuscripto, isLoading: loadingSub } = useVerificarSuscripcion(lote?.i
             <IconButton onClick={handleShare} sx={{ border: `1px solid ${theme.palette.divider}` }}>
                 <Share fontSize="small" />
             </IconButton>
+            
+            {/* ✅ INTEGRACIÓN DEL BOTÓN FAVORITO */}
             <FavoritoButton loteId={lote.id} size="large" />
+            
         </Stack>
       </Stack>
 
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '2fr 1fr' }, gap: 4, alignItems: 'start' }}>
         
-        {/* COLUMNA IZQUIERDA (IMÁGENES Y DETALLES) ... (Sin cambios importantes) */}
+        {/* COLUMNA IZQUIERDA (IMÁGENES Y DETALLES) */}
         <Box sx={{ minWidth: 0 }}>
           <Paper elevation={0} sx={{ position: 'relative', overflow: 'hidden', borderRadius: 4, mb: 2, border: `1px solid ${theme.palette.divider}`, boxShadow: theme.shadows[2] }}>
             <Box sx={{ height: { xs: 300, sm: 500 }, bgcolor: 'action.hover', position: 'relative' }}>
@@ -301,7 +306,6 @@ const { estaSuscripto, isLoading: loadingSub } = useVerificarSuscripcion(lote?.i
               {lote.estado_subasta === 'activa' ? (
                 <Stack spacing={2}>
                   
-                  {/* 🔒 4. AVISO DE BLOQUEO SI NO ESTÁ SUSCRIPTO */}
                   {!estaSuscripto && !loadingSub && isAuthenticated && (
                     <Alert severity="info" variant="outlined" icon={<Lock fontSize="inherit" />}>
                         Debes estar <strong>suscripto al proyecto</strong> para participar en esta subasta.
@@ -312,7 +316,6 @@ const { estaSuscripto, isLoading: loadingSub } = useVerificarSuscripcion(lote?.i
                     variant="contained" 
                     size="large" 
                     fullWidth 
-                    // 🎨 5. ICONO Y TEXTO DINÁMICO
                     startIcon={estaSuscripto ? <Gavel /> : <VerifiedUser />} 
                     onClick={handleBotonAccion}
                     color={soyGanador ? "success" : (estaSuscripto ? "primary" : "secondary")}

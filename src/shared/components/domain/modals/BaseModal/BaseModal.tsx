@@ -16,9 +16,24 @@ import {
   useTheme,
   useMediaQuery,
   alpha,
+  Tooltip,
+  Slide,
   type DialogProps,
 } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
+import type { TransitionProps } from 'node_modules/@mui/material/esm/transitions/transition';
+
+// ════════════════════════════════════════════════════════════
+// ANIMACIÓN (UX)
+// ════════════════════════════════════════════════════════════
+
+// Transición suave hacia arriba tipo "Slide"
+const Transition = React.forwardRef(function Transition(
+  props: TransitionProps & { children: React.ReactElement<any, any> },
+  ref: React.Ref<unknown>,
+) {
+  return <Slide direction="up" ref={ref} {...props} />;
+});
 
 // ════════════════════════════════════════════════════════════
 // TYPES
@@ -123,39 +138,57 @@ export const BaseModal: React.FC<BaseModalProps> = ({
 }) => {
   const theme = useTheme();
   
-  // ✅ DETECCIÓN MÓVIL: Si la pantalla es pequeña (sm o menor), activamos modo fullScreen
+  // Detección móvil
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-
-  // Determinar el color del header según el prop
   const headerColorValue = theme.palette[headerColor].main;
 
-  // Handler para el close con verificación de loading
+  // Lógica de cierre segura
   const handleClose = () => {
     if (!isLoading && !disableClose) {
       onClose();
     }
   };
 
-  // Handler para confirm
+  // Lógica de confirmación
   const handleConfirm = () => {
     if (onConfirm && !isLoading && !disableConfirm) {
       onConfirm();
     }
   };
 
+  // ✅ UX: Confirmar con ENTER (ignorando TextAreas)
+  const handleKeyDown = (event: React.KeyboardEvent) => {
+    if (event.key === 'Enter' && onConfirm && !hideConfirmButton && !disableConfirm && !isLoading) {
+      const target = event.target as HTMLElement;
+      // Si el usuario está escribiendo en un textarea, Enter debe hacer salto de línea, no enviar
+      if (target.tagName !== 'TEXTAREA') {
+        event.preventDefault();
+        handleConfirm();
+      }
+    }
+  };
+
   return (
     <Dialog
       open={open}
-      onClose={handleClose}
+      // ✅ UX: Control fino del cierre (Backdrop/Esc)
+      onClose={(event, reason) => {
+        if ((isLoading || disableClose) && (reason === 'backdropClick' || reason === 'escapeKeyDown')) {
+          return;
+        }
+        handleClose();
+      }}
+      TransitionComponent={Transition} // ✅ UX: Animación Slide
       maxWidth={maxWidth}
       fullWidth
-      // ✅ RESPONSIVE: Ocupa toda la pantalla en móvil si no se especifica lo contrario
-      fullScreen={dialogProps.fullScreen ?? isMobile} 
+      fullScreen={dialogProps.fullScreen ?? isMobile}
       scroll={scroll}
+      onKeyDown={handleKeyDown} // ✅ UX: Listener de teclado
+      aria-labelledby="base-modal-title"
       PaperProps={{
+        elevation: 24,
         sx: {
-          // ✅ RESPONSIVE: En móvil quitamos los bordes redondeados para que llene bien las esquinas
-          borderRadius: isMobile ? 0 : 3, 
+          borderRadius: isMobile ? 0 : 3,
           boxShadow: theme.shadows[10],
           overflow: 'hidden',
           ...(scroll === 'paper' && { maxHeight: isMobile ? '100%' : '90vh' }),
@@ -165,6 +198,7 @@ export const BaseModal: React.FC<BaseModalProps> = ({
     >
       {/* ═══════════════════ HEADER ═══════════════════ */}
       <DialogTitle
+        id="base-modal-title"
         sx={{
           display: 'flex',
           justifyContent: 'space-between',
@@ -177,7 +211,7 @@ export const BaseModal: React.FC<BaseModalProps> = ({
         }}
       >
         {/* Lado Izquierdo: Avatar + Textos */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1, overflow: 'hidden' }}>
           {icon && (
             <Avatar
               variant="rounded"
@@ -191,17 +225,18 @@ export const BaseModal: React.FC<BaseModalProps> = ({
               {icon}
             </Avatar>
           )}
-          <Box>
+          <Box sx={{ minWidth: 0 }}>
             <Typography
               variant="h6"
               fontWeight={800}
               color="text.primary"
               sx={{ lineHeight: 1.2 }}
+              noWrap // ✅ UX: Previene rotura de layout en títulos largos
             >
               {title}
             </Typography>
             {subtitle && (
-              <Typography variant="caption" color="text.secondary">
+              <Typography variant="caption" color="text.secondary" noWrap display="block">
                 {subtitle}
               </Typography>
             )}
@@ -209,16 +244,29 @@ export const BaseModal: React.FC<BaseModalProps> = ({
         </Box>
 
         {/* Lado Derecho: Extra + Close Button */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 1 }}>
           {headerExtra}
-          <IconButton
-            onClick={handleClose}
-            size="small"
-            disabled={isLoading || disableClose}
-            sx={{ color: 'text.secondary' }}
-          >
-            <CloseIcon />
-          </IconButton>
+          
+          {/* ✅ UX: Tooltip + Feedback visual al hover */}
+          <Tooltip title="Cerrar (Esc)">
+            <span>
+              <IconButton
+                onClick={handleClose}
+                size="small"
+                disabled={isLoading || disableClose}
+                sx={{ 
+                  color: 'text.secondary',
+                  transition: '0.2s',
+                  '&:hover': { 
+                    bgcolor: alpha(theme.palette.error.main, 0.1), 
+                    color: theme.palette.error.main 
+                  }
+                }}
+              >
+                <CloseIcon />
+              </IconButton>
+            </span>
+          </Tooltip>
         </Box>
       </DialogTitle>
 
@@ -228,7 +276,7 @@ export const BaseModal: React.FC<BaseModalProps> = ({
       <DialogContent
         dividers={scroll === 'paper'}
         sx={{
-          p: { xs: 2, md: 4 }, // ✅ Padding adaptable (menos en móvil)
+          p: { xs: 2, md: 4 },
           ...(scroll === 'paper' && {
             overflow: 'auto',
           }),
@@ -248,11 +296,9 @@ export const BaseModal: React.FC<BaseModalProps> = ({
         }}
       >
         {customActions ? (
-          // Si hay acciones custom, usarlas directamente
           customActions
         ) : (
           <>
-            {/* Botón Cancelar */}
             {!hideCancelButton && (
               <Button
                 onClick={handleClose}
@@ -260,14 +306,15 @@ export const BaseModal: React.FC<BaseModalProps> = ({
                 disabled={isLoading || disableClose}
                 sx={{
                   borderRadius: 2,
-                  mr: 'auto', // Empuja el botón a la izquierda
+                  mr: 'auto',
+                  textTransform: 'none', // ✅ UX: Texto más legible
+                  fontWeight: 600,
                 }}
               >
                 {cancelText}
               </Button>
             )}
 
-            {/* Botón Confirmar */}
             {!hideConfirmButton && onConfirm && (
               <Button
                 onClick={handleConfirm}
@@ -285,6 +332,8 @@ export const BaseModal: React.FC<BaseModalProps> = ({
                   px: 4,
                   borderRadius: 2,
                   fontWeight: 700,
+                  textTransform: 'none', // ✅ UX: Texto más legible
+                  boxShadow: confirmButtonVariant === 'contained' ? 4 : 0,
                 }}
               >
                 {isLoading ? 'Procesando...' : confirmText}

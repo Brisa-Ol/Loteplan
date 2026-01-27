@@ -13,8 +13,6 @@ import {
   Search, MonetizationOn, Warning, SwapHoriz
 } from '@mui/icons-material';
 
-
-
 // Componentes Comunes
 import { PageContainer } from '../../../../../shared/components/layout/containers/PageContainer/PageContainer';
 import { PageHeader } from '../../../../../shared/components/layout/headers/PageHeader';
@@ -22,6 +20,8 @@ import { QueryHandler } from '../../../../../shared/components/data-grid/QueryHa
 import { DataTable, type DataTableColumn } from '../../../../../shared/components/data-grid/DataTable/DataTable';
 import { StatCard } from '../../../../../shared/components/domain/cards/StatCard/StatCard';
 import useSnackbar from '@/shared/hooks/useSnackbar';
+
+// Servicios y Tipos
 import type { TransaccionDto } from '@/core/types/dto/transaccion.dto';
 import TransaccionService from '@/core/api/services/transaccion.service';
 import MercadoPagoService from '@/core/api/services/pagoMercado.service';
@@ -33,7 +33,7 @@ const MisTransacciones: React.FC = () => {
   const { showError } = useSnackbar();
 
   // 1. Estados de Filtros y UI
-  const [currentTab, setCurrentTab] = useState(0); // 0: Todas, 1: Exitosas, 2: Pendientes/Fallidas
+  const [currentTab, setCurrentTab] = useState(0); 
   const [searchTerm, setSearchTerm] = useState('');
   const [highlightedId, setHighlightedId] = useState<number | null>(null);
 
@@ -44,14 +44,13 @@ const MisTransacciones: React.FC = () => {
     refetchOnWindowFocus: false,
   });
 
-  // 3. Mutación Retry (Reintentar Pago)
+  // 3. Mutación Retry
   const retryMutation = useMutation({
     mutationFn: async (idTransaccion: number) => {
-      setHighlightedId(idTransaccion); // Feedback visual inmediato
+      setHighlightedId(idTransaccion);
       return await MercadoPagoService.createCheckoutGenerico({ id_transaccion: idTransaccion });
     },
     onSuccess: (res) => {
-      // Redirigir a MercadoPago si hay URL
       if (res.data.redirectUrl) window.location.href = res.data.redirectUrl;
     },
     onError: (err: unknown) => {
@@ -61,23 +60,20 @@ const MisTransacciones: React.FC = () => {
     }
   });
 
-  // 4. Lógica de Filtrado y KPIs (Memoizada)
+  // 4. Lógica de Filtrado y KPIs
   const { filteredData, counts, stats } = useMemo(() => {
     let data = [...transacciones];
 
-    // A. Contadores Globales (KPIs)
     const totalCounts = {
       todas: transacciones.length,
       exitosas: transacciones.filter(t => t.estado_transaccion === 'pagado').length,
       problemas: transacciones.filter(t => ['pendiente', 'fallido', 'expirado', 'rechazado_por_capacidad'].includes(t.estado_transaccion)).length
     };
 
-    // B. Estadísticas Financieras
     const totalAmount = transacciones
         .filter(t => t.estado_transaccion === 'pagado')
         .reduce((acc, curr) => acc + Number(curr.monto), 0);
 
-    // C. Filtrado por Texto
     if (searchTerm) {
       const lowerTerm = searchTerm.toLowerCase();
       data = data.filter(t => 
@@ -87,14 +83,12 @@ const MisTransacciones: React.FC = () => {
       );
     }
 
-    // D. Filtrado por Tab
-    if (currentTab === 1) { // Exitosas
+    if (currentTab === 1) { 
       data = data.filter(t => t.estado_transaccion === 'pagado');
-    } else if (currentTab === 2) { // Problemas
+    } else if (currentTab === 2) { 
       data = data.filter(t => ['pendiente', 'fallido', 'expirado', 'rechazado_por_capacidad', 'en_proceso'].includes(t.estado_transaccion));
     }
 
-    // E. Ordenamiento (Más reciente primero)
     data.sort((a, b) => new Date(b.createdAt || '').getTime() - new Date(a.createdAt || '').getTime());
 
     return { 
@@ -105,7 +99,6 @@ const MisTransacciones: React.FC = () => {
   }, [transacciones, currentTab, searchTerm]);
 
   // --- HELPERS VISUALES ---
-  
   const getTypeConfig = (tipo: string) => {
     switch (tipo) {
       case 'directo': return { icon: <TrendingUp fontSize="small" />, color: 'info' as const, label: 'Inversión' };
@@ -118,7 +111,7 @@ const MisTransacciones: React.FC = () => {
 
   const getStatusConfig = (status: string) => {
     switch (status) {
-      case 'pagado': return { color: 'success' as const, label: 'Pagado', icon: <CheckCircle /> };
+      case 'pagado': return { color: 'success' as const, label: 'Completado', icon: <CheckCircle /> };
       case 'pendiente': 
       case 'en_proceso': return { color: 'warning' as const, label: 'Pendiente', icon: <HourglassEmpty /> };
       case 'fallido': 
@@ -135,10 +128,10 @@ const MisTransacciones: React.FC = () => {
         style: 'currency', currency: env.defaultCurrency, maximumFractionDigits: 0 
     }).format(val);
 
-  // --- COLUMNAS DE LA TABLA ---
+  // --- COLUMNAS ---
   const columns = useMemo<DataTableColumn<TransaccionDto>[]>(() => [
     { 
-      id: 'fecha', label: 'Fecha', minWidth: 140,
+      id: 'fecha', label: 'Fecha / Ref', minWidth: 160,
       render: (row) => {
         const date = new Date(row.fecha_transaccion ?? row.createdAt);
         return (
@@ -146,32 +139,37 @@ const MisTransacciones: React.FC = () => {
             <Typography variant="body2" fontWeight={600} color="text.primary">
                 {date.toLocaleDateString(env.defaultLocale)}
             </Typography>
-            <Typography variant="caption" color="text.secondary">
-                {date.toLocaleTimeString(env.defaultLocale, {hour: '2-digit', minute:'2-digit'})}
-            </Typography>
+            <Stack direction="row" spacing={1} alignItems="center" mt={0.5}>
+                <Chip 
+                    label={`REF: #${row.id}`} 
+                    size="small" 
+                    sx={{ 
+                        height: 20, 
+                        fontSize: '0.65rem', 
+                        fontFamily: 'monospace',
+                        bgcolor: alpha(theme.palette.secondary.main, 0.1) 
+                    }} 
+                />
+            </Stack>
           </Box>
         );
       }
     },
     { 
-      id: 'descripcion', label: 'Detalle', minWidth: 220,
+      id: 'descripcion', label: 'Concepto', minWidth: 240,
       render: (row) => {
-        const nombreProyecto = row.proyectoTransaccion?.nombre_proyecto || 'Sin Proyecto';
-        let detalle = '';
-        
-        if (row.tipo_transaccion === 'mensual' && row.pagoMensual) detalle = `Cuota #${row.pagoMensual.mes}`;
-        else if (row.tipo_transaccion === 'pago_suscripcion_inicial') detalle = 'Suscripción Inicial';
-        else if (row.tipo_transaccion === 'directo') detalle = 'Inversión Directa';
-        else if (row.tipo_transaccion === 'Puja') detalle = 'Pago de Subasta';
-
+        const nombreProyecto = row.proyectoTransaccion?.nombre_proyecto || 'Sin Proyecto Asociado';
         const conf = getTypeConfig(row.tipo_transaccion);
+        
+        let detalle = conf.label;
+        if (row.tipo_transaccion === 'mensual' && row.pagoMensual) detalle = `Cuota #${row.pagoMensual.mes}`;
 
         return (
           <Box>
             <Typography variant="body2" fontWeight={600} noWrap color="text.primary">{nombreProyecto}</Typography>
             <Stack direction="row" spacing={1} alignItems="center" mt={0.5}>
                 <Chip 
-                    label={detalle || conf.label} 
+                    label={detalle} 
                     size="small" 
                     variant="outlined" 
                     color={conf.color} 
@@ -184,9 +182,9 @@ const MisTransacciones: React.FC = () => {
       }
     },
     { 
-      id: 'monto', label: 'Monto', align: 'right', minWidth: 120,
+      id: 'monto', label: 'Importe', align: 'right', minWidth: 120,
       render: (row) => (
-        <Typography variant="subtitle2" fontWeight={700} color="primary.main" sx={{ fontFamily: 'monospace' }}>
+        <Typography variant="subtitle2" fontWeight={700} color={row.estado_transaccion === 'pagado' ? 'success.main' : 'text.primary'} sx={{ fontFamily: 'monospace' }}>
             {formatCurrency(Number(row.monto))}
         </Typography>
       )
@@ -201,8 +199,7 @@ const MisTransacciones: React.FC = () => {
                     label={conf.label} 
                     color={conf.color} 
                     size="small" 
-                    variant="filled" 
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    variant={row.estado_transaccion === 'pagado' ? 'filled' : 'outlined'} // Filled para pagado (éxito)
                     icon={conf.icon as any}
                     sx={{ fontWeight: 600 }}
                 />
@@ -217,7 +214,6 @@ const MisTransacciones: React.FC = () => {
         
         if (!canRetry) return <Box minWidth={100} />;
 
-        // Si se está reintentando ESTA fila específica
         const isThisLoading = retryMutation.isPending && highlightedId === row.id;
 
         return (
@@ -246,22 +242,19 @@ const MisTransacciones: React.FC = () => {
 
   return (
     <PageContainer maxWidth="lg">
+      
+      {/* HEADER SIMÉTRICO */}
       <PageHeader 
-        title="Historial de Transacciones" 
-        subtitle="Monitorea tus pagos, inversiones y estados de cuenta." 
+        title="Mis Transacciones" 
+        subtitle="Consulta tus movimientos y el estado de tus operaciones." 
       />
 
-      {/* --- KPI SUMMARY --- */}
-      <Box 
-        display="grid" 
-        gridTemplateColumns={{ xs: '1fr', sm: '1fr 1fr 1fr' }} 
-        gap={3} 
-        mb={4}
-      >
+      {/* KPI SUMMARY */}
+      <Box display="grid" gridTemplateColumns={{ xs: '1fr', sm: '1fr 1fr 1fr' }} gap={3} mb={4}>
         <StatCard 
             title="Total Operado" 
             value={formatCurrency(stats.totalAmount)} 
-            subtitle="En transacciones exitosas" 
+            subtitle="Volumen exitoso" 
             icon={<MonetizationOn />} 
             color="primary" 
             loading={isLoading}
@@ -269,22 +262,22 @@ const MisTransacciones: React.FC = () => {
         <StatCard 
             title="Operaciones" 
             value={counts.exitosas.toString()} 
-            subtitle="Transacciones completadas" 
-            icon={<SwapHoriz />} 
-            color="secondary" 
+            subtitle="Transacciones OK" 
+            icon={<CheckCircle />} 
+            color="success" 
             loading={isLoading}
         />
         <StatCard 
-            title={counts.problemas > 0 ? "Atención" : "Estado"} 
-            value={counts.problemas > 0 ? counts.problemas.toString() : "OK"} 
-            subtitle={counts.problemas > 0 ? "Requieren revisión" : "Sin errores pendientes"} 
+            title={counts.problemas > 0 ? "Requieren Atención" : "Estado General"} 
+            value={counts.problemas > 0 ? counts.problemas.toString() : "Óptimo"} 
+            subtitle={counts.problemas > 0 ? "Fallidas o pendientes" : "Sin incidencias"} 
             icon={counts.problemas > 0 ? <Warning /> : <CheckCircle />} 
-            color={counts.problemas > 0 ? "error" : "success"} 
+            color={counts.problemas > 0 ? "error" : "info"} 
             loading={isLoading}
         />
       </Box>
 
-      {/* --- FILTROS Y PESTAÑAS --- */}
+      {/* FILTROS Y PESTAÑAS */}
       <Stack 
         direction={{ xs: 'column', md: 'row' }} 
         spacing={2} 
@@ -312,17 +305,14 @@ const MisTransacciones: React.FC = () => {
                     } 
                     icon={<ErrorOutline fontSize="small" />}
                     iconPosition="start"
-                    sx={{ 
-                        color: counts.problemas > 0 ? 'error.main' : 'inherit',
-                        fontWeight: counts.problemas > 0 ? 'bold' : 'normal'
-                    }}
+                    sx={{ color: counts.problemas > 0 ? 'error.main' : 'inherit' }}
                 />
             </Tabs>
         </Box>
 
         {/* BUSCADOR */}
         <TextField
-            placeholder="Buscar..."
+            placeholder="Buscar por ID, monto..."
             size="small"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -334,7 +324,7 @@ const MisTransacciones: React.FC = () => {
                 ),
             }}
             sx={{ 
-                minWidth: 250,
+                minWidth: 280,
                 '& .MuiOutlinedInput-root': {
                     bgcolor: 'background.paper',
                     borderRadius: 2
@@ -343,7 +333,7 @@ const MisTransacciones: React.FC = () => {
         />
       </Stack>
 
-      {/* --- TABLA --- */}
+      {/* TABLA */}
       <QueryHandler isLoading={isLoading} error={error as Error | null}>
         <Paper 
             elevation={0}
@@ -370,13 +360,10 @@ const MisTransacciones: React.FC = () => {
                 }
                 getRowSx={(row) => ({
                     bgcolor: ['fallido', 'expirado', 'rechazado_por_capacidad'].includes(row.estado_transaccion) 
-                        ? alpha(theme.palette.error.main, 0.05) 
-                        : ['pendiente', 'en_proceso'].includes(row.estado_transaccion)
-                        ? alpha(theme.palette.warning.main, 0.02)
+                        ? alpha(theme.palette.error.main, 0.04) 
                         : 'inherit',
-                    transition: 'background-color 0.2s',
                     '&:hover': {
-                          bgcolor: alpha(theme.palette.primary.main, 0.04)
+                         bgcolor: alpha(theme.palette.action.hover, 0.05)
                     }
                 })}
             />

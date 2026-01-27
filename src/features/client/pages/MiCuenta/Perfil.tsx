@@ -1,5 +1,3 @@
-// src/pages/client/MiCuenta/Perfil.tsx
-
 import React, { useState, useMemo } from 'react';
 import {
   Box, Typography, Button, Stack, TextField, Alert,

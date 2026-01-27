@@ -11,21 +11,19 @@ import {
 import {
   VerifiedUser, HourglassEmpty, NavigateNext, Send,
   Person, UploadFile, Assignment, ArrowBack, ErrorOutline,
-  RadioButtonUnchecked, Info, Security, Gavel, CheckCircle
+  RadioButtonUnchecked, Info, Security, Gavel, CheckCircle,
+  Badge, AccountBalance
 } from '@mui/icons-material';
-
-
 
 // Componentes Comunes
 import { PageContainer } from '../../../../shared/components/layout/containers/PageContainer/PageContainer';
 import { QueryHandler } from '../../../../shared/components/data-grid/QueryHandler/QueryHandler';
 import { FileUploadCard } from './components/FileUploadCard';
-import { PageHeader } from '../../../../shared/components/layout/headers/PageHeader';
+import { PageHeader } from '../../../../shared/components/layout/headers/PageHeader'; // ✅ Importado
 import type { TipoDocumento } from '@/core/types/dto/kyc.dto';
 import kycService from '@/core/api/services/kyc.service';
 import { env } from '@/core/config/env';
 import useSnackbar from '@/shared/hooks/useSnackbar';
-
 
 const TIPOS_DOCUMENTO: TipoDocumento[] = ['DNI', 'PASAPORTE', 'LICENCIA'];
 
@@ -277,6 +275,7 @@ const VerificacionKYC: React.FC = () => {
             variant="contained" color="success" size="large"
             sx={{ mt: 4, px: 4, borderRadius: 2 }}
             onClick={() => window.location.href = '/client/dashboard'}
+            startIcon={<AccountBalance />}
           >
             Ir al Dashboard
           </Button>
@@ -378,7 +377,6 @@ const VerificacionKYC: React.FC = () => {
                     </Box>
                   </Box>
 
-                  {/* Reemplazo de Grid por CSS Grid */}
                   <Box display="grid" gridTemplateColumns={{ xs: '1fr', md: '1fr 1fr' }} gap={3}>
                     <TextField
                       select fullWidth label="Tipo Documento" required
@@ -431,7 +429,6 @@ const VerificacionKYC: React.FC = () => {
                     </Alert>
                   </Box>
 
-                  {/* CSS Grid para archivos */}
                   <Box display="grid" gridTemplateColumns={{ xs: '1fr', md: '1fr 1fr' }} gap={3}>
                     <FileUploadCard
                       title="Frente DNI *"
@@ -492,7 +489,6 @@ const VerificacionKYC: React.FC = () => {
                     }}
                   >
                     <CardContent sx={{ p: 3 }}>
-                      {/* CSS Grid para resumen */}
                       <Box display="grid" gridTemplateColumns={{ xs: '1fr', sm: '1fr 1fr' }} gap={3}>
                         <Box>
                           <Typography variant="caption" color="text.secondary" fontWeight={700}>NOMBRE COMPLETO</Typography>
@@ -537,7 +533,7 @@ const VerificacionKYC: React.FC = () => {
 
                   <Alert
                     severity="warning"
-                    icon={<RadioButtonUnchecked fontSize="inherit" />}
+                    icon={<Badge fontSize="inherit" />}
                     sx={{ width: '100%', borderRadius: 2 }}
                   >
                     <Typography variant="body2">
@@ -556,7 +552,7 @@ const VerificacionKYC: React.FC = () => {
                     disabled={activeStep === 0 || uploadMutation.isPending}
                     startIcon={<ArrowBack />}
                     color="inherit"
-                    sx={{ color: 'text.secondary' }}
+                    sx={{ color: 'text.secondary', visibility: activeStep === 0 ? 'hidden' : 'visible' }}
                   >
                     Atrás
                   </Button>
@@ -595,9 +591,11 @@ const VerificacionKYC: React.FC = () => {
 
   return (
     <PageContainer maxWidth="md">
+      
+      {/* ✅ HEADER UNIFICADO */}
       <PageHeader
         title="Verificación de Identidad"
-        subtitle="Necesitamos confirmar tus datos para proteger tu cuenta y cumplir con las normativas vigentes."
+        subtitle="Completa tu perfil para desbloquear todas las funciones de inversión."
       />
 
       <QueryHandler isLoading={isLoading} error={error as Error}>

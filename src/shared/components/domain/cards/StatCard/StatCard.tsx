@@ -1,9 +1,10 @@
 // src/components/common/StatCard/StatCard.tsx
 
 import React from 'react';
-import { Paper, Box, Typography, Avatar, alpha, useTheme, Skeleton } from '@mui/material';
+import { Paper, Box, Typography, Avatar, alpha, useTheme, Skeleton, Chip } from '@mui/material';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 
-// ✅ BUENA PRÁCTICA: Type safety para colores permitidos
 type StatColor = 'primary' | 'secondary' | 'error' | 'warning' | 'info' | 'success';
 
 interface StatCardProps {
@@ -18,6 +19,8 @@ interface StatCardProps {
     value: number;
     isPositive?: boolean;
   };
+  badge?: string; // Nuevo: Badge para destacar (ej: "Nuevo", "+10%")
+  compact?: boolean; // Nuevo: Modo compacto para dashboards densos
 }
 
 export const StatCard: React.FC<StatCardProps> = ({
@@ -28,39 +31,54 @@ export const StatCard: React.FC<StatCardProps> = ({
   loading = false,
   onClick,
   subtitle,
-  trend
+  trend,
+  badge,
+  compact = false
 }) => {
-  // ✅ BUENA PRÁCTICA: Acceso al tema para colores dinámicos
   const theme = useTheme();
   const paletteColor = theme.palette[color];
 
   return (
     <Paper
-      elevation={0} // ✅ Usa el sistema de elevación del tema
+      elevation={0}
       onClick={onClick}
       sx={{
-        p: { xs: 2, sm: 2.5 }, // ✅ RESPONSIVE: Padding adaptable
+        p: compact ? { xs: 1.5, sm: 2 } : { xs: 2, sm: 2.5 },
         display: 'flex',
         alignItems: 'center',
-        gap: { xs: 1.5, sm: 2 }, // ✅ RESPONSIVE: Gap adaptable
-        borderRadius: { xs: 2, sm: 3 }, // ✅ RESPONSIVE: Border radius adaptable
+        gap: compact ? { xs: 1, sm: 1.5 } : { xs: 1.5, sm: 2 },
+        borderRadius: { xs: 2, sm: 2.5 },
         border: '1px solid',
-        borderColor: 'divider', // ✅ Usa token del tema
-        bgcolor: 'background.paper', // ✅ Usa token del tema
-        transition: 'all 0.2s ease-in-out',
-        cursor: onClick ? 'pointer' : 'default', // ✅ BUENA PRÁCTICA: Cursor contextual
+        borderColor: 'divider',
+        bgcolor: 'background.paper',
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', // Más fluido
+        cursor: onClick ? 'pointer' : 'default',
         userSelect: 'none',
-        position: 'relative', 
+        position: 'relative',
         overflow: 'hidden',
+        
+        // Mejora e-commerce: Borde superior de color como en Stripe/Shopify
+        '&::after': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 3,
+          background: `linear-gradient(90deg, ${paletteColor.main}, ${paletteColor.light})`,
+          opacity: 0.8,
+        },
+
         '&:hover': onClick ? {
-          borderColor: paletteColor.main, // ✅ Usa color del tema dinámicamente
-          transform: 'translateY(-4px)',
-          boxShadow: theme.shadows[4], // ✅ Usa shadow del tema
+          borderColor: paletteColor.main,
+          transform: 'translateY(-2px)', // Más sutil que -4px
+          boxShadow: `0 4px 20px ${alpha(paletteColor.main, 0.15)}`, // Shadow con color del tema
           '&::before': {
             opacity: 1
           }
         } : {},
-        // ✅ BUENA PRÁCTICA: Pseudo-elemento para efecto de gradiente sutil
+
+        // Gradiente de fondo sutil
         '&::before': {
           content: '""',
           position: 'absolute',
@@ -68,41 +86,71 @@ export const StatCard: React.FC<StatCardProps> = ({
           left: 0,
           right: 0,
           bottom: 0,
-          background: `linear-gradient(135deg, transparent 0%, ${alpha(paletteColor.main, 0.05)} 100%)`,
+          background: `radial-gradient(circle at top right, ${alpha(paletteColor.main, 0.03)}, transparent 70%)`,
           opacity: 0,
           transition: 'opacity 0.3s ease',
           pointerEvents: 'none'
         }
       }}
     >
-      {/* ✅ BUENA PRÁCTICA: Avatar con variant y colores del tema */}
+      {/* Badge superior derecho (patrón e-commerce) */}
+      {badge && !loading && (
+        <Chip
+          label={badge}
+          size="small"
+          sx={{
+            position: 'absolute',
+            top: 8,
+            right: 8,
+            height: 20,
+            fontSize: '0.65rem',
+            fontWeight: 700,
+            bgcolor: alpha(paletteColor.main, 0.12),
+            color: paletteColor.main,
+            border: `1px solid ${alpha(paletteColor.main, 0.3)}`,
+            '& .MuiChip-label': {
+              px: 1
+            }
+          }}
+        />
+      )}
+
+      {/* Avatar con mejoras visuales */}
       <Avatar
         variant="rounded"
         sx={{
-          bgcolor: alpha(paletteColor.main, 0.1), // ✅ Usa alpha del tema
+          bgcolor: alpha(paletteColor.main, 0.12), // Más sutil
           color: paletteColor.main,
-          width: { xs: 48, sm: 56 }, // ✅ RESPONSIVE
-          height: { xs: 48, sm: 56 }, // ✅ RESPONSIVE
+          width: compact ? { xs: 40, sm: 48 } : { xs: 48, sm: 56 },
+          height: compact ? { xs: 40, sm: 48 } : { xs: 48, sm: 56 },
           borderRadius: 2,
-          transition: 'transform 0.2s ease',
+          border: `2px solid ${alpha(paletteColor.main, 0.2)}`, // Borde sutil
+          transition: 'all 0.3s ease',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
           ...(onClick && {
             '&:hover': {
-              transform: 'scale(1.1)'
+              transform: 'scale(1.08) rotate(5deg)', // Efecto más dinámico
+              bgcolor: alpha(paletteColor.main, 0.2),
             }
-          })
+          }),
+          // Icono responsivo
+          '& svg': {
+            fontSize: compact ? '1.25rem' : '1.5rem'
+          }
         }}
       >
         {icon}
       </Avatar>
 
-      <Box sx={{ flex: 1, minWidth: 0 }}> {/* ✅ minWidth: 0 previene overflow */}
-        {/* ✅ BUENA PRÁCTICA: Estado de carga con Skeleton */}
+      <Box sx={{ flex: 1, minWidth: 0 }}>
         {loading ? (
           <Box sx={{ width: '100%' }}>
             <Skeleton 
               variant="text" 
               width="60%" 
-              height={40} 
+              height={compact ? 32 : 40} 
               sx={{ mb: 0.5 }}
             />
             <Skeleton 
@@ -113,65 +161,94 @@ export const StatCard: React.FC<StatCardProps> = ({
           </Box>
         ) : (
           <>
-            <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1 }}>
-              {/* ✅ RESPONSIVE: Fuente adaptable */}
-              <Typography 
-                variant="h4" // ✅ Usa variant del tema
-                fontWeight={700} 
-                color="text.primary" // ✅ Usa token del tema
-                sx={{ 
-                  lineHeight: 1.2,
-                  fontSize: { xs: '1.5rem', sm: '2rem' } // ✅ RESPONSIVE
-                }}
-              >
-                {value}
-              </Typography>
-              
-              {/* ✅ BUENA PRÁCTICA: Indicador de tendencia opcional */}
-              {trend && (
-                <Typography
-                  variant="caption"
-                  fontWeight={700}
-                  sx={{
-                    color: trend.isPositive === false 
-                      ? 'error.main' // ✅ Usa token del tema
-                      : 'success.main', // ✅ Usa token del tema
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 0.25
-                  }}
-                >
-                  {trend.isPositive === false ? '↓' : '↑'} {Math.abs(trend.value)}%
-                </Typography>
-              )}
-            </Box>
-            
-            {/* ✅ RESPONSIVE: Fuente adaptable */}
+            {/* Título primero (mejor jerarquía visual) */}
             <Typography
-              variant="caption" // ✅ Usa variant del tema
+              variant="caption"
               fontWeight={600}
-              color="text.secondary" // ✅ Usa token del tema
-              noWrap
+              color="text.secondary"
               sx={{ 
                 textTransform: 'uppercase', 
-                letterSpacing: 0.5,
+                letterSpacing: 0.8,
                 display: 'block',
-                fontSize: { xs: '0.6875rem', sm: '0.75rem' } // ✅ RESPONSIVE
+                mb: 0.5,
+                fontSize: compact ? '0.625rem' : { xs: '0.6875rem', sm: '0.75rem' }
               }}
             >
               {title}
             </Typography>
 
-            {/* ✅ BUENA PRÁCTICA: Subtítulo opcional */}
+            {/* Valor con tendencia en línea */}
+            <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, flexWrap: 'wrap' }}>
+              <Typography 
+                variant="h4"
+                fontWeight={700} 
+                color="text.primary"
+                sx={{ 
+                  lineHeight: 1.1,
+                  fontSize: compact 
+                    ? { xs: '1.25rem', sm: '1.5rem' }
+                    : { xs: '1.5rem', sm: '2rem' }
+                }}
+              >
+                {value}
+              </Typography>
+              
+              {/* Tendencia mejorada con iconos (patrón Stripe/Vercel) */}
+              {trend && (
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 0.25,
+                    px: 0.75,
+                    py: 0.25,
+                    borderRadius: 1,
+                    bgcolor: trend.isPositive === false 
+                      ? alpha(theme.palette.error.main, 0.1)
+                      : alpha(theme.palette.success.main, 0.1),
+                  }}
+                >
+                  {trend.isPositive === false ? (
+                    <TrendingDownIcon sx={{ fontSize: '0.875rem', color: 'error.main' }} />
+                  ) : (
+                    <TrendingUpIcon sx={{ fontSize: '0.875rem', color: 'success.main' }} />
+                  )}
+                  <Typography
+                    variant="caption"
+                    fontWeight={700}
+                    sx={{
+                      color: trend.isPositive === false ? 'error.main' : 'success.main',
+                      fontSize: '0.75rem',
+                      lineHeight: 1,
+                    }}
+                  >
+                    {Math.abs(trend.value)}%
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+
+            {/* Subtítulo con color del tema */}
             {subtitle && (
               <Typography
                 variant="caption"
-                color={paletteColor.main} // ✅ Usa color dinámico del tema
-                fontWeight={600}
+                color="text.secondary" // Más sutil que usar el color del tema
+                fontWeight={500}
                 sx={{ 
                   display: 'block',
                   mt: 0.5,
-                  fontSize: { xs: '0.6875rem', sm: '0.75rem' } // ✅ RESPONSIVE
+                  fontSize: compact ? '0.625rem' : { xs: '0.6875rem', sm: '0.75rem' },
+                  // Punto de color antes del texto (detalles e-commerce)
+                  '&::before': {
+                    content: '""',
+                    display: 'inline-block',
+                    width: 4,
+                    height: 4,
+                    borderRadius: '50%',
+                    bgcolor: paletteColor.main,
+                    mr: 0.5,
+                    mb: 0.25,
+                  }
                 }}
               >
                 {subtitle}

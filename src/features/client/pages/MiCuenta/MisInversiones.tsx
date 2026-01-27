@@ -1,6 +1,8 @@
+// src/components/domain/inversiones/MisInversiones.tsx
+
 import React, { useMemo } from 'react';
-import { Box, Paper, Stack, Chip, Button, Tooltip, useTheme, alpha, IconButton } from '@mui/material';
-import { Visibility, Payment, TrendingUp, MonetizationOn, CheckCircle, Refresh as RefreshIcon } from '@mui/icons-material';
+import { Box, Paper, Stack, Chip, Button, Tooltip, useTheme, alpha, IconButton, Typography } from '@mui/material';
+import { Visibility, Payment, TrendingUp, MonetizationOn, PieChart } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 
@@ -25,21 +27,18 @@ const MisInversiones: React.FC = () => {
     const navigate = useNavigate();
     const theme = useTheme();
 
-    // 1. Hook de Pagos (Lógica extraída)
     const { 
         iniciarPago, isIniciandoPago, selectedInversionId,
         confirmar2FA, isConfirmando2FA, twoFAError, setTwoFAError,
         is2FAOpen, close2FA 
     } = useInversionPayment();
 
-    // 2. Data Fetching
-    const { data: inversiones = [], isLoading, error, refetch } = useQuery<InversionDto[]>({
+    const { data: inversiones = [], isLoading, error } = useQuery<InversionDto[]>({
         queryKey: ['misInversiones'],
         queryFn: async () => (await InversionService.getMisInversiones()).data,
         retry: 1
     });
 
-    // 3. Stats (Optimizados)
     const stats = useMemo(() => {
         if (!inversiones.length) return { total: 0, pagadas: 0, monto: 0 };
         return {
@@ -49,7 +48,6 @@ const MisInversiones: React.FC = () => {
         };
     }, [inversiones]);
 
-    // Formatters (Podrían ir a un utils global si se usan mucho)
     const formatCurrency = (val: number) => new Intl.NumberFormat(env.defaultLocale, { 
         style: 'currency', currency: env.defaultCurrency, maximumFractionDigits: 0 
     }).format(val);
@@ -58,31 +56,39 @@ const MisInversiones: React.FC = () => {
         day: '2-digit', month: 'short', year: 'numeric' 
     });
 
-    // 4. Definición de Columnas
     const columns = useMemo<DataTableColumn<InversionDto>[]>(() => [
         {
-            id: 'proyecto', label: 'Proyecto / ID', minWidth: 200,
+            id: 'proyecto', label: 'Proyecto / Referencia', minWidth: 220,
             render: (row) => (
                 <Box>
-                    <Box component="span" sx={{ display: 'block', fontWeight: 600, color: 'text.primary' }}>
-                        {row.proyecto?.nombre_proyecto || 'Proyecto no disponible'}
-                    </Box>
-                    <Box component="span" sx={{ fontFamily: 'monospace', opacity: 0.8, fontSize: '0.75rem', color: 'text.secondary' }}>
-                        ID: #{row.id}
-                    </Box>
+                    <Typography variant="subtitle2" fontWeight={700} color="text.primary">
+                        {row.proyecto?.nombre_proyecto || 'Proyecto Desconocido'}
+                    </Typography>
+                    <Stack direction="row" spacing={1} alignItems="center" mt={0.5}>
+                        <Chip 
+                            label={`REF: #${row.id}`} 
+                            size="small" 
+                            sx={{ 
+                                height: 20, 
+                                fontSize: '0.65rem', 
+                                fontFamily: 'monospace',
+                                bgcolor: alpha(theme.palette.secondary.main, 0.1) 
+                            }} 
+                        />
+                    </Stack>
                 </Box>
             )
         },
         {
-            id: 'fecha', label: 'Fecha', minWidth: 120,
-            render: (row) => <Box sx={{ color: 'text.secondary' }}>{formatDate(row.fecha_inversion)}</Box>
+            id: 'fecha', label: 'Fecha Solicitud', minWidth: 120,
+            render: (row) => <Typography variant="body2" color="text.secondary">{formatDate(row.fecha_inversion)}</Typography>
         },
         {
-            id: 'monto', label: 'Monto', minWidth: 150,
+            id: 'monto', label: 'Capital', minWidth: 150,
             render: (row) => (
-                <Box sx={{ fontWeight: 700, color: 'primary.main' }}>
+                <Typography variant="body2" fontWeight={700} sx={{ color: 'success.main', fontSize: '1rem' }}>
                     {formatCurrency(Number(row.monto))}
-                </Box>
+                </Typography>
             )
         },
         {
@@ -93,10 +99,10 @@ const MisInversiones: React.FC = () => {
                     <Chip
                         label={label}
                         color={color}
-                        icon={icon as React.ReactElement} // Type casting seguro
+                        icon={icon as React.ReactElement}
                         size="small"
-                        variant="outlined"
-                        sx={{ fontWeight: 600, borderWidth: 1 }}
+                        variant={row.estado === 'pagado' ? 'filled' : 'outlined'}
+                        sx={{ fontWeight: 600 }}
                     />
                 );
             }
@@ -105,38 +111,38 @@ const MisInversiones: React.FC = () => {
             id: 'acciones', label: 'Acciones', align: 'right', minWidth: 180,
             render: (row) => (
                 <Stack direction="row" spacing={1} justifyContent="flex-end">
-                    <Tooltip title="Ver detalles">
-                        <Button
-                            variant="outlined" color="inherit" size="small"
-                            startIcon={<Visibility fontSize="small" />}
+                    <Tooltip title="Ver Proyecto">
+                        <IconButton
+                            size="small"
                             onClick={() => navigate(`/proyectos/${row.id_proyecto}`)}
-                            sx={{
-                                borderColor: theme.palette.divider,
+                            sx={{ 
                                 color: 'text.secondary',
-                                '&:hover': {
-                                    borderColor: theme.palette.primary.main,
-                                    color: theme.palette.primary.main,
-                                    bgcolor: alpha(theme.palette.primary.main, 0.05)
-                                }
+                                border: `1px solid ${theme.palette.divider}`,
+                                '&:hover': { color: 'primary.main', borderColor: 'primary.main' }
                             }}
                         >
-                            Ver
-                        </Button>
+                            <Visibility fontSize="small" />
+                        </IconButton>
                     </Tooltip>
 
                     {row.estado === 'pendiente' && (
-                        <Tooltip title="Pagar con MercadoPago">
-                            <Button
-                                variant="contained" color="primary" size="small"
-                                startIcon={<Payment fontSize="small" />}
-                                onClick={() => iniciarPago(row.id)}
-                                disabled={isIniciandoPago}
-                                disableElevation
-                                sx={{ fontWeight: 600 }}
-                            >
-                                {isIniciandoPago && selectedInversionId === row.id ? '...' : 'Pagar'}
-                            </Button>
-                        </Tooltip>
+                        <Button
+                            variant="contained" 
+                            color="primary" 
+                            size="small"
+                            startIcon={isIniciandoPago && selectedInversionId === row.id ? null : <Payment fontSize="small" />}
+                            onClick={() => iniciarPago(row.id)}
+                            disabled={isIniciandoPago}
+                            disableElevation
+                            sx={{ 
+                                borderRadius: 2,
+                                px: 2,
+                                fontWeight: 700,
+                                boxShadow: theme.shadows[2]
+                            }}
+                        >
+                            {isIniciandoPago && selectedInversionId === row.id ? 'Procesando...' : 'Pagar'}
+                        </Button>
                     )}
                 </Stack>
             )
@@ -145,34 +151,39 @@ const MisInversiones: React.FC = () => {
 
     return (
         <PageContainer maxWidth="lg">
+            
+            {/* ✅ HEADER SIMÉTRICO con 'Mis Planes de Ahorro' */}
             <PageHeader
-                title="Historial de Inversiones"
-                subtitle="Gestiona tus participaciones y pagos pendientes"
-                action={
-                    <Tooltip title="Actualizar lista">
-                        <IconButton onClick={() => refetch()} disabled={isLoading}>
-                            <RefreshIcon />
-                        </IconButton>
-                    </Tooltip>
-                }
+                title="Mis Inversiones" 
+                subtitle="Monitorea el rendimiento de tu capital y diversifica tu cartera."
+               
             />
 
             {/* KPI CARDS */}
             <Box mb={4} display="grid" gridTemplateColumns={{ xs: '1fr', md: 'repeat(3, 1fr)' }} gap={3}>
                 <StatCard 
-                    title="Capital Total" value={formatCurrency(stats.monto)} 
-                    icon={<MonetizationOn />} color="primary" loading={isLoading} 
-                    subtitle="Inversión acumulada" 
+                    title="Capital Invertido"
+                    value={formatCurrency(stats.monto)} 
+                    icon={<MonetizationOn />} 
+                    color="primary" 
+                    loading={isLoading} 
+                    subtitle="Total en cartera" 
                 />
                 <StatCard 
-                    title="Participaciones" value={stats.total.toString()} 
-                    icon={<TrendingUp />} color="secondary" loading={isLoading} 
-                    subtitle="Total histórico" 
+                    title="Proyectos Activos"
+                    value={stats.total.toString()} 
+                    icon={<PieChart />}
+                    color="secondary" 
+                    loading={isLoading} 
+                    subtitle="Diversificación actual" 
                 />
                 <StatCard 
-                    title="Finalizadas" value={stats.pagadas.toString()} 
-                    icon={<CheckCircle />} color="success" loading={isLoading} 
-                    subtitle="Pagos completados" 
+                    title="Retornos Completados"
+                    value={stats.pagadas.toString()} 
+                    icon={<TrendingUp />}
+                    color="success" 
+                    loading={isLoading} 
+                    subtitle="Inversiones finalizadas" 
                 />
             </Box>
 
@@ -190,9 +201,9 @@ const MisInversiones: React.FC = () => {
                         getRowKey={(row) => row.id}
                         pagination
                         defaultRowsPerPage={10}
-                        highlightedRowId={selectedInversionId} // Usamos el ID seleccionado por el hook
+                        highlightedRowId={selectedInversionId}
                         isRowActive={(row) => !['fallido', 'reembolsado'].includes(row.estado)}
-                        emptyMessage="Aún no tienes inversiones registradas."
+                        emptyMessage="Aún no has comenzado a invertir. ¡Explora los proyectos disponibles!"
                     />
                 </Paper>
             </QueryHandler>
@@ -204,8 +215,8 @@ const MisInversiones: React.FC = () => {
                 onSubmit={(code) => confirmar2FA(code)}
                 isLoading={isConfirmando2FA}
                 error={twoFAError}
-                title="Seguridad Requerida"
-                description="Confirma tu pago ingresando el código de autenticación."
+                title="Confirmar Inversión"
+                description="Para asegurar tu inversión, ingresa el código de seguridad de tu autenticador."
             />
         </PageContainer>
     );

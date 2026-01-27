@@ -1,10 +1,10 @@
 // src/features/client/pages/Proyectos/DetalleProyecto.tsx
 
-import React, { useState, lazy, Suspense } from 'react';
+import React, { useState } from 'react';
 import { 
   Backdrop, Box, CircularProgress, Stack, Tab, Tabs, 
   Typography, Skeleton, Alert, Dialog, IconButton, 
-  Divider, Paper 
+  Divider, Paper, Fade
 } from '@mui/material';
 import { 
   Info, InsertPhoto, ViewList, Close, LocationOn, 
@@ -14,41 +14,53 @@ import {
 // Hooks
 import { useDetalleProyecto } from '../../hooks/useDetalleProyecto';
 
-// Componentes Core (Carga inmediata)
-import { PageContainer } from '../../../../shared/components/layout/containers/PageContainer/PageContainer';
+// Componentes
+import { PageContainer } from '@/shared/components/layout/containers/PageContainer/PageContainer';
 import { ProjectHero } from './components/ProjectHero';
+import { ProjectGallery } from './components/ProjectGallery';
 import { ProjectSidebar } from './components/ProjectSidebar';
+import { ListaLotesProyecto } from '../Lotes/ListaLotesProyecto';
+
+// Modales
+import { CheckoutWizardModal } from './modals/CheckoutWizardModal';
+
+// Types
 import type { ProyectoDto } from '@/core/types/dto/proyecto.dto';
-
-// ✅ OPTIMIZACIÓN 1: Lazy Loading de componentes pesados
-const ProjectGallery = lazy(() => import('./components/ProjectGallery').then(m => ({ default: m.ProjectGallery })));
-const ListaLotesProyecto = lazy(() => import('../Lotes/ListaLotesProyecto').then(m => ({ default: m.ListaLotesProyecto })));
-
-// ✅ OPTIMIZACIÓN 2: Lazy Loading de Modales (solo se cargan si se abren)
-const TwoFactorAuthModal = lazy(() => import('../../../../shared/components/domain/modals/TwoFactorAuthModal/TwoFactorAuthModal'));
-const ModalFirmaContrato = lazy(() => import('../Contratos/components/ModalFirmaContrato'));
-const VerContratoModal = lazy(() => import('../Contratos/components/VerContratoModal').then(m => ({ default: m.VerContratoModal })));
-const VerContratoFirmadoModal = lazy(() => import('./modals/VerContratoFirmadoModal').then(m => ({ default: m.VerContratoFirmadoModal })));
-const PagoExitosoModal = lazy(() => import('./modals/PagoExitosoModal').then(m => ({ default: m.PagoExitosoModal })));
-const ConfirmarInversionModal = lazy(() => import('./modals/ConfirmarInversionModal').then(m => ({ default: m.ConfirmarInversionModal })));
-const SuscribirseModal = lazy(() => import('./modals/SuscribirseModal').then(m => ({ default: m.SuscribirseModal })));
 
 // ==========================================
 // SUB-COMPONENTES (UI Helpers)
 // ==========================================
 
-const CustomTabPanel: React.FC<{ children?: React.ReactNode; index: number; value: number }> = ({ children, value, index }) => (
+interface TabPanelProps {
+  children?: React.ReactNode;
+  index: number;
+  value: number;
+}
+
+const CustomTabPanel: React.FC<TabPanelProps> = ({ children, value, index }) => (
   <div role="tabpanel" hidden={value !== index} style={{ width: '100%' }}>
     {value === index && (
-      <Box sx={{ py: 3, animation: 'fadeIn 0.4s ease-in-out', '@keyframes fadeIn': { from: { opacity: 0 }, to: { opacity: 1 } } }}>
-        {children}
-      </Box>
+      <Fade in={value === index} timeout={500}>
+        <Box sx={{ py: 3 }}>
+          {children}
+        </Box>
+      </Fade>
     )}
   </div>
 );
 
 const ProjectHighlights: React.FC<{ proyecto: ProyectoDto }> = ({ proyecto }) => (
-  <Paper elevation={0} sx={{ p: 2, mb: 3, bgcolor: 'background.default', border: '1px solid #e0e0e0', borderRadius: 3 }}>
+  <Paper 
+    elevation={0} 
+    sx={{ 
+      p: 2, 
+      mb: 3, 
+      bgcolor: 'background.default', 
+      border: '1px solid', 
+      borderColor: 'divider', 
+      borderRadius: 3 
+    }}
+  >
     <Stack 
       direction={{ xs: 'column', sm: 'row' }} 
       spacing={3} 
@@ -84,92 +96,33 @@ const HighlightItem = ({ icon, label, value }: { icon: React.ReactNode, label: s
   </Stack>
 );
 
-// ✅ OPTIMIZACIÓN 3: Wrapper de Modales con Suspense
+// ✅ WRAPPER DE MODALES (Conectado a useDetalleProyecto)
 const ProjectModals: React.FC<{ logic: any, proyecto: ProyectoDto }> = ({ logic, proyecto }) => {
   if (!logic.user) return null;
   
   return (
-    <Suspense fallback={null}>
-      {logic.modales.pagoExitoso.isOpen && (
-        <PagoExitosoModal 
-          open={logic.modales.pagoExitoso.isOpen} 
-          onContinuar={logic.handleContinuarAFirma} 
-        />
-      )}
+    <CheckoutWizardModal
+      // --- Control de Estado ---
+      open={logic.modales.checkoutWizard.isOpen}
+      onClose={logic.modales.checkoutWizard.close}
       
-      {logic.modales.firma.isOpen && (
-        <ModalFirmaContrato 
-          {...logic.modales.firma.modalProps} 
-          idProyecto={Number(logic.id)} 
-          idUsuario={logic.user.id} 
-          onFirmaExitosa={logic.handleFirmaExitosa} 
-        />
-      )}
+      // --- Datos ---
+      proyecto={proyecto}
+      tipo={proyecto.tipo_inversion === 'mensual' ? 'suscripcion' : 'inversion'}
+      inversionId={logic.inversionId} 
+      pagoId={logic.pagoId}
       
-      {logic.modales.contrato.isOpen && (
-        <VerContratoModal 
-          {...logic.modales.contrato.modalProps} 
-          idProyecto={Number(logic.id)} 
-          nombreProyecto={proyecto.nombre_proyecto} 
-        />
-      )}
+      // --- Callbacks de Lógica (Desde el Hook) ---
+      onConfirmInvestment={logic.wizardCallbacks.onConfirmInvestment}
+      onSubmit2FA={logic.wizardCallbacks.onSubmit2FA}
+      onSignContract={logic.wizardCallbacks.onSignContract}
       
-      {logic.modales.firmado.isOpen && (
-        <VerContratoFirmadoModal 
-          open={logic.modales.firmado.isOpen}
-          onClose={() => { 
-            logic.modales.firmado.close(); 
-            setTimeout(() => logic.setContratoFirmadoSeleccionado(null), 300); 
-          }}
-          contrato={logic.contratoFirmadoSeleccionado}
-        />
-      )}
-      
-      {logic.modales.suscribirse.isOpen && (
-        <SuscribirseModal 
-          {...logic.modales.suscribirse.modalProps} 
-          proyecto={proyecto} 
-          isLoading={logic.handleInversion.isPending} 
-          onConfirm={() => logic.handleInversion.mutate()} 
-        />
-      )}
-      
-      {logic.modales.inversion.isOpen && (
-        <ConfirmarInversionModal 
-          {...logic.modales.inversion.modalProps} 
-          proyecto={proyecto} 
-          isLoading={logic.handleInversion.isPending} 
-          onConfirm={() => logic.handleInversion.mutate()} 
-        />
-      )}
-      
-      {logic.modales.twoFA.isOpen && (
-        <TwoFactorAuthModal 
-          open={logic.modales.twoFA.isOpen} 
-          onClose={() => { 
-            logic.modales.twoFA.close(); 
-            logic.setError2FA(null); 
-          }} 
-          onSubmit={(code) => logic.confirmar2FAMutation.mutate(code)} 
-          isLoading={logic.confirmar2FAMutation.isPending} 
-          error={logic.error2FA}
-          title="Confirmar Transacción" 
-          description="Ingresa el código de seguridad para autorizar el pago."
-        />
-      )}
-    </Suspense>
+      // --- Feedback UI ---
+      isProcessing={logic.isProcessingWizard}
+      error2FA={logic.error2FA}
+    />
   );
 };
-
-// ✅ OPTIMIZACIÓN 4: Skeleton específico para tabs
-const TabContentSkeleton = () => (
-  <Box py={3}>
-    <Skeleton variant="text" width="40%" height={40} sx={{ mb: 2 }} />
-    <Skeleton variant="text" width="100%" height={20} />
-    <Skeleton variant="text" width="100%" height={20} />
-    <Skeleton variant="text" width="80%" height={20} />
-  </Box>
-);
 
 // ==========================================
 // COMPONENTE PRINCIPAL
@@ -180,6 +133,7 @@ const DetalleProyecto: React.FC = () => {
 
   // --- Estados de Carga y Error ---
   if (logic.loadingProyecto) return <LoadingSkeleton />;
+  
   if (!logic.proyecto) return (
     <PageContainer>
       <Alert severity="error" variant="outlined">Proyecto no encontrado o no disponible.</Alert>
@@ -191,12 +145,19 @@ const DetalleProyecto: React.FC = () => {
   return (
     <PageContainer maxWidth="xl" sx={{ pb: 8 }}>
       
-      {/* Overlay global */}
-      <Backdrop sx={{ color: '#fff', zIndex: 9999, flexDirection: 'column', gap: 2 }} open={logic.verificandoPago}>
+      {/* Overlay global para cuando vuelve de Mercado Pago */}
+      <Backdrop 
+        sx={{ color: '#fff', zIndex: 9999, flexDirection: 'column', gap: 2 }} 
+        open={logic.verificandoPago}
+      >
         <CircularProgress color="inherit" size={60} />
         <Typography variant="h6" fontWeight={600}>Verificando transacción...</Typography>
+        <Typography variant="body2" color="inherit" sx={{ opacity: 0.8 }}>
+          Por favor no cierres esta ventana
+        </Typography>
       </Backdrop>
 
+      {/* Hero Section */}
       <ProjectHero proyecto={proyecto} />
 
       <Box sx={{ display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, gap: 5, alignItems: 'flex-start' }}>
@@ -210,6 +171,8 @@ const DetalleProyecto: React.FC = () => {
             <Tabs 
               value={logic.tabValue} 
               onChange={logic.handleTabChange}
+              variant="scrollable"
+              scrollButtons="auto"
             >
               <Tab icon={<Info fontSize="small" />} iconPosition="start" label="Visión General" />
               <Tab icon={<InsertPhoto fontSize="small" />} iconPosition="start" label="Galería" />
@@ -219,29 +182,39 @@ const DetalleProyecto: React.FC = () => {
             </Tabs>
           </Box>
 
-          {/* ✅ OPTIMIZACIÓN 5: Tabs Content con Suspense */}
+          {/* Tabs Content */}
           <Box sx={{ minHeight: 400 }}>
-            {/* Index 0: Descripción */}
+            {/* Tab 0: Visión General */}
             <CustomTabPanel value={logic.tabValue} index={0}>
-              <Typography variant="h5" fontWeight={800} gutterBottom>Sobre este proyecto</Typography>
-              <Typography variant="body1" paragraph sx={{ whiteSpace: 'pre-line', lineHeight: 1.8, color: 'text.secondary', fontSize: '1.05rem' }}>
+              <Typography variant="h5" fontWeight={800} gutterBottom>
+                Sobre este proyecto
+              </Typography>
+              <Typography 
+                variant="body1" 
+                paragraph 
+                sx={{ 
+                  whiteSpace: 'pre-line', 
+                  lineHeight: 1.8, 
+                  color: 'text.secondary', 
+                  fontSize: '1.05rem' 
+                }}
+              >
                 {proyecto.descripcion}
               </Typography>
             </CustomTabPanel>
             
-            {/* Index 1: Galería (Lazy) */}
+            {/* Tab 1: Galería */}
             <CustomTabPanel value={logic.tabValue} index={1}>
-              <Suspense fallback={<TabContentSkeleton />}>
-                <ProjectGallery proyecto={proyecto} onImageClick={(url) => setLightbox({ open: true, img: url })} />
-              </Suspense>
+              <ProjectGallery 
+                proyecto={proyecto} 
+                onImageClick={(url) => setLightbox({ open: true, img: url })} 
+              />
             </CustomTabPanel>
             
-            {/* Index 2: Lotes (Lazy) */}
+            {/* Tab 2: Lotes */}
             {logic.mostrarTabLotes && (
               <CustomTabPanel value={logic.tabValue} index={2}>
-                <Suspense fallback={<TabContentSkeleton />}>
-                  <ListaLotesProyecto idProyecto={Number(logic.id)} />
-                </Suspense>
+                <ListaLotesProyecto idProyecto={Number(logic.id)} />
               </CustomTabPanel>
             )}
           </Box>
@@ -253,7 +226,7 @@ const DetalleProyecto: React.FC = () => {
         </Box>
       </Box>
 
-      {/* --- UI ELEMENTS (Lightbox & Modals) --- */}
+      {/* --- Elementos Flotantes --- */}
       <LightboxViewer 
         isOpen={lightbox.open} 
         imgSrc={lightbox.img} 
@@ -272,10 +245,10 @@ const DetalleProyecto: React.FC = () => {
 
 const LoadingSkeleton = () => (
   <PageContainer>
-    <Skeleton variant="rectangular" height={500} sx={{ borderRadius: 4, mb: 4 }} animation="wave" />
+    <Skeleton variant="rectangular" height={500} sx={{ borderRadius: 4, mb: 4 }} />
     <Box sx={{ display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, gap: 4 }}>
-      <Skeleton sx={{ flex: 1, height: 300, borderRadius: 3 }} animation="wave" />
-      <Skeleton sx={{ width: { xs: '100%', lg: 380 }, height: 400, borderRadius: 3 }} animation="wave" />
+      <Skeleton sx={{ flex: 1, height: 300, borderRadius: 3 }} />
+      <Skeleton sx={{ width: { xs: '100%', lg: 380 }, height: 400, borderRadius: 3 }} />
     </Box>
   </PageContainer>
 );
@@ -285,20 +258,38 @@ const LightboxViewer: React.FC<{ isOpen: boolean, imgSrc: string, onClose: () =>
     open={isOpen} 
     onClose={onClose} 
     maxWidth="xl"
-    PaperProps={{ sx: { bgcolor: 'transparent', boxShadow: 'none', overflow: 'hidden' } }}
+    PaperProps={{ 
+      sx: { 
+        bgcolor: 'transparent', 
+        boxShadow: 'none', 
+        overflow: 'hidden' 
+      } 
+    }}
   >
     <Box position="relative">
       <IconButton 
         onClick={onClose} 
-        sx={{ position: 'absolute', right: 0, top: 0, m: 2, color: 'white', bgcolor: 'rgba(0,0,0,0.5)', '&:hover': { bgcolor: 'rgba(0,0,0,0.8)' } }}
+        sx={{ 
+          position: 'absolute', 
+          right: 0, 
+          top: 0, 
+          m: 2, 
+          color: 'white', 
+          bgcolor: 'rgba(0,0,0,0.5)', 
+          '&:hover': { bgcolor: 'rgba(0,0,0,0.8)' } 
+        }}
       >
         <Close />
       </IconButton>
       <img 
         src={imgSrc} 
         alt="Zoom Detalle" 
-        loading="lazy"
-        style={{ maxWidth: '100%', maxHeight: '90vh', borderRadius: 8, display: 'block' }} 
+        style={{ 
+          maxWidth: '100%', 
+          maxHeight: '90vh', 
+          borderRadius: 8, 
+          display: 'block' 
+        }} 
       />
     </Box>
   </Dialog>

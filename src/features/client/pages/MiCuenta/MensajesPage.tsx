@@ -1,33 +1,21 @@
 // src/pages/Client/Mensajes/MensajesPage.tsx
 
-import {
-  Person as PersonIcon,
-  MarkEmailRead as ReadIcon,
-  Send as SendIcon,
-  AdminPanelSettings as SystemIcon
-} from '@mui/icons-material';
-import {
-  alpha,
-  Avatar,
-  Badge,
-  Box,
-  Button,
-  CircularProgress,
-  Divider,
-  IconButton,
-  List,
-  ListItemAvatar,
-  ListItemButton,
-  Paper,
-  Stack,
-  TextField,
-  Typography,
-  useTheme
-} from '@mui/material';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Person as PersonIcon,
+  DoneAll as ReadIcon,
+  Send as SendIcon,
+  SupportAgent as SupportIcon,
+  ChatBubbleOutline
+} from '@mui/icons-material';
+import {
+  alpha, Avatar, Badge, Box, Button, CircularProgress, Divider,
+  IconButton, List, ListItemAvatar, ListItemButton, Paper,
+  Stack, TextField, Typography, useTheme
+} from '@mui/material';
 
 // Servicios y Contexto
 import { PageContainer } from '../../../../shared/components/layout/containers/PageContainer/PageContainer';
@@ -36,15 +24,16 @@ import { useAuth } from '@/core/context/AuthContext';
 import MensajeService from '@/core/api/services/mensaje.service';
 import type { MensajeDto } from '@/core/types/dto/mensaje';
 
-// ✅ Importamos configuración
-
+// Config
 const SYSTEM_USER_ID = 2; 
 
 const MensajesPage: React.FC = () => {
   const { user } = useAuth();
   const theme = useTheme(); 
   const queryClient = useQueryClient();
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  // ✅ CAMBIO 1: Referencia al contenedor del chat, no al final
+  const chatContainerRef = useRef<HTMLDivElement>(null);
   
   const [newMessage, setNewMessage] = useState('');
   const [selectedContactId, setSelectedContactId] = useState<number | null>(null);
@@ -53,7 +42,6 @@ const MensajesPage: React.FC = () => {
   const { data: mensajes = [], isLoading } = useQuery<MensajeDto[]>({
     queryKey: ['misMensajes'],
     queryFn: async () => (await MensajeService.obtenerMisMensajes()).data,
-    // Usamos configuración, pero permitimos un override para chat (ej. 5s es mejor que 30s para chat)
     refetchInterval: 5000 
   });
 
@@ -77,7 +65,7 @@ const MensajesPage: React.FC = () => {
       
       return {
         contactId,
-        contactName: contactId === SYSTEM_USER_ID ? 'Soporte / Sistema' : `${contactInfo?.nombre} ${contactInfo?.apellido}`,
+        contactName: contactId === SYSTEM_USER_ID ? 'Soporte Técnico' : `${contactInfo?.nombre} ${contactInfo?.apellido}`,
         lastMessage: lastMsg,
         unreadCount,
         allMessages: msgs
@@ -93,10 +81,17 @@ const MensajesPage: React.FC = () => {
     }
   }, [conversations, selectedContactId]);
 
-  // Scroll automático al final
+  // ✅ CAMBIO 2: Scroll controlado SOLO dentro del contenedor
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [selectedContactId, mensajes]);
+    if (chatContainerRef.current) {
+        const { scrollHeight, clientHeight } = chatContainerRef.current;
+        // Solo scrolleamos el contenedor interno
+        chatContainerRef.current.scrollTo({
+            top: scrollHeight - clientHeight,
+            behavior: 'smooth'
+        });
+    }
+  }, [selectedContactId, mensajes]); // Se ejecuta al cambiar de chat o recibir mensaje
 
   // Mutaciones
   const sendMutation = useMutation({
@@ -121,7 +116,6 @@ const MensajesPage: React.FC = () => {
     }
   });
 
-  // Marcar como leído al abrir chat
   useEffect(() => {
     if (selectedContactId && user) {
       const chat = conversations.find(c => c.contactId === selectedContactId);
@@ -147,17 +141,18 @@ const MensajesPage: React.FC = () => {
   return (
     <PageContainer maxWidth="xl">
       <PageHeader 
-        title="Centro de Mensajes" 
-        subtitle="Comunícate con soporte o revisa notificaciones." 
+        title="Mis Mensajes" 
+        subtitle="Canal directo de atención y novedades de tu cuenta." 
       />
 
       <Paper 
         sx={{ 
           display: 'flex', 
-          height: '75vh', 
+          height: '70vh', 
           overflow: 'hidden', 
           border: `1px solid ${theme.palette.divider}`,
-          borderRadius: 3
+          borderRadius: 3,
+          boxShadow: theme.shadows[2]
         }} 
         elevation={0}
       >
@@ -169,18 +164,19 @@ const MensajesPage: React.FC = () => {
           flexDirection: 'column', 
           bgcolor: 'background.default' 
         }}>
-          <Box p={2} display={{ xs: 'none', md: 'block' }}>
+          <Box p={2} display={{ xs: 'none', md: 'flex' }} justifyContent="space-between" alignItems="center">
             <Typography variant="subtitle2" color="text.secondary" fontWeight="bold">
-              CONVERSACIONES ({conversations.length})
+              CHATS ({conversations.length})
             </Typography>
           </Box>
           <Divider />
+          
           <List sx={{ flex: 1, overflowY: 'auto', p: 0 }}>
             {isLoading ? (
                <Box p={4} textAlign="center"><CircularProgress size={24} /></Box>
             ) : conversations.length === 0 ? (
                <Box p={4} textAlign="center" display={{ xs: 'none', md: 'block' }}>
-                   <Typography variant="body2" color="text.secondary">No tienes mensajes.</Typography>
+                   <Typography variant="body2" color="text.secondary">No tienes conversaciones activas.</Typography>
                </Box>
             ) : (
               conversations.map((chat) => (
@@ -196,6 +192,7 @@ const MensajesPage: React.FC = () => {
                           '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.12) }
                         },
                         borderLeft: selectedContactId === chat.contactId ? `4px solid ${theme.palette.primary.main}` : '4px solid transparent',
+                        transition: 'all 0.2s'
                       }}
                   >
                       <ListItemAvatar>
@@ -208,24 +205,22 @@ const MensajesPage: React.FC = () => {
                               ? 'white' 
                               : theme.palette.primary.main
                           }}>
-                            {chat.contactId === SYSTEM_USER_ID ? <SystemIcon /> : <PersonIcon />}
+                            {chat.contactId === SYSTEM_USER_ID ? <SupportIcon /> : <PersonIcon />}
                           </Avatar>
                         </Badge>
                       </ListItemAvatar>
                       
-                      {/* Texto solo en desktop */}
                       <Box sx={{ display: { xs: 'none', md: 'block' }, flex: 1, minWidth: 0 }}>
-                          <Typography variant="subtitle2" fontWeight={chat.unreadCount > 0 ? 700 : 600} noWrap color="text.primary">
-                            {chat.contactName}
-                          </Typography>
-                          <Typography variant="caption" color={chat.unreadCount > 0 ? "text.primary" : "text.secondary"} noWrap display="block">
+                          <Box display="flex" justifyContent="space-between">
+                              <Typography variant="subtitle2" fontWeight={chat.unreadCount > 0 ? 800 : 600} noWrap color="text.primary">
+                                {chat.contactName}
+                              </Typography>
+                              <Typography variant="caption" color="text.disabled">
+                                {format(new Date(chat.lastMessage.fecha_envio), 'HH:mm')}
+                              </Typography>
+                          </Box>
+                          <Typography variant="caption" color={chat.unreadCount > 0 ? "text.primary" : "text.secondary"} noWrap display="block" fontWeight={chat.unreadCount > 0 ? 600 : 400}>
                             {chat.lastMessage.contenido}
-                          </Typography>
-                      </Box>
-                      
-                      <Box sx={{ display: { xs: 'none', md: 'block' } }}>
-                          <Typography variant="caption" color="text.disabled" sx={{ minWidth: 40, textAlign: 'right' }}>
-                              {format(new Date(chat.lastMessage.fecha_envio), 'HH:mm')}
                           </Typography>
                       </Box>
                   </ListItemButton>
@@ -235,10 +230,11 @@ const MensajesPage: React.FC = () => {
             )}
             
             {!conversations.find(c => c.contactId === SYSTEM_USER_ID) && (
-                 <Box p={2} display={{ xs: 'none', md: 'block' }}>
+                 <Box p={2} mt="auto" display={{ xs: 'none', md: 'block' }}>
                     <Button 
-                        variant="outlined" fullWidth startIcon={<SystemIcon />}
+                        variant="contained" fullWidth startIcon={<SupportIcon />}
                         onClick={() => setSelectedContactId(SYSTEM_USER_ID)}
+                        sx={{ borderRadius: 2, boxShadow: theme.shadows[2] }}
                     >
                         Contactar Soporte
                     </Button>
@@ -247,33 +243,50 @@ const MensajesPage: React.FC = () => {
           </List>
         </Box>
 
-        {/* === CHAT AREA === */}
-        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', bgcolor: 'background.paper' }}>
+        {/* === AREA DE MENSAJES === */}
+        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', bgcolor: '#f5f7fb' }}>
           {selectedContactId ? (
             <>
-              {/* Header */}
-              <Box p={2} borderBottom={`1px solid ${theme.palette.divider}`} display="flex" alignItems="center" gap={2} bgcolor="background.default">
+              {/* Header Chat */}
+              <Box 
+                p={2} 
+                borderBottom={`1px solid ${theme.palette.divider}`} 
+                display="flex" alignItems="center" gap={2} 
+                bgcolor="background.paper"
+                boxShadow={theme.shadows[1]}
+                zIndex={1}
+              >
                  <Avatar sx={{ 
                     bgcolor: selectedContactId === SYSTEM_USER_ID ? theme.palette.secondary.main : theme.palette.primary.main,
                     color: 'white'
                  }}>
-                    {selectedContactId === SYSTEM_USER_ID ? <SystemIcon /> : activeChat?.contactName?.charAt(0)}
+                    {selectedContactId === SYSTEM_USER_ID ? <SupportIcon /> : activeChat?.contactName?.charAt(0)}
                  </Avatar>
-                 <Typography variant="h6" fontWeight="bold" color="text.primary">
-                    {selectedContactId === SYSTEM_USER_ID ? 'Soporte / Sistema' : activeChat?.contactName || 'Nuevo Chat'}
-                 </Typography>
+                 <Box>
+                     <Typography variant="subtitle1" fontWeight="bold" color="text.primary">
+                        {selectedContactId === SYSTEM_USER_ID ? 'Soporte Técnico' : activeChat?.contactName || 'Nuevo Chat'}
+                     </Typography>
+                     {selectedContactId === SYSTEM_USER_ID && (
+                         <Typography variant="caption" color="success.main" display="flex" alignItems="center" gap={0.5}>
+                             <Box width={6} height={6} borderRadius="50%" bgcolor="success.main" /> En línea
+                         </Typography>
+                     )}
+                 </Box>
               </Box>
 
-              {/* Mensajes */}
-              <Box sx={{ 
-                flex: 1, 
-                overflowY: 'auto', 
-                p: 3, 
-                display: 'flex', 
-                flexDirection: 'column', 
-                gap: 2, 
-                bgcolor: 'background.paper' 
-              }}>
+              {/* ✅ CAMBIO 3: Lista de Mensajes con REF al contenedor */}
+              <Box 
+                ref={chatContainerRef} // ✨ La referencia va aquí
+                sx={{ 
+                    flex: 1, 
+                    overflowY: 'auto', // ✨ El scroll ocurre aquí
+                    p: 3, 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    gap: 1.5,
+                    scrollBehavior: 'smooth' // Suavidad CSS
+                }}
+              >
                 {activeChat ? (
                     activeChat.allMessages.map((msg) => {
                         const isMe = msg.id_remitente === user?.id;
@@ -282,46 +295,53 @@ const MensajesPage: React.FC = () => {
                                 key={msg.id} 
                                 sx={{ 
                                     alignSelf: isMe ? 'flex-end' : 'flex-start',
-                                    maxWidth: '70%'
+                                    maxWidth: { xs: '85%', md: '65%' },
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: isMe ? 'flex-end' : 'flex-start'
                                 }}
                             >
                                 <Paper 
                                     elevation={0}
                                     sx={{ 
-                                        p: 2, 
-                                        bgcolor: isMe ? 'primary.main' : 'background.default',
+                                        p: 1.5, 
+                                        px: 2,
+                                        bgcolor: isMe ? 'primary.main' : 'white',
                                         color: isMe ? 'primary.contrastText' : 'text.primary',
                                         borderRadius: 2,
                                         borderTopRightRadius: isMe ? 0 : 2,
                                         borderTopLeftRadius: isMe ? 2 : 0,
-                                        border: isMe ? 'none' : `1px solid ${theme.palette.divider}`,
                                         boxShadow: theme.shadows[1]
                                     }}
                                 >
-                                    <Typography variant="body1" sx={{ wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>
+                                    <Typography variant="body2" sx={{ wordBreak: 'break-word', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
                                         {msg.contenido}
                                     </Typography>
                                 </Paper>
-                                <Stack direction="row" justifyContent={isMe ? 'flex-end' : 'flex-start'} spacing={0.5} mt={0.5}>
-                                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
-                                        {format(new Date(msg.fecha_envio), "dd/MM HH:mm", { locale: es })}
+                                <Stack direction="row" spacing={0.5} mt={0.5} alignItems="center">
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
+                                        {format(new Date(msg.fecha_envio), "HH:mm", { locale: es })}
                                     </Typography>
-                                    {isMe && msg.leido && <ReadIcon sx={{ fontSize: 14, color: 'primary.main' }} />}
+                                    {isMe && msg.leido && <ReadIcon sx={{ fontSize: 14, color: 'info.main' }} />}
                                 </Stack>
                             </Box>
                         );
                     })
                 ) : (
-                    <Box textAlign="center" mt={4} color="text.secondary">
-                        <Typography>Escribe tu primer mensaje para iniciar la conversación.</Typography>
+                    <Box 
+                        height="100%" display="flex" flexDirection="column" 
+                        justifyContent="center" alignItems="center" color="text.disabled"
+                    >
+                        <ChatBubbleOutline sx={{ fontSize: 48, mb: 1, opacity: 0.3 }} />
+                        <Typography variant="body2">Escribe un mensaje para comenzar.</Typography>
                     </Box>
                 )}
-                <div ref={messagesEndRef} />
+                {/* Eliminamos el div dummy al final */}
               </Box>
 
-              {/* Input */}
-              <Box p={2} borderTop={`1px solid ${theme.palette.divider}`} bgcolor="background.default">
-                <Stack direction="row" spacing={1}>
+              {/* Input Area */}
+              <Box p={2} bgcolor="background.paper" borderTop={`1px solid ${theme.palette.divider}`}>
+                <Stack direction="row" spacing={1} alignItems="flex-end">
                     <TextField 
                         fullWidth 
                         placeholder="Escribe tu mensaje..." 
@@ -331,17 +351,22 @@ const MensajesPage: React.FC = () => {
                         onChange={(e) => setNewMessage(e.target.value)}
                         onKeyDown={handleKeyPress}
                         multiline
-                        maxRows={3}
+                        maxRows={4}
+                        sx={{ 
+                            bgcolor: 'background.default',
+                            '& .MuiOutlinedInput-root': { borderRadius: 3 }
+                        }}
                     />
                     <IconButton 
                         onClick={() => sendMutation.mutate()}
                         disabled={!newMessage.trim() || sendMutation.isPending}
+                        color="primary"
                         sx={{ 
                           bgcolor: 'primary.main', 
                           color: 'white', 
                           '&:hover': { bgcolor: 'primary.dark' }, 
-                          width: 40, height: 40, alignSelf: 'flex-end',
-                          '&.Mui-disabled': { bgcolor: 'action.disabledBackground', color: 'action.disabled' }
+                          width: 40, height: 40, 
+                          '&.Mui-disabled': { bgcolor: 'action.disabledBackground' }
                         }}
                     >
                         {sendMutation.isPending ? <CircularProgress size={20} color="inherit" /> : <SendIcon fontSize="small" />}
@@ -351,7 +376,7 @@ const MensajesPage: React.FC = () => {
             </>
           ) : (
             <Box display="flex" alignItems="center" justifyContent="center" height="100%" color="text.disabled" flexDirection="column" gap={2}>
-               <PersonIcon sx={{ fontSize: 60, opacity: 0.2 }} />
+               <ChatBubbleOutline sx={{ fontSize: 80, opacity: 0.1 }} />
                <Typography variant="h6" color="text.secondary">Selecciona una conversación</Typography>
             </Box>
           )}

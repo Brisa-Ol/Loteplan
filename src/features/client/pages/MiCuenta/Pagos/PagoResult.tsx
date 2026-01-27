@@ -9,14 +9,12 @@ import {
 } from '@mui/material';
 import { 
   CheckCircle, Error, HourglassEmpty, Refresh, 
-  Home, History, ReceiptLong 
+  Home, ReceiptLong, ArrowForward 
 } from '@mui/icons-material';
 
 import { PageContainer } from '../../../../../shared/components/layout/containers/PageContainer/PageContainer';
 import { env } from '@/core/config/env';
 import MercadoPagoService from '@/core/api/services/pagoMercado.service';
-
-
 
 const PagoResult: React.FC = () => {
   const theme = useTheme();
@@ -29,13 +27,10 @@ const PagoResult: React.FC = () => {
     queryKey: ['paymentStatus', transaccionId],
     queryFn: async () => {
       if (!transaccionId) return null;
-      // sync=true fuerza al backend a consultar a MP si es necesario
       return (await MercadoPagoService.getPaymentStatus(Number(transaccionId), true)).data;
     },
     enabled: !!transaccionId,
     retry: 2,
-    // 🔄 POLLING INTELIGENTE:
-    // Seguir consultando cada 4s mientras el estado sea intermedio
     refetchInterval: (query) => {
         const estado = query.state.data?.transaccion?.estado;
         if (estado === 'pendiente' || estado === 'en_proceso') return 4000;
@@ -43,7 +38,6 @@ const PagoResult: React.FC = () => {
     }
   });
 
-  // Helper de Formato
   const formatCurrency = (val: number) => 
     new Intl.NumberFormat(env.defaultLocale, { 
         style: 'currency', currency: env.defaultCurrency, maximumFractionDigits: 0 
@@ -56,9 +50,9 @@ const PagoResult: React.FC = () => {
     // 1. ÉXITO
     if (estadoTx === 'pagado') {
       return {
-        icon: <CheckCircle sx={{ fontSize: 60 }} />,
-        title: '¡Pago Exitoso!',
-        desc: `La transacción #${transaccionId} fue aprobada correctamente.`,
+        icon: <CheckCircle sx={{ fontSize: 64 }} />,
+        title: '¡Pago Confirmado!',
+        desc: `La operación #${transaccionId} se ha procesado correctamente.`,
         color: 'success' as const, 
         isPending: false
       };
@@ -68,11 +62,11 @@ const PagoResult: React.FC = () => {
     if (['fallido', 'reembolsado', 'rechazado_por_capacidad', 'rechazado_proyecto_cerrado', 'expirado'].includes(estadoTx || '')) {
       const detalle = estadoPasarela === 'rechazado' 
         ? 'El método de pago fue rechazado por la entidad financiera.' 
-        : 'Hubo un problema con el procesamiento.';
+        : 'Hubo un problema al procesar tu solicitud.';
 
       return {
-        icon: <Error sx={{ fontSize: 60 }} />,
-        title: 'El pago no se completó',
+        icon: <Error sx={{ fontSize: 64 }} />,
+        title: 'Pago No Completado',
         desc: detalle,
         color: 'error' as const,
         isPending: false
@@ -81,24 +75,24 @@ const PagoResult: React.FC = () => {
 
     // 3. PENDIENTE (Default)
     return {
-      icon: <HourglassEmpty sx={{ fontSize: 60 }} />,
+      icon: <HourglassEmpty sx={{ fontSize: 64 }} />,
       title: 'Procesando Pago...',
-      desc: 'Estamos esperando la confirmación final de Mercado Pago. Esto puede tardar unos segundos.',
+      desc: 'Aguardando confirmación de la pasarela de pagos. Esto puede tomar unos instantes.',
       color: 'warning' as const,
       isPending: true
     };
   };
 
-  if (!transaccionId) return <Box p={4} textAlign="center"><Typography>Falta ID de transacción</Typography></Box>;
+  if (!transaccionId) return <Box p={8} textAlign="center"><Typography>No se encontró información de la transacción.</Typography></Box>;
   
   if (isLoading) return (
-    <Box height="60vh" display="flex" flexDirection="column" justifyContent="center" alignItems="center" gap={2}>
+    <Box height="80vh" display="flex" flexDirection="column" justifyContent="center" alignItems="center" gap={3}>
         <CircularProgress size={60} thickness={4} />
-        <Typography color="text.secondary" fontWeight={500}>Verificando estado del pago...</Typography>
+        <Typography variant="h6" color="text.secondary" fontWeight={500}>Verificando transacción...</Typography>
     </Box>
   );
 
-  if (isError) return <Box p={4} textAlign="center"><Typography color="error">Error al consultar el estado del pago.</Typography></Box>;
+  if (isError) return <Box p={8} textAlign="center"><Typography color="error">Error de conexión al verificar el pago.</Typography></Box>;
 
   const content = getStatusContent();
   const themeColor = theme.palette[content.color];
@@ -108,29 +102,29 @@ const PagoResult: React.FC = () => {
       <Card 
         elevation={0} 
         sx={{ 
-          p: { xs: 3, md: 5 }, 
+          p: { xs: 3, md: 6 }, 
           textAlign: 'center', 
           borderRadius: 4, 
           mt: 4,
-          border: `1px solid ${alpha(themeColor.main, 0.3)}`,
-          bgcolor: alpha(themeColor.main, 0.02),
-          boxShadow: theme.shadows[3]
+          border: `1px solid ${alpha(themeColor.main, 0.2)}`,
+          background: `linear-gradient(180deg, ${alpha(themeColor.main, 0.05)} 0%, ${theme.palette.background.paper} 100%)`,
+          boxShadow: theme.shadows[4]
         }}
       >
-        {/* ICONO CON ANIMACIÓN */}
+        {/* ICONO */}
         <Box mb={3} display="flex" justifyContent="center">
             <Avatar 
                 sx={{ 
-                    width: 100, 
-                    height: 100, 
+                    width: 110, 
+                    height: 110, 
                     bgcolor: alpha(themeColor.main, 0.1), 
                     color: themeColor.main,
                     mb: 1,
-                    // Animación de pulso si está pendiente
                     animation: content.isPending ? 'pulse 2s infinite ease-in-out' : 'none',
+                    boxShadow: `0 0 0 10px ${alpha(themeColor.main, 0.05)}`,
                     '@keyframes pulse': {
                         '0%': { transform: 'scale(1)', boxShadow: `0 0 0 0 ${alpha(themeColor.main, 0.4)}` },
-                        '70%': { transform: 'scale(1.05)', boxShadow: `0 0 0 15px ${alpha(themeColor.main, 0)}` },
+                        '70%': { transform: 'scale(1.05)', boxShadow: `0 0 0 20px ${alpha(themeColor.main, 0)}` },
                         '100%': { transform: 'scale(1)', boxShadow: `0 0 0 0 ${alpha(themeColor.main, 0)}` },
                     }
                 }}
@@ -143,11 +137,11 @@ const PagoResult: React.FC = () => {
           {content.title}
         </Typography>
         
-        <Typography variant="body1" color="text.secondary" paragraph sx={{ maxWidth: '400px', mx: 'auto', mb: 3 }}>
+        <Typography variant="body1" color="text.secondary" paragraph sx={{ maxWidth: '400px', mx: 'auto', mb: 4, lineHeight: 1.6 }}>
           {content.desc}
         </Typography>
 
-        {/* Botón de actualización manual si está pendiente */}
+        {/* Botón de actualizar si está pendiente */}
         {content.isPending && (
             <Button 
                 startIcon={isFetching ? <CircularProgress size={16} color="inherit" /> : <Refresh />}
@@ -160,54 +154,44 @@ const PagoResult: React.FC = () => {
             </Button>
         )}
 
-        {/* DETALLES DE LA TRANSACCIÓN (Estilo Ticket) */}
+        {/* TICKET DE DETALLES */}
         {data?.pagoPasarela && (
           <Box 
             sx={{ 
                 bgcolor: 'background.paper', 
                 p: 3, 
-                borderRadius: 3, 
+                borderRadius: 2, 
                 mb: 4, 
                 textAlign: 'left',
                 border: `1px dashed ${theme.palette.divider}`,
-                position: 'relative',
-                overflow: 'hidden'
+                position: 'relative'
             }}
           >
             <Stack spacing={2}>
               <Box display="flex" justifyContent="space-between" alignItems="center">
                 <Stack direction="row" spacing={1} alignItems="center" color="text.secondary">
                     <ReceiptLong fontSize="small" />
-                    <Typography variant="body2" fontWeight={600}>Monto Total</Typography>
+                    <Typography variant="body2" fontWeight={600}>Total Procesado</Typography>
                 </Stack>
                 <Typography variant="h6" fontWeight={700} color="text.primary">
                     {formatCurrency(Number(data.pagoPasarela.monto))}
                 </Typography>
               </Box>
 
-              <Divider />
+              <Divider sx={{ borderStyle: 'dashed' }} />
 
               <Box display="flex" justifyContent="space-between">
-                <Typography variant="caption" color="text.secondary">Referencia MP:</Typography>
-                <Typography variant="caption" fontWeight={600} fontFamily="monospace">
-                    {data.pagoPasarela.transaccionIdPasarela || 'N/A'}
+                <Typography variant="caption" color="text.secondary">ID Transacción</Typography>
+                <Typography variant="caption" fontWeight={600} fontFamily="monospace" color="text.primary">
+                    {transaccionId}
                 </Typography>
               </Box>
 
-              <Box display="flex" justifyContent="space-between" alignItems="center">
-                <Typography variant="caption" color="text.secondary">Estado Pasarela:</Typography>
-                <Box 
-                    sx={{ 
-                        textTransform: 'uppercase', 
-                        fontWeight: 'bold', 
-                        fontSize: '0.7rem',
-                        bgcolor: alpha(themeColor.main, 0.1),
-                        color: themeColor.main,
-                        px: 1, py: 0.5, borderRadius: 1
-                    }}
-                >
-                    {data.pagoPasarela.estado}
-                </Box>
+              <Box display="flex" justifyContent="space-between">
+                <Typography variant="caption" color="text.secondary">Referencia MercadoPago</Typography>
+                <Typography variant="caption" fontWeight={600} fontFamily="monospace" color="text.primary">
+                    {data.pagoPasarela.transaccionIdPasarela || '-'}
+                </Typography>
               </Box>
             </Stack>
           </Box>
@@ -218,29 +202,32 @@ const PagoResult: React.FC = () => {
           <Button 
             variant="outlined" 
             size="large"
-            startIcon={<History />}
-            onClick={() => navigate('/client/MiCuenta/MisTransacciones')}
+            startIcon={<Home />}
+            onClick={() => navigate('/')}
             sx={{ 
                 borderRadius: 2,
                 color: 'text.secondary',
-                borderColor: theme.palette.divider
+                borderColor: theme.palette.divider,
+                flex: 1
             }}
           >
-            Ver Historial
+            Inicio
           </Button>
           <Button 
             variant="contained" 
             size="large"
-            startIcon={<Home />}
-            onClick={() => navigate('/')}
+            endIcon={<ArrowForward />}
+            onClick={() => navigate('/client/MiCuenta/MisTransacciones')}
             disableElevation
             sx={{ 
                 borderRadius: 2,
                 bgcolor: themeColor.main,
-                '&:hover': { bgcolor: themeColor.dark }
+                '&:hover': { bgcolor: themeColor.dark },
+                flex: 1,
+                fontWeight: 700
             }}
           >
-            Ir al Inicio
+            Ver Movimientos
           </Button>
         </Stack>
       </Card>

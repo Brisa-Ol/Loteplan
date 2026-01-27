@@ -1,7 +1,7 @@
-// src/components/common/BotonFavorito/BotonFavorito.tsx
+// src/shared/components/ui/buttons/FavoritoButton.tsx
 
 import React from 'react';
-import { IconButton, Tooltip, CircularProgress, Zoom } from '@mui/material';
+import { IconButton, Tooltip, Zoom } from '@mui/material';
 import { Favorite, FavoriteBorder } from '@mui/icons-material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/core/context/AuthContext';
@@ -10,8 +10,6 @@ import FavoritoService from '@/core/api/services/favorito.service';
 import type { CheckFavoritoResponseDto } from '@/core/types/dto/favorito.dto';
 import SuscripcionService from '@/core/api/services/suscripcion.service';
 import LoteService from '@/core/api/services/lote.service';
-
-
 
 interface FavoritoButtonProps {
   loteId: number;
@@ -26,24 +24,22 @@ export const FavoritoButton: React.FC<FavoritoButtonProps> = ({
 }) => {
   const queryClient = useQueryClient();
   const { isAuthenticated } = useAuth();
-  const { showSuccess, showInfo } = useSnackbar();
+  const { showSuccess, showInfo, showError } = useSnackbar();
 
-  // =========================================================
-  // 1. ESTADO ACTUAL
-  // =========================================================
-  const { data: status, isLoading: loadingStatus } = useQuery<CheckFavoritoResponseDto>({
-    queryKey: ['favorito', loteId],
+  // CLAVE: Query Key consistente
+  const QUERY_KEY = ['favorito', loteId];
+
+  // 1. ESTADO ACTUAL (Desde Cache)
+  const { data: status } = useQuery<CheckFavoritoResponseDto>({
+    queryKey: QUERY_KEY,
     queryFn: async () => (await FavoritoService.checkEsFavorito(loteId)).data,
     enabled: isAuthenticated,
     staleTime: 1000 * 60 * 5, 
-    retry: false
   });
 
   const isFavorite = status?.es_favorito ?? false;
 
-  // =========================================================
-  // 2. DATOS PARA VALIDACIÓN
-  // =========================================================
+  // 2. DATOS AUXILIARES (Para validaciones de negocio)
   const { data: lote } = useQuery({
     queryKey: ['lote', loteId],
     queryFn: async () => (await LoteService.getByIdActive(loteId)).data,
@@ -58,48 +54,61 @@ export const FavoritoButton: React.FC<FavoritoButtonProps> = ({
     staleTime: 1000 * 60 * 2
   });
 
-  // =========================================================
-  // 3. MUTACIÓN (Toggle)
-  // =========================================================
+  // 3. MUTACIÓN OPTIMISTA (La magia ocurre aquí)
   const mutation = useMutation({
     mutationFn: () => FavoritoService.toggle(loteId),
+    
+    // ✨ SE EJECUTA ANTES DE IR AL SERVIDOR
     onMutate: async () => {
-      await queryClient.cancelQueries({ queryKey: ['favorito', loteId] });
-      const previousStatus = queryClient.getQueryData(['favorito', loteId]);
+      // 1. Cancelar queries en vuelo para que no sobrescriban nuestro estado optimista
+      await queryClient.cancelQueries({ queryKey: QUERY_KEY });
 
-      queryClient.setQueryData(['favorito', loteId], (old: any) => ({
-        es_favorito: !old?.es_favorito
+      // 2. Guardar el estado anterior (snapshot) por si hay error
+      const previousStatus = queryClient.getQueryData<CheckFavoritoResponseDto>(QUERY_KEY);
+
+      // 3. ACTUALIZAR UI INMEDIATAMENTE (Lo ponemos como queremos que se vea)
+      const nuevoEstado = !isFavorite;
+      
+      queryClient.setQueryData<CheckFavoritoResponseDto>(QUERY_KEY, (old) => ({
+        es_favorito: nuevoEstado // Forzamos el cambio visual
       }));
+
+      // Feedback visual instantáneo (opcional, pero se siente bien)
+      if (nuevoEstado) {
+         // showSuccess('Añadido a favoritos'); // A veces es mejor esperar al success real para el toast
+      }
 
       return { previousStatus };
     },
-    onSuccess: (response) => {
-      const fueAgregado = response.data.agregado;
-      
-      queryClient.setQueryData(['favorito', loteId], { es_favorito: fueAgregado });
-      
-      queryClient.invalidateQueries({ queryKey: ['misFavoritos'] }); 
-      queryClient.invalidateQueries({ queryKey: ['adminLotes'] });
 
-      if (fueAgregado) {
-          showSuccess('Añadido a tus favoritos');
+    // ✅ SI EL SERVIDOR RESPONDE OK
+    onSuccess: (response) => {
+      const serverState = response.data.agregado;
+      
+      // Sincronizamos con la verdad del servidor (por si acaso difiere)
+      queryClient.setQueryData<CheckFavoritoResponseDto>(QUERY_KEY, { es_favorito: serverState });
+      
+      // Actualizamos la lista de "Mis Favoritos" en segundo plano
+      queryClient.invalidateQueries({ queryKey: ['misFavoritos'] });
+
+      // Feedback al usuario
+      if (serverState) {
+          showSuccess('Guardado en tu lista de seguimiento');
       } else {
-          showInfo('Eliminado de tus favoritos');
+          showInfo('Dejaste de seguir este lote');
       }
     },
-    // ✅ CORRECCIÓN AQUÍ:
-    // Eliminamos 'err' y 'newTodo' porque no se usan.
-    // Solo dejamos 'context' que sí se usa para el rollback.
-    onError: (_err, _newTodo, context: any) => {
+
+    // ❌ SI HAY ERROR
+    onError: (_err, _variables, context) => {
+      // Revertimos al estado anterior (Rollback)
       if (context?.previousStatus) {
-        queryClient.setQueryData(['favorito', loteId], context.previousStatus);
+        queryClient.setQueryData(QUERY_KEY, context.previousStatus);
       }
+      showError('No se pudo actualizar favoritos');
     }
   });
 
-  // =========================================================
-  // 4. HANDLER
-  // =========================================================
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
@@ -109,18 +118,12 @@ export const FavoritoButton: React.FC<FavoritoButtonProps> = ({
         return;
     }
 
-    if (isFavorite && onRemoveRequest) {
-      onRemoveRequest(loteId);
-      return;
-    }
-
+    // Validaciones de negocio (Suscripción requerida)
     if (!isFavorite && lote && lote.id_proyecto) {
         const tieneSuscripcion = suscripciones?.some(
             s => s.id_proyecto === lote.id_proyecto && s.activo
         );
-        
         const validacion = FavoritoService.puedeAgregarFavorito(lote, !!tieneSuscripcion);
-        
         if (!validacion.puede) {
             showInfo(`🔒 ${validacion.razon}`);
             return;
@@ -130,28 +133,31 @@ export const FavoritoButton: React.FC<FavoritoButtonProps> = ({
     mutation.mutate();
   };
 
-  if (loadingStatus) return <CircularProgress size={20} color="inherit" thickness={5} />;
-
   return (
     <Tooltip 
-        title={isFavorite ? "Quitar de favoritos" : "Guardar en favoritos"} 
+        title={isFavorite ? "Dejar de seguir" : "Guardar en favoritos"} 
         TransitionComponent={Zoom}
         arrow
     >
       <IconButton 
         onClick={handleClick}
-        disabled={mutation.isPending}
+        // Eliminamos disabled={mutation.isPending} para permitir clicks rápidos (debounce natural)
         size={size}
         sx={{ 
-          color: isFavorite ? 'error.main' : 'action.disabled',
-          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+          // Color dinámico basado en estado optimista
+          color: isFavorite ? 'error.main' : 'action.disabled', 
+          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          
+          // Animación de escala al activar
+          transform: isFavorite ? 'scale(1.1)' : 'scale(1)',
+          
           '&:hover': { 
-            color: isFavorite ? 'error.dark' : 'error.light',
-            transform: 'scale(1.15)',
-            bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)'
+            color: isFavorite ? 'error.dark' : 'error.main',
+            transform: 'scale(1.2)',
+            bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(255,0,0,0.04)'
           },
           '&:active': {
-            transform: 'scale(0.95)'
+            transform: 'scale(0.9)'
           }
         }}
       >
