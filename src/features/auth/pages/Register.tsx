@@ -27,7 +27,7 @@ import * as Yup from "yup";
 
 // ✅ Componentes Reutilizables (Patrón de diseño unificado)
 import AuthFormContainer from "./components/AuthFormContainer/AuthFormContainer";
-import FormTextField from "../../../shared/components/forms/inputs/FormTextField/FormTextField";
+import FormTextField from "../../../shared/components/forms/inputs/FormTextField";
 import { useAuth } from "@/core/context/AuthContext";
 import type { RegisterRequestDto } from "@/core/types/dto/auth.dto";
 

@@ -13,7 +13,7 @@ import { QueryHandler } from '../../../../shared/components/data-grid/QueryHandl
 import { PageHeader } from '../../../../shared/components/layout/headers/PageHeader';
 import { DataTable, type DataTableColumn } from '../../../../shared/components/data-grid/DataTable/DataTable';
 import { StatCard } from '../../../../shared/components/domain/cards/StatCard/StatCard';
-import { FilterBar, FilterSelect } from '../../../../shared/components/forms/filters/FilterBar/FilterBar';
+import { FilterBar, FilterSelect } from '../../../../shared/components/forms/filters/FilterBar';
 import { ConfirmDialog } from '../../../../shared/components/domain/modals/ConfirmDialog/ConfirmDialog';
 
 import DetalleSuscripcionModal from './components/DetalleSuscripcionModal';
@@ -29,17 +29,17 @@ const AdminSuscripciones: React.FC = () => {
     {
       id: 'usuario', label: 'ID / Usuario', minWidth: 240,
       render: (s) => (
-        <Stack direction="row" spacing={2} alignItems="center" sx={{ opacity: s.activo ? 1 : 0.6 }}>
+        <Stack direction="row" spacing={2} alignItems="center">
           <Avatar sx={{
             width: 36, height: 36,
-            bgcolor: s.activo ? alpha(logic.theme.palette.primary.main, 0.1) : logic.theme.palette.action.disabledBackground,
+            bgcolor: s.activo ? alpha(logic.theme.palette.primary.main, 0.1) : alpha(logic.theme.palette.grey[500], 0.1),
             color: s.activo ? 'primary.main' : 'text.disabled',
             fontSize: 14, fontWeight: 'bold'
           }}>
             {s.usuario?.nombre?.charAt(0) || '#'}
           </Avatar>
           <Box>
-            <Typography variant="body2" fontWeight={600} color="text.primary">
+            <Typography variant="body2" fontWeight={700}>
               {s.usuario?.nombre} {s.usuario?.apellido}
             </Typography>
             <Typography variant="caption" color="text.secondary">
@@ -51,7 +51,11 @@ const AdminSuscripciones: React.FC = () => {
     },
     {
       id: 'proyecto', label: 'Proyecto', minWidth: 150,
-      render: (s) => <Typography variant="body2" fontWeight={500} sx={{ opacity: s.activo ? 1 : 0.6 }}>{s.proyectoAsociado?.nombre_proyecto}</Typography>
+      render: (s) => (
+        <Typography variant="body2" fontWeight={600} color="text.secondary">
+          {s.proyectoAsociado?.nombre_proyecto}
+        </Typography>
+      )
     },
     {
       id: 'deuda', label: 'Estado Deuda',
@@ -62,9 +66,11 @@ const AdminSuscripciones: React.FC = () => {
 
         return (
           <Chip
-            label={s.meses_a_pagar === 0 ? 'Al día' : `${s.meses_a_pagar} cuota(s) pend.`}
-            size="small" color={color} variant={s.meses_a_pagar > 0 ? 'filled' : 'outlined'}
-            sx={{ fontWeight: 600, borderColor: 'divider', opacity: s.activo ? 1 : 0.6 }}
+            label={s.meses_a_pagar === 0 ? 'Al día' : `${s.meses_a_pagar} cuotas pend.`}
+            size="small" 
+            color={color} 
+            variant={s.meses_a_pagar > 0 ? 'filled' : 'outlined'}
+            sx={{ fontWeight: 800, fontSize: '0.65rem' }}
           />
         );
       }
@@ -72,24 +78,19 @@ const AdminSuscripciones: React.FC = () => {
     {
       id: 'pagado', label: 'Monto Pagado',
       render: (s) => (
-        <Typography variant="body2" fontWeight={700} sx={{ fontFamily: 'monospace', opacity: s.activo ? 1 : 0.6 }}>
+        <Typography variant="body2" fontWeight={700} sx={{ fontFamily: 'monospace' }}>
           ${Number(s.monto_total_pagado).toLocaleString('es-AR')}
         </Typography>
       )
     },
     {
       id: 'tokens', label: 'Tokens',
-      render: (s) => <Chip label={s.tokens_disponibles} size="small" variant="outlined" sx={{ color: 'text.secondary', borderColor: 'divider', opacity: s.activo ? 1 : 0.6 }} />
-    },
-    {
-      id: 'estado', label: 'Estado',
       render: (s) => (
-        <Chip
-          label={s.activo ? 'Activa' : 'Cancelada'}
-          size="small"
-          color={s.activo ? 'success' : 'default'}
-          variant={s.activo ? 'filled' : 'outlined'}
-          sx={{ fontWeight: 600, opacity: s.activo ? 1 : 0.7 }}
+        <Chip 
+          label={`${s.tokens_disponibles} disp.`} 
+          size="small" 
+          variant="outlined" 
+          sx={{ fontWeight: 600, fontSize: '0.65rem' }} 
         />
       )
     },
@@ -101,19 +102,27 @@ const AdminSuscripciones: React.FC = () => {
             <IconButton
               onClick={() => logic.handleVerDetalle(s)}
               size="small"
-              sx={{ color: 'primary.main', bgcolor: alpha(logic.theme.palette.primary.main, 0.1), '&:hover': { bgcolor: alpha(logic.theme.palette.primary.main, 0.2) } }}
+              sx={{ 
+                color: 'primary.main', 
+                bgcolor: alpha(logic.theme.palette.primary.main, 0.05),
+                '&:hover': { bgcolor: alpha(logic.theme.palette.primary.main, 0.15) } 
+              }}
             >
               <Visibility fontSize="small" />
             </IconButton>
           </Tooltip>
 
           {s.activo && (
-            <Tooltip title="Cancelar Suscripción (Admin)">
+            <Tooltip title="Cancelar Suscripción">
               <IconButton
                 onClick={() => logic.handleCancelarClick(s)}
                 disabled={logic.isCancelling}
                 size="small"
-                sx={{ color: 'error.main', bgcolor: alpha(logic.theme.palette.error.main, 0.1), '&:hover': { bgcolor: alpha(logic.theme.palette.error.main, 0.2) } }}
+                sx={{ 
+                  color: 'error.main', 
+                  bgcolor: alpha(logic.theme.palette.error.main, 0.05),
+                  '&:hover': { bgcolor: alpha(logic.theme.palette.error.main, 0.15) } 
+                }}
               >
                 <Cancel fontSize="small" />
               </IconButton>
@@ -126,79 +135,87 @@ const AdminSuscripciones: React.FC = () => {
 
   return (
     <PageContainer maxWidth="xl">
+      <PageHeader 
+        title="Gestión de Suscripciones" 
+        subtitle="Monitoreo de recaudación, morosidad y estados de planes mensuales." 
+      />
 
-      <PageHeader title="Gestión de Suscripciones" subtitle="Monitor de suscripciones activas, canceladas y métricas clave" />
-
-      <Tabs value={logic.tabIndex} onChange={logic.handleTabChange} sx={{ mb: 3, borderBottom: 1, borderColor: 'divider' }}>
-        <Tab label="Suscripciones Activas" />
-        <Tab label="Historial Cancelaciones" />
+      <Tabs 
+        value={logic.tabIndex} 
+        onChange={logic.handleTabChange} 
+        sx={{ mb: 3, borderBottom: 1, borderColor: 'divider' }}
+      >
+        <Tab label="Suscripciones Activas" sx={{ fontWeight: 700 }} />
+        <Tab label="Historial de Cancelaciones" sx={{ fontWeight: 700 }} />
       </Tabs>
 
-      {/* --- TAB 0: ACTIVAS Y GESTIÓN --- */}
+      {/* --- TAB 0: GESTIÓN PRINCIPAL --- */}
       <div role="tabpanel" hidden={logic.tabIndex !== 0}>
         {logic.tabIndex === 0 && (
           <Box>
             {/* KPIs */}
             <Stack spacing={2} mb={4}>
-              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1fr' }, gap: 2 }}>
-                <StatCard title="Total Histórico" value={logic.stats.totalSuscripciones} icon={<Groups />} color="primary" loading={logic.isLoadingStats} subtitle="Todas las suscripciones" />
-                <StatCard title="Activas Hoy" value={logic.stats.totalActivas} icon={<CheckCircle />} color="success" loading={logic.isLoadingStats} subtitle="En curso actualmente" />
-                <StatCard title="Canceladas" value={logic.stats.totalCanceladas} icon={<Cancel />} color="error" loading={logic.isLoadingStats} subtitle="Bajas totales" />
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 2 }}>
+                <StatCard title="Total Histórico" value={logic.stats.totalSuscripciones} icon={<Groups />} color="primary" loading={logic.isLoadingStats} subtitle="Registro global" />
+                <StatCard title="Activas" value={logic.stats.totalActivas} icon={<CheckCircle />} color="success" loading={logic.isLoadingStats} subtitle="Generando ingresos" />
+                <StatCard title="Canceladas" value={logic.stats.totalCanceladas} icon={<Cancel />} color="error" loading={logic.isLoadingStats} subtitle="Bajas acumuladas" />
               </Box>
 
-              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1fr' }, gap: 2 }}>
-                <StatCard title="Tasa Cancelación" value={`${logic.stats.tasaCancelacion}%`} icon={<TrendingDown />} color="warning" loading={logic.isLoadingStats} subtitle="Churn Rate Global" />
-                <StatCard title="Tasa Morosidad" value={`${logic.stats.tasaMorosidad}%`} icon={<Warning />} color="error" loading={logic.isLoadingStats} subtitle={`$${Number(logic.stats.totalEnRiesgo).toLocaleString()} en riesgo`} />
-                <StatCard title="Total Generado" value={`$${Number(logic.stats.totalGenerado).toLocaleString('es-AR', { maximumFractionDigits: 0 })}`} icon={<MonetizationOn />} color="info" loading={logic.isLoadingStats} subtitle="Ingresos brutos acumulados" />
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 2 }}>
+                <StatCard title="Churn Rate" value={`${logic.stats.tasaCancelacion}%`} icon={<TrendingDown />} color="warning" loading={logic.isLoadingStats} subtitle="Tasa de cancelación" />
+                <StatCard title="Morosidad" value={`${logic.stats.tasaMorosidad}%`} icon={<Warning />} color="error" loading={logic.isLoadingStats} subtitle={`$${Number(logic.stats.totalEnRiesgo).toLocaleString()} en mora`} />
+                <StatCard title="Recaudación" value={`$${Number(logic.stats.totalGenerado).toLocaleString('es-AR', { maximumFractionDigits: 0 })}`} icon={<MonetizationOn />} color="info" loading={logic.isLoadingStats} subtitle="Ingresos totales" />
               </Box>
             </Stack>
 
             {/* FILTROS */}
             <FilterBar>
               <TextField
-                placeholder="Buscar por usuario, email o ID..."
+                placeholder="Buscar por usuario o email..."
                 size="small" sx={{ flexGrow: 1 }}
-                value={logic.searchTerm} onChange={(e) => logic.setSearchTerm(e.target.value)}
+                value={logic.searchTerm} 
+                onChange={(e) => logic.setSearchTerm(e.target.value)}
                 InputProps={{ startAdornment: (<InputAdornment position="start"><Search color="action" /></InputAdornment>) }}
               />
-              <Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', md: 'block' } }} />
-
+              
               <FilterSelect
-                label="Proyecto" value={logic.filterProject}
+                label="Proyecto" 
+                value={logic.filterProject}
                 onChange={(e) => logic.setFilterProject(e.target.value)}
                 sx={{ minWidth: 200 }}
               >
-                <MenuItem value="all">Todos</MenuItem>
-                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                <MenuItem value="all">Todos los proyectos</MenuItem>
                 {logic.proyectos.filter((p: any) => p.tipo_inversion === 'mensual').map((p: any) => (
                   <MenuItem key={p.id} value={p.id}>{p.nombre_proyecto}</MenuItem>
                 ))}
               </FilterSelect>
 
               <FilterSelect
-                label="Estado" value={logic.filterStatus}
+                label="Vista de Estado" 
+                value={logic.filterStatus}
                 onChange={(e) => logic.setFilterStatus(e.target.value as any)}
                 sx={{ minWidth: 180 }}
               >
+                <MenuItem value="all">Todas</MenuItem>
                 <MenuItem value="activas">Solo Activas</MenuItem>
                 <MenuItem value="inactivas">Solo Canceladas</MenuItem>
-                <MenuItem value="all">Todas</MenuItem>
               </FilterSelect>
             </FilterBar>
 
-            {/* TABLA */}
+            {/* TABLA DE DATOS */}
             <QueryHandler isLoading={logic.isLoading} error={logic.error as Error | null}>
               <DataTable
                 columns={columns}
-                // ✨ Datos Ordenados
                 data={logic.filteredSuscripciones}
                 getRowKey={(s) => s.id}
-
-                // ✨ UX Props
-                highlightedRowId={logic.highlightedId}
+                
+                // ✅ Nuevas propiedades integradas
                 isRowActive={(s) => s.activo}
-
-                emptyMessage="No se encontraron suscripciones con los filtros actuales."
+                showInactiveToggle={true}
+                inactiveLabel="Canceladas"
+                
+                highlightedRowId={logic.highlightedId}
+                emptyMessage="No se encontraron suscripciones."
                 pagination={true}
                 defaultRowsPerPage={10}
               />
@@ -220,11 +237,10 @@ const AdminSuscripciones: React.FC = () => {
         )}
       </div>
 
-      {/* --- TAB 1: HISTORIAL CANCELACIONES --- */}
+      {/* --- TAB 1: HISTORIAL --- */}
       <div role="tabpanel" hidden={logic.tabIndex !== 1}>
         {logic.tabIndex === 1 && <CancelacionesTab />}
       </div>
-
     </PageContainer>
   );
 };

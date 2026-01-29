@@ -1,4 +1,5 @@
 // src/features/client/pages/Proyectos/DetalleProyecto.tsx
+// ✅ VERSIÓN CORREGIDA - TAB DE LOTES SOLO PARA MENSUALES
 
 import React, { useState } from 'react';
 import { 
@@ -102,22 +103,15 @@ const ProjectModals: React.FC<{ logic: any, proyecto: ProyectoDto }> = ({ logic,
   
   return (
     <CheckoutWizardModal
-      // --- Control de Estado ---
       open={logic.modales.checkoutWizard.isOpen}
       onClose={logic.modales.checkoutWizard.close}
-      
-      // --- Datos ---
       proyecto={proyecto}
       tipo={proyecto.tipo_inversion === 'mensual' ? 'suscripcion' : 'inversion'}
       inversionId={logic.inversionId} 
       pagoId={logic.pagoId}
-      
-      // --- Callbacks de Lógica (Desde el Hook) ---
       onConfirmInvestment={logic.wizardCallbacks.onConfirmInvestment}
       onSubmit2FA={logic.wizardCallbacks.onSubmit2FA}
       onSignContract={logic.wizardCallbacks.onSignContract}
-      
-      // --- Feedback UI ---
       isProcessing={logic.isProcessingWizard}
       error2FA={logic.error2FA}
     />
@@ -141,6 +135,11 @@ const DetalleProyecto: React.FC = () => {
   );
 
   const { proyecto } = logic;
+
+  // ==========================================
+  // ✅ VALIDACIÓN CRÍTICA: MOSTRAR TAB SOLO SI ES MENSUAL
+  // ==========================================
+  const mostrarTabLotes = proyecto.tipo_inversion === 'mensual';
 
   return (
     <PageContainer maxWidth="xl" sx={{ pb: 8 }}>
@@ -176,7 +175,8 @@ const DetalleProyecto: React.FC = () => {
             >
               <Tab icon={<Info fontSize="small" />} iconPosition="start" label="Visión General" />
               <Tab icon={<InsertPhoto fontSize="small" />} iconPosition="start" label="Galería" />
-              {logic.mostrarTabLotes && (
+              {/* ✅ Tab de lotes SOLO si es mensual */}
+              {mostrarTabLotes && (
                 <Tab icon={<ViewList fontSize="small" />} iconPosition="start" label="Inventario de Lotes" />
               )}
             </Tabs>
@@ -201,6 +201,19 @@ const DetalleProyecto: React.FC = () => {
               >
                 {proyecto.descripcion}
               </Typography>
+
+              {/* ✅ INFO ADICIONAL PARA INVERSIONISTAS DIRECTOS */}
+              {proyecto.tipo_inversion === 'directo' && proyecto.pack_de_lotes && (
+                <Alert severity="success" variant="outlined" sx={{ mt: 3, borderRadius: 2 }}>
+                  <Typography variant="subtitle2" fontWeight={700} gutterBottom>
+                    🎁 Pack Completo Incluido
+                  </Typography>
+                  <Typography variant="body2">
+                    Al invertir en este proyecto recibirás <strong>TODOS los {proyecto.lotes?.length || 0} lotes</strong> al finalizar.
+                    No se requiere participar en subastas individuales.
+                  </Typography>
+                </Alert>
+              )}
             </CustomTabPanel>
             
             {/* Tab 1: Galería */}
@@ -211,8 +224,8 @@ const DetalleProyecto: React.FC = () => {
               />
             </CustomTabPanel>
             
-            {/* Tab 2: Lotes */}
-            {logic.mostrarTabLotes && (
+            {/* Tab 2: Lotes (Solo para mensuales) */}
+            {mostrarTabLotes && (
               <CustomTabPanel value={logic.tabValue} index={2}>
                 <ListaLotesProyecto idProyecto={Number(logic.id)} />
               </CustomTabPanel>

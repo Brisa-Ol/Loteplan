@@ -12,7 +12,8 @@ import {
   CheckCircleOutline as ApprovedIcon,
   HighlightOff as RejectedIcon,
   AssignmentInd as KpiIcon,
-  Badge as BadgeIcon
+  Badge as BadgeIcon,
+  History as HistoryIcon
 } from '@mui/icons-material';
 
 import { PageContainer } from '../../../../shared/components/layout/containers/PageContainer/PageContainer';
@@ -32,31 +33,40 @@ const AdminKYC: React.FC = () => {
   // DEFINICIÓN DE COLUMNAS
   const columns = useMemo<DataTableColumn<KycDTO>[]>(() => [
     {
-      id: 'usuario', label: 'Solicitante', minWidth: 280,
+      id: 'usuario', label: 'Solicitante', minWidth: 260,
       render: (kyc) => (
         <Stack direction="row" spacing={2} alignItems="center">
-          <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main', fontWeight: 'bold', width: 40, height: 40 }}>
+          <Avatar sx={{ 
+            bgcolor: alpha(theme.palette.primary.main, 0.1), 
+            color: 'primary.main', 
+            fontWeight: 800, 
+            width: 40, height: 40 
+          }}>
             {kyc.nombre_completo?.[0] || 'U'}
           </Avatar>
           <Box>
-            <Typography variant="body2" fontWeight={700} color="text.primary">
+            <Typography variant="body2" fontWeight={700}>
               {kyc.nombre_completo}
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              {kyc.usuario?.email || `ID: ${kyc.id_usuario}`}
+              {kyc.usuario?.email || `ID Usuario: ${kyc.id_usuario}`}
             </Typography>
           </Box>
         </Stack>
       )
     },
     {
-      id: 'documento', label: 'Documentación',
+      id: 'documento', label: 'Documentación', minWidth: 200,
       render: (kyc) => (
-        <Stack direction="row" alignItems="center" spacing={1}>
-          <BadgeIcon fontSize="small" color="action" />
+        <Stack direction="row" alignItems="center" spacing={1.5}>
+          <BadgeIcon fontSize="small" sx={{ color: 'text.disabled' }} />
           <Box>
-            <Typography variant="body2" fontWeight={600} color="text.primary">{kyc.tipo_documento}</Typography>
-            <Typography variant="caption" sx={{ fontFamily: 'monospace', bgcolor: 'action.hover', px: 0.5, borderRadius: 1 }}>
+            <Typography variant="body2" fontWeight={700}>{kyc.tipo_documento}</Typography>
+            <Typography variant="caption" sx={{ 
+                fontFamily: 'monospace', 
+                bgcolor: alpha(theme.palette.action.selected, 0.5), 
+                px: 0.8, py: 0.2, borderRadius: 1 
+            }}>
               {kyc.numero_documento}
             </Typography>
           </Box>
@@ -66,28 +76,31 @@ const AdminKYC: React.FC = () => {
     {
       id: 'fecha', label: 'Fecha Solicitud',
       render: (kyc) => (
-        <Typography variant="body2" color="text.secondary">
-          {kyc.createdAt ? new Date(kyc.createdAt).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+        <Typography variant="body2" color="text.secondary" fontWeight={500}>
+          {kyc.fecha_creacion 
+            ? new Date(kyc.fecha_creacion).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' }) 
+            : '-'}
         </Typography>
       )
     },
     {
-      id: 'estado_verificacion', label: 'Estado',
+      id: 'estado_verificacion', label: 'Estado', align: 'center',
       render: (kyc) => {
-        let color: 'success' | 'error' | 'warning' = 'warning';
-        let icon = <PendingIcon fontSize="small" />;
-
-        if (kyc.estado_verificacion === 'APROBADA') { color = 'success'; icon = <ApprovedIcon fontSize="small" />; }
-        if (kyc.estado_verificacion === 'RECHAZADA') { color = 'error'; icon = <RejectedIcon fontSize="small" />; }
+        const configs: Record<string, { color: any, icon: any }> = {
+          APROBADA: { color: 'success', icon: <ApprovedIcon fontSize="small" /> },
+          RECHAZADA: { color: 'error', icon: <RejectedIcon fontSize="small" /> },
+          PENDIENTE: { color: 'warning', icon: <PendingIcon fontSize="small" /> }
+        };
+        const config = configs[kyc.estado_verificacion] || configs.PENDIENTE;
 
         return (
           <Chip
             label={kyc.estado_verificacion}
             size="small"
-            icon={icon}
-            color={color}
-            sx={{ fontWeight: 700, minWidth: 100, justifyContent: 'flex-start' }}
-            variant="outlined"
+            icon={config.icon}
+            color={config.color}
+            sx={{ fontWeight: 800, fontSize: '0.65rem', minWidth: 110 }}
+            variant={kyc.estado_verificacion === 'PENDIENTE' ? 'filled' : 'outlined'}
           />
         );
       }
@@ -100,7 +113,7 @@ const AdminKYC: React.FC = () => {
             <IconButton
               size="small"
               onClick={() => logic.handleOpenDetails(kyc)}
-              sx={{ color: 'info.main', '&:hover': { bgcolor: alpha(theme.palette.info.main, 0.1) } }}
+              sx={{ color: 'info.main', bgcolor: alpha(theme.palette.info.main, 0.05) }}
             >
               <VisibilityIcon fontSize="small" />
             </IconButton>
@@ -113,7 +126,7 @@ const AdminKYC: React.FC = () => {
                   size="small"
                   onClick={() => logic.handleApproveClick(kyc)}
                   disabled={logic.isApproving}
-                  sx={{ color: 'success.main', '&:hover': { bgcolor: alpha(theme.palette.success.main, 0.1) } }}
+                  sx={{ color: 'success.main', bgcolor: alpha(theme.palette.success.main, 0.05) }}
                 >
                   <CheckCircleIcon fontSize="small" />
                 </IconButton>
@@ -122,7 +135,7 @@ const AdminKYC: React.FC = () => {
                 <IconButton
                   size="small"
                   onClick={() => logic.handleOpenRejectInput(kyc)}
-                  sx={{ color: 'error.main', '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.1) } }}
+                  sx={{ color: 'error.main', bgcolor: alpha(theme.palette.error.main, 0.05) }}
                 >
                   <CancelIcon fontSize="small" />
                 </IconButton>
@@ -136,46 +149,56 @@ const AdminKYC: React.FC = () => {
 
   return (
     <PageContainer maxWidth="xl" sx={{ py: 3 }}>
-      <PageHeader title="Gestión KYC" subtitle="Validación de identidad y documentación de usuarios" />
+      <PageHeader 
+        title="Gestión KYC" 
+        subtitle="Verificación de identidad y validación de cumplimiento legal para usuarios registrados." 
+      />
 
-      {/* Tabs */}
-      <Paper
-        elevation={0}
-        sx={{ mb: 3, borderRadius: 2, border: '1px solid', borderColor: 'divider', bgcolor: alpha(theme.palette.background.paper, 0.6), p: 0.5 }}
+      {/* Selector de Vistas (Tabs) */}
+      <Paper 
+        elevation={0} 
+        sx={{ 
+          mb: 3, 
+          border: '1px solid', 
+          borderColor: 'divider', 
+          borderRadius: 2, 
+          p: 0.5,
+          bgcolor: alpha(theme.palette.background.paper, 0.8)
+        }}
       >
         <Tabs
           value={logic.currentTab}
           onChange={(_, v) => logic.setCurrentTab(v)}
-          variant="standard"
           indicatorColor="primary"
           textColor="primary"
+          sx={{ '& .MuiTab-root': { fontWeight: 700, minHeight: 48, borderRadius: 1.5, mx: 0.5 } }}
         >
-          <Tab icon={<PendingIcon />} iconPosition="start" label="Pendientes" value="pendiente" />
-          <Tab icon={<ApprovedIcon />} iconPosition="start" label="Aprobadas" value="aprobada" />
-          <Tab icon={<RejectedIcon />} iconPosition="start" label="Rechazadas" value="rechazada" />
-          <Tab icon={<KpiIcon />} iconPosition="start" label="Historial" value="todas" />
+          <Tab icon={<PendingIcon fontSize="small" />} iconPosition="start" label="Pendientes" value="pendiente" />
+          <Tab icon={<ApprovedIcon fontSize="small" />} iconPosition="start" label="Aprobadas" value="aprobada" />
+          <Tab icon={<RejectedIcon fontSize="small" />} iconPosition="start" label="Rechazadas" value="rechazada" />
+          <Tab icon={<HistoryIcon fontSize="small" />} iconPosition="start" label="Historial" value="todas" />
         </Tabs>
       </Paper>
 
+      {/* Tabla Principal */}
       <QueryHandler isLoading={logic.isLoading} error={logic.error as Error}>
         <DataTable
           columns={columns}
-          // ✨ Usamos la lista ordenada del hook
           data={logic.kycList}
           getRowKey={(row) => row.id}
-
-          // ✨ Props de UX
+          
+          isRowActive={(row) => row.estado_verificacion === 'PENDIENTE'}
+          showInactiveToggle={logic.currentTab === 'todas'}
+          inactiveLabel="Procesadas"
+          
           highlightedRowId={logic.highlightedId}
-
-          emptyMessage={`No hay solicitudes en estado: ${logic.currentTab}.`}
+          emptyMessage={`No hay solicitudes ${logic.currentTab} para mostrar.`}
           pagination
           defaultRowsPerPage={10}
         />
       </QueryHandler>
 
-      {/* --- MODALES --- */}
-
-      {/* 1. Detalle KYC */}
+      {/* Modales */}
       <KycDetailModal
         open={logic.detailsModal.isOpen}
         onClose={logic.detailsModal.close}
@@ -184,46 +207,31 @@ const AdminKYC: React.FC = () => {
         onReject={logic.handleOpenRejectInput}
       />
 
-      {/* 2. Confirmación Aprobación */}
       <ConfirmDialog
         controller={logic.confirmDialog}
         onConfirm={logic.handleConfirmApprove}
         isLoading={logic.isApproving}
       />
 
-      {/* 3. Rechazo Manual */}
-      <Dialog
-        open={logic.rejectModal.isOpen}
-        onClose={logic.rejectModal.close}
-        maxWidth="sm" fullWidth
-        PaperProps={{ sx: { borderRadius: 3 } }}
-      >
-        <DialogTitle sx={{ fontWeight: 700 }}>Rechazar Solicitud</DialogTitle>
+      <Dialog open={logic.rejectModal.isOpen} onClose={logic.rejectModal.close} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+        <DialogTitle sx={{ fontWeight: 800 }}>Rechazar Solicitud de Identidad</DialogTitle>
         <DialogContent>
-          <Alert severity="warning" variant="outlined" sx={{ mb: 2 }}>
-            El usuario deberá volver a subir la documentación.
-          </Alert>
+          <Alert severity="warning" sx={{ mb: 2, fontWeight: 600 }}>El usuario podrá ver este motivo y reintentar el envío de documentos.</Alert>
           <TextField
             autoFocus fullWidth multiline rows={3}
             label="Motivo del rechazo"
-            placeholder="Ej: Documento ilegible..."
-            variant="outlined"
+            placeholder="Ej: El documento no es legible o la selfie no coincide..."
             value={logic.rejectReason}
             onChange={(e) => logic.setRejectReason(e.target.value)}
           />
         </DialogContent>
         <DialogActions sx={{ p: 2.5 }}>
           <Button onClick={logic.rejectModal.close} color="inherit">Cancelar</Button>
-          <Button
-            variant="contained" color="error"
-            onClick={logic.handleConfirmReject}
-            disabled={!logic.rejectReason.trim() || logic.isRejecting}
-          >
-            {logic.isRejecting ? 'Procesando...' : 'Rechazar'}
+          <Button variant="contained" color="error" onClick={logic.handleConfirmReject} disabled={!logic.rejectReason.trim() || logic.isRejecting}>
+            {logic.isRejecting ? 'Procesando...' : 'Confirmar Rechazo'}
           </Button>
         </DialogActions>
       </Dialog>
-
     </PageContainer>
   );
 };

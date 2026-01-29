@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { 
   Box, Typography, Chip, IconButton, Tooltip, 
-  MenuItem, Avatar, Stack, alpha 
+  MenuItem, Avatar, Stack, alpha, useTheme
 } from '@mui/material';
 import { 
   Visibility, ErrorOutline, Bolt, Person 
@@ -18,91 +18,101 @@ import { PageHeader } from '../../../../../shared/components/layout/headers/Page
 
 import { QueryHandler } from '../../../../../shared/components/data-grid/QueryHandler/QueryHandler';
 import type { TransaccionDto } from '../../../../../core/types/dto/transaccion.dto';
-import { FilterBar, FilterSearch, FilterSelect } from '../../../../../shared/components/forms/filters/FilterBar/FilterBar';
+import { FilterBar, FilterSearch, FilterSelect } from '../../../../../shared/components/forms/filters/FilterBar';
 import { ConfirmDialog } from '../../../../../shared/components/domain/modals/ConfirmDialog/ConfirmDialog';
 
 const AdminTransacciones: React.FC = () => {
-  const logic = useAdminTransacciones(); // Hook
+  const theme = useTheme();
+  const logic = useAdminTransacciones();
 
-  // Columnas
+  // DEFINICIÓN DE COLUMNAS
   const columns = useMemo<DataTableColumn<TransaccionDto>[]>(() => [
     {
-      id: 'id', label: 'ID', minWidth: 50,
-      render: (row) => <Typography variant="body2" color="text.secondary">#{row.id}</Typography>
+      id: 'id', label: 'ID', minWidth: 60,
+      render: (row) => <Typography variant="caption" fontWeight={700} color="text.secondary">#{row.id}</Typography>
     },
     {
-      id: 'usuario', label: 'Usuario', minWidth: 220,
+      id: 'usuario', label: 'Usuario / Cliente', minWidth: 240,
       render: (row) => (
         <Stack direction="row" alignItems="center" spacing={1.5}>
-            <Avatar sx={{ width: 28, height: 28, fontSize: '0.8rem', bgcolor: alpha(logic.theme.palette.primary.main, 0.1), color: 'primary.main' }}>
+            <Avatar sx={{ 
+                width: 32, height: 32, 
+                fontSize: '0.85rem', 
+                bgcolor: alpha(theme.palette.primary.main, 0.1), 
+                color: 'primary.main',
+                fontWeight: 700
+            }}>
                 {row.usuario?.nombre?.[0]?.toUpperCase() || <Person fontSize="small" />}
             </Avatar>
             <Box>
-                <Typography variant="body2" fontWeight={600}>
+                <Typography variant="body2" fontWeight={700}>
                     {row.usuario ? `${row.usuario.nombre} ${row.usuario.apellido}` : `ID: ${row.id_usuario}`}
                 </Typography>
-                {row.usuario?.email && (
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontSize: '0.7rem' }}>
-                        {row.usuario.email}
-                    </Typography>
-                )}
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                    {row.usuario?.email || 'Sin correo registrado'}
+                </Typography>
             </Box>
         </Stack>
       )
     },
     {
-      id: 'proyecto', label: 'Proyecto / Detalle', minWidth: 180,
-      render: (row) => (
-        <Box>
-            <Typography variant="body2" fontWeight={500}>
-                {row.tipo_transaccion === 'pago_suscripcion_inicial' ? 'Suscripción Inicial' : 
-                 row.tipo_transaccion === 'directo' ? 'Inversión Directa' : 
-                 row.tipo_transaccion === 'mensual' ? 'Cuota Mensual' :
-                 row.tipo_transaccion}
-            </Typography>
-            {row.proyectoTransaccion?.nombre_proyecto ? (
-                <Typography variant="caption" color="primary.main" fontWeight={600}>
-                    {row.proyectoTransaccion.nombre_proyecto}
+      id: 'proyecto', label: 'Tipo / Origen', minWidth: 200,
+      render: (row) => {
+        const labels: Record<string, string> = {
+            pago_suscripcion_inicial: 'Suscripción Inicial',
+            directo: 'Inversión Directa',
+            mensual: 'Cuota Mensual'
+        };
+        return (
+            <Box>
+                <Typography variant="body2" fontWeight={600}>
+                    {labels[row.tipo_transaccion] || row.tipo_transaccion}
                 </Typography>
-            ) : (
-                <Typography variant="caption" color="text.disabled">Sin proyecto asignado</Typography>
-            )}
-        </Box>
-      )
+                <Typography variant="caption" color="primary.main" fontWeight={700}>
+                    {row.proyectoTransaccion?.nombre_proyecto || 'Sin proyecto asignado'}
+                </Typography>
+            </Box>
+        );
+      }
     },
     {
       id: 'monto', label: 'Monto',
       render: (row) => (
-        <Typography fontWeight={700} color="success.main" sx={{ fontFamily: 'monospace' }}>
-            ${Number(row.monto).toLocaleString()}
+        <Typography variant="body2" fontWeight={700} color="success.main" sx={{ fontFamily: 'monospace' }}>
+            ${Number(row.monto).toLocaleString('es-AR')}
         </Typography>
       )
     },
     {
-      id: 'estado', label: 'Estado',
+      id: 'estado', label: 'Estado', align: 'center',
       render: (row) => (
-        <Box display="flex" alignItems="center" gap={1}>
+        <Stack direction="row" alignItems="center" spacing={1} justifyContent="center">
             <Chip 
-                label={row.estado_transaccion} 
+                label={row.estado_transaccion.toUpperCase()} 
                 color={logic.getStatusColor(row.estado_transaccion) as any} 
                 size="small" 
                 variant={row.estado_transaccion === 'pagado' ? 'filled' : 'outlined'}
-                sx={{ textTransform: 'capitalize', fontWeight: 600 }}
+                sx={{ fontWeight: 800, fontSize: '0.65rem' }}
             />
             {row.error_detalle && (
                 <Tooltip title={row.error_detalle}>
-                    <ErrorOutline color="error" fontSize="small" />
+                    <ErrorOutline color="error" sx={{ fontSize: 18 }} />
                 </Tooltip>
             )}
-        </Box>
+        </Stack>
       )
     },
     {
-      id: 'fecha', label: 'Fecha',
+      id: 'fecha', label: 'Fecha / Hora',
       render: (row) => (
-        <Typography variant="caption" color="text.secondary">
-            {row.fecha_transaccion ? format(new Date(row.fecha_transaccion), 'dd/MM HH:mm', { locale: es }) : '-'}
-        </Typography>
+        <Box>
+            <Typography variant="body2" color="text.primary">
+                {row.fecha_transaccion ? format(new Date(row.fecha_transaccion), 'dd/MM/yyyy', { locale: es }) : '-'}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+                {row.fecha_transaccion ? format(new Date(row.fecha_transaccion), 'HH:mm', { locale: es }) : ''} hs
+            </Typography>
+        </Box>
       )
     },
     {
@@ -113,19 +123,19 @@ const AdminTransacciones: React.FC = () => {
                 <IconButton 
                     size="small"
                     onClick={() => logic.handleViewDetails(row)} 
-                    sx={{ color: 'primary.main', bgcolor: alpha(logic.theme.palette.primary.main, 0.1), '&:hover': { bgcolor: alpha(logic.theme.palette.primary.main, 0.2) } }}
+                    sx={{ color: 'primary.main', bgcolor: alpha(theme.palette.primary.main, 0.05), '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.15) } }}
                 >
                     <Visibility fontSize="small" />
                 </IconButton>
             </Tooltip>
 
             {row.estado_transaccion !== 'pagado' && (
-                <Tooltip title="Forzar Confirmación (Manual)">
+                <Tooltip title="Forzar Confirmación">
                     <IconButton 
                         size="small"
                         onClick={() => logic.handleForceConfirmClick(row.id)} 
                         disabled={logic.isConfirming}
-                        sx={{ color: 'warning.main', bgcolor: alpha(logic.theme.palette.warning.main, 0.1), '&:hover': { bgcolor: alpha(logic.theme.palette.warning.main, 0.2) } }}
+                        sx={{ color: 'warning.main', bgcolor: alpha(theme.palette.warning.main, 0.05), '&:hover': { bgcolor: alpha(theme.palette.warning.main, 0.15) } }}
                     >
                         <Bolt fontSize="small" />
                     </IconButton>
@@ -134,49 +144,57 @@ const AdminTransacciones: React.FC = () => {
         </Stack>
       )
     }
-  ], [logic]);
+  ], [logic, theme]);
 
   return (
-    <PageContainer maxWidth="xl">
-      <PageHeader title="Auditoría de Transacciones" subtitle="Control financiero y estado de pagos." />
+    <PageContainer maxWidth="xl" sx={{ py: 3 }}>
+      <PageHeader 
+        title="Auditoría Financiera" 
+        subtitle="Monitoreo de transacciones, pasarelas de pago y conciliación manual." 
+      />
 
+      {/* FILTROS */}
       <FilterBar>
         <FilterSearch 
-            placeholder="Buscar por Usuario, Proyecto, ID o Pasarela..." 
+            placeholder="Buscar por cliente, proyecto o ID..." 
             value={logic.searchTerm} 
             onChange={(e) => logic.setSearchTerm(e.target.value)}
-            sx={{ flexGrow: 2 }}
+            sx={{ flexGrow: 1 }}
         />
         
         <FilterSelect
-          label="Estado"
+          label="Estado de Pago"
           value={logic.filterStatus}
           onChange={(e) => logic.setFilterStatus(e.target.value)}
           sx={{ minWidth: 200 }}
         >
-          <MenuItem value="all">Todos</MenuItem>
-          <MenuItem value="pagado">Pagados</MenuItem>
+          <MenuItem value="all">Todos los registros</MenuItem>
+          <MenuItem value="pagado">Completados</MenuItem>
           <MenuItem value="pendiente">Pendientes</MenuItem>
-          <MenuItem value="fallido">Fallidos</MenuItem>
+          <MenuItem value="fallido">Fallidos/Rechazados</MenuItem>
         </FilterSelect>
       </FilterBar>
 
+      {/* TABLA DE DATOS */}
       <QueryHandler isLoading={logic.isLoading} error={logic.error as Error | null}>
         <DataTable
             columns={columns}
             data={logic.filteredData}
             getRowKey={(row) => row.id}
             
-            // ✨ UX
-            highlightedRowId={logic.highlightedId}
+            // ✅ Sincronización con DataTable: Fila "Activa" si no es un error terminal
             isRowActive={(row) => !['fallido', 'rechazado_por_capacidad', 'rechazado_proyecto_cerrado', 'expirado'].includes(row.estado_transaccion)}
+            showInactiveToggle={true}
+            inactiveLabel="Fallidas"
             
-            emptyMessage="No se encontraron transacciones."
+            highlightedRowId={logic.highlightedId}
+            emptyMessage="No se encontraron transacciones registradas."
             pagination={true}
             defaultRowsPerPage={10}
         />
       </QueryHandler>
 
+      {/* MODALES */}
       <ModalDetalleTransaccion 
         open={logic.modales.detail.isOpen}
         transaccion={logic.selectedTransaccion}

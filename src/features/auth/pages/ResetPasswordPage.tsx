@@ -23,7 +23,7 @@ import { Visibility, VisibilityOff, CheckCircleOutline, LockReset, VpnKey } from
 // Services and Components
 import AuthService from '../../services/auth.service';
 import AuthFormContainer from './components/AuthFormContainer/AuthFormContainer';
-import FormTextField from '../../../shared/components/forms/inputs/FormTextField/FormTextField';
+import FormTextField from '../../../shared/components/forms/inputs/FormTextField';
 
 const ResetPasswordPage: React.FC = () => {
   const { token } = useParams<{ token: string }>();

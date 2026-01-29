@@ -28,7 +28,7 @@ import { useAuth } from "@/core/context/AuthContext";
 import { ROUTES } from "@/routes";
 import TwoFactorAuthModal from "../../../shared/components/domain/modals/TwoFactorAuthModal/TwoFactorAuthModal";
 import AuthFormContainer from "./components/AuthFormContainer/AuthFormContainer";
-import FormTextField from "../../../shared/components/forms/inputs/FormTextField/FormTextField";
+import FormTextField from "../../../shared/components/forms/inputs/FormTextField";
 
 // Definimos el tipo de error local
 type LocalErrorType = 'invalid_credentials' | 'account_not_activated' | 'session_expired' | 'generic';

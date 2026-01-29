@@ -5,7 +5,7 @@ import {
 } from '@mui/material';
 import { 
   Warning, ErrorOutline, CheckCircle, Person,
-  Info, Timeline, Image as ImageIcon
+  Info, Timeline, Image as ImageIcon, AttachMoney
 } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
 
@@ -13,67 +13,12 @@ import { PageContainer } from '../../../../shared/components/layout/containers/P
 import { QueryHandler } from '../../../../shared/components/data-grid/QueryHandler/QueryHandler';
 import { PageHeader } from '../../../../shared/components/layout/headers/PageHeader';
 import { DataTable, type DataTableColumn } from '../../../../shared/components/data-grid/DataTable/DataTable';
+import { StatCard } from '../../../../shared/components/domain/cards/StatCard/StatCard'; // ✅ Importación del componente Premium
+
 import type { LoteDto } from '../../../../core/types/dto/lote.dto';
 import LoteService from '../../../../core/api/services/lote.service';
 import imagenService from '../../../../core/api/services/imagen.service';
 import { useSortedData } from '../../hooks/useSortedData';
-
-
-// --- COMPONENTE KPI (Estandarizado) ---
-const StatCard: React.FC<{
-  title: string;
-  value: string | number;
-  icon: React.ReactNode;
-  color: 'success' | 'warning' | 'error' | 'info';
-  description?: string;
-}> = ({ title, value, icon, color, description }) => {
-  const theme = useTheme();
-  const paletteColor = theme.palette[color];
-
-  return (
-    <Paper 
-      elevation={0} 
-      sx={{ 
-        p: 2, 
-        border: '1px solid', 
-        borderColor: 'divider', 
-        borderRadius: 2, 
-        height: '100%', 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: 2,
-        transition: 'all 0.2s ease',
-        '&:hover': {
-            borderColor: paletteColor.main,
-            transform: 'translateY(-2px)'
-        }
-      }}
-    >
-      <Box sx={{ 
-        bgcolor: alpha(paletteColor.main, 0.1), 
-        color: paletteColor.main, 
-        p: 1.5, 
-        borderRadius: '50%', 
-        display: 'flex' 
-      }}>
-        {icon}
-      </Box>
-      <Box flex={1}>
-        <Typography variant="h5" fontWeight={700} color="text.primary">
-          {value}
-        </Typography>
-        <Typography variant="body2" color="text.secondary" fontWeight={600} sx={{ textTransform: 'uppercase' }}>
-          {title}
-        </Typography>
-        {description && (
-          <Typography variant="caption" color={paletteColor.main} fontWeight={700}>
-            {description}
-          </Typography>
-        )}
-      </Box>
-    </Paper>
-  );
-};
 
 // Helper: 90 días desde fecha_fin
 const calcularDiasRestantes = (lote: LoteDto): number => {
@@ -88,53 +33,33 @@ const calcularDiasRestantes = (lote: LoteDto): number => {
 const AdminLotePagos: React.FC = () => {
   const theme = useTheme();
   
-  // 1. QUERY (Data cruda)
   const { data: lotesRaw = [], isLoading, error } = useQuery<LoteDto[]>({
     queryKey: ['adminLotes'],
     queryFn: async () => (await LoteService.findAllAdmin()).data,
     refetchInterval: 15000,
   });
 
-  // 2. HOOK: Ordenamiento (Aunque filtraremos después, esto garantiza consistencia si la tabla crece)
   const { sortedData: lotes, highlightedId } = useSortedData(lotesRaw);
 
-  // Análisis de datos
   const analytics = useMemo(() => {
-    // Usamos 'lotes' (que ya vienen ordenados por ID desc) para filtrar
     const finalizados = lotes.filter(l => l.estado_subasta === 'finalizada' && l.id_ganador);
-    
-    // Pendientes: intentos > 0 y < 3
-    const pendientesPago = finalizados.filter(l => 
-      (l.intentos_fallidos_pago || 0) > 0 && (l.intentos_fallidos_pago || 0) < 3
-    );
-    
+    const pendientesPago = finalizados.filter(l => (l.intentos_fallidos_pago || 0) > 0);
     const riesgoCritico = pendientesPago.filter(l => (l.intentos_fallidos_pago || 0) >= 2);
-    const primerIntento = pendientesPago.filter(l => (l.intentos_fallidos_pago || 0) === 1);
-    const proximosVencer = pendientesPago.filter(l => calcularDiasRestantes(l) <= 10);
     const capitalEnRiesgo = riesgoCritico.reduce((acc, l) => acc + Number(l.precio_base), 0);
     
-    // 3. MEJORA: Ordenamiento Específico de Negocio para esta tabla
-    // Aunque el hook ordena por fecha de creación, para "Control de Pagos" 
-    // es más importante ver arriba los de "Mayor Riesgo" (más intentos fallidos).
-    const detallesOrdenados = [...pendientesPago].sort((a, b) => (b.intentos_fallidos_pago || 0) - (a.intentos_fallidos_pago || 0));
+    const detallesOrdenados = [...pendientesPago].sort((a, b) => 
+      (b.intentos_fallidos_pago || 0) - (a.intentos_fallidos_pago || 0)
+    );
 
     return {
       totalFinalizados: finalizados.length,
       pendientesPago: pendientesPago.length,
       riesgoCritico: riesgoCritico.length,
-      primerIntento: primerIntento.length,
-      proximosVencer: proximosVencer.length,
       capitalEnRiesgo,
       detalles: detallesOrdenados
     };
   }, [lotes]);
 
-  const getLoteImage = (lote: LoteDto) => 
-    lote.imagenes?.[0] ? imagenService.resolveImageUrl(lote.imagenes[0].url) : undefined;
-
-  // ========================================================================
-  // ⚙️ DEFINICIÓN DE COLUMNAS PARA DATATABLE
-  // ========================================================================
   const columns: DataTableColumn<LoteDto>[] = useMemo(() => [
     {
       id: 'lote',
@@ -143,68 +68,63 @@ const AdminLotePagos: React.FC = () => {
       render: (lote) => (
         <Stack direction="row" spacing={2} alignItems="center">
             <Avatar 
-                src={getLoteImage(lote)} 
+                src={lote.imagenes?.[0] ? imagenService.resolveImageUrl(lote.imagenes[0].url) : undefined} 
                 variant="rounded" 
-                sx={{ 
-                    width: 48, height: 48, 
-                    bgcolor: alpha(theme.palette.primary.main, 0.1),
-                    color: theme.palette.primary.main
-                }}
+                sx={{ width: 44, height: 44, bgcolor: alpha(theme.palette.primary.main, 0.1), borderRadius: 1 }}
             >
-                <ImageIcon fontSize="small" />
+                <ImageIcon sx={{ color: theme.palette.primary.main }} />
             </Avatar>
             <Box>
-                <Typography variant="body2" fontWeight={700} color="text.primary">{lote.nombre_lote}</Typography>
-                <Typography variant="caption" color="text.secondary">
-                ID: {lote.id}
-                </Typography>
+                <Typography variant="body2" fontWeight={700}>{lote.nombre_lote}</Typography>
+                <Typography variant="caption" color="text.secondary">ID: {lote.id}</Typography>
             </Box>
         </Stack>
       )
     },
     {
       id: 'ganador',
-      label: 'Ganador Actual',
+      label: 'Ganador',
       render: (lote) => (
         <Stack direction="row" spacing={1} alignItems="center">
-            <Avatar sx={{ width: 24, height: 24, bgcolor: alpha(theme.palette.primary.main, 0.2), color: 'primary.main', fontSize: 12 }}>
-                <Person fontSize="inherit" />
+            <Avatar sx={{ width: 28, height: 28, bgcolor: alpha(theme.palette.primary.main, 0.05), color: theme.palette.primary.main }}>
+                <Person sx={{ fontSize: 16 }} />
             </Avatar>
-            <Typography variant="body2" fontWeight={500}>
-                Usuario #{lote.id_ganador}
-            </Typography>
+            <Typography variant="body2" fontWeight={600}>Usuario #{lote.id_ganador}</Typography>
         </Stack>
       )
     },
     {
       id: 'monto',
-      label: 'Monto',
+      label: 'Capital',
       render: (lote) => (
-        <Typography variant="body2" fontWeight={700} color="primary.main" sx={{ fontFamily: 'monospace' }}>
+        <Typography variant="body2" fontWeight={800} color="primary.main" sx={{ fontFamily: 'monospace' }}>
             ${Number(lote.precio_base).toLocaleString('es-AR')}
         </Typography>
       )
     },
     {
       id: 'intentos',
-      label: 'Intentos Fallidos',
+      label: 'Salud del Pago',
       minWidth: 160,
       render: (lote) => {
         const intentos = lote.intentos_fallidos_pago || 0;
-        const esRiesgoCritico = intentos >= 2;
+        const isCritical = intentos >= 2;
         return (
-            <Stack spacing={0.5} width="100%">
-                <Stack direction="row" justifyContent="space-between">
-                    <Typography variant="caption" fontWeight={700} color={esRiesgoCritico ? 'error.main' : 'text.secondary'}>
-                        {intentos}/3
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">Intentos</Typography>
-                </Stack>
+            <Stack spacing={0.8} width="100%" sx={{ pr: 2 }}>
+                <Typography variant="caption" fontWeight={800} color={isCritical ? 'error.main' : 'warning.main'}>
+                  {intentos} DE 3 INTENTOS FALLIDOS
+                </Typography>
                 <LinearProgress 
                     variant="determinate" 
                     value={(intentos / 3) * 100}
-                    color={intentos === 1 ? 'warning' : 'error'}
-                    sx={{ height: 6, borderRadius: 3, bgcolor: alpha(theme.palette.grey[300], 0.5) }}
+                    sx={{ 
+                      height: 6, 
+                      borderRadius: 3, 
+                      bgcolor: alpha(theme.palette.grey[300], 0.3),
+                      '& .MuiLinearProgress-bar': {
+                        bgcolor: isCritical ? theme.palette.error.main : theme.palette.warning.main
+                      }
+                    }}
                 />
             </Stack>
         );
@@ -212,178 +132,114 @@ const AdminLotePagos: React.FC = () => {
     },
     {
       id: 'dias',
-      label: 'Días Restantes',
+      label: 'Vencimiento',
       render: (lote) => {
         const dias = calcularDiasRestantes(lote);
         return (
             <Chip
-                label={`${dias} días`}
+                label={`${dias} DÍAS RESTANTES`}
                 size="small"
                 color={dias <= 10 ? 'error' : dias <= 30 ? 'warning' : 'success'}
-                variant={dias <= 10 ? 'filled' : 'outlined'}
-                sx={{ fontWeight: 700 }}
-            />
-        );
-      }
-    },
-    {
-      id: 'estado',
-      label: 'Estado',
-      render: (lote) => {
-        const esRiesgoCritico = (lote.intentos_fallidos_pago || 0) >= 2;
-        return esRiesgoCritico ? (
-            <Chip 
-                label="CRÍTICO" 
-                size="small" 
-                color="error" 
-                variant="filled"
-                icon={<ErrorOutline sx={{ fontSize: '14px !important' }} />}
-                sx={{ fontWeight: 700 }}
-            />
-        ) : (
-            <Chip 
-                label="En seguimiento" 
-                size="small" 
-                color="warning"
-                variant="outlined"
-                sx={{ fontWeight: 600 }}
+                sx={{ fontWeight: 800, fontSize: '0.6rem' }}
             />
         );
       }
     },
     {
       id: 'acciones',
-      label: 'Info',
+      label: 'Estado',
       align: 'right',
-      render: (lote) => {
-        const esRiesgoCritico = (lote.intentos_fallidos_pago || 0) >= 2;
-        return (
-            <Tooltip 
-                title={
-                    esRiesgoCritico 
-                    ? "Si vence el plazo, el sistema marcará incumplimiento, devolverá el token y reasignará automáticamente."
-                    : "El sistema monitoreará el vencimiento y actuará automáticamente."
-                }
-            >
-                <IconButton size="small" color="info" sx={{ bgcolor: alpha(theme.palette.info.main, 0.1), '&:hover': { bgcolor: alpha(theme.palette.info.main, 0.2) } }}>
-                    <Info fontSize="small" />
-                </IconButton>
-            </Tooltip>
-        );
-      }
+      render: (lote) => (
+        <Tooltip title={lote.intentos_fallidos_pago >= 2 ? "Riesgo de liberación inmediata" : "En seguimiento"}>
+            <IconButton size="small" sx={{ color: (lote.intentos_fallidos_pago || 0) >= 2 ? 'error.main' : 'info.main' }}>
+                <Info fontSize="small" />
+            </IconButton>
+        </Tooltip>
+      )
     }
   ], [theme]);
 
   return (
     <PageContainer maxWidth="xl" sx={{ py: 3 }}>
-    
       <PageHeader
-        title="Gestión de Pagos"
-        subtitle="Sistema automático de seguimiento de pagos y reasignación de lotes."
+        title="Gestión de Cobranza de Subastas"
+        subtitle="Monitoreo de capital en mora y control de procesos de reasignación automática."
       />
 
-      {/* Alerta informativa */}
-      <Alert 
-        severity="info" 
-        icon={<Info />} 
-        sx={{ mb: 3, borderRadius: 2, border: '1px solid', borderColor: 'info.light' }}
-      >
-        <Typography variant="body2" fontWeight={600}>
-          🤖 Sistema Automático Activo
-        </Typography>
-        <Typography variant="caption">
-          El sistema verifica diariamente vencimientos. Tras 3 intentos fallidos, el lote se reingresa automáticamente.
-        </Typography>
-      </Alert>
-
-      {/* KPIs */}
-      <Box sx={{ 
-        display: 'grid', 
-        gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' },
-        gap: 2,
-        mb: 4
-      }}>
-        <StatCard title="Total Finalizados" value={analytics.totalFinalizados} icon={<CheckCircle />} color="info" description="Subastas OK" />
-        <StatCard title="En Proceso de Cobro" value={analytics.pendientesPago} icon={<Timeline />} color="warning" description="1 o 2 intentos" />
-        <StatCard title="Riesgo Crítico" value={analytics.riesgoCritico} icon={<ErrorOutline />} color="error" description="Último intento" />
-        <StatCard title="Capital en Riesgo" value={`$${analytics.capitalEnRiesgo.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`} icon={<Warning />} color="error" description="Monto acumulado" />
+      {/* ========== 1. KPI SECTION (Premium StatCards) ========== */}
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' }, gap: 2.5, mb: 4 }}>
+        <StatCard 
+          title="Total Finalizados" 
+          value={analytics.totalFinalizados} 
+          icon={<CheckCircle />} 
+          color="info" // ✅ Se verá Naranja por tu tema
+          subtitle="Subastas cerradas"
+          loading={isLoading}
+        />
+        <StatCard 
+          title="Pagos en Proceso" 
+          value={analytics.pendientesPago} 
+          icon={<Timeline />} 
+          color="warning" 
+          subtitle="Con intentos fallidos"
+          loading={isLoading}
+        />
+        <StatCard 
+          title="Riesgo Crítico" 
+          value={analytics.riesgoCritico} 
+          icon={<ErrorOutline />} 
+          color="error" 
+          subtitle="Al borde de liberación"
+          badge="Urgente"
+          loading={isLoading}
+        />
+        <StatCard 
+          title="Capital en Riesgo" 
+          value={`$${analytics.capitalEnRiesgo.toLocaleString('es-AR')}`} 
+          icon={<AttachMoney />} 
+          color="error" 
+          subtitle="Falta de pago"
+          loading={isLoading}
+        />
       </Box>
 
-      {/* Alertas críticas */}
+      {/* Alertas dinámicas */}
       {analytics.riesgoCritico > 0 && (
-        <Alert severity="error" variant="filled" sx={{ mb: 3, borderRadius: 2, boxShadow: theme.shadows[2] }}>
-          <Typography variant="body2" fontWeight={700}>
-            ⚠️ ATENCIÓN: {analytics.riesgoCritico} lote{analytics.riesgoCritico > 1 ? 's' : ''} en riesgo crítico
-          </Typography>
-          <Typography variant="caption">
-            Están a 1 intento del reingreso automático. El sistema reasignará si no se paga antes del vencimiento.
-          </Typography>
+        <Alert severity="error" variant="outlined" sx={{ mb: 3, borderRadius: 2, fontWeight: 700, borderLeft: '5px solid' }}>
+          ATENCIÓN: {analytics.riesgoCritico} Lotes están en riesgo crítico de ser liberados por falta de pago del ganador.
         </Alert>
       )}
 
-      {analytics.proximosVencer > 0 && (
-        <Alert severity="warning" variant="filled" sx={{ mb: 3, borderRadius: 2, boxShadow: theme.shadows[2] }}>
-          <Typography variant="body2" fontWeight={700}>
-            ⏰ {analytics.proximosVencer} lote{analytics.proximosVencer > 1 ? 's' : ''} con menos de 10 días de plazo
-          </Typography>
-        </Alert>
-      )}
+      {/* ========== 2. DATA TABLE ========== */}
+      <QueryHandler isLoading={isLoading} error={error as Error}>
+        <DataTable
+          columns={columns}
+          data={analytics.detalles}
+          getRowKey={(row) => row.id}
+          isRowActive={(lote) => (lote.intentos_fallidos_pago || 0) < 2}
+          showInactiveToggle={true}
+          inactiveLabel="Riesgo Crítico"
+          highlightedRowId={highlightedId}
+          emptyMessage="No hay lotes con incidencias de pago registradas."
+          pagination={true}
+          defaultRowsPerPage={10}
+        />
+      </QueryHandler>
 
-      {/* ✅ USO DEL COMPONENTE DATATABLE */}
-      <Box sx={{ mt: 4 }}>
-        <Typography variant="h6" fontWeight="bold" gutterBottom sx={{ mb: 2, color: 'text.primary' }}>
-            Lotes Pendientes de Pago (Seguimiento)
+      {/* ========== 3. INFO PROTOCOLO ========== */}
+      <Paper sx={{ p: 4, mt: 4, bgcolor: alpha(theme.palette.background.paper, 0.4), borderRadius: 2, border: '1px solid', borderColor: theme.palette.secondary.main }} elevation={0}>
+        <Typography variant="overline" fontWeight={800} color="primary.main" sx={{ mb: 2, display: 'block' }}>
+          🔄 Protocolo Automático de Reasignación
         </Typography>
-        <QueryHandler isLoading={isLoading} error={error as Error}>
-            <DataTable
-                columns={columns}
-                data={analytics.detalles} // Datos ordenados por riesgo
-                getRowKey={(row) => row.id}
-                emptyMessage="¡Excelente! No hay pendientes de pago con intentos fallidos."
-                pagination={true}
-                defaultRowsPerPage={5}
-                
-                // 4. MEJORA: Aunque no editamos aquí, si el sistema detecta cambios en tiempo real
-                // (por el refetchInterval), el highlight visual mostraría qué fila cambió si se dispara un evento.
-                highlightedRowId={highlightedId} 
-            />
-        </QueryHandler>
-      </Box>
-
-      {/* Explicación del flujo automático */}
-      <Paper sx={{ p: 3, mt: 4, bgcolor: alpha(theme.palette.background.paper, 0.5), borderRadius: 2, border: '1px solid', borderColor: 'divider' }} elevation={0}>
-        <Typography variant="subtitle1" fontWeight={800} gutterBottom sx={{ textTransform: 'uppercase', letterSpacing: 1, fontSize: '0.85rem', color: 'text.secondary' }}>
-          🔄 Flujo Automático de Reasignación
-        </Typography>
-        <Divider sx={{ mb: 2 }} />
         <Stack spacing={2}>
-          <Box>
-            <Typography variant="caption" fontWeight={700} color="success.main" display="block">
-              1. FINALIZACIÓN
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              Se asigna ganador y plazo de 90 días (Intento 1).
-            </Typography>
-          </Box>
-          <Box>
-            <Typography variant="caption" fontWeight={700} color="warning.main" display="block">
-              2. VENCIMIENTO & REASIGNACIÓN
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              Si vence: Se marca incumplimiento, se devuelve token y se busca siguiente postor (Intento +1).
-            </Typography>
-          </Box>
-          <Box>
-            <Typography variant="caption" fontWeight={700} color="error.main" display="block">
-              3. REINGRESO
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              Si se agotan 3 intentos o no hay más postores: El lote se limpia y vuelve a estado 'pendiente'.
-            </Typography>
-          </Box>
+          <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.8 }}>
+            • <b>Intento de Pago:</b> El ganador dispone de 90 días naturales para la entrega del capital.<br/>
+            • <b>Fallo en Cobro:</b> Tras cada intento fallido, se notifica automáticamente al usuario y al administrador.<br/>
+            • <b>Reasignación:</b> Al alcanzar el <b>3er intento fallido</b>, el sistema revoca la adjudicación y asigna el lote al siguiente postor de la lista.<br/>
+            • <b>Disponibilidad:</b> Si no existen más postores válidos, el lote regresa a estado de "Suscripción Abierta".
+          </Typography>
         </Stack>
       </Paper>
-
     </PageContainer>
   );
 };

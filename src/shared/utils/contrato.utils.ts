@@ -1,5 +1,4 @@
-import type { ContratoPlantillaDto } from '../types/dto/contrato-plantilla.dto';
-import type { ContratoFirmadoDto } from '../types/dto/contrato-firmado.dto';
+import type { ContratoFirmadoDto, ContratoPlantillaDto } from "@/core/types/dto";
 
 /**
  * Formatea la fecha de un contrato

@@ -1,5 +1,3 @@
-// src/pages/Admin/Inversiones/components/DetalleInversionModal.tsx
-
 import React from 'react';
 import {
   Typography, Chip, Stack, Paper, Box, Divider, Button, useTheme, alpha
@@ -14,7 +12,6 @@ import {
 import { useNavigate } from 'react-router-dom';
 import type { InversionDto } from '../../../../../core/types/dto/inversion.dto';
 import BaseModal from '../../../../../shared/components/domain/modals/BaseModal/BaseModal';
-
 
 interface Props {
   open: boolean;
@@ -33,8 +30,10 @@ const DetalleInversionModal: React.FC<Props> = ({
 
   if (!inversion) return null;
 
-  // Determinar color según estado para el header y componentes
-  const getStatusColor = (status: string): 'success' | 'warning' | 'error' | 'info' | 'primary' => {
+  /**
+   * Determina el esquema de color basado en el estado de la inversión
+   */
+  const getStatusColor = (status: InversionDto['estado']): 'success' | 'warning' | 'error' | 'info' | 'primary' => {
     switch (status) {
       case 'pagado': return 'success';
       case 'pendiente': return 'warning';
@@ -46,6 +45,13 @@ const DetalleInversionModal: React.FC<Props> = ({
 
   const statusColor = getStatusColor(inversion.estado);
   const themeColorMain = theme.palette[statusColor].main;
+
+  // Formateador de fecha seguro
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return 'No registrada';
+    const date = new Date(dateStr);
+    return isNaN(date.getTime()) ? 'Fecha inválida' : date.toLocaleDateString('es-AR');
+  };
 
   return (
     <BaseModal
@@ -69,7 +75,7 @@ const DetalleInversionModal: React.FC<Props> = ({
     >
       <Stack spacing={3}>
         
-        {/* SECCIÓN 1: MONTOS */}
+        {/* SECCIÓN 1: KPI MONTO */}
         <Paper 
           elevation={0}
           sx={{ 
@@ -144,7 +150,7 @@ const DetalleInversionModal: React.FC<Props> = ({
           </Paper>
         </Stack>
 
-        {/* SECCIÓN 4: FECHAS */}
+        {/* SECCIÓN 4: FECHAS (Cronología) */}
         <Paper elevation={0} sx={{ p: 2.5, borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
           <Stack direction="row" alignItems="center" spacing={1} mb={2}>
             <CalendarToday color="action" fontSize="small" />
@@ -155,13 +161,13 @@ const DetalleInversionModal: React.FC<Props> = ({
             <Box>
               <Typography variant="caption" color="text.secondary">Fecha Inversión</Typography>
               <Typography variant="body1" fontWeight={600}>
-                {new Date(inversion.fecha_inversion || inversion.createdAt || '').toLocaleDateString('es-AR')}
+                {formatDate(inversion.fecha_inversion || inversion.fecha_creacion)}
               </Typography>
             </Box>
             <Box>
-              <Typography variant="caption" color="text.secondary">Última Act.</Typography>
+              <Typography variant="caption" color="text.secondary">Última Actualización</Typography>
               <Typography variant="body1" fontWeight={600}>
-                {new Date(inversion.updatedAt || '').toLocaleDateString('es-AR')}
+                {formatDate(inversion.fecha_actualizacion)}
               </Typography>
             </Box>
           </Stack>

@@ -1,4 +1,5 @@
 // src/features/client/pages/Proyectos/components/ProjectSidebar.tsx
+// ✅ VERSIÓN CORREGIDA CON LÓGICA DE NEGOCIO CLARA
 
 import React from 'react';
 import { 
@@ -7,7 +8,7 @@ import {
 } from '@mui/material';
 import { 
   ArrowForward, HistoryEdu, CheckCircle, Description, 
-  GppGood, MonetizationOn, Download, CalendarMonth
+  GppGood, MonetizationOn, Download, CalendarMonth, Lock
 } from '@mui/icons-material';
 
 import type { ProyectoDto } from '@/core/types/dto/proyecto.dto';
@@ -36,7 +37,6 @@ export interface ProjectSidebarLogic {
 interface ProjectSidebarProps {
   logic: ProjectSidebarLogic;
   proyecto: ProyectoDto;
-  onVerLotesClick?: () => void;
 }
 
 // ==========================================
@@ -53,7 +53,7 @@ const ProcessStepper: React.FC<{
   const steps = [
     {
       icon: paso1Completo ? CheckCircle : MonetizationOn,
-      label: esMensual ? 'Suscripción al Plan' : 'Pago del Lote',
+      label: esMensual ? 'Suscripción al Plan' : 'Pago del Pack Completo',
       completed: paso1Completo,
       active: !paso1Completo
     },
@@ -69,7 +69,7 @@ const ProcessStepper: React.FC<{
     <Box sx={{ 
       bgcolor: alpha(theme.palette.primary.main, 0.05), 
       p: 2.5, 
-      borderRadius: 2, // Usa el shape del tema (16px según theme overrides o 8px default)
+      borderRadius: 2,
       border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}` 
     }}>
       <Typography variant="subtitle2" fontWeight={700} mb={2} color="primary.main" sx={{ letterSpacing: 0.5 }}>
@@ -84,7 +84,6 @@ const ProcessStepper: React.FC<{
           return (
             <React.Fragment key={idx}>
               <Box display="flex" alignItems="center" gap={2}>
-                {/* Círculo del ícono */}
                 <Box sx={{ 
                   width: 40, height: 40, minWidth: 40, borderRadius: '50%', 
                   bgcolor: step.completed ? 'success.main' : step.active ? 'primary.main' : alpha(theme.palette.text.disabled, 0.1), 
@@ -96,7 +95,6 @@ const ProcessStepper: React.FC<{
                   <Icon fontSize="small"/>
                 </Box>
                 
-                {/* Texto */}
                 <Box flex={1}>
                   <Typography variant="body2" fontWeight={step.active ? 700 : 500} sx={{ 
                     textDecoration: step.completed ? 'line-through' : 'none', 
@@ -107,7 +105,6 @@ const ProcessStepper: React.FC<{
                 </Box>
               </Box>
               
-              {/* Línea conectora */}
               {!isLast && (
                 <Box sx={{ 
                   ml: 2.4, height: 24, 
@@ -137,12 +134,10 @@ const PriceHeader: React.FC<{
             bgcolor: bgHeader, 
             p: 3, 
             color: 'white', 
-            // Alineado con el borderRadius del tema para MuiCard (12px)
             borderRadius: '12px 12px 0 0', 
             position: 'relative', 
             overflow: 'hidden' 
         }}>
-             {/* Decoración sutil */}
              <Box sx={{ position: 'absolute', top: -30, right: -30, width: 140, height: 140, borderRadius: '50%', bgcolor: 'rgba(255,255,255,0.08)', pointerEvents: 'none' }} />
 
              <Stack direction="row" justifyContent="space-between" alignItems="start" mb={2}>
@@ -159,7 +154,7 @@ const PriceHeader: React.FC<{
             </Stack>
 
             <Typography variant="caption" sx={{ opacity: 0.9, fontWeight: 500, display: 'block', mb: 0.5, color: 'inherit' }}>
-                {helpers.esMensual ? 'VALOR DE CUOTA MENSUAL' : 'VALOR DE INVERSIÓN'}
+                {helpers.esMensual ? 'VALOR DE CUOTA MENSUAL' : 'INVERSIÓN TOTAL'}
             </Typography>
             
             <Typography variant="h3" fontWeight={700} sx={{ mb: 1, color: 'inherit' }}>
@@ -175,7 +170,9 @@ const PriceHeader: React.FC<{
                 helpers.hayLotes && (
                     <Stack direction="row" alignItems="center" gap={1} sx={{ opacity: 0.95 }}>
                         <Description fontSize="small" />
-                        <Typography variant="body2" fontWeight={600} color="inherit">{helpers.cantidadLotes} lotes disponibles</Typography>
+                        <Typography variant="body2" fontWeight={600} color="inherit">
+                          Pack de {helpers.cantidadLotes} lotes
+                        </Typography>
                     </Stack>
                 )
             )}
@@ -189,8 +186,7 @@ const PriceHeader: React.FC<{
 
 export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({ 
   logic, 
-  proyecto, 
-  onVerLotesClick 
+  proyecto
 }) => {
   const theme = useTheme();
   const helpers = useProyectoHelpers(proyecto); 
@@ -200,8 +196,6 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
   const paso2Completo = logic.yaFirmo;
 
   return (
-    // MuiCard ya tiene definidos shadow, radius y hover en theme.ts
-    // Solo agregamos sticky y overflow visible
     <Card 
       sx={{ 
         position: { lg: 'sticky' }, 
@@ -226,7 +220,9 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
             />
           )}
 
-          {/* Área de Botones y Acción */}
+          {/* ==========================================
+              ✅ ÁREA DE ACCIÓN PRINCIPAL - LÓGICA CORREGIDA
+              ========================================== */}
           <Box>
             {!user ? (
               // CASO 0: No Logueado
@@ -244,17 +240,19 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
                   <Stack spacing={2}>
                     <Button 
                         variant="contained" fullWidth size="large" 
-                        onClick={helpers.esMensual ? logic.handleMainAction : onVerLotesClick}
+                        onClick={logic.handleMainAction} // ✅ Siempre abre el wizard
                         disabled={logic.handleInversion.isPending}
                         endIcon={!logic.handleInversion.isPending && <ArrowForward />}
                     >
                       {logic.handleInversion.isPending 
                         ? 'Procesando...' 
-                        : helpers.esMensual ? 'Suscribirme al Plan' : 'Ver Lotes Disponibles'
+                        : helpers.esMensual 
+                          ? 'Suscribirme al Plan' 
+                          : 'Invertir en el Pack'
                       }
                     </Button>
                     
-                    {/* Barra de progreso de cupos (Solo Mensuales) */}
+                    {/* ✅ Barra de progreso SOLO para Mensuales */}
                     {helpers.esMensual && helpers.progreso && helpers.progreso.disponibles > 0 && (
                         <Box sx={{ p: 2, bgcolor: alpha(theme.palette.success.main, 0.08), borderRadius: 2 }}>
                             <Stack direction="row" justifyContent="space-between" mb={1}>
@@ -273,13 +271,25 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
                             />
                         </Box>
                     )}
+
+                    {/* ✅ Info para Inversionistas Directos */}
+                    {!helpers.esMensual && (
+                        <Alert severity="info" variant="outlined" icon={<Lock />}>
+                            <Typography variant="caption" display="block" fontWeight={600}>
+                                INVERSIÓN PACK COMPLETO
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                                Al invertir recibirás TODOS los lotes del proyecto al finalizar.
+                                No se requiere participar en subastas.
+                            </Typography>
+                        </Alert>
+                    )}
                   </Stack>
                 )}
 
                 {/* CASO 2: Pagó, Falta Firmar */}
                 {paso1Completo && !paso2Completo && (
                   <Stack spacing={2}>
-                    {/* MuiAlert ya tiene radius y estilos en theme.ts */}
                     <Alert severity="warning" icon={<HistoryEdu />}>
                         Pago confirmado. Firma tu contrato para finalizar.
                     </Alert>

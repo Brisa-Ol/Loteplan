@@ -4,70 +4,22 @@ import type { LoteDto } from "./lote.dto";
 
 /**
  * DTOs para la gestión de proyectos.
- * 
- * @remarks
- * Los tipos están alineados con el modelo `Proyecto` del backend (Sequelize).
- * - El backend valida que tipo_inversion sea 'directo' o 'mensual'
- * - Los proyectos mensuales tienen plazo_inversion (meses)
- * - Los proyectos directos tienen monto_inversion fijo
- * - Soft delete: activo: true/false
- * 
+ * * @remarks
+ * Los tipos están alineados 100% con el modelo `Proyecto` del backend (Sequelize).
  */
 
 // ==========================================
 // 🛠️ ENUMS & TYPES
 // ==========================================
 
-/**
- * Tipo de inversión del proyecto.
- * - 'directo': Pago único, adjudicación inmediata
- * - 'mensual': Cuotas mensuales, adjudicación desde cuota 12
- */
 export type TipoInversion = 'directo' | 'mensual';
-
-/**
- * Estado del proyecto en su ciclo de vida.
- * - 'En Espera': Creado pero no iniciado
- * - 'En proceso': Activo, aceptando suscripciones
- * - 'Finalizado': Completado, no acepta más suscripciones
- */
 export type EstadoProyecto = 'En Espera' | 'En proceso' | 'Finalizado';
-
-/**
- * Moneda en la que se maneja el proyecto.
- * - 'USD': Dólares estadounidenses
- * - 'ARS': Pesos argentinos
- */
 export type MonedaProyecto = 'USD' | 'ARS';
 
 // ==========================================
 // 📤 REQUEST DTOs (Lo que envías)
 // ==========================================
 
-/**
- * Datos para crear un nuevo proyecto.
- * 
- * @remarks
- * Backend: POST /api/proyectos/
- * - Requiere autenticación y rol admin
- * - El backend crea el proyecto y asocia lotes iniciales si se proporcionan
- * - Envía notificaciones a todos los usuarios activos
- * - La imagen se envía como multipart/form-data
- * 
- * @example
- * ```typescript
- * const proyecto = {
- *   nombre_proyecto: "Proyecto Nuevo",
- *   tipo_inversion: "mensual",
- *   monto_inversion: 50000,
- *   plazo_inversion: 24,
- *   moneda: "ARS",
- *   fecha_inicio: "2024-01-01",
- *   fecha_cierre: "2024-12-31",
- *   lotesIds: [1, 2, 3]
- * };
- * ```
- */
 export interface CreateProyectoDto {
   nombre_proyecto: string;
   descripcion?: string;
@@ -75,33 +27,31 @@ export interface CreateProyectoDto {
   moneda: MonedaProyecto;
   
   // Configuración Financiera
-  monto_inversion: number; // Costo total o cuota mensual
-  plazo_inversion?: number; // Solo para mensual (meses)
+  monto_inversion: number; 
+  plazo_inversion?: number; 
   forma_juridica?: string;
   
   // Configuración Suscripción
   obj_suscripciones?: number;
-  suscripciones_minimas?: number;
+  suscripciones_minimas?: number; // ✅ Sincronizado con el modelo
   
   // Fechas
-  fecha_inicio: string; // YYYY-MM-DD
-  fecha_cierre: string; // YYYY-MM-DD
+  fecha_inicio: string; 
+  fecha_cierre: string; 
   
   // Ubicación
   latitud?: number;
   longitud?: number;
   
   // Relaciones Iniciales
-  lotesIds?: number[]; // IDs de lotes para asociar al crear
+  lotesIds?: number[]; 
 }
 
 export interface UpdateProyectoDto extends Partial<Omit<CreateProyectoDto, 'lotesIds' | 'tipo_inversion'>> {
-  // No incluye lotesIds porque se actualizan en un endpoint separado
-  // No incluye tipo_inversion porque no debería cambiar después de crear el proyecto
-  
   estado_proyecto?: EstadoProyecto;
   activo?: boolean;
-  moneda?: MonedaProyecto; // ✅ AGREGADO: Permite actualizar la moneda
+  moneda?: MonedaProyecto;
+  objetivo_notificado?: boolean; // ✅ Permite actualizar estado de notificación
 }
 
 export interface AsignarLotesDto {
@@ -112,6 +62,10 @@ export interface AsignarLotesDto {
 // 📥 RESPONSE DTOs (Lo que recibes)
 // ==========================================
 
+/**
+ * ProyectoDto extendiendo de BaseDTO para incluir:
+ * id, activo, fecha_creacion y fecha_actualizacion
+ */
 export interface ProyectoDto extends BaseDTO {
   nombre_proyecto: string;
   descripcion: string;
@@ -125,20 +79,20 @@ export interface ProyectoDto extends BaseDTO {
   plazo_inversion?: number;
   forma_juridica?: string;
   
-  // Datos de Progreso
+  // Datos de Progreso (Sincronizados con Sequelize)
   suscripciones_actuales: number;
-  suscripciones_minimas: number;
+  suscripciones_minimas: number; // ✅ Agregado del modelo
   obj_suscripciones: number;
-  objetivo_notificado: boolean;
+  objetivo_notificado: boolean; // ✅ Agregado del modelo
   
   // Datos de Tiempo
   fecha_inicio: string;
   fecha_cierre: string;
-  fecha_inicio_proceso?: string;
-  meses_restantes?: number;
+  fecha_inicio_proceso?: string; // ✅ DATEONLY en Back
+  meses_restantes?: number;      // ✅ Integer en Back
   
   // Configuración
-  pack_de_lotes: boolean;
+  pack_de_lotes: boolean; // 👈 Tu campo crítico del modelo
   
   // Ubicación
   latitud?: number;
@@ -153,13 +107,13 @@ export interface ProyectoDto extends BaseDTO {
 // 📊 MÉTRICAS (ADMIN)
 // ==========================================
 
-export interface CompletionRateDTO  {
+export interface CompletionRateDTO {
   total_iniciados: number;
   total_finalizados: number;
   tasa_culminacion: string; 
 }
 
-export interface MonthlyProgressItem  {
+export interface MonthlyProgressItem {
   id: number;
   nombre: string;
   estado: EstadoProyecto;

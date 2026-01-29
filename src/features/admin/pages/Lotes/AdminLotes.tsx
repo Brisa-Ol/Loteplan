@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Add,
   AssignmentLate, CheckCircle,
@@ -29,27 +29,31 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 
+// Componentes de arquitectura
 import { DataTable, type DataTableColumn } from '../../../../shared/components/data-grid/DataTable/DataTable';
 import { PageContainer } from '../../../../shared/components/layout/containers/PageContainer/PageContainer';
 import { PageHeader } from '../../../../shared/components/layout/headers/PageHeader';
 import { QueryHandler } from '../../../../shared/components/data-grid/QueryHandler/QueryHandler';
 import { StatCard } from '../../../../shared/components/domain/cards/StatCard/StatCard';
+import { FilterBar, FilterSelect } from '../../../../shared/components/forms/filters/FilterBar';
+import { ConfirmDialog } from '../../../../shared/components/domain/modals/ConfirmDialog/ConfirmDialog';
 
+// Modales de negocio
 import AuctionControlModal from './modals/AuctionControlModal';
 import CreateLoteModal from './modals/CreateLoteModal';
 import EditLoteModal from './modals/EditLoteModal';
 import ManageLoteImagesModal from './modals/ManageLoteImagesModal';
 
+// Hooks de utilidad
 import { useConfirmDialog } from '../../../../shared/hooks/useConfirmDialog';
 import { useModal } from '../../../../shared/hooks/useModal';
 import useSnackbar from '../../../../shared/hooks/useSnackbar';
+import { useSortedData } from '../../hooks/useSortedData';
 
+// Servicios y Tipado
 import type { CreateLoteDto, LoteDto, UpdateLoteDto } from '../../../../core/types/dto/lote.dto';
 import ProyectoService from '../../../../core/api/services/proyecto.service';
 import LoteService from '../../../../core/api/services/lote.service';
-import { FilterBar, FilterSelect } from '../../../../shared/components/forms/filters/FilterBar/FilterBar';
-import { ConfirmDialog } from '../../../../shared/components/domain/modals/ConfirmDialog/ConfirmDialog';
-import { useSortedData } from '../../hooks/useSortedData';
 
 const AdminLotes: React.FC = () => {
   const theme = useTheme();
@@ -59,33 +63,30 @@ const AdminLotes: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const proyectoParam = searchParams.get('proyecto');
 
-  // Hooks de UI
+  // Hooks de interfaz
   const createModal = useModal();
   const editModal = useModal();
   const imagesModal = useModal();
   const auctionModal = useModal();
   const confirmDialog = useConfirmDialog();
 
-  // Estados locales
+  // Estados de control
   const [selectedLote, setSelectedLote] = useState<LoteDto | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterProject, setFilterProject] = useState<string>(proyectoParam || 'all');
 
-  // URL Sync Effect
+  // Sincronización de URL
   useEffect(() => {
-    if (filterProject === 'all') {
-      if (searchParams.get('proyecto')) {
-         searchParams.delete('proyecto');
-         setSearchParams(searchParams);
-      }
-    } else if (filterProject !== 'huerfano') {
-      if (searchParams.get('proyecto') !== filterProject) {
-         setSearchParams({ proyecto: filterProject });
-      }
+    const params = new URLSearchParams(searchParams);
+    if (filterProject === 'all' || filterProject === 'huerfano') {
+      params.delete('proyecto');
+    } else {
+      params.set('proyecto', filterProject);
     }
-  }, [filterProject, searchParams, setSearchParams]);
+    setSearchParams(params, { replace: true });
+  }, [filterProject]);
 
-  // --- QUERIES ---
+  // --- CONSULTAS ---
   const { data: lotesRaw = [], isLoading: loadingLotes, error } = useQuery({
     queryKey: ['adminLotes'],
     queryFn: async () => (await LoteService.findAllAdmin()).data,
@@ -96,11 +97,10 @@ const AdminLotes: React.FC = () => {
     queryFn: async () => (await ProyectoService.getAllAdmin()).data,
   });
 
-  // ✨ 1. USO DEL HOOK UX (Ordenamiento + Highlight)
-  // Renombramos 'lotesRaw' arriba para usar 'sortedLotes' aquí
+  // UX: Ordenamiento automático y resaltado de cambios
   const { sortedData: sortedLotes, highlightedId, triggerHighlight } = useSortedData(lotesRaw);
 
-  // --- KPIS (Calculados sobre data cruda, no importa el orden) ---
+  // --- MÉTRICAS ---
   const stats = useMemo(() => ({
     total: lotesRaw.length,
     enSubasta: lotesRaw.filter(l => l.estado_subasta === 'activa').length,
@@ -108,22 +108,33 @@ const AdminLotes: React.FC = () => {
     huerfanos: lotesRaw.filter(l => !l.id_proyecto).length
   }), [lotesRaw]);
 
-  // --- FILTRADO (Se aplica SOBRE los datos ya ordenados) ---
+  // --- VALIDACIÓN DE NEGOCIO ---
+  const checkIsSubastable = useCallback((lote: LoteDto) => {
+    if (!lote.id_proyecto) return { allowed: false, reason: 'Sin proyecto asignado' };
+    const proyecto = proyectos.find(p => p.id === lote.id_proyecto);
+
+    // BLOQUEO: Si es proyecto de inversión directa, no se permite subastar
+    if (proyecto?.tipo_inversion === 'directo') {
+      return { allowed: false, reason: 'Proyecto de Inversión Directa (No Subastable)' };
+    }
+    return { allowed: true, reason: '' };
+  }, [proyectos]);
+
+  // --- FILTRADO LOCAL ---
   const filteredLotes = useMemo(() => {
     return sortedLotes.filter(lote => {
       const term = searchTerm.toLowerCase();
       const matchesSearch = lote.nombre_lote.toLowerCase().includes(term) || lote.id.toString().includes(term);
-      
+
       let matchesProject = true;
       if (filterProject === 'huerfano') matchesProject = !lote.id_proyecto;
       else if (filterProject !== 'all') matchesProject = lote.id_proyecto === Number(filterProject);
-      
+
       return matchesSearch && matchesProject;
     });
   }, [sortedLotes, searchTerm, filterProject]);
 
-  // --- MUTACIONES ---
-
+  // --- ACCIONES (MUTACIONES) ---
   const handleCloseAllModals = useCallback(() => {
     createModal.close();
     editModal.close();
@@ -140,12 +151,8 @@ const AdminLotes: React.FC = () => {
     onSuccess: (response, variables) => {
       queryClient.invalidateQueries({ queryKey: ['adminLotes'] });
       handleCloseAllModals();
-      
-      // ✨ 2. ACTIVAR HIGHLIGHT
-      // Si es update, usamos el ID enviado. Si es create, usamos el ID que devuelve el backend.
       const targetId = variables.id || response.data.id;
       if (targetId) triggerHighlight(targetId);
-
       showSuccess(variables.id ? 'Lote actualizado' : 'Lote creado exitosamente');
     },
     onError: (err: any) => showError(err.response?.data?.error || 'Error al guardar')
@@ -156,14 +163,12 @@ const AdminLotes: React.FC = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['adminLotes'] });
       confirmDialog.close();
-      
-      // ✨ Highlight también al cambiar estado
       triggerHighlight(variables.id);
       showSuccess(variables.activo ? 'Lote visible' : 'Lote ocultado');
     },
     onError: (err: any) => {
-        showError(err.response?.data?.error || 'Error al cambiar estado');
-        confirmDialog.close();
+      showError(err.response?.data?.error || 'Error al cambiar estado');
+      confirmDialog.close();
     }
   });
 
@@ -175,7 +180,7 @@ const AdminLotes: React.FC = () => {
       triggerHighlight(id);
       showSuccess('✅ Subasta iniciada');
     },
-    onError: (error: any) => showError('Error al iniciar subasta') // Simplificado por brevedad
+    onError: () => showError('Error al iniciar subasta')
   });
 
   const endAuction = useMutation({
@@ -186,83 +191,105 @@ const AdminLotes: React.FC = () => {
       triggerHighlight(id);
       showSuccess('✅ Subasta finalizada');
     },
-    onError: (error: any) => showError('Error al finalizar subasta')
+    onError: () => showError('Error al finalizar subasta')
   });
 
-  // --- COLUMNS ---
-  const getStatusColor = (estado: string) => {
-    if (estado === 'activa') return 'success';
-    if (estado === 'finalizada') return 'info';
-    return 'default';
-  };
-
+  // --- DEFINICIÓN DE COLUMNAS ---
   const columns = useMemo<DataTableColumn<LoteDto>[]>(() => [
-    { id: 'lote', label: 'Lote / ID', minWidth: 200, render: (l) => (
-      // ✨ 3. VISUALIZACIÓN DESHABILITADOS
-      // Usamos opacidad para indicar inactividad sin moverlos de lugar
-      <Box sx={{ opacity: l.activo ? 1 : 0.6 }}> 
-        <Typography fontWeight={700} variant="body2">{l.nombre_lote}</Typography>
-        <Typography variant="caption" color="text.secondary">ID: {l.id}</Typography>
-      </Box>
-    )},
-    { id: 'proyecto', label: 'Proyecto', minWidth: 150, render: (l) => (
-      <Box sx={{ opacity: l.activo ? 1 : 0.6 }}>
-        {l.id_proyecto 
-            ? <Chip label={proyectos.find(p => p.id === l.id_proyecto)?.nombre_proyecto || `Proy. ${l.id_proyecto}`} size="small" variant="outlined" color="primary" /> 
-            : <Chip label="Huérfano" size="small" color="warning" icon={<Warning sx={{ fontSize: 14 }} />} variant="outlined" />
-        }
-      </Box>
-    )},
-    { id: 'precio', label: 'Precio Base', render: (l) => (
-        <Typography variant="body2" fontWeight={700} color={l.activo ? "primary.main" : "text.disabled"}>
-            ${Number(l.precio_base).toLocaleString('es-AR')}
-        </Typography> 
-    )},
-    { id: 'estado', label: 'Estado', render: (l) => (
-        <Chip 
-            label={l.estado_subasta.toUpperCase()} 
-            color={!l.activo ? 'default' : getStatusColor(l.estado_subasta) as any} 
-            size="small" 
-            variant={l.estado_subasta === 'pendiente' ? 'outlined' : 'filled'} 
-            sx={{ fontWeight: 700, opacity: l.activo ? 1 : 0.7 }} 
-        /> 
-    )},
-    { id: 'visibilidad', label: 'Visibilidad', align: 'center', render: (l) => (
-      <Stack direction="row" alignItems="center" spacing={1} justifyContent="center">
-        {toggleActiveMutation.isPending && confirmDialog.data?.id === l.id 
-            ? <CircularProgress size={20} /> 
-            : <Switch checked={l.activo} onChange={() => handleToggleActive(l)} size="small" color="success" />
-        }
-      </Stack>
-    )},
-    { id: 'ganador', label: 'Ganador', render: (l) => (
-      l.id_ganador ? <Chip icon={<Person sx={{ fontSize: '14px !important' }} />} label={`Usuario ${l.id_ganador}`} size="small" color="success" variant="outlined" /> : <Typography variant="caption" color="text.disabled">-</Typography>
-    )},
-    { id: 'subasta', label: 'Control', align: 'right', render: (l) => (
-      l.id_proyecto && (
-        <Tooltip title="Gestionar Subasta">
-            <IconButton 
-                size="small" 
-                onClick={() => handleAuctionClick(l)}
-                disabled={!l.activo} // Deshabilitar control si el lote está oculto
-                sx={{ 
-                    color: l.estado_subasta === 'activa' ? 'error.main' : 'success.main',
-                    bgcolor: alpha(l.estado_subasta === 'activa' ? theme.palette.error.main : theme.palette.success.main, 0.1),
-                    '&:hover': { bgcolor: alpha(l.estado_subasta === 'activa' ? theme.palette.error.main : theme.palette.success.main, 0.2) }
-                }}
-            >
-                {l.estado_subasta === 'activa' ? <StopCircle /> : <Gavel />}
-            </IconButton>
-        </Tooltip>
+    {
+      id: 'lote', label: 'Lote / ID', minWidth: 180, render: (l) => (
+        <Box>
+          <Typography fontWeight={700} variant="body2">{l.nombre_lote}</Typography>
+          <Typography variant="caption" color="text.secondary">ID: {l.id}</Typography>
+        </Box>
       )
-    )},
-    { id: 'acciones', label: 'Acciones', align: 'right', render: (l) => (
-      <Stack direction="row" justifyContent="flex-end" spacing={0.5}>
-        <Tooltip title="Imágenes"><IconButton onClick={() => handleManageImages(l)} size="small" color="primary"><Collections fontSize="small" /></IconButton></Tooltip>
-        <Tooltip title="Editar"><IconButton size="small" onClick={() => handleOpenEdit(l)}><Edit fontSize="small" /></IconButton></Tooltip>
-      </Stack>
-    )}
-  ], [proyectos, theme, toggleActiveMutation.isPending, confirmDialog.data]);
+    },
+    {
+      id: 'proyecto', label: 'Proyecto', minWidth: 220, render: (l) => {
+        const proyecto = proyectos.find(p => p.id === l.id_proyecto);
+        const isInversionista = proyecto?.tipo_inversion === 'directo';
+
+        return (
+          <Box>
+            {l.id_proyecto
+              ? (
+                <Stack spacing={0.5}>
+                  <Chip
+                    label={proyecto?.nombre_proyecto || `Proy. ${l.id_proyecto}`}
+                    size="small"
+                    variant="outlined"
+                    color="primary"
+                  />
+                  <Typography variant="caption" sx={{ fontSize: '0.65rem', fontWeight: 800, color: isInversionista ? 'info.main' : 'warning.main', px: 1 }}>
+                    {isInversionista ? '💼 INVERSIONISTA' : '🔨 SUBASTABLE'}
+                  </Typography>
+                </Stack>
+              )
+              : <Chip label="Huérfano" size="small" color="warning" icon={<Warning sx={{ fontSize: 14 }} />} variant="outlined" />
+            }
+          </Box>
+        );
+      }
+    },
+    {
+      id: 'precio', label: 'Precio Base', render: (l) => (
+        <Typography variant="body2" fontWeight={700} color="primary.main">
+          ${Number(l.precio_base).toLocaleString('es-AR')}
+        </Typography>
+      )
+    },
+    {
+      id: 'estado', label: 'Estado', render: (l) => {
+        const colors: Record<string, any> = { activa: 'success', finalizada: 'info', pendiente: 'warning' };
+        return (
+          <Chip
+            label={l.estado_subasta.toUpperCase()}
+            color={colors[l.estado_subasta] || 'default'}
+            size="small"
+            variant={l.estado_subasta === 'pendiente' ? 'outlined' : 'filled'}
+            sx={{ fontWeight: 700 }}
+          />
+        );
+      }
+    },
+    {
+      id: 'visibilidad', label: 'Visibilidad', align: 'center', render: (l) => (
+        <Stack direction="row" alignItems="center" spacing={1} justifyContent="center">
+          {toggleActiveMutation.isPending && confirmDialog.data?.id === l.id
+            ? <CircularProgress size={20} />
+            : <Switch checked={l.activo} onChange={() => handleToggleActive(l)} size="small" color="success" />
+          }
+        </Stack>
+      )
+    },
+    {
+      id: 'acciones', label: 'Acciones', align: 'right', render: (l) => {
+        const validation = checkIsSubastable(l);
+
+        return (
+          <Stack direction="row" justifyContent="flex-end" spacing={0.5}>
+            <Tooltip title={validation.allowed ? "Gestionar Subasta" : validation.reason}>
+              <span>
+                <IconButton
+                  size="small"
+                  onClick={() => handleAuctionClick(l)}
+                  disabled={!l.activo || !validation.allowed}
+                  sx={{
+                    color: !validation.allowed ? 'text.disabled' : (l.estado_subasta === 'activa' ? 'error.main' : 'success.main'),
+                    bgcolor: validation.allowed ? alpha(l.estado_subasta === 'activa' ? theme.palette.error.main : theme.palette.success.main, 0.08) : 'transparent'
+                  }}
+                >
+                  {l.estado_subasta === 'activa' ? <StopCircle fontSize="small" /> : <Gavel fontSize="small" />}
+                </IconButton>
+              </span>
+            </Tooltip>
+            <Tooltip title="Imágenes"><IconButton onClick={() => handleManageImages(l)} size="small" color="primary"><Collections fontSize="small" /></IconButton></Tooltip>
+            <Tooltip title="Editar"><IconButton size="small" onClick={() => handleOpenEdit(l)}><Edit fontSize="small" /></IconButton></Tooltip>
+          </Stack>
+        );
+      }
+    }
+  ], [proyectos, theme, toggleActiveMutation.isPending, confirmDialog.data, checkIsSubastable]);
 
   // Handlers simples
   const handleToggleActive = useCallback((lote: LoteDto) => confirmDialog.confirm('toggle_lote_visibility', lote), [confirmDialog]);
@@ -270,20 +297,18 @@ const AdminLotes: React.FC = () => {
   const handleOpenEdit = useCallback((lote: LoteDto) => { setSelectedLote(lote); editModal.open(); }, [editModal]);
   const handleManageImages = useCallback((lote: LoteDto) => { setSelectedLote(lote); imagesModal.open(); }, [imagesModal]);
   const handleAuctionClick = useCallback((lote: LoteDto) => { setSelectedLote(lote); auctionModal.open(); }, [auctionModal]);
-  
+
   const handleConfirmAction = () => {
-    if (!confirmDialog.data) return;
-    const { id, activo } = confirmDialog.data;
-    if (confirmDialog.action === 'toggle_lote_visibility') {
-        toggleActiveMutation.mutate({ id, activo: !activo });
+    if (confirmDialog.action === 'toggle_lote_visibility' && confirmDialog.data) {
+      toggleActiveMutation.mutate({ id: confirmDialog.data.id, activo: !confirmDialog.data.activo });
     }
   };
 
   return (
     <PageContainer maxWidth="xl" sx={{ py: 3 }}>
-      <PageHeader title="Gestión de Lotes" subtitle="Inventario, asignación de proyectos y control de subastas." />
+      <PageHeader title="Gestión de Lotes" subtitle="Inventario, asignación de proyectos y control administrativo." />
 
-      {/* STAT CARDS (Sin cambios) */}
+      {/* KPI Stats */}
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', lg: 'repeat(4, 1fr)' }, gap: 2, mb: 4 }}>
         <StatCard title="Total Lotes" value={stats.total} icon={<Inventory />} color="primary" loading={loadingLotes} subtitle="Inventario global" />
         <StatCard title="En Subasta" value={stats.enSubasta} icon={<Gavel />} color="success" loading={loadingLotes} subtitle="Pujas activas hoy" />
@@ -291,11 +316,12 @@ const AdminLotes: React.FC = () => {
         <StatCard title="Huérfanos" value={stats.huerfanos} icon={<AssignmentLate />} color="warning" loading={loadingLotes} subtitle="Sin proyecto asignado" />
       </Box>
 
+      {/* Filtros y Acciones */}
       <FilterBar>
-        <TextField 
-          placeholder="Buscar por nombre o ID..." size="small" sx={{ flexGrow: 1 }} 
-          value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} 
-          InputProps={{ startAdornment: <InputAdornment position="start"><Search color="action"/></InputAdornment> }} 
+        <TextField
+          placeholder="Buscar por nombre o ID..." size="small" sx={{ flexGrow: 1 }}
+          value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
+          InputProps={{ startAdornment: <InputAdornment position="start"><Search color="action" /></InputAdornment> }}
         />
         <FilterSelect label="Filtrar Proyecto" value={filterProject} onChange={(e) => setFilterProject(e.target.value)} sx={{ minWidth: 250 }}>
           <MenuItem value="all">Todos los Lotes</MenuItem>
@@ -303,31 +329,39 @@ const AdminLotes: React.FC = () => {
           <Divider />
           {proyectos.map(p => <MenuItem key={p.id} value={p.id}>{p.nombre_proyecto}</MenuItem>)}
         </FilterSelect>
-        <Button variant="contained" startIcon={<Add />} onClick={handleOpenCreate} sx={{ whiteSpace: 'nowrap' }}>Nuevo Lote</Button>
+        <Button variant="contained" startIcon={<Add />} onClick={handleOpenCreate}>Nuevo Lote</Button>
       </FilterBar>
 
+      {/* Tabla de Datos Principal */}
       <QueryHandler isLoading={loadingLotes} error={error as Error}>
-        <DataTable 
-            columns={columns} 
-            data={filteredLotes} // Usamos la lista filtrada (que ya viene ordenada del hook)
-            getRowKey={(row) => row.id} 
-            
-            // ✨ 4. Props de UX
-            isRowActive={(lote) => lote.activo} 
-            highlightedRowId={highlightedId} 
-            
-            emptyMessage="No se encontraron lotes." 
-            pagination={true} 
-            defaultRowsPerPage={10} 
+        <DataTable
+          columns={columns}
+          data={filteredLotes}
+          getRowKey={(row) => row.id}
+          isRowActive={(lote) => lote.activo}
+          highlightedRowId={highlightedId}
+          showInactiveToggle={true}  // ✅ Nueva función del DataTable
+          inactiveLabel="Oculto"     // ✅ Nueva función del DataTable
+          emptyMessage="No se encontraron lotes registrados."
+          pagination={true}
+          defaultRowsPerPage={10}
         />
       </QueryHandler>
 
-      {/* MODALES */}
+      {/* Modales de Gestión */}
       <CreateLoteModal {...createModal.modalProps} onSubmit={async (data) => { await saveMutation.mutateAsync({ dto: data }); }} isLoading={saveMutation.isPending} />
       <EditLoteModal {...editModal.modalProps} lote={selectedLote} onSubmit={async (id, data) => { await saveMutation.mutateAsync({ dto: data, id }); }} isLoading={saveMutation.isPending} />
       {selectedLote && <ManageLoteImagesModal {...imagesModal.modalProps} lote={selectedLote} />}
-      {selectedLote && <AuctionControlModal open={auctionModal.isOpen} onClose={auctionModal.close} lote={selectedLote} isLoading={startAuction.isPending || endAuction.isPending} onStart={(id, d) => startAuction.mutate(id)} onEnd={(id) => endAuction.mutate(id)} />}
-      
+      {selectedLote && (
+        <AuctionControlModal
+          open={auctionModal.isOpen}
+          onClose={auctionModal.close}
+          lote={selectedLote}
+          isLoading={startAuction.isPending || endAuction.isPending}
+          onStart={(id) => startAuction.mutate(id)}
+          onEnd={(id) => endAuction.mutate(id)}
+        />
+      )}
       <ConfirmDialog controller={confirmDialog} onConfirm={handleConfirmAction} isLoading={toggleActiveMutation.isPending} />
     </PageContainer>
   );

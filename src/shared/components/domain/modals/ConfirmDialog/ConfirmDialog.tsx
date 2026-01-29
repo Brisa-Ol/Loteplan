@@ -1,17 +1,12 @@
-// src/components/common/ConfirmDialog/ConfirmDialog.tsx
-
 import React, { useState, useEffect } from 'react';
 import { 
   Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography,
-  Avatar, useTheme, alpha, TextField, Stack, useMediaQuery, Slide, CircularProgress
+  Avatar, useTheme, alpha, TextField, Stack, useMediaQuery, Slide, CircularProgress,
+  Box
 } from '@mui/material';
-import { Help, CheckCircle, ErrorOutline } from '@mui/icons-material';
-import type { useConfirmDialog } from '../../../../hooks/useConfirmDialog';
-import type { TransitionProps } from 'node_modules/@mui/material/esm/transitions/transition';
+import { Help, CheckCircle, ErrorOutline, WarningAmber } from '@mui/icons-material';
+import type { TransitionProps } from '@mui/material/transitions';
 
-// ════════════════════════════════════════════════════════════
-// ✨ UX: ANIMACIÓN SLIDE
-// ════════════════════════════════════════════════════════════
 const Transition = React.forwardRef(function Transition(
   props: TransitionProps & { children: React.ReactElement<any, any> },
   ref: React.Ref<unknown>,
@@ -20,7 +15,7 @@ const Transition = React.forwardRef(function Transition(
 });
 
 interface Props {
-  controller: ReturnType<typeof useConfirmDialog>; 
+  controller: any; // Hook useConfirmDialog
   onConfirm: (inputValue?: string) => void;
   isLoading?: boolean;
   title?: string;
@@ -37,7 +32,6 @@ export const ConfirmDialog: React.FC<Props> = ({
   const [inputValue, setInputValue] = useState('');
   const [touched, setTouched] = useState(false);
 
-  // Reset del estado al abrir
   useEffect(() => {
     if (open) {
       setInputValue('');
@@ -52,41 +46,35 @@ export const ConfirmDialog: React.FC<Props> = ({
   const severity = config.severity || 'info'; 
   const confirmText = config.confirmText || 'Confirmar';
 
-  // 🎨 CONFIGURACIÓN VISUAL
+  // 🎨 MAPE DE COLORES: ADIÓS AL AZUL, HOLA NARANJA (#CC6333)
   const getSeverityData = () => {
-    switch(severity) {
-      case 'error': 
-        return { 
-          color: theme.palette.error.main, 
-          icon: <ErrorOutline />, 
-          btnColor: 'error' as const,
-          bgAlpha: 0.08
-        };
-      case 'success': 
-        return { 
-          color: theme.palette.success.main, 
-          icon: <CheckCircle />, 
-          btnColor: 'success' as const,
-          bgAlpha: 0.08
-        };
-      case 'warning': 
-        return { 
-          color: theme.palette.primary.main, // Mantenemos tu preferencia de Primary para Warnings
-          icon: <Help />, 
-          btnColor: 'primary' as const, 
-          bgAlpha: 0.08
-        };
-      default: 
-        return { 
-          color: theme.palette.primary.main, 
-          icon: <Help />, 
-          btnColor: 'primary' as const,
-          bgAlpha: 0.08
-        };
-    }
+    const configs = {
+      error: { 
+        color: theme.palette.error.main, 
+        icon: <ErrorOutline />, 
+        btnColor: 'error' as const 
+      },
+      success: { 
+        color: theme.palette.success.main, 
+        icon: <CheckCircle />, 
+        btnColor: 'success' as const 
+      },
+      // ✅ Tanto warning como info ahora usan tu naranja primario
+      warning: { 
+        color: theme.palette.primary.main, 
+        icon: <WarningAmber />, 
+        btnColor: 'primary' as const 
+      },
+      info: { 
+        color: theme.palette.primary.main, 
+        icon: <Help />, 
+        btnColor: 'primary' as const 
+      }
+    };
+    return configs[severity as keyof typeof configs] || configs.info;
   };
 
-  const { color: severityColor, icon: severityIcon, btnColor, bgAlpha } = getSeverityData();
+  const { color: severityColor, icon: severityIcon, btnColor } = getSeverityData();
 
   const handleConfirmClick = () => {
     if (config.requireInput && inputValue.trim().length < 3) {
@@ -96,76 +84,67 @@ export const ConfirmDialog: React.FC<Props> = ({
     onConfirm(inputValue);
   };
 
-  const isInputInvalid = config.requireInput && touched && inputValue.trim().length < 3;
-  const isConfirmDisabled = isLoading || (config.requireInput && inputValue.trim().length < 3);
-
-  // ✨ UX: MANEJO DE TECLADO INTELIGENTE
-  const handleKeyDown = (event: React.KeyboardEvent) => {
-    // Si está cargando o deshabilitado, ignorar
-    if (isLoading || isConfirmDisabled) return;
-
-    // Caso 1: Input requerido (Textarea)
-    if (config.requireInput) {
-      // Permitir enviar con Ctrl + Enter (Estándar de UX en formularios)
-      if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
-        event.preventDefault();
-        handleConfirmClick();
-      }
-      // Enter normal hace salto de línea en el textarea, así que no hacemos nada
-    } 
-    // Caso 2: Confirmación simple (Sí/No)
-    else {
-      if (event.key === 'Enter') {
-        event.preventDefault();
-        handleConfirmClick();
-      }
-    }
-  };
-
   return (
     <Dialog 
       open={open} 
-      // ✨ UX: Evita cierre accidental si está cargando
-      onClose={(event, reason) => {
+      TransitionComponent={Transition}
+      onClose={(_, reason) => {
         if (isLoading && (reason === 'backdropClick' || reason === 'escapeKeyDown')) return;
         close();
       }}
-      TransitionComponent={Transition} // ✨ UX: Animación
       maxWidth="xs" 
       fullWidth
-      onKeyDown={handleKeyDown} // ✨ UX: Listener de teclado
+      slotProps={{
+        backdrop: {
+          sx: {
+            backdropFilter: 'blur(8px)',
+            backgroundColor: alpha(theme.palette.common.black, 0.4),
+          }
+        }
+      }}
       PaperProps={{
-        elevation: 24, // ✨ UX: Mayor profundidad para destacar sobre el contenido
+        elevation: 0,
         sx: {
-          borderRadius: 3, 
+          borderRadius: 2, // 16px
+          border: '1px solid',
+          borderColor: theme.palette.secondary.main,
+          boxShadow: '0 24px 48px -12px rgba(0,0,0,0.15)',
           overflow: 'hidden'
         }
       }}
     >
-      {/* HEADER */}
+      {/* HEADER: Con fondo naranja muy sutil para coherencia */}
       <DialogTitle sx={{ 
-          display: 'flex', alignItems: 'center', gap: 2,
-          bgcolor: alpha(severityColor, bgAlpha), 
-          pt: 3, pb: 2, px: 3
+          display: 'flex', 
+          flexDirection: 'column',
+          alignItems: 'center', 
+          textAlign: 'center',
+          pt: 5, pb: 2, px: 3,
+          bgcolor: alpha(severityColor, 0.04), 
       }}>
-          <Avatar variant="rounded" sx={{ 
-            bgcolor: alpha(severityColor, 0.15), 
+          <Avatar sx={{ 
+            bgcolor: alpha(severityColor, 0.1), 
             color: severityColor, 
-            width: 42, 
-            height: 42, 
-            borderRadius: 2 
+            width: 64, height: 64, 
+            mb: 2.5,
+            border: `1px solid ${alpha(severityColor, 0.2)}`,
+            '& svg': { fontSize: 32 }
           }}>
             {severityIcon}
           </Avatar>
-          <Typography variant="h6" component="span" fontWeight={800} color="text.primary" sx={{ lineHeight: 1.2 }}>
+          <Typography variant="h4" fontWeight={700} color="text.primary">
             {displayTitle}
           </Typography>
       </DialogTitle>
       
-      {/* CONTENT */}
-      <DialogContent sx={{ px: 3, pb: 1, pt: 2 }}>
-        <Stack spacing={2}> 
-            <Typography variant="body1" color="text.secondary" sx={{ fontWeight: 500 }}>
+      <DialogContent sx={{ px: 4, py: 2 }}>
+        <Stack spacing={3}> 
+            <Typography 
+              variant="body1" 
+              textAlign="center"
+              color="text.secondary" 
+              sx={{ fontWeight: 500, lineHeight: 1.6 }}
+            >
                 {displayDesc}
             </Typography>
 
@@ -173,27 +152,18 @@ export const ConfirmDialog: React.FC<Props> = ({
                 <TextField
                     autoFocus
                     fullWidth
-                    variant="outlined"
                     label={config.inputLabel || "Motivo"}
-                    placeholder={config.inputPlaceholder || "Escribe aquí..."}
+                    placeholder="Escribe aquí..."
                     value={inputValue}
-                    onChange={(e) => {
-                        setInputValue(e.target.value);
-                        if (touched) setTouched(false);
-                    }}
-                    onBlur={() => setTouched(true)}
-                    error={isInputInvalid}
-                    helperText={isInputInvalid 
-                      ? "Este campo es requerido (mínimo 3 caracteres)" 
-                      : "Presiona Ctrl + Enter para confirmar"} // ✨ UX: Tip para el usuario
+                    onChange={(e) => setInputValue(e.target.value)}
+                    error={config.requireInput && touched && inputValue.trim().length < 3}
+                    helperText={config.requireInput && touched && inputValue.trim().length < 3 ? "Mínimo 3 caracteres" : ""}
                     size="small"
                     multiline
-                    minRows={2}
-                    maxRows={4}
-                    disabled={isLoading}
+                    minRows={3}
                     sx={{
-                      // Estilo visual sutil para el input
                       '& .MuiOutlinedInput-root': {
+                        borderRadius: 1, // 8px
                         bgcolor: alpha(theme.palette.background.paper, 0.5)
                       }
                     }}
@@ -202,50 +172,41 @@ export const ConfirmDialog: React.FC<Props> = ({
         </Stack>
       </DialogContent>
       
-      {/* ACTIONS */}
       <DialogActions sx={{ 
-          p: 3,
-          pt: 2,
-          flexDirection: isMobile ? 'column-reverse' : 'row',
-          gap: isMobile ? 1.5 : 1,
+          p: 4, 
+          gap: 2,
+          justifyContent: 'center',
+          bgcolor: alpha(severityColor, 0.02),
       }}>
         <Button 
             onClick={close} 
             disabled={isLoading} 
             color="inherit" 
-            fullWidth={isMobile}
             sx={{ 
-                borderRadius: 2, 
+                borderRadius: 1, // 8px
                 fontWeight: 600, 
-                color: 'text.secondary',
-                textTransform: 'none', // ✨ UX: Texto más legible
-                mr: isMobile ? 0 : 'auto', 
-                px: 3,
+                px: 4,
+                textTransform: 'none'
             }}
         >
           Cancelar
         </Button>
         <Button 
             onClick={handleConfirmClick} 
-            disabled={isConfirmDisabled}
+            disabled={isLoading || (config.requireInput && inputValue.trim().length < 3)}
             variant="contained" 
             color={btnColor} 
-            fullWidth={isMobile}
-            disableElevation
-            // ✨ UX: Spinner integrado en lugar de cambiar todo el texto
-            startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : null}
             sx={{ 
-                borderRadius: 2, 
+                borderRadius: 1, // 8px
                 fontWeight: 700, 
-                textTransform: 'none', // ✨ UX: Texto más legible
-                px: 4, 
-                py: 1, // Ajuste ligero para compensar el icono
-                boxShadow: theme.shadows[4],
-                minWidth: 120 // Evita que el botón cambie de tamaño drásticamente
+                px: 5, py: 1.2,
+                minWidth: 150,
+                textTransform: 'none',
+                // Sombra naranja dinámica
+                boxShadow: btnColor === 'primary' ? `0 4px 12px ${alpha(theme.palette.primary.main, 0.3)}` : undefined,
             }}
         >
-          {/* Mantenemos el texto visible, el spinner va a la izquierda */}
-          {confirmText}
+          {isLoading ? <CircularProgress size={20} color="inherit" /> : confirmText}
         </Button>
       </DialogActions>
     </Dialog>

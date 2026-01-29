@@ -3,6 +3,6 @@ export interface BaseDTO {
   activo: boolean;
   
   // Sequelize casi siempre añade esto, es bueno tenerlos:
-  createdAt?: string; 
-  updatedAt?: string;
+  fecha_creacion: string;     // createdAt
+  fecha_actualizacion: string; // updatedAt
 }

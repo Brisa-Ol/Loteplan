@@ -1,5 +1,3 @@
-// src/pages/Client/Proyectos/DetalleLote.tsx
-
 import React, { useState, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -19,7 +17,6 @@ import LoteService from '@/core/api/services/lote.service';
 import type { LoteDto } from '@/core/types/dto/lote.dto';
 import { useAuth } from '@/core/context/AuthContext';
 import ImagenService from '@/core/api/services/imagen.service';
-
 
 import { useVerificarSuscripcion } from '../../hooks/useVerificarSuscripcion';
 import { FavoritoButton } from '@/shared/components/ui/buttons/BotonFavorito';
@@ -136,15 +133,42 @@ const DetalleLote: React.FC = () => {
     }
   };
 
-  // 3. LÓGICA DE BOTÓN PRINCIPAL
+  // === 3. LÓGICA DE BOTÓN PRINCIPAL (CORREGIDA) ===
   const handleBotonAccion = () => {
-    if (!isAuthenticated) return navigate('/login', { state: { from: location.pathname } });
-    
-    if (!estaSuscripto) {
-        return navigate(`/cliente/proyectos/${lote.id_proyecto}`); 
+    // 1. Validar autenticación
+    if (!isAuthenticated) {
+      return navigate('/login', { state: { from: location.pathname } });
     }
 
-    pujarModal.open();
+    // 2. Obtener proyecto del lote
+    const proyecto = lote?.proyecto;
+    
+    if (!proyecto) {
+      // Nota: Si no tienes implementado showError, usa alert o un snackbar
+      console.error("No se pudo cargar la información del proyecto");
+      return;
+    }
+
+    // 3. LÓGICA SEGÚN TIPO DE INVERSIÓN
+    if (proyecto.tipo_inversion === 'mensual') {
+      // === AHORRISTA: Verificar suscripción y abrir modal de puja ===
+      if (!estaSuscripto) {
+        // Nota: Si no tienes implementado showWarning, puedes navegar directamente
+        return navigate(`/cliente/proyectos/${lote.id_proyecto}`);
+      }
+      
+      // ✅ Solo aquí se abre el modal de puja
+      pujarModal.open();
+      
+    } else if (proyecto.tipo_inversion === 'directo') {
+      // === INVERSIONISTA: Redirigir para comprar el pack ===
+      navigate(`/cliente/proyectos/${lote.id_proyecto}`, {
+        state: { 
+          scrollTo: 'investment-section',
+          message: 'Este lote forma parte de un pack de inversión. Invierte en el proyecto completo.'
+        }
+      });
+    }
   };
 
   // --- RENDERS ---
@@ -184,16 +208,13 @@ const DetalleLote: React.FC = () => {
             <IconButton onClick={handleShare} sx={{ border: `1px solid ${theme.palette.divider}` }}>
                 <Share fontSize="small" />
             </IconButton>
-            
-            {/* ✅ INTEGRACIÓN DEL BOTÓN FAVORITO */}
             <FavoritoButton loteId={lote.id} size="large" />
-            
         </Stack>
       </Stack>
 
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '2fr 1fr' }, gap: 4, alignItems: 'start' }}>
         
-        {/* COLUMNA IZQUIERDA (IMÁGENES Y DETALLES) */}
+        {/* COLUMNA IZQUIERDA */}
         <Box sx={{ minWidth: 0 }}>
           <Paper elevation={0} sx={{ position: 'relative', overflow: 'hidden', borderRadius: 4, mb: 2, border: `1px solid ${theme.palette.divider}`, boxShadow: theme.shadows[2] }}>
             <Box sx={{ height: { xs: 300, sm: 500 }, bgcolor: 'action.hover', position: 'relative' }}>
@@ -258,9 +279,7 @@ const DetalleLote: React.FC = () => {
           )}
         </Box>
 
-        {/* =================================
-            COLUMNA DERECHA (STICKY ACTIONS)
-           ================================= */}
+        {/* COLUMNA DERECHA */}
         <Box component="aside">
           <Card elevation={4} sx={{ borderRadius: 3, position: { lg: 'sticky' }, top: { lg: 100 }, border: `1px solid ${soyGanador ? theme.palette.success.main : theme.palette.divider}`, transition: 'all 0.3s ease' }}>
             
@@ -302,7 +321,6 @@ const DetalleLote: React.FC = () => {
                  </Box>
               </Stack>
 
-              {/* BOTONES DE ACCIÓN */}
               {lote.estado_subasta === 'activa' ? (
                 <Stack spacing={2}>
                   

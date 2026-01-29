@@ -21,7 +21,7 @@ import { MarkEmailRead, ArrowBack, Send as SendIcon, LockReset } from "@mui/icon
 
 
 import AuthFormContainer from "./components/AuthFormContainer/AuthFormContainer";
-import FormTextField from "../../../shared/components/forms/inputs/FormTextField/FormTextField";
+import FormTextField from "../../../shared/components/forms/inputs/FormTextField";
 import { useAuth } from "@/core/context/AuthContext";
 
 const ForgotPasswordPage: React.FC = () => {

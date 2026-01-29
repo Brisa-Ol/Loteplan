@@ -12,7 +12,7 @@ import { PageContainer } from '../../../../shared/components/layout/containers/P
 import { QueryHandler } from '../../../../shared/components/data-grid/QueryHandler/QueryHandler';
 import { PageHeader } from '../../../../shared/components/layout/headers/PageHeader';
 import { DataTable, type DataTableColumn } from '../../../../shared/components/data-grid/DataTable/DataTable';
-import { FilterBar, FilterSearch, FilterSelect } from '../../../../shared/components/forms/filters/FilterBar/FilterBar';
+import { FilterBar, FilterSearch, FilterSelect } from '../../../../shared/components/forms/filters/FilterBar';
 import { ConfirmDialog } from '../../../../shared/components/domain/modals/ConfirmDialog/ConfirmDialog';
 
 // Modales

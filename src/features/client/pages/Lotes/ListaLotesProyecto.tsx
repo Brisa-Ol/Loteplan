@@ -1,12 +1,16 @@
+// src/features/client/pages/Lotes/ListaLotesProyecto.tsx
+// ✅ VERSIÓN CORREGIDA - VALIDACIÓN DE TIPO DE PROYECTO
+
 import React, { useState, useMemo, useCallback } from 'react';
 import { 
   Box, Typography, Stack, Skeleton, Alert, useTheme, Fade, 
   Tabs, Tab, Chip, Button
 } from '@mui/material';
 import { 
-  Lock, Gavel, AccessTime, EmojiEvents, Apps 
+  Lock, Gavel, AccessTime, EmojiEvents, Apps, Block 
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 
 import { useLotesProyecto } from '../../hooks/useLotesProyecto';
 import PujarModal from './components/PujarModal';
@@ -16,6 +20,8 @@ import { useAuth } from '@/core/context/AuthContext';
 import { ConfirmDialog } from '@/shared/components/domain/modals/ConfirmDialog/ConfirmDialog';
 import { ROUTES } from '@/routes';
 import { useVerificarSuscripcion } from '../../hooks/useVerificarSuscripcion';
+import ProyectoService from '@/core/api/services/proyecto.service';
+import type { ProyectoDto } from '@/core/types/dto/proyecto.dto';
 
 
 interface Props {
@@ -38,10 +44,22 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
   
   const [tabValue, setTabValue] = useState('todos');
 
+  // ==========================================
+  // ✅ 1. VALIDACIÓN CRÍTICA: VERIFICAR TIPO DE PROYECTO
+  // ==========================================
+  const { data: proyecto, isLoading: loadingProyecto } = useQuery<ProyectoDto>({
+    queryKey: ['proyecto', idProyecto],
+    queryFn: async () => (await ProyectoService.getByIdActive(idProyecto)).data,
+    retry: 1,
+    staleTime: 5 * 60 * 1000,
+  });
+
   const logic = useLotesProyecto(idProyecto, isAuthenticated);
 
-  // 1. VERIFICAR SUSCRIPCIÓN EN EL PADRE
-  const { estaSuscripto, isLoading: loadingSub } = useVerificarSuscripcion(idProyecto);
+  // 2. VERIFICAR SUSCRIPCIÓN (Solo para proyectos mensuales)
+  const { estaSuscripto, isLoading: loadingSub } = useVerificarSuscripcion(
+    proyecto?.tipo_inversion === 'mensual' ? idProyecto : undefined
+  );
 
   const { filteredLotes, counts } = useMemo(() => {
     if (!logic.lotes) return { filteredLotes: [], counts: { todos: 0, activa: 0, pendiente: 0, finalizada: 0 } };
@@ -77,18 +95,80 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
     alignItems: 'stretch'
   };
 
+  // ==========================================
+  // ✅ VALIDACIÓN 1: CARGANDO PROYECTO
+  // ==========================================
+  if (loadingProyecto) {
+    return (
+      <Box mt={4}>
+        <Stack direction="row" spacing={2} mb={3}>
+           <Skeleton variant="rectangular" width={100} height={40} sx={{ borderRadius: 2 }} />
+           <Skeleton variant="rectangular" width={100} height={40} sx={{ borderRadius: 2 }} />
+        </Stack>
+        <Box sx={gridStyles}>
+          {[1, 2, 3].map((i) => (
+            <Box key={i}>
+              <Skeleton variant="rectangular" height={220} sx={{ borderRadius: '16px 16px 0 0' }} />
+              <Skeleton variant="rectangular" height={150} sx={{ borderRadius: '0 0 16px 16px' }} />
+            </Box>
+          ))}
+        </Box>
+      </Box>
+    );
+  }
+
+  // ==========================================
+  // ✅ VALIDACIÓN 2: BLOQUEO PARA INVERSIONISTAS DIRECTOS
+  // ==========================================
+  if (proyecto?.tipo_inversion === 'directo') {
+    return (
+      <Fade in timeout={500}>
+        <Box mt={{ xs: 2, md: 4 }} p={{ xs: 3, md: 5 }} textAlign="center" bgcolor="background.paper" borderRadius={4} border={`1px solid ${theme.palette.divider}`}>
+          <Block sx={{ fontSize: 60, color: 'warning.main', mb: 2, opacity: 0.7 }} />
+          <Typography variant="h6" fontWeight="bold" gutterBottom>
+            Inventario No Disponible
+          </Typography>
+          <Typography variant="body2" color="text.secondary" paragraph>
+            Este es un proyecto de <strong>inversión directa</strong>. 
+            Los lotes forman parte del pack completo y no se subastan individualmente.
+          </Typography>
+          <Typography variant="caption" color="text.secondary" display="block" mb={2}>
+            Al invertir en este proyecto, recibirás TODOS los lotes al finalizar.
+          </Typography>
+          <Button 
+            variant="outlined" 
+            onClick={() => navigate(`/cliente/proyectos/${idProyecto}`)}
+          >
+            Volver al Proyecto
+          </Button>
+        </Box>
+      </Fade>
+    );
+  }
+
+  // ==========================================
+  // ✅ VALIDACIÓN 3: USUARIO NO AUTENTICADO
+  // ==========================================
   if (!isAuthenticated) {
     return (
       <Fade in timeout={500}>
         <Box mt={{ xs: 2, md: 4 }} p={{ xs: 3, md: 5 }} textAlign="center" bgcolor="background.paper" borderRadius={4} border={`1px dashed ${theme.palette.divider}`}>
           <Lock sx={{ fontSize: 60, color: 'text.secondary', mb: 2, opacity: 0.5 }} />
           <Typography variant="h6" fontWeight="bold" gutterBottom>Inventario Exclusivo</Typography>
-          <Button variant="contained" onClick={() => navigate('/login')}>Iniciar Sesión para ver Lotes</Button>
+          <Typography variant="body2" color="text.secondary" mb={3}>
+            Inicia sesión para ver los lotes disponibles en subasta.
+          </Typography>
+          <Button variant="contained" onClick={() => navigate('/login')}>
+            Iniciar Sesión
+          </Button>
         </Box>
       </Fade>
     );
   }
 
+  // ==========================================
+  // ✅ VALIDACIÓN 4: CARGANDO LOTES
+  // ==========================================
   if (logic.isLoading) {
     return (
       <Box mt={4}>
@@ -110,9 +190,30 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
 
   if (logic.error) return <Alert severity="error">Error al cargar inventario.</Alert>;
 
+  // ==========================================
+  // ✅ RENDER PRINCIPAL (SOLO PARA PROYECTOS MENSUALES)
+  // ==========================================
   return (
     <Box mt={{ xs: 3, md: 4 }}>
-      {/* HEADER CON PESTAÑAS (Igual) */}
+      
+      {/* ✅ ALERT DE SUSCRIPCIÓN */}
+      {!estaSuscripto && !loadingSub && (
+        <Alert severity="info" variant="outlined" icon={<Lock />} sx={{ mb: 3, borderRadius: 2 }}>
+          <Typography variant="body2" fontWeight={600}>
+            Debes estar suscripto al proyecto para participar en las subastas.
+          </Typography>
+          <Button 
+            size="small" 
+            variant="text" 
+            onClick={() => navigate(`/cliente/proyectos/${idProyecto}`)}
+            sx={{ mt: 1 }}
+          >
+            Ver opciones de suscripción
+          </Button>
+        </Alert>
+      )}
+
+      {/* HEADER CON PESTAÑAS */}
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
         <Tabs value={tabValue} onChange={(_, newValue) => setTabValue(newValue)} variant="scrollable" scrollButtons="auto" allowScrollButtonsMobile sx={{ '& .MuiTab-root': { minHeight: 60, fontWeight: 600 }, '& .Mui-selected': { color: 'primary.main' } }}>
           <Tab value="todos" label={<Stack direction="row" gap={1} alignItems="center">Todos <Chip label={counts.todos} size="small" sx={{ height: 20, fontSize: '0.7rem', cursor: 'pointer' }} /></Stack>} icon={<Apps fontSize="small" />} iconPosition="start" />
@@ -133,7 +234,7 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
                 onNavigate={handleNavigate}
                 onPujar={logic.handleOpenPujar} 
                 onRemoveFav={logic.handleRequestUnfav}
-                // 2. PASAR PROPS AL HIJO
+                // ✅ Pasar estado de suscripción al hijo
                 isSubscribed={estaSuscripto}
                 isLoadingSub={loadingSub}
               />
