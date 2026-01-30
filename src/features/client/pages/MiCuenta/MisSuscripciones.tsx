@@ -2,7 +2,14 @@
 
 import React, { useState, useMemo, useCallback } from 'react';
 import { Box, Tabs, Tab, Paper, useTheme } from '@mui/material';
-import { CheckCircle, History as HistoryIcon, MonetizationOn, EventBusy, PlayCircleFilled } from '@mui/icons-material';
+import { 
+    CheckCircle, 
+    History as HistoryIcon, 
+    MonetizationOn, 
+    EventBusy, 
+    PlayCircleFilled,
+    Token as TokenIcon 
+} from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 
 import { useConfirmDialog } from '../../../../shared/hooks/useConfirmDialog';
@@ -10,7 +17,6 @@ import { env } from '@/core/config/env';
 
 // Componentes Shared
 import { PageContainer } from '../../../../shared/components/layout/containers/PageContainer/PageContainer';
-// ✅ USO DE PAGE HEADER (Consistencia con MisInversiones)
 import { PageHeader } from '../../../../shared/components/layout/headers/PageHeader';
 import { QueryHandler } from '../../../../shared/components/data-grid/QueryHandler/QueryHandler';
 import { DataTable } from '../../../../shared/components/data-grid/DataTable/DataTable';
@@ -35,7 +41,12 @@ const MisSuscripciones: React.FC = () => {
     // 2. UI State
     const [tabValue, setTabValue] = useState(0);
 
-    // 3. Handlers
+    // 3. Lógica de Tokens (Mantenemos el KPI porque es información de valor)
+    const totalTokens = useMemo(() => {
+        return suscripciones.reduce((acc, curr) => acc + (curr.tokens_disponibles || 0), 0);
+    }, [suscripciones]);
+
+    // 4. Handlers
     const handleOpenCancelDialog = useCallback((suscripcion: SuscripcionDto) => {
         confirmDialog.confirm('cancel_subscription', suscripcion);
     }, [confirmDialog]);
@@ -47,7 +58,7 @@ const MisSuscripciones: React.FC = () => {
         }
     };
 
-    // 4. Columnas
+    // 5. Columnas
     const activeCols = useMemo(() => getActiveColumns(theme, {
         onView: (projectId) => navigate(`/proyectos/${projectId}`),
         onCancel: handleOpenCancelDialog
@@ -56,21 +67,27 @@ const MisSuscripciones: React.FC = () => {
     const canceledCols = useMemo(() => getCanceledColumns(theme), [theme]);
 
     const formatMoney = (val: number) => 
-        new Intl.NumberFormat(env.defaultLocale, { style: 'currency', currency: env.defaultCurrency, maximumFractionDigits: 0 }).format(val);
+        new Intl.NumberFormat(env.defaultLocale, { 
+            style: 'currency', 
+            currency: env.defaultCurrency, 
+            maximumFractionDigits: 0 
+        }).format(val);
 
     return (
         <PageContainer maxWidth="lg">
             
-            {/* ✅ HEADER ESTANDARIZADO */}
             <PageHeader 
                 title="Mis Planes de Ahorro" 
-                subtitle="Sigue el progreso de tus metas y mantén tus cuotas al día."
-                // No pasamos 'action' porque aquí no hay botón de refrescar explícito por ahora,
-                // pero si quisieras agregarlo, iría aquí igual que en Inversiones.
+                subtitle="Seguimiento de tus suscripciones y capital acumulado."
             />
 
-            {/* KPI SUMMARY (Terminología de Ahorro) */}
-            <Box display="grid" gridTemplateColumns={{ xs: '1fr', md: 'repeat(3, 1fr)' }} gap={2} mb={4}>
+            {/* KPI SUMMARY - Mantenemos los 4 indicadores */}
+            <Box 
+                display="grid" 
+                gridTemplateColumns={{ xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }} 
+                gap={2} 
+                mb={4}
+            >
                 <StatCard 
                     title="Planes Activos" 
                     value={stats.activas.toString()} 
@@ -79,6 +96,16 @@ const MisSuscripciones: React.FC = () => {
                     loading={isLoading} 
                     subtitle="Ahorros en curso" 
                 />
+
+                <StatCard 
+                    title="Poder de Oferta" 
+                    value={`${totalTokens} Tokens`} 
+                    icon={<TokenIcon />} 
+                    color="warning" 
+                    loading={isLoading} 
+                    subtitle="Disponibles para pujar" 
+                />
+
                 <StatCard 
                     title="Capital Ahorrado" 
                     value={formatMoney(stats.totalPagado)} 
@@ -87,13 +114,14 @@ const MisSuscripciones: React.FC = () => {
                     loading={isLoading} 
                     subtitle="Total acumulado" 
                 />
+                
                 <StatCard 
                     title="Bajas Históricas" 
                     value={stats.canceladas.toString()} 
                     icon={<EventBusy />} 
                     color="error" 
                     loading={isLoading} 
-                    subtitle="Planes descontinuados" 
+                    subtitle="Planes finalizados" 
                 />
             </Box>
 
@@ -136,13 +164,12 @@ const MisSuscripciones: React.FC = () => {
                 </Paper>
             </QueryHandler>
 
-            {/* DIALOGS */}
             <ConfirmDialog 
                 controller={confirmDialog}
                 onConfirm={handleConfirmCancel}
                 isLoading={isCancelling}
                 title="¿Detener plan de ahorro?"
-                description="Esta acción pausará tus aportes futuros. Podrás reactivarlo si hay cupo disponible, pero podrías perder beneficios de constancia."
+                description="Esta acción pausará tus aportes futuros. Podrás reactivarlo si hay cupo disponible."
             />
         </PageContainer>
     );

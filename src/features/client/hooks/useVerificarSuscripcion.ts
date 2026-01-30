@@ -1,36 +1,53 @@
+// src/features/client/hooks/useVerificarSuscripcion.ts
 import { useQuery } from '@tanstack/react-query';
 import SuscripcionService from '@/core/api/services/suscripcion.service';
 import { useAuth } from '@/core/context/AuthContext';
 
-export const useVerificarSuscripcion = (idProyecto?: number) => {
+export interface EstadoSuscripcion {
+  suscripcion: any | null;
+  estaSuscripto: boolean;
+  tieneTokens: boolean;
+  puedePujar: boolean;
+  tokensDisponibles: number;
+  isLoading: boolean;
+  motivoBloqueo: string | null; // ✅ NUEVO: Mensaje de bloqueo
+}
+
+export const useVerificarSuscripcion = (idProyecto?: number): EstadoSuscripcion => {
   const { isAuthenticated, user } = useAuth();
 
   const { data: suscripcion, isLoading } = useQuery({
     queryKey: ['check-suscripcion', idProyecto, user?.id],
     queryFn: async () => {
-      // Si no hay proyecto o usuario, no ejecutamos la llamada
       if (!idProyecto || !isAuthenticated) return null;
       return await SuscripcionService.checkEstadoSuscripcion(idProyecto);
     },
-    // Solo se ejecuta si tenemos los datos necesarios
     enabled: !!idProyecto && isAuthenticated,
-    staleTime: 1000 * 60 * 5, // Cachear resultado por 5 minutos
+    staleTime: 1000 * 60 * 2, // ✅ Reducido a 2 min (tokens cambian al pujar)
     retry: false
   });
 
-  // Lógica derivada
-  const estaSuscripto = !!suscripcion; // true si existe objeto, false si es null
-  const tieneTokens = (suscripcion?.tokens_disponibles || 0) > 0;
-  
-  // Puedes ajustar esta lógica. Por ahora, si está suscripto habilitamos el botón.
-  // Si en el futuro quieres bloquear por falta de tokens, cambia esto a: estaSuscripto && tieneTokens
-  const puedePujar = estaSuscripto;
+  // ✅ LÓGICA CORRECTA
+  const estaSuscripto = !!suscripcion;
+  const tokensDisponibles = suscripcion?.tokens_disponibles || 0;
+  const tieneTokens = tokensDisponibles > 0;
+  const puedePujar = estaSuscripto && tieneTokens;
+
+  // ✅ NUEVO: Determinar motivo de bloqueo
+  let motivoBloqueo: string | null = null;
+  if (!estaSuscripto) {
+    motivoBloqueo = 'No estás suscripto al proyecto';
+  } else if (!tieneTokens) {
+    motivoBloqueo = 'Ya utilizaste tu token en otra subasta de este proyecto';
+  }
 
   return { 
     suscripcion, 
     estaSuscripto, 
     tieneTokens,
+    tokensDisponibles,
     puedePujar, 
+    motivoBloqueo,
     isLoading 
   };
 };

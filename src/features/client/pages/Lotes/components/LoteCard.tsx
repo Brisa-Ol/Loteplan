@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef, useCallback } from 'react';
 import {
   Box, Card, CardContent, CardMedia, Typography, Button,
   Chip, Stack, Fade, Tooltip, IconButton, useTheme, alpha, keyframes
@@ -6,7 +6,7 @@ import {
 import {
   Gavel, AccessTime, LocationOn,
   ArrowForward, LocalOffer, CalendarMonth,
-  Timelapse, Lock
+  Timelapse, Lock, BrokenImage
 } from '@mui/icons-material';
 
 import type { LoteDto } from '@/core/types/dto/lote.dto';
@@ -24,21 +24,37 @@ interface LoteCardProps {
   onNavigate: (id: number) => void;
   onPujar: (lote: LoteDto) => void;
   onRemoveFav: (id: number) => void;
-  // 1. NUEVAS PROPS
-  isSubscribed?: boolean;
-  isLoadingSub?: boolean;
+  isSubscribed: boolean;
+  hasTokens: boolean;
+  tokensDisponibles: number;
+  isLoadingSub: boolean;
 }
 
 const LoteCard: React.FC<LoteCardProps> = ({ 
   lote, onNavigate, onPujar, onRemoveFav, 
-  isSubscribed = false, isLoadingSub = false 
+  isSubscribed, hasTokens, tokensDisponibles, isLoadingSub 
 }) => {
   const theme = useTheme();
 
+  // ✅ OPTIMIZACIÓN: useRef para estado de imagen (no causa re-renders innecesarios)
+  const imageState = useRef<{ loaded: boolean; error: boolean }>({ 
+    loaded: false, 
+    error: false 
+  });
+
   const imgUrl = useMemo(() => {
     const img = lote.imagenes?.[0];
-    return img ? ImagenService.resolveImageUrl(img.url) : '/assets/placeholder-lote.jpg';
+    return img ? ImagenService.resolveImageUrl(img.url) : null;
   }, [lote.imagenes]);
+
+  // ✅ Handlers memoizados
+  const handleImageLoad = useCallback(() => {
+    imageState.current.loaded = true;
+  }, []);
+
+  const handleImageError = useCallback(() => {
+    imageState.current.error = true;
+  }, []);
 
   const isActiva = lote.estado_subasta === 'activa';
   const isFinalizada = lote.estado_subasta === 'finalizada';
@@ -55,17 +71,14 @@ const LoteCard: React.FC<LoteCardProps> = ({
     action();
   };
 
-  // 2. MANEJADOR DEL BOTÓN
   const handleBotonClick = (e: React.MouseEvent) => {
     e.stopPropagation(); 
-    
-    if (isSubscribed) {
-       onPujar(lote);
+    if (isSubscribed && hasTokens) {
+      onPujar(lote);
     } else {
-       // Si no está suscripto, lo llevamos al detalle para que vea la alerta
-       onNavigate(lote.id);
+      onNavigate(lote.id);
     }
- };
+  };
 
   return (
     <Fade in={true} timeout={400}>
@@ -86,10 +99,37 @@ const LoteCard: React.FC<LoteCardProps> = ({
           }
         }}
       >
-        {/* HEADER ... */}
-        <Box position="relative" sx={{ overflow: 'hidden', paddingTop: '65%' }}>
-          <CardMedia className="lote-img" component="img" image={imgUrl} alt={lote.nombre_lote} sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', filter: isFinalizada ? 'grayscale(100%)' : 'none', transition: 'transform 0.6s ease' }} />
-          <Box sx={{ position: 'absolute', inset: 0, background: `linear-gradient(to top, ${alpha(theme.palette.common.black, 0.9)} 0%, ${alpha(theme.palette.common.black, 0.4)} 25%, transparent 60%)` }} />
+        {/* HEADER CON GESTIÓN DE IMAGEN OPTIMIZADA */}
+        <Box position="relative" sx={{ overflow: 'hidden', paddingTop: '65%', bgcolor: 'grey.100' }}>
+          
+          {imgUrl && !imageState.current.error ? (
+            <CardMedia 
+              className="lote-img" 
+              component="img" 
+              image={imgUrl} 
+              alt={lote.nombre_lote} 
+              onLoad={handleImageLoad}
+              onError={handleImageError}
+              loading="lazy"
+              sx={{ 
+                position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', 
+                objectFit: 'cover', 
+                filter: isFinalizada ? 'grayscale(100%)' : 'none', 
+                transition: 'transform 0.6s ease, opacity 0.5s ease',
+                opacity: 1
+              }} 
+            />
+          ) : (
+            <Box sx={{ 
+              position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'grey.200' 
+            }}>
+              <BrokenImage sx={{ fontSize: 48, color: 'grey.400' }} />
+            </Box>
+          )}
+
+          {/* GRADIENTES Y BADGES */}
+          <Box sx={{ position: 'absolute', inset: 0, background: `linear-gradient(to top, ${alpha(theme.palette.common.black, 0.9)} 0%, ${alpha(theme.palette.common.black, 0.4)} 25%, transparent 60%)`, pointerEvents: 'none' }} />
 
           <Box position="absolute" top={12} left={12} zIndex={2}>
             {isActiva ? (
@@ -98,9 +138,11 @@ const LoteCard: React.FC<LoteCardProps> = ({
               <Chip label="Próximamente" color="warning" size="small" icon={<AccessTime sx={{ color: 'white !important' }} />} sx={{ fontWeight: 700 }} />
             )}
           </Box>
+
           <Box position="absolute" top={8} right={8} onClick={(e) => e.stopPropagation()} zIndex={2}>
             <FavoritoButton loteId={lote.id} size="small" onRemoveRequest={onRemoveFav} />
           </Box>
+
           <Box position="absolute" bottom={0} left={0} right={0} p={2} zIndex={2}>
             <Stack direction="row" justifyContent="space-between" alignItems="flex-end">
               <Box>
@@ -114,7 +156,7 @@ const LoteCard: React.FC<LoteCardProps> = ({
           </Box>
         </Box>
 
-        {/* BODY ... */}
+        {/* BODY */}
         <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', gap: 1.5, p: 2.5 }}>
           <Box>
             <Stack direction="row" justifyContent="space-between" alignItems="center" mb={0.5}>
@@ -146,21 +188,24 @@ const LoteCard: React.FC<LoteCardProps> = ({
              ) : null}
           </Box>
 
-          {/* 3. BOTONES DINÁMICOS */}
+          {/* BOTONES DINÁMICOS */}
           <Stack direction="row" spacing={1.5} mt={1}>
             {isActiva ? (
               <>
                 <Button
                   variant="contained"
                   fullWidth
-                  // Si no está suscripto, color 'inherit' (grisáceo) o secundario
-                  color={isSubscribed ? "primary" : "inherit"}
-                  startIcon={isLoadingSub ? <Timelapse /> : (isSubscribed ? <Gavel /> : <Lock />)}
+                  color={isSubscribed && hasTokens ? "primary" : "inherit"}
+                  startIcon={isLoadingSub ? <Timelapse /> : (isSubscribed && hasTokens ? <Gavel /> : <Lock />)}
                   onClick={handleBotonClick}
                   disabled={isLoadingSub}
                   sx={{ borderRadius: 2, fontWeight: 700, boxShadow: 3, textTransform: 'none', fontSize: '1rem' }}
                 >
-                  {isLoadingSub ? "Cargando..." : (isSubscribed ? "Pujar Ahora" : "Ver Requisitos")}
+                  {isLoadingSub ? "Cargando..." : (
+                    isSubscribed && hasTokens ? "Pujar Ahora" : 
+                    isSubscribed && !hasTokens ? "Token en Uso" :
+                    "Ver Requisitos"
+                  )}
                 </Button>
 
                 <Tooltip title="Ver todos los detalles">
@@ -175,6 +220,19 @@ const LoteCard: React.FC<LoteCardProps> = ({
               </Button>
             )}
           </Stack>
+
+          {/* BADGE DE TOKENS */}
+          {isSubscribed && isActiva && (
+            <Box display="flex" justifyContent="center" mt={0.5}>
+              <Chip 
+                label={hasTokens ? `${tokensDisponibles} token disponible` : 'Token en uso'}
+                size="small"
+                color={hasTokens ? "success" : "default"}
+                variant="outlined"
+                sx={{ fontSize: '0.7rem', height: 20 }}
+              />
+            </Box>
+          )}
         </CardContent>
       </Card>
     </Fade>

@@ -1,6 +1,6 @@
 // src/components/Admin/Proyectos/Components/modals/CreateProyectoModal.tsx
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   TextField, MenuItem, Stack, Box, Typography,
   Divider, Alert, InputAdornment, useTheme, alpha, Paper,
@@ -26,7 +26,6 @@ import BaseModal from '@/shared/components/domain/modals/BaseModal/BaseModal';
 
 // Interfaces
 interface FullProjectFormValues {
-  // Proyecto
   nombre_proyecto: string;
   descripcion: string;
   tipo_inversion: 'directo' | 'mensual';
@@ -34,16 +33,12 @@ interface FullProjectFormValues {
   forma_juridica: string;
   monto_inversion: number;
   moneda: string;
-  // Suscripción
   suscripciones_minimas: number;
   obj_suscripciones: number;
-  // Fechas
   fecha_inicio: string;
   fecha_cierre: string;
-  // Ubicación
   latitud: number | ''; 
   longitud: number | '';
-  // Cuota (Solo mensual)
   nombre_cemento_cemento?: string;
   valor_cemento_unidades?: number;
   valor_cemento?: number;
@@ -59,40 +54,27 @@ interface CreateProyectoModalProps {
   isLoading?: boolean;
 }
 
-// ✅ ESQUEMAS DE VALIDACIÓN
+// ✅ ESQUEMAS DE VALIDACIÓN REFORZADOS
 const projectSchema = Yup.object({
-  nombre_proyecto: Yup.string().min(5, 'Mínimo 5 caracteres').required('Requerido'),
-  descripcion: Yup.string().nullable(),
+  nombre_proyecto: Yup.string().min(5, 'Mínimo 5 caracteres').max(100, 'Máximo 100').required('Requerido'),
+  descripcion: Yup.string().min(20, 'Describe mejor el proyecto (mín 20 car.)').required('Requerido'),
   tipo_inversion: Yup.string().required('Requerido'),
-  monto_inversion: Yup.number().min(0, 'Debe ser mayor a 0').required('Requerido'),
+  monto_inversion: Yup.number().min(0, 'Monto inválido').required('Requerido'),
   moneda: Yup.string().required('Requerido'),
-  
   fecha_inicio: Yup.date().required('Requerido'),
   fecha_cierre: Yup.date()
     .required('Requerido')
-    .min(Yup.ref('fecha_inicio'), 'La fecha de cierre debe ser posterior al inicio'),
-
+    .min(Yup.ref('fecha_inicio'), 'Debe ser posterior al inicio'),
   plazo_inversion: Yup.number().when('tipo_inversion', {
     is: 'mensual',
     then: (s) => s.min(1, 'Mínimo 1 mes').required('Requerido'),
     otherwise: (s) => s.nullable(),
   }),
-  obj_suscripciones: Yup.number().when('tipo_inversion', {
-    is: 'mensual',
-    then: (s) => s.min(1, 'Mínimo 1').required('Requerido'),
-    otherwise: (s) => s.nullable(),
-  }),
-  
-  latitud: Yup.number().nullable().notRequired().min(-90).max(90),
-  longitud: Yup.number().nullable().notRequired().min(-180).max(180),
 });
 
 const quotaSchema = Yup.object({
   valor_cemento_unidades: Yup.number().min(1, 'Mínimo 1').required('Requerido'),
   valor_cemento: Yup.number().min(0.01, 'Precio inválido').required('Requerido'),
-  porcentaje_plan: Yup.number().min(0).max(100).required('Requerido'),
-  porcentaje_administrativo: Yup.number().min(0).max(100).required('Requerido'),
-  porcentaje_iva: Yup.number().min(0).max(100).required('Requerido'),
 });
 
 const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({ 
@@ -109,19 +91,16 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
       moneda: 'ARS', suscripciones_minimas: 1, obj_suscripciones: 10,
       fecha_inicio: '', fecha_cierre: '', 
       latitud: '', longitud: '',
-      // Cuota Defaults
-      nombre_cemento_cemento: '', valor_cemento_unidades: 1, valor_cemento: 0,
+      nombre_cemento_cemento: 'Bolsa de Cemento', valor_cemento_unidades: 1, valor_cemento: 0,
       porcentaje_plan: 70, porcentaje_administrativo: 10, porcentaje_iva: 21,
     },
     validateOnBlur: false,
     validateOnChange: false,
     onSubmit: async (values) => {
-      // Limpieza de datos (vacíos a null)
-      const cleanData = {
-          ...values,
-          latitud: values.latitud === '' ? null : values.latitud,
-          longitud: values.longitud === '' ? null : values.longitud,
-      };
+      // Limpieza de datos profunda
+      const cleanData = Object.fromEntries(
+        Object.entries(values).map(([key, val]) => [key, val === '' ? null : val])
+      );
       await onSubmit(cleanData, image); 
       handleReset(); 
     },
@@ -134,332 +113,143 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
     onClose();
   };
 
-  // Cambio automático de moneda
   useEffect(() => {
-    if (formik.values.tipo_inversion === 'mensual') {
-      formik.setFieldValue('moneda', 'ARS');
-    } else {
-      formik.setFieldValue('moneda', 'USD');
-    }
+    formik.setFieldValue('moneda', formik.values.tipo_inversion === 'mensual' ? 'ARS' : 'USD');
   }, [formik.values.tipo_inversion]);
 
-  // 🧮 CÁLCULOS VISUALES EN TIEMPO REAL
-  const plazo = formik.values.plazo_inversion || 1;
-  const unidades = formik.values.valor_cemento_unidades || 0;
-  const precioUnitario = formik.values.valor_cemento || 0;
-  const pctPlan = formik.values.porcentaje_plan || 0;
-  const pctAdmin = formik.values.porcentaje_administrativo || 0;
-  const pctIva = formik.values.porcentaje_iva || 0;
+  // 🧮 CÁLCULOS OPTIMIZADOS (useMemo)
+  const simulation = useMemo(() => {
+    const { plazo_inversion, valor_cemento_unidades, valor_cemento, porcentaje_plan, porcentaje_administrativo, porcentaje_iva } = formik.values;
+    
+    const plazo = plazo_inversion || 1;
+    const unidades = valor_cemento_unidades || 0;
+    const precio = valor_cemento || 0;
+    
+    const valorMovil = unidades * precio;
+    const cuotaPura = (valorMovil * ((porcentaje_plan || 0) / 100)) / plazo;
+    const gastosAdmin = cuotaPura * ((porcentaje_administrativo || 0) / 100);
+    const iva = gastosAdmin * ((porcentaje_iva || 0) / 100);
+    
+    return {
+      pura: cuotaPura,
+      admin: gastosAdmin,
+      final: cuotaPura + gastosAdmin + iva
+    };
+  }, [formik.values]);
 
-  const valorMovil = unidades * precioUnitario;
-  const totalDelPlan = valorMovil * (pctPlan / 100);
-  const valorMensual = totalDelPlan / plazo;
-  const cargaAdministrativa = valorMensual * (pctAdmin / 100);
-  const ivaCarga = cargaAdministrativa * (pctIva / 100);
-  const valorMensualFinal = valorMensual + cargaAdministrativa + ivaCarga;
-
-  // --- NAVEGACIÓN ---
   const handleNext = async () => {
+    const isStep0 = activeStep === 0;
+    const schema = isStep0 ? projectSchema : quotaSchema;
+    
     try {
-      if (activeStep === 0) {
-        await projectSchema.validate(formik.values, { abortEarly: false });
-        // Si es directo, saltamos la configuración de cuota
-        if (formik.values.tipo_inversion === 'directo') setActiveStep(2); 
-        else setActiveStep(1); 
-      } else if (activeStep === 1) {
-        await quotaSchema.validate(formik.values, { abortEarly: false });
-        setActiveStep(2);
-      }
+      await schema.validate(formik.values, { abortEarly: false });
+      if (isStep0 && formik.values.tipo_inversion === 'directo') setActiveStep(2);
+      else setActiveStep(prev => prev + 1);
     } catch (err: any) {
       const errors: any = {};
       err.inner.forEach((e: any) => { errors[e.path] = e.message; });
       formik.setErrors(errors);
-      formik.setTouched(errors);
-    }
-  };
-
-  const handleBack = () => {
-    if (activeStep === 2 && formik.values.tipo_inversion === 'directo') {
-        setActiveStep(0);
-    } else {
-        setActiveStep((prev) => prev - 1);
     }
   };
 
   const steps = formik.values.tipo_inversion === 'mensual' 
-    ? ['Datos Proyecto', 'Configurar Cuota', 'Imagen'] 
-    : ['Datos Proyecto', 'Imagen'];
+    ? ['Información', 'Cuotas', 'Multimedia'] 
+    : ['Información', 'Multimedia'];
 
-  // Ajuste visual del índice del stepper
-  const getStepIndex = () => {
-      if (activeStep === 0) return 0;
-      if (activeStep === 2) return formik.values.tipo_inversion === 'mensual' ? 2 : 1;
-      return 1;
-  };
-
-  // Estilo reutilizable para títulos de sección
-  const sectionTitleSx = { 
-    fontWeight: 700, 
-    color: 'text.secondary', 
-    textTransform: 'uppercase', 
-    mb: 2, 
-    mt: 1,
-    display: 'flex', 
-    alignItems: 'center', 
-    gap: 1, 
-    fontSize: '0.75rem' 
-  };
+  const sectionTitleSx = { fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', mb: 2, mt: 1, display: 'flex', alignItems: 'center', gap: 1, fontSize: '0.75rem' };
 
   return (
     <BaseModal
-      open={open}
-      onClose={handleReset}
-      title="Nuevo Proyecto"
-      subtitle={activeStep === 0 ? "Información General" : activeStep === 1 ? "Definición de Cuotas" : "Carga de Multimedia"}
-      icon={<AddIcon />}
-      headerColor="primary"
-      hideConfirmButton
-      hideCancelButton
-      maxWidth="md"
-      isLoading={isLoading}
+      open={open} onClose={handleReset} title="Nuevo Proyecto" icon={<AddIcon />} headerColor="primary"
+      hideConfirmButton hideCancelButton maxWidth="md" isLoading={isLoading}
       customActions={
         <>
-            <Button onClick={activeStep === 0 ? handleReset : handleBack} color="inherit" disabled={isLoading} sx={{ mr: 'auto' }}>
-                {activeStep === 0 ? 'Cancelar' : 'Atrás'}
-            </Button>
-            
-            {activeStep === 2 ? (
-                <Button variant="contained" onClick={formik.submitForm} startIcon={<AddIcon />} disabled={isLoading}>
-                    {isLoading ? 'Creando...' : 'Finalizar y Crear'}
-                </Button>
-            ) : (
-                <Button variant="contained" onClick={handleNext} endIcon={<ArrowForward />}>
-                    Siguiente
-                </Button>
-            )}
+          <Button onClick={activeStep === 0 ? handleReset : () => setActiveStep(p => p - 1)} color="inherit" disabled={isLoading} sx={{ mr: 'auto' }}>
+            {activeStep === 0 ? 'Cancelar' : 'Atrás'}
+          </Button>
+          {activeStep === 2 ? (
+            <Button variant="contained" onClick={formik.submitForm} startIcon={<AddIcon />} disabled={isLoading}>Crear Proyecto</Button>
+          ) : (
+            <Button variant="contained" onClick={handleNext} endIcon={<ArrowForward />}>Siguiente</Button>
+          )}
         </>
       }
     >
       <Stack spacing={3}>
-        <Stepper activeStep={getStepIndex()} alternativeLabel sx={{ mb: 2 }}>
-            {steps.map((label) => (
-                <Step key={label}><StepLabel>{label}</StepLabel></Step>
-            ))}
+        <Stepper activeStep={activeStep === 2 && formik.values.tipo_inversion === 'directo' ? 1 : activeStep} alternativeLabel>
+          {steps.map((label) => (<Step key={label}><StepLabel>{label}</StepLabel></Step>))}
         </Stepper>
 
-        {/* === PASO 0: DATOS PROYECTO === */}
         {activeStep === 0 && (
-            <Box>
-                <Stack spacing={2}>
-                    <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-                        <TextField
-                            fullWidth label="Nombre del Proyecto"
-                            {...formik.getFieldProps('nombre_proyecto')}
-                            error={Boolean(formik.touched.nombre_proyecto && formik.errors.nombre_proyecto)}
-                            helperText={formik.touched.nombre_proyecto && formik.errors.nombre_proyecto}
-                            sx={{ flex: 2 }}
-                        />
-                        <TextField
-                            fullWidth label="Forma Jurídica"
-                            {...formik.getFieldProps('forma_juridica')}
-                            error={Boolean(formik.touched.forma_juridica && formik.errors.forma_juridica)}
-                            helperText={formik.touched.forma_juridica && formik.errors.forma_juridica}
-                            sx={{ flex: 1 }}
-                        />
-                    </Stack>
+          <Box>
+            <Stack spacing={2.5}>
+              <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+                <TextField fullWidth label="Nombre del Proyecto" {...formik.getFieldProps('nombre_proyecto')} error={Boolean(formik.touched.nombre_proyecto && formik.errors.nombre_proyecto)} helperText={formik.touched.nombre_proyecto && formik.errors.nombre_proyecto} />
+                <TextField fullWidth label="Forma Jurídica" {...formik.getFieldProps('forma_juridica')} />
+              </Stack>
 
-                    <TextField
-                        fullWidth multiline rows={2} label="Descripción Comercial"
-                        {...formik.getFieldProps('descripcion')}
-                    />
+              {/* ✅ DESCRIPCIÓN OPTIMIZADA CON CONTADOR */}
+              <Box>
+                <TextField 
+                  fullWidth multiline rows={4} maxRows={10} label="Descripción Comercial" 
+                  {...formik.getFieldProps('descripcion')} 
+                  error={Boolean(formik.touched.descripcion && formik.errors.descripcion)}
+                  helperText={formik.errors.descripcion || `${formik.values.descripcion.length} caracteres`}
+                />
+              </Box>
 
-                    <Divider />
-                    
-                    <Typography variant="subtitle2" sx={sectionTitleSx}><MonetizationIcon fontSize="inherit"/> Configuración Financiera</Typography>
-                    
-                    <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-                        <TextField
-                            fullWidth select label="Tipo de Inversión"
-                            {...formik.getFieldProps('tipo_inversion')}
-                        >
-                            <MenuItem value="mensual">Ahorro (Mensual)</MenuItem>
-                            <MenuItem value="directo">Inversión (Directo)</MenuItem>
-                        </TextField>
-                        
-                        <TextField
-                            fullWidth select label="Moneda"
-                            {...formik.getFieldProps('moneda')}
-                            disabled
-                        >
-                            <MenuItem value="ARS">ARS</MenuItem>
-                            <MenuItem value="USD">USD</MenuItem>
-                        </TextField>
+              <Typography variant="subtitle2" sx={sectionTitleSx}><MonetizationIcon fontSize="inherit"/> Finanzas</Typography>
+              <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+                <TextField fullWidth select label="Tipo" {...formik.getFieldProps('tipo_inversion')}>
+                  <MenuItem value="mensual">Plan de Ahorro</MenuItem>
+                  <MenuItem value="directo">Inversión Directa</MenuItem>
+                </TextField>
+                <TextField fullWidth type="number" label="Monto Base / Total" InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }} {...formik.getFieldProps('monto_inversion')} />
+              </Stack>
 
-                        <TextField
-                            fullWidth type="number"
-                            label={formik.values.tipo_inversion === 'mensual' ? "Valor Cuota Base" : "Monto Total"}
-                            InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }}
-                            {...formik.getFieldProps('monto_inversion')}
-                            error={Boolean(formik.touched.monto_inversion && formik.errors.monto_inversion)}
-                            helperText={formik.touched.monto_inversion && formik.errors.monto_inversion}
-                        />
-                    </Stack>
+              {formik.values.tipo_inversion === 'mensual' && (
+                <Paper variant="outlined" sx={{ p: 2, bgcolor: alpha(theme.palette.primary.main, 0.02), borderRadius: 2 }}>
+                  <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+                    <TextField fullWidth type="number" label="Plazo (Meses)" {...formik.getFieldProps('plazo_inversion')} />
+                    <TextField fullWidth type="number" label="Cupo Máximo" {...formik.getFieldProps('obj_suscripciones')} />
+                  </Stack>
+                </Paper>
+              )}
 
-                    {formik.values.tipo_inversion === 'mensual' && (
-                        <Paper variant="outlined" sx={{ p: 2, bgcolor: alpha(theme.palette.primary.main, 0.02) }}>
-                            <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-                                <TextField
-                                    fullWidth type="number" label="Plazo (Meses)"
-                                    {...formik.getFieldProps('plazo_inversion')}
-                                    error={Boolean(formik.touched.plazo_inversion && formik.errors.plazo_inversion)}
-                                    helperText={formik.touched.plazo_inversion && formik.errors.plazo_inversion}
-                                />
-                                <TextField
-                                    fullWidth type="number" label="Obj. Suscripciones"
-                                    {...formik.getFieldProps('obj_suscripciones')}
-                                    error={Boolean(formik.touched.obj_suscripciones && formik.errors.obj_suscripciones)}
-                                    helperText={formik.touched.obj_suscripciones && formik.errors.obj_suscripciones}
-                                />
-                                <TextField
-                                    fullWidth type="number" label="Mínimo Suscripciones"
-                                    {...formik.getFieldProps('suscripciones_minimas')}
-                                />
-                            </Stack>
-                        </Paper>
-                    )}
-
-                    <Typography variant="subtitle2" sx={sectionTitleSx}><CalendarIcon fontSize="inherit"/> Cronograma</Typography>
-                    <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-                        <TextField
-                            fullWidth type="date" label="Inicio Suscripciones" InputLabelProps={{ shrink: true }}
-                            {...formik.getFieldProps('fecha_inicio')}
-                            error={Boolean(formik.touched.fecha_inicio && formik.errors.fecha_inicio)}
-                            helperText={formik.touched.fecha_inicio && (formik.errors.fecha_inicio as string)}
-                        />
-                        <TextField
-                            fullWidth type="date" label="Cierre Suscripciones" InputLabelProps={{ shrink: true }}
-                            {...formik.getFieldProps('fecha_cierre')}
-                            error={Boolean(formik.touched.fecha_cierre && formik.errors.fecha_cierre)}
-                            helperText={formik.touched.fecha_cierre && (formik.errors.fecha_cierre as string)}
-                        />
-                    </Stack>
-
-                    <Typography variant="subtitle2" sx={sectionTitleSx}><LocationIcon fontSize="inherit"/> Ubicación (Opcional)</Typography>
-                    <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-                        <TextField
-                            fullWidth type="number" label="Latitud" placeholder="-34.12345"
-                            {...formik.getFieldProps('latitud')}
-                            error={Boolean(formik.touched.latitud && formik.errors.latitud)}
-                            helperText={formik.touched.latitud && formik.errors.latitud}
-                        />
-                        <TextField
-                            fullWidth type="number" label="Longitud" placeholder="-58.12345"
-                            {...formik.getFieldProps('longitud')}
-                            error={Boolean(formik.touched.longitud && formik.errors.longitud)}
-                            helperText={formik.touched.longitud && formik.errors.longitud}
-                        />
-                    </Stack>
-
-                </Stack>
-            </Box>
+              <Typography variant="subtitle2" sx={sectionTitleSx}><CalendarIcon fontSize="inherit"/> Fechas Clave</Typography>
+              <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+                <TextField fullWidth type="date" label="Apertura" InputLabelProps={{ shrink: true }} {...formik.getFieldProps('fecha_inicio')} />
+                <TextField fullWidth type="date" label="Cierre" InputLabelProps={{ shrink: true }} {...formik.getFieldProps('fecha_cierre')} />
+              </Stack>
+            </Stack>
+          </Box>
         )}
 
-        {/* === PASO 1: CONFIGURAR CUOTA (SOLO MENSUAL) === */}
         {activeStep === 1 && (
-            <Box>
-                <Alert severity="info" variant="outlined" sx={{ mb: 2 }}>Define los valores base para la primera cuota del proyecto.</Alert>
-                
-                <Stack spacing={3}>
-                    <Box>
-                        <Typography variant="subtitle2" sx={sectionTitleSx}><DescriptionIcon fontSize="inherit"/> Datos del Cemento</Typography>
-                        <Stack spacing={2}>
-                            <TextField
-                                fullWidth label="Referencia (Ej: Bolsa 50kg)"
-                                {...formik.getFieldProps('nombre_cemento_cemento')}
-                            />
-                            <Stack direction="row" spacing={2}>
-                                <TextField
-                                    fullWidth type="number" label="Unidades"
-                                    {...formik.getFieldProps('valor_cemento_unidades')}
-                                    error={Boolean(formik.touched.valor_cemento_unidades && formik.errors.valor_cemento_unidades)}
-                                    helperText={formik.touched.valor_cemento_unidades && formik.errors.valor_cemento_unidades}
-                                />
-                                <TextField
-                                    fullWidth type="number" label="Precio Unitario"
-                                    InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }}
-                                    {...formik.getFieldProps('valor_cemento')}
-                                    error={Boolean(formik.touched.valor_cemento && formik.errors.valor_cemento)}
-                                    helperText={formik.touched.valor_cemento && formik.errors.valor_cemento}
-                                />
-                            </Stack>
-                        </Stack>
-                    </Box>
-
-                    <Box>
-                        <Typography variant="subtitle2" sx={sectionTitleSx}><CalculateIcon fontSize="inherit"/> Porcentajes</Typography>
-                        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                            <TextField 
-                                fullWidth type="number" label="% Plan" 
-                                {...formik.getFieldProps('porcentaje_plan')} 
-                                error={Boolean(formik.touched.porcentaje_plan && formik.errors.porcentaje_plan)}
-                                InputProps={{ endAdornment: <InputAdornment position="end">%</InputAdornment> }} 
-                            />
-                            <TextField 
-                                fullWidth type="number" label="% Admin" 
-                                {...formik.getFieldProps('porcentaje_administrativo')} 
-                                error={Boolean(formik.touched.porcentaje_administrativo && formik.errors.porcentaje_administrativo)}
-                                InputProps={{ endAdornment: <InputAdornment position="end">%</InputAdornment> }} 
-                            />
-                            <TextField 
-                                fullWidth type="number" label="% IVA" 
-                                {...formik.getFieldProps('porcentaje_iva')} 
-                                error={Boolean(formik.touched.porcentaje_iva && formik.errors.porcentaje_iva)}
-                                InputProps={{ endAdornment: <InputAdornment position="end">%</InputAdornment> }} 
-                            />
-                        </Stack>
-                    </Box>
-
-                    <Alert severity="success" icon={<SavingsIcon fontSize="inherit"/>} variant="outlined">
-                        <Typography variant="subtitle2" gutterBottom>Simulación de Cuota Inicial:</Typography>
-                        <Stack direction="row" justifyContent="space-between" alignItems="baseline">
-                            <Box>
-                                <Typography variant="caption" display="block">Cuota Pura: ${valorMensual.toLocaleString(undefined, { maximumFractionDigits: 2 })}</Typography>
-                                <Typography variant="caption" display="block">Gastos Admin: ${cargaAdministrativa.toLocaleString(undefined, { maximumFractionDigits: 2 })}</Typography>
-                            </Box>
-                            <Box textAlign="right">
-                                <Typography variant="body2">Valor Mensual Final:</Typography>
-                                <Typography variant="h5" fontWeight={800} color="primary">
-                                    ${valorMensualFinal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                </Typography>
-                            </Box>
-                        </Stack>
-                    </Alert>
-                </Stack>
-            </Box>
-        )}
-
-        {/* === PASO 2: IMAGEN === */}
-        {activeStep === 2 && (
-            <Box textAlign="center">
-                <Typography variant="subtitle2" sx={{ ...sectionTitleSx, justifyContent: 'center' }}>
-                    <ImageIcon fontSize="inherit"/> Portada del Proyecto
+          <Box>
+            <Alert severity="info" sx={{ mb: 3 }}>Configura el valor de referencia para el cálculo de cuotas.</Alert>
+            <Stack spacing={3}>
+              <TextField fullWidth label="Insumo de Referencia" {...formik.getFieldProps('nombre_cemento_cemento')} />
+              <Stack direction="row" spacing={2}>
+                <TextField fullWidth type="number" label="Unidades" {...formik.getFieldProps('valor_cemento_unidades')} />
+                <TextField fullWidth type="number" label="Precio Unitario" {...formik.getFieldProps('valor_cemento')} />
+              </Stack>
+              <Paper sx={{ p: 3, textAlign: 'right', border: `1px solid ${theme.palette.success.light}`, bgcolor: alpha(theme.palette.success.main, 0.02) }}>
+                <Typography variant="caption" color="text.secondary">Estimación de Cuota Inicial</Typography>
+                <Typography variant="h4" fontWeight={900} color="success.main">
+                  ${simulation.final.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </Typography>
-                <Box sx={{ maxWidth: 400, mx: 'auto', mt: 2 }}>
-                    <SingleImageUpload
-                        image={image}
-                        onChange={setImage}
-                        maxSizeMB={15}
-                        disabled={isLoading}
-                    />
-                </Box>
-                {!image && (
-                      <Alert severity="warning" sx={{mt: 2, display: 'inline-flex'}}>
-                        Se creará el proyecto sin imagen de portada.
-                      </Alert>
-                )}
-            </Box>
+              </Paper>
+            </Stack>
+          </Box>
         )}
 
+        {activeStep === 2 && (
+          <Box textAlign="center" py={2}>
+            <SingleImageUpload image={image} onChange={setImage} maxSizeMB={10} />
+            {!image && <Alert severity="warning" sx={{ mt: 2 }}>No se ha seleccionado imagen de portada.</Alert>}
+          </Box>
+        )}
       </Stack>
     </BaseModal>
   );

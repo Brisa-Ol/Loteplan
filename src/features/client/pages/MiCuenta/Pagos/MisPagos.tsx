@@ -2,11 +2,12 @@ import React, { useMemo, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import {
   CheckCircle, ErrorOutline, Lock, ReceiptLong,
-  Schedule, Warning, AccountBalanceWallet
+  Schedule, Warning, AccountBalanceWallet,
+  Stars, RocketLaunch, PriorityHigh // ✅ Nuevos iconos para el banner
 } from '@mui/icons-material';
 import {
   alpha, Badge, Box, Button, Chip, Stack,
-  Tab, Tabs, Typography, useTheme
+  Tab, Tabs, Typography, useTheme, Paper, Alert, AlertTitle
 } from '@mui/material';
 
 // --- COMPONENTES ---
@@ -95,7 +96,6 @@ const MisPagos: React.FC = () => {
     const stats = {
       deudaVencida: data.filter(p => p.estado_pago === 'vencido').reduce((acc, curr) => acc + Number(curr.monto), 0),
       proximosVencimientos: data.filter(p => p.estado_pago === 'pendiente').reduce((acc, curr) => acc + Number(curr.monto), 0),
-      // ✅ Nuevo KPI: Total histórico pagado
       totalAbonado: data.filter(p => p.estado_pago === 'pagado').reduce((acc, curr) => acc + Number(curr.monto), 0),
     };
 
@@ -157,7 +157,6 @@ const MisPagos: React.FC = () => {
             {getNombreProyecto(row.id_proyecto ?? 0)}
           </Typography>
           <Stack direction="row" spacing={1} alignItems="center" mt={0.5}>
-            {/* Estilo consistente de ID/REF */}
             <Chip
               label={`SUSC: #${row.id_suscripcion}`}
               size="small"
@@ -249,13 +248,11 @@ const MisPagos: React.FC = () => {
   return (
     <PageContainer maxWidth="lg">
 
-      {/* HEADER SIMÉTRICO */}
       <PageHeader
         title="Mis Pagos"
         subtitle="Control de cuotas y registro de transacciones."
       />
 
-      {/* KPI SUMMARY (3 Columnas para balance visual) */}
       <Box
         mb={4}
         display="grid"
@@ -278,7 +275,6 @@ const MisPagos: React.FC = () => {
           color="error"
           loading={isLoading}
         />
-        {/* ✅ Nueva Tarjeta para completar el grid */}
         <StatCard
           title="Total Abonado"
           value={formatCurrency(stats.totalAbonado)}
@@ -289,7 +285,54 @@ const MisPagos: React.FC = () => {
         />
       </Box>
 
-      {/* TABS */}
+      {/* ✅ BANNER MOTIVACIONAL EN PANTALLA DE PAGOS */}
+      <Box mb={4}>
+        {!isLoading && counts.vencidas > 0 ? (
+          <Alert 
+            severity="error" 
+            variant="filled" 
+            icon={<PriorityHigh fontSize="large" />}
+            sx={{ borderRadius: 3, py: 2, boxShadow: theme.shadows[4] }}
+          >
+            <AlertTitle sx={{ fontWeight: 800, fontSize: '1.1rem' }}>¡Recupera tu Poder de Oferta!</AlertTitle>
+            <Typography variant="body2">
+                Tienes <strong>{counts.vencidas} cuotas vencidas</strong> que están bloqueando tu participación en las subastas. 
+                Regulariza tu deuda ahora para volver a pujar por el lote de tus sueños. ¡No dejes que otro gane por ti!
+            </Typography>
+          </Alert>
+        ) : (
+          <Paper 
+            elevation={0} 
+            sx={{ 
+              p: 3, 
+              borderRadius: 3, 
+              background: `linear-gradient(135deg, ${theme.palette.secondary.dark} 0%, ${theme.palette.primary.dark} 100%)`,
+              color: 'white',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 3,
+              position: 'relative',
+              overflow: 'hidden',
+              boxShadow: theme.shadows[6]
+            }}
+          >
+            <Stars sx={{ fontSize: 80, opacity: 0.1, position: 'absolute', right: -10, bottom: -20 }} />
+            <Box sx={{ bgcolor: alpha('#fff', 0.2), p: 2, borderRadius: '50%', display: 'flex' }}>
+              <RocketLaunch fontSize="large" />
+            </Box>
+            <Box>
+              <Typography variant="h6" fontWeight={800} sx={{ mb: 0.5, letterSpacing: 0.5 }}>
+                ¡Cuentas claras, lotes asegurados!
+              </Typography>
+              <Typography variant="body2" sx={{ opacity: 0.9, maxWidth: 700 }}>
+                Estás al día con tus compromisos. Esto te garantiza acceso total a todas las subastas activas del sistema. 
+                <strong> ¡Aprovecha tus tokens y haz tu mejor oferta hoy mismo!</strong>
+              </Typography>
+            </Box>
+          </Paper>
+        )}
+      </Box>
+
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
         <Tabs
           value={currentTab}
@@ -326,7 +369,6 @@ const MisPagos: React.FC = () => {
         </Box>
       </QueryHandler>
 
-      {/* MODAL 2FA */}
       <TwoFactorAuthModal
         open={twoFaModal.isOpen}
         onClose={() => { twoFaModal.close(); setSelectedPagoId(null); setTwoFAError(null); }}

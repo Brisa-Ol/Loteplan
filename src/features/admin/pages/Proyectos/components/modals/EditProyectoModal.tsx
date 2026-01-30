@@ -19,7 +19,6 @@ import * as Yup from 'yup';
 import type { ProyectoDto, UpdateProyectoDto } from '../../../../../../core/types/dto/proyecto.dto';
 import BaseModal from '../../../../../../shared/components/domain/modals/BaseModal/BaseModal';
 
-
 interface EditProyectoModalProps {
   open: boolean;
   onClose: () => void;
@@ -28,24 +27,20 @@ interface EditProyectoModalProps {
   isLoading?: boolean;
 }
 
-// ✅ Esquema de validación
+// ✅ Esquema de validación consistente
 const validationSchema = Yup.object({
-  nombre_proyecto: Yup.string().required('Requerido'),
-  descripcion: Yup.string().nullable(),
-  forma_juridica: Yup.string().nullable(),
+  nombre_proyecto: Yup.string().min(5, 'Mínimo 5 caracteres').required('Requerido'),
+  descripcion: Yup.string().min(20, 'Describe mejor el proyecto (mín 20 car.)').required('Requerido'),
+  forma_juridica: Yup.string().required('Requerido'),
   estado_proyecto: Yup.string().required('Requerido'),
-  fecha_inicio: Yup.string().required('Requerido'),
-  fecha_cierre: Yup.string()
+  fecha_inicio: Yup.date().required('Requerido'),
+  fecha_cierre: Yup.date()
     .required('Requerido')
-    .test('is-after', 'La fecha de cierre debe ser posterior a la de inicio', function(value) {
-      const { fecha_inicio } = this.parent;
-      if (!fecha_inicio || !value) return true;
-      return new Date(value) > new Date(fecha_inicio);
-    }),
+    .min(Yup.ref('fecha_inicio'), 'Debe ser posterior al inicio'),
   latitud: Yup.number().nullable().min(-90).max(90),
   longitud: Yup.number().nullable().min(-180).max(180),
   obj_suscripciones: Yup.number().nullable().min(1, 'Mínimo 1'),
-  suscripciones_minimas: Yup.number().nullable().min(0, 'No puede ser negativo'),
+  suscripciones_minimas: Yup.number().nullable().min(0),
   plazo_inversion: Yup.number().nullable().min(1, 'Mínimo 1 mes'),
 });
 
@@ -65,19 +60,27 @@ const EditProyectoModal: React.FC<EditProyectoModalProps> = ({
     enableReinitialize: true, 
     onSubmit: async (values) => {
       if (!proyecto) return;
+      
+      // ✅ Limpieza de datos (vacíos a null) y conversión forzada a Number para la API
+      const cleanData = Object.fromEntries(
+        Object.entries(values).map(([key, val]) => {
+            if (val === '') return [key, null];
+            // Aseguramos que campos que deben ser números lo sean al enviar
+            if (['latitud', 'longitud', 'obj_suscripciones', 'suscripciones_minimas', 'plazo_inversion'].includes(key)) {
+                return [key, val !== null ? Number(val) : null];
+            }
+            return [key, val];
+        })
+      );
+
       try {
-        await onSubmit(proyecto.id, values);
-        handleReset();
+        await onSubmit(proyecto.id, cleanData as UpdateProyectoDto);
+        onClose();
       } catch (error) {
         console.error('Error al editar:', error);
       }
     },
   });
-
-  const handleReset = () => {
-    formik.resetForm();
-    onClose();
-  };
 
   useEffect(() => {
     if (proyecto && open) {
@@ -85,109 +88,83 @@ const EditProyectoModal: React.FC<EditProyectoModalProps> = ({
         nombre_proyecto: proyecto.nombre_proyecto || '',
         descripcion: proyecto.descripcion || '',
         forma_juridica: proyecto.forma_juridica || '',
-        fecha_inicio: proyecto.fecha_inicio ? new Date(proyecto.fecha_inicio).toISOString().slice(0, 10) : '',
-        fecha_cierre: proyecto.fecha_cierre ? new Date(proyecto.fecha_cierre).toISOString().slice(0, 10) : '',
+        // Formateo de fecha seguro para input type="date"
+        fecha_inicio: proyecto.fecha_inicio ? proyecto.fecha_inicio.split('T')[0] : '',
+        fecha_cierre: proyecto.fecha_cierre ? proyecto.fecha_cierre.split('T')[0] : '',
         activo: proyecto.activo ?? true,
         estado_proyecto: proyecto.estado_proyecto || 'En Espera',
-        latitud: proyecto.latitud ?? undefined,
-        longitud: proyecto.longitud ?? undefined,
-        obj_suscripciones: proyecto.obj_suscripciones ?? undefined,
-        suscripciones_minimas: proyecto.suscripciones_minimas ?? undefined,
-        plazo_inversion: proyecto.plazo_inversion ?? undefined,
+        
+        // ✅ CORRECCIÓN DE TIPO: Conversión explícita de String (del DB) a Number (para Formik/TS)
+        latitud: proyecto.latitud != null ? Number(proyecto.latitud) : undefined,
+        longitud: proyecto.longitud != null ? Number(proyecto.longitud) : undefined,
+        obj_suscripciones: proyecto.obj_suscripciones != null ? Number(proyecto.obj_suscripciones) : undefined,
+        suscripciones_minimas: proyecto.suscripciones_minimas != null ? Number(proyecto.suscripciones_minimas) : undefined,
+        plazo_inversion: proyecto.plazo_inversion != null ? Number(proyecto.plazo_inversion) : undefined,
       });
     }
   }, [proyecto, open]);
 
   if (!proyecto) return null;
 
-  // Estilos
   const commonInputSx = { '& .MuiOutlinedInput-root': { borderRadius: 2 } };
   const sectionTitleSx = { 
     fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', mb: 2, 
-    display: 'flex', alignItems: 'center', gap: 1, fontSize: '0.75rem', letterSpacing: 0.5
+    display: 'flex', alignItems: 'center', gap: 1, fontSize: '0.72rem', letterSpacing: 0.5
   };
 
   return (
     <BaseModal
-      open={open}
-      onClose={handleReset}
-      title="Editar Proyecto"
-      subtitle={`Modificando: ${proyecto.nombre_proyecto}`}
-      icon={<EditIcon />}
-      headerColor="primary"
-      confirmText="Guardar Cambios"
-      confirmButtonIcon={<SaveIcon />}
-      onConfirm={formik.submitForm}
-      isLoading={isLoading}
-      disableConfirm={!formik.isValid || isLoading}
-      maxWidth="md"
-      headerExtra={
-        <Chip 
-            label={`ID: ${proyecto.id}`} 
-            size="small" 
-            variant="outlined" 
-            sx={{ fontWeight: 700, borderRadius: 1.5 }}
-        />
-      }
+      open={open} onClose={() => { formik.resetForm(); onClose(); }} 
+      title="Editar Proyecto" icon={<EditIcon />} headerColor="primary"
+      confirmText="Guardar Cambios" confirmButtonIcon={<SaveIcon />} onConfirm={formik.submitForm}
+      isLoading={isLoading} disableConfirm={!formik.isValid || isLoading} maxWidth="md"
+      headerExtra={<Chip label={`ID: ${proyecto.id}`} size="small" variant="outlined" sx={{ fontWeight: 700, borderRadius: 1.5 }} />}
     >
       <Stack spacing={4}>
         
-        {/* 1. INFORMACIÓN GENERAL */}
+        {/* 1. INFORMACIÓN PRINCIPAL */}
         <Box>
             <Typography variant="subtitle2" sx={sectionTitleSx}>
-                <DescriptionIcon fontSize="inherit" /> Información General
+                <DescriptionIcon fontSize="inherit" /> Información del Desarrollo
             </Typography>
             
-            <Stack spacing={2}>
+            <Stack spacing={2.5}>
                 <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-                    <Box sx={{ flex: 2 }}>
-                        <TextField
-                            fullWidth
-                            id="nombre_proyecto"
-                            label="Nombre del Proyecto"
-                            {...formik.getFieldProps('nombre_proyecto')}
-                            error={formik.touched.nombre_proyecto && Boolean(formik.errors.nombre_proyecto)}
-                            helperText={formik.touched.nombre_proyecto && formik.errors.nombre_proyecto}
-                            disabled={isLoading}
-                            sx={commonInputSx}
-                        />
-                    </Box>
-                    <Box sx={{ flex: 1 }}>
-                        <TextField
-                            select
-                            fullWidth
-                            id="estado_proyecto"
-                            label="Estado Actual"
-                            {...formik.getFieldProps('estado_proyecto')}
-                            disabled={isLoading}
-                            sx={commonInputSx}
-                        >
-                            <MenuItem value="En Espera">En Espera</MenuItem>
-                            <MenuItem value="En proceso">En Proceso</MenuItem>
-                            <MenuItem value="Finalizado">Finalizado</MenuItem>
-                        </TextField>
-                    </Box>
+                    <TextField
+                        fullWidth label="Nombre del Proyecto"
+                        {...formik.getFieldProps('nombre_proyecto')}
+                        error={formik.touched.nombre_proyecto && Boolean(formik.errors.nombre_proyecto)}
+                        helperText={formik.touched.nombre_proyecto && formik.errors.nombre_proyecto}
+                        sx={{ ...commonInputSx, flex: 2 }}
+                    />
+                    <TextField
+                        select fullWidth label="Estado"
+                        {...formik.getFieldProps('estado_proyecto')}
+                        sx={{ ...commonInputSx, flex: 1 }}
+                    >
+                        <MenuItem value="En Espera">En Espera</MenuItem>
+                        <MenuItem value="En proceso">En Proceso</MenuItem>
+                        <MenuItem value="Finalizado">Finalizado</MenuItem>
+                    </TextField>
                 </Stack>
 
-                <TextField
-                    fullWidth
-                    multiline
-                    rows={2}
-                    id="descripcion"
-                    label="Descripción Comercial"
-                    placeholder="Breve descripción del proyecto..."
-                    {...formik.getFieldProps('descripcion')}
-                    disabled={isLoading}
-                    sx={commonInputSx}
-                />
+                <Box>
+                    <TextField
+                        fullWidth multiline rows={4} maxRows={10}
+                        label="Descripción Comercial"
+                        {...formik.getFieldProps('descripcion')}
+                        error={formik.touched.descripcion && Boolean(formik.errors.descripcion)}
+                        helperText={formik.errors.descripcion || `${formik.values.descripcion?.length || 0} caracteres`}
+                        sx={commonInputSx}
+                    />
+                </Box>
 
                 <Box sx={{ width: { xs: '100%', md: '50%' } }}>
                     <TextField
-                        fullWidth
-                        id="forma_juridica"
-                        label="Forma Jurídica"
+                        fullWidth label="Forma Jurídica"
                         {...formik.getFieldProps('forma_juridica')}
-                        disabled={isLoading}
+                        error={formik.touched.forma_juridica && Boolean(formik.errors.forma_juridica)}
+                        helperText={formik.touched.forma_juridica && formik.errors.forma_juridica}
                         sx={commonInputSx}
                     />
                 </Box>
@@ -196,84 +173,54 @@ const EditProyectoModal: React.FC<EditProyectoModalProps> = ({
 
         <Divider />
 
-        {/* 2. VIGENCIA (FECHAS) */}
+        {/* 2. CRONOGRAMA */}
         <Box>
             <Typography variant="subtitle2" sx={sectionTitleSx}>
-                <CalendarIcon fontSize="inherit" /> Vigencia del Proyecto
+                <CalendarIcon fontSize="inherit" /> Plazos de Convocatoria
             </Typography>
             <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
                 <TextField
-                    fullWidth
-                    id="fecha_inicio"
-                    label="Fecha de Inicio"
-                    type="date"
-                    InputLabelProps={{ shrink: true }}
+                    fullWidth label="Fecha de Inicio" type="date" InputLabelProps={{ shrink: true }}
                     {...formik.getFieldProps('fecha_inicio')}
                     error={formik.touched.fecha_inicio && Boolean(formik.errors.fecha_inicio)}
                     helperText={formik.touched.fecha_inicio && (formik.errors.fecha_inicio as string)}
-                    disabled={isLoading}
                     sx={commonInputSx}
                 />
                 <TextField
-                    fullWidth
-                    id="fecha_cierre"
-                    label="Fecha de Cierre"
-                    type="date"
-                    InputLabelProps={{ shrink: true }}
+                    fullWidth label="Fecha de Cierre" type="date" InputLabelProps={{ shrink: true }}
                     {...formik.getFieldProps('fecha_cierre')}
                     error={formik.touched.fecha_cierre && Boolean(formik.errors.fecha_cierre)}
                     helperText={formik.touched.fecha_cierre && (formik.errors.fecha_cierre as string)}
-                    disabled={isLoading}
                     sx={commonInputSx}
                 />
             </Stack>
         </Box>
 
-        {/* 3. CONFIGURACIÓN ESPECÍFICA (SOLO MENSUAL) */}
+        {/* 3. CONFIGURACIÓN (MENSUAL) */}
         {proyecto.tipo_inversion === 'mensual' && (
             <Paper 
                 elevation={0}
-                sx={{ 
-                    p: 2.5, 
-                    border: `1px dashed ${theme.palette.divider}`,
-                    borderRadius: 2,
-                    bgcolor: alpha(theme.palette.primary.main, 0.02)
-                }}
+                sx={{ p: 2.5, border: `1px dashed ${theme.palette.primary.main}`, borderRadius: 2, bgcolor: alpha(theme.palette.primary.main, 0.02) }}
             >
-                <Typography variant="subtitle2" sx={{ ...sectionTitleSx, color: 'primary.main', mb: 2 }}>
-                    <SavingsIcon fontSize="inherit" /> Configuración de Ahorro
+                <Typography variant="subtitle2" sx={{ ...sectionTitleSx, color: 'primary.main', mb: 2.5 }}>
+                    <SavingsIcon fontSize="inherit" /> Objetivos de Suscripción
                 </Typography>
                 
                 <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
                     <TextField
-                        fullWidth
-                        id="obj_suscripciones"
-                        label="Objetivo Suscripciones"
-                        type="number"
+                        fullWidth label="Cupo Máximo" type="number"
                         {...formik.getFieldProps('obj_suscripciones')}
-                        disabled={isLoading}
-                        size="small"
-                        InputProps={{ endAdornment: <InputAdornment position="end">Subs</InputAdornment> }}
+                        InputProps={{ endAdornment: <InputAdornment position="end">Planes</InputAdornment> }}
                         sx={commonInputSx}
                     />
                     <TextField
-                        fullWidth
-                        id="suscripciones_minimas"
-                        label="Mínimo Requerido"
-                        type="number"
+                        fullWidth label="Mínimo Requerido" type="number"
                         {...formik.getFieldProps('suscripciones_minimas')}
-                        disabled={isLoading}
-                        size="small"
                         sx={commonInputSx}
                     />
                     <TextField
-                        fullWidth
-                        id="plazo_inversion"
-                        label="Plazo Estimado"
-                        type="number"
+                        fullWidth label="Plazo Inversión" type="number"
                         {...formik.getFieldProps('plazo_inversion')}
-                        disabled={isLoading}
-                        size="small"
                         InputProps={{ endAdornment: <InputAdornment position="end">Meses</InputAdornment> }}
                         sx={commonInputSx}
                     />
@@ -283,81 +230,49 @@ const EditProyectoModal: React.FC<EditProyectoModalProps> = ({
 
         <Divider />
 
-        {/* 4. UBICACIÓN Y ESTADO */}
+        {/* 4. LOCALIZACIÓN Y VISIBILIDAD */}
         <Box>
-            <Stack direction={{ xs: 'column', md: 'row' }} spacing={3} alignItems="flex-start">
-                
-                {/* Columna Izquierda: Ubicación */}
-                <Box sx={{ flex: 2, width: '100%' }}>
+            <Stack direction={{ xs: 'column', md: 'row' }} spacing={3} alignItems="center">
+                <Box sx={{ flex: 1, width: '100%' }}>
                     <Typography variant="subtitle2" sx={sectionTitleSx}>
-                        <LocationIcon fontSize="inherit" /> Ubicación Geográfica
+                        <LocationIcon fontSize="inherit" /> Georreferenciación
                     </Typography>
-                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                    <Stack direction="row" spacing={2}>
                         <TextField
-                            fullWidth
-                            id="latitud"
-                            label="Latitud"
-                            type="number"
-                            inputProps={{ step: "any" }}
-                            InputProps={{ startAdornment: <InputAdornment position="start"><WorldIcon fontSize='small' color="action"/></InputAdornment> }}
+                            fullWidth label="Latitud" type="number"
                             {...formik.getFieldProps('latitud')}
-                            disabled={isLoading}
+                            InputProps={{ startAdornment: <InputAdornment position="start"><WorldIcon fontSize='small' color="action"/></InputAdornment> }}
                             sx={commonInputSx}
                         />
                         <TextField
-                            fullWidth
-                            id="longitud"
-                            label="Longitud"
-                            type="number"
-                            inputProps={{ step: "any" }}
-                            InputProps={{ startAdornment: <InputAdornment position="start"><WorldIcon fontSize='small' color="action"/></InputAdornment> }}
+                            fullWidth label="Longitud" type="number"
                             {...formik.getFieldProps('longitud')}
-                            disabled={isLoading}
+                            InputProps={{ startAdornment: <InputAdornment position="start"><WorldIcon fontSize='small' color="action"/></InputAdornment> }}
                             sx={commonInputSx}
                         />
                     </Stack>
                 </Box>
 
-                {/* Columna Derecha: Switch de Estado */}
-                <Box sx={{ flex: 1, width: '100%', display: 'flex', justifyContent: {xs: 'flex-start', md: 'flex-end'} }}>
-                    <Paper 
-                        variant="outlined" 
-                        sx={{ 
-                            p: 2, 
-                            width: { xs: '100%', md: 'auto' },
-                            minWidth: 150,
-                            display: 'flex', 
-                            flexDirection: 'column', 
-                            alignItems: 'center',
-                            borderColor: formik.values.activo ? 'success.main' : 'divider',
-                            bgcolor: formik.values.activo ? alpha(theme.palette.success.main, 0.05) : 'transparent',
-                            borderRadius: 2
-                        }}
-                    >
-                        <Typography variant="caption" fontWeight={700} color={formik.values.activo ? 'success.main' : 'text.disabled'} gutterBottom>
-                            VISIBILIDAD
-                        </Typography>
-                        <FormControlLabel
-                            control={
-                                <Switch
-                                    checked={formik.values.activo}
-                                    onChange={(e) => formik.setFieldValue('activo', e.target.checked)}
-                                    color="success"
-                                />
-                            }
-                            label={
-                                <Typography variant="body2" fontWeight={600}>
-                                    {formik.values.activo ? "Público" : "Oculto"}
-                                </Typography>
-                            }
-                            labelPlacement="bottom"
-                            sx={{ m: 0 }}
-                        />
-                    </Paper>
-                </Box>
+                <Paper 
+                    variant="outlined" 
+                    sx={{ 
+                        p: 2, minWidth: 160, textAlign: 'center', borderRadius: 2,
+                        borderColor: formik.values.activo ? 'success.main' : 'divider',
+                        bgcolor: formik.values.activo ? alpha(theme.palette.success.main, 0.05) : 'transparent'
+                    }}
+                >
+                    <Typography variant="caption" fontWeight={800} color={formik.values.activo ? 'success.main' : 'text.disabled'} display="block" mb={1}>
+                        VISIBILIDAD PÚBLICA
+                    </Typography>
+                    <FormControlLabel
+                        control={<Switch checked={formik.values.activo} onChange={(e) => formik.setFieldValue('activo', e.target.checked)} color="success" />}
+                        label={<Typography variant="body2" fontWeight={700}>{formik.values.activo ? "ACTIVO" : "OCULTO"}</Typography>}
+                        labelPlacement="bottom"
+                        sx={{ m: 0 }}
+                    />
+                </Paper>
             </Stack>
         </Box>
-
       </Stack>
     </BaseModal>
   );

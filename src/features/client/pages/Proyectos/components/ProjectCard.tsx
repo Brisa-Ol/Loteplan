@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useCallback } from "react";
 import {
   Card, CardMedia, CardContent, Typography, Chip, Box, Button,
   useTheme, alpha, Divider, Stack, LinearProgress
@@ -23,32 +23,39 @@ const CardHeader: React.FC<{
   esUrgente: boolean;
   nombreProyecto: string;
   onImageError: () => void;
-}> = ({ imagenPrincipal, badge, esPack, estadoConfig, diasRestantes, esUrgente, nombreProyecto, onImageError }) => {
+  onImageLoad: () => void;
+}> = ({ imagenPrincipal, badge, esPack, estadoConfig, diasRestantes, esUrgente, nombreProyecto, onImageError, onImageLoad }) => {
   const theme = useTheme();
   const BadgeIcon = badge.icon;
-  const [imageLoaded, setImageLoaded] = useState(false);
+  
+  // ✅ OPTIMIZACIÓN: useRef para estado de imagen (no causa re-renders innecesarios)
+  const imageState = useRef<{ loaded: boolean }>({ loaded: false });
+
+  const handleImageLoad = useCallback(() => {
+    imageState.current.loaded = true;
+    onImageLoad();
+  }, [onImageLoad]);
 
   return (
     <Box sx={{ position: 'relative', height: 200, overflow: 'hidden', bgcolor: 'grey.100' }}>
-      {/* ✅ MEJORA 1: Lazy loading de imágenes */}
       <CardMedia 
         component="img" 
         height="100%" 
         image={imagenPrincipal} 
         alt={nombreProyecto}
         loading="lazy"
-        onLoad={() => setImageLoaded(true)}
+        onLoad={handleImageLoad}
         onError={onImageError}
         sx={{ 
           objectFit: 'cover', 
           transition: 'all 0.5s ease',
-          opacity: imageLoaded ? 1 : 0,
+          opacity: 1,
           '&:hover': { transform: 'scale(1.05)' }
         }} 
       />
 
-      {/* ✅ MEJORA 2: Placeholder mientras carga */}
-      {!imageLoaded && (
+      {/* Placeholder mientras carga */}
+      {!imageState.current.loaded && (
         <Box
           sx={{
             position: 'absolute',
@@ -311,16 +318,22 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, onClick }) =>
   const theme = useTheme();
   const helpers = useProyectoHelpers(project);
   
-  // ✅ MEJORA 3: Estado para manejar error de imagen
-  const [imageError, setImageError] = useState(false);
+  // ✅ OPTIMIZACIÓN: useRef para estado de imagen (no causa re-renders innecesarios)
+  const imageState = useRef<{ error: boolean; loaded: boolean }>({ 
+    error: false,
+    loaded: false 
+  });
 
-  // ✅ MEJORA 4: Handler para error de imagen
-  const handleImageError = () => {
-    setImageError(true);
-  };
+  const handleImageError = useCallback(() => {
+    imageState.current.error = true;
+  }, []);
+
+  const handleImageLoad = useCallback(() => {
+    imageState.current.loaded = true;
+  }, []);
 
   // Si hay error, usar placeholder
-  const imagenFinal = imageError ? '/assets/placeholder-project.jpg' : helpers.imagenPrincipal;
+  const imagenFinal = imageState.current.error ? '/assets/placeholder-project.jpg' : helpers.imagenPrincipal;
 
   return (
     <Card
@@ -347,6 +360,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, onClick }) =>
         esUrgente={helpers.esUrgente && project.estado_proyecto === 'En proceso'}
         nombreProyecto={project.nombre_proyecto}
         onImageError={handleImageError}
+        onImageLoad={handleImageLoad}
       />
       
       <CardContent sx={{ 

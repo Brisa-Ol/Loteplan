@@ -1,311 +1,246 @@
 // src/features/client/pages/Proyectos/DetalleProyecto.tsx
-// ✅ VERSIÓN CORREGIDA - TAB DE LOTES SOLO PARA MENSUALES
 
 import React, { useState } from 'react';
-import { 
-  Backdrop, Box, CircularProgress, Stack, Tab, Tabs, 
-  Typography, Skeleton, Alert, Dialog, IconButton, 
-  Divider, Paper, Fade
+import {
+  Backdrop, Box, CircularProgress, Stack, Tab, Tabs,
+  Typography, Skeleton, Alert, Dialog, IconButton,
+  Divider, Paper, Fade, Avatar, Button, alpha, useTheme,
+  List, ListItem, ListItemIcon, ListItemText, DialogTitle,
+  DialogContent, DialogActions
 } from '@mui/material';
-import { 
-  Info, InsertPhoto, ViewList, Close, LocationOn, 
-  CalendarMonth, GppGood 
+import {
+  Info, InsertPhoto, ViewList, Close, LocationOn,
+  CalendarMonth, GppGood, Gavel, HelpOutline,
+  Restore, ShoppingBag, SportsScore, AutoGraph, CheckCircle,
+  AccountBalance, Groups, Schedule, MonetizationOn, Explore
 } from '@mui/icons-material';
 
-// Hooks
+// Hooks y Componentes
 import { useDetalleProyecto } from '../../hooks/useDetalleProyecto';
-
-// Componentes
 import { PageContainer } from '@/shared/components/layout/containers/PageContainer/PageContainer';
 import { ProjectHero } from './components/ProjectHero';
 import { ProjectGallery } from './components/ProjectGallery';
 import { ProjectSidebar } from './components/ProjectSidebar';
 import { ListaLotesProyecto } from '../Lotes/ListaLotesProyecto';
-
-// Modales
 import { CheckoutWizardModal } from './modals/CheckoutWizardModal';
-
-// Types
 import type { ProyectoDto } from '@/core/types/dto/proyecto.dto';
 
 // ==========================================
-// SUB-COMPONENTES (UI Helpers)
+// COMPONENTE INTERNOS DE UI
 // ==========================================
 
-interface TabPanelProps {
-  children?: React.ReactNode;
-  index: number;
-  value: number;
-}
-
-const CustomTabPanel: React.FC<TabPanelProps> = ({ children, value, index }) => (
-  <div role="tabpanel" hidden={value !== index} style={{ width: '100%' }}>
-    {value === index && (
-      <Fade in={value === index} timeout={500}>
-        <Box sx={{ py: 3 }}>
-          {children}
-        </Box>
-      </Fade>
-    )}
-  </div>
+const FeatureItem = ({ icon, title, desc, action }: { icon: React.ReactNode, title: string, desc: string, action?: React.ReactNode }) => (
+  <Stack spacing={1} sx={{ p: 2.5, bgcolor: 'background.default', borderRadius: 3, height: '100%', border: '1px solid', borderColor: 'divider' }}>
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+      <Avatar sx={{ bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1), color: 'primary.main', width: 40, height: 40 }}>
+        {icon}
+      </Avatar>
+      <Typography variant="subtitle2" fontWeight={800}>{title}</Typography>
+    </Box>
+    <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.5, flexGrow: 1 }}>{desc}</Typography>
+    {action && <Box sx={{ mt: 1 }}>{action}</Box>}
+  </Stack>
 );
 
-const ProjectHighlights: React.FC<{ proyecto: ProyectoDto }> = ({ proyecto }) => (
-  <Paper 
-    elevation={0} 
-    sx={{ 
-      p: 2, 
-      mb: 3, 
-      bgcolor: 'background.default', 
-      border: '1px solid', 
-      borderColor: 'divider', 
-      borderRadius: 3 
-    }}
-  >
-    <Stack 
-      direction={{ xs: 'column', sm: 'row' }} 
-      spacing={3} 
-      alignItems={{ xs: 'flex-start', sm: 'center' }} 
-      divider={<Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', sm: 'block' } }} />}
-    >
-      <HighlightItem 
-        icon={<LocationOn color="error" />} 
-        label="UBICACIÓN" 
-        value={proyecto.latitud && proyecto.longitud ? 'Georreferenciada' : 'Consultar Zona'} 
-      />
-      <HighlightItem 
-        icon={<CalendarMonth color="primary" />} 
-        label="CIERRE PREVISTO" 
-        value={new Date(proyecto.fecha_cierre).toLocaleDateString()} 
-      />
-      <HighlightItem 
-        icon={<GppGood color="success" />} 
-        label="RESPALDO" 
-        value={proyecto.forma_juridica || 'Contrato Digital'} 
-      />
-    </Stack>
-  </Paper>
-);
-
-const HighlightItem = ({ icon, label, value }: { icon: React.ReactNode, label: string, value: string }) => (
-  <Stack direction="row" alignItems="center" gap={1}>
-    {icon}
+const DataPoint = ({ label, value, icon }: { label: string, value: string | number, icon?: React.ReactNode }) => (
+  <Stack direction="row" spacing={1.5} alignItems="center">
+    {icon && <Box sx={{ color: 'action.active', display: 'flex' }}>{icon}</Box>}
     <Box>
-      <Typography variant="caption" color="text.secondary" fontWeight={600}>{label}</Typography>
+      <Typography variant="caption" color="text.secondary" display="block" fontWeight={600} sx={{ textTransform: 'uppercase', lineHeight: 1 }}>
+        {label}
+      </Typography>
       <Typography variant="body2" fontWeight={700}>{value}</Typography>
     </Box>
   </Stack>
 );
 
-// ✅ WRAPPER DE MODALES (Conectado a useDetalleProyecto)
-const ProjectModals: React.FC<{ logic: any, proyecto: ProyectoDto }> = ({ logic, proyecto }) => {
-  if (!logic.user) return null;
-  
-  return (
-    <CheckoutWizardModal
-      open={logic.modales.checkoutWizard.isOpen}
-      onClose={logic.modales.checkoutWizard.close}
-      proyecto={proyecto}
-      tipo={proyecto.tipo_inversion === 'mensual' ? 'suscripcion' : 'inversion'}
-      inversionId={logic.inversionId} 
-      pagoId={logic.pagoId}
-      onConfirmInvestment={logic.wizardCallbacks.onConfirmInvestment}
-      onSubmit2FA={logic.wizardCallbacks.onSubmit2FA}
-      onSignContract={logic.wizardCallbacks.onSignContract}
-      isProcessing={logic.isProcessingWizard}
-      error2FA={logic.error2FA}
-    />
-  );
-};
+const TokenInfoModal: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => (
+  <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
+    <DialogTitle sx={{ fontWeight: 800, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+      <HelpOutline color="primary" /> Sistema de Tokens
+    </DialogTitle>
+    <DialogContent dividers>
+      <Stack spacing={3}>
+        <Typography variant="body2" color="text.secondary">
+          Tu suscripción te otorga <strong>Tokens de Subasta</strong> para participar en la adjudicación de lotes.
+        </Typography>
+        <List dense disablePadding>
+          <ListItem disableGutters>
+            <ListItemIcon sx={{ minWidth: 36 }}><ShoppingBag fontSize="small" color="action" /></ListItemIcon>
+            <ListItemText primaryTypographyProps={{ variant: 'body2' }} primary="Cada oferta activa bloquea 1 token de tu saldo." />
+          </ListItem>
+          <ListItem disableGutters>
+            <ListItemIcon sx={{ minWidth: 36 }}><SportsScore fontSize="small" color="success" /></ListItemIcon>
+            <ListItemText primaryTypographyProps={{ variant: 'body2' }} primary="Si ganas, el token se consume para la entrega del lote." />
+          </ListItem>
+          <ListItem disableGutters>
+            <ListItemIcon sx={{ minWidth: 36 }}><Restore fontSize="small" color="primary" /></ListItemIcon>
+            <ListItemText primaryTypographyProps={{ variant: 'body2' }} primary="Si pierdes, el token vuelve a tu cuenta automáticamente." />
+          </ListItem>
+        </List>
+      </Stack>
+    </DialogContent>
+    <DialogActions sx={{ p: 2 }}>
+      <Button onClick={onClose} variant="contained" fullWidth sx={{ borderRadius: 2, fontWeight: 700 }}>Entendido</Button>
+    </DialogActions>
+  </Dialog>
+);
 
 // ==========================================
 // COMPONENTE PRINCIPAL
 // ==========================================
+
 const DetalleProyecto: React.FC = () => {
   const logic = useDetalleProyecto();
+  const theme = useTheme();
   const [lightbox, setLightbox] = useState<{ open: boolean; img: string }>({ open: false, img: '' });
+  const [tokenInfoOpen, setTokenInfoOpen] = useState(false);
 
-  // --- Estados de Carga y Error ---
-  if (logic.loadingProyecto) return <LoadingSkeleton />;
-  
-  if (!logic.proyecto) return (
-    <PageContainer>
-      <Alert severity="error" variant="outlined">Proyecto no encontrado o no disponible.</Alert>
-    </PageContainer>
-  );
+  if (logic.loadingProyecto) return <Skeleton variant="rectangular" height="100vh" />;
+  if (!logic.proyecto) return <PageContainer><Alert severity="error">Proyecto no disponible.</Alert></PageContainer>;
 
   const { proyecto } = logic;
+  const esMensual = proyecto.tipo_inversion === 'mensual';
 
-  // ==========================================
-  // ✅ VALIDACIÓN CRÍTICA: MOSTRAR TAB SOLO SI ES MENSUAL
-  // ==========================================
-  const mostrarTabLotes = proyecto.tipo_inversion === 'mensual';
+  // Lógica para el mapa
+  const googleMapsUrl = proyecto.latitud && proyecto.longitud 
+    ? `https://www.google.com/maps/search/?api=1&query=${proyecto.latitud},${proyecto.longitud}`
+    : null;
 
   return (
     <PageContainer maxWidth="xl" sx={{ pb: 8 }}>
-      
-      {/* Overlay global para cuando vuelve de Mercado Pago */}
-      <Backdrop 
-        sx={{ color: '#fff', zIndex: 9999, flexDirection: 'column', gap: 2 }} 
-        open={logic.verificandoPago}
-      >
+      <Backdrop sx={{ color: '#fff', zIndex: 9999, flexDirection: 'column', gap: 2 }} open={logic.verificandoPago}>
         <CircularProgress color="inherit" size={60} />
-        <Typography variant="h6" fontWeight={600}>Verificando transacción...</Typography>
-        <Typography variant="body2" color="inherit" sx={{ opacity: 0.8 }}>
-          Por favor no cierres esta ventana
-        </Typography>
+        <Typography variant="h6">Verificando transacción...</Typography>
       </Backdrop>
 
-      {/* Hero Section */}
       <ProjectHero proyecto={proyecto} />
 
       <Box sx={{ display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, gap: 5, alignItems: 'flex-start' }}>
-        
-        {/* === COLUMNA PRINCIPAL === */}
         <Box sx={{ flex: 1, width: '100%', minWidth: 0 }}>
-          <ProjectHighlights proyecto={proyecto} />
-
-          {/* Tabs Header */}
-          <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-            <Tabs 
-              value={logic.tabValue} 
-              onChange={logic.handleTabChange}
-              variant="scrollable"
-              scrollButtons="auto"
-            >
+          <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
+            <Tabs value={logic.tabValue} onChange={logic.handleTabChange} variant="scrollable">
               <Tab icon={<Info fontSize="small" />} iconPosition="start" label="Visión General" />
               <Tab icon={<InsertPhoto fontSize="small" />} iconPosition="start" label="Galería" />
-              {/* ✅ Tab de lotes SOLO si es mensual */}
-              {mostrarTabLotes && (
-                <Tab icon={<ViewList fontSize="small" />} iconPosition="start" label="Inventario de Lotes" />
-              )}
+              {esMensual && <Tab icon={<ViewList fontSize="small" />} iconPosition="start" label="Inventario de Lotes" />}
             </Tabs>
           </Box>
 
-          {/* Tabs Content */}
           <Box sx={{ minHeight: 400 }}>
-            {/* Tab 0: Visión General */}
-            <CustomTabPanel value={logic.tabValue} index={0}>
-              <Typography variant="h5" fontWeight={800} gutterBottom>
-                Sobre este proyecto
-              </Typography>
-              <Typography 
-                variant="body1" 
-                paragraph 
-                sx={{ 
-                  whiteSpace: 'pre-line', 
-                  lineHeight: 1.8, 
-                  color: 'text.secondary', 
-                  fontSize: '1.05rem' 
-                }}
-              >
-                {proyecto.descripcion}
-              </Typography>
+            {/* TAB 0: VISIÓN GENERAL */}
+            {logic.tabValue === 0 && (
+              <Fade in>
+                <Stack spacing={4}>
+                  <Box display="grid" gridTemplateColumns={{ xs: '1fr', sm: '1fr 1fr 1fr' }} gap={3}>
+                    
+                    {/* ✅ HIGHLIGHT DE UBICACIÓN DINÁMICO */}
+                    <FeatureItem 
+                      icon={<LocationOn />} 
+                      title="Ubicación" 
+                      desc={googleMapsUrl 
+                        ? "Proyecto georreferenciado con coordenadas exactas en mapa digital." 
+                        : "Ubicación estratégica con alta proyección urbana y plusvalía."} 
+                      action={googleMapsUrl && (
+                        <Button 
+                          size="small" 
+                          variant="text" 
+                          startIcon={<Explore fontSize="small" />}
+                          href={googleMapsUrl}
+                          target="_blank"
+                          sx={{ fontWeight: 700, textTransform: 'none', p: 0 }}
+                        >
+                          Ver en Google Maps
+                        </Button>
+                      )}
+                    />
 
-              {/* ✅ INFO ADICIONAL PARA INVERSIONISTAS DIRECTOS */}
-              {proyecto.tipo_inversion === 'directo' && proyecto.pack_de_lotes && (
-                <Alert severity="success" variant="outlined" sx={{ mt: 3, borderRadius: 2 }}>
-                  <Typography variant="subtitle2" fontWeight={700} gutterBottom>
-                    🎁 Pack Completo Incluido
-                  </Typography>
-                  <Typography variant="body2">
-                    Al invertir en este proyecto recibirás <strong>TODOS los {proyecto.lotes?.length || 0} lotes</strong> al finalizar.
-                    No se requiere participar en subastas individuales.
-                  </Typography>
-                </Alert>
-              )}
-            </CustomTabPanel>
-            
-            {/* Tab 1: Galería */}
-            <CustomTabPanel value={logic.tabValue} index={1}>
-              <ProjectGallery 
-                proyecto={proyecto} 
-                onImageClick={(url) => setLightbox({ open: true, img: url })} 
-              />
-            </CustomTabPanel>
-            
-            {/* Tab 2: Lotes (Solo para mensuales) */}
-            {mostrarTabLotes && (
-              <CustomTabPanel value={logic.tabValue} index={2}>
-                <ListaLotesProyecto idProyecto={Number(logic.id)} />
-              </CustomTabPanel>
+                    <FeatureItem icon={<AutoGraph />} title="Rendimiento" desc={`Inversión en ${proyecto.moneda} con capitalización progresiva por desarrollo.`} />
+                    <FeatureItem icon={<GppGood />} title="Seguridad" desc={`Avalado legalmente por ${proyecto.forma_juridica || 'Contrato Digital'}.`} />
+                  </Box>
+
+                  <Box>
+                    <Typography variant="h6" fontWeight={800} gutterBottom>Sobre el proyecto</Typography>
+                    <Typography variant="body1" sx={{ whiteSpace: 'pre-line', lineHeight: 1.8, color: 'text.secondary', textAlign: 'justify' }}>
+                      {proyecto.descripcion}
+                    </Typography>
+                  </Box>
+
+                  {/* FICHA TÉCNICA DINÁMICA */}
+                  <Paper variant="outlined" sx={{ p: 3, borderRadius: 3, bgcolor: alpha(theme.palette.action.hover, 0.4) }}>
+                    <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 3, textTransform: 'uppercase' }}>Ficha Técnica del Activo</Typography>
+                    <Box display="grid" gridTemplateColumns={{ xs: '1fr 1fr', md: 'repeat(4, 1fr)' }} gap={4}>
+                      <DataPoint label="Moneda" value={proyecto.moneda} icon={<MonetizationOn fontSize="small"/>} />
+                      <DataPoint label="Modalidad" value={esMensual ? 'Ahorro Mensual' : 'Inversión Directa'} icon={<CalendarMonth fontSize="small"/>} />
+                      
+                      {/* ✅ UBICACIÓN EN FICHA TÉCNICA */}
+                      <DataPoint 
+                        label="Ubicación" 
+                        value={proyecto.latitud ? "Georreferenciada" : "Consultar Zona"} 
+                        icon={<LocationOn fontSize="small"/>} 
+                      />
+                      
+                      <DataPoint label="Respaldo" value={proyecto.forma_juridica || 'Contrato'} icon={<AccountBalance fontSize="small"/>} />
+                    </Box>
+
+                    {esMensual && (
+                      <Box sx={{ mt: 4, pt: 3, borderTop: `1px dashed ${theme.palette.divider}` }}>
+                        <Stack direction="row" spacing={4}>
+                          <DataPoint label="Suscripciones" value={`${proyecto.suscripciones_actuales} / ${proyecto.obj_suscripciones}`} icon={<Groups fontSize="small"/>} />
+                          <DataPoint label="Total Lotes" value={proyecto.lotes?.length || 0} icon={<ViewList fontSize="small"/>} />
+                        </Stack>
+                      </Box>
+                    )}
+                  </Paper>
+                </Stack>
+              </Fade>
+            )}
+
+            {/* TAB 1: GALERÍA */}
+            {logic.tabValue === 1 && <ProjectGallery proyecto={proyecto} onImageClick={(url) => setLightbox({ open: true, img: url })} />}
+
+            {/* TAB 2: LOTES */}
+            {logic.tabValue === 2 && esMensual && (
+              <Fade in>
+                <Box>
+                  <Paper variant="outlined" sx={{ mb: 4, p: 3, borderRadius: 3, bgcolor: alpha(theme.palette.warning.main, 0.05), borderColor: 'warning.light' }}>
+                    <Stack direction={{ xs: 'column', md: 'row' }} spacing={3} alignItems="center">
+                      <Avatar sx={{ bgcolor: 'warning.main', width: 56, height: 56 }}><Gavel /></Avatar>
+                      <Box flex={1}>
+                        <Typography variant="subtitle1" fontWeight={800} color="warning.dark" gutterBottom>Sistema de Subastas</Typography>
+                        <Typography variant="body2" color="text.secondary">Usa tus tokens para pujar por lotes. El token se libera si tu oferta es superada.</Typography>
+                      </Box>
+                      <Button variant="outlined" color="warning" size="small" sx={{ borderRadius: 2, fontWeight: 700 }} onClick={() => setTokenInfoOpen(true)}>Saber más</Button>
+                    </Stack>
+                  </Paper>
+                  <ListaLotesProyecto idProyecto={Number(proyecto.id)} />
+                </Box>
+              </Fade>
             )}
           </Box>
         </Box>
 
-        {/* === SIDEBAR (STICKY) === */}
         <Box sx={{ width: { xs: '100%', lg: 380 }, flexShrink: 0 }}>
-           <ProjectSidebar logic={logic} proyecto={proyecto} />
+          <ProjectSidebar logic={logic} proyecto={proyecto} />
         </Box>
       </Box>
 
-      {/* --- Elementos Flotantes --- */}
-      <LightboxViewer 
-        isOpen={lightbox.open} 
-        imgSrc={lightbox.img} 
-        onClose={() => setLightbox({ ...lightbox, open: false })} 
-      />
-
-      <ProjectModals logic={logic} proyecto={proyecto} />
-
+      {/* MODALES */}
+      <TokenInfoModal open={tokenInfoOpen} onClose={() => setTokenInfoOpen(false)} />
+      <CheckoutWizardModal
+          open={logic.modales.checkoutWizard.isOpen}
+          onClose={logic.modales.checkoutWizard.close}
+          proyecto={proyecto}
+          tipo={esMensual ? 'suscripcion' : 'inversion'}
+          inversionId={logic.inversionId}
+          pagoId={logic.pagoId}
+          onConfirmInvestment={logic.wizardCallbacks.onConfirmInvestment}
+          onSubmit2FA={logic.wizardCallbacks.onSubmit2FA}
+          onSignContract={logic.wizardCallbacks.onSignContract}
+          isProcessing={logic.isProcessingWizard}
+          error2FA={logic.error2FA}
+        />
     </PageContainer>
   );
 };
 
-// ==========================================
-// COMPONENTES AUXILIARES
-// ==========================================
-
-const LoadingSkeleton = () => (
-  <PageContainer>
-    <Skeleton variant="rectangular" height={500} sx={{ borderRadius: 4, mb: 4 }} />
-    <Box sx={{ display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, gap: 4 }}>
-      <Skeleton sx={{ flex: 1, height: 300, borderRadius: 3 }} />
-      <Skeleton sx={{ width: { xs: '100%', lg: 380 }, height: 400, borderRadius: 3 }} />
-    </Box>
-  </PageContainer>
-);
-
-const LightboxViewer: React.FC<{ isOpen: boolean, imgSrc: string, onClose: () => void }> = ({ isOpen, imgSrc, onClose }) => (
-  <Dialog 
-    open={isOpen} 
-    onClose={onClose} 
-    maxWidth="xl"
-    PaperProps={{ 
-      sx: { 
-        bgcolor: 'transparent', 
-        boxShadow: 'none', 
-        overflow: 'hidden' 
-      } 
-    }}
-  >
-    <Box position="relative">
-      <IconButton 
-        onClick={onClose} 
-        sx={{ 
-          position: 'absolute', 
-          right: 0, 
-          top: 0, 
-          m: 2, 
-          color: 'white', 
-          bgcolor: 'rgba(0,0,0,0.5)', 
-          '&:hover': { bgcolor: 'rgba(0,0,0,0.8)' } 
-        }}
-      >
-        <Close />
-      </IconButton>
-      <img 
-        src={imgSrc} 
-        alt="Zoom Detalle" 
-        style={{ 
-          maxWidth: '100%', 
-          maxHeight: '90vh', 
-          borderRadius: 8, 
-          display: 'block' 
-        }} 
-      />
-    </Box>
-  </Dialog>
-);
-  
 export default DetalleProyecto;

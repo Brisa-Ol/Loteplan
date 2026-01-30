@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  TextField, Typography, Alert, Box, Stack, Divider, InputAdornment, useTheme, alpha, CircularProgress 
+  TextField, Typography, Alert, Box, Stack, Divider, InputAdornment, useTheme, alpha, CircularProgress, Chip 
 } from '@mui/material';
 import { Gavel, MonetizationOn, Token, TrendingUp, VerifiedUser } from '@mui/icons-material';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -9,8 +9,9 @@ import type { LoteDto } from '@/core/types/dto/lote.dto';
 import type { CreatePujaDto } from '@/core/types/dto/puja.dto';
 import PujaService from '@/core/api/services/puja.service';
 import BaseModal from '@/shared/components/domain/modals/BaseModal/BaseModal';
+import { useVerificarSuscripcion } from '@/features/client/hooks/useVerificarSuscripcion';
 
-// Extendemos para soportar datos anidados que el backend pueda enviar (ej: includes)
+
 interface LoteConPuja extends LoteDto {
     ultima_puja?: { 
         monto: string | number; 
@@ -35,6 +36,9 @@ export const PujarModal: React.FC<Props> = ({ open, onClose, lote: loteProp, soy
   
   const lote = loteProp as LoteConPuja | null;
 
+  // ✅ 1. VERIFICACIÓN DE TOKENS PARA ESTE PROYECTO
+const { tokensDisponibles, tieneTokens, isLoading: loadingTokens } = useVerificarSuscripcion(lote?.id_proyecto ?? undefined);
+
   // Reset al abrir
   useEffect(() => {
     if (open) {
@@ -46,20 +50,18 @@ export const PujarModal: React.FC<Props> = ({ open, onClose, lote: loteProp, soy
   const mutation = useMutation({
     mutationFn: async () => {
       if (!lote) return;
-      
       const payload: CreatePujaDto = {
         id_lote: lote.id,
-        monto_puja: Number(monto) // Convertimos a número para el DTO
+        monto_puja: Number(monto)
       };
-
       await PujaService.create(payload);
     },
     onSuccess: () => {
-      // Invalidar queries clave para refrescar la UI inmediatamente
       queryClient.invalidateQueries({ queryKey: ['lotesProyecto'] }); 
       queryClient.invalidateQueries({ queryKey: ['lote', lote?.id?.toString()] });
       queryClient.invalidateQueries({ queryKey: ['misPujas'] });
       queryClient.invalidateQueries({ queryKey: ['activePujas'] });
+      queryClient.invalidateQueries({ queryKey: ['check-suscripcion'] }); // Refrescar tokens
       
       if (onSuccess) onSuccess();
       handleReset();
@@ -76,19 +78,11 @@ export const PujarModal: React.FC<Props> = ({ open, onClose, lote: loteProp, soy
       onClose();
   };
 
-  // === 🧮 LÓGICA DE PRECIOS Y VALIDACIÓN ===
-  
+  // === 🧮 LÓGICA DE PRECIOS ===
   const { precioBase, precioActualMercado, precioMinimoRequerido, esPrimerPuja } = useMemo(() => {
       if (!lote) return { precioBase: 0, precioActualMercado: 0, precioMinimoRequerido: 0, esPrimerPuja: true };
 
-      // 1. Parseo seguro de Decimales (vienen como string del backend usualmente)
       const base = parseFloat(lote.precio_base.toString());
-      
-      // 2. Determinar la puja más alta actual
-      // Prioridad: 
-      // A. 'ultima_puja.monto' (si el backend hace include)
-      // B. 'monto_ganador_lote' (si el backend actualiza la columna en Lote)
-      // C. 0 (Nadie ha pujado)
       let actual = 0;
       if (lote.ultima_puja?.monto) {
           actual = parseFloat(lote.ultima_puja.monto.toString());
@@ -97,22 +91,7 @@ export const PujarModal: React.FC<Props> = ({ open, onClose, lote: loteProp, soy
       }
 
       const hayPujas = actual > 0;
-
-      // 3. Regla del Backend:
-      // - Si hay puja previa: Nueva > Actual
-      // - Si NO hay puja previa: Nueva >= Base
-      // Nota: Para simplificar UX, en subastas activas solemos pedir > Actual.
-      // Pero si nadie ha pujado, debe ser >= Base.
-      
-      let minimo = 0;
-      if (hayPujas) {
-          // Si ya hay pujas, debo superar estrictamente la actual.
-          // En la UI, sugerimos al menos un incremento mínimo (ej: +1 centavo o +100 pesos), 
-          // pero la validación estricta es > actual.
-          minimo = actual + 0.01; 
-      } else {
-          minimo = base;
-      }
+      let minimo = hayPujas ? actual + 0.01 : base;
 
       return {
           precioBase: base,
@@ -133,12 +112,10 @@ export const PujarModal: React.FC<Props> = ({ open, onClose, lote: loteProp, soy
   if (!lote) return null;
 
   const montoNumerico = parseFloat(monto);
-  
-  // Validación estricta contra NaN y reglas de negocio
-  const esMontoValido = 
-    monto !== '' && 
-    !isNaN(montoNumerico) && 
-    montoNumerico >= precioMinimoRequerido;
+  const esMontoValido = monto !== '' && !isNaN(montoNumerico) && montoNumerico >= precioMinimoRequerido;
+
+  // ✅ BLOQUEO DE SEGURIDAD: No puede confirmar si no tiene tokens y no es el ganador
+  const puedeConfirmar = esMontoValido && !mutation.isPending && (soyGanador || tieneTokens);
 
   return (
     <BaseModal
@@ -154,7 +131,7 @@ export const PujarModal: React.FC<Props> = ({ open, onClose, lote: loteProp, soy
         confirmButtonIcon={mutation.isPending ? <CircularProgress size={20} color="inherit"/> : undefined}
         onConfirm={handleSubmit}
         isLoading={mutation.isPending}
-        disableConfirm={!esMontoValido || mutation.isPending}
+        disableConfirm={!puedeConfirmar}
     >
       <Stack spacing={3}>
           
@@ -167,7 +144,6 @@ export const PujarModal: React.FC<Props> = ({ open, onClose, lote: loteProp, soy
             borderColor={soyGanador ? 'success.main' : 'divider'}
           >
             <Stack spacing={1}>
-                {/* Fila 1: Precio Base (Referencia) */}
                 <Stack direction="row" justifyContent="space-between" alignItems="center">
                     <Typography variant="caption" color="text.secondary">Precio Base</Typography>
                     <Typography variant="body2" fontWeight={500} color="text.secondary">{formatMoney(precioBase)}</Typography>
@@ -175,7 +151,6 @@ export const PujarModal: React.FC<Props> = ({ open, onClose, lote: loteProp, soy
 
                 <Divider sx={{ borderStyle: 'dashed' }} />
 
-                {/* Fila 2: Situación Actual */}
                 <Stack direction="row" justifyContent="space-between" alignItems="center">
                     <Typography variant="body2" color="text.primary" display="flex" alignItems="center" gap={0.5} fontWeight={600}>
                         {soyGanador 
@@ -201,7 +176,6 @@ export const PujarModal: React.FC<Props> = ({ open, onClose, lote: loteProp, soy
             autoFocus
             fullWidth
             label={soyGanador ? "Mejorar mi oferta" : "Tu oferta"}
-            // Placeholder dinámico según reglas
             placeholder={`Mínimo ${formatMoney(precioMinimoRequerido)}`}
             type="number"
             autoComplete='off'
@@ -223,11 +197,11 @@ export const PujarModal: React.FC<Props> = ({ open, onClose, lote: loteProp, soy
             }
             sx={{ 
                 '& .MuiOutlinedInput-root': { borderRadius: 2 },
-                '& input[type=number]': { MozAppearance: 'textfield' } // Quita flechas en Firefox
+                '& input[type=number]': { MozAppearance: 'textfield' }
             }}
           />
 
-          {/* ℹ️ AVISO DE TOKENS */}
+          {/* ✅ ℹ️ AVISO DE TOKENS ACTUALIZADO */}
           {soyGanador ? (
             <Alert severity="info" icon={<Token fontSize="inherit" />} variant="outlined" sx={{ borderRadius: 2 }}>
                 <Typography variant="caption" display="block" lineHeight={1.3}>
@@ -235,10 +209,30 @@ export const PujarModal: React.FC<Props> = ({ open, onClose, lote: loteProp, soy
                 </Typography>
             </Alert>
           ) : (
-            <Alert severity="warning" icon={<Token fontSize="inherit" />} variant="outlined" sx={{ borderRadius: 2 }}>
-                <Typography variant="caption" display="block" lineHeight={1.3}>
-                  Al confirmar, se consumirá <strong>1 Token de Subasta</strong> de tu suscripción.
-                </Typography>
+            <Alert 
+              severity={tieneTokens ? "warning" : "error"} 
+              icon={loadingTokens ? <CircularProgress size={16}/> : <Token fontSize="inherit" />} 
+              variant="outlined" 
+              sx={{ borderRadius: 2 }}
+            >
+              <Stack direction="row" justifyContent="space-between" alignItems="center" width="100%">
+                <Box>
+                  <Typography variant="body2" fontWeight={600} color={tieneTokens ? "inherit" : "error"}>
+                    {tieneTokens ? "Se consumirá 1 Token" : "Sin tokens disponibles"}
+                  </Typography>
+                  <Typography variant="caption" display="block" lineHeight={1.3}>
+                    {tieneTokens 
+                      ? "Esta oferta utilizará un token de tu suscripción." 
+                      : "Ya estás participando en otra subasta de este proyecto."}
+                  </Typography>
+                </Box>
+                <Chip 
+                  label={`${tokensDisponibles} disp.`} 
+                  color={tieneTokens ? "primary" : "error"} 
+                  size="small" 
+                  sx={{ fontWeight: 'bold' }}
+                />
+              </Stack>
             </Alert>
           )}
 

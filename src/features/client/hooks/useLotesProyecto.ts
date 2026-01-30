@@ -1,5 +1,4 @@
-// src/hooks/useLotesProyecto.ts
-
+// src/features/client/hooks/useLotesProyecto.ts
 import { useState, useMemo, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useModal } from '../../../shared/hooks/useModal';
@@ -18,19 +17,17 @@ export const useLotesProyecto = (idProyecto: number, isAuthenticated: boolean) =
   const pujarModal = useModal();
   const confirmDialog = useConfirmDialog();
 
-  // 1. Query: Obtener Lotes (CORREGIDO PARA CLIENTE)
-  // Usamos 'getAllActive' (Ruta pública/auth) en lugar de 'getByProject' (Ruta Admin)
+  // 1. Query: Obtener Lotes
   const { data: lotes = [], isLoading, error } = useQuery<LoteDto[]>({
-    queryKey: ['lotesActivos'], // Cacheamos todos los activos
+    queryKey: ['lotesActivos'],
     queryFn: async () => {
       const res = await LoteService.getAllActive();
       return res.data || [];
     },
-    // Filtramos usando la opción 'select' de React Query para eficiencia
     select: (allLotes) => {
-        return allLotes.filter(lote => Number(lote.id_proyecto) === Number(idProyecto));
+      return allLotes.filter(lote => Number(lote.id_proyecto) === Number(idProyecto));
     },
-    enabled: !!idProyecto && isAuthenticated, // Solo si está logueado
+    enabled: !!idProyecto && isAuthenticated,
     staleTime: 1000 * 60, 
   });
 
@@ -39,13 +36,30 @@ export const useLotesProyecto = (idProyecto: number, isAuthenticated: boolean) =
     queryKey: ['misSuscripciones'],
     queryFn: async () => (await SuscripcionService.getMisSuscripciones()).data,
     enabled: isAuthenticated && !!idProyecto,
-    staleTime: 1000 * 60 * 5, 
+    staleTime: 1000 * 60 * 2, // ✅ Reducido (tokens cambian)
   });
 
-  // 3. Validación de Suscripción
-  const isSubscribed = useMemo(() => {
-    if (!misSuscripciones || !isAuthenticated) return false;
-    return misSuscripciones.some(s => Number(s.id_proyecto) === Number(idProyecto) && s.activo === true);
+  // ✅ 3. VALIDACIÓN CORRECTA: Suscripción + Tokens
+  const { isSubscribed, hasTokens, tokensDisponibles } = useMemo(() => {
+    if (!misSuscripciones || !isAuthenticated) {
+      return { isSubscribed: false, hasTokens: false, tokensDisponibles: 0 };
+    }
+
+    const suscripcion = misSuscripciones.find(
+      s => Number(s.id_proyecto) === Number(idProyecto) && s.activo === true
+    );
+
+    if (!suscripcion) {
+      return { isSubscribed: false, hasTokens: false, tokensDisponibles: 0 };
+    }
+
+    const tokens = suscripcion.tokens_disponibles || 0;
+    
+    return { 
+      isSubscribed: true, 
+      hasTokens: tokens > 0,
+      tokensDisponibles: tokens
+    };
   }, [misSuscripciones, idProyecto, isAuthenticated]);
 
   // Mutation: Favoritos
@@ -53,12 +67,9 @@ export const useLotesProyecto = (idProyecto: number, isAuthenticated: boolean) =
     mutationFn: (loteId: number) => FavoritoService.toggle(loteId),
     onSuccess: (response, loteId) => {
       const esAhoraFavorito = response.data.agregado; 
-      
       queryClient.setQueryData(['checkFavorito', loteId], { es_favorito: esAhoraFavorito });
       queryClient.invalidateQueries({ queryKey: ['misFavoritos'] });
-      
       confirmDialog.close();
-      
       if (esAhoraFavorito) showSuccess('Añadido a favoritos');
       else showSuccess('Eliminado de favoritos');
     },
@@ -68,19 +79,27 @@ export const useLotesProyecto = (idProyecto: number, isAuthenticated: boolean) =
     }
   });
 
-  // --- HANDLERS ---
+  // ✅ HANDLER MEJORADO: Validar tokens
   const handleOpenPujar = useCallback((lote: LoteDto) => {
     if (!isAuthenticated) {
-        showWarning('Debes iniciar sesión para realizar una oferta.');
-        return; 
+      showWarning('Debes iniciar sesión para realizar una oferta.');
+      return; 
     }
+    
     if (!isSubscribed) {
-        showWarning('Para participar de la subasta necesitas estar suscripto al proyecto.');
-        return;
+      showWarning('Para participar debes estar suscripto al proyecto.');
+      return;
     }
+
+    // ✅ VALIDACIÓN DE TOKENS
+    if (!hasTokens) {
+      showWarning('Ya utilizaste tu token de subasta en este proyecto. Gana o espera la próxima ronda de lotes.');
+      return;
+    }
+
     setSelectedLote(lote);
     pujarModal.open();
-  }, [isAuthenticated, isSubscribed, showWarning, pujarModal]);
+  }, [isAuthenticated, isSubscribed, hasTokens, showWarning, pujarModal]);
 
   const handleRequestUnfav = useCallback((loteId: number) => {
     confirmDialog.confirm('remove_favorite', loteId);
@@ -96,7 +115,7 @@ export const useLotesProyecto = (idProyecto: number, isAuthenticated: boolean) =
   }, [pujarModal]);
 
   return {
-    lotes, // Ya viene filtrado gracias a 'select'
+    lotes,
     isLoading,
     error,
     selectedLote,
@@ -104,6 +123,8 @@ export const useLotesProyecto = (idProyecto: number, isAuthenticated: boolean) =
     confirmDialog,
     unfavPending: unfavMutation.isPending,
     isSubscribed,
+    hasTokens, // ✅ NUEVO
+    tokensDisponibles, // ✅ NUEVO
     snackbar, 
     closeSnackbar,
     handleOpenPujar,

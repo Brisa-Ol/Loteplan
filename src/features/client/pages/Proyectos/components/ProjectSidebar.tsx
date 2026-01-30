@@ -1,5 +1,5 @@
 // src/features/client/pages/Proyectos/components/ProjectSidebar.tsx
-// ✅ VERSIÓN CORREGIDA CON LÓGICA DE NEGOCIO CLARA
+// ✅ VERSIÓN CON PROPUESTA DE VALOR DE TOKENS INTEGRADA
 
 import React from 'react';
 import { 
@@ -8,7 +8,8 @@ import {
 } from '@mui/material';
 import { 
   ArrowForward, HistoryEdu, CheckCircle, Description, 
-  GppGood, MonetizationOn, Download, CalendarMonth, Lock
+  GppGood, MonetizationOn, Download, CalendarMonth, Lock,
+  Token as TokenIcon // ✅ Agregado
 } from '@mui/icons-material';
 
 import type { ProyectoDto } from '@/core/types/dto/proyecto.dto';
@@ -40,7 +41,34 @@ interface ProjectSidebarProps {
 }
 
 // ==========================================
-// 2. SUBCOMPONENTE: Stepper Visual
+// 2. SUBCOMPONENTE: Propuesta de Valor (Tokens)
+// ==========================================
+
+const TokenValueProposition = () => {
+  const theme = useTheme();
+  return (
+    <Stack spacing={1.5} sx={{ mb: 3, p: 2, bgcolor: alpha(theme.palette.success.main, 0.05), borderRadius: 2, border: `1px solid ${alpha(theme.palette.success.main, 0.1)}` }}>
+      <Typography variant="caption" fontWeight={800} color="success.main" sx={{ textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 1 }}>
+        <TokenIcon sx={{ fontSize: 16 }} /> Incluido en tu suscripción:
+      </Typography>
+      <Stack direction="row" spacing={1} alignItems="center">
+        <CheckCircle sx={{ fontSize: 16, color: 'success.main' }} />
+        <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>Acceso a subastas mensuales</Typography>
+      </Stack>
+      <Stack direction="row" spacing={1} alignItems="center">
+        <CheckCircle sx={{ fontSize: 16, color: 'success.main' }} />
+        <Typography variant="body2" sx={{ fontSize: '0.85rem' }}><strong>1 Token de Puja</strong> activo</Typography>
+      </Stack>
+      <Stack direction="row" spacing={1} alignItems="center">
+        <CheckCircle sx={{ fontSize: 16, color: 'success.main' }} />
+        <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>Garantía de devolución de token si pierdes</Typography>
+      </Stack>
+    </Stack>
+  );
+};
+
+// ==========================================
+// 3. SUBCOMPONENTE: Stepper Visual
 // ==========================================
 
 const ProcessStepper: React.FC<{
@@ -120,7 +148,7 @@ const ProcessStepper: React.FC<{
 };
 
 // ==========================================
-// 3. SUBCOMPONENTE: Header de Precios
+// 4. SUBCOMPONENTE: Header de Precios
 // ==========================================
 
 const PriceHeader: React.FC<{ 
@@ -181,7 +209,7 @@ const PriceHeader: React.FC<{
 };
 
 // ==========================================
-// 4. COMPONENTE PRINCIPAL
+// 5. COMPONENTE PRINCIPAL
 // ==========================================
 
 export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({ 
@@ -204,14 +232,11 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
       }}
     >
       
-      {/* --- HEADER --- */}
       <PriceHeader helpers={helpers} />
 
-      {/* --- BODY --- */}
       <Box p={3}>
         <Stack spacing={3}>
           
-          {/* Stepper (Solo si está logueado) */}
           {user && (
             <ProcessStepper 
                 paso1Completo={paso1Completo} 
@@ -220,27 +245,28 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
             />
           )}
 
-          {/* ==========================================
-              ✅ ÁREA DE ACCIÓN PRINCIPAL - LÓGICA CORREGIDA
-              ========================================== */}
           <Box>
             {!user ? (
-              // CASO 0: No Logueado
-              <Button 
-                variant="contained" fullWidth size="large" 
-                onClick={logic.handleMainAction} 
-                startIcon={<ArrowForward />} 
-              >
-                Ingresar para Invertir
-              </Button>
+              <Stack spacing={2}>
+                {helpers.esMensual && <TokenValueProposition />}
+                <Button 
+                  variant="contained" fullWidth size="large" 
+                  onClick={logic.handleMainAction} 
+                  startIcon={<ArrowForward />} 
+                >
+                  Ingresar para Invertir
+                </Button>
+              </Stack>
             ) : (
               <>
-                {/* CASO 1: Logueado, No ha pagado */}
                 {!paso1Completo && (
                   <Stack spacing={2}>
+                    {/* ✅ Propuesta de valor dinámica antes del botón */}
+                    {helpers.esMensual && <TokenValueProposition />}
+
                     <Button 
                         variant="contained" fullWidth size="large" 
-                        onClick={logic.handleMainAction} // ✅ Siempre abre el wizard
+                        onClick={logic.handleMainAction} 
                         disabled={logic.handleInversion.isPending}
                         endIcon={!logic.handleInversion.isPending && <ArrowForward />}
                     >
@@ -252,7 +278,6 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
                       }
                     </Button>
                     
-                    {/* ✅ Barra de progreso SOLO para Mensuales */}
                     {helpers.esMensual && helpers.progreso && helpers.progreso.disponibles > 0 && (
                         <Box sx={{ p: 2, bgcolor: alpha(theme.palette.success.main, 0.08), borderRadius: 2 }}>
                             <Stack direction="row" justifyContent="space-between" mb={1}>
@@ -272,7 +297,6 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
                         </Box>
                     )}
 
-                    {/* ✅ Info para Inversionistas Directos */}
                     {!helpers.esMensual && (
                         <Alert severity="info" variant="outlined" icon={<Lock />}>
                             <Typography variant="caption" display="block" fontWeight={600}>
@@ -287,13 +311,11 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
                   </Stack>
                 )}
 
-                {/* CASO 2: Pagó, Falta Firmar */}
                 {paso1Completo && !paso2Completo && (
                   <Stack spacing={2}>
                     <Alert severity="warning" icon={<HistoryEdu />}>
                         Pago confirmado. Firma tu contrato para finalizar.
                     </Alert>
-                    
                     <Button 
                         variant="contained" color="warning" fullWidth size="large" 
                         onClick={logic.handleClickFirmar} 
@@ -301,20 +323,17 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
                     >
                       Firmar Contrato Digital
                     </Button>
-                    
                     <Button variant="text" size="small" onClick={logic.modales.contrato.open}>
                         Ver borrador del contrato
                     </Button>
                   </Stack>
                 )}
 
-                {/* CASO 3: Proceso Terminado */}
                 {paso2Completo && (
                   <Stack spacing={2}>
                     <Alert severity="success" icon={<CheckCircle />}>
                         ¡Inversión completada exitosamente!
                     </Alert>
-                    
                     <Button 
                         variant="outlined" color="success" fullWidth 
                         onClick={logic.handleVerContratoFirmado} 
@@ -330,7 +349,6 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
           
           <Divider />
           
-          {/* Footer Informativo de Confianza */}
           <Stack spacing={1.5}>
              <Stack direction="row" alignItems="center" gap={1.5}>
                 <Box sx={{ bgcolor: alpha(theme.palette.success.main, 0.1), p: 1, borderRadius: 1.5, display: 'flex' }}>
@@ -366,3 +384,5 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
     </Card>
   );
 };
+
+export default ProjectSidebar;

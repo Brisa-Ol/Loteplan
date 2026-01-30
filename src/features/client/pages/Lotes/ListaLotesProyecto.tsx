@@ -1,13 +1,11 @@
 // src/features/client/pages/Lotes/ListaLotesProyecto.tsx
-// ✅ VERSIÓN CORREGIDA - VALIDACIÓN DE TIPO DE PROYECTO
-
 import React, { useState, useMemo, useCallback } from 'react';
 import { 
   Box, Typography, Stack, Skeleton, Alert, useTheme, Fade, 
   Tabs, Tab, Chip, Button
 } from '@mui/material';
 import { 
-  Lock, Gavel, AccessTime, EmojiEvents, Apps, Block 
+  Lock, Gavel, AccessTime, EmojiEvents, Apps, Block, CheckCircle
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -19,10 +17,9 @@ import { GlobalSnackbar } from '../../../../shared/components/ui/feedback/Global
 import { useAuth } from '@/core/context/AuthContext';
 import { ConfirmDialog } from '@/shared/components/domain/modals/ConfirmDialog/ConfirmDialog';
 import { ROUTES } from '@/routes';
-import { useVerificarSuscripcion } from '../../hooks/useVerificarSuscripcion';
 import ProyectoService from '@/core/api/services/proyecto.service';
 import type { ProyectoDto } from '@/core/types/dto/proyecto.dto';
-
+import type { LoteDto } from '@/core/types/dto/lote.dto';
 
 interface Props {
   idProyecto: number;
@@ -37,6 +34,25 @@ const getPesoEstado = (estado: string) => {
   }
 };
 
+// ✅ OPTIMIZACIÓN 1: Memoizar LoteCard con comparador personalizado
+const MemoizedLoteCard = React.memo(LoteCard, (prevProps, nextProps) => {
+  // Solo re-renderizar si cambian estas props críticas
+  return (
+    prevProps.lote.id === nextProps.lote.id &&
+    prevProps.lote.estado_subasta === nextProps.lote.estado_subasta &&
+    prevProps.lote.precio_base === nextProps.lote.precio_base &&
+    prevProps.lote.monto_ganador_lote === nextProps.lote.monto_ganador_lote &&
+    prevProps.isSubscribed === nextProps.isSubscribed &&
+    prevProps.hasTokens === nextProps.hasTokens &&
+    prevProps.tokensDisponibles === nextProps.tokensDisponibles &&
+    prevProps.isLoadingSub === nextProps.isLoadingSub &&
+    (prevProps.lote.pujas?.length || 0) === (nextProps.lote.pujas?.length || 0)
+  );
+});
+
+// Agregar displayName para mejor debugging
+MemoizedLoteCard.displayName = 'MemoizedLoteCard';
+
 export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -44,9 +60,7 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
   
   const [tabValue, setTabValue] = useState('todos');
 
-  // ==========================================
-  // ✅ 1. VALIDACIÓN CRÍTICA: VERIFICAR TIPO DE PROYECTO
-  // ==========================================
+  // 1. VALIDACIÓN: VERIFICAR TIPO DE PROYECTO
   const { data: proyecto, isLoading: loadingProyecto } = useQuery<ProyectoDto>({
     queryKey: ['proyecto', idProyecto],
     queryFn: async () => (await ProyectoService.getByIdActive(idProyecto)).data,
@@ -56,11 +70,7 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
 
   const logic = useLotesProyecto(idProyecto, isAuthenticated);
 
-  // 2. VERIFICAR SUSCRIPCIÓN (Solo para proyectos mensuales)
-  const { estaSuscripto, isLoading: loadingSub } = useVerificarSuscripcion(
-    proyecto?.tipo_inversion === 'mensual' ? idProyecto : undefined
-  );
-
+  // ✅ OPTIMIZACIÓN 2: Memoizar filtrado y sorting
   const { filteredLotes, counts } = useMemo(() => {
     if (!logic.lotes) return { filteredLotes: [], counts: { todos: 0, activa: 0, pendiente: 0, finalizada: 0 } };
 
@@ -83,10 +93,19 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
     return { filteredLotes: result, counts };
   }, [logic.lotes, tabValue]);
 
+  // ✅ OPTIMIZACIÓN 3: Memoizar handlers con useCallback
   const handleNavigate = useCallback((id: number) => {
     const ruta = ROUTES.CLIENT.LOTES.DETALLE.replace(':id', String(id));
     navigate(ruta);
   }, [navigate]);
+
+  const handlePujar = useCallback((lote: LoteDto) => {
+    logic.handleOpenPujar(lote);
+  }, [logic]);
+
+  const handleRemoveFav = useCallback((id: number) => {
+    logic.handleRequestUnfav(id);
+  }, [logic]);
 
   const gridStyles = {
     display: 'grid',
@@ -95,9 +114,7 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
     alignItems: 'stretch'
   };
 
-  // ==========================================
-  // ✅ VALIDACIÓN 1: CARGANDO PROYECTO
-  // ==========================================
+  // VALIDACIÓN 1: CARGANDO PROYECTO
   if (loadingProyecto) {
     return (
       <Box mt={4}>
@@ -117,9 +134,7 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
     );
   }
 
-  // ==========================================
-  // ✅ VALIDACIÓN 2: BLOQUEO PARA INVERSIONISTAS DIRECTOS
-  // ==========================================
+  // VALIDACIÓN 2: BLOQUEO PARA INVERSIONISTAS DIRECTOS
   if (proyecto?.tipo_inversion === 'directo') {
     return (
       <Fade in timeout={500}>
@@ -146,9 +161,7 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
     );
   }
 
-  // ==========================================
-  // ✅ VALIDACIÓN 3: USUARIO NO AUTENTICADO
-  // ==========================================
+  // VALIDACIÓN 3: USUARIO NO AUTENTICADO
   if (!isAuthenticated) {
     return (
       <Fade in timeout={500}>
@@ -166,9 +179,7 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
     );
   }
 
-  // ==========================================
-  // ✅ VALIDACIÓN 4: CARGANDO LOTES
-  // ==========================================
+  // VALIDACIÓN 4: CARGANDO LOTES
   if (logic.isLoading) {
     return (
       <Box mt={4}>
@@ -190,16 +201,17 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
 
   if (logic.error) return <Alert severity="error">Error al cargar inventario.</Alert>;
 
-  // ==========================================
-  // ✅ RENDER PRINCIPAL (SOLO PARA PROYECTOS MENSUALES)
-  // ==========================================
+  // RENDER PRINCIPAL (SOLO PARA PROYECTOS MENSUALES)
   return (
     <Box mt={{ xs: 3, md: 4 }}>
       
-      {/* ✅ ALERT DE SUSCRIPCIÓN */}
-      {!estaSuscripto && !loadingSub && (
-        <Alert severity="info" variant="outlined" icon={<Lock />} sx={{ mb: 3, borderRadius: 2 }}>
-          <Typography variant="body2" fontWeight={600}>
+      {/* ✅ ALERTAS INTELIGENTES */}
+      {!logic.isSubscribed && !logic.isLoading && (
+        <Alert severity="warning" variant="outlined" icon={<Lock />} sx={{ mb: 3, borderRadius: 2 }}>
+          <Typography variant="body2" fontWeight={600} gutterBottom>
+            Suscripción Requerida
+          </Typography>
+          <Typography variant="body2">
             Debes estar suscripto al proyecto para participar en las subastas.
           </Typography>
           <Button 
@@ -213,6 +225,47 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
         </Alert>
       )}
 
+      {logic.isSubscribed && !logic.hasTokens && !logic.isLoading && (
+        <Alert severity="info" variant="filled" icon={<EmojiEvents />} sx={{ mb: 3, borderRadius: 2 }}>
+          <Typography variant="body2" fontWeight={600} gutterBottom>
+            Token en Uso
+          </Typography>
+          <Typography variant="body2">
+            Ya estás participando activamente en una subasta de este proyecto. 
+            Puedes revisar el estado de tus pujas en "Mis Ofertas".
+          </Typography>
+          <Button 
+            size="small" 
+            variant="text" 
+            onClick={() => navigate('/cliente/mis-pujas')}
+            sx={{ mt: 1, color: 'white' }}
+          >
+            Ver mis pujas
+          </Button>
+        </Alert>
+      )}
+
+      {logic.isSubscribed && logic.hasTokens && !logic.isLoading && (
+        <Alert severity="success" variant="outlined" icon={<CheckCircle />} sx={{ mb: 3, borderRadius: 2 }}>
+          <Stack direction="row" justifyContent="space-between" alignItems="center">
+            <Box>
+              <Typography variant="body2" fontWeight={600}>
+                ¡Listo para Ofertar!
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Tienes {logic.tokensDisponibles} token{logic.tokensDisponibles === 1 ? '' : 's'} disponible{logic.tokensDisponibles === 1 ? '' : 's'}
+              </Typography>
+            </Box>
+            <Chip 
+              label={`${logic.tokensDisponibles} 🎟️`}
+              color="success"
+              size="small"
+              sx={{ fontWeight: 700 }}
+            />
+          </Stack>
+        </Alert>
+      )}
+
       {/* HEADER CON PESTAÑAS */}
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
         <Tabs value={tabValue} onChange={(_, newValue) => setTabValue(newValue)} variant="scrollable" scrollButtons="auto" allowScrollButtonsMobile sx={{ '& .MuiTab-root': { minHeight: 60, fontWeight: 600 }, '& .Mui-selected': { color: 'primary.main' } }}>
@@ -223,20 +276,21 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
         </Tabs>
       </Box>
 
-      {/* GRID DE RESULTADOS */}
+      {/* GRID DE RESULTADOS CON COMPONENTE MEMOIZADO */}
       {filteredLotes.length > 0 ? (
         <Fade in key={tabValue} timeout={300}>
           <Box sx={gridStyles}>
             {filteredLotes.map((lote) => (
-              <LoteCard 
+              <MemoizedLoteCard 
                 key={lote.id}
                 lote={lote}
                 onNavigate={handleNavigate}
-                onPujar={logic.handleOpenPujar} 
-                onRemoveFav={logic.handleRequestUnfav}
-                // ✅ Pasar estado de suscripción al hijo
-                isSubscribed={estaSuscripto}
-                isLoadingSub={loadingSub}
+                onPujar={handlePujar}
+                onRemoveFav={handleRemoveFav}
+                isSubscribed={logic.isSubscribed}
+                hasTokens={logic.hasTokens}
+                tokensDisponibles={logic.tokensDisponibles}
+                isLoadingSub={logic.isLoading}
               />
             ))}
           </Box>
