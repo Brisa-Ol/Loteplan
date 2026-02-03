@@ -1,23 +1,19 @@
 import React from 'react';
-import { usePermissions } from '../../../../hooks/usePermissions';
+import { usePermissions } from '@/shared/hooks/usePermissions'; // Ajusta la ruta si es necesario
 
-// ✅ Definimos el tipo de rol basado en tu AuthContext/DTO
+// Definimos los roles válidos según tu backend
 type UserRole = 'admin' | 'cliente';
 
 interface PermissionGuardProps {
   children: React.ReactNode;
   requiredRoles?: UserRole[]; // Arreglo de roles permitidos
-  fallback?: React.ReactNode; // Lo que se muestra si no tiene permiso (ej: nada, o un mensaje)
+  fallback?: React.ReactNode; // Lo que se muestra si no tiene permiso
   requireAdmin?: boolean;     // Shortcut para requerir admin
   requireCliente?: boolean;   // Shortcut para requerir cliente
 }
 
 /**
  * Componente para renderizar contenido condicionalmente según permisos.
- * @example
- * <PermissionGuard requireAdmin fallback={<Forbidden />}>
- * <AdminPanel />
- * </PermissionGuard>
  */
 const PermissionGuard: React.FC<PermissionGuardProps> = ({
   children,
@@ -38,7 +34,7 @@ const PermissionGuard: React.FC<PermissionGuardProps> = ({
     return <>{fallback}</>;
   }
 
-  // 3. Verificación de lista de roles (usa tu helper hasRole que acepta arrays)
+  // 3. Verificación de lista de roles
   if (requiredRoles.length > 0 && !permissions.hasRole(requiredRoles)) {
     return <>{fallback}</>;
   }

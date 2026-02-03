@@ -1,4 +1,5 @@
 import { type BaseDTO } from './base.dto'; 
+import type { EstadoVerificacion } from './kyc.dto';
 
 // ==========================================
 // 📤 REQUEST DTOs (Peticiones al servidor)
@@ -89,6 +90,7 @@ export interface UserDto extends BaseDTO {
   apellido?: string;
   dni?: string;
   numero_telefono?: string;
+  estado_kyc?: EstadoVerificacion
 }
 
 /**

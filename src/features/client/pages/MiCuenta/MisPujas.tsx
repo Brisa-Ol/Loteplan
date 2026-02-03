@@ -18,15 +18,20 @@ import { PageHeader } from '../../../../shared/components/layout/headers/PageHea
 import { QueryHandler } from '../../../../shared/components/data-grid/QueryHandler/QueryHandler';
 import { StatCard } from '../../../../shared/components/domain/cards/StatCard/StatCard';
 
+
 // Servicios y Config
 import PujaService from '@/core/api/services/puja.service';
 import { env } from '@/core/config/env';
 import type { PujaDto } from '@/core/types/dto/puja.dto';
+import { useCurrencyFormatter } from '../../hooks/useCurrencyFormatter';
 
 const MisPujas: React.FC = () => {
   const navigate = useNavigate();
   const theme = useTheme();
   const [tabValue, setTabValue] = useState(0);
+
+  // ✅ Inicialización del Hook de Moneda
+  const formatCurrency = useCurrencyFormatter();
 
   // 1. Data Fetching
   const { data: misPujas = [], isLoading, error } = useQuery<PujaDto[]>({
@@ -36,13 +41,11 @@ const MisPujas: React.FC = () => {
 
   // 2. Stats & Filtering
   const { activePujas, historyPujas, stats } = useMemo(() => {
-    // Clasificación de estados
     const activeStates = ['activa', 'ganadora_pendiente'];
 
     const active = misPujas.filter(p => activeStates.includes(p.estado_puja));
     const history = misPujas.filter(p => !activeStates.includes(p.estado_puja));
 
-    // Stats calculation
     const totalComprometido = active.reduce((acc, curr) => acc + Number(curr.monto_puja), 0);
     const ganadas = misPujas.filter(p => ['ganadora_pagada', 'ganadora_pendiente'].includes(p.estado_puja)).length;
 
@@ -57,12 +60,7 @@ const MisPujas: React.FC = () => {
     };
   }, [misPujas]);
 
-  // Helpers
-  const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat(env.defaultLocale, {
-      style: 'currency', currency: env.defaultCurrency, maximumFractionDigits: 0
-    }).format(amount);
-
+  // Helpers de fecha
   const formatDate = (dateString: string) =>
     new Date(dateString).toLocaleDateString(env.defaultLocale, {
       day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
@@ -100,7 +98,8 @@ const MisPujas: React.FC = () => {
       minWidth: 140,
       render: (puja) => (
         <Typography variant="body2" fontWeight={700} sx={{ color: 'primary.main', fontSize: '1rem' }}>
-          {formatCurrency(Number(puja.monto_puja))}
+          {/* ✅ Uso del hook para formatear el monto de la puja */}
+          {formatCurrency(puja.monto_puja)}
         </Typography>
       )
     },
@@ -128,13 +127,13 @@ const MisPujas: React.FC = () => {
           case 'activa':
             color = 'primary';
             label = 'OFERTA ACTIVA';
-            variant = 'outlined'; // Outlined porque aún no se define
+            variant = 'outlined';
             break;
           case 'ganadora_pendiente':
             color = 'warning';
             label = 'GANASTE (PAGAR)';
             icon = <EmojiEvents fontSize="small" />;
-            variant = 'filled'; // Filled para llamar la atención (Acción requerida)
+            variant = 'filled';
             break;
           case 'ganadora_pagada':
             color = 'success';
@@ -187,12 +186,11 @@ const MisPujas: React.FC = () => {
         </Tooltip>
       )
     }
-  ], [navigate, theme]);
+    // ✅ Agregado formatCurrency a las dependencias de useMemo por buena práctica
+  ], [navigate, theme, formatCurrency]);
 
   return (
     <PageContainer maxWidth="lg">
-
-      {/* HEADER SIMÉTRICO */}
       <PageHeader
         title="Mis Ofertas"
         subtitle="Monitorea tus pujas activas y gestiona tus lotes ganados."
@@ -202,6 +200,7 @@ const MisPujas: React.FC = () => {
       <Box mb={4} display="grid" gridTemplateColumns={{ xs: '1fr', md: 'repeat(3, 1fr)' }} gap={3}>
         <StatCard
           title="Capital Ofertado"
+          /* ✅ Uso del hook en el StatCard */
           value={formatCurrency(stats.comprometido)}
           icon={<MonetizationOn />}
           color="primary"
@@ -234,7 +233,6 @@ const MisPujas: React.FC = () => {
         </Tabs>
       </Box>
 
-      {/* TABLA CON TABS */}
       <QueryHandler isLoading={isLoading} error={error as Error}>
         <Paper elevation={0} sx={{
           border: `1px solid ${theme.palette.divider}`,
@@ -249,7 +247,7 @@ const MisPujas: React.FC = () => {
               getRowKey={(row) => row.id}
               emptyMessage="No tienes pujas activas en este momento."
               pagination
-              defaultRowsPerPage={5}
+              defaultRowsPerPage={10}
             />
           ) : (
             <DataTable
@@ -258,13 +256,12 @@ const MisPujas: React.FC = () => {
               getRowKey={(row) => row.id}
               emptyMessage="No tienes historial de subastas finalizadas."
               pagination
-              defaultRowsPerPage={5}
-              isRowActive={() => false} // Visualmente desactiva las filas históricas
+              defaultRowsPerPage={10}
+              isRowActive={() => false}
             />
           )}
         </Paper>
       </QueryHandler>
-
     </PageContainer>
   );
 };

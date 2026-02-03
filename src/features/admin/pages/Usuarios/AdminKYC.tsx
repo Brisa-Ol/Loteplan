@@ -1,178 +1,202 @@
-import React, { useMemo } from 'react';
 import {
-  Box, Typography, Paper, Chip, Stack,
-  Dialog, DialogTitle, DialogContent, DialogActions, TextField,
-  Avatar, IconButton, Tabs, Tab, Tooltip, useTheme, Alert, alpha, Button
-} from '@mui/material';
-import {
-  Visibility as VisibilityIcon,
-  CheckCircle as CheckCircleIcon,
-  Cancel as CancelIcon,
-  PendingActions as PendingIcon,
   CheckCircleOutline as ApprovedIcon,
-  HighlightOff as RejectedIcon,
-  AssignmentInd as KpiIcon,
   Badge as BadgeIcon,
-  History as HistoryIcon
+  Cancel as CancelIcon,
+  CheckCircle as CheckCircleIcon,
+  History as HistoryIcon,
+  PendingActions as PendingIcon,
+  HighlightOff as RejectedIcon,
+  Schedule,
+  Visibility as VisibilityIcon,
+  Warning
 } from '@mui/icons-material';
+import {
+  Alert,
+  alpha,
+  Avatar,
+  Box,
+  Button,
+  Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  IconButton,
+  LinearProgress,
+  Paper,
+  Stack,
+  Tab,
+  Tabs,
+  TextField,
+  Tooltip,
+  Typography,
+  useTheme
+} from '@mui/material';
+import React, { useMemo } from 'react';
 
-import { PageContainer } from '../../../../shared/components/layout/containers/PageContainer/PageContainer';
-import { PageHeader } from '../../../../shared/components/layout/headers/PageHeader';
-import { QueryHandler } from '../../../../shared/components/data-grid/QueryHandler/QueryHandler';
-import { DataTable, type DataTableColumn } from '../../../../shared/components/data-grid/DataTable/DataTable';
-import { ConfirmDialog } from '../../../../shared/components/domain/modals/ConfirmDialog/ConfirmDialog';
+// --- COMPONENTES ESTANDARIZADOS ---
+import AdminPageHeader from '@/shared/components/admin/Adminpageheader';
+import AlertBanner from '@/shared/components/admin/Alertbanner';
+import MetricsGrid from '@/shared/components/admin/Metricsgrid';
+import { DataTable, type DataTableColumn } from '@/shared/components/data-grid/DataTable/DataTable';
+import { QueryHandler } from '@/shared/components/data-grid/QueryHandler/QueryHandler';
+import { StatCard } from '@/shared/components/domain/cards/StatCard/StatCard';
+import { ConfirmDialog } from '@/shared/components/domain/modals/ConfirmDialog/ConfirmDialog';
+import { PageContainer } from '@/shared/components/layout/containers/PageContainer/PageContainer';
 
+// --- MODALES ---
 import KycDetailModal from './modals/KycDetailModal';
-import { useAdminKYC } from '../../hooks/useAdminKYC';
-import type { KycDTO } from '../../../../core/types/dto/kyc.dto';
 
+// --- TYPES & HOOKS ---
+import type { KycDTO } from '@/core/types/dto/kyc.dto'; // ✅ Asegurar que importa de kyc.dto.ts
+import { useAdminKYC } from '../../hooks/useAdminKYC';
+
+// ============================================================================
+// COMPONENTE PRINCIPAL: ADMIN KYC
+// ============================================================================
 const AdminKYC: React.FC = () => {
   const theme = useTheme();
   const logic = useAdminKYC();
 
-  // DEFINICIÓN DE COLUMNAS
-  const columns = useMemo<DataTableColumn<KycDTO>[]>(() => [
-    {
-      id: 'usuario', label: 'Solicitante', minWidth: 260,
-      render: (kyc) => (
-        <Stack direction="row" spacing={2} alignItems="center">
-          <Avatar sx={{ 
-            bgcolor: alpha(theme.palette.primary.main, 0.1), 
-            color: 'primary.main', 
-            fontWeight: 800, 
-            width: 40, height: 40 
-          }}>
-            {kyc.nombre_completo?.[0] || 'U'}
-          </Avatar>
-          <Box>
-            <Typography variant="body2" fontWeight={700}>
-              {kyc.nombre_completo}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              {kyc.usuario?.email || `ID Usuario: ${kyc.id_usuario}`}
-            </Typography>
-          </Box>
-        </Stack>
-      )
-    },
-    {
-      id: 'documento', label: 'Documentación', minWidth: 200,
-      render: (kyc) => (
-        <Stack direction="row" alignItems="center" spacing={1.5}>
-          <BadgeIcon fontSize="small" sx={{ color: 'text.disabled' }} />
-          <Box>
-            <Typography variant="body2" fontWeight={700}>{kyc.tipo_documento}</Typography>
-            <Typography variant="caption" sx={{ 
-                fontFamily: 'monospace', 
-                bgcolor: alpha(theme.palette.action.selected, 0.5), 
-                px: 0.8, py: 0.2, borderRadius: 1 
-            }}>
-              {kyc.numero_documento}
-            </Typography>
-          </Box>
-        </Stack>
-      )
-    },
-    {
-      id: 'fecha', label: 'Fecha Solicitud',
-      render: (kyc) => (
-        <Typography variant="body2" color="text.secondary" fontWeight={500}>
-          {kyc.fecha_creacion 
-            ? new Date(kyc.fecha_creacion).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' }) 
-            : '-'}
-        </Typography>
-      )
-    },
-    {
-      id: 'estado_verificacion', label: 'Estado', align: 'center',
-      render: (kyc) => {
-        const configs: Record<string, { color: any, icon: any }> = {
-          APROBADA: { color: 'success', icon: <ApprovedIcon fontSize="small" /> },
-          RECHAZADA: { color: 'error', icon: <RejectedIcon fontSize="small" /> },
-          PENDIENTE: { color: 'warning', icon: <PendingIcon fontSize="small" /> }
-        };
-        const config = configs[kyc.estado_verificacion] || configs.PENDIENTE;
+  // 1. CÁLCULO DE MÉTRICAS
+  const metrics = useMemo(() => {
+    const all = logic.kycList || [];
+    return {
+      pending: all.filter((k) => k.estado_verificacion === 'PENDIENTE').length,
+      approved: all.filter((k) => k.estado_verificacion === 'APROBADA').length,
+      rejected: all.filter((k) => k.estado_verificacion === 'RECHAZADA').length,
+      total: all.length,
+    };
+  }, [logic.kycList]);
 
-        return (
-          <Chip
-            label={kyc.estado_verificacion}
-            size="small"
-            icon={config.icon}
-            color={config.color}
-            sx={{ fontWeight: 800, fontSize: '0.65rem', minWidth: 110 }}
-            variant={kyc.estado_verificacion === 'PENDIENTE' ? 'filled' : 'outlined'}
-          />
-        );
-      }
-    },
-    {
-      id: 'acciones', label: 'Acciones', align: 'right',
-      render: (kyc) => (
-        <Stack direction="row" justifyContent="flex-end" spacing={0.5}>
-          <Tooltip title="Ver Detalles">
-            <IconButton
+  // 2. DEFINICIÓN DE COLUMNAS
+  const columns = useMemo<DataTableColumn<KycDTO>[]>(
+    () => [
+      {
+        id: 'usuario',
+        label: 'Solicitante',
+        minWidth: 220,
+        render: (kyc) => (
+          <Stack direction="row" spacing={1.5} alignItems="center">
+            <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main', fontWeight: 800, width: 36, height: 36, borderRadius: '10px' }}>
+              {kyc.nombre_completo?.[0] || 'U'}
+            </Avatar>
+            <Box minWidth={0}>
+              <Typography variant="body2" fontWeight={700} noWrap>{kyc.nombre_completo}</Typography>
+              <Typography variant="caption" color="text.secondary" noWrap>{kyc.usuario?.email || `ID: ${kyc.id_usuario}`}</Typography>
+            </Box>
+          </Stack>
+        ),
+      },
+      {
+        id: 'documento',
+        label: 'Documentación',
+        minWidth: 180,
+        render: (kyc) => (
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <BadgeIcon fontSize="small" sx={{ color: 'text.disabled' }} />
+            <Box minWidth={0}>
+              <Typography variant="body2" fontWeight={600} noWrap>{kyc.tipo_documento}</Typography>
+              <Typography variant="caption" sx={{ fontFamily: 'monospace', bgcolor: alpha(theme.palette.action.selected, 0.5), px: 0.8, py: 0.2, borderRadius: 1, display: 'inline-block' }}>
+                {kyc.numero_documento}
+              </Typography>
+            </Box>
+          </Stack>
+        ),
+      },
+      {
+        id: 'fecha',
+        label: 'Fecha Solicitud',
+        render: (kyc) => {
+          // ✅ Usamos createdAt (Sequelize) o fecha_creacion (DTO)
+          const fecha = kyc.createdAt || kyc.fecha_creacion;
+          return (
+            <Typography variant="body2" color="text.secondary" fontWeight={500}>
+              {fecha ? new Date(fecha).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+            </Typography>
+          );
+        },
+      },
+      {
+        id: 'estado_verificacion',
+        label: 'Estado',
+        align: 'center',
+        render: (kyc) => {
+          const configs: Record<string, { color: any; icon: any }> = {
+            APROBADA: { color: 'success', icon: <ApprovedIcon fontSize="small" /> },
+            RECHAZADA: { color: 'error', icon: <RejectedIcon fontSize="small" /> },
+            PENDIENTE: { color: 'warning', icon: <PendingIcon fontSize="small" /> },
+          };
+          const config = configs[kyc.estado_verificacion] || configs.PENDIENTE;
+
+          return (
+            <Chip
+              label={kyc.estado_verificacion}
               size="small"
-              onClick={() => logic.handleOpenDetails(kyc)}
-              sx={{ color: 'info.main', bgcolor: alpha(theme.palette.info.main, 0.05) }}
-            >
-              <VisibilityIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
+              icon={config.icon}
+              color={config.color}
+              sx={{ fontWeight: 700, fontSize: '0.7rem', minWidth: 110, borderRadius: '8px' }}
+              variant={kyc.estado_verificacion === 'PENDIENTE' ? 'filled' : 'outlined'}
+            />
+          );
+        },
+      },
+      {
+        id: 'acciones',
+        label: 'Acciones',
+        align: 'right',
+        render: (kyc) => (
+          <Stack direction="row" justifyContent="flex-end" spacing={1}>
+            <Tooltip title="Ver Detalles">
+              <IconButton size="small" onClick={() => logic.handleOpenDetails(kyc)} sx={{ color: 'info.main', bgcolor: alpha(theme.palette.info.main, 0.08), borderRadius: '8px', '&:hover': { bgcolor: alpha(theme.palette.info.main, 0.15) } }}>
+                <VisibilityIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+            {kyc.estado_verificacion === 'PENDIENTE' && (
+              <>
+                <Tooltip title="Aprobar">
+                  <IconButton size="small" onClick={() => logic.handleApproveClick(kyc)} disabled={logic.isApproving} sx={{ color: 'success.main', bgcolor: alpha(theme.palette.success.main, 0.08), borderRadius: '8px', '&:hover': { bgcolor: alpha(theme.palette.success.main, 0.15) } }}>
+                    <CheckCircleIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Rechazar">
+                  <IconButton size="small" onClick={() => logic.handleOpenRejectInput(kyc)} sx={{ color: 'error.main', bgcolor: alpha(theme.palette.error.main, 0.08), borderRadius: '8px', '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.15) } }}>
+                    <CancelIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </>
+            )}
+          </Stack>
+        ),
+      },
+    ],
+    [logic, theme]
+  );
 
-          {kyc.estado_verificacion === 'PENDIENTE' && (
-            <>
-              <Tooltip title="Aprobar">
-                <IconButton
-                  size="small"
-                  onClick={() => logic.handleApproveClick(kyc)}
-                  disabled={logic.isApproving}
-                  sx={{ color: 'success.main', bgcolor: alpha(theme.palette.success.main, 0.05) }}
-                >
-                  <CheckCircleIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-              <Tooltip title="Rechazar">
-                <IconButton
-                  size="small"
-                  onClick={() => logic.handleOpenRejectInput(kyc)}
-                  sx={{ color: 'error.main', bgcolor: alpha(theme.palette.error.main, 0.05) }}
-                >
-                  <CancelIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            </>
-          )}
-        </Stack>
-      )
-    }
-  ], [logic, theme]);
+  const approvalRate = metrics.total > 0 ? ((metrics.approved / metrics.total) * 100).toFixed(1) : '0';
+  const rejectionRate = metrics.total > 0 ? ((metrics.rejected / metrics.total) * 100).toFixed(1) : '0';
 
   return (
     <PageContainer maxWidth="xl" sx={{ py: 3 }}>
-      <PageHeader 
-        title="Gestión KYC" 
-        subtitle="Verificación de identidad y validación de cumplimiento legal para usuarios registrados." 
+      <AdminPageHeader
+        title="Gestión KYC"
+        subtitle="Verificación de identidad y cumplimiento legal"
+        action={(logic.isApproving || logic.isRejecting) ? <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, color: 'text.secondary' }}><Typography variant="caption">Procesando solicitud...</Typography><LinearProgress sx={{ width: 150, borderRadius: 1 }} /></Box> : undefined}
       />
 
-      {/* Selector de Vistas (Tabs) */}
-      <Paper 
-        elevation={0} 
-        sx={{ 
-          mb: 3, 
-          border: '1px solid', 
-          borderColor: 'divider', 
-          borderRadius: 2, 
-          p: 0.5,
-          bgcolor: alpha(theme.palette.background.paper, 0.8)
-        }}
-      >
-        <Tabs
-          value={logic.currentTab}
-          onChange={(_, v) => logic.setCurrentTab(v)}
-          indicatorColor="primary"
-          textColor="primary"
-          sx={{ '& .MuiTab-root': { fontWeight: 700, minHeight: 48, borderRadius: 1.5, mx: 0.5 } }}
-        >
+      {metrics.pending > 0 && logic.currentTab !== 'pendiente' && (
+        <AlertBanner severity="warning" title="Verificaciones Pendientes" message={`Hay ${metrics.pending} solicitud${metrics.pending !== 1 ? 'es' : ''} de identidad esperando revisión manual.`} action={{ label: "Revisar Ahora", onClick: () => logic.setCurrentTab('pendiente') }} icon={<Warning />} />
+      )}
+
+      <MetricsGrid columns={{ xs: 1, sm: 2, lg: 4 }}>
+        <StatCard title="Pendientes" value={metrics.pending.toString()} subtitle="Requieren atención" icon={<Schedule />} color="warning" loading={logic.isLoading} />
+        <StatCard title="Aprobadas" value={metrics.approved.toString()} subtitle={`${approvalRate}% del total`} icon={<CheckCircleIcon />} color="success" loading={logic.isLoading} />
+        <StatCard title="Rechazadas" value={metrics.rejected.toString()} subtitle={`${rejectionRate}% del total`} icon={<RejectedIcon />} color="error" loading={logic.isLoading} />
+        <StatCard title="Total Procesadas" value={metrics.total.toString()} subtitle="Historial completo" icon={<HistoryIcon />} color="info" loading={logic.isLoading} />
+      </MetricsGrid>
+
+      <Paper elevation={0} sx={{ mb: 3, border: '1px solid', borderColor: 'divider', borderRadius: '12px', p: 0.5, bgcolor: alpha(theme.palette.background.paper, 0.6) }}>
+        <Tabs value={logic.currentTab} onChange={(_, v) => logic.setCurrentTab(v)} indicatorColor="primary" textColor="primary" variant="scrollable" scrollButtons="auto" sx={{ '& .MuiTab-root': { fontWeight: 700, minHeight: 48, borderRadius: '8px', mx: 0.5, textTransform: 'none', transition: 'all 0.2s', '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.04) }, '&.Mui-selected': { bgcolor: alpha(theme.palette.primary.main, 0.08) } } }}>
           <Tab icon={<PendingIcon fontSize="small" />} iconPosition="start" label="Pendientes" value="pendiente" />
           <Tab icon={<ApprovedIcon fontSize="small" />} iconPosition="start" label="Aprobadas" value="aprobada" />
           <Tab icon={<RejectedIcon fontSize="small" />} iconPosition="start" label="Rechazadas" value="rechazada" />
@@ -180,56 +204,22 @@ const AdminKYC: React.FC = () => {
         </Tabs>
       </Paper>
 
-      {/* Tabla Principal */}
       <QueryHandler isLoading={logic.isLoading} error={logic.error as Error}>
-        <DataTable
-          columns={columns}
-          data={logic.kycList}
-          getRowKey={(row) => row.id}
-          
-          isRowActive={(row) => row.estado_verificacion === 'PENDIENTE'}
-          showInactiveToggle={logic.currentTab === 'todas'}
-          inactiveLabel="Procesadas"
-          
-          highlightedRowId={logic.highlightedId}
-          emptyMessage={`No hay solicitudes ${logic.currentTab} para mostrar.`}
-          pagination
-          defaultRowsPerPage={10}
-        />
+        <DataTable columns={columns} data={logic.kycList} getRowKey={(row) => row.id} isRowActive={(row) => logic.currentTab === 'todas' ? row.estado_verificacion === 'PENDIENTE' : true} showInactiveToggle={logic.currentTab === 'todas'} inactiveLabel="Ver Procesadas" highlightedRowId={logic.highlightedId} emptyMessage={`No hay solicitudes ${logic.currentTab === 'todas' ? '' : logic.currentTab.toLowerCase()} para mostrar.`} pagination defaultRowsPerPage={10} />
       </QueryHandler>
 
-      {/* Modales */}
-      <KycDetailModal
-        open={logic.detailsModal.isOpen}
-        onClose={logic.detailsModal.close}
-        kyc={logic.selectedKyc}
-        onApprove={logic.handleApproveClick}
-        onReject={logic.handleOpenRejectInput}
-      />
+      <KycDetailModal open={logic.detailsModal.isOpen} onClose={logic.detailsModal.close} kyc={logic.selectedKyc} onApprove={logic.handleApproveClick} onReject={logic.handleOpenRejectInput} />
+      <ConfirmDialog controller={logic.confirmDialog} onConfirm={logic.handleConfirmApprove} isLoading={logic.isApproving} />
 
-      <ConfirmDialog
-        controller={logic.confirmDialog}
-        onConfirm={logic.handleConfirmApprove}
-        isLoading={logic.isApproving}
-      />
-
-      <Dialog open={logic.rejectModal.isOpen} onClose={logic.rejectModal.close} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
-        <DialogTitle sx={{ fontWeight: 800 }}>Rechazar Solicitud de Identidad</DialogTitle>
+      <Dialog open={logic.rejectModal.isOpen} onClose={logic.rejectModal.close} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: '12px', boxShadow: theme.shadows[10] } }}>
+        <DialogTitle sx={{ fontWeight: 800 }}>Rechazar Solicitud</DialogTitle>
         <DialogContent>
-          <Alert severity="warning" sx={{ mb: 2, fontWeight: 600 }}>El usuario podrá ver este motivo y reintentar el envío de documentos.</Alert>
-          <TextField
-            autoFocus fullWidth multiline rows={3}
-            label="Motivo del rechazo"
-            placeholder="Ej: El documento no es legible o la selfie no coincide..."
-            value={logic.rejectReason}
-            onChange={(e) => logic.setRejectReason(e.target.value)}
-          />
+          <Alert severity="warning" sx={{ mb: 2, borderRadius: 2 }}>El usuario será notificado del motivo y deberá volver a subir sus documentos.</Alert>
+          <TextField autoFocus fullWidth multiline rows={3} label="Motivo del rechazo" placeholder="Ej: La imagen del DNI es borrosa o está cortada..." value={logic.rejectReason} onChange={(e) => logic.setRejectReason(e.target.value)} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
         </DialogContent>
-        <DialogActions sx={{ p: 2.5 }}>
-          <Button onClick={logic.rejectModal.close} color="inherit">Cancelar</Button>
-          <Button variant="contained" color="error" onClick={logic.handleConfirmReject} disabled={!logic.rejectReason.trim() || logic.isRejecting}>
-            {logic.isRejecting ? 'Procesando...' : 'Confirmar Rechazo'}
-          </Button>
+        <DialogActions sx={{ p: 3, pt: 0 }}>
+          <Button onClick={logic.rejectModal.close} color="inherit" sx={{ fontWeight: 600 }}>Cancelar</Button>
+          <Button variant="contained" color="error" onClick={logic.handleConfirmReject} disabled={!logic.rejectReason.trim() || logic.isRejecting} sx={{ fontWeight: 600, px: 3 }}>{logic.isRejecting ? 'Procesando...' : 'Confirmar Rechazo'}</Button>
         </DialogActions>
       </Dialog>
     </PageContainer>

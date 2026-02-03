@@ -1,18 +1,18 @@
 // src/App.tsx
-import React, { useEffect } from 'react';
-import { BrowserRouter } from 'react-router-dom';
-import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
+import { ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import React, { useEffect } from 'react';
+import { BrowserRouter } from 'react-router-dom';
 
 // Contexts
-import { SnackbarProvider } from './core/context/SnackbarContext';
 import { AuthProvider } from './core/context/AuthContext';
+import { SnackbarProvider } from './core/context/SnackbarContext';
 
 // Utils & Hooks
-import { setGlobalSnackbar } from './shared/utils/snackbarUtils';
 import useSnackbar from './shared/hooks/useSnackbar';
+import { setGlobalSnackbar } from './shared/utils/snackbarUtils';
 
 // Theme
 import theme from './core/theme';
@@ -23,8 +23,8 @@ import AppRouter from './routes/AppRouter';
 // Configuración de React Query
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: { 
-      refetchOnWindowFocus: false, 
+    queries: {
+      refetchOnWindowFocus: false,
       retry: 1,
       staleTime: 5 * 60 * 1000, // 5 minutos
     },

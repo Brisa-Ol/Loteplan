@@ -1,64 +1,73 @@
-// src/utils/secureStorage.ts
+import { env } from "@/core/config/env";
 
 /**
- * Gestión segura de tokens con validación y expiración
+ * Metadata guardada junto al token para validaciones de seguridad
  */
+interface TokenMetadata {
+  timestamp: number;
+  expiresIn: number;
+  userAgent: string;
+}
+
 class SecureStorage {
-  private readonly TOKEN_KEY = import.meta.env.VITE_AUTH_TOKEN_KEY || 'auth_token';
+  private readonly TOKEN_KEY = env.authTokenKey;
   private readonly TOKEN_METADATA_KEY = `${this.TOKEN_KEY}_meta`;
-  
+
   /**
-   * Guarda token con metadata de seguridad
+   * Guarda el token con metadata de seguridad (User-Agent y Timestamp)
+   * @param token - El JWT recibido del backend
    */
   setToken(token: string): void {
     try {
-      const metadata = {
+      const metadata: TokenMetadata = {
         timestamp: Date.now(),
-        expiresIn: 55 * 60 * 1000, // 55 minutos (antes de que expire el JWT de 1h)
-        userAgent: navigator.userAgent, // Detectar cambios de navegador
+        // Usamos 55 min como seguridad antes de la hora típica de expiración del JWT
+        expiresIn: 55 * 60 * 1000, 
+        userAgent: navigator.userAgent, // Previene robo de sesión copiando LocalStorage a otro PC
       };
-      
+
       localStorage.setItem(this.TOKEN_KEY, token);
       localStorage.setItem(this.TOKEN_METADATA_KEY, JSON.stringify(metadata));
     } catch (error) {
-      console.error('Error guardando token:', error);
+      console.error('❌ Error guardando token:', error);
     }
   }
 
   /**
-   * Obtiene token solo si es válido
+   * Recupera el token validando expiración e integridad del navegador
    */
   getToken(): string | null {
     try {
       const token = localStorage.getItem(this.TOKEN_KEY);
       const metadataStr = localStorage.getItem(this.TOKEN_METADATA_KEY);
-      
+
       if (!token || !metadataStr) return null;
 
-      const metadata = JSON.parse(metadataStr);
-      
-      // Validar expiración
+      const metadata: TokenMetadata = JSON.parse(metadataStr);
+
+      // 1. Validación de Expiración
       if (Date.now() - metadata.timestamp > metadata.expiresIn) {
         this.clearToken();
-        return null;
+        return null; // Sesión expirada
       }
 
-      // Validar User-Agent (detectar robo de token)
+      // 2. Validación de User-Agent (Detectar cambio de navegador/PC)
       if (metadata.userAgent !== navigator.userAgent) {
-        console.error('⚠️ Sesión comprometida: User-Agent diferente');
+        console.warn('⚠️ Sesión invalidada: User-Agent diferente (posible robo de token)');
         this.clearToken();
         return null;
       }
 
       return token;
     } catch (error) {
+      // Si el JSON está corrupto, limpiamos todo por seguridad
       this.clearToken();
       return null;
     }
   }
 
   /**
-   * Limpia tokens
+   * Elimina el token y su metadata (Logout)
    */
   clearToken(): void {
     localStorage.removeItem(this.TOKEN_KEY);
@@ -66,22 +75,26 @@ class SecureStorage {
   }
 
   /**
-   * Verifica si hay sesión válida
+   * Chequeo rápido de existencia de sesión
    */
   hasValidSession(): boolean {
     return this.getToken() !== null;
   }
 
   /**
-   * Obtiene tiempo restante de sesión (en ms)
+   * Devuelve milisegundos restantes de sesión válida (útil para mostrar timers en UI)
    */
   getTimeRemaining(): number {
     const metadataStr = localStorage.getItem(this.TOKEN_METADATA_KEY);
     if (!metadataStr) return 0;
 
-    const metadata = JSON.parse(metadataStr);
-    const remaining = metadata.expiresIn - (Date.now() - metadata.timestamp);
-    return Math.max(0, remaining);
+    try {
+      const metadata: TokenMetadata = JSON.parse(metadataStr);
+      const remaining = metadata.expiresIn - (Date.now() - metadata.timestamp);
+      return Math.max(0, remaining);
+    } catch {
+      return 0;
+    }
   }
 }
 

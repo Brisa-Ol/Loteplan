@@ -14,6 +14,7 @@ import { PageContainer } from '../../../../shared/components/layout/containers/P
 import { QueryHandler } from '../../../../shared/components/data-grid/QueryHandler/QueryHandler';
 import TwoFactorAuthModal from '../../../../shared/components/domain/modals/TwoFactorAuthModal/TwoFactorAuthModal';
 
+
 // Servicios y Tipos
 import InversionService from '@/core/api/services/inversion.service';
 import type { InversionDto } from '@/core/types/dto/inversion.dto';
@@ -22,10 +23,14 @@ import { env } from '@/core/config/env';
 // Utils Locales & Hooks
 import { getStatusConfig } from '../utils/inversionStatus';
 import { useInversionPayment } from '../../hooks/useInversionPayment';
+import { useCurrencyFormatter } from '../../hooks/useCurrencyFormatter';
 
 const MisInversiones: React.FC = () => {
     const navigate = useNavigate();
     const theme = useTheme();
+
+    // ✅ Inicialización del Formateador
+    const formatCurrency = useCurrencyFormatter();
 
     const { 
         iniciarPago, isIniciandoPago, selectedInversionId,
@@ -47,10 +52,6 @@ const MisInversiones: React.FC = () => {
             monto: inversiones.reduce((acc, inv) => acc + Number(inv.monto), 0)
         };
     }, [inversiones]);
-
-    const formatCurrency = (val: number) => new Intl.NumberFormat(env.defaultLocale, { 
-        style: 'currency', currency: env.defaultCurrency, maximumFractionDigits: 0 
-    }).format(val);
 
     const formatDate = (date: string) => new Date(date).toLocaleDateString(env.defaultLocale, { 
         day: '2-digit', month: 'short', year: 'numeric' 
@@ -87,7 +88,8 @@ const MisInversiones: React.FC = () => {
             id: 'monto', label: 'Capital', minWidth: 150,
             render: (row) => (
                 <Typography variant="body2" fontWeight={700} sx={{ color: 'success.main', fontSize: '1rem' }}>
-                    {formatCurrency(Number(row.monto))}
+                    {/* ✅ Uso del hook (maneja strings automáticamente) */}
+                    {formatCurrency(row.monto)}
                 </Typography>
             )
         },
@@ -147,22 +149,21 @@ const MisInversiones: React.FC = () => {
                 </Stack>
             )
         }
-    ], [theme, isIniciandoPago, selectedInversionId, navigate, iniciarPago]);
+    ], [theme, isIniciandoPago, selectedInversionId, navigate, iniciarPago, formatCurrency]);
 
     return (
         <PageContainer maxWidth="lg">
             
-            {/* ✅ HEADER SIMÉTRICO con 'Mis Planes de Ahorro' */}
             <PageHeader
                 title="Mis Inversiones" 
                 subtitle="Monitorea el rendimiento de tu capital y diversifica tu cartera."
-               
             />
 
             {/* KPI CARDS */}
             <Box mb={4} display="grid" gridTemplateColumns={{ xs: '1fr', md: 'repeat(3, 1fr)' }} gap={3}>
                 <StatCard 
                     title="Capital Invertido"
+                  
                     value={formatCurrency(stats.monto)} 
                     icon={<MonetizationOn />} 
                     color="primary" 
@@ -208,7 +209,6 @@ const MisInversiones: React.FC = () => {
                 </Paper>
             </QueryHandler>
 
-            {/* MODAL 2FA */}
             <TwoFactorAuthModal
                 open={is2FAOpen}
                 onClose={() => { close2FA(); setTwoFAError(null); }}

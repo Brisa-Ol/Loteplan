@@ -1,27 +1,29 @@
-import React, { useState, useMemo } from 'react';
+import { FilterListOff } from '@mui/icons-material';
 import {
+  alpha,
+  Box,
+  FormControlLabel,
+  Paper,
+  Stack,
+  Switch,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
-  TableRow,
-  Paper,
   TablePagination,
-  Switch,
-  FormControlLabel,
+  TableRow,
   Typography,
-  Box,
-  Chip,
-  type SxProps,
-  type Theme,
-  useTheme,
   useMediaQuery,
-  alpha,
-  Stack
+  useTheme,
+  type SxProps,
+  type Theme
 } from '@mui/material';
+import React, { useMemo, useState } from 'react';
 
-// --- DataSwitch (Componente auxiliar para celdas) ---
+// ============================================================================
+// COMPONENTE: DATA SWITCH (Auxiliar)
+// ============================================================================
 interface DataSwitchProps {
   active: boolean;
   onChange: () => void;
@@ -30,30 +32,45 @@ interface DataSwitchProps {
   inactiveLabel?: string;
 }
 
-export const DataSwitch: React.FC<DataSwitchProps> = ({ 
-  active, onChange, disabled = false, activeLabel = "Visible", inactiveLabel = "Oculto" 
+export const DataSwitch: React.FC<DataSwitchProps> = ({
+  active,
+  onChange,
+  disabled = false,
+  activeLabel = "Visible",
+  inactiveLabel = "Oculto"
 }) => (
   <FormControlLabel
-    control={<Switch checked={active} onChange={onChange} color="success" size="small" disabled={disabled} />}
+    control={
+      <Switch
+        checked={active}
+        onChange={onChange}
+        color="success"
+        size="small"
+        disabled={disabled}
+      />
+    }
     label={
-      <Typography variant="caption" color={active ? 'text.primary' : 'text.disabled'}>
+      <Typography variant="caption" fontWeight={500} color={active ? 'text.primary' : 'text.disabled'}>
         {active ? activeLabel : inactiveLabel}
       </Typography>
     }
     labelPlacement="end"
-    sx={{ margin: 0 }}
+    sx={{ margin: 0, '& .MuiTypography-root': { minWidth: 45 } }}
   />
 );
 
-// --- Interfaces ---
+// ============================================================================
+// COMPONENTE PRINCIPAL: DATA TABLE
+// ============================================================================
+
 export interface DataTableColumn<T> {
-  id: string; 
+  id: keyof T | string; // Tipado más flexible pero seguro
   label: string;
   align?: 'left' | 'right' | 'center';
   minWidth?: number;
   format?: (value: any, row: T) => React.ReactNode;
   render?: (row: T) => React.ReactNode;
-  hideOnMobile?: boolean; 
+  hideOnMobile?: boolean;
 }
 
 interface DataTableProps<T> {
@@ -63,14 +80,14 @@ interface DataTableProps<T> {
   onRowClick?: (row: T) => void;
   emptyMessage?: string;
   sx?: SxProps<Theme>;
-  isRowActive?: (row: T) => boolean; 
-  highlightedRowId?: string | number | null; 
-  getRowSx?: (row: T) => SxProps<Theme>; 
+  isRowActive?: (row: T) => boolean;
+  highlightedRowId?: string | number | null;
+  getRowSx?: (row: T) => SxProps<Theme>;
   pagination?: boolean;
   defaultRowsPerPage?: number;
   rowsPerPageOptions?: number[];
-  showInactiveToggle?: boolean; 
-  inactiveLabel?: string; 
+  showInactiveToggle?: boolean;
+  inactiveLabel?: string;
 }
 
 export function DataTable<T>({
@@ -85,16 +102,16 @@ export function DataTable<T>({
   getRowSx,
   pagination = true,
   defaultRowsPerPage = 10,
-  rowsPerPageOptions = [10, 25, 50],
-  showInactiveToggle = true,
-  inactiveLabel = 'Inactivo',
+  rowsPerPageOptions = [5, 10, 25, 50],
+  showInactiveToggle = false, // Default false para no ensuciar UI si no se necesita
+  inactiveLabel = 'Mostrar inactivos',
 }: DataTableProps<T>) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  
+
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(defaultRowsPerPage);
-  const [showInactive, setShowInactive] = useState(true);
+  const [showInactive, setShowInactive] = useState(false); // Default ocultos para limpieza
 
   const handleChangePage = (_: unknown, newPage: number) => setPage(newPage);
 
@@ -103,57 +120,110 @@ export function DataTable<T>({
     setPage(0);
   };
 
-  // 1. Ordenar datos: Activos primero
-  const sortedData = useMemo(() => {
-    if (!isRowActive) return data;
-    return [...data].sort((a, b) => {
-      const aActive = isRowActive(a);
-      const bActive = isRowActive(b);
-      return aActive === bActive ? 0 : aActive ? -1 : 1;
-    });
-  }, [data, isRowActive]);
+  // 1. Lógica de Filtrado y Ordenamiento
+  const processedData = useMemo(() => {
+    let result = [...data];
 
-  // 2. Filtrar por Toggle
-  const filteredData = useMemo(() => {
-    if (!isRowActive || showInactive) return sortedData;
-    return sortedData.filter(row => isRowActive(row));
-  }, [sortedData, showInactive, isRowActive]);
+    // Si hay lógica de activos, primero filtramos/ordenamos
+    if (isRowActive) {
+      // Filtrar si el toggle está apagado
+      if (!showInactive) {
+        result = result.filter(row => isRowActive(row));
+      } else {
+        // Si mostramos todos, ordenamos para que los activos salgan primero
+        result.sort((a, b) => {
+          const aActive = isRowActive(a);
+          const bActive = isRowActive(b);
+          return aActive === bActive ? 0 : aActive ? -1 : 1;
+        });
+      }
+    }
+    return result;
+  }, [data, isRowActive, showInactive]);
 
-  // 3. Conteo de inactivos
+  // 2. Conteo de inactivos (para mostrar en el label del switch si se desea)
   const inactiveCount = useMemo(() => {
     if (!isRowActive) return 0;
     return data.filter(row => !isRowActive(row)).length;
   }, [data, isRowActive]);
 
+  // 3. Paginación
   const paginatedData = pagination
-    ? filteredData.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-    : filteredData;
+    ? processedData.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+    : processedData;
 
+  // 4. Columnas responsivas
   const visibleColumns = columns.filter(col => !(isMobile && col.hideOnMobile));
 
   return (
-    <Box>
-      <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, ...sx }}>
+    <Box sx={{ width: '100%' }}>
+      {/* TOOLBAR SUPERIOR (Solo si hay toggle de inactivos y existen inactivos) */}
+      {showInactiveToggle && inactiveCount > 0 && (
+        <Stack
+          direction="row"
+          justifyContent="flex-end"
+          sx={{ mb: 1, px: 1 }}
+        >
+          <FormControlLabel
+            control={
+              <Switch
+                size="small"
+                checked={showInactive}
+                onChange={(e) => setShowInactive(e.target.checked)}
+                color="primary" // Usamos el color de marca
+              />
+            }
+            label={
+              <Typography variant="caption" color="text.secondary">
+                {inactiveLabel} ({inactiveCount})
+              </Typography>
+            }
+          />
+        </Stack>
+      )}
+
+      <TableContainer
+        component={Paper}
+        elevation={0}
+        sx={{
+          width: '100%',
+          overflowX: 'auto', // Clave para responsive en tablas
+          border: '1px solid',
+          borderColor: 'divider',
+          borderRadius: '12px', // Theme match
+          ...sx
+        }}
+      >
         <Table size={isMobile ? 'small' : 'medium'}>
           <TableHead>
-            <TableRow sx={{ bgcolor: alpha(theme.palette.primary.main, 0.02) }}>
+            <TableRow sx={{ bgcolor: alpha(theme.palette.primary.main, 0.04) }}>
               {visibleColumns.map((column) => (
                 <TableCell
-                  key={column.id}
+                  key={String(column.id)}
                   align={column.align || 'left'}
-                  sx={{ minWidth: column.minWidth, fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', fontSize: '0.75rem' }}
+                  sx={{
+                    minWidth: column.minWidth,
+                    fontWeight: 700,
+                    color: 'text.secondary',
+                    fontSize: '0.75rem',
+                    whiteSpace: 'nowrap', // Evita saltos de línea feos en headers
+                    py: 1.5
+                  }}
                 >
                   {column.label}
                 </TableCell>
               ))}
             </TableRow>
           </TableHead>
-          
+
           <TableBody>
             {paginatedData.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={visibleColumns.length} align="center" sx={{ py: 8 }}>
-                  <Typography variant="body2" color="text.disabled">{emptyMessage}</Typography>
+                  <Stack alignItems="center" spacing={1} color="text.disabled">
+                    <FilterListOff fontSize="large" sx={{ opacity: 0.5 }} />
+                    <Typography variant="body2">{emptyMessage}</Typography>
+                  </Stack>
                 </TableCell>
               </TableRow>
             ) : (
@@ -162,30 +232,44 @@ export function DataTable<T>({
                 const isHighlighted = highlightedRowId === rowKey;
                 const isActive = isRowActive ? isRowActive(row) : true;
 
-                const rowStyles: SxProps<Theme> = {
-                  cursor: onRowClick && isActive ? 'pointer' : 'default',
-                  transition: 'background-color 0.2s',
-                  bgcolor: isHighlighted ? alpha(theme.palette.success.main, 0.08) : 'inherit',
-                  opacity: !isActive ? 0.6 : 1,
-                  '&:hover': {
-                    bgcolor: isActive ? alpha(theme.palette.primary.main, 0.04) : alpha(theme.palette.action.disabledBackground, 0.02),
-                  },
-                  ...(getRowSx ? getRowSx(row) : {})
-                };
-
                 return (
-                  <TableRow key={rowKey} onClick={() => isActive && onRowClick?.(row)} sx={rowStyles}>
+                  <TableRow
+                    key={rowKey}
+                    hover={isActive && !!onRowClick} // Solo efecto hover si es clickeable
+                    onClick={() => isActive && onRowClick?.(row)}
+                    sx={{
+                      cursor: onRowClick && isActive ? 'pointer' : 'default',
+                      transition: 'all 0.2s',
+                      bgcolor: isHighlighted ? alpha(theme.palette.success.main, 0.08) : 'inherit',
+                      opacity: !isActive ? 0.5 : 1, // Opacidad visual para inactivos
+                      // Estilo condicional para inactivos (fondo grisáceo suave)
+                      ...(!isActive && {
+                        bgcolor: alpha(theme.palette.action.disabledBackground, 0.1)
+                      }),
+                      ...(getRowSx ? getRowSx(row) : {})
+                    }}
+                  >
                     {visibleColumns.map((column) => {
-                      // @ts-ignore - Acceso dinámico seguro
-                      const cellValue = row[column.id];
-                      
+                      // Acceso seguro sin ts-ignore
+                      const cellValue = (row as any)[column.id];
+
                       return (
-                        <TableCell key={column.id} align={column.align || 'left'}>
-                          {column.render 
-                            ? column.render(row) 
-                            : column.format 
-                              ? column.format(cellValue, row) 
-                              : String(cellValue ?? '')}
+                        <TableCell
+                          key={String(column.id)}
+                          align={column.align || 'left'}
+                          sx={{
+                            // Evita que el texto se rompa en pantallas medianas si no es necesario
+                            whiteSpace: 'nowrap',
+                            maxWidth: 300,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                          }}
+                        >
+                          {column.render
+                            ? column.render(row)
+                            : column.format
+                              ? column.format(cellValue, row)
+                              : cellValue}
                         </TableCell>
                       );
                     })}
@@ -196,17 +280,30 @@ export function DataTable<T>({
           </TableBody>
         </Table>
 
-        {pagination && filteredData.length > 0 && (
+        {pagination && data.length > 0 && (
           <TablePagination
             rowsPerPageOptions={rowsPerPageOptions}
             component="div"
-            count={filteredData.length}
+            count={processedData.length}
             rowsPerPage={rowsPerPage}
             page={page}
             onPageChange={handleChangePage}
             onRowsPerPageChange={handleChangeRowsPerPage}
-            labelRowsPerPage="Filas:"
-            sx={{ borderTop: '1px solid', borderColor: 'divider' }}
+            labelRowsPerPage={isMobile ? "Filas" : "Filas por página:"}
+            labelDisplayedRows={({ from, to, count }) =>
+              `${from}–${to} de ${count !== -1 ? count : `> ${to}`}`
+            }
+            sx={{
+              borderTop: '1px solid',
+              borderColor: 'divider',
+              // Ajustes para paginación responsive
+              '.MuiTablePagination-toolbar': {
+                px: { xs: 1, sm: 2 }
+              },
+              '.MuiTablePagination-selectLabel': {
+                display: { xs: 'none', sm: 'block' }
+              }
+            }}
           />
         )}
       </TableContainer>

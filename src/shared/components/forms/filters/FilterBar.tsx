@@ -5,9 +5,10 @@ import {
   TextField, 
   useTheme, 
   alpha,
-  Box,
   InputAdornment,
-  type TextFieldProps 
+  type TextFieldProps,
+  type SxProps,
+  type Theme
 } from '@mui/material';
 import { Search as SearchIcon } from '@mui/icons-material';
 
@@ -16,9 +17,10 @@ import { Search as SearchIcon } from '@mui/icons-material';
 // =============================================================================
 interface FilterBarProps {
   children: React.ReactNode;
+  sx?: SxProps<Theme>; // ✅ Soporte para sx prop
 }
 
-export const FilterBar: React.FC<FilterBarProps> = ({ children }) => {
+export const FilterBar: React.FC<FilterBarProps> = ({ children, sx }) => {
   const theme = useTheme();
 
   return (
@@ -27,22 +29,22 @@ export const FilterBar: React.FC<FilterBarProps> = ({ children }) => {
       sx={{
         p: { xs: 2, sm: 2.5 },
         mb: 3,
-        borderRadius: 3, // Bordes más suaves
+        borderRadius: 3,
         border: '1px solid',
         borderColor: alpha(theme.palette.divider, 0.1),
-        // Efecto de cristal esmerilado
         bgcolor: alpha(theme.palette.background.paper, 0.8),
         backdropFilter: 'blur(12px)',
         boxShadow: `0 4px 20px -5px ${alpha(theme.palette.common.black, 0.05)}`,
         transition: 'all 0.3s ease',
         '&:hover': {
           boxShadow: `0 8px 30px -10px ${alpha(theme.palette.common.black, 0.08)}`,
-        }
+        },
+        ...sx // ✅ Permitir override de estilos
       }}
     >
       <Stack 
         direction={{ xs: 'column', md: 'row' }} 
-        spacing={2.5} // Espaciado más amplio y "aireado"
+        spacing={2.5}
         alignItems={{ xs: 'stretch', md: 'center' }}
       >
         {children}
@@ -87,7 +89,6 @@ export const FilterSelect: React.FC<TextFieldProps> = (props) => {
               mt: 1,
               border: '1px solid',
               borderColor: 'divider',
-              // Scrollbar Premium
               '&::-webkit-scrollbar': { width: 6 },
               '&::-webkit-scrollbar-thumb': {
                 backgroundColor: alpha(theme.palette.primary.main, 0.2),

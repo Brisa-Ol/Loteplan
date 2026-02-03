@@ -1,160 +1,159 @@
-// src/hooks/auth/useAuthCore.ts
 import { useState, useCallback } from 'react';
-import { AxiosError } from 'axios';
+import { useQueryClient } from '@tanstack/react-query'; 
 
-import { secureStorage } from '../../../shared/utils/secureStorage';
-import type { LoginRequestDto, LoginResponseDto, RegisterRequestDto, UserDto } from '../../../core/types/dto/auth.dto';
-import UsuarioService from '../../../core/api/services/usuario.service';
-import type { ApiError } from '../../../core/api/httpService';
-import AuthService from '../../../core/api/services/auth.service';
+import { secureStorage } from '@/shared/utils/secureStorage';
+import type { LoginRequestDto, LoginResponseDto, RegisterRequestDto, UserDto } from '@/core/types/dto/auth.dto';
+import type { ApiError } from '@/core/api/httpService';
+
+// Servicios
+import UsuarioService from '@/core/api/services/usuario.service';
+import AuthService from '@/core/api/services/auth.service';
+import kycService from '@/core/api/services/kyc.service';
 
 export interface UseAuthCoreReturn {
-    // Estado
-    user: UserDto | null;
-    isAuthenticated: boolean;
-    isLoading: boolean;
-    isInitializing: boolean;
-    error: string | null;
-
-    // Métodos
-    login: (credentials: LoginRequestDto) => Promise<LoginResponseDto>;
-    register: (data: RegisterRequestDto) => Promise<void>;
-    logout: () => void;
-    loadUser: () => Promise<void>;
-    setUser: React.Dispatch<React.SetStateAction<UserDto | null>>;
-    setError: React.Dispatch<React.SetStateAction<string | null>>;
-    setIsLoading: React.Dispatch<React.SetStateAction<boolean>>;
-    clearError: () => void;
+  user: UserDto | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  isInitializing: boolean;
+  error: string | null;
+  login: (credentials: LoginRequestDto) => Promise<LoginResponseDto>;
+  register: (data: RegisterRequestDto) => Promise<void>;
+  logout: () => void;
+  loadUser: () => Promise<void>;
+  clearError: () => void;
 }
 
 export const useAuthCore = (): UseAuthCoreReturn => {
-    // Estados
-    const [user, setUser] = useState<UserDto | null>(null);
-    const [isLoading, setIsLoading] = useState(false);
-    const [isInitializing, setIsInitializing] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  
+  const [user, setUser] = useState<UserDto | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-    // Manejador de errores centralizado
-    const handleServiceError = useCallback((err: unknown, defaultMsg: string) => {
-        let msg = defaultMsg;
+  const extractErrorMessage = (err: unknown): string => {
+    const apiError = err as ApiError;
+    return apiError.message || 'Error desconocido en la operación';
+  };
 
-        if (err && typeof err === 'object') {
-            const apiErr = err as ApiError;
+  // 🚀 CARGA DE USUARIO + KYC (Combinados)
+  const loadUser = useCallback(async () => {
+    const token = secureStorage.getToken();
+    
+    // Si no hay token, cortamos la inicialización
+    if (!token) {
+      setIsInitializing(false);
+      return;
+    }
 
-            if (apiErr.type === 'SECURITY_ACTION') {
-                msg = `🔐 Requisito de seguridad: ${apiErr.message}`;
-            } else if (apiErr.type === 'ROLE_RESTRICTION') {
-                msg = `⛔ Permiso denegado: ${apiErr.message}`;
-            } else if (apiErr.type === 'RATE_LIMIT') {
-                msg = `⏳ ${apiErr.message}`;
-            } else if ('message' in apiErr && typeof apiErr.message === 'string') {
-                msg = apiErr.message;
-            }
-        } else if (err instanceof AxiosError && err.response?.data?.error) {
-            msg = err.response.data.error;
-        } else if (err instanceof Error) {
-            msg = err.message;
-        }
+    try {
+      // 1. Obtenemos datos base del usuario
+      const { data: userData } = await UsuarioService.getMe();
+      
+      // Creamos una copia para mutarla con el estado KYC
+      let fullUser: UserDto = { ...userData };
 
-        setError(msg);
-        throw err;
-    }, []);
-
-    // Cargar usuario desde token
-    const loadUser = useCallback(async () => {
-        // ✅ CAMBIO: Usamos secureStorage
-        const token = secureStorage.getToken();
-
-        if (!token) {
-            setIsInitializing(false);
-            return;
-        }
-
+      // 2. Si es CLIENTE, buscamos su estado de KYC
+      if (userData.rol === 'cliente') {
         try {
-            const { data } = await UsuarioService.getMe();
-            setUser(data);
-        } catch (err) {
-            console.warn('Sesión inválida o expirada', err);
-            // ✅ CAMBIO: Limpieza segura
-            secureStorage.clearToken();
-            setUser(null);
-        } finally {
-            setIsInitializing(false);
+          // ✅ CORRECTO: El servicio ya devuelve la data limpia, no desestructuramos
+          const kycData = await kycService.getStatus();
+          
+          // Agregamos el estado al objeto de usuario
+          fullUser = { 
+            ...userData, 
+            estado_kyc: kycData.estado_verificacion 
+          };
+        } catch (kycError) {
+          // Si falla (ej: 404 porque nunca inició), asumimos NO_INICIADO
+          console.warn("No se pudo obtener estado KYC, asumiendo NO_INICIADO", kycError);
+          
+          // ✅ TypeScript ya no se queja porque actualizamos UserDto en auth.dto.ts
+          fullUser = { 
+            ...userData, 
+            estado_kyc: 'NO_INICIADO' 
+          };
         }
-    }, []);
+      }
 
-    // Login (retorna respuesta para que 2FA pueda procesarla)
-    const login = useCallback(async (credentials: LoginRequestDto): Promise<LoginResponseDto> => {
-        setIsLoading(true);
-        setError(null);
-        try {
-            const { data } = await AuthService.login(credentials);
+      setUser(fullUser);
 
-            // Si es login directo (sin 2FA), guardar token
-            if ('token' in data && !('is2FARequired' in data)) {
-                // ✅ CAMBIO: Guardado seguro
-                secureStorage.setToken(data.token);
-                await loadUser();
-            }
+    } catch (err) {
+      console.warn('Sesión inválida o expirada', err);
+      // Si falla obtener el usuario base, limpiamos todo
+      secureStorage.clearToken();
+      setUser(null);
+      queryClient.clear();
+    } finally {
+      setIsInitializing(false);
+    }
+  }, [queryClient]);
 
-            return data;
-        } catch (err: unknown) {
-            const is401 = (err as { status?: number })?.status === 401 ||
-                (err as AxiosError)?.response?.status === 401;
-            if (is401) {
-                const msg = 'Usuario o contraseña incorrectos';
-                setError(msg);
-                throw err;
-            }
-            handleServiceError(err, 'Error al iniciar sesión');
-            throw err;
-        } finally {
-            setIsLoading(false);
-        }
-    }, [loadUser, handleServiceError]);
-
-    // Registro
-const register = useCallback(async (data: RegisterRequestDto) => {
+  // LOGIN
+  const login = useCallback(async (credentials: LoginRequestDto): Promise<LoginResponseDto> => {
     setIsLoading(true);
     setError(null);
     try {
-        await AuthService.register(data);
+      const { data } = await AuthService.login(credentials);
+
+      // Si es login exitoso directo (sin 2FA), guardamos sesión y cargamos datos
+      if ('token' in data && !('is2FARequired' in data)) {
+        secureStorage.setToken(data.token);
+        // Llamamos a loadUser para que traiga Usuario + KYC
+        await loadUser();
+      }
+
+      return data;
     } catch (err) {
-        handleServiceError(err, 'Error en el registro');
-        throw err; 
+      const msg = extractErrorMessage(err);
+      setError(msg);
+      throw err;
     } finally {
-        setIsLoading(false);
+      setIsLoading(false);
     }
-}, [handleServiceError]);
-    // Logout
-    const logout = useCallback(() => {
-        AuthService.logout().catch(console.error);
-        
-        // ✅ CAMBIO: Limpieza segura y completa
-        secureStorage.clearToken();
-        sessionStorage.clear(); // Mantenemos sessionStorage por si guardas algo más allí
+  }, [loadUser]);
 
-        setUser(null);
-        setError(null);
+  // REGISTRO
+  const register = useCallback(async (data: RegisterRequestDto) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await AuthService.register(data);
+    } catch (err) {
+      const msg = extractErrorMessage(err);
+      setError(msg);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
-        window.location.href = '/login';
-    }, []);
+  // LOGOUT (Hard Reload)
+  const logout = useCallback(() => {
+    AuthService.logout().catch(console.error);
+    
+    secureStorage.clearToken(); 
+    sessionStorage.clear();     
+    queryClient.clear(); 
 
-    const clearError = useCallback(() => setError(null), []);
+    setUser(null);
+    setError(null);
+    
+    window.location.href = '/login'; 
+  }, [queryClient]);
 
-    return {
-        user,
-        isAuthenticated: !!user,
-        isLoading,
-        isInitializing,
-        error,
-        login,
-        register,
-        logout,
-        loadUser,
-        setUser,
-        setError,
-        setIsLoading,
-        clearError,
-    };
+  const clearError = useCallback(() => setError(null), []);
+
+  return {
+    user,
+    isAuthenticated: !!user,
+    isLoading,
+    isInitializing,
+    error,
+    login,
+    register,
+    logout,
+    loadUser,
+    clearError,
+  };
 };

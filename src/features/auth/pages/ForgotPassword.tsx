@@ -1,41 +1,41 @@
 // src/pages/Auth/ForgotPassword.tsx
 
-import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { useFormik } from "formik";
-import * as Yup from "yup";
+import { ArrowBack, LockReset, MarkEmailRead, Send as SendIcon } from "@mui/icons-material";
 import {
-  Button,
   Alert,
-  CircularProgress,
-  Stack,
-  Box,
-  Typography,
-  Fade,
+  alpha,
   Avatar,
+  Box,
+  Button,
+  CircularProgress,
+  Fade,
   Link,
-  useTheme,
-  alpha
+  Stack,
+  Typography,
+  useTheme
 } from "@mui/material";
-import { MarkEmailRead, ArrowBack, Send as SendIcon, LockReset } from "@mui/icons-material";
+import { useFormik } from "formik";
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import * as Yup from "yup";
 
 
-import AuthFormContainer from "./components/AuthFormContainer/AuthFormContainer";
-import FormTextField from "../../../shared/components/forms/inputs/FormTextField";
 import { useAuth } from "@/core/context/AuthContext";
+import FormTextField from "../../../shared/components/forms/inputs/FormTextField";
+import AuthFormContainer from "./components/AuthFormContainer/AuthFormContainer";
 
 const ForgotPasswordPage: React.FC = () => {
   const navigate = useNavigate();
   const theme = useTheme();
-  
+
   // Hooks de Autenticación
-  const { 
-    forgotPassword, 
-    isLoading, 
-    error, 
-    clearError 
+  const {
+    forgotPassword,
+    isLoading,
+    error,
+    clearError
   } = useAuth();
-  
+
   const [successEmail, setSuccessEmail] = useState<string | null>(null);
 
   // Limpieza de errores
@@ -65,28 +65,28 @@ const ForgotPasswordPage: React.FC = () => {
   return (
     <AuthFormContainer
       title={successEmail ? "¡Correo Enviado!" : "Recuperar Contraseña"}
-      subtitle={successEmail 
-        ? "" 
+      subtitle={successEmail
+        ? ""
         : "¿Olvidaste tu clave? No te preocupes, te ayudamos a restablecerla."}
       maxWidth="sm"
     >
       {/* 1. VISTA DE CARGA */}
       {isLoading ? (
-         <Fade in={true}>
-           <Box textAlign="center" py={5}>
-             <CircularProgress size={60} thickness={4} />
-             <Typography variant="body1" color="text.secondary" sx={{ mt: 3, fontWeight: 500 }}>
-               Procesando solicitud...
-             </Typography>
-           </Box>
-         </Fade>
+        <Fade in={true}>
+          <Box textAlign="center" py={5}>
+            <CircularProgress size={60} thickness={4} />
+            <Typography variant="body1" color="text.secondary" sx={{ mt: 3, fontWeight: 500 }}>
+              Procesando solicitud...
+            </Typography>
+          </Box>
+        </Fade>
       ) : successEmail ? (
-        
+
         /* 2. VISTA DE ÉXITO */
         <Fade in={true}>
           <Box textAlign="center">
-            <Avatar 
-              sx={{ 
+            <Avatar
+              sx={{
                 width: 72, height: 72, margin: '0 auto', mb: 3,
                 bgcolor: alpha(theme.palette.success.main, 0.1),
                 color: theme.palette.success.main
@@ -94,9 +94,9 @@ const ForgotPasswordPage: React.FC = () => {
             >
               <MarkEmailRead fontSize="large" />
             </Avatar>
-            
+
             <Typography variant="body1" color="text.secondary" sx={{ mb: 4, lineHeight: 1.6 }}>
-              Hemos enviado las instrucciones a <strong>{successEmail}</strong>.<br/>
+              Hemos enviado las instrucciones a <strong>{successEmail}</strong>.<br />
               Por favor revisa tu bandeja de entrada y la carpeta de spam.
             </Typography>
 
@@ -113,17 +113,17 @@ const ForgotPasswordPage: React.FC = () => {
         </Fade>
 
       ) : (
-        
+
         /* 3. VISTA DE FORMULARIO */
         <Fade in={true}>
           <Box>
             <Box textAlign="center" mb={4}>
-              <Box 
-                sx={{ 
-                  width: 56, height: 56, borderRadius: '50%', 
-                  bgcolor: alpha(theme.palette.primary.main, 0.1), 
-                  color: 'primary.main', display: 'flex', 
-                  alignItems: 'center', justifyContent: 'center', 
+              <Box
+                sx={{
+                  width: 56, height: 56, borderRadius: '50%',
+                  bgcolor: alpha(theme.palette.primary.main, 0.1),
+                  color: 'primary.main', display: 'flex',
+                  alignItems: 'center', justifyContent: 'center',
                   mx: 'auto', mb: 2
                 }}
               >
@@ -157,7 +157,7 @@ const ForgotPasswordPage: React.FC = () => {
                   size="large"
                   endIcon={<SendIcon />}
                   disabled={isLoading || !formik.isValid || !formik.dirty}
-                  sx={{ 
+                  sx={{
                     py: 1.5, fontWeight: 700, borderRadius: 2, boxShadow: 'none',
                     '&:hover': { boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }
                   }}

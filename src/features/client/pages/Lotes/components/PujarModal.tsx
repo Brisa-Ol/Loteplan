@@ -10,6 +10,8 @@ import type { CreatePujaDto } from '@/core/types/dto/puja.dto';
 import PujaService from '@/core/api/services/puja.service';
 import BaseModal from '@/shared/components/domain/modals/BaseModal/BaseModal';
 import { useVerificarSuscripcion } from '@/features/client/hooks/useVerificarSuscripcion';
+import { useCurrencyFormatter } from '@/features/client/hooks/useCurrencyFormatter';
+
 
 
 interface LoteConPuja extends LoteDto {
@@ -31,15 +33,16 @@ export const PujarModal: React.FC<Props> = ({ open, onClose, lote: loteProp, soy
   const theme = useTheme();
   const queryClient = useQueryClient();
   
+  // ✅ Inicialización del formateador
+  const formatCurrency = useCurrencyFormatter();
+  
   const [monto, setMonto] = useState('');
   const [error, setError] = useState<string | null>(null);
   
   const lote = loteProp as LoteConPuja | null;
 
-  // ✅ 1. VERIFICACIÓN DE TOKENS PARA ESTE PROYECTO
-const { tokensDisponibles, tieneTokens, isLoading: loadingTokens } = useVerificarSuscripcion(lote?.id_proyecto ?? undefined);
+  const { tokensDisponibles, tieneTokens, isLoading: loadingTokens } = useVerificarSuscripcion(lote?.id_proyecto ?? undefined);
 
-  // Reset al abrir
   useEffect(() => {
     if (open) {
       setMonto('');
@@ -61,7 +64,7 @@ const { tokensDisponibles, tieneTokens, isLoading: loadingTokens } = useVerifica
       queryClient.invalidateQueries({ queryKey: ['lote', lote?.id?.toString()] });
       queryClient.invalidateQueries({ queryKey: ['misPujas'] });
       queryClient.invalidateQueries({ queryKey: ['activePujas'] });
-      queryClient.invalidateQueries({ queryKey: ['check-suscripcion'] }); // Refrescar tokens
+      queryClient.invalidateQueries({ queryKey: ['check-suscripcion'] }); 
       
       if (onSuccess) onSuccess();
       handleReset();
@@ -91,6 +94,7 @@ const { tokensDisponibles, tieneTokens, isLoading: loadingTokens } = useVerifica
       }
 
       const hayPujas = actual > 0;
+      // Mínimo incremento de 0.01 o precio base si no hay pujas
       let minimo = hayPujas ? actual + 0.01 : base;
 
       return {
@@ -101,8 +105,7 @@ const { tokensDisponibles, tieneTokens, isLoading: loadingTokens } = useVerifica
       };
   }, [lote]);
 
-  const formatMoney = (amount: number) => 
-    new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(amount);
+  // 🗑️ Se eliminó la función manual formatMoney
 
   const handleSubmit = () => {
     if (!monto || !esMontoValido) return;
@@ -113,8 +116,6 @@ const { tokensDisponibles, tieneTokens, isLoading: loadingTokens } = useVerifica
 
   const montoNumerico = parseFloat(monto);
   const esMontoValido = monto !== '' && !isNaN(montoNumerico) && montoNumerico >= precioMinimoRequerido;
-
-  // ✅ BLOQUEO DE SEGURIDAD: No puede confirmar si no tiene tokens y no es el ganador
   const puedeConfirmar = esMontoValido && !mutation.isPending && (soyGanador || tieneTokens);
 
   return (
@@ -146,7 +147,10 @@ const { tokensDisponibles, tieneTokens, isLoading: loadingTokens } = useVerifica
             <Stack spacing={1}>
                 <Stack direction="row" justifyContent="space-between" alignItems="center">
                     <Typography variant="caption" color="text.secondary">Precio Base</Typography>
-                    <Typography variant="body2" fontWeight={500} color="text.secondary">{formatMoney(precioBase)}</Typography>
+                    {/* ✅ Uso del hook para Precio Base */}
+                    <Typography variant="body2" fontWeight={500} color="text.secondary">
+                        {formatCurrency(precioBase)}
+                    </Typography>
                 </Stack>
 
                 <Divider sx={{ borderStyle: 'dashed' }} />
@@ -158,8 +162,9 @@ const { tokensDisponibles, tieneTokens, isLoading: loadingTokens } = useVerifica
                             : (esPrimerPuja ? <><MonetizationOn fontSize="inherit"/> Sin Ofertas</> : <><TrendingUp fontSize="inherit" color="warning"/> Oferta Más Alta</>)
                         }
                     </Typography>
+                    {/* ✅ Uso del hook para Oferta Actual */}
                     <Typography variant="h6" color={soyGanador ? "success.main" : (esPrimerPuja ? "text.primary" : "warning.main")} fontWeight={800}>
-                        {esPrimerPuja ? '--' : formatMoney(precioActualMercado)}
+                        {esPrimerPuja ? '--' : formatCurrency(precioActualMercado)}
                     </Typography>
                 </Stack>
             </Stack>
@@ -176,7 +181,8 @@ const { tokensDisponibles, tieneTokens, isLoading: loadingTokens } = useVerifica
             autoFocus
             fullWidth
             label={soyGanador ? "Mejorar mi oferta" : "Tu oferta"}
-            placeholder={`Mínimo ${formatMoney(precioMinimoRequerido)}`}
+          
+            placeholder={`Mínimo ${formatCurrency(precioMinimoRequerido)}`}
             type="number"
             autoComplete='off'
             value={monto}
@@ -192,7 +198,8 @@ const { tokensDisponibles, tieneTokens, isLoading: loadingTokens } = useVerifica
             helperText={
                 error || 
                 (monto !== '' && !esMontoValido 
-                    ? `La oferta debe ser mayor o igual a ${formatMoney(precioMinimoRequerido)}` 
+                    /* ✅ Formateo en Mensaje de Error */
+                    ? `La oferta debe ser mayor o igual a ${formatCurrency(precioMinimoRequerido)}` 
                     : 'Ingresa el monto que estás dispuesto a pagar.')
             }
             sx={{ 
@@ -201,7 +208,7 @@ const { tokensDisponibles, tieneTokens, isLoading: loadingTokens } = useVerifica
             }}
           />
 
-          {/* ✅ ℹ️ AVISO DE TOKENS ACTUALIZADO */}
+          {/* ✅ ℹ️ AVISO DE TOKENS */}
           {soyGanador ? (
             <Alert severity="info" icon={<Token fontSize="inherit" />} variant="outlined" sx={{ borderRadius: 2 }}>
                 <Typography variant="caption" display="block" lineHeight={1.3}>

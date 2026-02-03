@@ -1,7 +1,6 @@
-// src/hooks/usePermissions.ts
-
+import { useAuth } from "@/core/context/AuthContext";
 import { useMemo } from "react";
-import { useAuth } from "../context/AuthContext";
+
 
 export const usePermissions = () => {
   const { user } = useAuth();
@@ -11,9 +10,13 @@ export const usePermissions = () => {
     const isAdmin = user?.rol === "admin";
     const isCliente = user?.rol === "cliente";
 
-    // Helper para verificar arrays de roles
+    /**
+     * Helper para verificar roles.
+     * Acepta un rol único (string) o un array de roles permitidos.
+     */
     const hasRole = (role: string | string[]) => {
       if (!user?.rol) return false;
+      
       if (Array.isArray(role)) {
         return role.includes(user.rol);
       }

@@ -4,19 +4,8 @@ import type { BaseDTO } from './base.dto';
 // 🧠 ENUMS & TIPOS GLOBALES
 // ==========================================
 
-/**
- * Estados posibles del proceso de verificación de identidad.
- * - `NO_INICIADO`: El usuario aún no ha enviado ninguna solicitud.
- * - `PENDIENTE`: Solicitud enviada y esperando revisión manual.
- * - `APROBADA`: Identidad validada. Usuario habilitado para operar.
- * - `RECHAZADA`: Solicitud denegada. El usuario puede reintentar.
- */
 export type EstadoVerificacion = 'NO_INICIADO' | 'PENDIENTE' | 'APROBADA' | 'RECHAZADA';
 
-/**
- * Tipos de documentos aceptados por la plataforma.
- * Coincide con el ENUM de la base de datos.
- */
 export type TipoDocumento = 'DNI' | 'PASAPORTE' | 'LICENCIA';
 
 // ==========================================
@@ -26,25 +15,31 @@ export type TipoDocumento = 'DNI' | 'PASAPORTE' | 'LICENCIA';
 /**
  * Representación completa de un registro de Verificación de Identidad (KYC).
  * Refleja la tabla `verificacion_identidad` y sus relaciones.
+ *
+ * Hereda de BaseDTO: id, activo, fecha_creacion, fecha_actualizacion.
+ *
+ * Nota sobre timestamps: Sequelize manda createdAt/updatedAt en toJSON().
+ * BaseDTO los declara como fecha_creacion/fecha_actualizacion.
+ * createdAt se incluye aquí porque es el nombre real que llega del back.
  */
 export interface KycDTO extends BaseDTO {
-  
+
   /** ID del usuario dueño de la verificación (FK). */
   id_usuario: number;
-  
+
   // --- DATOS PERSONALES DEL FORMULARIO ---
   tipo_documento: TipoDocumento;
   numero_documento: string;
   nombre_completo: string;
   /** Fecha de nacimiento en formato ISO "YYYY-MM-DD". */
   fecha_nacimiento?: string;
-  
-  // --- URLs DE ARCHIVOS (Solo lectura desde el back) ---
+
+  // --- URLs DE ARCHIVOS (Solo lectura desde el back, presentes en endpoints admin) ---
   url_foto_documento_frente: string;
   url_foto_documento_dorso: string | null;
   url_foto_selfie_con_documento: string;
   url_video_verificacion: string | null;
-  
+
   // --- ESTADO Y GESTIÓN ---
   estado_verificacion: EstadoVerificacion;
   /** ID del administrador que realizó la revisión (si aplica). */
@@ -52,14 +47,19 @@ export interface KycDTO extends BaseDTO {
   fecha_verificacion?: string;
   /** Razón del rechazo, visible para el usuario si estado es 'RECHAZADA'. */
   motivo_rechazo?: string;
-  
+
   // --- METADATOS TÉCNICOS ---
   latitud_verificacion?: number;
   longitud_verificacion?: number;
   ip_verificacion?: string;
 
+  // --- TIMESTAMP REAL DE SEQUELIZE ---
+  // Sequelize no tiene alias configurado en base.js, así que toJSON() manda createdAt.
+  // Se declara aquí para que el componente pueda accederlo sin error de tipos.
+  createdAt?: string;
+
   // --- RELACIONES (Includes) ---
-  /** Datos del usuario que envió la solicitud (útil para el Admin Dashboard). */
+  /** Datos del usuario que envió la solicitud. Presente en endpoints admin (pending/approved/rejected/all). */
   usuario?: {
     id: number;
     nombre: string;
@@ -71,7 +71,7 @@ export interface KycDTO extends BaseDTO {
     rol?: string;
   };
 
-  /** Datos del administrador que procesó la solicitud. */
+  /** Datos del administrador que procesó la solicitud. Presente en approved/rejected/all y en status. */
   verificador?: {
     id: number;
     nombre: string;
@@ -81,10 +81,8 @@ export interface KycDTO extends BaseDTO {
     rol?: string;
   };
 
-  // --- HELPERS (Calculados en el Controller) ---
-  /** Indica si el usuario puede enviar una nueva solicitud (True si es NO_INICIADO o RECHAZADA). */
-  puede_enviar?: boolean; 
-  /** Mensaje descriptivo del estado actual para la UI. */
+  // --- HELPERS (Calculados en el Controller, presentes en la respuesta de /status) ---
+  puede_enviar?: boolean;
   mensaje_estado?: string;
 }
 
@@ -93,46 +91,81 @@ export interface KycDTO extends BaseDTO {
 // ==========================================
 
 /**
- * Versión "ligera" del estado KYC para mostrar en el perfil del cliente.
- * Omite URLs de archivos sensibles y datos técnicos irrelevantes para el usuario final.
+ * Respuesta de GET /kyc/status cuando el usuario YA tiene un registro.
+ *
+ * El servicio del back excluye las URLs de archivos y la IP via attributes.exclude.
+ * El controlador agrega puede_enviar y mensaje_estado.
+ * Incluye la relación verificador si existe.
  */
-export type KycStatusDTO = Omit<
-  KycDTO, 
-  | 'url_foto_documento_frente' 
-  | 'url_foto_documento_dorso' 
-  | 'url_foto_selfie_con_documento' 
+export type KycStatusWithRecord = Omit<
+  KycDTO,
+  | 'url_foto_documento_frente'
+  | 'url_foto_documento_dorso'
+  | 'url_foto_selfie_con_documento'
   | 'url_video_verificacion'
   | 'ip_verificacion'
->;
+> & {
+  puede_enviar: boolean;
+  mensaje_estado: string;
+};
+
+/**
+ * Respuesta de GET /kyc/status cuando NO existe registro para el usuario.
+ *
+ * El controlador retorna este objeto mínimo directamente (sin modelo):
+ *   { success: true, estado_verificacion: 'NO_INICIADO', mensaje: '...', puede_enviar: true }
+ *
+ * success no se incluye aquí porque es parte del envelope genérico de la API,
+ * no es un dato del modelo KYC y el frontend nunca lo consume.
+ */
+export interface KycStatusNoRecord {
+  estado_verificacion: 'NO_INICIADO';
+  mensaje: string;
+  puede_enviar: true;
+}
+
+/**
+ * Tipo unificado de la respuesta de GET /kyc/status.
+ *
+ * Uso en componentes:
+ *   const estado = kycStatus?.estado_verificacion || 'NO_INICIADO';
+ *   const puedeEnviar = kycStatus?.puede_enviar ?? true;
+ */
+export type KycStatusDTO = KycStatusWithRecord | KycStatusNoRecord;
+
+// ==========================================
+// 📤 DTOs DE ENTRADA (Envío desde el frontend)
+// ==========================================
 
 /**
  * Datos requeridos para enviar una nueva solicitud de verificación.
- * Se convierte a `FormData` en el servicio antes de enviarse.
+ * Se convierte a FormData en kyc.service.ts antes de enviarse.
+ * Los nombres de los campos coinciden con uploadKYCData.fields() del middleware Multer.
  */
 export interface SubmitKycDto {
   tipo_documento: TipoDocumento;
   numero_documento: string;
   nombre_completo: string;
   fecha_nacimiento?: string;
-  
-  /** Archivo de imagen (JPG/PNG/PDF). Obligatorio. */
+
+  /** Archivo de imagen (JPG/PNG). Obligatorio. Campo: documento_frente */
   documento_frente: File;
-  /** Archivo de imagen. Opcional. */
+  /** Archivo de imagen. Opcional. Campo: documento_dorso */
   documento_dorso?: File;
-  /** Selfie sosteniendo el documento. Obligatorio. */
+  /** Selfie sosteniendo el documento. Obligatorio. Campo: selfie_con_documento */
   selfie_con_documento: File;
-  /** Video corto de prueba de vida. Opcional. */
+  /** Video corto de prueba de vida. Opcional. Campo: video_verificacion */
   video_verificacion?: File;
-  
+
   // Geo-localización del usuario al momento de enviar
   latitud_verificacion?: number;
   longitud_verificacion?: number;
 }
 
 /**
- * Datos requeridos por el administrador para rechazar una solicitud.
+ * Body requerido por el administrador para rechazar una solicitud.
+ * Se envía como JSON en POST /kyc/reject/:idUsuario
  */
 export interface RejectKycDTO {
-  /** Explicación clara de por qué se rechazó la solicitud. */
   motivo_rechazo: string;
 }

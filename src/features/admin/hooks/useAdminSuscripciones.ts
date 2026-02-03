@@ -91,16 +91,17 @@ export const useAdminSuscripciones = () => {
 
   // Cálculos Stats
   const stats = useMemo(() => {
-      const totalSuscripciones = cancelacionStats?.total_suscripciones || 0;
-      const totalCanceladas = cancelacionStats?.total_canceladas || 0;
+      // CORRECCIÓN: Convertir todo a Number explícitamente para evitar error de operador '>'
+      const totalSuscripciones = Number(cancelacionStats?.total_suscripciones || 0);
+      const totalCanceladas = Number(cancelacionStats?.total_canceladas || 0);
       return {
           totalSuscripciones,
           totalCanceladas,
           totalActivas: Math.max(0, totalSuscripciones - totalCanceladas),
-          tasaCancelacion: cancelacionStats?.tasa_cancelacion || 0,
-          tasaMorosidad: morosidadStats?.tasa_morosidad || 0,
-          totalEnRiesgo: morosidadStats?.total_en_riesgo || 0,
-          totalGenerado: morosidadStats?.total_pagos_generados || 0
+          tasaCancelacion: Number(cancelacionStats?.tasa_cancelacion || 0),
+          tasaMorosidad: Number(morosidadStats?.tasa_morosidad || 0),
+          totalEnRiesgo: Number(morosidadStats?.total_en_riesgo || 0),
+          totalGenerado: Number(morosidadStats?.total_pagos_generados || 0)
       };
   }, [cancelacionStats, morosidadStats]);
 
@@ -152,7 +153,9 @@ export const useAdminSuscripciones = () => {
   return {
     theme,
     // State
-    tabIndex, handleTabChange,
+    tabIndex, 
+    setTabIndex, // CORRECCIÓN: Exportado para poder usarlo en el componente
+    handleTabChange,
     searchTerm, setSearchTerm,
     filterProject, setFilterProject,
     filterStatus, setFilterStatus,

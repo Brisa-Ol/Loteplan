@@ -1,15 +1,23 @@
+import { useQuery } from '@tanstack/react-query';
 import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from '@tanstack/react-query';
 
 // Material UI
-import { 
-  Box, Paper, Stack, Typography, Button, Container, Fade, 
-  Divider, Avatar, useTheme, alpha, Chip 
+import {
+  alpha,
+  Avatar,
+  Box,
+  Button,
+  Chip,
+  Container,
+  Divider,
+  Fade,
+  Paper, Stack, Typography,
+  useTheme
 } from "@mui/material";
 
 // Iconos
-import { TrendingUp, Savings, Home as HomeIcon, Business, FilterListOff } from "@mui/icons-material";
+import { Business, FilterListOff, Home as HomeIcon, Savings, TrendingUp } from "@mui/icons-material";
 
 // Servicios y Hooks
 import proyectoService from "@/core/api/services/proyecto.service";
@@ -62,7 +70,7 @@ const ProyectosUnificados: React.FC = () => {
   // Estados
   const [perfilSeleccionado, setPerfilSeleccionado] = useState<'ahorrista' | 'inversionista'>('ahorrista');
   const [itemsVisibles, setItemsVisibles] = useState(9);
-  
+
   // Estado de Filtros
   const [filtros, setFiltros] = useState({
     search: '',
@@ -88,22 +96,22 @@ const ProyectosUnificados: React.FC = () => {
 
   // Lógica de Filtrado
   const proyectosFiltrados = useMemo(() => {
-    let baseProyectos = perfilSeleccionado === 'inversionista' 
-        ? (proyectosInv || []) 
-        : (proyectosAho || []);
+    let baseProyectos = perfilSeleccionado === 'inversionista'
+      ? (proyectosInv || [])
+      : (proyectosAho || []);
 
     return baseProyectos.filter(p => {
-        const searchTerm = filtros.search.toLowerCase().trim();
+      const searchTerm = filtros.search.toLowerCase().trim();
 
-        const matchSearch = searchTerm 
-            ? (p.nombre_proyecto || '').toLowerCase().includes(searchTerm) 
-            : true;
-        
-        const matchStatus = filtros.status === 'todos'
-            ? true
-            : p.estado_proyecto === filtros.status;
+      const matchSearch = searchTerm
+        ? (p.nombre_proyecto || '').toLowerCase().includes(searchTerm)
+        : true;
 
-        return matchSearch && matchStatus;
+      const matchStatus = filtros.status === 'todos'
+        ? true
+        : p.estado_proyecto === filtros.status;
+
+      return matchSearch && matchStatus;
     });
   }, [proyectosInv, proyectosAho, perfilSeleccionado, filtros]);
 
@@ -133,21 +141,21 @@ const ProyectosUnificados: React.FC = () => {
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
-      
+
       {/* 1. HERO HEADER */}
-      <Box sx={{ 
-        background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`, 
-        color: 'primary.contrastText', 
-        py: { xs: 6, md: 8 }, 
-        textAlign: 'center', 
-        mb: 6, 
-        borderBottomLeftRadius: { xs: 24, md: 48 }, 
-        borderBottomRightRadius: { xs: 24, md: 48 }, 
-        boxShadow: 3 
+      <Box sx={{
+        background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+        color: 'primary.contrastText',
+        py: { xs: 6, md: 8 },
+        textAlign: 'center',
+        mb: 6,
+        borderBottomLeftRadius: { xs: 24, md: 48 },
+        borderBottomRightRadius: { xs: 24, md: 48 },
+        boxShadow: 3
       }}>
         <Container maxWidth="lg">
           <Typography variant="h3" component="h1" fontWeight={800} gutterBottom sx={{ letterSpacing: -1 }}>
-           Explora Oportunidades
+            Explora Oportunidades
           </Typography>
           <Typography variant="h6" sx={{ maxWidth: 'md', mx: 'auto', opacity: 0.9, fontWeight: 400 }}>
             Encuentra el proyecto ideal para hacer crecer tu capital o asegurar tu futuro lote.
@@ -156,33 +164,33 @@ const ProyectosUnificados: React.FC = () => {
       </Box>
 
       <Container maxWidth="xl" sx={{ pb: 12 }}>
-        
+
         {/* 2. CONTROLES DE PERFIL (TOGGLE) */}
         <Stack spacing={4} mb={2} alignItems="center">
-          <Paper 
-            elevation={0} 
-            sx={{ 
-                p: 0.8, 
-                borderRadius: 50, 
-                bgcolor: 'background.paper', 
-                display: 'flex', 
-                maxWidth: 600, 
-                width: '100%', 
-                border: `1px solid ${theme.palette.divider}`,
-                boxShadow: `0 4px 20px ${alpha(theme.palette.common.black, 0.05)}`
+          <Paper
+            elevation={0}
+            sx={{
+              p: 0.8,
+              borderRadius: 50,
+              bgcolor: 'background.paper',
+              display: 'flex',
+              maxWidth: 600,
+              width: '100%',
+              border: `1px solid ${theme.palette.divider}`,
+              boxShadow: `0 4px 20px ${alpha(theme.palette.common.black, 0.05)}`
             }}
           >
             <Button
               onClick={() => handleCambioPerfil('ahorrista')}
               fullWidth
               startIcon={<HomeIcon />}
-              sx={{ 
-                  borderRadius: 50, 
-                  py: 1.5, 
-                  transition: 'all 0.3s ease', 
-                  ...(perfilSeleccionado === 'ahorrista' 
-                    ? { bgcolor: 'primary.main', color: 'white', '&:hover': { bgcolor: 'primary.dark' } } 
-                    : { color: 'text.secondary', '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.05) } }) 
+              sx={{
+                borderRadius: 50,
+                py: 1.5,
+                transition: 'all 0.3s ease',
+                ...(perfilSeleccionado === 'ahorrista'
+                  ? { bgcolor: 'primary.main', color: 'white', '&:hover': { bgcolor: 'primary.dark' } }
+                  : { color: 'text.secondary', '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.05) } })
               }}
             >
               Modo Ahorrista
@@ -191,31 +199,31 @@ const ProyectosUnificados: React.FC = () => {
               onClick={() => handleCambioPerfil('inversionista')}
               fullWidth
               startIcon={<TrendingUp />}
-              sx={{ 
-                  borderRadius: 50, 
-                  py: 1.5, 
-                  transition: 'all 0.3s ease', 
-                  ...(perfilSeleccionado === 'inversionista' 
-                    ? { bgcolor: 'primary.main', color: 'white', '&:hover': { bgcolor: 'primary.dark' } } 
-                    : { color: 'text.secondary', '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.05) } }) 
+              sx={{
+                borderRadius: 50,
+                py: 1.5,
+                transition: 'all 0.3s ease',
+                ...(perfilSeleccionado === 'inversionista'
+                  ? { bgcolor: 'primary.main', color: 'white', '&:hover': { bgcolor: 'primary.dark' } }
+                  : { color: 'text.secondary', '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.05) } })
               }}
             >
               Modo Inversionista
             </Button>
           </Paper>
-          
+
           <HighlightsSection perfil={perfilSeleccionado} />
         </Stack>
 
         {/* 3. BARRA DE FILTROS (Con debounce integrado) */}
         <Box mb={6}>
-            <ProjectFilters onFilter={handleFilter} />
+          <ProjectFilters onFilter={handleFilter} />
         </Box>
 
         {/* ✅ MEJORA 3: Chip de resultados con filtros activos */}
         {tieneFiltrosActivos && (
           <Box mb={3} display="flex" justifyContent="center">
-            <Chip 
+            <Chip
               label={`${proyectosFiltrados.length} ${proyectosFiltrados.length === 1 ? 'resultado encontrado' : 'resultados encontrados'}`}
               color="primary"
               variant="outlined"
@@ -225,10 +233,10 @@ const ProyectosUnificados: React.FC = () => {
         )}
 
         {/* 4. GRID DE RESULTADOS - ✅ MEJORA 4: Skeleton Loading */}
-        <QueryHandler 
-          isLoading={isLoading} 
-          error={null} 
-          loadingMessage="Buscando las mejores oportunidades..." 
+        <QueryHandler
+          isLoading={isLoading}
+          error={null}
+          loadingMessage="Buscando las mejores oportunidades..."
           fullHeight={true}
           useSkeleton={true}
           skeletonCount={9}
@@ -241,7 +249,7 @@ const ProyectosUnificados: React.FC = () => {
                   No se encontraron proyectos con estos filtros.
                 </Typography>
                 <Button variant="text" onClick={() => setFiltros({ search: '', status: 'todos' })} sx={{ mt: 2 }}>
-                    Limpiar filtros
+                  Limpiar filtros
                 </Button>
               </Box>
             ) : (
@@ -262,17 +270,17 @@ const ProyectosUnificados: React.FC = () => {
 
             {hayMasProyectos && (
               <Box textAlign="center" py={6}>
-                <Button 
-                    variant="outlined" 
-                    size="large" 
-                    onClick={() => setItemsVisibles(prev => prev + 9)} 
-                    sx={{ 
-                        px: 4, py: 1.5, 
-                        borderWidth: 2, 
-                        fontWeight: 700, 
-                        borderRadius: 50, 
-                        '&:hover': { borderWidth: 2 } 
-                    }}
+                <Button
+                  variant="outlined"
+                  size="large"
+                  onClick={() => setItemsVisibles(prev => prev + 9)}
+                  sx={{
+                    px: 4, py: 1.5,
+                    borderWidth: 2,
+                    fontWeight: 700,
+                    borderRadius: 50,
+                    '&:hover': { borderWidth: 2 }
+                  }}
                 >
                   Cargar más proyectos
                 </Button>

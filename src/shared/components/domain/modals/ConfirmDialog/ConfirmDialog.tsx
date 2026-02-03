@@ -114,7 +114,7 @@ export const ConfirmDialog: React.FC<Props> = ({
       }}
     >
       {/* HEADER: Con fondo naranja muy sutil para coherencia */}
-      <DialogTitle sx={{ 
+      <Box sx={{ 
           display: 'flex', 
           flexDirection: 'column',
           alignItems: 'center', 
@@ -132,10 +132,10 @@ export const ConfirmDialog: React.FC<Props> = ({
           }}>
             {severityIcon}
           </Avatar>
-          <Typography variant="h4" fontWeight={700} color="text.primary">
+          <Typography variant="h4" component="h2" fontWeight={700} color="text.primary">
             {displayTitle}
           </Typography>
-      </DialogTitle>
+      </Box>
       
       <DialogContent sx={{ px: 4, py: 2 }}>
         <Stack spacing={3}> 

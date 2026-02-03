@@ -1,52 +1,42 @@
 // src/shared/hooks/useNavbarMenu.tsx
 
-import { useMemo } from "react";
-import { useNavigate } from "react-router-dom";
 import {
-  // Navegación General
-  Dashboard as DashboardIcon,
-  Construction as ConstructionIcon,
-  HelpOutline as HelpOutlineIcon,
-  
   // Finanzas & Pagos
   AccountBalance as AccountBalanceIcon,
-  AttachMoney as AttachMoneyIcon,
-  Receipt as ReceiptIcon,
-  
-  // Gestión & Documentos
-  Description as DescriptionIcon,
-  Folder as FolderIcon,
-  Assignment as AssignmentIcon,
-  
-  // Productos / Social
-  SupervisedUserCircle as SupervisedUserIcon,
-  Gavel as GavelIcon,
-  Favorite as FavoriteIcon,
-  Terrain as TerrainIcon,
-  
   // Usuario & Seguridad
   AccountCircle as AccountCircleIcon,
-  Message as MessageIcon,
-  Settings as SettingsIcon,
-  Security as SecurityIcon,
-  Logout as LogoutIcon,
-  
-  // Estados / Feedback (Para KYC y 2FA)
-  VerifiedUser as VerifiedUserIcon,
+  Assignment as AssignmentIcon,
+  AttachMoney as AttachMoneyIcon,
   Badge as BadgeIcon,
+  Construction as ConstructionIcon,
+  // Navegación General
+  Dashboard as DashboardIcon,
+  // Gestión & Documentos
+  Description as DescriptionIcon,
+  Favorite as FavoriteIcon,
+  Folder as FolderIcon,
+  Gavel as GavelIcon,
   Lock as LockIcon,
   LockOpen as LockOpenIcon,
-  CheckCircle as CheckCircleIcon,
-  Error as ErrorIcon,
-  Person as PersonIcon,
+  Logout as LogoutIcon,
+  Message as MessageIcon,
   MoreHoriz as MoreHorizIcon,
-
+  Person as PersonIcon,
+  Receipt as ReceiptIcon,
+  Settings as SettingsIcon,
+  // Productos / Social
+  SupervisedUserCircle as SupervisedUserIcon,
+  Terrain as TerrainIcon,
+  // Estados / Feedback (Para KYC y 2FA)
+  VerifiedUser as VerifiedUserIcon,
   // Tipo
   type SvgIconComponent
 } from "@mui/icons-material";
+import { useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 
-import { useAuth } from "../../core/context/AuthContext";
 import { ROUTES } from "@/routes";
+import { useAuth } from "../../core/context/AuthContext";
 import { useConfirmDialog } from "./useConfirmDialog";
 
 // ════════════════════════════════════════════════════════
@@ -126,12 +116,12 @@ export const useNavbarMenu = () => {
         homePath: ROUTES.ADMIN.DASHBOARD,
         actionButtons: [],
         navItems: [
-          { 
-            label: "Dashboard", 
-            path: ROUTES.ADMIN.DASHBOARD, 
-            icon: DashboardIcon 
+          {
+            label: "Dashboard",
+            path: ROUTES.ADMIN.DASHBOARD,
+            icon: DashboardIcon
           },
-          { 
+          {
             label: "Gestión Usuarios",
             icon: PersonIcon,
             submenu: [
@@ -139,7 +129,7 @@ export const useNavbarMenu = () => {
               { label: "Verificaciones KYC", path: ROUTES.ADMIN.USUARIOS.KYC, icon: VerifiedUserIcon, badge: 0 }, // Aquí podrías pasar un prop de conteo
             ]
           },
-          { 
+          {
             label: "Proyectos",
             icon: ConstructionIcon,
             submenu: [
@@ -187,8 +177,8 @@ export const useNavbarMenu = () => {
           }
         ],
         quickAccess: [
-            { label: "Dashboard", path: ROUTES.ADMIN.DASHBOARD, icon: DashboardIcon },
-            { label: "Usuarios", path: ROUTES.ADMIN.USUARIOS.LISTA, icon: PersonIcon },
+          { label: "Dashboard", path: ROUTES.ADMIN.DASHBOARD, icon: DashboardIcon },
+          { label: "Usuarios", path: ROUTES.ADMIN.USUARIOS.LISTA, icon: PersonIcon },
         ]
       };
     }
@@ -198,8 +188,8 @@ export const useNavbarMenu = () => {
     // ----------------------------------------------------------------------
     if (user?.rol === "cliente") {
       // Analizar Estados de Seguridad
-     const rawKycStatus = (user as any)?.estado_kyc || 'SIN_INICIAR';
-const kycStatus = rawKycStatus.toUpperCase();
+      const rawKycStatus = (user as any)?.estado_kyc || 'SIN_INICIAR';
+      const kycStatus = rawKycStatus.toUpperCase();
       const isKycApproved = kycStatus === "APROBADA";
       const isKycPending = kycStatus === "PENDIENTE";
       const is2faEnabled = user?.is_2fa_enabled;
@@ -208,18 +198,18 @@ const kycStatus = rawKycStatus.toUpperCase();
         logoPath: "/logo.svg",
         homePath: ROUTES.CLIENT.DASHBOARD,
         actionButtons: [],
-        
+
         // 1. MENÚ PRINCIPAL (Izquierda)
         navItems: [
-          { 
-            label: "Inicio", 
-            path: ROUTES.CLIENT.DASHBOARD, 
+          {
+            label: "Inicio",
+            path: ROUTES.CLIENT.DASHBOARD,
             icon: DashboardIcon,
             description: "Resumen de cuenta"
           },
-          { 
+          {
             label: "Oportunidades", // Mejor que "Invertir" o "Proyectos"
-            path: ROUTES.PROYECTOS.SELECCION_ROL, 
+            path: ROUTES.PROYECTOS.SELECCION_ROL,
             icon: ConstructionIcon,
             description: "Explorar catálogo de inversiones"
           },
@@ -249,10 +239,10 @@ const kycStatus = rawKycStatus.toUpperCase();
             label: "Más",
             icon: MoreHorizIcon,
             submenu: [
-               { label: "Lotes Favoritos", path: ROUTES.CLIENT.CUENTA.FAVORITOS, icon: FavoriteIcon },
-               { isDivider: true, label: "" },
-               { label: "Ayuda Ahorristas", path: ROUTES.PUBLIC.COMO_FUNCIONA_AHORRISTA, icon: HelpOutlineIcon },
-               { label: "Ayuda Inversores", path: ROUTES.PUBLIC.COMO_FUNCIONA_INVERSIONISTA, icon: HelpOutlineIcon },
+              { label: "Lotes Favoritos", path: ROUTES.CLIENT.CUENTA.FAVORITOS, icon: FavoriteIcon },
+              { isDivider: true, label: "" },
+              //{ label: "Ayuda Ahorristas", path: ROUTES.PUBLIC.COMO_FUNCIONA_AHORRISTA, icon: HelpOutlineIcon },
+              //{ label: "Ayuda Inversores", path: ROUTES.PUBLIC.COMO_FUNCIONA_INVERSIONISTA, icon: HelpOutlineIcon },
             ]
           }
         ],
@@ -263,22 +253,22 @@ const kycStatus = rawKycStatus.toUpperCase();
             label: user?.nombre || "Mi Cuenta",
             icon: AccountCircleIcon,
             // Badge en el avatar si falta algo crítico
-            badge: (!isKycApproved || !is2faEnabled) ? 1 : undefined, 
+            badge: (!isKycApproved || !is2faEnabled) ? 1 : undefined,
             submenu: [
               // --- Datos ---
-              { 
-                label: "Mi Perfil", 
-                path: ROUTES.CLIENT.CUENTA.PERFIL, 
-                icon: AccountCircleIcon, 
-                description: "Datos personales" 
+              {
+                label: "Mi Perfil",
+                path: ROUTES.CLIENT.CUENTA.PERFIL,
+                icon: AccountCircleIcon,
+                description: "Datos personales"
               },
-              { 
-                label: "Mis Mensajes", 
-                path: ROUTES.CLIENT.CUENTA.MENSAJES, 
-                icon: MessageIcon, 
-                description: "Centro de notificaciones" 
+              {
+                label: "Mis Mensajes",
+                path: ROUTES.CLIENT.CUENTA.MENSAJES,
+                icon: MessageIcon,
+                description: "Centro de notificaciones"
               },
-              
+
               { isDivider: true, label: "" },
 
               // --- Seguridad (Semáforo) ---
@@ -287,11 +277,11 @@ const kycStatus = rawKycStatus.toUpperCase();
                 path: ROUTES.CLIENT.CUENTA.KYC,
                 // Si está aprobado: Check Verde. Si no: Escudo con alerta o Badge.
                 icon: isKycApproved ? VerifiedUserIcon : BadgeIcon,
-                description: isKycApproved 
-                  ? "Cuenta validada correctamente" 
+                description: isKycApproved
+                  ? "Cuenta validada correctamente"
                   : (isKycPending ? "Verificación en revisión" : "Requerido para operar"),
                 // Si no está aprobado, mostramos badge para llamar la atención
-               color: isKycApproved ? "success" : "warning", 
+                color: isKycApproved ? "success" : "warning",
                 badge: !isKycApproved ? 1 : undefined
               },
               {
@@ -299,8 +289,8 @@ const kycStatus = rawKycStatus.toUpperCase();
                 path: ROUTES.CLIENT.CUENTA.SEGURIDAD,
                 // Candado cerrado (seguro) vs Candado abierto (inseguro)
                 icon: is2faEnabled ? LockIcon : LockOpenIcon,
-                description: is2faEnabled 
-                  ? "Cuenta protegida" 
+                description: is2faEnabled
+                  ? "Cuenta protegida"
                   : "Recomendado para seguridad",
                 // Opcional: Badge si quieres forzar la seguridad
                 // badge: !is2faEnabled ? 1 : undefined
@@ -310,10 +300,10 @@ const kycStatus = rawKycStatus.toUpperCase();
               { isDivider: true, label: "" },
 
               // --- Salida ---
-              { 
-                label: "Cerrar Sesión", 
-                icon: LogoutIcon, 
-                action: handleLogoutClick 
+              {
+                label: "Cerrar Sesión",
+                icon: LogoutIcon,
+                action: handleLogoutClick
               }
             ]
           }

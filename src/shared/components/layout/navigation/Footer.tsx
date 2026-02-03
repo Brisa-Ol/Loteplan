@@ -1,8 +1,8 @@
 // src/components/layout/Footer/Footer.tsx
 
+import { Email, Facebook, Instagram, LinkedIn, LocationOn, Phone } from '@mui/icons-material';
+import { alpha, Box, Container, Divider, IconButton, Link, Stack, Typography, useTheme } from '@mui/material';
 import React from 'react';
-import { Box, Container, Typography, Link, Stack, useTheme, alpha, Divider, IconButton } from '@mui/material';
-import { Facebook, Instagram, LinkedIn, Email, Phone, LocationOn } from '@mui/icons-material';
 
 const Footer: React.FC = () => {
   const theme = useTheme();
@@ -34,40 +34,40 @@ const Footer: React.FC = () => {
   const socialButtonStyle = {
     color: 'text.secondary',
     transition: '0.2s',
-    '&:hover': { 
-        color: 'primary.main', 
-        bgcolor: alpha(theme.palette.primary.main, 0.1),
-        transform: 'translateY(-2px)'
+    '&:hover': {
+      color: 'primary.main',
+      bgcolor: alpha(theme.palette.primary.main, 0.1),
+      transform: 'translateY(-2px)'
     }
   };
 
   return (
-    <Box 
-      component="footer" 
-      sx={{ 
-        bgcolor: 'background.paper', 
-        pt: { xs: 6, md: 8 }, 
-        pb: 4, 
+    <Box
+      component="footer"
+      sx={{
+        bgcolor: 'background.paper',
+        pt: { xs: 6, md: 8 },
+        pb: 4,
         mt: 'auto',
         borderTop: `1px solid ${theme.palette.divider}`
       }}
     >
       <Container maxWidth="xl">
         <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: { xs: 5, md: 4 } }}>
-          
+
           {/* 1. Identidad de Marca */}
           <Box sx={{ flex: { xs: 1, md: 1.5 }, maxWidth: { md: 350 } }}>
             {/* Logo: Asegúrate de que la ruta sea correcta */}
-            <Box 
+            <Box
               component="img"
-              src="/navbar/nav.png" 
+              src="/navbar/nav.png"
               alt="Loteplan Logo"
               sx={{ height: 36, mb: 2.5, objectFit: 'contain', objectPosition: 'left' }}
             />
             <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.7, mb: 3 }}>
               La plataforma líder para comprar, financiar y gestionar lotes de inversión. Construye tu futuro con seguridad y confianza.
             </Typography>
-            
+
             {/* Redes Sociales */}
             <Stack direction="row" spacing={1}>
               <IconButton size="small" sx={socialButtonStyle} aria-label="Facebook">
@@ -88,7 +88,7 @@ const Footer: React.FC = () => {
             <Stack spacing={1.2}>
               <Link href="/nosotros" sx={linkStyle}>Nosotros</Link>
               <Link href="/proyectos" sx={linkStyle}>Proyectos</Link>
-              <Link href="/blog" sx={linkStyle}>Blog & Noticias</Link>
+              <Link href="/como-funciona" sx={linkStyle}>Como Funciona</Link>
               <Link href="/preguntas" sx={linkStyle}>Preguntas Frecuentes</Link>
             </Stack>
           </Box>
@@ -111,7 +111,7 @@ const Footer: React.FC = () => {
               <Stack direction="row" spacing={1.5} alignItems="center">
                 <Email fontSize="small" color="action" sx={{ fontSize: 18 }} />
                 <Link href="mailto:info@loteplan.com" sx={{ ...linkStyle, '&:hover': { color: 'primary.main', transform: 'none' } }}>
-                    info@loteplan.com
+                  info@loteplan.com
                 </Link>
               </Stack>
               <Stack direction="row" spacing={1.5} alignItems="center">
@@ -120,7 +120,7 @@ const Footer: React.FC = () => {
               </Stack>
               <Stack direction="row" spacing={1.5} alignItems="flex-start">
                 <LocationOn fontSize="small" color="action" sx={{ fontSize: 18, mt: 0.3 }} />
-                <Typography variant="body2" color="text.secondary">Av. del Libertador 1000,<br/>Buenos Aires, Argentina</Typography>
+                <Typography variant="body2" color="text.secondary">Av. del Libertador 1000,<br />Buenos Aires, Argentina</Typography>
               </Stack>
             </Stack>
           </Box>
@@ -134,9 +134,9 @@ const Footer: React.FC = () => {
             © {currentYear} LotePlan S.A. Todos los derechos reservados.
           </Typography>
           <Stack direction="row" spacing={3}>
-             {/* Enlaces legales rápidos (opcional) */}
-             <Link href="#" variant="caption" color="text.disabled" underline="hover">Mapa del sitio</Link>
-             <Typography variant="caption" color="text.disabled">v1.0.0</Typography>
+            {/* Enlaces legales rápidos (opcional) */}
+            <Link href="#" variant="caption" color="text.disabled" underline="hover">Mapa del sitio</Link>
+            <Typography variant="caption" color="text.disabled">v1.0.0</Typography>
           </Stack>
         </Box>
       </Container>

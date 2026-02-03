@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Button,
@@ -24,13 +24,14 @@ import {
 import { useFormik } from "formik";
 import * as Yup from "yup";
 
+// Imports internos
 import { useAuth } from "@/core/context/AuthContext";
 import { ROUTES } from "@/routes";
 import TwoFactorAuthModal from "../../../shared/components/domain/modals/TwoFactorAuthModal/TwoFactorAuthModal";
 import AuthFormContainer from "./components/AuthFormContainer/AuthFormContainer";
 import FormTextField from "../../../shared/components/forms/inputs/FormTextField";
 
-// Definimos el tipo de error local
+// Tipos para manejo de errores locales
 type LocalErrorType = 'invalid_credentials' | 'account_not_activated' | 'session_expired' | 'generic';
 
 interface LocationState {
@@ -44,51 +45,59 @@ const LoginPage: React.FC = () => {
   const location = useLocation();
   const theme = useTheme();
 
+  // Consumimos el contexto
   const {
     login,
     verify2FA,
     requires2FA,
     isLoading,
     isInitializing,
-    clearError: clearAuthError,
+    clearError: clearAuthError, // Renombramos para claridad interna
     logout,
     user,
     isAuthenticated,
     resendConfirmation
   } = useAuth();
 
+  // --- Estados Locales ---
   const [showPassword, setShowPassword] = useState(false);
   const [resendSuccess, setResendSuccess] = useState(false);
+  const [isSessionExpiredRedirect, setIsSessionExpiredRedirect] = useState(false);
   
-  // ✅ ESTADO LOCAL: Aquí se guarda el error para mostrarlo en pantalla
+  // ✅ ESTADO LOCAL DEL ERROR: Esto asegura que el mensaje persista en la UI
   const [localError, setLocalError] = useState<{ type: LocalErrorType; msg: string } | null>(null);
 
-  const [isSessionExpiredRedirect, setIsSessionExpiredRedirect] = useState(false);
-
+  // --- Lógica de Historial ---
   const state = location.state as LocationState;
   const from = useMemo(() => state?.from ? (typeof state.from === 'string' ? state.from : state.from.pathname) : null, [state]);
-  const successMessage = state?.message;
   const vieneDeProyecto = from?.includes('/proyectos/');
 
   // 1. Manejo de redirección por sesión expirada
   useEffect(() => {
     if (state?.sessionExpired) {
       setIsSessionExpiredRedirect(true);
+      // Limpiamos el flag del history para que no aparezca si el usuario refresca la página
       window.history.replaceState({}, document.title);
     }
   }, [state]);
 
-  // 🔴 CORRECCIÓN CRÍTICA AQUÍ 🔴
-  // Antes, esto borraba el error en cada render. Ahora solo lo hace al desmontar el componente.
-  useEffect(() => {
-    return () => {
-      // Solo limpiamos el estado global al salir de la página
-      clearAuthError(); 
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // <--- El array vacío asegura que solo corra al desmontar (salir de la pagina)
+  // 2. ✅ CORRECCIÓN CRÍTICA DE LIMPIEZA
+  // Usamos useRef para mantener la referencia a la función sin disparar el useEffect
+  const clearErrorRef = useRef(clearAuthError);
 
-  // Redirección si ya está autenticado
+  useEffect(() => {
+    clearErrorRef.current = clearAuthError;
+  }, [clearAuthError]);
+
+  useEffect(() => {
+    // Esta función de limpieza solo se ejecuta al DESMONTAR el componente (salir de la página)
+    return () => { 
+      if (clearErrorRef.current) clearErrorRef.current();
+      // Nota: No limpiamos localError aquí para evitar parpadeos visuales en la transición
+    };
+  }, []); // Array vacío = Solo al montar/desmontar
+
+  // 3. Redirección si ya está autenticado y no requiere 2FA
   useEffect(() => {
     if (!isInitializing && isAuthenticated && user && !requires2FA) {
       const destino = from && from !== ROUTES.PUBLIC.HOME 
@@ -98,6 +107,7 @@ const LoginPage: React.FC = () => {
     }
   }, [isInitializing, isAuthenticated, user, requires2FA, navigate, from]);
 
+  // --- Lógica del Formulario ---
   const formik = useFormik({
     initialValues: { identificador: "", password: "" },
     validationSchema: Yup.object({
@@ -105,38 +115,59 @@ const LoginPage: React.FC = () => {
       password: Yup.string().required("Ingresá tu contraseña"),
     }),
     onSubmit: async (values) => {
-      // Limpiamos estados antes de intentar login
+      // Resetear estados visuales antes de la petición
       setResendSuccess(false);
       setIsSessionExpiredRedirect(false);
       setLocalError(null); 
-      clearAuthError();
+      
+      // No llamamos a clearAuthError() aquí para no causar re-renders innecesarios antes del submit
 
       try {
         await login({
           identificador: values.identificador,
           contraseña: values.password,
         });
+        // Si el login es exitoso, el useEffect de redirección (#3) se encarga.
       } catch (err: any) {
-        // 🔥 CAPTURA DEL ERROR
-        const msg = err?.message || err?.error || "Ocurrió un error inesperado";
-        const msgLower = msg.toLowerCase();
+        // 🔥 EXTRACCIÓN ROBUSTA DE ERROR
+        console.log("Login Error capturado:", err);
 
-        console.log("❌ Error procesado para UI:", msg);
+        let rawMsg = "Ocurrió un error inesperado.";
+        
+        // Prioridad de extracción de mensaje
+        if (typeof err === 'string') rawMsg = err;
+        else if (err?.message) rawMsg = err.message; // ApiError nuestro
+        else if (err?.response?.data?.message) rawMsg = err.response.data.message; // Axios Backend msg
+        else if (err?.response?.data?.error) rawMsg = err.response.data.error;
 
+        const msgLower = rawMsg.toLowerCase();
         let type: LocalErrorType = 'generic';
 
-        if (msgLower.includes('credenciales incorrectas') || 
+        // Clasificación para mostrar la alerta correcta
+        if (
+            msgLower.includes('credenciales') || 
+            msgLower.includes('incorrect') || 
             msgLower.includes('usuario o contraseña') ||
-            msgLower.includes('invalid credentials')) {
-          type = 'invalid_credentials';
-        } else if (msgLower.includes('cuenta no activada')) {
-          type = 'account_not_activated';
-        } else if (msgLower.includes('sesión expirada')) {
-          type = 'session_expired';
+            msgLower.includes('unauthorized') || 
+            msgLower.includes('401')
+        ) {
+            type = 'invalid_credentials';
+            rawMsg = "Usuario o contraseña incorrectos.";
+        } else if (
+            msgLower.includes('cuenta no activada') || 
+            msgLower.includes('verificar') ||
+            msgLower.includes('confirmar')
+        ) {
+            type = 'account_not_activated';
+        } else if (
+            msgLower.includes('sesión') || 
+            msgLower.includes('token')
+        ) {
+            type = 'session_expired';
         }
 
-        // Forzamos la actualización del estado local
-        setLocalError({ type, msg });
+        // Establecer estado local para mostrar la alerta roja
+        setLocalError({ type, msg: rawMsg });
       }
     },
   });
@@ -146,12 +177,16 @@ const LoginPage: React.FC = () => {
     try {
       await resendConfirmation(formik.values.identificador);
       setResendSuccess(true);
-      setLocalError(null);
-    } catch (err) { }
+      // Opcional: Limpiar el error de "no activada" si el reenvío fue exitoso para dar feedback positivo
+      setLocalError(null); 
+    } catch (err) { 
+      // El error de reenvío se mostrará por el interceptor global o puedes setearlo aquí
+    }
   };
 
-  // --- RENDERIZADO DE ALERTAS ---
-  const renderErrorAlert = () => {
+  // --- Renderizado de Alertas (Helper) ---
+  const renderAlerts = () => {
+    // 1. Prioridad: Éxito
     if (resendSuccess) {
       return (
         <Alert severity="success" sx={{ mb: 3, borderRadius: 2 }} onClose={() => setResendSuccess(false)}>
@@ -160,6 +195,7 @@ const LoginPage: React.FC = () => {
       );
     }
 
+    // 2. Prioridad: Sesión Expirada (Warning)
     if (isSessionExpiredRedirect) {
       return (
         <Alert severity="warning" icon={<LockClock />} sx={{ mb: 3, borderRadius: 2 }} onClose={() => setIsSessionExpiredRedirect(false)}>
@@ -169,71 +205,56 @@ const LoginPage: React.FC = () => {
       );
     }
 
-    // SI NO HAY ERROR LOCAL, NO RENDERIZA NADA
-    if (!localError) return null;
-
-    switch (localError.type) {
-      case 'invalid_credentials':
-        return (
-          <Alert 
-            severity="error" 
-            icon={<ErrorOutline />} 
-            sx={{ mb: 3, borderRadius: 2 }} 
-            onClose={() => setLocalError(null)}
-          >
-            <Typography variant="body2" fontWeight={600}>Credenciales incorrectas</Typography>
-            <Typography variant="body2">Verifica tu usuario y contraseña.</Typography>
-            <Box mt={1}>
-              <Link 
-                component="button" 
-                variant="caption" 
-                onClick={() => navigate(ROUTES.FORGOT_PASSWORD)} 
-                sx={{ fontWeight: 'bold', textDecoration: 'underline' }}
-              >
-                ¿Olvidaste tu contraseña?
-              </Link>
-            </Box>
-          </Alert>
-        );
-
-      case 'account_not_activated':
-        return (
-          <Alert 
-            severity="info" 
-            icon={<InfoOutlined />} 
-            sx={{ mb: 3, borderRadius: 2 }} 
-            onClose={() => setLocalError(null)}
-          >
-            <Typography variant="body2" fontWeight={600}>Cuenta no activada</Typography>
-            <Typography variant="body2">Debes confirmar tu email.</Typography>
-            <Box mt={1}>
-              <Link 
-                component="button" 
-                variant="caption" 
-                onClick={handleResendEmail} 
-                disabled={isLoading} 
-                sx={{ fontWeight: 'bold', textDecoration: 'underline' }}
-              >
-                Reenviar confirmación
-              </Link>
-            </Box>
-          </Alert>
-        );
-
-      case 'session_expired':
+    // 3. Prioridad: Errores de Login
+    if (localError) {
+      switch (localError.type) {
+        case 'invalid_credentials':
           return (
-            <Alert severity="warning" icon={<LockClock />} sx={{ mb: 3, borderRadius: 2 }} onClose={() => setLocalError(null)}>
-              <Typography variant="body2">Tu sesión ha expirado.</Typography>
+            <Alert severity="error" icon={<ErrorOutline />} sx={{ mb: 3, borderRadius: 2 }} onClose={() => setLocalError(null)}>
+              <Typography variant="body2" fontWeight={600}>Credenciales incorrectas</Typography>
+              <Typography variant="body2">Verifica tu usuario y contraseña.</Typography>
+              <Box mt={1}>
+                <Link 
+                  component="button" 
+                  variant="caption" 
+                  onClick={() => navigate(ROUTES.FORGOT_PASSWORD)} 
+                  sx={{ fontWeight: 'bold', textDecoration: 'underline', color: 'error.dark', cursor: 'pointer' }}
+                >
+                  ¿Olvidaste tu contraseña?
+                </Link>
+              </Box>
             </Alert>
           );
 
-      default:
-        return (
-          <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }} onClose={() => setLocalError(null)}>
-            {localError.msg}
-          </Alert>
-        );
+        case 'account_not_activated':
+          return (
+            <Alert severity="info" icon={<InfoOutlined />} sx={{ mb: 3, borderRadius: 2 }} onClose={() => setLocalError(null)}>
+              <Typography variant="body2" fontWeight={600}>Cuenta no activada</Typography>
+              <Typography variant="body2">Debes confirmar tu email para ingresar.</Typography>
+              <Box mt={1}>
+                <Link 
+                  component="button" 
+                  variant="caption" 
+                  onClick={handleResendEmail} 
+                  disabled={isLoading} 
+                  sx={{ fontWeight: 'bold', textDecoration: 'underline', color: 'info.dark', cursor: 'pointer' }}
+                >
+                  Reenviar correo de confirmación
+                </Link>
+              </Box>
+            </Alert>
+          );
+
+        default: // Generic Error
+          return (
+            <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }} onClose={() => setLocalError(null)}>
+              {localError.msg}
+            </Alert>
+          );
+      }
     }
+
+    return null;
   };
 
   if (isInitializing) {
@@ -247,38 +268,31 @@ const LoginPage: React.FC = () => {
         subtitle="Ingresá a tu cuenta para gestionar tus inversiones."
       >
         <Box textAlign="center" mb={4}>
-          <Box
-            sx={{
-              width: 56, height: 56, borderRadius: '50%',
-              bgcolor: alpha(theme.palette.primary.main, 0.1),
-              color: 'primary.main',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              mx: 'auto', mb: 2
-            }}
-          >
+          <Box sx={{ width: 56, height: 56, borderRadius: '50%', bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main', display: 'flex', alignItems: 'center', justifyContent: 'center', mx: 'auto', mb: 2 }}>
             <LockOpen fontSize="large" />
           </Box>
           <Typography variant="h5" fontWeight={700}>Iniciar Sesión</Typography>
         </Box>
 
-        {vieneDeProyecto && !isAuthenticated && !localError && !isSessionExpiredRedirect && (
+        {/* Alerta Informativa (Si viene de un link protegido y no hay errores) */}
+        {vieneDeProyecto && !isAuthenticated && !localError && !isSessionExpiredRedirect && !resendSuccess && (
           <Alert severity="info" icon={<InfoOutlined />} sx={{ mb: 3, borderRadius: 2 }}>
             Inicia sesión para ver los detalles del proyecto.
           </Alert>
         )}
 
-        {/* ✅ RENDERIZADO DEL ERROR */}
-        {renderErrorAlert()}
+        {/* Zona Dinámica de Alertas */}
+        {renderAlerts()}
 
         <form onSubmit={formik.handleSubmit}>
           <Stack spacing={3}>
-            <FormTextField
-              name="identificador"
-              label="Email o Usuario"
-              formik={formik}
-              disabled={isLoading}
+            <FormTextField 
+              name="identificador" 
+              label="Email o Usuario" 
+              formik={formik} 
+              disabled={isLoading} 
             />
-
+            
             <FormTextField
               name="password"
               label="Contraseña"
@@ -302,7 +316,7 @@ const LoginPage: React.FC = () => {
               type="submit"
               size="large"
               disabled={isLoading}
-              sx={{ py: 1.5, borderRadius: 2 }}
+              sx={{ py: 1.5, borderRadius: 2, fontWeight: 700 }}
             >
               {isLoading ? <CircularProgress size={24} color="inherit" /> : "INGRESAR"}
             </Button>
@@ -315,6 +329,8 @@ const LoginPage: React.FC = () => {
             variant="body2"
             onClick={() => navigate(ROUTES.FORGOT_PASSWORD)}
             color="text.secondary"
+            underline="hover"
+            sx={{ cursor: 'pointer' }}
           >
             ¿Olvidaste tu contraseña?
           </Link>
@@ -326,6 +342,8 @@ const LoginPage: React.FC = () => {
               variant="body2"
               onClick={() => navigate(ROUTES.REGISTER)}
               fontWeight={700}
+              underline="hover"
+              sx={{ cursor: 'pointer' }}
             >
               Regístrate
             </Link>
@@ -333,14 +351,15 @@ const LoginPage: React.FC = () => {
         </Box>
       </AuthFormContainer>
 
+      {/* Modal para Login de 2 Pasos */}
       <TwoFactorAuthModal
         open={requires2FA}
         onClose={() => { logout(); clearAuthError(); setLocalError(null); }}
         onSubmit={verify2FA}
         isLoading={isLoading}
-        error={localError?.msg}
+        error={localError?.type === 'generic' ? localError.msg : undefined}
         title="Verificación en 2 Pasos"
-        description="Tu cuenta está protegida. Ingresa el código."
+        description="Tu cuenta está protegida. Ingresa el código de tu aplicación autenticadora."
       />
     </>
   );

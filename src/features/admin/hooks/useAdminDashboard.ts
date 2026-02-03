@@ -1,178 +1,193 @@
+// src/hooks/admin/useAdminDashboard.ts
+import { useTheme } from '@mui/material';
+import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { useTheme } from '@mui/material';
 
 // Servicios
+import favoritoService from '@/core/api/services/favorito.service';
+import inversionService from '@/core/api/services/inversion.service';
 import kycService from '@/core/api/services/kyc.service';
 import proyectoService from '@/core/api/services/proyecto.service';
-import inversionService from '@/core/api/services/inversion.service';
-import suscripcionService from '@/core/api/services/suscripcion.service';
-import favoritoService from '@/core/api/services/favorito.service';
 import pujaService from '@/core/api/services/puja.service';
+import suscripcionService from '@/core/api/services/suscripcion.service';
 
-// Tipos
-import type { KycDTO } from '@/core/types/dto/kyc.dto';
-import type { CompletionRateDTO, MonthlyProgressItem, ProyectoDto } from '@/core/types/dto/proyecto.dto';
-import type { InversionPorUsuarioDTO, LiquidityRateDTO } from '@/core/types/dto/inversion.dto';
-import type { CancelacionDTO, MorosidadDTO } from '@/core/types/dto/suscripcion.dto';
-import type { PopularidadLoteDTO } from '@/core/types/dto/favorito.dto';
-import type { PujaDto } from '@/core/types/dto/puja.dto';
-
-interface DashboardStats {
-  pendingKYC: number;
-  totalInvertido: string;
-  totalPagado: string;
-  tasaLiquidez: string;
-  tasaMorosidad: string;
-  tasaCancelacion: string;
-  proyectosEnProceso: number;
-  proyectosEnEspera: number;
-  totalFinalizados: number;
-  subastasActivas: number;
-  cobrosPendientes: number;
-}
+// ===========================================================================
+// HOOK
+// ===========================================================================
 
 export const useAdminDashboard = () => {
   const navigate = useNavigate();
   const theme = useTheme();
-  
-  // Estados UI
   const [activeTab, setActiveTab] = useState(0);
-  const [selectedPopularidadProject, setSelectedPopularidadProject] = useState<number | ''>('');
+  // FIX: tipo coherente. Se inicializa en null hasta que proyectosActivos se carga.
+  const [selectedPopularidadProject, setSelectedPopularidadProject] = useState<number | null>(null);
 
-  // --- QUERIES ---
-  const { data: pendingKYC = [], isLoading: l1 } = useQuery<KycDTO[]>({
+  // ---------------------------------------------------------------------------
+  // QUERIES
+  // ---------------------------------------------------------------------------
+
+  const { data: pendingKYC = [], isLoading: l1 } = useQuery({
     queryKey: ['pendingKYC'],
-    queryFn: async () => (await kycService.getPendingVerifications() as any).data || [],
+    queryFn: kycService.getPendingVerifications,
   });
 
-  const { data: completionRate, isLoading: l2 } = useQuery<CompletionRateDTO>({
+  // proyectoService.getCompletionRate() ya retorna CompletionRateDTO (extrae data.data internamente)
+  const { data: completionRate, isLoading: l2 } = useQuery({
     queryKey: ['completionRate'],
-    queryFn: proyectoService.getCompletionRate
+    queryFn: proyectoService.getCompletionRate,
   });
 
-  const { data: monthlyProgress = [], isLoading: l3 } = useQuery<MonthlyProgressItem[]>({
+  // proyectoService.getMonthlyProgress() ya retorna MonthlyProgressItem[]
+  const { data: monthlyProgress = [], isLoading: l3 } = useQuery({
     queryKey: ['monthlyProgress'],
-    queryFn: proyectoService.getMonthlyProgress
+    queryFn: proyectoService.getMonthlyProgress,
   });
 
-  const { data: liquidityRate, isLoading: l4 } = useQuery<LiquidityRateDTO>({
+  // FIX: getLiquidityMetrics() → AxiosResponse<BackendResponse<LiquidityRateDTO>>
+  // .data (AxiosResponse) → .data (BackendResponse) → LiquidityRateDTO
+  const { data: liquidityRate, isLoading: l4 } = useQuery({
     queryKey: ['liquidityRate'],
-    queryFn: async () => (await inversionService.getLiquidityMetrics()).data.data,
-  });
-
-  const { data: inversionesPorUsuario = [], isLoading: l5 } = useQuery<InversionPorUsuarioDTO[]>({
-    queryKey: ['inversionesPorUsuario'],
     queryFn: async () => {
-      const res = await inversionService.getAggregatedMetrics();
-      const responseData = res.data;
-      if (Array.isArray(responseData)) return responseData;
-      return (responseData as any).data || [];
+      const { data } = await inversionService.getLiquidityMetrics();
+      return data.data;
     },
   });
 
-  const { data: morosidad, isLoading: l6 } = useQuery<MorosidadDTO>({
+  // FIX: getAggregatedMetrics() → AxiosResponse<BackendResponse<InversionPorUsuarioDTO[]>>
+  // res.data es BackendResponse (un objeto), Array.isArray siempre retornaba false.
+  // La lógica anterior "casualmente" funcionaba por el fallback, pero estaba invertida.
+  const { data: inversionesPorUsuario = [], isLoading: l5 } = useQuery({
+    queryKey: ['inversionesPorUsuario'],
+    queryFn: async () => {
+      const { data } = await inversionService.getAggregatedMetrics();
+      return data.data;
+    },
+  });
+
+  // FIX: getMorosityMetrics() → AxiosResponse<MorosidadDTO>
+  // Antes hacía: (await service() as any).data || await service()
+  // Si .data era falsy, ejecutaba una SEGUNDA llamada HTTP y retornaba AxiosResponse crudo.
+  const { data: morosidad, isLoading: l6 } = useQuery({
     queryKey: ['morosidad'],
-    queryFn: async () => (await suscripcionService.getMorosityMetrics() as any).data || await suscripcionService.getMorosityMetrics(),
+    queryFn: async () => {
+      const { data } = await suscripcionService.getMorosityMetrics();
+      return data;
+    },
   });
 
-  const { data: cancelacion, isLoading: l7 } = useQuery<CancelacionDTO>({
+  // FIX: mismo bug que morosidad, mismo patrón de doble llamada HTTP.
+  const { data: cancelacion, isLoading: l7 } = useQuery({
     queryKey: ['cancelacion'],
-    queryFn: async () => (await suscripcionService.getCancellationMetrics() as any).data || await suscripcionService.getCancellationMetrics(),
+    queryFn: async () => {
+      const { data } = await suscripcionService.getCancellationMetrics();
+      return data;
+    },
   });
 
-  const { data: proyectosActivos = [], isLoading: l8 } = useQuery<ProyectoDto[]>({
+  // proyectoService.getAllActive() → AxiosResponse<ProyectoDto[]>
+  const { data: proyectosActivos = [], isLoading: l8 } = useQuery({
     queryKey: ['proyectosActivos'],
-    queryFn: async () => (await proyectoService.getAllActive()).data,
+    queryFn: async () => {
+      const { data } = await proyectoService.getAllActive();
+      return data;
+    },
   });
 
-  const { data: allPujas = [], isLoading: l9 } = useQuery<PujaDto[]>({
+  const { data: allPujas = [], isLoading: l9 } = useQuery({
     queryKey: ['adminAllPujas'],
-    queryFn: async () => (await pujaService.getAllAdmin()).data,
+    queryFn: async () => {
+      const { data } = await pujaService.getAllAdmin();
+      return data;
+    },
   });
 
-  // Query Dependiente (Popularidad)
-  const { data: popularidadLotes = [], isLoading: loadingPopularidad } = useQuery<PopularidadLoteDTO[]>({
+  // FIX: enabled usa null-check en lugar de !! que falaría con id === 0
+  const { data: popularidadLotes = [], isLoading: loadingPopularidad } = useQuery({
     queryKey: ['popularidadLotes', selectedPopularidadProject],
-    queryFn: () => favoritoService.getPopularidadLotes(selectedPopularidadProject as number),
-    enabled: !!selectedPopularidadProject
+    queryFn: () => favoritoService.getPopularidadLotes(selectedPopularidadProject!),
+    enabled: selectedPopularidadProject !== null,
   });
 
-  // Loading global inicial
-  const isLoading = l1 || l2 || l3 || l4 || l5 || l6 || l7 || l8 || l9;
+  // ---------------------------------------------------------------------------
+  // EFECTOS
+  // ---------------------------------------------------------------------------
 
-  // Efecto: Selección automática de proyecto para popularidad
+  // Seleccionar el primer proyecto activo como valor inicial del selector
   useEffect(() => {
-    if (proyectosActivos.length > 0 && selectedPopularidadProject === '') {
-        setSelectedPopularidadProject(proyectosActivos[0].id);
+    if (proyectosActivos.length > 0 && selectedPopularidadProject === null) {
+      setSelectedPopularidadProject(proyectosActivos[0].id);
     }
   }, [proyectosActivos, selectedPopularidadProject]);
 
-  // --- DATOS PROCESADOS ---
-  const stats: DashboardStats = useMemo(() => {
-    const safePujas = Array.isArray(allPujas) ? allPujas : [];
-    return {
-      pendingKYC: pendingKYC.length,
-      totalInvertido: liquidityRate?.total_invertido_registrado ?? '0',
-      totalPagado: liquidityRate?.total_pagado ?? '0',
-      tasaLiquidez: liquidityRate?.tasa_liquidez ?? '0',
-      tasaMorosidad: morosidad?.tasa_morosidad ?? '0',
-      tasaCancelacion: cancelacion?.tasa_cancelacion ?? '0',
-      proyectosEnProceso: monthlyProgress.filter(p => p.estado === 'En proceso').length,
-      proyectosEnEspera: monthlyProgress.filter(p => p.estado === 'En Espera').length,
-      totalFinalizados: completionRate?.total_finalizados ?? 0,
-      subastasActivas: safePujas.filter(p => p.estado_puja === 'activa').length,
-      cobrosPendientes: safePujas.filter(p => p.estado_puja === 'ganadora_pendiente').length,
-    };
-  }, [pendingKYC, liquidityRate, morosidad, cancelacion, monthlyProgress, completionRate, allPujas]);
+  // ---------------------------------------------------------------------------
+  // PROCESAMIENTO DE DATOS
+  // ---------------------------------------------------------------------------
 
-  const chartDataSuscripciones = useMemo(() => monthlyProgress.map(p => ({
-    nombre: p.nombre.length > 15 ? `${p.nombre.substring(0, 15)}...` : p.nombre,
-    avance: parseFloat(p.porcentaje_avance),
-  })), [monthlyProgress]);
+  const stats = useMemo(() => ({
+    pendingKYC: pendingKYC.length,
+    totalInvertido: liquidityRate?.total_invertido_registrado ?? '0',
+    totalPagado: liquidityRate?.total_pagado ?? '0',
+    tasaLiquidez: liquidityRate?.tasa_liquidez ?? '0',
+    proyectosEnProceso: monthlyProgress.filter(p => p.estado === 'En proceso').length,
+    proyectosEnEspera: monthlyProgress.filter(p => p.estado === 'En Espera').length,
+    totalFinalizados: completionRate?.total_finalizados ?? 0,
+    subastasActivas: allPujas.filter(p => p.estado_puja === 'activa').length,
+    cobrosPendientes: allPujas.filter(p => p.estado_puja === 'ganadora_pendiente').length,
+  }), [pendingKYC, liquidityRate, monthlyProgress, completionRate, allPujas]);
 
-  const estadosData = useMemo(() => [
-    { name: 'En Proceso', value: stats.proyectosEnProceso },
-    { name: 'En Espera', value: stats.proyectosEnEspera },
-    { name: 'Finalizados', value: stats.totalFinalizados },
-  ].filter(item => item.value > 0), [stats]);
+  const chartDataSuscripciones = useMemo(() =>
+    monthlyProgress.map(p => ({
+      nombre: p.nombre.length > 15 ? `${p.nombre.substring(0, 15)}…` : p.nombre,
+      avance: parseFloat(p.porcentaje_avance),
+    })),
+  [monthlyProgress]);
 
-  const RECHART_COLORS = [
-    theme.palette.primary.main, 
-    theme.palette.success.main, 
-    theme.palette.warning.main, 
-    theme.palette.error.main, 
-    theme.palette.info.main
-  ];
+  // Mapeo para el gráfico de popularidad: el campo dataKey del BarChart es "total_pujas"
+  const topLotes = useMemo(() =>
+    popularidadLotes.map(l => ({
+      nombre_lote: l.nombre_lote,
+      total_pujas: l.cantidad_favoritos,
+      porcentaje: l.porcentaje_popularidad,
+    })),
+  [popularidadLotes]);
+
+  const estadosData = useMemo(() =>
+    [
+      { name: 'En Proceso', value: stats.proyectosEnProceso },
+      { name: 'En Espera',  value: stats.proyectosEnEspera },
+      { name: 'Finalizados', value: stats.totalFinalizados },
+    ].filter(item => item.value > 0),
+  [stats]);
+
+  // ---------------------------------------------------------------------------
+  // RETORNO
+  // ---------------------------------------------------------------------------
 
   return {
     navigate,
     theme,
-    // State
-    activeTab, setActiveTab,
-    selectedPopularidadProject, setSelectedPopularidadProject,
-    
-    // Status
-    isLoading,
-    loadingPopularidad, // ✅ AHORA SÍ ESTÁ EXPORTADO
-    
-    // Data Lists
+    activeTab,
+    setActiveTab,
+    selectedPopularidadProject,
+    setSelectedPopularidadProject,
+    isLoading: l1 || l2 || l3 || l4 || l5 || l6 || l7 || l8 || l9,
+    loadingPopularidad,
     proyectosActivos,
     popularidadLotes,
+    topLotes,
     inversionesPorUsuario,
-    
-    // Metrics Objects
     completionRate,
     morosidad,
     cancelacion,
-
-    // Processed Stats & Charts
     stats,
     chartDataSuscripciones,
     estadosData,
-    
-    // Constants
-    RECHART_COLORS
+    RECHART_COLORS: [
+      theme.palette.primary.main,
+      theme.palette.success.main,
+      theme.palette.warning.main,
+      theme.palette.error.main,
+    ],
   };
 };

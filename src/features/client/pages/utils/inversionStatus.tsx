@@ -1,22 +1,26 @@
+// src/features/client/utils/inversionStatus.ts
 
-import { CheckCircle, Schedule, ErrorOutline, Refresh, HelpOutline } from '@mui/icons-material';
-import type { ChipProps } from 'node_modules/@mui/material/esm/Chip/Chip';
-import type { ReactNode } from 'react';
+import { 
+  CheckCircle, Schedule, ErrorOutline, Refresh, 
+  HelpOutline, HourglassEmpty, AccountBalanceWallet, Warning 
+} from '@mui/icons-material';
 
-
-type InversionStatus = 'pagado' | 'pendiente' | 'fallido' | 'reembolsado' | string;
-
-interface StatusConfig {
-    label: string;
-    color: ChipProps['color'];
-    icon: ReactNode;
-}
-
-export const getStatusConfig = (estado: InversionStatus): StatusConfig => {
-    const configs: Record<string, StatusConfig> = {
+export const getStatusConfig = (estado: string) => {
+    const configs: Record<string, any> = {
+        // Estados de Éxito
         pagado: { label: 'Pagado', color: 'success', icon: <CheckCircle fontSize="small" /> },
-        pendiente: { label: 'Pendiente', color: 'warning', icon: <Schedule fontSize="small" /> },
+        cubierto_por_puja: { label: 'Cubierto (Puja)', color: 'success', icon: <AccountBalanceWallet fontSize="small" /> },
+        
+        // Estados de Alerta / Pendientes
+        pendiente: { label: 'Pendiente', color: 'info', icon: <Schedule fontSize="small" /> },
+        en_proceso: { label: 'En Proceso', color: 'warning', icon: <HourglassEmpty fontSize="small" /> },
+        
+        // Estados de Error / Peligro
+        vencido: { label: 'Vencido', color: 'error', icon: <ErrorOutline fontSize="small" /> },
         fallido: { label: 'Fallido', color: 'error', icon: <ErrorOutline fontSize="small" /> },
+        expirado: { label: 'Expirado', color: 'error', icon: <ErrorOutline fontSize="small" /> },
+        
+        // Otros
         reembolsado: { label: 'Reembolsado', color: 'info', icon: <Refresh fontSize="small" /> },
     };
 

@@ -1,26 +1,25 @@
-import React from 'react';
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  IconButton,
-  Box,
-  Typography,
-  Avatar,
-  Divider,
-  CircularProgress,
-  useTheme,
-  useMediaQuery,
-  alpha,
-  Tooltip,
-  Slide,
-  type DialogProps,
-  Stack,
-} from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
+import {
+  alpha,
+  Avatar,
+  Box,
+  Button,
+  CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Divider,
+  IconButton,
+  Slide,
+  Stack,
+  Typography,
+  useMediaQuery,
+  useTheme,
+  type DialogProps
+} from '@mui/material';
 import type { TransitionProps } from '@mui/material/transitions';
+import React from 'react';
 
 // Transición suave hacia arriba
 const Transition = React.forwardRef(function Transition(

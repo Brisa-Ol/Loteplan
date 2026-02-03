@@ -1,7 +1,7 @@
 // src/components/common/ImageCard/ImageCard.tsx
 
-import React from "react";
 import { Card, CardContent, CardMedia, Typography, useTheme } from "@mui/material";
+import React from "react";
 
 interface ImageCardProps {
   title: string;
@@ -50,26 +50,26 @@ export const ImageCard: React.FC<ImageCardProps> = ({
         }}
       />
 
-      <CardContent 
-        sx={{ 
-            flexGrow: 1, 
-            textAlign: "center", 
-            p: 3 // Más espacio interno
+      <CardContent
+        sx={{
+          flexGrow: 1,
+          textAlign: "center",
+          p: 3 // Más espacio interno
         }}
       >
-        <Typography 
-            variant="h5" 
-            color="text.primary" // Mejor contraste que primary.main para lectura prolongada
-            fontWeight={800} 
-            gutterBottom
+        <Typography
+          variant="h5"
+          color="text.primary" // Mejor contraste que primary.main para lectura prolongada
+          fontWeight={800}
+          gutterBottom
         >
           {title}
         </Typography>
-        
-        <Typography 
-            variant="body1" 
-            color="text.secondary" 
-            sx={{ lineHeight: 1.7 }}
+
+        <Typography
+          variant="body1"
+          color="text.secondary"
+          sx={{ lineHeight: 1.7 }}
         >
           {description}
         </Typography>

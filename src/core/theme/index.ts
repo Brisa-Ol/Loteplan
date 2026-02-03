@@ -1,8 +1,6 @@
-// src/core/theme.ts
-import { createTheme, responsiveFontSizes } from "@mui/material/styles";
+import { createTheme, responsiveFontSizes, alpha } from "@mui/material/styles";
 import type { Components, Theme } from "@mui/material/styles";
 
-// ========== PALETA DE COLORES ==========
 export const colors = {
   primary: { main: "#CC6333", light: "#E07A4D", dark: "#A34D26", contrastText: "#FFFFFF" },
   secondary: { main: "#ECECEC", light: "#F6F6F6", dark: "#D4D4D4", contrastText: "#000000" },
@@ -14,101 +12,104 @@ export const colors = {
   info: { main: "#0288D1", light: "#E1F5FE" },
 } as const;
 
-// ========== TIPOGRAFÍA ==========
+// =============================================================================
+// TIPOGRAFÍA
+// =============================================================================
+// Escala de tamaños (desktop → móvil vía responsiveFontSizes):
+//
+//   Nivel        | Desktop  | Móvil aprox.  | Uso típico
+//   -------------|----------|---------------|------------------------------------------
+//   h1           | 2.25rem  | ~1.75rem      | Título principal de página
+//   h2           | 1.875rem | ~1.5rem       | Sección importante dentro de una página
+//   h3           | 1.5rem   | ~1.25rem      | Sub-sección
+//   h4           | 1.25rem  | ~1.125rem     | Título de card o bloque
+//   h5           | 1.125rem | ~1rem         | Título pequeño, sidebar, widget
+//   h6           | 1rem     | ~0.95rem      | Etiqueta de grupo, label importante
+//   subtitle1    | 1rem     |  —            | Subtítulo bajo h1/h2 (no se reduce)
+//   subtitle2    | 0.875rem |  —            | Subtítulo secundario
+//   body1        | 1rem     |  —            | Texto principal
+//   body2        | 0.875rem |  —            | Texto secundario, descripciones
+//   caption      | 0.75rem  |  —            | Metadatos, fechas, labels pequeñas
+//   button       | 0.875rem |  —            | Texto de botones
+//   overline     | 0.75rem  |  —            | Tags, badges, categorías (uppercase)
+//
+// responsiveFontSizes reduce automáticamente h1–h6 en pantallas pequeñas.
+// subtitle, body, caption y button NO se reducen (son ya pequeños y legibles en móvil).
+
 const typography = {
   fontFamily: "Inter, sans-serif",
-  h1: { fontWeight: 700, fontSize: "2.5rem", lineHeight: 1.2, letterSpacing: "-0.01562em" },
-  h2: { fontWeight: 600, fontSize: "2rem", lineHeight: 1.3, letterSpacing: "-0.00833em" },
-  h3: { fontWeight: 600, fontSize: "1.75rem", lineHeight: 1.35, letterSpacing: "0em" },
-  h4: { fontWeight: 600, fontSize: "1.5rem", lineHeight: 1.4, letterSpacing: "0.00735em" },
-  h5: { fontWeight: 500, fontSize: "1.25rem", lineHeight: 1.5, letterSpacing: "0em" },
-  h6: { fontWeight: 500, fontSize: "1.125rem", lineHeight: 1.6, letterSpacing: "0.0075em" },
-  subtitle1: { fontWeight: 500, fontSize: "1rem", lineHeight: 1.75, letterSpacing: "0.00938em" },
-  subtitle2: { fontWeight: 500, fontSize: "0.875rem", lineHeight: 1.57, letterSpacing: "0.00714em" },
-  body1: { fontWeight: 400, fontSize: "1rem", lineHeight: 1.6, letterSpacing: "0.00938em" },
-  body2: { fontWeight: 400, fontSize: "0.875rem", lineHeight: 1.5, letterSpacing: "0.01071em" },
-  caption: { fontWeight: 400, fontSize: "0.75rem", lineHeight: 1.66, letterSpacing: "0.03333em", color: "#666666" },
-  overline: { fontWeight: 600, fontSize: "0.75rem", lineHeight: 2.66, letterSpacing: "0.08333em", textTransform: "uppercase" as const },
-  button: { fontWeight: 600, fontSize: "0.9375rem", lineHeight: 1.75, letterSpacing: "0.02857em", textTransform: "none" as const },
+
+  // --- Títulos (responsive automáticamente) ---
+  h1: { fontWeight: 700, fontSize: "2.25rem", lineHeight: 1.2 },
+  h2: { fontWeight: 700, fontSize: "1.875rem", lineHeight: 1.3 },
+  h3: { fontWeight: 600, fontSize: "1.5rem", lineHeight: 1.3 },
+  h4: { fontWeight: 600, fontSize: "1.25rem", lineHeight: 1.4 },
+  h5: { fontWeight: 600, fontSize: "1.125rem", lineHeight: 1.4 },
+  h6: { fontWeight: 500, fontSize: "1rem", lineHeight: 1.5 },
+
+  // --- Subtítulos ---
+  subtitle1: { fontWeight: 500, fontSize: "1rem", lineHeight: 1.5 },
+  subtitle2: { fontWeight: 500, fontSize: "0.875rem", lineHeight: 1.5 },
+
+  // --- Cuerpo ---
+  body1: { fontWeight: 400, fontSize: "1rem", lineHeight: 1.6 },
+  body2: { fontWeight: 400, fontSize: "0.875rem", lineHeight: 1.5 },
+
+  // --- Otros ---
+  caption: { fontWeight: 400, fontSize: "0.75rem", lineHeight: 1.4, color: "#666666" },
+  button: { fontWeight: 600, fontSize: "0.875rem", textTransform: "none" as const },
+  overline: { fontWeight: 600, fontSize: "0.75rem", textTransform: "uppercase" as const, letterSpacing: "0.05em" },
 } as const;
 
-// ========== COMPONENTES ==========
 const components: Components<Theme> = {
   MuiCssBaseline: {
     styleOverrides: `
       *::-webkit-scrollbar { width: 8px; height: 8px; }
-      *::-webkit-scrollbar-track { background: #F6F6F6; border-radius: 4px; }
-      *::-webkit-scrollbar-thumb { background-color: #E07A4D; border-radius: 4px; border: 2px solid #F6F6F6; }
-      *::-webkit-scrollbar-thumb:hover { background-color: #CC6333; }
-      *::-webkit-scrollbar-corner { background-color: transparent; }
+      *::-webkit-scrollbar-thumb { background-color: #E07A4D; border-radius: 4px; }
       * { scrollbar-width: thin; scrollbar-color: #E07A4D #F6F6F6; }
     `,
+  },
+  MuiSkeleton: {
+    styleOverrides: {
+      root: {
+        backgroundColor: alpha(colors.primary.main, 0.08),
+        borderRadius: 12,
+      },
+    },
   },
   MuiButton: {
     styleOverrides: {
       root: {
-        borderRadius: 8, padding: "10px 24px", fontWeight: 600, textTransform: "none",
+        borderRadius: 8,
         transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
         "&:hover": { transform: "translateY(-2px)" },
       },
-      contained: { boxShadow: "none", "&:hover": { boxShadow: "0 4px 12px rgba(204, 99, 51, 0.25)" } },
-      outlined: { borderWidth: "2px", "&:hover": { backgroundColor: "rgba(204, 99, 51, 0.08)", borderWidth: "2px" } },
-      sizeLarge: { padding: "12px 32px", fontSize: "1rem" },
-      sizeSmall: { padding: "6px 16px", fontSize: "0.8125rem" },
+      contained: { boxShadow: "none" },
     },
   },
-  MuiTableContainer: {
-    styleOverrides: {
-      root: { borderRadius: 16, border: `1px solid ${colors.secondary.main}`, boxShadow: "none", backgroundImage: "none", backgroundColor: colors.background.default, overflowX: "auto" },
-    },
-  },
-  MuiTableHead: { styleOverrides: { root: { backgroundColor: colors.secondary.light } } },
-  MuiTableCell: {
-    styleOverrides: {
-      head: { color: colors.text.secondary, fontWeight: 700, fontSize: "0.875rem", borderBottom: `1px solid ${colors.secondary.main}`, padding: "12px 16px" },
-      root: { borderBottom: `1px solid ${colors.secondary.main}`, padding: "16px" },
-    },
-  },
-  MuiTablePagination: { styleOverrides: { root: { borderTop: `1px solid ${colors.secondary.main}` } } },
   MuiCard: {
     styleOverrides: {
-      root: { borderRadius: 12, boxShadow: "0 4px 16px rgba(0, 0, 0, 0.08)", transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)", "&:hover": { boxShadow: "0 8px 24px rgba(0, 0, 0, 0.12)", transform: "translateY(-4px)" } },
-    },
-  },
-  MuiCardContent: { styleOverrides: { root: { padding: "24px", "&:last-child": { paddingBottom: "24px" } } } },
-  MuiPaper: { styleOverrides: { rounded: { borderRadius: 12 } } },
-  MuiTextField: {
-    styleOverrides: {
-      root: {
-        "& .MuiOutlinedInput-root": { borderRadius: 8, "&:hover fieldset": { borderColor: "#CC6333" } },
+      root: { 
+        borderRadius: 12, 
+        boxShadow: "0 4px 16px rgba(0, 0, 0, 0.08)",
+        transition: "all 0.3s ease" 
       },
     },
   },
   MuiChip: { styleOverrides: { root: { fontWeight: 600, borderRadius: 8 } } },
-  MuiAlert: { styleOverrides: { root: { borderRadius: 12 } } },
-  MuiBottomNavigation: { styleOverrides: { root: { height: 64, borderTop: "1px solid #ECECEC" } } },
-  MuiBottomNavigationAction: {
-    styleOverrides: {
-      root: { minWidth: "auto", padding: "6px 12px", "&.Mui-selected": { color: "#CC6333" } },
-      label: { fontSize: "0.75rem", fontWeight: 600, "&.Mui-selected": { fontWeight: 700 } },
-    },
-  },
-  MuiDialog: { styleOverrides: { paper: { margin: "32px", "@media (max-width: 600px)": { margin: "16px" } } } },
-  MuiDialogTitle: { styleOverrides: { root: { padding: "24px" } } },
-  MuiDialogContent: { styleOverrides: { root: { padding: "24px" } } },
-  MuiDialogActions: { styleOverrides: { root: { padding: "16px 24px" } } },
 };
 
-// ========== TEMA PRINCIPAL ==========
 let theme = createTheme({
   palette: colors,
   typography,
   components,
   shape: { borderRadius: 8 },
   spacing: 8,
-  breakpoints: { values: { xs: 0, sm: 600, md: 900, lg: 1200, xl: 1536 } },
 });
 
+// Reduce automáticamente h1–h6 en pantallas pequeñas.
+// factor: 3 es agresivo (reduce bastante en móvil). Si te parece que
+// los títulos quedan muy chicos, bajarlo a 2.
 theme = responsiveFontSizes(theme, { factor: 3 });
 
 export default theme;

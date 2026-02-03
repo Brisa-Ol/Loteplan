@@ -1,62 +1,76 @@
-import React, { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
-import GlobalSnackbar from '../../shared/components/ui/feedback/GlobalSnackbarProps/GlobalSnackbarProps';
+import GlobalSnackbar from '@/shared/components/ui/feedback/GlobalSnackbarProps/GlobalSnackbarProps';
+import { setGlobalSnackbar } from '@/shared/utils/snackbarUtils';
+import React, { createContext, useState, useCallback, useEffect, type ReactNode } from 'react';
 
 
-// Definimos la forma de nuestro contexto
+// Tipos
+type Severity = 'success' | 'error' | 'warning' | 'info';
+
 interface SnackbarContextType {
   showSuccess: (msg: string) => void;
   showError: (msg: string) => void;
+  showWarning: (msg: string) => void;
   showInfo: (msg: string) => void;
 }
 
-const SnackbarContext = createContext<SnackbarContextType | undefined>(undefined);
+export const SnackbarContext = createContext<SnackbarContextType | undefined>(undefined);
 
-// El Provider envuelve tu aplicación
 export const SnackbarProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [snackbar, setSnackbar] = useState({
-    open: false,
-    message: '',
-    severity: 'info' as 'success' | 'error' | 'warning' | 'info',
-  });
+  const [open, setOpen] = useState(false);
+  const [message, setMessage] = useState('');
+  const [severity, setSeverity] = useState<Severity>('info');
+
+  /**
+   * Función central para mostrar alertas.
+   * Cierra la anterior si existe (efecto rebote) para que se note el cambio.
+   */
+  const triggerSnackbar = useCallback((msg: string, type: Severity) => {
+    // Si ya hay uno abierto, lo cerramos momentáneamente para que el usuario note el nuevo
+    if (open) {
+      setOpen(false);
+      setTimeout(() => {
+        setMessage(msg);
+        setSeverity(type);
+        setOpen(true);
+      }, 150); // Breve delay para la animación
+    } else {
+      setMessage(msg);
+      setSeverity(type);
+      setOpen(true);
+    }
+  }, [open]);
+
+  // Wrappers para el contexto
+  const showSuccess = useCallback((msg: string) => triggerSnackbar(msg, 'success'), [triggerSnackbar]);
+  const showError = useCallback((msg: string) => triggerSnackbar(msg, 'error'), [triggerSnackbar]);
+  const showWarning = useCallback((msg: string) => triggerSnackbar(msg, 'warning'), [triggerSnackbar]);
+  const showInfo = useCallback((msg: string) => triggerSnackbar(msg, 'info'), [triggerSnackbar]);
 
   const handleClose = useCallback(() => {
-    setSnackbar((prev) => ({ ...prev, open: false }));
+    setOpen(false);
   }, []);
 
-  const showSuccess = useCallback((message: string) => {
-    setSnackbar({ open: true, message, severity: 'success' });
-  }, []);
-
-  const showError = useCallback((message: string) => {
-    setSnackbar({ open: true, message, severity: 'error' });
-  }, []);
-
-  const showInfo = useCallback((message: string) => {
-    setSnackbar({ open: true, message, severity: 'info' });
-  }, []);
+  /**
+   * 🔌 CONEXIÓN MÁGICA:
+   * Aquí conectamos React con el mundo exterior (Axios/Utils).
+   * Al montar el Provider, le pasamos la función `triggerSnackbar` a `snackbarUtils`.
+   */
+  useEffect(() => {
+    setGlobalSnackbar((msg, type) => {
+      triggerSnackbar(msg, type);
+    });
+  }, [triggerSnackbar]);
 
   return (
-    <SnackbarContext.Provider value={{ showSuccess, showError, showInfo }}>
-      {/* Renderizamos los hijos (toda tu app) */}
+    <SnackbarContext.Provider value={{ showSuccess, showError, showWarning, showInfo }}>
       {children}
       
-      {/* ✅ AQUÍ vive el componente visual globalmente. 
-          Nunca más tendrás que ponerlo en tus páginas. */}
       <GlobalSnackbar
-        open={snackbar.open}
-        message={snackbar.message}
-        severity={snackbar.severity}
+        open={open}
+        message={message}
+        severity={severity}
         onClose={handleClose}
       />
     </SnackbarContext.Provider>
   );
-};
-
-// Hook personalizado para usar el contexto
-export const useSnackbar = () => {
-  const context = useContext(SnackbarContext);
-  if (!context) {
-    throw new Error('useSnackbar debe ser usado dentro de un SnackbarProvider');
-  }
-  return context;
 };

@@ -1,35 +1,149 @@
-import React, { useMemo } from 'react';
 import {
-  Box, Typography, Chip, IconButton, Tooltip,
-  Stack, useTheme, alpha, Avatar, CircularProgress
-} from '@mui/material';
-import {
-  Download as DownloadIcon,
-  Fingerprint,
+  BarChart as BarChartIcon,
   Business,
+  Description as DescriptionIcon,
+  Download as DownloadIcon, Fingerprint,
+  Gavel,
+  HistoryEdu,
   Person,
-  Description as DescriptionIcon
+  PieChart as PieChartIcon, ViewList
 } from '@mui/icons-material';
+import {
+  alpha, Avatar,
+  Box,
+  CircularProgress,
+  IconButton,
+  Stack,
+  Tooltip,
+  Typography,
+  useTheme
+} from '@mui/material';
+import React, { useMemo, useState } from 'react';
 
 // Utils
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import {
+  Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer,
+  XAxis, YAxis
+} from 'recharts';
 
-// Componentes Comunes
-import { PageContainer } from '../../../../shared/components/layout/containers/PageContainer/PageContainer';
-import { PageHeader } from '../../../../shared/components/layout/headers/PageHeader';
-import { QueryHandler } from '../../../../shared/components/data-grid/QueryHandler/QueryHandler';
-import { DataTable, type DataTableColumn } from '../../../../shared/components/data-grid/DataTable/DataTable';
-import { FilterBar, FilterSearch } from '../../../../shared/components/forms/filters/FilterBar';
-
+// Hooks y DTOs
 import type { ContratoFirmadoDto } from '../../../../core/types/dto/contrato-firmado.dto';
 import { useAdminContratosFirmados } from '../../hooks/useAdminContratosFirmados';
 
+// Componentes Compartidos (Legacy)
+import AdminPageHeader from '@/shared/components/admin/Adminpageheader';
+import AlertBanner from '@/shared/components/admin/Alertbanner';
+import MetricsGrid from '@/shared/components/admin/Metricsgrid';
+import { ViewModeToggle, type ViewMode } from '@/shared/components/admin/Viewmodetoggle';
+import { StatCard, StatusBadge } from '@/shared/components/domain/cards/StatCard/StatCard';
+import { DataTable, type DataTableColumn } from '../../../../shared/components/data-grid/DataTable/DataTable';
+import { QueryHandler } from '../../../../shared/components/data-grid/QueryHandler/QueryHandler';
+import { FilterBar, FilterSearch } from '../../../../shared/components/forms/filters/FilterBar';
+import { PageContainer } from '../../../../shared/components/layout/containers/PageContainer/PageContainer';
+
+
+// ============================================================================
+// SUB-COMPONENTE: ANALYTICS (Distribución de Contratos)
+// ============================================================================
+const ContratosAnalytics: React.FC<{ data: ContratoFirmadoDto[] }> = ({ data }) => {
+  const theme = useTheme();
+
+  const typeData = useMemo(() => {
+    const inversiones = data.filter(c => c.id_inversion_asociada).length;
+    const suscripciones = data.filter(c => c.id_suscripcion_asociada).length;
+    const otros = data.length - inversiones - suscripciones;
+
+    return [
+      { name: 'Inversiones', value: inversiones, color: theme.palette.primary.main },
+      { name: 'Suscripciones', value: suscripciones, color: theme.palette.secondary.main },
+      { name: 'Generales', value: otros, color: theme.palette.info.main },
+    ].filter(i => i.value > 0);
+  }, [data, theme]);
+
+  const projectData = useMemo(() => {
+    const counts = data.reduce((acc, curr) => {
+      const id = `Proy #${curr.id_proyecto}`;
+      acc[id] = (acc[id] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    return Object.entries(counts)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 5);
+  }, [data]);
+
+  return (
+    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
+      {/* Distribución por Tipo */}
+      <Box sx={{ bgcolor: alpha(theme.palette.background.paper, 0.5), p: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
+        <Typography variant="h6" fontWeight={800} mb={3}>Tipología Legal</Typography>
+        <ResponsiveContainer width="100%" height={300}>
+          <PieChart>
+            <Pie
+              data={typeData}
+              cx="50%" cy="50%"
+              innerRadius={60}
+              outerRadius={80}
+              paddingAngle={5}
+              dataKey="value"
+            >
+              {typeData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.color} />
+              ))}
+            </Pie>
+            <RechartsTooltip contentStyle={{ borderRadius: 8, border: 'none', boxShadow: theme.shadows[3] }} />
+            <Legend verticalAlign="bottom" height={36} />
+          </PieChart>
+        </ResponsiveContainer>
+      </Box>
+
+      {/* Top Proyectos */}
+      <Box sx={{ bgcolor: alpha(theme.palette.background.paper, 0.5), p: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
+        <Typography variant="h6" fontWeight={800} mb={3}>Volumen por Proyecto (Top 5)</Typography>
+        <ResponsiveContainer width="100%" height={300}>
+          <BarChart data={projectData} layout="vertical" margin={{ left: 10, right: 30 }}>
+            <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={theme.palette.divider} />
+            <XAxis type="number" hide />
+            <YAxis dataKey="name" type="category" width={80} tick={{ fontSize: 11, fontWeight: 600 }} axisLine={false} />
+            <RechartsTooltip cursor={{ fill: alpha(theme.palette.primary.main, 0.1) }} contentStyle={{ borderRadius: 8 }} />
+            <Bar dataKey="value" fill={theme.palette.primary.main} radius={[0, 4, 4, 0]} barSize={24} />
+          </BarChart>
+        </ResponsiveContainer>
+      </Box>
+    </Box>
+  );
+};
+
+// ============================================================================
+// COMPONENTE PRINCIPAL
+// ============================================================================
 const AdminContratosFirmados: React.FC = () => {
   const theme = useTheme();
   const logic = useAdminContratosFirmados();
 
-  // DEFINICIÓN DE COLUMNAS
+  const [viewMode, setViewMode] = useState<ViewMode>('table');
+
+  // --------------------------------------------------------------------------
+  // CÁLCULO DE KPIS
+  // --------------------------------------------------------------------------
+  const stats = useMemo(() => {
+    const data = logic.filteredContratos;
+    const total = data.length;
+    const inv = data.filter(c => c.id_inversion_asociada).length;
+    const subs = data.filter(c => c.id_suscripcion_asociada).length;
+    const verified = data.filter(c => c.hash_archivo_firmado).length;
+
+    return { total, inv, subs, verified };
+  }, [logic.filteredContratos]);
+
+  // --------------------------------------------------------------------------
+  // COLUMNAS
+  // --------------------------------------------------------------------------
   const columns = useMemo<DataTableColumn<ContratoFirmadoDto>[]>(() => [
     {
       id: 'id',
@@ -37,10 +151,10 @@ const AdminContratosFirmados: React.FC = () => {
       minWidth: 120,
       render: (row) => (
         <Stack direction="row" spacing={1.5} alignItems="center">
-            <Avatar sx={{ width: 32, height: 32, bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}>
-                <DescriptionIcon sx={{ fontSize: 16 }} />
-            </Avatar>
-            <Typography variant="body2" fontWeight={700}>#{row.id}</Typography>
+          <Avatar sx={{ width: 32, height: 32, bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}>
+            <DescriptionIcon sx={{ fontSize: 16 }} />
+          </Avatar>
+          <Typography variant="body2" fontWeight={700}>#{row.id}</Typography>
         </Stack>
       )
     },
@@ -50,9 +164,9 @@ const AdminContratosFirmados: React.FC = () => {
       minWidth: 220,
       render: (row) => (
         <Stack direction="row" alignItems="center" spacing={2}>
-          <Avatar sx={{ 
-            width: 32, height: 32, 
-            bgcolor: alpha(theme.palette.secondary.main, 0.1), 
+          <Avatar sx={{
+            width: 32, height: 32,
+            bgcolor: alpha(theme.palette.secondary.main, 0.1),
             color: theme.palette.secondary.main,
             fontSize: 14, fontWeight: 800
           }}>
@@ -80,13 +194,18 @@ const AdminContratosFirmados: React.FC = () => {
       id: 'tipo',
       label: 'Relación',
       render: (row) => {
+        let statusType: any = 'info';
+        let label = 'GENERAL';
+
         if (row.id_inversion_asociada) {
-          return <Chip label="INVERSIÓN" color="primary" size="small" variant="filled" sx={{ fontWeight: 800, fontSize: '0.6rem' }} />;
+          statusType = 'active';
+          label = 'INVERSIÓN';
+        } else if (row.id_suscripcion_asociada) {
+          statusType = 'in_progress';
+          label = 'SUSCRIPCIÓN';
         }
-        if (row.id_suscripcion_asociada) {
-          return <Chip label="SUSCRIPCIÓN" color="secondary" size="small" variant="filled" sx={{ fontWeight: 800, fontSize: '0.6rem' }} />;
-        }
-        return <Chip label="GENERAL" size="small" sx={{ fontWeight: 800, fontSize: '0.6rem' }} />;
+
+        return <StatusBadge status={statusType} customLabel={label} />;
       }
     },
     {
@@ -110,15 +229,15 @@ const AdminContratosFirmados: React.FC = () => {
         <Tooltip title={`SHA-256: ${row.hash_archivo_firmado}`}>
           <Stack direction="row" alignItems="center" spacing={1} sx={{ cursor: 'help' }}>
             <Fingerprint color="success" fontSize="small" />
-            <Typography 
-                variant="caption" 
-                sx={{ 
-                    fontFamily: 'monospace', 
-                    color: 'success.main', 
-                    bgcolor: alpha(theme.palette.success.main, 0.05), 
-                    px: 0.8, py: 0.2, borderRadius: 1,
-                    fontWeight: 700
-                }}
+            <Typography
+              variant="caption"
+              sx={{
+                fontFamily: 'monospace',
+                color: 'success.main',
+                bgcolor: alpha(theme.palette.success.main, 0.05),
+                px: 0.8, py: 0.2, borderRadius: 1,
+                fontWeight: 700
+              }}
             >
               {row.hash_archivo_firmado ? row.hash_archivo_firmado.substring(0, 8).toUpperCase() : 'PEND...'}
             </Typography>
@@ -143,8 +262,8 @@ const AdminContratosFirmados: React.FC = () => {
                 '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.15) }
               }}
             >
-              {logic.downloadingId === row.id 
-                ? <CircularProgress size={18} color="inherit" /> 
+              {logic.downloadingId === row.id
+                ? <CircularProgress size={18} color="inherit" />
                 : <DownloadIcon fontSize="small" />
               }
             </IconButton>
@@ -156,37 +275,101 @@ const AdminContratosFirmados: React.FC = () => {
 
   return (
     <PageContainer maxWidth="xl" sx={{ py: 3 }}>
-      <PageHeader
+      {/* 1. HEADER */}
+      <AdminPageHeader
         title="Auditoría de Contratos"
-        subtitle="Registro histórico de acuerdos legales y contratos digitalizados por los usuarios."
+        subtitle="Registro histórico de acuerdos legales y contratos digitalizados."
       />
 
-      {/* BARRA DE BÚSQUEDA */}
-      <FilterBar>
-        <FilterSearch 
-            placeholder="Buscar por ID, Usuario o Hash..." 
-            value={logic.searchTerm} 
-            onSearch={logic.setSearchTerm} 
+      {/* 2. ERROR BANNER */}
+      {logic.error && (
+        <AlertBanner
+          severity="error"
+          title="Error de Conexión"
+          message={(logic.error as Error).message || "No se pudieron cargar los contratos."}
+        />
+      )}
+
+      {/* 3. KPIS GRID */}
+      <MetricsGrid columns={{ xs: 1, sm: 2, lg: 4 }}>
+        <StatCard
+          title="Total Firmados"
+          value={stats.total}
+          subtitle="Acuerdos registrados"
+          icon={<Gavel />}
+          color="primary"
+          loading={logic.isLoading}
+        />
+        <StatCard
+          title="Inversiones"
+          value={stats.inv}
+          subtitle="Contratos de capital"
+          icon={<PieChartIcon />}
+          color="success"
+          loading={logic.isLoading}
+        />
+        <StatCard
+          title="Suscripciones"
+          value={stats.subs}
+          subtitle="Planes mensuales"
+          icon={<HistoryEdu />}
+          color="secondary"
+          loading={logic.isLoading}
+        />
+        <StatCard
+          title="Verificados"
+          value={stats.verified}
+          subtitle="Con Hash criptográfico"
+          icon={<Fingerprint />}
+          color="info"
+          loading={logic.isLoading}
+        />
+      </MetricsGrid>
+
+      {/* 4. CONTROLES Y FILTROS */}
+      <Stack
+        direction={{ xs: 'column', sm: 'row' }}
+        justifyContent="space-between"
+        alignItems={{ xs: 'stretch', sm: 'center' }}
+        mb={3}
+        spacing={2}
+      >
+        <ViewModeToggle
+          value={viewMode}
+          onChange={(newMode) => setViewMode(newMode)}
+          options={[
+            { value: 'table', label: 'Tabla', icon: <ViewList fontSize="small" /> },
+            { value: 'analytics', label: 'Analítica', icon: <BarChartIcon fontSize="small" /> }
+          ]}
+        />
+
+        <FilterBar sx={{ flex: 1, maxWidth: { sm: 600 } }}>
+          <FilterSearch
+            placeholder="Buscar por ID, Usuario o Hash..."
+            value={logic.searchTerm}
+            onSearch={logic.setSearchTerm}
             sx={{ flexGrow: 1 }}
-        />
-      </FilterBar>
+          />
+        </FilterBar>
+      </Stack>
 
-      {/* TABLA DE AUDITORÍA */}
-      <QueryHandler isLoading={logic.isLoading} error={logic.error as Error | null}>
-        <DataTable
-          columns={columns}
-          data={logic.filteredContratos}
-          getRowKey={(row) => row.id}
-
-          // ✅ INTEGRACIÓN: Fila activa si tiene el hash generado (contrato válido)
-          isRowActive={(row) => !!row.hash_archivo_firmado}
-          highlightedRowId={logic.highlightedId}
-
-          emptyMessage="No se han encontrado registros de contratos firmados."
-          pagination={true}
-          defaultRowsPerPage={10}
-        />
-      </QueryHandler>
+      {/* 5. CONTENIDO */}
+      {viewMode === 'analytics' ? (
+        <ContratosAnalytics data={logic.filteredContratos} />
+      ) : (
+        <QueryHandler isLoading={logic.isLoading} error={logic.error as Error | null}>
+          <DataTable
+            columns={columns}
+            data={logic.filteredContratos}
+            getRowKey={(row) => row.id}
+            isRowActive={(row) => !!row.hash_archivo_firmado}
+            highlightedRowId={logic.highlightedId}
+            emptyMessage="No se han encontrado registros de contratos firmados."
+            pagination={true}
+            defaultRowsPerPage={10}
+          />
+        </QueryHandler>
+      )}
 
     </PageContainer>
   );

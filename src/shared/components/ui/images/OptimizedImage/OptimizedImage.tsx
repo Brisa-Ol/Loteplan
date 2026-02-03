@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { Skeleton, Box } from '@mui/material';
 import { BrokenImage as BrokenIcon } from '@mui/icons-material';
+import { Box, Skeleton } from '@mui/material';
+import React, { useState } from 'react';
 
 interface OptimizedImageProps {
   src: string;
@@ -25,12 +25,12 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
   const [hasError, setHasError] = useState(false);
 
   return (
-    <Box 
-      position="relative" 
-      width={width} 
-      height={height} 
-      sx={{ 
-        overflow: 'hidden', 
+    <Box
+      position="relative"
+      width={width}
+      height={height}
+      sx={{
+        overflow: 'hidden',
         borderRadius: borderRadius,
         bgcolor: 'action.hover' // Fondo sutil por si la imagen es transparente
       }}
@@ -48,12 +48,12 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
 
       {/* 2. ESTADO DE ERROR: Si falla la carga */}
       {hasError && (
-        <Box 
-          sx={{ 
-            width: '100%', 
-            height: '100%', 
-            display: 'flex', 
-            alignItems: 'center', 
+        <Box
+          sx={{
+            width: '100%',
+            height: '100%',
+            display: 'flex',
+            alignItems: 'center',
             justifyContent: 'center',
             bgcolor: 'action.selected',
             color: 'text.disabled'

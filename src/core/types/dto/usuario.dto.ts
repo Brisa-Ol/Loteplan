@@ -1,4 +1,5 @@
 import { type BaseDTO } from './base.dto';
+import type { EstadoVerificacion } from './kyc.dto';
 
 // ==========================================
 // 📤 REQUEST DTOs (Lo que envías al Backend)
@@ -94,6 +95,8 @@ export interface UsuarioDto extends BaseDTO {
   fecha_registro?: string;
   createdAt?: string;
   updatedAt?: string;
+
+estado_kyc?: EstadoVerificacion;
 }
 
 /**

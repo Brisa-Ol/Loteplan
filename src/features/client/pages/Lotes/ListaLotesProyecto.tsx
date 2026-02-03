@@ -232,7 +232,7 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
           </Typography>
           <Typography variant="body2">
             Ya estás participando activamente en una subasta de este proyecto. 
-            Puedes revisar el estado de tus pujas en "Mis Ofertas".
+            Puedes revisar el estado de tus pujas en "Mis Pujas".
           </Typography>
           <Button 
             size="small" 

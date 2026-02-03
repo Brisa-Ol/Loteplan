@@ -1,20 +1,23 @@
-// src/utils/snackbarUtils.ts
+// Definición de tipos para la función de alerta
+type AlertType = 'success' | 'error' | 'warning' | 'info';
+type SnackbarFn = (msg: string, type: AlertType) => void;
 
-// Definimos la firma de la función
-type SnackbarFn = (msg: string, type: 'success' | 'error' | 'warning' | 'info') => void;
-
-// Variable interna que guardará la referencia a la función del Contexto
+// Referencia mutable (Singleton pattern)
 let globalShowAlert: SnackbarFn | null = null;
 
-// 1. React llamará a esto para "conectar" el snackbar
+/**
+ * INICIALIZADOR: Debe llamarse una sola vez en el componente raíz (App.tsx o Layout)
+ * Conecta la función del contexto de UI con este utilitario global.
+ */
 export const setGlobalSnackbar = (fn: SnackbarFn) => {
   globalShowAlert = fn;
 };
 
-// 2. Tu httpService llamará a esto para mostrar alertas
+// --- Helpers exportados para usar en toda la app ---
+
 export const notifyError = (msg: string) => {
   if (globalShowAlert) globalShowAlert(msg, 'error');
-  else console.warn('⚠️ Snackbar no inicializado. Error:', msg);
+  else console.error('🚨 [Snackbar Error]:', msg);
 };
 
 export const notifySuccess = (msg: string) => {
@@ -22,5 +25,9 @@ export const notifySuccess = (msg: string) => {
 };
 
 export const notifyWarning = (msg: string) => {
-    if (globalShowAlert) globalShowAlert(msg, 'warning');
+  if (globalShowAlert) globalShowAlert(msg, 'warning');
+};
+
+export const notifyInfo = (msg: string) => {
+  if (globalShowAlert) globalShowAlert(msg, 'info');
 };

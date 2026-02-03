@@ -1,11 +1,18 @@
+// src/utils/contractUtils.ts
 import type { ContratoFirmadoDto, ContratoPlantillaDto } from "@/core/types/dto";
 
 /**
- * Formatea la fecha de un contrato
+ * Formatea la fecha de un contrato para mostrar en la UI.
+ * Incluye validación de fecha inválida.
  */
 export const formatContratoDate = (dateString?: string): string => {
   if (!dateString) return 'N/A';
+  
   const date = new Date(dateString);
+  
+  // Validación extra por seguridad
+  if (isNaN(date.getTime())) return 'Fecha inválida';
+
   return date.toLocaleDateString('es-AR', {
     year: 'numeric',
     month: 'long',
@@ -16,24 +23,30 @@ export const formatContratoDate = (dateString?: string): string => {
 };
 
 /**
- * Genera un nombre sugerido para descargar un contrato
+ * Genera un nombre de archivo estandarizado para descargar un contrato firmado.
+ * Formato: contrato_{ID}_{FECHA}.pdf
  */
 export const generateDownloadFileName = (contrato: ContratoFirmadoDto): string => {
-  const fecha = new Date(contrato.fecha_firma).toISOString().split('T')[0];
-  return `contrato_${contrato.id}_${fecha}.pdf`;
+  // Intentamos usar la fecha de firma, si no la de creación, o la actual
+  const fechaBase = contrato.fecha_firma || contrato.fecha_creacion || new Date().toISOString();
+  const fechaStr = new Date(fechaBase).toISOString().split('T')[0];
+  
+  return `contrato_${contrato.id}_${fechaStr}.pdf`;
 };
 
 /**
- * Determina si una plantilla está lista para ser usada
+ * Determina si una plantilla cumple los requisitos para ser utilizada en una firma.
  */
 export const isPlantillaReady = (plantilla: ContratoPlantillaDto): boolean => {
-  return plantilla.activo && 
-         !plantilla.integrity_compromised && 
-         !!plantilla.id_proyecto;
+  return (
+    plantilla.activo &&
+    !plantilla.integrity_compromised &&
+    !!plantilla.id_proyecto
+  );
 };
 
 /**
- * Obtiene el tipo de autorización de un contrato firmado
+ * Obtiene el texto legible del tipo de autorización según los IDs asociados.
  */
 export const getTipoAutorizacion = (contrato: ContratoFirmadoDto): string => {
   if (contrato.id_inversion_asociada) return 'Inversión Directa';
