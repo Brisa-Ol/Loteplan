@@ -20,39 +20,27 @@ import theme from './core/theme';
 // Router
 import AppRouter from './routes/AppRouter';
 
-// Configuración de React Query
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
       retry: 1,
-      staleTime: 5 * 60 * 1000, // 5 minutos
+      staleTime: 5 * 60 * 1000,
     },
   },
 });
 
-/**
- * Puente entre Axios interceptors y React Context.
- * Permite que las llamadas API muestren snackbars automáticamente.
- */
 const GlobalSnackbarConfigurator: React.FC = () => {
   const { showSuccess, showError, showInfo } = useSnackbar();
 
   useEffect(() => {
     setGlobalSnackbar((msg, type) => {
       switch (type) {
-        case 'success':
-          showSuccess(msg);
-          break;
-        case 'error':
-          showError(msg);
-          break;
+        case 'success': showSuccess(msg); break;
+        case 'error': showError(msg); break;
         case 'warning':
-        case 'info':
-          showInfo(msg);
-          break;
-        default:
-          showInfo(msg);
+        case 'info': showInfo(msg); break;
+        default: showInfo(msg);
       }
     });
   }, [showSuccess, showError, showInfo]);
@@ -65,8 +53,11 @@ const App: React.FC = () => {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <SnackbarProvider>
-        <GlobalSnackbarConfigurator />
+        {/* ✅ 1. BrowserRouter envuelve todo lo que pueda necesitar navegación */}
         <BrowserRouter>
+          {/* ✅ 2. Configurator ahora tiene acceso al Router si fuera necesario */}
+          <GlobalSnackbarConfigurator />
+
           <QueryClientProvider client={queryClient}>
             <AuthProvider>
               <AppRouter />
