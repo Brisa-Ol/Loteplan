@@ -1,7 +1,7 @@
 import axios, { type AxiosResponse, type InternalAxiosRequestConfig } from 'axios';
-import { env } from '../config/env'; 
 import { secureStorage } from '../../shared/utils/secureStorage';
-import { notifyError, notifyWarning } from '../../shared/utils/snackbarUtils';
+import { notifyError } from '../../shared/utils/snackbarUtils';
+import { env } from '../config/env';
 
 // Definición de tipos
 export interface ApiError {
@@ -15,14 +15,14 @@ export interface ApiError {
 }
 
 const httpService = axios.create({
-  baseURL: env.apiBaseUrl, 
+  baseURL: env.apiBaseUrl,
   headers: { 'Content-Type': 'application/json' },
 });
 
 // 📤 Request Interceptor
 httpService.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    const token = secureStorage.getToken(); 
+    const token = secureStorage.getToken();
     if (token && config.headers) config.headers.Authorization = `Bearer ${token}`;
     if (config.data instanceof FormData && config.headers) delete config.headers['Content-Type'];
     return config;
@@ -39,7 +39,7 @@ httpService.interceptors.response.use(
       const message = data.error || 'Error en la operación';
       // No mostramos toast si es login, dejamos que el componente maneje el error
       if (!response.config.url?.includes('/auth/login')) {
-         notifyError(message);
+        notifyError(message);
       }
       return Promise.reject({ status: response.status, message: message, type: 'VALIDATION_ERROR', originalError: data } as ApiError);
     }
@@ -48,14 +48,14 @@ httpService.interceptors.response.use(
   (error) => {
     // A) Error de Red
     if (!error.response) {
-      notifyError('No se pudo conectar con el servidor.'); 
+      notifyError('No se pudo conectar con el servidor.');
       return Promise.reject({ status: 0, message: 'Error de conexión', type: 'UNKNOWN', originalError: error } as ApiError);
     }
 
     const status = error.response.status;
     const data = error.response.data;
     const url = error.config?.url || '';
-    
+
     // Detectar si es una petición de Login
     const isLoginEndpoint = url.includes('/auth/login') || url.includes('/auth/2fa/verify');
     const msg = data.error || data.message || 'Error desconocido';

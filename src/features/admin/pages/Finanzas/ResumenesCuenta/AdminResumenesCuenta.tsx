@@ -18,30 +18,28 @@ import {
   XAxis, YAxis
 } from 'recharts';
 
-// Hooks y DTOs
-import { useAdminResumenes } from '@/features/admin/hooks/useAdminResumenes';
-import type { ResumenCuentaDto } from '../../../../../core/types/dto/resumenCuenta.dto';
 
-// Componentes Compartidos (Legacy)
-import { DataTable, type DataTableColumn } from '../../../../../shared/components/data-grid/DataTable/DataTable';
-import { QueryHandler } from '../../../../../shared/components/data-grid/QueryHandler/QueryHandler';
-import { StatCard, StatusBadge } from '../../../../../shared/components/domain/cards/StatCard/StatCard';
-import { FilterBar, FilterSearch, FilterSelect } from '../../../../../shared/components/forms/filters/FilterBar';
-import { PageContainer } from '../../../../../shared/components/layout/containers/PageContainer/PageContainer';
+import type { ResumenCuentaDto } from '@/core/types/dto/resumenCuenta.dto';
 
+// Componentes Compartidos
+import { DataTable, type DataTableColumn } from '@/shared/components/data-grid/DataTable/DataTable';
+import { QueryHandler } from '@/shared/components/data-grid/QueryHandler/QueryHandler';
+import { StatCard, StatusBadge } from '@/shared/components/domain/cards/StatCard/StatCard';
+import { FilterBar, FilterSearch, FilterSelect } from '@/shared/components/forms/filters/FilterBar';
+import { PageContainer } from '@/shared/components/layout/containers/PageContainer/PageContainer';
 
-
-// Modales
 import AdminPageHeader from '@/shared/components/admin/Adminpageheader';
 import AlertBanner from '@/shared/components/admin/Alertbanner';
 import MetricsGrid from '@/shared/components/admin/Metricsgrid';
 import { ViewModeToggle, type ViewMode } from '@/shared/components/admin/Viewmodetoggle';
+import { useAdminResumenes } from '@/features/admin/hooks/useAdminResumenes';
 import DetalleResumenModal from './modals/DetalleResumenModal';
 
+
 // ============================================================================
-// SUB-COMPONENTE: ANALYTICS (Distribución de Estados)
+// SUB-COMPONENTE: ANALYTICS (Memoizado)
 // ============================================================================
-const ResumenAnalytics: React.FC<{ data: ResumenCuentaDto[] }> = ({ data }) => {
+const ResumenAnalytics = React.memo<{ data: ResumenCuentaDto[] }>(({ data }) => {
   const theme = useTheme();
 
   const chartData = useMemo(() => {
@@ -81,7 +79,9 @@ const ResumenAnalytics: React.FC<{ data: ResumenCuentaDto[] }> = ({ data }) => {
       </ResponsiveContainer>
     </Box>
   );
-};
+});
+
+ResumenAnalytics.displayName = 'ResumenAnalytics';
 
 // ============================================================================
 // COMPONENTE PRINCIPAL
@@ -93,7 +93,7 @@ const AdminResumenesCuenta: React.FC = () => {
   const [viewMode, setViewMode] = useState<ViewMode>('table');
 
   // --------------------------------------------------------------------------
-  // CÁLCULO DE KPIS
+  // CÁLCULO DE KPIS (Memoizado)
   // --------------------------------------------------------------------------
   const stats = useMemo(() => {
     const data = logic.filteredResumenes;
@@ -354,7 +354,8 @@ const AdminResumenesCuenta: React.FC = () => {
             data={logic.filteredResumenes}
             getRowKey={(row) => row.id}
             isRowActive={(row) => row.porcentaje_pagado < 100}
-            showInactiveToggle={true}
+            // 🔥 CORRECCIÓN: false para respetar filtros
+            showInactiveToggle={false} 
             inactiveLabel="Ver Completados"
             highlightedRowId={logic.highlightedId}
             emptyMessage="No se encontraron resúmenes de cuenta registrados."

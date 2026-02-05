@@ -19,30 +19,28 @@ import {
 } from 'recharts';
 
 // Hooks y DTOs
-import type { TransaccionDto } from '../../../../../core/types/dto/transaccion.dto';
-import { useAdminTransacciones } from '../../../hooks/useAdminTransacciones';
-
-// Componentes Compartidos (Legacy)
-import { DataTable, type DataTableColumn } from '../../../../../shared/components/data-grid/DataTable/DataTable';
-import { QueryHandler } from '../../../../../shared/components/data-grid/QueryHandler/QueryHandler';
-import { StatCard, StatusBadge } from '../../../../../shared/components/domain/cards/StatCard/StatCard';
-import { ConfirmDialog } from '../../../../../shared/components/domain/modals/ConfirmDialog/ConfirmDialog';
-import { FilterBar, FilterSearch, FilterSelect } from '../../../../../shared/components/forms/filters/FilterBar';
-import { PageContainer } from '../../../../../shared/components/layout/containers/PageContainer/PageContainer';
+import type { TransaccionDto } from '@/core/types/dto/transaccion.dto';
 
 
+// Componentes Compartidos
+import { DataTable, type DataTableColumn } from '@/shared/components/data-grid/DataTable/DataTable';
+import { QueryHandler } from '@/shared/components/data-grid/QueryHandler/QueryHandler';
+import { StatCard, StatusBadge } from '@/shared/components/domain/cards/StatCard/StatCard';
+import { ConfirmDialog } from '@/shared/components/domain/modals/ConfirmDialog/ConfirmDialog';
+import { FilterBar, FilterSearch, FilterSelect } from '@/shared/components/forms/filters/FilterBar';
+import { PageContainer } from '@/shared/components/layout/containers/PageContainer/PageContainer';
 
-// Modales
-import AdminPageHeader from '@/shared/components/admin/Adminpageheader';
+import { AdminPageHeader } from '@/shared/components/admin/Adminpageheader';
 import AlertBanner from '@/shared/components/admin/Alertbanner';
 import MetricsGrid from '@/shared/components/admin/Metricsgrid';
 import { ViewModeToggle, type ViewMode } from '@/shared/components/admin/Viewmodetoggle';
 import ModalDetalleTransaccion from './modal/ModalDetalleTransaccion';
+import { useAdminTransacciones } from '@/features/admin/hooks/useAdminTransacciones';
 
 // ============================================================================
-// SUB-COMPONENTE: ANALYTICS (Gráfico de Transacciones)
+// SUB-COMPONENTE: ANALYTICS (Memoizado para performance)
 // ============================================================================
-const TransactionAnalytics: React.FC<{ data: TransaccionDto[] }> = ({ data }) => {
+const TransactionAnalytics = React.memo<{ data: TransaccionDto[] }>(({ data }) => {
   const theme = useTheme();
 
   const chartData = useMemo(() => {
@@ -57,7 +55,8 @@ const TransactionAnalytics: React.FC<{ data: TransaccionDto[] }> = ({ data }) =>
     const labels: Record<string, string> = {
       pago_suscripcion_inicial: 'Suscripción',
       directo: 'Inversión',
-      mensual: 'Cuota Mensual'
+      mensual: 'Cuota Mensual',
+      Puja: 'Subasta'
     };
 
     return Object.values(grouped).map((item: any) => ({
@@ -89,7 +88,9 @@ const TransactionAnalytics: React.FC<{ data: TransaccionDto[] }> = ({ data }) =>
       </ResponsiveContainer>
     </Box>
   );
-};
+});
+
+TransactionAnalytics.displayName = 'TransactionAnalytics';
 
 // ============================================================================
 // COMPONENTE PRINCIPAL
@@ -101,7 +102,7 @@ const AdminTransacciones: React.FC = () => {
   const [viewMode, setViewMode] = useState<ViewMode>('table');
 
   // --------------------------------------------------------------------------
-  // CÁLCULO DE KPIS
+  // CÁLCULO DE KPIS (Memoizado)
   // --------------------------------------------------------------------------
   const stats = useMemo(() => {
     const data = logic.filteredData;
@@ -155,7 +156,8 @@ const AdminTransacciones: React.FC = () => {
         const labels: Record<string, string> = {
           pago_suscripcion_inicial: 'Suscripción Inicial',
           directo: 'Inversión Directa',
-          mensual: 'Cuota Mensual'
+          mensual: 'Cuota Mensual',
+          Puja: 'Subasta'
         };
         return (
           <Box>
@@ -321,7 +323,7 @@ const AdminTransacciones: React.FC = () => {
           <FilterSearch
             placeholder="Buscar por cliente, proyecto..."
             value={logic.searchTerm}
-            onChange={(e) => logic.setSearchTerm(e.target.value)}
+            onSearch={logic.setSearchTerm}
             sx={{ flexGrow: 1 }}
           />
 
@@ -349,7 +351,7 @@ const AdminTransacciones: React.FC = () => {
             data={logic.filteredData}
             getRowKey={(row) => row.id}
             isRowActive={(row) => !['fallido', 'rechazado_por_capacidad', 'rechazado_proyecto_cerrado', 'expirado'].includes(row.estado_transaccion)}
-            showInactiveToggle={true}
+            showInactiveToggle={false} // Mostrar todo lo filtrado por el usuario
             inactiveLabel="Mostrar Fallidas"
             highlightedRowId={logic.highlightedId}
             emptyMessage="No se encontraron transacciones registradas."

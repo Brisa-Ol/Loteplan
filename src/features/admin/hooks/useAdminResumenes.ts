@@ -1,42 +1,55 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { ResumenCuentaDto } from '@/core/types/dto/resumenCuenta.dto';
 import ResumenCuentaService from '@/core/api/services/resumenCuenta.service';
 import { useModal } from '@/shared/hooks/useModal';
 import { useSortedData } from './useSortedData';
 
+// ============================================================================
+// DEBOUNCE HELPER
+// ============================================================================
+function useDebouncedValue<T>(value: T, delay: number = 300): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+  useEffect(() => {
+    const handler = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(handler);
+  }, [value, delay]);
+  return debouncedValue;
+}
 
+// ============================================================================
+// HOOK PRINCIPAL
+// ============================================================================
 export const useAdminResumenes = () => {
+  // --- MODALES (Nivel Superior) ---
+  const detalleModal = useModal();
+  
   // --- ESTADOS DE FILTRO ---
   const [searchTerm, setSearchTerm] = useState('');
   const [filterState, setFilterState] = useState<'all' | 'active' | 'completed' | 'overdue'>('all');
-
-  // Hooks
-  const detalleModal = useModal();
   const [selectedResumen, setSelectedResumen] = useState<ResumenCuentaDto | null>(null);
 
-  // --- QUERY ---
+  // ✨ Debounce
+  const debouncedSearchTerm = useDebouncedValue(searchTerm, 300);
+
+  // --- QUERY OPTIMIZADA ---
   const { data: resumenesRaw = [], isLoading, error } = useQuery({
     queryKey: ['adminResumenes'],
-    queryFn: async () => {
-      const response = await ResumenCuentaService.findAll();
-      return response.data;
-    },
+    queryFn: async () => (await ResumenCuentaService.findAll()).data,
+    staleTime: 30000,      // 30 segundos de frescura
+    gcTime: 5 * 60 * 1000, // 5 minutos en caché
+    refetchOnWindowFocus: false,
   });
 
   // ✨ 1. ORDENAMIENTO + HIGHLIGHT
-  // Aunque aquí no creamos items, el ordenamiento descendente por ID es útil
   const { sortedData: resumenesOrdenados, highlightedId } = useSortedData(resumenesRaw);
 
-  // --- FILTRADO (Sobre data ordenada) ---
+  // --- FILTRADO (Memoizado + Debounce) ---
   const filteredResumenes = useMemo(() => {
+    const term = debouncedSearchTerm.toLowerCase();
+    
     return resumenesOrdenados.filter(resumen => {
-      const term = searchTerm.toLowerCase();
-      const matchesSearch =
-        resumen.nombre_proyecto.toLowerCase().includes(term) ||
-        resumen.id.toString().includes(term) ||
-        resumen.id_suscripcion.toString().includes(term);
-
+      // 1. Filtro de Estado (Rápido)
       let matchesState = true;
       if (filterState === 'active') {
         matchesState = resumen.porcentaje_pagado < 100 && resumen.cuotas_vencidas === 0;
@@ -46,9 +59,18 @@ export const useAdminResumenes = () => {
         matchesState = resumen.cuotas_vencidas > 0;
       }
 
-      return matchesSearch && matchesState;
+      if (!matchesState) return false;
+
+      // 2. Filtro de Texto (Más lento, ejecutar al final)
+      if (!term) return true;
+
+      return (
+        resumen.nombre_proyecto.toLowerCase().includes(term) ||
+        resumen.id.toString().includes(term) ||
+        resumen.id_suscripcion.toString().includes(term)
+      );
     });
-  }, [resumenesOrdenados, searchTerm, filterState]);
+  }, [resumenesOrdenados, debouncedSearchTerm, filterState]);
 
   // --- HANDLERS ---
   const handleVerDetalle = useCallback((resumen: ResumenCuentaDto) => {

@@ -7,12 +7,15 @@ import {
   Description as FileIcon,
   FolderShared, Public,
   Upload as UploadIcon,
-  ViewList
+  ViewList,
+  Download as DownloadIcon,
+  WarningAmber as WarningIcon
 } from '@mui/icons-material';
 import {
   alpha, Avatar,
   Box,
   Button,
+  Chip,
   CircularProgress,
   Divider,
   IconButton,
@@ -32,21 +35,19 @@ import {
 } from 'recharts';
 
 // Hooks y DTOs
-import type { ContratoPlantillaDto } from '../../../../core/types/dto/contrato-plantilla.dto';
+import type { ContratoPlantillaDto } from '@/core/types/dto/contrato-plantilla.dto';
 import { useAdminPlantillas } from '../../hooks/useAdminPlantillas';
 
-// Componentes Compartidos (Legacy)
-import { DataTable, type DataTableColumn } from '../../../../shared/components/data-grid/DataTable/DataTable';
-import { QueryHandler } from '../../../../shared/components/data-grid/QueryHandler/QueryHandler';
-import { StatCard } from '../../../../shared/components/domain/cards/StatCard/StatCard';
-import { ConfirmDialog } from '../../../../shared/components/domain/modals/ConfirmDialog/ConfirmDialog';
-import { FilterBar, FilterSearch, FilterSelect } from '../../../../shared/components/forms/filters/FilterBar';
-import { PageContainer } from '../../../../shared/components/layout/containers/PageContainer/PageContainer';
+// Componentes Compartidos
+import { DataTable, type DataTableColumn } from '@/shared/components/data-grid/DataTable/DataTable';
+import { QueryHandler } from '@/shared/components/data-grid/QueryHandler/QueryHandler';
+import { StatCard } from '@/shared/components/domain/cards/StatCard/StatCard';
+import { ConfirmDialog } from '@/shared/components/domain/modals/ConfirmDialog/ConfirmDialog';
+import { FilterBar, FilterSearch, FilterSelect } from '@/shared/components/forms/filters/FilterBar';
+import { PageContainer } from '@/shared/components/layout/containers/PageContainer/PageContainer';
 
-
-
-// Modales
-import AdminPageHeader from '@/shared/components/admin/Adminpageheader';
+// Modales y componentes
+import { AdminPageHeader } from '@/shared/components/admin/Adminpageheader';
 import AlertBanner from '@/shared/components/admin/Alertbanner';
 import MetricsGrid from '@/shared/components/admin/Metricsgrid';
 import { ViewModeToggle, type ViewMode } from '@/shared/components/admin/Viewmodetoggle';
@@ -55,9 +56,9 @@ import UpdateMetadataModal from './components/modals/UpdateMetadataModal';
 import UpdatePdfModal from './components/modals/UpdatePdfModal';
 
 // ============================================================================
-// SUB-COMPONENTE: ANALYTICS (Distribución de Plantillas)
+// SUB-COMPONENTE: ANALYTICS (Memoizado)
 // ============================================================================
-const PlantillaAnalytics: React.FC<{ data: ContratoPlantillaDto[], proyectos: any[] }> = ({ data, proyectos }) => {
+const PlantillaAnalytics = React.memo<{ data: ContratoPlantillaDto[] }>(({ data }) => {
   const theme = useTheme();
 
   const pieData = useMemo(() => {
@@ -122,7 +123,9 @@ const PlantillaAnalytics: React.FC<{ data: ContratoPlantillaDto[], proyectos: an
       </Box>
     </Box>
   );
-};
+});
+
+PlantillaAnalytics.displayName = 'PlantillaAnalytics';
 
 // ============================================================================
 // COMPONENTE PRINCIPAL
@@ -131,25 +134,21 @@ const AdminPlantillas: React.FC = () => {
   const theme = useTheme();
   const logic = useAdminPlantillas();
 
-  // Estado de Vista
   const [viewMode, setViewMode] = useState<ViewMode>('table');
 
-  // --------------------------------------------------------------------------
-  // CÁLCULO DE KPIS
-  // --------------------------------------------------------------------------
+  // KPIS
   const stats = useMemo(() => {
     const data = logic.filteredPlantillas;
     const total = data.length;
     const active = data.filter(p => p.activo).length;
     const global = data.filter(p => !p.id_proyecto).length;
     const assigned = total - global;
+    const compromised = data.filter(p => p.integrity_compromised).length; // ✅ Nuevo KPI
 
-    return { total, active, global, assigned };
+    return { total, active, global, assigned, compromised };
   }, [logic.filteredPlantillas]);
 
-  // --------------------------------------------------------------------------
-  // DEFINICIÓN DE COLUMNAS
-  // --------------------------------------------------------------------------
+  // COLUMNAS
   const columns = useMemo<DataTableColumn<ContratoPlantillaDto>[]>(() => [
     {
       id: 'id',
@@ -159,24 +158,30 @@ const AdminPlantillas: React.FC = () => {
     },
     {
       id: 'nombre_archivo',
-      label: 'Documento / Hash',
+      label: 'Documento / Integridad',
       minWidth: 280,
       render: (row) => (
         <Stack direction="row" spacing={2} alignItems="center">
           <Avatar sx={{
-            bgcolor: alpha(theme.palette.primary.main, 0.05),
-            color: row.activo ? 'primary.main' : 'text.disabled',
+            bgcolor: row.integrity_compromised ? alpha(theme.palette.error.main, 0.1) : alpha(theme.palette.primary.main, 0.05),
+            color: row.integrity_compromised ? 'error.main' : (row.activo ? 'primary.main' : 'text.disabled'),
             width: 40, height: 40
           }}>
-            <FileIcon />
+            {/* ✅ Indicador visual de integridad comprometida */}
+            {row.integrity_compromised ? <WarningIcon /> : <FileIcon />}
           </Avatar>
           <Box>
-            <Typography variant="body2" fontWeight={700}>
-              {row.nombre_archivo}
-            </Typography>
+            <Stack direction="row" alignItems="center" spacing={1}>
+                <Typography variant="body2" fontWeight={700}>
+                {row.nombre_archivo}
+                </Typography>
+                {row.integrity_compromised && (
+                    <Chip label="ERROR DE HASH" size="small" color="error" sx={{ height: 16, fontSize: '0.6rem', fontWeight: 700 }} />
+                )}
+            </Stack>
             <Tooltip title={`Hash Original: ${row.hash_archivo_original}`}>
               <Typography variant="caption" sx={{ fontFamily: 'monospace', color: 'text.secondary', fontSize: '0.65rem' }}>
-                SHA256: {row.hash_archivo_original?.substring(0, 12).toUpperCase()}...
+                SHA: {row.hash_archivo_original?.substring(0, 8).toUpperCase()}...
               </Typography>
             </Tooltip>
           </Box>
@@ -232,7 +237,6 @@ const AdminPlantillas: React.FC = () => {
       align: 'center',
       render: (row) => {
         const isProcessingThis = logic.isToggling && logic.modales.confirmDialog.data?.id === row.id;
-
         return (
           <Stack direction="row" alignItems="center" spacing={1} justifyContent="center">
             {isProcessingThis ? (
@@ -254,11 +258,22 @@ const AdminPlantillas: React.FC = () => {
       id: 'actions',
       label: 'Acciones',
       align: 'right',
-      minWidth: 160,
+      minWidth: 180,
       render: (row) => (
         <Stack direction="row" spacing={0.5} justifyContent="flex-end">
-
-          {/* CORRECCIÓN: Envolver en <span> para evitar error de Tooltip en elementos disabled */}
+          
+          {/* ✅ Nueva acción: Descargar */}
+          <Tooltip title="Descargar Plantilla">
+            <span>
+                <IconButton
+                    size="small"
+                    onClick={() => logic.handleDownload(row)}
+                    sx={{ color: 'text.secondary', '&:hover': { color: 'primary.main' } }}
+                >
+                    <DownloadIcon fontSize="small" />
+                </IconButton>
+            </span>
+          </Tooltip>
 
           <Tooltip title="Editar Metadatos">
             <span>
@@ -306,7 +321,6 @@ const AdminPlantillas: React.FC = () => {
 
   return (
     <PageContainer maxWidth="xl" sx={{ py: 3 }}>
-      {/* 1. HEADER ESTANDARIZADO */}
       <AdminPageHeader
         title="Gestión de Plantillas"
         subtitle="Control de versiones de contratos legales y documentos base."
@@ -322,7 +336,6 @@ const AdminPlantillas: React.FC = () => {
         }
       />
 
-      {/* 2. ERRORES */}
       {logic.error && (
         <AlertBanner
           severity="error"
@@ -331,50 +344,24 @@ const AdminPlantillas: React.FC = () => {
         />
       )}
 
-      {/* 3. KPIS GRID */}
+      {/* Alerta de Integridad Comprometida si existe alguna */}
+      {stats.compromised > 0 && (
+          <AlertBanner 
+            severity="error" 
+            title="Integridad Comprometida" 
+            message={`Se detectaron ${stats.compromised} plantillas con hash no coincidente. Revise los archivos marcados.`} 
+            sx={{ mb: 3 }}
+          />
+      )}
+
       <MetricsGrid columns={{ xs: 1, sm: 2, lg: 4 }}>
-        <StatCard
-          title="Total Plantillas"
-          value={stats.total}
-          subtitle="Inventario total"
-          icon={<FileIcon />}
-          color="info"
-          loading={logic.isLoading}
-        />
-        <StatCard
-          title="Activas"
-          value={stats.active}
-          subtitle="Disponibles para uso"
-          icon={<CheckCircle />}
-          color="success"
-          loading={logic.isLoading}
-        />
-        <StatCard
-          title="Globales"
-          value={stats.global}
-          subtitle="Base general"
-          icon={<Public />}
-          color="warning"
-          loading={logic.isLoading}
-        />
-        <StatCard
-          title="Específicas"
-          value={stats.assigned}
-          subtitle="Asignadas a proyectos"
-          icon={<FolderShared />}
-          color="primary"
-          loading={logic.isLoading}
-        />
+        <StatCard title="Total Plantillas" value={stats.total} subtitle="Inventario total" icon={<FileIcon />} color="info" loading={logic.isLoading} />
+        <StatCard title="Activas" value={stats.active} subtitle="Disponibles para uso" icon={<CheckCircle />} color="success" loading={logic.isLoading} />
+        <StatCard title="Globales" value={stats.global} subtitle="Base general" icon={<Public />} color="warning" loading={logic.isLoading} />
+        <StatCard title="Específicas" value={stats.assigned} subtitle="Asignadas a proyectos" icon={<FolderShared />} color="primary" loading={logic.isLoading} />
       </MetricsGrid>
 
-      {/* 4. CONTROLES */}
-      <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        justifyContent="space-between"
-        alignItems={{ xs: 'stretch', sm: 'center' }}
-        mb={3}
-        spacing={2}
-      >
+      <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'stretch', sm: 'center' }} mb={3} spacing={2}>
         <ViewModeToggle
           value={viewMode}
           onChange={(newMode) => setViewMode(newMode)}
@@ -385,19 +372,8 @@ const AdminPlantillas: React.FC = () => {
         />
 
         <FilterBar sx={{ flex: 1, maxWidth: { sm: 700 } }}>
-          <FilterSearch
-            placeholder="Buscar por nombre de archivo..."
-            value={logic.searchTerm}
-            onSearch={logic.setSearchTerm}
-            sx={{ flexGrow: 1 }}
-          />
-
-          <FilterSelect
-            label="Proyecto"
-            value={logic.filterProject}
-            onChange={(e) => logic.setFilterProject(e.target.value)}
-            sx={{ minWidth: 200 }}
-          >
+          <FilterSearch placeholder="Buscar por nombre de archivo..." value={logic.searchTerm} onSearch={logic.setSearchTerm} sx={{ flexGrow: 1 }} />
+          <FilterSelect label="Proyecto" value={logic.filterProject} onChange={(e) => logic.setFilterProject(e.target.value)} sx={{ minWidth: 200 }}>
             <MenuItem value="all">Todos los Proyectos</MenuItem>
             <Divider />
             {logic.proyectos.map(p => (
@@ -407,21 +383,17 @@ const AdminPlantillas: React.FC = () => {
         </FilterBar>
       </Stack>
 
-      {/* 5. CONTENIDO */}
       {viewMode === 'analytics' ? (
-        <PlantillaAnalytics data={logic.filteredPlantillas} proyectos={logic.proyectos} />
+        <PlantillaAnalytics data={logic.filteredPlantillas} />
       ) : (
         <QueryHandler isLoading={logic.isLoading} error={logic.error as Error | null}>
           <DataTable
             columns={columns}
             data={logic.filteredPlantillas}
             getRowKey={(row) => row.id}
-
-            // UX: Opacidad para inactivas
             isRowActive={(row) => row.activo}
-            showInactiveToggle={true}
+            showInactiveToggle={false} // 🔥 Fix: Desactivado para respetar filtros externos
             inactiveLabel="Ver Inactivas"
-
             highlightedRowId={logic.highlightedId}
             emptyMessage="No se encontraron plantillas registradas."
             pagination
@@ -430,7 +402,7 @@ const AdminPlantillas: React.FC = () => {
         </QueryHandler>
       )}
 
-      {/* 6. MODALES */}
+      {/* Modales */}
       <CreatePlantillaModal
         open={logic.modales.create.isOpen}
         onClose={logic.modales.create.close}

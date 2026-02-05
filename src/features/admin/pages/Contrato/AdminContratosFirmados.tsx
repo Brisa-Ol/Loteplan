@@ -31,25 +31,24 @@ import {
 } from 'recharts';
 
 // Hooks y DTOs
-import type { ContratoFirmadoDto } from '../../../../core/types/dto/contrato-firmado.dto';
+import type { ContratoFirmadoDto } from '@/core/types/dto/contrato-firmado.dto';
 import { useAdminContratosFirmados } from '../../hooks/useAdminContratosFirmados';
 
-// Componentes Compartidos (Legacy)
-import AdminPageHeader from '@/shared/components/admin/Adminpageheader';
+// Componentes Compartidos
+import { AdminPageHeader } from '@/shared/components/admin/Adminpageheader';
 import AlertBanner from '@/shared/components/admin/Alertbanner';
 import MetricsGrid from '@/shared/components/admin/Metricsgrid';
 import { ViewModeToggle, type ViewMode } from '@/shared/components/admin/Viewmodetoggle';
 import { StatCard, StatusBadge } from '@/shared/components/domain/cards/StatCard/StatCard';
-import { DataTable, type DataTableColumn } from '../../../../shared/components/data-grid/DataTable/DataTable';
-import { QueryHandler } from '../../../../shared/components/data-grid/QueryHandler/QueryHandler';
-import { FilterBar, FilterSearch } from '../../../../shared/components/forms/filters/FilterBar';
-import { PageContainer } from '../../../../shared/components/layout/containers/PageContainer/PageContainer';
-
+import { DataTable, type DataTableColumn } from '@/shared/components/data-grid/DataTable/DataTable';
+import { QueryHandler } from '@/shared/components/data-grid/QueryHandler/QueryHandler';
+import { FilterBar, FilterSearch } from '@/shared/components/forms/filters/FilterBar';
+import { PageContainer } from '@/shared/components/layout/containers/PageContainer/PageContainer';
 
 // ============================================================================
-// SUB-COMPONENTE: ANALYTICS (Distribución de Contratos)
+// SUB-COMPONENTE: ANALYTICS (Memoizado para performance)
 // ============================================================================
-const ContratosAnalytics: React.FC<{ data: ContratoFirmadoDto[] }> = ({ data }) => {
+const ContratosAnalytics = React.memo<{ data: ContratoFirmadoDto[] }>(({ data }) => {
   const theme = useTheme();
 
   const typeData = useMemo(() => {
@@ -117,7 +116,9 @@ const ContratosAnalytics: React.FC<{ data: ContratoFirmadoDto[] }> = ({ data }) 
       </Box>
     </Box>
   );
-};
+});
+
+ContratosAnalytics.displayName = 'ContratosAnalytics';
 
 // ============================================================================
 // COMPONENTE PRINCIPAL
@@ -364,6 +365,7 @@ const AdminContratosFirmados: React.FC = () => {
             getRowKey={(row) => row.id}
             isRowActive={(row) => !!row.hash_archivo_firmado}
             highlightedRowId={logic.highlightedId}
+            showInactiveToggle={false} // Desactivamos filtro interno
             emptyMessage="No se han encontrado registros de contratos firmados."
             pagination={true}
             defaultRowsPerPage={10}
