@@ -30,7 +30,7 @@ import {
   Typography,
   useTheme
 } from '@mui/material';
-import React, { useMemo, useState } from 'react';
+import React, { memo, useMemo, useState } from 'react';
 
 // Componentes Compartidos
 import { AdminPageHeader } from '@/shared/components/admin/Adminpageheader';
@@ -55,14 +55,14 @@ import type { ProyectoDto } from '@/core/types/dto/proyecto.dto';
 import { useAdminProyectos, type TipoInversionFilter } from '../../hooks/useAdminProyectos';
 
 // ============================================================================
-// COMPONENTE: VISTA DE CARDS
+// COMPONENTE: VISTA DE CARDS (MEMOIZADO)
 // ============================================================================
-const ProjectCard: React.FC<{
+const ProjectCard = memo<{
   proyecto: ProyectoDto;
   onAction: (proyecto: ProyectoDto, action: any, e?: React.MouseEvent) => void;
   onToggle: (proyecto: ProyectoDto) => void;
   isToggling: boolean;
-}> = ({ proyecto, onAction, onToggle, isToggling }) => {
+}>(({ proyecto, onAction, onToggle, isToggling }) => {
   const theme = useTheme();
   const isMensual = proyecto.tipo_inversion === 'mensual';
   const canStart = isMensual && proyecto.estado_proyecto === 'En Espera';
@@ -206,7 +206,9 @@ const ProjectCard: React.FC<{
       </CardActions>
     </Card>
   );
-};
+});
+
+ProjectCard.displayName = 'ProjectCard';
 
 // ============================================================================
 // COMPONENTE PRINCIPAL
@@ -217,7 +219,7 @@ const AdminProyectos: React.FC = () => {
   const [viewMode, setViewMode] = useState<ViewMode>('table');
 
   // --------------------------------------------------------------------------
-  // CÁLCULO DE KPIS (derivado de filteredProyectos)
+  // CÁLCULO DE KPIS (derivado de filteredProyectos) - ✨ OPTIMIZADO
   // --------------------------------------------------------------------------
   const stats = useMemo(() => {
     const data = logic.filteredProyectos;
@@ -230,7 +232,7 @@ const AdminProyectos: React.FC = () => {
   }, [logic.filteredProyectos]);
 
   // --------------------------------------------------------------------------
-  // COLUMNAS
+  // COLUMNAS - ✨ OPTIMIZADO con callbacks memoizados
   // --------------------------------------------------------------------------
   const columns = useMemo<DataTableColumn<ProyectoDto>[]>(
     () => [
@@ -317,7 +319,10 @@ const AdminProyectos: React.FC = () => {
           <Stack direction="row" alignItems="center" spacing={1} justifyContent="center">
             <Switch
               checked={p.activo}
-              onChange={() => logic.modales.confirmDialog.confirm('toggle_project_visibility', p)}
+              onChange={(e) => {
+                e.stopPropagation();
+                logic.modales.confirmDialog.confirm('toggle_project_visibility', p);
+              }}
               size="small"
               color="success"
               disabled={logic.isToggling}
@@ -355,7 +360,10 @@ const AdminProyectos: React.FC = () => {
             {p.tipo_inversion === 'mensual' && p.estado_proyecto === 'En Espera' && (
               <Tooltip title="Iniciar Cobros">
                 <IconButton
-                  onClick={() => logic.modales.confirmDialog.confirm('start_project_process', p)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    logic.modales.confirmDialog.confirm('start_project_process', p);
+                  }}
                   size="small"
                   sx={{ color: 'success.main' }}
                 >

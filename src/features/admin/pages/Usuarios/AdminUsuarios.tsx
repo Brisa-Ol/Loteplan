@@ -3,15 +3,18 @@ import {
   Block as BlockIcon,
   CheckCircle,
   Edit as EditIcon,
-  Group as GroupIcon, MarkEmailRead,
+  Group as GroupIcon,
+  MarkEmailRead,
   Person,
-  PersonAdd, Search,
+  PersonAdd,
+  Search,
   Security,
   PhonelinkLock as TwoFaIcon,
   VerifiedUser as VerifiedUserIcon
 } from '@mui/icons-material';
 import {
-  alpha, Avatar,
+  alpha,
+  Avatar,
   Box,
   Button,
   Chip,
@@ -26,7 +29,7 @@ import {
   Typography,
   useTheme
 } from '@mui/material';
-import React, { useMemo } from 'react';
+import React, { memo, useMemo } from 'react';
 
 import { DataTable, type DataTableColumn } from '@/shared/components/data-grid/DataTable/DataTable';
 import { QueryHandler } from '@/shared/components/data-grid/QueryHandler/QueryHandler';
@@ -42,16 +45,21 @@ import type { UsuarioDto } from '@/core/types/dto/usuario.dto';
 import { useAdminUsuarios } from '../../hooks/useAdminUsuarios';
 
 // ============================================================================
-// COMPONENTE: BADGE DE SEGURIDAD
+// COMPONENTE: BADGES DE SEGURIDAD (Memoizado)
 // ============================================================================
-const SecurityBadges: React.FC<{
+const SecurityBadges = memo<{
   emailConfirmed: boolean;
   twoFaEnabled: boolean;
   isCurrentUser: boolean;
-}> = ({ emailConfirmed, twoFaEnabled, isCurrentUser }) => (
+}>(({ emailConfirmed, twoFaEnabled, isCurrentUser }) => (
   <Stack direction="row" spacing={0.5} alignItems="center">
     {isCurrentUser && (
-      <Chip label="TÚ" size="small" color="primary" sx={{ height: 18, fontSize: '0.6rem', fontWeight: 900 }} />
+      <Chip 
+        label="TÚ" 
+        size="small" 
+        color="primary" 
+        sx={{ height: 18, fontSize: '0.6rem', fontWeight: 900 }} 
+      />
     )}
     {emailConfirmed && (
       <Tooltip title="Email Verificado">
@@ -64,12 +72,14 @@ const SecurityBadges: React.FC<{
       </Tooltip>
     )}
   </Stack>
-);
+));
+
+SecurityBadges.displayName = 'SecurityBadges';
 
 // ============================================================================
-// COMPONENTE: QUICK STATS
+// COMPONENTE: QUICK STATS (Memoizado)
 // ============================================================================
-const UserQuickStats: React.FC<{
+const UserQuickStats = memo<{
   stats: {
     total: number;
     activos: number;
@@ -78,7 +88,7 @@ const UserQuickStats: React.FC<{
     admins: number;
   };
   isLoading?: boolean;
-}> = ({ stats, isLoading }) => (
+}>(({ stats, isLoading }) => (
   <Box
     sx={{
       display: 'grid',
@@ -128,7 +138,9 @@ const UserQuickStats: React.FC<{
       subtitle="Rol elevado"
     />
   </Box>
-);
+));
+
+UserQuickStats.displayName = 'UserQuickStats';
 
 // ============================================================================
 // COMPONENTE PRINCIPAL
@@ -137,6 +149,7 @@ const AdminUsuarios: React.FC = () => {
   const theme = useTheme();
   const logic = useAdminUsuarios();
 
+  // ✨ Stats con admins
   const statsWithAdmins = useMemo(
     () => ({
       ...logic.stats,
@@ -145,6 +158,7 @@ const AdminUsuarios: React.FC = () => {
     [logic.stats, logic.users]
   );
 
+  // ✨ COLUMNAS OPTIMIZADAS
   const columns = useMemo<DataTableColumn<UsuarioDto>[]>(
     () => [
       {
@@ -200,6 +214,7 @@ const AdminUsuarios: React.FC = () => {
         id: 'email',
         label: 'Email',
         minWidth: 180,
+        hideOnMobile: true,
         render: (user) => (
           <Typography variant="body2" noWrap>
             {user.email}
@@ -213,7 +228,13 @@ const AdminUsuarios: React.FC = () => {
           const isAdmin = user.rol === 'admin';
           return (
             <Chip
-              icon={isAdmin ? <AdminPanelSettings sx={{ fontSize: '14px !important' }} /> : <Person sx={{ fontSize: '14px !important' }} />}
+              icon={
+                isAdmin ? (
+                  <AdminPanelSettings sx={{ fontSize: '14px !important' }} />
+                ) : (
+                  <Person sx={{ fontSize: '14px !important' }} />
+                )
+              }
               label={user.rol.toUpperCase()}
               size="small"
               sx={{
@@ -239,8 +260,12 @@ const AdminUsuarios: React.FC = () => {
           const isSelf = user.id === logic.currentUser?.id;
           const isAdminAndActive = user.rol === 'admin' && user.activo;
           const isProcessing =
-            logic.toggleStatusMutation.isPending && logic.confirmDialog.data?.id === user.id;
-          const isDisabled = logic.toggleStatusMutation.isPending || isAdminAndActive || isSelf;
+            logic.toggleStatusMutation.isPending && 
+            logic.confirmDialog.data?.id === user.id;
+          const isDisabled = 
+            logic.toggleStatusMutation.isPending || 
+            isAdminAndActive || 
+            isSelf;
 
           return (
             <Stack direction="row" alignItems="center" spacing={1} justifyContent="center">
@@ -249,7 +274,10 @@ const AdminUsuarios: React.FC = () => {
               ) : (
                 <Switch
                   checked={user.activo}
-                  onChange={() => logic.handleToggleStatusClick(user)}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    logic.handleToggleStatusClick(user);
+                  }}
                   size="small"
                   disabled={isDisabled}
                   color="success"
@@ -285,7 +313,10 @@ const AdminUsuarios: React.FC = () => {
         render: (user) => (
           <Tooltip title="Editar Usuario">
             <IconButton
-              onClick={() => logic.handleEditUser(user)}
+              onClick={(e) => {
+                e.stopPropagation();
+                logic.handleEditUser(user);
+              }}
               size="small"
               disabled={logic.toggleStatusMutation.isPending}
               sx={{
@@ -317,9 +348,7 @@ const AdminUsuarios: React.FC = () => {
         spacing={2}
       >
         <Box>
-          <Typography variant="h1">
-            Gestión de Usuarios
-          </Typography>
+          <Typography variant="h1">Gestión de Usuarios</Typography>
           <Typography variant="subtitle1" color="text.secondary">
             Control de accesos, roles y seguridad perimetral
           </Typography>
@@ -329,7 +358,7 @@ const AdminUsuarios: React.FC = () => {
           variant="contained"
           startIcon={<PersonAdd />}
           onClick={logic.createModal.open}
-          sx={{ whiteSpace: 'nowrap' }}
+          sx={{ whiteSpace: 'nowrap', fontWeight: 700 }}
         >
           Nuevo Usuario
         </Button>
@@ -376,7 +405,8 @@ const AdminUsuarios: React.FC = () => {
           data={logic.users}
           getRowKey={(user) => user.id}
           isRowActive={(user) => user.activo}
-          showInactiveToggle={true}
+          // 🔥 CORRECCIÓN AQUÍ: false para respetar el filtro externo del Select
+          showInactiveToggle={false} 
           inactiveLabel="Inactivos"
           highlightedRowId={logic.highlightedUserId}
           emptyMessage="No se encontraron usuarios."
@@ -409,7 +439,8 @@ const AdminUsuarios: React.FC = () => {
       <ConfirmDialog
         controller={logic.confirmDialog}
         onConfirm={() =>
-          logic.confirmDialog.data && logic.toggleStatusMutation.mutate(logic.confirmDialog.data)
+          logic.confirmDialog.data && 
+          logic.toggleStatusMutation.mutate(logic.confirmDialog.data)
         }
         isLoading={logic.toggleStatusMutation.isPending}
       />

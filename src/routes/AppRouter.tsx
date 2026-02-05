@@ -10,7 +10,7 @@ import { ROUTES } from '.';
 // ============ LAZY LOADING ============
 
 // Layouts
-const AdminLayout = lazy(() => import('@/shared/layouts/AdminLayout')); // Asegúrate de la ruta correcta
+const AdminLayout = lazy(() => import('@/shared/layouts/AdminLayout'));
 const ClientLayout = lazy(() => import('@/shared/layouts/ClientLayout')); 
 
 // Auth Pages
@@ -26,10 +26,8 @@ const Home = lazy(() => import('@/features/public/Home'));
 const ComoFunciona = lazy(() => import('@/features/public/ComoFunciona'));
 const Nosotros = lazy(() => import('@/features/public/Nosotros'));
 
-
 // Proyectos
 const RoleSelection = lazy(() => import('@/features/client/pages/Proyectos/RoleSelection'));
-
 const DetalleProyecto = lazy(() => import('@/features/client/pages/Proyectos/DetalleProyecto'));
 
 // Client Dashboard & Features
@@ -86,9 +84,9 @@ const AppRouter = () => {
           <Route path={ROUTES.PUBLIC.COMO_FUNCIONA} element={<ComoFunciona />} />
           <Route path={ROUTES.PUBLIC.NOSOTROS} element={<Nosotros />} />
           
-          
-          {/* ✅ SELECCIÓN DE ROL AHORA ES PÚBLICA (Movida aquí) */}
+          {/* ✅ PROYECTOS PÚBLICOS - Cualquiera puede ver */}
           <Route path={ROUTES.PROYECTOS.SELECCION_ROL} element={<RoleSelection />} />
+          <Route path={ROUTES.PROYECTOS.DETALLE} element={<DetalleProyecto />} />
 
           {/* Login y Registro con Navbar Pública */}
           <Route path={ROUTES.LOGIN} element={<LoginPage />} />
@@ -98,13 +96,7 @@ const AppRouter = () => {
           <Route path={ROUTES.CONFIRM_EMAIL} element={<ConfirmEmailPage />} />
           <Route path={ROUTES.UNAUTHORIZED} element={<Unauthorized />} />
 
-
-          {/* ---- RUTAS PRIVADAS CLIENTE (Requieren Login) ---- */}
-          
-          {/* ✅ DETALLE DE PROYECTO SIGUE PROTEGIDO */}
-          <Route path={ROUTES.PROYECTOS.DETALLE} element={<ProtectedRoute><DetalleProyecto /></ProtectedRoute>} />
-          
-      
+          {/* ---- RUTAS PROTEGIDAS (Requieren Login) ---- */}
 
           {/* Dashboard y Cuenta */}
           <Route path={ROUTES.CLIENT.DASHBOARD} element={<ProtectedRoute><UserDashboard /></ProtectedRoute>} />

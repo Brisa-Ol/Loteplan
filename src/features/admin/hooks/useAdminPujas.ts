@@ -1,111 +1,157 @@
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
 import { useConfirmDialog } from '../../../shared/hooks/useConfirmDialog';
 import { useModal } from '../../../shared/hooks/useModal';
+import useSnackbar from '../../../shared/hooks/useSnackbar';
 
 import LoteService from '@/core/api/services/lote.service';
 import PujaService from '@/core/api/services/puja.service';
 import UsuarioService from '@/core/api/services/usuario.service';
+
 import type { LoteDto } from '@/core/types/dto/lote.dto';
 import type { PujaDto } from '@/core/types/dto/puja.dto';
 import type { UsuarioDto } from '@/core/types/dto/usuario.dto';
-import useSnackbar from '../../../shared/hooks/useSnackbar';
 import { useSortedData } from './useSortedData';
+
+// ============================================================================
+// DEBOUNCE HELPER
+// ============================================================================
+function useDebouncedValue<T>(value: T, delay: number = 300): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+  useEffect(() => {
+    const handler = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(handler);
+  }, [value, delay]);
+  return debouncedValue;
+}
 
 export const useAdminPujas = () => {
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useSnackbar();
 
-  // Estados UI
+  // --- MODALES (Nivel Superior) ---
+  const detallePujaModal = useModal();
+  const confirmDialog = useConfirmDialog();
+
+  const modales = useMemo(() => ({
+    detallePuja: detallePujaModal,
+    confirmDialog: confirmDialog
+  }), [detallePujaModal, confirmDialog]);
+
+  // --- ESTADOS UI ---
   const [tabValue, setTabValue] = useState(0);
   const [filterLoteNombre, setFilterLoteNombre] = useState('');
   const [filterUserId, setFilterUserId] = useState('');
-
-  // Estados Selección (Solo para detalle de puja)
+  
+  // Selección
   const [pujaSeleccionada, setPujaSeleccionada] = useState<PujaDto | null>(null);
 
-  // Modales
-  const modales = {
-    detallePuja: useModal(),
-    confirmDialog: useConfirmDialog()
-  };
+  // Debounce
+  const debouncedFilterLote = useDebouncedValue(filterLoteNombre, 300);
 
-  // --- QUERIES ---
-  const { data: lotesRaw = [], isLoading: loadingLotes, error: errorLotes } = useQuery<LoteDto[]>({
-    queryKey: ['adminLotes'],
-    queryFn: async () => (await LoteService.findAllAdmin()).data,
-    refetchInterval: 10000,
-  });
+  // --- QUERIES INTELIGENTES ---
 
-  const { data: pujasRaw = [], isLoading: loadingPujas } = useQuery<PujaDto[]>({
-    queryKey: ['adminPujas'],
-    queryFn: async () => (await PujaService.getAllAdmin()).data,
-    refetchInterval: tabValue === 0 ? 5000 : 15000,
-  });
-
+  // 1. Usuarios (Cache agresivo)
   const { data: usuarios = [] } = useQuery<UsuarioDto[]>({
-    queryKey: ['adminUsuarios'],
-    queryFn: async () => (await UsuarioService.findAllAdmins()).data,
-    staleTime: 1000 * 60 * 5,
+    queryKey: ['adminUsuarios', 'simple'],
+    queryFn: async () => (await UsuarioService.findAll()).data,
+    staleTime: 1000 * 60 * 10,
+    gcTime: 1000 * 60 * 30,
   });
 
-  // ✨ ORDENAMIENTO + HIGHLIGHT
-  const { sortedData: lotesOrdenados, highlightedId, triggerHighlight } = useSortedData(lotesRaw);
+  // 2. Lotes
+  const { 
+    data: lotesRaw = [], 
+    isLoading: loadingLotes, 
+    error: errorLotes // 🔴 Capturamos error aquí
+  } = useQuery<LoteDto[]>({
+    queryKey: ['adminLotes', tabValue === 0 ? 'active' : 'all'],
+    queryFn: async () => {
+      if (tabValue === 0) return (await LoteService.getAllActive()).data;
+      return (await LoteService.findAllAdmin()).data;
+    },
+    refetchInterval: tabValue === 0 ? 10000 : false,
+    staleTime: tabValue === 0 ? 5000 : 30000,
+  });
 
-  // Helpers
-  const getUserName = (id: number) => {
+  // 3. Pujas (SOLO para TAB 0 - En Vivo)
+  const { 
+    data: pujasActivas = [], 
+    isLoading: loadingPujas,
+    error: errorPujas // 🔴 Capturamos error aquí también
+  } = useQuery<PujaDto[]>({
+    queryKey: ['adminPujas', 'active'],
+    queryFn: async () => (await PujaService.getAllActive()).data,
+    enabled: tabValue === 0,
+    refetchInterval: 5000,
+  });
+
+  // --- PROCESAMIENTO DE DATOS ---
+
+  // Helper Nombres
+  const getUserName = useCallback((id: number) => {
     const user = usuarios.find(u => u.id === id);
     if (user) return user.nombre_usuario || `${user.nombre} ${user.apellido}`;
-    return `User #${id}`;
-  };
+    return `ID #${id}`;
+  }, [usuarios]);
 
-  // --- ANALYTICS (Memoized) ---
-  const filteredLotes = useMemo(() => {
-    let result = lotesOrdenados;
-    if (filterLoteNombre) {
-      result = result.filter(l => l.nombre_lote.toLowerCase().includes(filterLoteNombre.toLowerCase()));
-    }
-    return result;
-  }, [lotesOrdenados, filterLoteNombre]);
-
+  // Mapa de Pujas
   const pujasPorLote = useMemo(() => {
+    if (tabValue !== 0) return {};
     const map: Record<number, PujaDto[]> = {};
-    pujasRaw.forEach(p => {
-      if (filterUserId && p.id_usuario.toString() !== filterUserId) return;
+    
+    pujasActivas.forEach(p => {
       if (!map[p.id_lote]) map[p.id_lote] = [];
       map[p.id_lote].push(p);
     });
 
-    // Ordenar pujas por monto descendente
     Object.keys(map).forEach(key => {
       map[Number(key)].sort((a, b) => Number(b.monto_puja) - Number(a.monto_puja));
     });
+    
     return map;
-  }, [pujasRaw, filterUserId]);
+  }, [pujasActivas, tabValue]);
 
+  // Filtrado General de Lotes
+  const { sortedData: filteredLotes, highlightedId, triggerHighlight } = useSortedData(lotesRaw);
+
+  // Analytics y Listas por Tab
   const analytics = useMemo(() => {
-    const activos = filteredLotes.filter(l => l.estado_subasta === 'activa');
+    const search = debouncedFilterLote.toLowerCase();
+    
+    const lotesFiltradosPorNombre = filteredLotes.filter(l => 
+        !search || l.nombre_lote.toLowerCase().includes(search)
+    );
 
-    const pendientesPago = filteredLotes.filter(l => {
-      const matchesUser = filterUserId ? l.id_ganador?.toString() === filterUserId : true;
-      return l.estado_subasta === 'finalizada' && l.id_ganador && (l.intentos_fallidos_pago || 0) < 3 && matchesUser;
-    });
+    // Tab 0: Activos
+    const activos = lotesFiltradosPorNombre.filter(l => l.estado_subasta === 'activa');
 
-    const lotesEnRiesgo = filteredLotes.filter(l => (l.intentos_fallidos_pago || 0) > 0);
+    // Tab 1: Gestión de Cobros
+    const pendientesPago = lotesFiltradosPorNombre.filter(l => 
+      l.estado_subasta === 'finalizada' && 
+      l.id_ganador && 
+      (l.intentos_fallidos_pago || 0) < 3
+    );
+
+    // Tab 2: Impagos / Riesgo
+    const lotesEnRiesgo = lotesFiltradosPorNombre.filter(l => (l.intentos_fallidos_pago || 0) > 0);
 
     const dineroEnJuego = activos.reduce((acc, lote) => {
       const topPuja = pujasPorLote[lote.id]?.[0];
       return acc + (topPuja ? Number(topPuja.monto_puja) : Number(lote.precio_base));
     }, 0);
 
-    const totalPujasActivas = pujasRaw.filter(p => p.estado_puja === 'activa').length;
-
-    return { activos, pendientesPago, lotesEnRiesgo, dineroEnJuego, totalPujas: totalPujasActivas };
-  }, [filteredLotes, pujasPorLote, pujasRaw, filterUserId]);
+    return { 
+        activos, 
+        pendientesPago, 
+        lotesEnRiesgo, 
+        dineroEnJuego,
+        totalPujas: pujasActivas.length 
+    };
+  }, [filteredLotes, debouncedFilterLote, pujasPorLote, pujasActivas.length]);
 
   // --- MUTACIONES ---
 
-  // 1. Finalizar Subasta (Manual)
   const endAuctionMutation = useMutation({
     mutationFn: (id: number) => LoteService.endAuction(id),
     onSuccess: (_, id) => {
@@ -118,7 +164,6 @@ export const useAdminPujas = () => {
     onError: () => { showError('Error al finalizar'); modales.confirmDialog.close(); }
   });
 
-  // 2. Gestión Admin (Sancionar/Forzar cierre)
   const forceFinishMutation = useMutation({
     mutationFn: ({ idLote, idGanador }: { idLote: number, idGanador: number | null }) =>
       PujaService.manageAuctionEnd(idLote, idGanador),
@@ -130,17 +175,14 @@ export const useAdminPujas = () => {
     onError: (err: any) => showError(`Error: ${err.response?.data?.error || 'Datos inválidos'}`)
   });
 
-  // 3. Cancelar Ganadora (Anular adjudicación)
   const cancelarGanadoraMutation = useMutation({
     mutationFn: async ({ id, motivo }: { id: number; motivo: string }) => {
       return await PujaService.cancelarGanadoraAnticipada(id, motivo);
     },
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ['adminLotes'] });
-      queryClient.invalidateQueries({ queryKey: ['adminPujas'] });
-
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const msg = res.data.message || (res.data as any).mensaje || 'Adjudicación anulada y token devuelto.';
+      const msg = res.data?.message || 'Adjudicación anulada y token devuelto.';
       showSuccess(`✅ ${msg}`);
       modales.confirmDialog.close();
     },
@@ -151,33 +193,42 @@ export const useAdminPujas = () => {
   });
 
   // --- HANDLERS ---
-  const handleFinalizarSubasta = (lote: LoteDto) => {
+
+  const handleFinalizarSubasta = useCallback((lote: LoteDto) => {
     modales.confirmDialog.confirm('end_auction', lote);
-  };
+  }, [modales.confirmDialog]);
 
-  const handleCancelarAdjudicacion = (lote: LoteDto) => {
-    const puja = pujasRaw.find(p => p.id_lote === lote.id && p.estado_puja === 'ganadora_pendiente');
-    if (!puja) return showError('No se encontró la puja ganadora pendiente.');
-
-    modales.confirmDialog.confirm('cancel_ganadora_anticipada', {
-      ...lote,
-      pujaId: puja.id,
-      id_ganador: lote.id_ganador
-    });
-  };
-
-  const handleConfirmAction = (inputValue?: string) => {
-    if (modales.confirmDialog.action === 'end_auction' && modales.confirmDialog.data) {
-      endAuctionMutation.mutate(modales.confirmDialog.data.id);
+  const handleCancelarAdjudicacion = useCallback(async (lote: LoteDto) => {
+    try {
+        if (lote.id_puja_mas_alta) {
+             modales.confirmDialog.confirm('cancel_ganadora_anticipada', {
+                ...lote,
+                pujaId: lote.id_puja_mas_alta,
+                id_ganador: lote.id_ganador
+            });
+        } else {
+            showError('No se pudo identificar la puja ganadora automáticamente.');
+        }
+    } catch (e) {
+        console.error(e);
+        showError('Error al preparar cancelación');
     }
-    if (modales.confirmDialog.action === 'cancel_ganadora_anticipada' && modales.confirmDialog.data) {
+  }, [modales.confirmDialog, showError]);
+
+  const handleConfirmAction = useCallback((inputValue?: string) => {
+    const { action, data } = modales.confirmDialog;
+    
+    if (action === 'end_auction' && data) {
+      endAuctionMutation.mutate(data.id);
+    }
+    if (action === 'cancel_ganadora_anticipada' && data) {
       if (!inputValue) return;
       cancelarGanadoraMutation.mutate({
-        id: modales.confirmDialog.data.pujaId,
+        id: data.pujaId,
         motivo: inputValue
       });
     }
-  };
+  }, [modales.confirmDialog, endAuctionMutation, cancelarGanadoraMutation]);
 
   return {
     // Estado
@@ -189,11 +240,12 @@ export const useAdminPujas = () => {
     highlightedId,
 
     // Datos y Loading
-    loading: loadingLotes || loadingPujas,
-    error: errorLotes,
+    loading: loadingLotes || (tabValue === 0 && loadingPujas),
+    // 🟢 AQUÍ ESTÁ LA CORRECCIÓN: Devolvemos el error combinado
+    error: errorLotes || (tabValue === 0 ? errorPujas : null),
+    
     analytics,
     pujasPorLote,
-    pujas: pujasRaw,
     getUserName,
 
     // Seleccionados

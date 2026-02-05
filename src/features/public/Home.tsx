@@ -1,47 +1,36 @@
-import React, { useState } from 'react';
+import { ROUTES } from '@/routes';
 import {
+  ArrowForward,
+  CheckCircle,
+  Home as HomeIcon,
+  TrendingUp,
+} from '@mui/icons-material';
+import {
+  alpha,
   Box,
-  Container,
-  Typography,
   Button,
   Card,
   CardContent,
-  CardMedia,
-  Stack,
   Chip,
-  Paper,
+  Container,
+  Stack,
+  Typography,
   useTheme,
-  alpha,
-  IconButton,
-
 } from '@mui/material';
-import {
-  TrendingUp,
-  Home as HomeIcon,
-  Shield,
-  CheckCircle,
-  PlayArrow,
-  ArrowForward,
-  Group,
-  LocationOn,
-} from '@mui/icons-material';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 // ==========================================
-// DEFINICIÓN DE TIPOS (SOLUCIÓN AL ERROR)
+// DEFINICIÓN DE TIPOS
 // ==========================================
-
-// 1. Definimos qué claves de la paleta vamos a permitir.
-// Estas claves garantizan que theme.palette[key] tenga una propiedad .main
 type AllowedColors = 'primary' | 'secondary' | 'warning' | 'error';
 
-// 2. Creamos la interfaz para los objetos de "modos"
 interface ModeData {
   type: string;
   title: string;
   subtitle: string;
   icon: React.ElementType;
-  color: AllowedColors; // <--- Aquí está la magia: ya no es 'string', es un color válido.
+  color: AllowedColors;
   bgGradient: string;
   description: string;
   benefits: string[];
@@ -56,7 +45,6 @@ const trustIndicators = [
   { value: '100%', label: 'Seguro y legal' },
 ];
 
-// 3. Tipamos el array con la interfaz ModeData
 const twoModes: ModeData[] = [
   {
     type: 'ahorrista',
@@ -88,71 +76,6 @@ const twoModes: ModeData[] = [
   },
 ];
 
-const featuredProjects = [
-  {
-    id: 1,
-    name: 'Portfolio Gran Mendoza',
-    location: 'Mendoza Norte',
-    type: 'inversionista',
-    image: '/Home/Home2a_modoinversionista.jpg',
-    status: 'Abierto',
-    stats: [
-      { label: 'Rentabilidad', value: '15,5% anual', highlight: true },
-      { label: 'Inversión mínima', value: 'USD 10.000' },
-      { label: 'Plazo', value: '24 meses' },
-    ],
-  },
-  {
-    id: 2,
-    name: 'Campus Perdriel',
-    location: 'Luján de Cuyo',
-    type: 'inversionista',
-    image: '/Home/Home1b_modoahorrista.jpg',
-    status: 'Abierto',
-    stats: [
-      { label: 'Rentabilidad', value: '35% en 5 años', highlight: true },
-      { label: 'Inversión mínima', value: 'USD 7.000' },
-      { label: 'Plazo', value: '5 años' },
-    ],
-  },
-  {
-    id: 3,
-    name: 'Lotes El Challao',
-    location: 'Las Heras, Mendoza',
-    type: 'ahorrista',
-    image: '/Home/Home1b_modoahorrista.jpg',
-    status: '84 cupos',
-    stats: [
-      { label: 'Cuota mensual', value: '$ 297.000', highlight: true },
-      { label: 'Plazo', value: '96 meses' },
-      { label: 'Subasta desde', value: 'Cuota 12' },
-    ],
-  },
-];
-
-const whyUsFeatures = [
-  {
-    icon: Shield,
-    title: '100% seguro y legal',
-    description: 'Todos los proyectos están respaldados por fideicomiso y escritura pública. Tu dinero está protegido.',
-  },
-  {
-    icon: Group,
-    title: 'Tecnología colaborativa',
-    description: 'Unimos personas con objetivos comunes. Juntos logramos lo que solos sería imposible.',
-  },
-  {
-    icon: TrendingUp,
-    title: 'Inversión tangible',
-    description: 'No invertís en promesas, invertís en metros cuadrados de tierra real con alto potencial de crecimiento.',
-  },
-  {
-    icon: CheckCircle,
-    title: 'Proceso 100% digital',
-    description: 'Desde tu casa, sin papeleo. Todo el proceso online, simple y transparente.',
-  },
-];
-
 // ==========================================
 // COMPONENTE PRINCIPAL
 // ==========================================
@@ -172,7 +95,7 @@ const Home: React.FC = () => {
           color: 'primary.contrastText',
           position: 'relative',
           overflow: 'hidden',
-          py: { xs: 8, md: 12 },
+          py: { xs: 10, md: 14 },
         }}
       >
         <Box
@@ -189,9 +112,8 @@ const Home: React.FC = () => {
             display: 'flex',
             flexDirection: { xs: 'column', md: 'row' },
             alignItems: 'center',
-            gap: 6
+            gap: 8
           }}>
-
             {/* Left Column - Text */}
             <Box sx={{ flex: 1, width: '100%' }}>
               <Chip
@@ -201,7 +123,8 @@ const Home: React.FC = () => {
                   color: 'inherit',
                   backdropFilter: 'blur(10px)',
                   border: `1px solid ${alpha(theme.palette.common.white, 0.3)}`,
-                  mb: 3,
+                  mb: 4,
+                  fontWeight: 600
                 }}
               />
 
@@ -223,10 +146,11 @@ const Home: React.FC = () => {
               <Typography
                 variant="h6"
                 sx={{
-                  mb: 4,
+                  mb: 5,
                   color: alpha(theme.palette.common.white, 0.9),
                   fontWeight: 400,
                   maxWidth: 600,
+                  lineHeight: 1.7
                 }}
               >
                 Comprá en cuotas sin interés o invertí con rentabilidad segura.{' '}
@@ -235,18 +159,18 @@ const Home: React.FC = () => {
                 </Box>
               </Typography>
 
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 6 }}>
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 7 }}>
                 <Button
                   variant="contained"
                   size="large"
                   startIcon={<HomeIcon />}
-                  onClick={() => navigate('/register')}
+                  onClick={() => navigate(ROUTES.REGISTER)}
                   sx={{
                     bgcolor: 'common.white',
                     color: 'primary.main',
+                    fontWeight: 600,
                     '&:hover': {
                       bgcolor: alpha(theme.palette.common.white, 0.9),
-                      transform: 'translateY(-2px)',
                     },
                   }}
                 >
@@ -256,10 +180,11 @@ const Home: React.FC = () => {
                   variant="outlined"
                   size="large"
                   startIcon={<TrendingUp />}
-                  onClick={() => navigate('/login')}
+                  onClick={() => navigate(ROUTES.LOGIN)}
                   sx={{
                     borderColor: 'common.white',
                     color: 'common.white',
+                    fontWeight: 600,
                     '&:hover': {
                       borderColor: 'common.white',
                       bgcolor: alpha(theme.palette.common.white, 0.1),
@@ -267,14 +192,14 @@ const Home: React.FC = () => {
                     },
                   }}
                 >
-                  Incia Sesion
+                  Inicia Sesión
                 </Button>
               </Stack>
 
               <Box sx={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(3, 1fr)',
-                gap: 2
+                gap: 3
               }}>
                 {trustIndicators.map((item, index) => (
                   <Box key={index}>
@@ -294,15 +219,14 @@ const Home: React.FC = () => {
               <Box sx={{ position: 'relative', transform: 'perspective(1000px) rotateY(-5deg)' }}>
                 <Box
                   component="img"
-                  src="public/nosotros/Nosotros_2a.jpg"
-                  alt="Terrenos Nectárea"
+                  src="/nosotros/Nosotros_2a.jpg"
+                  alt="Terrenos Loteplan"
                   sx={{
                     width: '100%',
                     borderRadius: 4,
                     boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
                   }}
                 />
-                
               </Box>
             </Box>
           </Box>
@@ -312,27 +236,24 @@ const Home: React.FC = () => {
       {/* ==========================================
           QUÉ ES NECTÁREA
           ========================================== */}
-     <Box sx={{ py: { xs: 8, md: 12 }, bgcolor: 'secondary.light' }}>
+      <Box sx={{ py: { xs: 10, md: 14 }, bgcolor: 'secondary.light' }}>
         <Container maxWidth="lg">
-          
-          {/* Contenedor GRID: 1 columna en móvil, 2 en escritorio */}
-          <Box sx={{ 
-            display: 'grid', 
-            gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, 
-            gap: { xs: 4, md: 8 }, // Espacio entre imagen y texto
-            alignItems: 'center'   // Centra el texto verticalmente respecto a la imagen
+          <Box sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+            gap: { xs: 6, md: 10 },
+            alignItems: 'center'
           }}>
-
             {/* COLUMNA IZQUIERDA: IMAGEN */}
             <Box
               component="img"
-              src="/nosotros/Nosotros_2a.jpg" // Nota: quité 'public' del path
-              alt="Equipo Nectárea"
+              src="/nosotros/Nosotros_2a.jpg"
+              alt="Equipo Loteplan"
               sx={{
                 width: '100%',
                 height: 'auto',
                 borderRadius: 4,
-                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.15)',
                 display: 'block',
               }}
             />
@@ -342,11 +263,12 @@ const Home: React.FC = () => {
               <Typography
                 variant="h3"
                 gutterBottom
-                sx={{ mb: 3, fontWeight: 800 }}
+                sx={{ mb: 4, fontWeight: 800 }}
+                color="text.primary"
               >
-                ¿Qué es Nectárea?
+                ¿Qué es Loteplan?
               </Typography>
-              
+
               <Typography
                 variant="h6"
                 color="text.secondary"
@@ -359,13 +281,10 @@ const Home: React.FC = () => {
                 que conecta ahorristas que buscan su terreno con inversionistas que quieren rentabilidad.
               </Typography>
 
-              <Typography variant="h6" fontWeight={700} sx={{ mb: 4 }}>
+              <Typography variant="h6" fontWeight={700} color="text.primary" sx={{ mb: 4 }}>
                 Simple: unimos personas, financiamos proyectos, todos ganan.
               </Typography>
-
-
             </Box>
-
           </Box>
         </Container>
       </Box>
@@ -373,35 +292,38 @@ const Home: React.FC = () => {
       {/* ==========================================
           DOS MODOS
           ========================================== */}
-      <Box sx={{ py: { xs: 8, md: 12 } }}>
+      <Box sx={{ py: { xs: 10, md: 14 } }}>
         <Container maxWidth="lg">
-          <Typography variant="h3" textAlign="center" gutterBottom>
+          <Typography variant="h3" textAlign="center" gutterBottom fontWeight={800} color="text.primary">
             Dos formas de participar
           </Typography>
-          <Typography variant="subtitle1" textAlign="center" color="text.secondary" sx={{ mb: 6 }}>
+          <Typography variant="subtitle1" textAlign="center" color="text.secondary" sx={{ mb: 8, fontWeight: 400 }}>
             Elegí el modo que mejor se adapte a tus objetivos
           </Typography>
 
           <Box sx={{
             display: 'grid',
             gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
-            gap: 4
+            gap: 5
           }}>
             {twoModes.map((mode) => (
-              <Box key={mode.type}>
+              <Box key={mode.type} sx={{ display: 'flex' }}>
                 <Card
                   onMouseEnter={() => setHoveredMode(mode.type)}
                   onMouseLeave={() => setHoveredMode(null)}
                   sx={{
-                    height: '100%',
+                    width: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
                     background: mode.bgGradient,
-                    // Ahora TS sabe que mode.color es una clave válida de palette
                     border: `1px solid ${alpha(theme.palette[mode.color].main, 0.2)}`,
-                    transform: hoveredMode === mode.type ? 'translateY(-8px) !important' : 'none',
+                    transition: 'all 0.3s ease',
+                    transform: hoveredMode === mode.type ? 'translateY(-8px)' : 'none',
+                    boxShadow: hoveredMode === mode.type ? theme.shadows[8] : theme.shadows[1],
                   }}
                 >
-                  <CardContent>
-                    <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 3 }}>
+                  <CardContent sx={{ p: 4, display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
+                    <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 4 }}>
                       <Box
                         sx={{
                           width: 56,
@@ -417,7 +339,7 @@ const Home: React.FC = () => {
                         <mode.icon sx={{ fontSize: 28, color: 'white' }} />
                       </Box>
                       <Box>
-                        <Typography variant="h5">
+                        <Typography variant="h5" fontWeight={700} color="text.primary">
                           {mode.title}
                         </Typography>
                         <Typography variant="subtitle2" color={`${mode.color}.dark`} fontWeight={700}>
@@ -426,15 +348,15 @@ const Home: React.FC = () => {
                       </Box>
                     </Stack>
 
-                    <Typography variant="body1" sx={{ mb: 3 }}>
+                    <Typography variant="body1" sx={{ mb: 4, lineHeight: 1.7 }} color="text.primary">
                       {mode.description}
                     </Typography>
 
-                    <Stack spacing={1.5} sx={{ mb: 4 }}>
+                    <Stack spacing={2} sx={{ mb: 5, flexGrow: 1 }}>
                       {mode.benefits.map((benefit, index) => (
-                        <Stack direction="row" spacing={1} alignItems="center" key={index}>
+                        <Stack direction="row" spacing={1.5} alignItems="center" key={index}>
                           <CheckCircle fontSize="small" color={mode.color} />
-                          <Typography variant="body2">{benefit}</Typography>
+                          <Typography variant="body2" color="text.primary">{benefit}</Typography>
                         </Stack>
                       ))}
                     </Stack>
@@ -444,7 +366,8 @@ const Home: React.FC = () => {
                       fullWidth
                       endIcon={<ArrowForward />}
                       color={mode.color}
-                      onClick={() => navigate('/comofunciona')}
+                      onClick={() => navigate(ROUTES.PUBLIC.COMO_FUNCIONA)}
+                      sx={{ fontWeight: 600, mt: 'auto' }}
                     >
                       Conocer más
                     </Button>
@@ -456,24 +379,22 @@ const Home: React.FC = () => {
         </Container>
       </Box>
 
-    
-
       {/* ==========================================
           CTA FINAL
           ========================================== */}
       <Box
         sx={{
-          py: { xs: 10, md: 12 },
+          py: { xs: 12, md: 14 },
           background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
           color: 'white',
           textAlign: 'center',
         }}
       >
         <Container maxWidth="md">
-          <Typography variant="h3" gutterBottom sx={{ mb: 3 }}>
+          <Typography variant="h3" gutterBottom sx={{ mb: 3, fontWeight: 800 }}>
             ¿Listo para tu terreno propio?
           </Typography>
-          <Typography variant="h6" sx={{ mb: 5, color: alpha(theme.palette.common.white, 0.9), fontWeight: 400 }}>
+          <Typography variant="h6" sx={{ mb: 6, color: alpha(theme.palette.common.white, 0.9), fontWeight: 400, lineHeight: 1.7 }}>
             Registrate gratis y explorá todas las oportunidades disponibles. Sin compromiso, sin
             cargos ocultos.
           </Typography>
@@ -483,36 +404,38 @@ const Home: React.FC = () => {
               variant="contained"
               size="large"
               startIcon={<HomeIcon />}
-              onClick={() => navigate('/registro')}
+              onClick={() => navigate(ROUTES.REGISTER)}
               sx={{
                 bgcolor: 'white',
                 color: 'primary.main',
+                fontWeight: 600,
                 '&:hover': {
                   bgcolor: alpha(theme.palette.common.white, 0.9),
                 },
               }}
             >
-              Registrarme 
+              Registrarme
             </Button>
             <Button
               variant="outlined"
               size="large"
               startIcon={<TrendingUp />}
-              onClick={() => navigate('/registro')}
+              onClick={() => navigate(ROUTES.LOGIN)}
               sx={{
                 borderColor: 'white',
                 color: 'white',
+                fontWeight: 600,
                 '&:hover': {
                   borderColor: 'white',
                   bgcolor: alpha(theme.palette.common.white, 0.1),
                 },
               }}
             >
-              Inciar Sesion
+              Iniciar Sesión
             </Button>
           </Stack>
 
-          <Typography variant="body1" sx={{ mt: 4, color: alpha(theme.palette.common.white, 0.8) }}>
+          <Typography variant="body1" sx={{ mt: 5, color: alpha(theme.palette.common.white, 0.8) }}>
             ¿Tenés dudas?{' '}
             <Box
               component="span"

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTheme } from '@mui/material';
 import useSnackbar from '@/shared/hooks/useSnackbar';
@@ -10,12 +10,39 @@ import SuscripcionService from '@/core/api/services/suscripcion.service';
 import ProyectoService from '@/core/api/services/proyecto.service';
 import { useSortedData } from './useSortedData';
 
+// ============================================================================
+// HOOK DE DEBOUNCE (Inline para consistencia)
+// ============================================================================
+function useDebouncedValue<T>(value: T, delay: number = 300): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(handler);
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+
+// ============================================================================
+// HOOK PRINCIPAL - ULTRA OPTIMIZADO
+// ============================================================================
 export const useAdminSuscripciones = () => {
   const queryClient = useQueryClient();
   const theme = useTheme();
   const { showSuccess, showError } = useSnackbar();
 
-  // Estados UI
+  // --- MODALES (CORREGIDO: Hooks llamados en nivel superior) ---
+  const detailModal = useModal();
+  const confirmDialog = useConfirmDialog();
+
+  // Agrupamos en useMemo
+  const modales = useMemo(() => ({
+    detail: detailModal,
+    confirm: confirmDialog
+  }), [detailModal, confirmDialog]);
+
+  // --- ESTADOS UI ---
   const [tabIndex, setTabIndex] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterProject, setFilterProject] = useState<string>('all');
@@ -24,55 +51,63 @@ export const useAdminSuscripciones = () => {
   // Selección
   const [selectedSuscripcion, setSelectedSuscripcion] = useState<SuscripcionDto | null>(null);
 
-  // Modales
-  const modales = {
-    detail: useModal(),
-    confirm: useConfirmDialog()
-  };
+  // ✨ DEBOUNCE del search term
+  const debouncedSearchTerm = useDebouncedValue(searchTerm, 300);
 
-  // --- QUERIES ---
+  // --- QUERIES CON CACHE OPTIMIZADO ---
   const { data: suscripcionesRaw = [], isLoading: l1, error } = useQuery({
     queryKey: ['adminSuscripciones', filterStatus],
     queryFn: async () => {
+      // Optimizamos la llamada según el filtro para traer menos data del back si es posible
       if (filterStatus === 'activas') {
         return (await SuscripcionService.findAllActivas()).data;
       }
       return (await SuscripcionService.findAll()).data;
     },
-    refetchInterval: 30000,
+    staleTime: 30000,        // 30 segundos de frescura
+    gcTime: 5 * 60 * 1000,   // 5 minutos en memoria
+    refetchOnWindowFocus: false,
   });
 
   // ✨ 1. ORDENAMIENTO + HIGHLIGHT
   const { sortedData: suscripcionesOrdenadas, highlightedId, triggerHighlight } = useSortedData(suscripcionesRaw);
 
+  // Selectores auxiliares (Proyectos)
   const { data: proyectos = [] } = useQuery({
     queryKey: ['adminProyectosSelect'],
     queryFn: async () => (await ProyectoService.getAllAdmin()).data,
     staleTime: 60000,
+    gcTime: 10 * 60 * 1000,
   });
 
+  // Métricas
   const { data: morosidadStats, isLoading: l2 } = useQuery({
     queryKey: ['metricsMorosidad'],
     queryFn: async () => (await SuscripcionService.getMorosityMetrics()).data,
+    staleTime: 30000,
   });
 
   const { data: cancelacionStats, isLoading: l3 } = useQuery({
     queryKey: ['metricsCancelacionMetrics'],
     queryFn: async () => (await SuscripcionService.getCancellationMetrics()).data,
+    staleTime: 30000,
   });
 
   const isLoading = l1 || l2 || l3;
 
-  // Filtrado (Sobre data ordenada)
+  // Filtrado (Sobre data ordenada + Debounce)
   const filteredSuscripciones = useMemo(() => {
+    const term = debouncedSearchTerm.toLowerCase();
+
     return suscripcionesOrdenadas.filter(suscripcion => {
-      const term = searchTerm.toLowerCase();
-      const matchesSearch =
+      // ✨ Short-circuit en búsqueda
+      const matchesSearch = !term || (
         suscripcion.usuario?.nombre.toLowerCase().includes(term) ||
         suscripcion.usuario?.apellido.toLowerCase().includes(term) ||
         suscripcion.usuario?.email.toLowerCase().includes(term) ||
         suscripcion.proyectoAsociado?.nombre_proyecto.toLowerCase().includes(term) ||
-        suscripcion.id.toString().includes(term);
+        suscripcion.id.toString().includes(term)
+      );
 
       let matchesProject = true;
       if (filterProject !== 'all') {
@@ -87,11 +122,10 @@ export const useAdminSuscripciones = () => {
 
       return matchesSearch && matchesProject && matchesStatus;
     });
-  }, [suscripcionesOrdenadas, searchTerm, filterProject, filterStatus]);
+  }, [suscripcionesOrdenadas, debouncedSearchTerm, filterProject, filterStatus]);
 
   // Cálculos Stats
   const stats = useMemo(() => {
-      // CORRECCIÓN: Convertir todo a Number explícitamente para evitar error de operador '>'
       const totalSuscripciones = Number(cancelacionStats?.total_suscripciones || 0);
       const totalCanceladas = Number(cancelacionStats?.total_canceladas || 0);
       return {
@@ -109,13 +143,14 @@ export const useAdminSuscripciones = () => {
   const cancelarMutation = useMutation({
     mutationFn: async (id: number) => await SuscripcionService.cancelarAdmin(id),
     onSuccess: (_, id) => {
+      // Invalida todo lo relacionado para recalcular métricas y listas
       queryClient.invalidateQueries({ queryKey: ['adminSuscripciones'] });
       queryClient.invalidateQueries({ queryKey: ['metricsCancelacionMetrics'] });
       queryClient.invalidateQueries({ queryKey: ['metricsMorosidad'] });
 
       modales.confirm.close();
       
-      // ✨ Highlight Automático (Visualizar qué se canceló)
+      // ✨ Highlight Automático
       triggerHighlight(id);
       showSuccess('Suscripción cancelada correctamente.');
     },
@@ -126,35 +161,37 @@ export const useAdminSuscripciones = () => {
     }
   });
 
-  // --- HANDLERS ---
-  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => setTabIndex(newValue);
+  // --- HANDLERS (Callbacks Estables) ---
+  const handleTabChange = useCallback((_event: React.SyntheticEvent, newValue: number) => {
+    setTabIndex(newValue);
+  }, []);
 
-  const handleCancelarClick = (suscripcion: SuscripcionDto) => {
+  const handleCancelarClick = useCallback((suscripcion: SuscripcionDto) => {
     if (!suscripcion.activo) return;
     modales.confirm.confirm('admin_cancel_subscription', suscripcion);
-  };
+  }, [modales.confirm]);
 
-  const handleConfirmAction = () => {
+  const handleConfirmAction = useCallback(() => {
     if (modales.confirm.action === 'admin_cancel_subscription' && modales.confirm.data) {
       cancelarMutation.mutate(modales.confirm.data.id);
     }
-  };
+  }, [modales.confirm, cancelarMutation]);
 
-  const handleVerDetalle = (s: SuscripcionDto) => {
+  const handleVerDetalle = useCallback((s: SuscripcionDto) => {
     setSelectedSuscripcion(s);
     modales.detail.open();
-  };
+  }, [modales.detail]);
 
-  const handleCerrarModal = () => {
+  const handleCerrarModal = useCallback(() => {
     modales.detail.close();
     setTimeout(() => setSelectedSuscripcion(null), 300);
-  };
+  }, [modales.detail]);
 
   return {
     theme,
     // State
     tabIndex, 
-    setTabIndex, // CORRECCIÓN: Exportado para poder usarlo en el componente
+    setTabIndex, // Exportado para uso en alertas
     handleTabChange,
     searchTerm, setSearchTerm,
     filterProject, setFilterProject,

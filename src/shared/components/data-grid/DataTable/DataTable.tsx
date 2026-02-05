@@ -19,7 +19,7 @@ import {
   type SxProps,
   type Theme
 } from '@mui/material';
-import React, { useMemo, useState } from 'react';
+import React, { memo, useMemo, useState } from 'react';
 
 // ============================================================================
 // COMPONENTE: DATA SWITCH (Auxiliar)
@@ -32,7 +32,7 @@ interface DataSwitchProps {
   inactiveLabel?: string;
 }
 
-export const DataSwitch: React.FC<DataSwitchProps> = ({
+export const DataSwitch: React.FC<DataSwitchProps> = memo(({
   active,
   onChange,
   disabled = false,
@@ -57,14 +57,16 @@ export const DataSwitch: React.FC<DataSwitchProps> = ({
     labelPlacement="end"
     sx={{ margin: 0, '& .MuiTypography-root': { minWidth: 45 } }}
   />
-);
+));
+
+DataSwitch.displayName = 'DataSwitch';
 
 // ============================================================================
 // COMPONENTE PRINCIPAL: DATA TABLE
 // ============================================================================
 
 export interface DataTableColumn<T> {
-  id: keyof T | string; // Tipado más flexible pero seguro
+  id: keyof T | string;
   label: string;
   align?: 'left' | 'right' | 'center';
   minWidth?: number;
@@ -90,6 +92,85 @@ interface DataTableProps<T> {
   inactiveLabel?: string;
 }
 
+// ============================================================================
+// FILA MEMOIZADA PARA MEJOR PERFORMANCE
+// ============================================================================
+interface TableRowMemoProps<T> {
+  row: T;
+  columns: DataTableColumn<T>[];
+  getRowKey: (row: T) => string | number;
+  isHighlighted: boolean;
+  isActive: boolean;
+  onRowClick?: (row: T) => void;
+  getRowSx?: (row: T) => SxProps<Theme>;
+  theme: Theme;
+}
+
+const TableRowMemo = memo(<T,>({
+  row,
+  columns,
+  getRowKey,
+  isHighlighted,
+  isActive,
+  onRowClick,
+  getRowSx,
+  theme
+}: TableRowMemoProps<T>) => {
+  const rowKey = getRowKey(row);
+
+  return (
+    <TableRow
+      hover={isActive && !!onRowClick}
+      onClick={() => isActive && onRowClick?.(row)}
+      sx={{
+        cursor: onRowClick && isActive ? 'pointer' : 'default',
+        transition: 'all 0.2s',
+        bgcolor: isHighlighted ? alpha(theme.palette.success.main, 0.08) : 'inherit',
+        opacity: !isActive ? 0.5 : 1,
+        ...(!isActive && {
+          bgcolor: alpha(theme.palette.action.disabledBackground, 0.1)
+        }),
+        ...(getRowSx ? getRowSx(row) : {})
+      }}
+    >
+      {columns.map((column) => {
+        const cellValue = (row as any)[column.id];
+
+        return (
+          <TableCell
+            key={String(column.id)}
+            align={column.align || 'left'}
+            sx={{
+              whiteSpace: 'nowrap',
+              maxWidth: 300,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis'
+            }}
+          >
+            {column.render
+              ? column.render(row)
+              : column.format
+                ? column.format(cellValue, row)
+                : cellValue}
+          </TableCell>
+        );
+      })}
+    </TableRow>
+  );
+}, (prevProps, nextProps) => {
+  // Custom comparison para optimizar re-renders
+  return (
+    prevProps.getRowKey(prevProps.row) === nextProps.getRowKey(nextProps.row) &&
+    prevProps.isHighlighted === nextProps.isHighlighted &&
+    prevProps.isActive === nextProps.isActive
+  );
+}) as <T>(props: TableRowMemoProps<T>) => React.ReactElement;
+
+(TableRowMemo as any).displayName = 'TableRowMemo';
+
+// ============================================================================
+// TABLA PRINCIPAL
+// ============================================================================
 export function DataTable<T>({
   columns,
   data,
@@ -103,7 +184,7 @@ export function DataTable<T>({
   pagination = true,
   defaultRowsPerPage = 10,
   rowsPerPageOptions = [5, 10, 25, 50],
-  showInactiveToggle = false, // Default false para no ensuciar UI si no se necesita
+  showInactiveToggle = false,
   inactiveLabel = 'Mostrar inactivos',
 }: DataTableProps<T>) {
   const theme = useTheme();
@@ -111,7 +192,7 @@ export function DataTable<T>({
 
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(defaultRowsPerPage);
-  const [showInactive, setShowInactive] = useState(false); // Default ocultos para limpieza
+  const [showInactive, setShowInactive] = useState(false);
 
   const handleChangePage = (_: unknown, newPage: number) => setPage(newPage);
 
@@ -120,17 +201,16 @@ export function DataTable<T>({
     setPage(0);
   };
 
-  // 1. Lógica de Filtrado y Ordenamiento
+  // ✨ PROCESAMIENTO DE DATA OPTIMIZADO
   const processedData = useMemo(() => {
     let result = [...data];
 
-    // Si hay lógica de activos, primero filtramos/ordenamos
     if (isRowActive) {
-      // Filtrar si el toggle está apagado
-      if (!showInactive) {
+      if (showInactiveToggle && !showInactive) {
+        // Filtrar solo activos
         result = result.filter(row => isRowActive(row));
       } else {
-        // Si mostramos todos, ordenamos para que los activos salgan primero
+        // Ordenar: activos primero
         result.sort((a, b) => {
           const aActive = isRowActive(a);
           const bActive = isRowActive(b);
@@ -139,38 +219,38 @@ export function DataTable<T>({
       }
     }
     return result;
-  }, [data, isRowActive, showInactive]);
+  }, [data, isRowActive, showInactive, showInactiveToggle]);
 
-  // 2. Conteo de inactivos (para mostrar en el label del switch si se desea)
+  // ✨ CONTEO DE INACTIVOS
   const inactiveCount = useMemo(() => {
     if (!isRowActive) return 0;
     return data.filter(row => !isRowActive(row)).length;
   }, [data, isRowActive]);
 
-  // 3. Paginación
-  const paginatedData = pagination
-    ? processedData.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-    : processedData;
+  // ✨ PAGINACIÓN
+  const paginatedData = useMemo(() => {
+    if (!pagination) return processedData;
+    return processedData.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+  }, [pagination, processedData, page, rowsPerPage]);
 
-  // 4. Columnas responsivas
-  const visibleColumns = columns.filter(col => !(isMobile && col.hideOnMobile));
+  // ✨ COLUMNAS RESPONSIVAS
+  const visibleColumns = useMemo(() =>
+    columns.filter(col => !(isMobile && col.hideOnMobile)),
+    [columns, isMobile]
+  );
 
   return (
     <Box sx={{ width: '100%' }}>
-      {/* TOOLBAR SUPERIOR (Solo si hay toggle de inactivos y existen inactivos) */}
+      {/* TOOLBAR SUPERIOR */}
       {showInactiveToggle && inactiveCount > 0 && (
-        <Stack
-          direction="row"
-          justifyContent="flex-end"
-          sx={{ mb: 1, px: 1 }}
-        >
+        <Stack direction="row" justifyContent="flex-end" sx={{ mb: 1, px: 1 }}>
           <FormControlLabel
             control={
               <Switch
                 size="small"
                 checked={showInactive}
                 onChange={(e) => setShowInactive(e.target.checked)}
-                color="primary" // Usamos el color de marca
+                color="primary"
               />
             }
             label={
@@ -187,10 +267,10 @@ export function DataTable<T>({
         elevation={0}
         sx={{
           width: '100%',
-          overflowX: 'auto', // Clave para responsive en tablas
+          overflowX: 'auto',
           border: '1px solid',
           borderColor: 'divider',
-          borderRadius: '12px', // Theme match
+          borderRadius: '12px',
           ...sx
         }}
       >
@@ -206,7 +286,7 @@ export function DataTable<T>({
                     fontWeight: 700,
                     color: 'text.secondary',
                     fontSize: '0.75rem',
-                    whiteSpace: 'nowrap', // Evita saltos de línea feos en headers
+                    whiteSpace: 'nowrap',
                     py: 1.5
                   }}
                 >
@@ -233,47 +313,17 @@ export function DataTable<T>({
                 const isActive = isRowActive ? isRowActive(row) : true;
 
                 return (
-                  <TableRow
+                  <TableRowMemo
                     key={rowKey}
-                    hover={isActive && !!onRowClick} // Solo efecto hover si es clickeable
-                    onClick={() => isActive && onRowClick?.(row)}
-                    sx={{
-                      cursor: onRowClick && isActive ? 'pointer' : 'default',
-                      transition: 'all 0.2s',
-                      bgcolor: isHighlighted ? alpha(theme.palette.success.main, 0.08) : 'inherit',
-                      opacity: !isActive ? 0.5 : 1, // Opacidad visual para inactivos
-                      // Estilo condicional para inactivos (fondo grisáceo suave)
-                      ...(!isActive && {
-                        bgcolor: alpha(theme.palette.action.disabledBackground, 0.1)
-                      }),
-                      ...(getRowSx ? getRowSx(row) : {})
-                    }}
-                  >
-                    {visibleColumns.map((column) => {
-                      // Acceso seguro sin ts-ignore
-                      const cellValue = (row as any)[column.id];
-
-                      return (
-                        <TableCell
-                          key={String(column.id)}
-                          align={column.align || 'left'}
-                          sx={{
-                            // Evita que el texto se rompa en pantallas medianas si no es necesario
-                            whiteSpace: 'nowrap',
-                            maxWidth: 300,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis'
-                          }}
-                        >
-                          {column.render
-                            ? column.render(row)
-                            : column.format
-                              ? column.format(cellValue, row)
-                              : cellValue}
-                        </TableCell>
-                      );
-                    })}
-                  </TableRow>
+                    row={row}
+                    columns={visibleColumns}
+                    getRowKey={getRowKey}
+                    isHighlighted={isHighlighted}
+                    isActive={isActive}
+                    onRowClick={onRowClick}
+                    getRowSx={getRowSx}
+                    theme={theme}
+                  />
                 );
               })
             )}
@@ -296,7 +346,6 @@ export function DataTable<T>({
             sx={{
               borderTop: '1px solid',
               borderColor: 'divider',
-              // Ajustes para paginación responsive
               '.MuiTablePagination-toolbar': {
                 px: { xs: 1, sm: 2 }
               },

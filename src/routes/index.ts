@@ -17,12 +17,10 @@ export const ROUTES = {
     PREGUNTAS: '/preguntas',
   },
 
-  // Proyectos (Compartido)
+  // ✅ Proyectos (PÚBLICOS - Cualquiera puede ver)
   PROYECTOS: {
     SELECCION_ROL: '/proyectos/rol-seleccion',
-    AHORRISTA: '/proyectos/ahorrista',
-    INVERSIONISTA: '/proyectos/inversionista',
-    DETALLE: '/proyectos/:id',
+    DETALLE: '/proyectos/:id', // ✅ Ahora es público
   },
 
   // Área Cliente
@@ -43,10 +41,10 @@ export const ROUTES = {
       MENSAJES: '/client/mensajes',
       SEGURIDAD: '/client/seguridad',
       FAVORITOS: '/client/favoritos',
-      CONTRATOS: '/client/contratos', // ✅ Coincide con tu hook
+      CONTRATOS: '/client/contratos',
     },
     LOTES: {
-      DETALLE: '/client/lotes/:id',
+      DETALLE: '/client/lotes/:id', // ✅ Este sigue protegido
     }
   },
 
@@ -56,8 +54,8 @@ export const ROUTES = {
     USUARIOS: {
       LISTA: '/admin/usuarios',
       KYC: '/admin/kyc',
-      PERFIL: '/admin/perfil',           // ✅ Agregado
-      CONFIGURACION: '/admin/configuracion', // ✅ Agregado
+      PERFIL: '/admin/perfil',
+      CONFIGURACION: '/admin/configuracion',
     },
     PROYECTOS: {
       LISTA: '/admin/proyectos',

@@ -45,7 +45,6 @@ interface ProjectSidebarProps {
 
 // ==========================================
 // 2. SUBCOMPONENTE: Propuesta de Valor (Tokens)
-// ... (Sin cambios aquí)
 // ==========================================
 const TokenValueProposition = () => {
   const theme = useTheme();
@@ -72,7 +71,6 @@ const TokenValueProposition = () => {
 
 // ==========================================
 // 3. SUBCOMPONENTE: Stepper Visual
-// ... (Sin cambios aquí)
 // ==========================================
 const ProcessStepper: React.FC<{
   paso1Completo: boolean;
@@ -117,7 +115,7 @@ const ProcessStepper: React.FC<{
                 </Box>
               </Box>
               {!isLast && (
-                <Box sx={{ ml: 2.4, height: 24, borderLeft: `2px solid ${step.completed ? theme.palette.success.main : alpha(theme.palette.text.disabled, 0.2)}` }} />
+                <Box sx={{ ml: 1.9, height: 24, borderLeft: `2px solid ${step.completed ? theme.palette.success.main : alpha(theme.palette.text.disabled, 0.2)}` }} />
               )}
             </React.Fragment>
           );
@@ -129,7 +127,6 @@ const ProcessStepper: React.FC<{
 
 // ==========================================
 // 4. SUBCOMPONENTE: Header de Precios
-// ... (Sin cambios aquí)
 // ==========================================
 const PriceHeader: React.FC<{ helpers: ReturnType<typeof useProyectoHelpers>; }> = ({ helpers }) => {
     const BadgeIcon = helpers.badge.icon;
@@ -185,7 +182,7 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
   const theme = useTheme();
   const helpers = useProyectoHelpers(proyecto); 
 
-  // ✅ INICIALIZAMOS EL GUARDIA
+  // ✅ INICIALIZAMOS EL GUARDIA PARA ACCIONES INTERNAS (Firma)
   const { withSecurityCheck, securityModalProps } = useSecurityGuard();
 
   const user = logic.user;
@@ -201,7 +198,6 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
           overflow: 'visible' 
         }}
       >
-        
         <PriceHeader helpers={helpers} />
 
         <Box p={3}>
@@ -219,12 +215,16 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
               {!user ? (
                 <Stack spacing={2}>
                   {helpers.esMensual && <TokenValueProposition />}
+                  {/* ✅ BOTÓN PARA INVITADOS: Muestra candado y llama a handleMainAction (que redirige al login) */}
                   <Button 
-                    variant="contained" fullWidth size="large" 
-                    onClick={logic.handleMainAction} // Sin seguridad: Redirige a Login
-                    startIcon={<ArrowForward />} 
+                    variant="contained" 
+                    fullWidth 
+                    size="large" 
+                    onClick={logic.handleMainAction} 
+                    startIcon={<Lock />} 
+                    sx={{ fontWeight: 700 }}
                   >
-                    Ingresar para Invertir
+                    {helpers.esMensual ? 'Identificate para Suscribirte' : 'Identificate para Invertir'}
                   </Button>
                 </Stack>
               ) : (
@@ -234,11 +234,14 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
                       {helpers.esMensual && <TokenValueProposition />}
 
                       <Button 
-                          variant="contained" fullWidth size="large" 
-                          // ✅ PROTEGIDO: Inversión requiere KYC/2FA
-                          onClick={() => withSecurityCheck(logic.handleMainAction)} 
+                          variant="contained" 
+                          fullWidth 
+                          size="large" 
+                          // ✅ El interceptor de seguridad ya está en logic.handleMainAction (inyectado por secureLogic)
+                          onClick={logic.handleMainAction} 
                           disabled={logic.handleInversion.isPending}
                           endIcon={!logic.handleInversion.isPending && <ArrowForward />}
+                          sx={{ fontWeight: 700 }}
                       >
                         {logic.handleInversion.isPending 
                           ? 'Procesando...' 
@@ -248,7 +251,7 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
                         }
                       </Button>
                       
-                      {helpers.esMensual && helpers.progreso && helpers.progreso.disponibles > 0 && (
+                      {helpers.esMensual && helpers.progreso && (
                           <Box sx={{ p: 2, bgcolor: alpha(theme.palette.success.main, 0.08), borderRadius: 2 }}>
                               <Stack direction="row" justifyContent="space-between" mb={1}>
                                   <Typography variant="caption" fontWeight={700} color="success.dark">
@@ -268,13 +271,12 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
                       )}
 
                       {!helpers.esMensual && (
-                          <Alert severity="info" variant="outlined" icon={<Lock />}>
+                          <Alert severity="info" variant="outlined" icon={<GppGood />}>
                               <Typography variant="caption" display="block" fontWeight={600}>
                                   INVERSIÓN PACK COMPLETO
                               </Typography>
                               <Typography variant="caption" color="text.secondary">
                                   Al invertir recibirás TODOS los lotes del proyecto al finalizar.
-                                  No se requiere participar en subastas.
                               </Typography>
                           </Alert>
                       )}
@@ -287,14 +289,17 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
                           Pago confirmado. Firma tu contrato para finalizar.
                       </Alert>
                       <Button 
-                          variant="contained" color="warning" fullWidth size="large" 
+                          variant="contained" 
+                          color="warning" 
+                          fullWidth 
+                          size="large" 
                           // ✅ PROTEGIDO: Firmar requiere identidad verificada
                           onClick={() => withSecurityCheck(logic.handleClickFirmar)} 
-                          sx={{ color: 'white' }}
+                          sx={{ color: 'white', fontWeight: 700 }}
                       >
                         Firmar Contrato Digital
                       </Button>
-                      <Button variant="text" size="small" onClick={logic.modales.contrato.open}>
+                      <Button variant="text" size="small" onClick={logic.modales.contrato.open} sx={{ fontWeight: 600 }}>
                           Ver borrador del contrato
                       </Button>
                     </Stack>
@@ -306,9 +311,12 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
                           ¡Inversión completada exitosamente!
                       </Alert>
                       <Button 
-                          variant="outlined" color="success" fullWidth 
+                          variant="outlined" 
+                          color="success" 
+                          fullWidth 
                           onClick={logic.handleVerContratoFirmado} 
                           startIcon={<Download />} 
+                          sx={{ fontWeight: 700 }}
                       >
                         Descargar Contrato Firmado
                       </Button>
@@ -326,7 +334,7 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
                       <GppGood color="success" fontSize="small" />
                   </Box>
                   <Box>
-                      <Typography variant="subtitle2" color="text.primary" display="block">
+                      <Typography variant="subtitle2" color="text.primary" display="block" fontWeight={700}>
                           Operación Legal
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
@@ -340,7 +348,7 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
                       <Description color="primary" fontSize="small" />
                   </Box>
                   <Box>
-                      <Typography variant="subtitle2" color="text.primary" display="block">
+                      <Typography variant="subtitle2" color="text.primary" display="block" fontWeight={700}>
                           Contrato Digital
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
@@ -354,7 +362,7 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
         </Box>
       </Card>
 
-      {/* ✅ RENDERIZAR EL MODAL DE SEGURIDAD */}
+      {/* ✅ RENDERIZAR EL MODAL DE SEGURIDAD PARA FIRMA Y OTRAS ACCIONES */}
       <SecurityRequirementModal {...securityModalProps} />
     </>
   );

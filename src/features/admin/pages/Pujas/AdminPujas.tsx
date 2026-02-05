@@ -7,20 +7,19 @@ import {
   Warning
 } from '@mui/icons-material';
 import {
-  alpha, Avatar, Box, Button, Card, CardActions, CardContent, Chip,
+  alpha, Avatar, Box, Button, Card, CardActions, CardContent,
   Divider,
-  IconButton, LinearProgress, Paper, Stack, Tab, Tabs, Tooltip,
+  IconButton,
+  Paper, Stack, Tab, Tabs, Tooltip,
   Typography, useTheme
 } from '@mui/material';
 import React, { useMemo, useState } from 'react';
 
-// Hooks y Servicios
 import imagenService from '@/core/api/services/imagen.service';
 import type { LoteDto } from '@/core/types/dto/lote.dto';
 import type { PujaDto } from '@/core/types/dto/puja.dto';
 import { useAdminPujas } from '../../hooks/useAdminPujas';
 
-// Componentes Compartidos
 import { AdminPageHeader } from '@/shared/components/admin/Adminpageheader';
 import AlertBanner from '@/shared/components/admin/Alertbanner';
 import MetricsGrid from '@/shared/components/admin/Metricsgrid';
@@ -32,13 +31,16 @@ import { ConfirmDialog } from '@/shared/components/domain/modals/ConfirmDialog/C
 import { FilterBar, FilterSearch } from '@/shared/components/forms/filters/FilterBar';
 import { PageContainer } from '@/shared/components/layout/containers/PageContainer/PageContainer';
 
-// Modales
 import DetallePujaModal from './components/DetallePujaModal';
 
-// ... (El componente Top3List se mantiene igual) ...
-const Top3List: React.FC<{ pujas: PujaDto[]; getUserName: (id: number) => string }> = ({ pujas, getUserName }) => {
+// ============================================================================
+// SUB-COMPONENTES MEMOIZADOS (Evitan re-renders masivos en polling)
+// ============================================================================
+
+const Top3List = React.memo<{ pujas: PujaDto[]; getUserName: (id: number) => string }>(({ pujas, getUserName }) => {
   const theme = useTheme();
-  const top3 = pujas.slice(0, 3);
+  const top3 = useMemo(() => pujas.slice(0, 3), [pujas]);
+
   return (
     <Box sx={{ mt: 2, bgcolor: alpha(theme.palette.background.paper, 0.5), borderRadius: 2, p: 1.5, border: '1px solid', borderColor: 'divider' }}>
       <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
@@ -62,39 +64,41 @@ const Top3List: React.FC<{ pujas: PujaDto[]; getUserName: (id: number) => string
       </Stack>
     </Box>
   );
-};
+});
+Top3List.displayName = 'Top3List';
 
-// ... (El componente LiveAuctionCard se mantiene igual) ...
-const LiveAuctionCard: React.FC<any> = ({ lote, pujas, getUserName, onFinish }) => {
-    // ... (Mismo código de LiveAuctionCard anterior) ...
-    // Resumido para brevedad ya que no cambia lógica, solo visual
-    const theme = useTheme();
-    const maxPuja = pujas.length > 0 ? Number(pujas[0].monto_puja) : Number(lote.precio_base);
-    return (
-        <Card sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 3 }}>
-             <CardContent sx={{ p: 2.5 }}>
-                <Stack direction="row" spacing={2} mb={2}>
-                     <Avatar src={imagenService.resolveImageUrl(lote.imagenes?.[0]?.url || '')} variant="rounded"><Gavel color="primary" /></Avatar>
-                     <Box>
-                         <Typography fontWeight={800} variant="subtitle1">{lote.nombre_lote}</Typography>
-                         <Typography variant="caption" color="text.secondary">ID: {lote.id}</Typography>
-                     </Box>
-                </Stack>
-                <Box textAlign="center" py={2}>
-                    <Typography variant="caption" color="text.secondary" fontWeight={600}>OFERTA ACTUAL</Typography>
-                    <Typography variant="h4" fontWeight={800} color="primary.main">${maxPuja.toLocaleString()}</Typography>
-                </Box>
-                <Top3List pujas={pujas} getUserName={getUserName} />
-             </CardContent>
-             <Divider />
-             <CardActions sx={{ p: 1.5 }}>
-                <Button fullWidth variant="contained" color="error" size="small" startIcon={<StopCircle />} onClick={() => onFinish(lote)} sx={{ fontWeight: 700 }}>Finalizar Subasta</Button>
-             </CardActions>
-        </Card>
-    )
-};
+const LiveAuctionCard = React.memo<{ lote: LoteDto, pujas: PujaDto[], getUserName: (id: number) => string, onFinish: (l: LoteDto) => void }>(({ lote, pujas, getUserName, onFinish }) => {
+  const theme = useTheme();
+  const maxPuja = pujas.length > 0 ? Number(pujas[0].monto_puja) : Number(lote.precio_base);
 
+  return (
+    <Card sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 3, height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <CardContent sx={{ p: 2.5, flex: 1 }}>
+        <Stack direction="row" spacing={2} mb={2}>
+          <Avatar src={imagenService.resolveImageUrl(lote.imagenes?.[0]?.url || '')} variant="rounded"><Gavel color="primary" /></Avatar>
+          <Box minWidth={0}>
+            <Typography fontWeight={800} variant="subtitle1" noWrap>{lote.nombre_lote}</Typography>
+            <Typography variant="caption" color="text.secondary">ID: {lote.id}</Typography>
+          </Box>
+        </Stack>
+        <Box textAlign="center" py={2}>
+          <Typography variant="caption" color="text.secondary" fontWeight={600}>OFERTA ACTUAL</Typography>
+          <Typography variant="h4" fontWeight={800} color="primary.main">${maxPuja.toLocaleString()}</Typography>
+        </Box>
+        <Top3List pujas={pujas} getUserName={getUserName} />
+      </CardContent>
+      <Divider />
+      <CardActions sx={{ p: 1.5 }}>
+        <Button fullWidth variant="contained" color="error" size="small" startIcon={<StopCircle />} onClick={() => onFinish(lote)} sx={{ fontWeight: 700 }}>Finalizar Subasta</Button>
+      </CardActions>
+    </Card>
+  )
+});
+LiveAuctionCard.displayName = 'LiveAuctionCard';
 
+// ============================================================================
+// COMPONENTE PRINCIPAL
+// ============================================================================
 const AdminPujas: React.FC = () => {
   const theme = useTheme();
   const logic = useAdminPujas();
@@ -127,40 +131,26 @@ const AdminPujas: React.FC = () => {
       )
     },
     {
-      id: 'vencimiento', label: 'Estado de Pago', minWidth: 200, render: (l) => {
-        const pujaGanadora = logic.pujasPorLote[l.id]?.find(p => p.estado_puja === 'ganadora_pendiente');
-        const vencimiento = pujaGanadora?.fecha_vencimiento_pago ? new Date(pujaGanadora.fecha_vencimiento_pago) : new Date();
-        const diff = Math.ceil((vencimiento.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
-        let status: any = 'pending';
-        let label = `${diff} DÍAS RESTANTES`;
-        if (diff < 3) status = 'warning';
-        if (diff < 0) { status = 'failed'; label = 'VENCIDO'; }
-
-        return (
-          <Stack spacing={0.5} width="100%">
-            <StatusBadge status={status} customLabel={label} />
-            {diff >= 0 && (
-              <LinearProgress variant="determinate" value={Math.max(0, (diff / 90) * 100)} color={diff < 7 ? 'error' : diff < 30 ? 'warning' : 'success'} sx={{ height: 4, borderRadius: 2, bgcolor: alpha(theme.palette.grey[300], 0.3) }} />
-            )}
-          </Stack>
-        );
-      }
-    },
-    {
       id: 'monto', label: 'Monto a Cobrar', render: (l) => {
-        const pujaGanadora = logic.pujasPorLote[l.id]?.find(p => p.estado_puja === 'ganadora_pendiente');
-        const monto = pujaGanadora?.monto_puja || l.precio_base;
+        // En vista Gestión, usamos datos del Lote, no buscamos en array de pujas
+        const monto = l.monto_ganador_lote || l.precio_base;
         return <Typography fontWeight={700} fontFamily="monospace">${Number(monto).toLocaleString()}</Typography>
       }
     },
     {
       id: 'acciones', label: 'Acciones', align: 'right', render: (l) => (
         <Stack direction="row" spacing={0.5} justifyContent="flex-end">
-          {/* ✅ Solo mantenemos la acción soportada por el backend: Cancelar/Anular */}
           <Tooltip title="Anular Adjudicación (Impago)">
-            <IconButton size="small" sx={{ color: 'error.main', bgcolor: alpha(theme.palette.error.main, 0.05) }} onClick={() => logic.handleCancelarAdjudicacion(l)} disabled={logic.cancelarGanadoraMutation.isPending}>
-              <CancelScheduleSend fontSize="small" />
-            </IconButton>
+            <span>
+              <IconButton
+                size="small"
+                sx={{ color: 'error.main', bgcolor: alpha(theme.palette.error.main, 0.05) }}
+                onClick={() => logic.handleCancelarAdjudicacion(l)}
+                disabled={logic.cancelarGanadoraMutation.isPending || !l.id_puja_mas_alta} // Deshabilitar si no tenemos ID de puja
+              >
+                <CancelScheduleSend fontSize="small" />
+              </IconButton>
+            </span>
           </Tooltip>
         </Stack>
       )
@@ -175,18 +165,6 @@ const AdminPujas: React.FC = () => {
           <Typography fontWeight={700} variant="body2">{l.nombre_lote}</Typography>
         </Stack>
       )
-    },
-    {
-      id: 'historial', label: 'Historial de Fallos', minWidth: 250, render: (lote) => {
-        const pujasIncumplidas = logic.pujas.filter(p => p.id_lote === lote.id && p.estado_puja === 'ganadora_incumplimiento');
-        return (
-          <Stack spacing={0.5}>
-            {pujasIncumplidas.length > 0 ? pujasIncumplidas.map((p, i) => (
-              <Chip key={p.id} size="small" color="error" variant="outlined" label={`Intento ${i + 1}: ${logic.getUserName(p.id_usuario)} ($${Number(p.monto_puja).toLocaleString()})`} sx={{ width: 'fit-content' }} />
-            )) : <Typography variant="caption" color="text.secondary">Sin historial registrado</Typography>}
-          </Stack>
-        );
-      }
     },
     {
       id: 'intentos', label: 'Severidad', render: (l) => {
@@ -208,9 +186,8 @@ const AdminPujas: React.FC = () => {
   return (
     <PageContainer maxWidth="xl" sx={{ py: 3 }}>
       <AdminPageHeader title="Sala de Control de Subastas" subtitle="Gestión en tiempo real de subastas, adjudicaciones y control de pagos." />
-      
-      {logic.error && <AlertBanner severity="error" title="Error de Conexión" message={(logic.error as Error).message} />}
 
+      {/* METRICS */}
       <MetricsGrid columns={{ xs: 1, sm: 2, lg: 4 }}>
         <StatCard title="En Vivo" value={logic.analytics.activos.length} icon={<Gavel />} color="success" loading={logic.loading} subtitle="Subastas activas" />
         <StatCard title="Por Cobrar" value={logic.analytics.pendientesPago.length} icon={<ReceiptLong />} color="info" loading={logic.loading} subtitle="Adjudicaciones pendientes" />
@@ -218,6 +195,7 @@ const AdminPujas: React.FC = () => {
         <StatCard title="Impagos / Riesgo" value={logic.analytics.lotesEnRiesgo.length} icon={<ErrorOutline />} color="error" loading={logic.loading} subtitle="Atención requerida" />
       </MetricsGrid>
 
+      {/* TABS & FILTERS */}
       <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems="flex-end" mb={3} spacing={2}>
         <Paper elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', p: 0.5, bgcolor: alpha(theme.palette.background.paper, 0.6) }}>
           <Tabs value={logic.tabValue} onChange={(_, v) => logic.setTabValue(v)} indicatorColor="primary" textColor="primary">
@@ -231,12 +209,15 @@ const AdminPujas: React.FC = () => {
             <ViewModeToggle value={viewMode} onChange={(m) => setViewMode(m)} options={[{ value: 'grid', label: 'Grid', icon: <ViewModule fontSize="small" /> }, { value: 'table', label: 'Lista', icon: <ViewList fontSize="small" /> }]} />
           )}
           <FilterBar sx={{ width: { xs: '100%', md: 400 } }}>
-            <FilterSearch placeholder="Buscar lote o usuario..." value={logic.filterLoteNombre} onChange={(e) => logic.setFilterLoteNombre(e.target.value)} sx={{ flexGrow: 1 }} />
+            <FilterSearch placeholder="Buscar lote..." value={logic.filterLoteNombre} onChange={(e) => logic.setFilterLoteNombre(e.target.value)} sx={{ flexGrow: 1 }} />
           </FilterBar>
         </Stack>
       </Stack>
 
+      {/* CONTENT */}
       <QueryHandler isLoading={logic.loading} error={logic.error as Error}>
+
+        {/* TAB 0: EN VIVO */}
         {logic.tabValue === 0 && (
           <>
             {logic.analytics.activos.length === 0 ? (
@@ -244,7 +225,13 @@ const AdminPujas: React.FC = () => {
             ) : viewMode === 'grid' ? (
               <Box display="grid" gridTemplateColumns={{ xs: '1fr', md: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' }} gap={3}>
                 {logic.analytics.activos.map(lote => (
-                  <LiveAuctionCard key={lote.id} lote={lote} pujas={logic.pujasPorLote[lote.id] || []} getUserName={logic.getUserName} onFinish={logic.handleFinalizarSubasta} />
+                  <LiveAuctionCard
+                    key={lote.id}
+                    lote={lote}
+                    pujas={logic.pujasPorLote[lote.id] || []}
+                    getUserName={logic.getUserName}
+                    onFinish={logic.handleFinalizarSubasta}
+                  />
                 ))}
               </Box>
             ) : (
@@ -257,6 +244,7 @@ const AdminPujas: React.FC = () => {
                   { id: 'acciones', label: '', align: 'right', render: (l) => <Button size="small" variant="contained" color="error" onClick={() => logic.handleFinalizarSubasta(l)}>Finalizar</Button> }
                 ]}
                 getRowKey={r => r.id}
+                showInactiveToggle={false} // Siempre mostrar todo lo filtrado
                 pagination
                 defaultRowsPerPage={10}
               />
@@ -264,12 +252,32 @@ const AdminPujas: React.FC = () => {
           </>
         )}
 
+        {/* TAB 1: GESTIÓN DE COBROS */}
         {logic.tabValue === 1 && (
-          <DataTable columns={columnsCobros} data={logic.analytics.pendientesPago} getRowKey={(row) => row.id} highlightedRowId={logic.highlightedId} emptyMessage="No hay cobros pendientes de adjudicación." pagination={true} defaultRowsPerPage={10} />
+          <DataTable
+            columns={columnsCobros}
+            data={logic.analytics.pendientesPago}
+            getRowKey={(row) => row.id}
+            highlightedRowId={logic.highlightedId}
+            showInactiveToggle={false}
+            emptyMessage="No hay cobros pendientes de adjudicación."
+            pagination={true}
+            defaultRowsPerPage={10}
+          />
         )}
 
+        {/* TAB 2: IMPAGOS */}
         {logic.tabValue === 2 && (
-          <DataTable columns={columnsImpagos} data={logic.analytics.lotesEnRiesgo} getRowKey={(row) => row.id} highlightedRowId={logic.highlightedId} emptyMessage="Excelente, no hay lotes en situación de impago." pagination={true} defaultRowsPerPage={10} />
+          <DataTable
+            columns={columnsImpagos}
+            data={logic.analytics.lotesEnRiesgo}
+            getRowKey={(row) => row.id}
+            highlightedRowId={logic.highlightedId}
+            showInactiveToggle={false}
+            emptyMessage="Excelente, no hay lotes en situación de impago."
+            pagination={true}
+            defaultRowsPerPage={10}
+          />
         )}
       </QueryHandler>
 

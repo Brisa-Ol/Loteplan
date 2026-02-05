@@ -1,567 +1,340 @@
 import {
-  AttachMoney, CheckCircle, ErrorOutline, Info,
-  Image as ImageIcon, Person, Timeline, Warning, Refresh,
-  FileDownload, TrendingUp
+  AttachMoney, CheckCircle, ErrorOutline,
+  Image as ImageIcon, Info, Person, Refresh, Timeline, TrendingUp, Warning
 } from '@mui/icons-material';
 import {
-  Alert, alpha, Avatar, Box, Button, Chip, IconButton,
-  LinearProgress, Paper, Stack, Tooltip, Typography, useTheme,
-  ToggleButtonGroup, ToggleButton, Card, CardContent, Divider
+  Alert, Avatar, Box, Card, CardContent, Chip,
+  Divider, IconButton, LinearProgress, Paper, Stack, ToggleButton,
+  ToggleButtonGroup, Tooltip, Typography, alpha
 } from '@mui/material';
-import React, { useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React, { useMemo } from 'react';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
-  ResponsiveContainer, Cell
+  Bar, BarChart, CartesianGrid, Cell,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer,
+  XAxis, YAxis
 } from 'recharts';
 
-import { PageContainer } from '@/shared/components/layout/containers/PageContainer/PageContainer';
-import { QueryHandler } from '@/shared/components/data-grid/QueryHandler/QueryHandler';
 import { DataTable, type DataTableColumn } from '@/shared/components/data-grid/DataTable/DataTable';
+import { QueryHandler } from '@/shared/components/data-grid/QueryHandler/QueryHandler';
 import { StatCard } from '@/shared/components/domain/cards/StatCard/StatCard';
+import { PageContainer } from '@/shared/components/layout/containers/PageContainer/PageContainer';
 
-import type { LoteDto } from '@/core/types/dto/lote.dto';
-import LoteService from '@/core/api/services/lote.service';
 import imagenService from '@/core/api/services/imagen.service';
-import { useSortedData } from '../../hooks/useSortedData';
+import type { LoteDto } from '@/core/types/dto/lote.dto';
+import { useAdminLotePagos } from '../../hooks/useAdminLotePagos';
 
 // ============================================================================
-// HELPER: Cálculo de días restantes
+// COMPONENTE: GRÁFICO (Memoizado)
 // ============================================================================
-const calcularDiasRestantes = (lote: LoteDto): number => {
-  if (!lote.fecha_fin) return 90;
-  const fechaFin = new Date(lote.fecha_fin);
-  const fechaLimite = new Date(fechaFin.getTime() + 90 * 24 * 60 * 60 * 1000);
-  const ahora = new Date();
-  const diff = fechaLimite.getTime() - ahora.getTime();
-  return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
-};
-
-// ============================================================================
-// COMPONENTE: GRÁFICO DE DISTRIBUCIÓN DE RIESGOS
-// ============================================================================
-const RiskDistributionChart: React.FC<{
+const RiskDistributionChart = React.memo<{
   data: Array<{ name: string; value: number; color: string }>;
-  isLoading?: boolean;
-}> = ({ data, isLoading }) => {
-  const theme = useTheme();
+  theme: any;
+}>(({ data, theme }) => (
+  <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 3, height: '100%' }}>
+    <CardContent sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+        <Box>
+          <Typography variant="h6">Distribución de Riesgo</Typography>
+          <Typography variant="caption" color="text.secondary">Nivel de mora actual</Typography>
+        </Box>
+        <Chip icon={<TrendingUp />} label="En vivo" size="small" color="success" variant="outlined" />
+      </Stack>
 
-  if (isLoading) {
-    return (
-      <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
-        <CardContent sx={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <LinearProgress sx={{ width: '80%' }} />
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return (
-    <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
-      <CardContent sx={{ p: 3 }}>
-        <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
-          <Box>
-            <Typography variant="h5">
-              Distribución de Riesgo
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              Clasificación por nivel de mora
-            </Typography>
-          </Box>
-          <Chip
-            icon={<TrendingUp />}
-            label="Actualizado"
-            size="small"
-            color="info"
-          />
-        </Stack>
-
-        <ResponsiveContainer width="100%" height={250}>
-          <BarChart data={data} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+      <Box flex={1} minHeight={200}>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={theme.palette.divider} />
-            <XAxis
-              dataKey="name"
-              axisLine={false}
-              tick={{ fontSize: 12, fill: theme.palette.text.secondary }}
-            />
-            <YAxis
-              axisLine={false}
-              tick={{ fontSize: 12, fill: theme.palette.text.secondary }}
-            />
+            <XAxis dataKey="name" axisLine={false} tick={{ fontSize: 11, fill: theme.palette.text.secondary }} />
+            <YAxis axisLine={false} tick={{ fontSize: 11, fill: theme.palette.text.secondary }} allowDecimals={false} />
             <RechartsTooltip
-              contentStyle={{
-                borderRadius: 8,
-                border: 'none',
-                boxShadow: theme.shadows[4],
-              }}
+              cursor={{ fill: alpha(theme.palette.primary.main, 0.05) }}
+              contentStyle={{ borderRadius: 8, border: 'none', boxShadow: theme.shadows[3] }}
             />
-            <Bar dataKey="value" radius={[6, 6, 0, 0]} barSize={50}>
+            <Bar dataKey="value" radius={[4, 4, 0, 0]} barSize={40}>
               {data.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={entry.color} />
               ))}
             </Bar>
           </BarChart>
         </ResponsiveContainer>
-      </CardContent>
-    </Card>
-  );
-};
+      </Box>
+    </CardContent>
+  </Card>
+));
+
+RiskDistributionChart.displayName = 'RiskDistributionChart';
 
 // ============================================================================
-// COMPONENTE: CARD DE LOTE EN RIESGO (Vista alternativa)
+// COMPONENTE: CARD DE RIESGO (Memoizado)
 // ============================================================================
-const RiskLoteCard: React.FC<{
-  lote: LoteDto;
-}> = ({ lote }) => {
-  const theme = useTheme();
-  const intentos = lote.intentos_fallidos_pago || 0;
-  const dias = calcularDiasRestantes(lote);
-  const isCritical = intentos >= 2;
+const RiskLoteCard = React.memo<{ lote: LoteDto; theme: any; diasRestantes: number }>(
+  ({ lote, theme, diasRestantes }) => {
+    const intentos = lote.intentos_fallidos_pago || 0;
+    const isCritical = intentos >= 2;
 
-  return (
-    <Card
-      elevation={0}
-      sx={{
-        border: '2px solid',
-        borderColor: isCritical ? 'error.main' : 'warning.main',
-        borderRadius: 3,
-        bgcolor: alpha(isCritical ? theme.palette.error.main : theme.palette.warning.main, 0.04),
-        transition: 'all 0.3s ease',
-        '&:hover': {
-          boxShadow: theme.shadows[6],
-          transform: 'translateY(-4px)',
-        },
-      }}
-    >
-      <CardContent sx={{ p: 3 }}>
-        <Stack direction="row" spacing={2} alignItems="flex-start" mb={2}>
-          <Avatar
-            src={lote.imagenes?.[0] ? imagenService.resolveImageUrl(lote.imagenes[0].url) : undefined}
-            variant="rounded"
-            sx={{ width: 56, height: 56, bgcolor: alpha(theme.palette.primary.main, 0.1) }}
-          >
-            <ImageIcon sx={{ color: theme.palette.primary.main }} />
-          </Avatar>
-          <Box flex={1} minWidth={0}>
-            <Typography variant="h5" noWrap>
-              {lote.nombre_lote}
-            </Typography>
-            <Stack direction="row" spacing={1} alignItems="center">
-              <Person sx={{ fontSize: 14, color: 'text.disabled' }} />
-              <Typography variant="caption" color="text.secondary">
-                Usuario #{lote.id_ganador}
-              </Typography>
-            </Stack>
-          </Box>
-        </Stack>
+    return (
+      <Card
+        elevation={0}
+        sx={{
+          border: '1px solid',
+          borderColor: isCritical ? 'error.main' : 'warning.main',
+          borderRadius: 3,
+          bgcolor: alpha(isCritical ? theme.palette.error.main : theme.palette.warning.main, 0.02),
+          transition: 'transform 0.2s',
+          '&:hover': { transform: 'translateY(-4px)', boxShadow: theme.shadows[4] },
+        }}
+      >
+        <CardContent sx={{ p: 2.5 }}>
+          <Stack direction="row" spacing={2} mb={2}>
+            <Avatar
+              src={lote.imagenes?.[0] ? imagenService.resolveImageUrl(lote.imagenes[0].url) : undefined}
+              variant="rounded"
+              sx={{ width: 50, height: 50, bgcolor: alpha(theme.palette.primary.main, 0.1) }}
+            >
+              <ImageIcon sx={{ color: theme.palette.primary.main }} />
+            </Avatar>
+            <Box minWidth={0}>
+              <Typography variant="subtitle1" fontWeight={700} noWrap>{lote.nombre_lote}</Typography>
+              <Stack direction="row" spacing={0.5} alignItems="center">
+                <Person sx={{ fontSize: 14, color: 'text.disabled' }} />
+                <Typography variant="caption" color="text.secondary">Ganador #{lote.id_ganador}</Typography>
+              </Stack>
+            </Box>
+          </Stack>
 
-        <Divider sx={{ my: 2 }} />
+          <Divider sx={{ mb: 2 }} />
 
-        <Stack spacing={2}>
-          <Box>
-            <Stack direction="row" justifyContent="space-between" mb={0.5}>
-              <Typography variant="caption" color={isCritical ? 'error.main' : 'warning.main'}>
-                {intentos} DE 3 INTENTOS FALLIDOS
-              </Typography>
-              <Typography variant="caption">
-                {((intentos / 3) * 100).toFixed(0)}%
-              </Typography>
-            </Stack>
-            <LinearProgress
-              variant="determinate"
-              value={(intentos / 3) * 100}
-              sx={{
-                height: 8,
-                borderRadius: 4,
-                bgcolor: alpha(theme.palette.grey[300], 0.3),
-                '& .MuiLinearProgress-bar': {
-                  bgcolor: isCritical ? theme.palette.error.main : theme.palette.warning.main,
-                  borderRadius: 4,
-                },
-              }}
-            />
-          </Box>
-
-          <Stack direction="row" justifyContent="space-between" alignItems="center">
+          <Stack spacing={1.5}>
             <Box>
-              <Typography variant="caption" color="text.secondary">
-                Capital en Riesgo
-              </Typography>
-              <Typography variant="h6" color="primary.main" sx={{ fontFamily: 'monospace' }}>
-                ${Number(lote.precio_base).toLocaleString('es-AR')}
-              </Typography>
+              <Stack direction="row" justifyContent="space-between" mb={0.5}>
+                <Typography variant="caption" fontWeight={700} color={isCritical ? 'error.main' : 'warning.main'}>
+                  {intentos}/3 INTENTOS FALLIDOS
+                </Typography>
+                <Typography variant="caption" color="text.secondary">{Math.round((intentos / 3) * 100)}%</Typography>
+              </Stack>
+              <LinearProgress
+                variant="determinate"
+                value={(intentos / 3) * 100}
+                color={isCritical ? 'error' : 'warning'}
+                sx={{ height: 6, borderRadius: 3, bgcolor: alpha(theme.palette.grey[500], 0.1) }}
+              />
             </Box>
 
-            <Chip
-              label={`${dias} DÍAS`}
-              size="small"
-              color={dias <= 10 ? 'error' : dias <= 30 ? 'warning' : 'success'}
-            />
+            <Stack direction="row" justifyContent="space-between" alignItems="center">
+              <Box>
+                <Typography variant="caption" display="block" color="text.secondary">Deuda</Typography>
+                <Typography variant="body1" fontWeight={700} sx={{ fontFamily: 'monospace' }}>
+                  ${Number(lote.precio_base).toLocaleString('es-AR')}
+                </Typography>
+              </Box>
+              <Chip
+                label={`${diasRestantes} días`}
+                size="small"
+                color={diasRestantes <= 10 ? 'error' : diasRestantes <= 30 ? 'warning' : 'success'}
+                variant="outlined"
+              />
+            </Stack>
           </Stack>
-        </Stack>
-      </CardContent>
-    </Card>
-  );
-};
+        </CardContent>
+      </Card>
+    );
+  }
+);
+
+RiskLoteCard.displayName = 'RiskLoteCard';
 
 // ============================================================================
 // COMPONENTE PRINCIPAL
 // ============================================================================
 const AdminLotePagos: React.FC = () => {
-  const theme = useTheme();
-  const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
+  const logic = useAdminLotePagos();
 
-  const { data: lotesRaw = [], isLoading, error } = useQuery<LoteDto[]>({
-    queryKey: ['adminLotes'],
-    queryFn: async () => (await LoteService.findAllAdmin()).data,
-    refetchInterval: 15000,
-  });
-
-  const { sortedData: lotes, highlightedId } = useSortedData(lotesRaw);
-
-  const analytics = useMemo(() => {
-    const finalizados = lotes.filter((l) => l.estado_subasta === 'finalizada' && l.id_ganador);
-    const pendientesPago = finalizados.filter((l) => (l.intentos_fallidos_pago || 0) > 0);
-    const riesgoCritico = pendientesPago.filter((l) => (l.intentos_fallidos_pago || 0) >= 2);
-    const capitalEnRiesgo = riesgoCritico.reduce((acc, l) => acc + Number(l.precio_base), 0);
-
-    const detallesOrdenados = [...pendientesPago].sort(
-      (a, b) => (b.intentos_fallidos_pago || 0) - (a.intentos_fallidos_pago || 0)
-    );
-
-    const chartData = [
-      { name: 'Bajo (1 int.)', value: pendientesPago.filter(l => l.intentos_fallidos_pago === 1).length, color: theme.palette.warning.light },
-      { name: 'Alto (2 int.)', value: pendientesPago.filter(l => l.intentos_fallidos_pago === 2).length, color: theme.palette.error.main },
-      { name: 'Crítico (3 int.)', value: pendientesPago.filter(l => l.intentos_fallidos_pago >= 3).length, color: theme.palette.error.dark },
-    ];
-
-    return {
-      totalFinalizados: finalizados.length,
-      pendientesPago: pendientesPago.length,
-      riesgoCritico: riesgoCritico.length,
-      capitalEnRiesgo,
-      detalles: detallesOrdenados,
-      chartData,
-    };
-  }, [lotes, theme]);
-
-  const columns: DataTableColumn<LoteDto>[] = useMemo(
-    () => [
-      {
-        id: 'lote',
-        label: 'Lote / ID',
-        minWidth: 220,
-        render: (lote) => (
-          <Stack direction="row" spacing={2} alignItems="center">
-            <Avatar
-              src={lote.imagenes?.[0] ? imagenService.resolveImageUrl(lote.imagenes[0].url) : undefined}
-              variant="rounded"
-              sx={{
-                width: 44,
-                height: 44,
-                bgcolor: alpha(theme.palette.primary.main, 0.1),
-                borderRadius: 1,
-              }}
-            >
-              <ImageIcon sx={{ color: theme.palette.primary.main }} />
-            </Avatar>
-            <Box minWidth={0}>
-              <Typography variant="body2" noWrap>
-                {lote.nombre_lote}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                ID: {lote.id}
-              </Typography>
-            </Box>
-          </Stack>
-        ),
-      },
-      {
-        id: 'ganador',
-        label: 'Ganador',
-        render: (lote) => (
-          <Stack direction="row" spacing={1} alignItems="center">
-            <Avatar
-              sx={{
-                width: 28,
-                height: 28,
-                bgcolor: alpha(theme.palette.primary.main, 0.05),
-                color: theme.palette.primary.main,
-              }}
-            >
-              <Person sx={{ fontSize: 16 }} />
-            </Avatar>
-            <Typography variant="body2">
-              Usuario #{lote.id_ganador}
-            </Typography>
-          </Stack>
-        ),
-      },
-      {
-        id: 'monto',
-        label: 'Capital',
-        render: (lote) => (
-          <Typography variant="body2" color="primary.main" sx={{ fontFamily: 'monospace' }}>
-            ${Number(lote.precio_base).toLocaleString('es-AR')}
-          </Typography>
-        ),
-      },
-      {
-        id: 'intentos',
-        label: 'Salud del Pago',
-        minWidth: 160,
-        render: (lote) => {
-          const intentos = lote.intentos_fallidos_pago || 0;
-          const isCritical = intentos >= 2;
-          return (
-            <Stack spacing={0.8} width="100%" sx={{ pr: 2 }}>
-              <Typography variant="caption" color={isCritical ? 'error.main' : 'warning.main'}>
-                {intentos} DE 3 INTENTOS FALLIDOS
-              </Typography>
-              <LinearProgress
-                variant="determinate"
-                value={(intentos / 3) * 100}
-                sx={{
-                  height: 6,
-                  borderRadius: 3,
-                  bgcolor: alpha(theme.palette.grey[300], 0.3),
-                  '& .MuiLinearProgress-bar': {
-                    bgcolor: isCritical ? theme.palette.error.main : theme.palette.warning.main,
-                  },
-                }}
-              />
-            </Stack>
-          );
-        },
-      },
-      {
-        id: 'dias',
-        label: 'Vencimiento',
-        render: (lote) => {
-          const dias = calcularDiasRestantes(lote);
-          return (
-            <Chip
-              label={`${dias} DÍAS RESTANTES`}
-              size="small"
-              color={dias <= 10 ? 'error' : dias <= 30 ? 'warning' : 'success'}
-              sx={{ fontSize: '0.6rem' }}
-            />
-          );
-        },
-      },
-      {
-        id: 'acciones',
-        label: 'Estado',
-        align: 'right',
-        render: (lote) => (
-          <Tooltip
-            title={
-              lote.intentos_fallidos_pago >= 2
-                ? 'Riesgo de liberación inmediata'
-                : 'En seguimiento'
-            }
+  const columns = useMemo<DataTableColumn<LoteDto>[]>(() => [
+    {
+      id: 'lote',
+      label: 'Lote',
+      minWidth: 200,
+      render: (l) => (
+        <Stack direction="row" spacing={1.5} alignItems="center">
+          <Avatar
+            variant="rounded"
+            src={l.imagenes?.[0] ? imagenService.resolveImageUrl(l.imagenes[0].url) : undefined}
+            sx={{ width: 36, height: 36, bgcolor: alpha(logic.theme.palette.primary.main, 0.1) }}
           >
-            <IconButton
-              size="small"
-              sx={{ color: (lote.intentos_fallidos_pago || 0) >= 2 ? 'error.main' : 'info.main' }}
-            >
-              <Info fontSize="small" />
-            </IconButton>
-          </Tooltip>
-        ),
-      },
-    ],
-    [theme]
-  );
+            <ImageIcon sx={{ fontSize: 20, color: logic.theme.palette.primary.main }} />
+          </Avatar>
+          <Box>
+            <Typography variant="body2" fontWeight={600}>{l.nombre_lote}</Typography>
+            <Typography variant="caption" color="text.secondary">ID: {l.id}</Typography>
+          </Box>
+        </Stack>
+      )
+    },
+    {
+      id: 'ganador',
+      label: 'Deudor',
+      render: (l) => (
+        <Chip
+          avatar={<Avatar sx={{ bgcolor: 'transparent' }}><Person sx={{ color: 'text.secondary' }} /></Avatar>}
+          label={`Usuario #${l.id_ganador}`}
+          variant="outlined"
+          size="small"
+        />
+      )
+    },
+    {
+      id: 'riesgo',
+      label: 'Nivel de Riesgo',
+      minWidth: 150,
+      render: (l) => {
+        const intentos = l.intentos_fallidos_pago || 0;
+        return (
+          <Box sx={{ width: '100%' }}>
+            <Stack direction="row" justifyContent="space-between" mb={0.5}>
+              <Typography variant="caption" fontWeight={700} color={intentos >= 2 ? 'error.main' : 'warning.main'}>
+                {intentos === 1 ? 'BAJO' : intentos === 2 ? 'ALTO' : 'CRÍTICO'}
+              </Typography>
+              <Typography variant="caption">{intentos}/3</Typography>
+            </Stack>
+            <LinearProgress
+              variant="determinate"
+              value={(intentos / 3) * 100}
+              color={intentos >= 2 ? 'error' : 'warning'}
+              sx={{ height: 4, borderRadius: 2 }}
+            />
+          </Box>
+        );
+      }
+    },
+    {
+      id: 'monto',
+      label: 'Capital',
+      align: 'right',
+      render: (l) => (
+        <Typography variant="body2" fontWeight={700} sx={{ fontFamily: 'monospace' }}>
+          ${Number(l.precio_base).toLocaleString()}
+        </Typography>
+      )
+    },
+    {
+      id: 'acciones',
+      label: 'Estado',
+      align: 'center',
+      render: (l) => (
+        <Tooltip title={l.intentos_fallidos_pago >= 2 ? 'Acción requerida' : 'Monitoreando'}>
+          <IconButton size="small" color={l.intentos_fallidos_pago >= 2 ? 'error' : 'default'}>
+            <Info fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      )
+    }
+  ], [logic.theme]);
 
   return (
     <PageContainer maxWidth="xl" sx={{ py: 3 }}>
-      {/* CABECERA */}
-      <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        justifyContent="space-between"
-        alignItems={{ xs: 'flex-start', sm: 'center' }}
-        mb={4}
-        spacing={2}
-      >
+      {/* HEADER */}
+      <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} mb={4} spacing={2}>
         <Box>
-          <Typography variant="h1">
-            Gestión de Cobranza
-          </Typography>
-          <Typography variant="subtitle1" color="text.secondary">
-            Monitoreo de capital en mora y procesos de reasignación
-          </Typography>
+          <Typography variant="h1">Monitor de Cobranza</Typography>
+          <Typography variant="subtitle1" color="text.secondary">Seguimiento de lotes adjudicados con pagos pendientes</Typography>
         </Box>
-
         <Stack direction="row" spacing={1}>
-          <Tooltip title="Actualizar datos">
-            <IconButton size="small" sx={{ bgcolor: alpha(theme.palette.action.selected, 0.5) }}>
-              <Refresh fontSize="small" />
-            </IconButton>
-          </Tooltip>
-          <Button variant="outlined" startIcon={<FileDownload />} size="small">
-            Exportar
-          </Button>
         </Stack>
       </Stack>
 
-      {/* KPIs */}
-      <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' },
-          gap: 2.5,
-          mb: 4,
-        }}
-      >
-        <StatCard
-          title="Total Finalizados"
-          value={analytics.totalFinalizados}
-          icon={<CheckCircle />}
-          color="info"
-          subtitle="Subastas cerradas"
-          loading={isLoading}
-        />
-        <StatCard
-          title="Pagos en Proceso"
-          value={analytics.pendientesPago}
-          icon={<Timeline />}
-          color="warning"
-          subtitle="Con intentos fallidos"
-          loading={isLoading}
-        />
-        <StatCard
-          title="Riesgo Crítico"
-          value={analytics.riesgoCritico}
-          icon={<ErrorOutline />}
-          color="error"
-          subtitle="Al borde de liberación"
-          loading={isLoading}
-        />
-        <StatCard
-          title="Capital en Riesgo"
-          value={`$${analytics.capitalEnRiesgo.toLocaleString('es-AR')}`}
-          icon={<AttachMoney />}
-          color="error"
-          subtitle="Falta de pago"
-          loading={isLoading}
-        />
+      {/* METRICS & CHART */}
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 2fr' }, gap: 3, mb: 4 }}>
+        {/* KPIs Verticales */}
+        <Stack spacing={2}>
+          <StatCard
+            title="Lotes en Mora"
+            value={logic.analytics.totalPendientes}
+            icon={<Timeline />}
+            color="warning"
+            loading={logic.isLoading}
+            subtitle="Total incidencias"
+          />
+          <StatCard
+            title="Riesgo Crítico"
+            value={logic.analytics.cantidadCritica}
+            icon={<ErrorOutline />}
+            color="error"
+            loading={logic.isLoading}
+            subtitle="Liberación inminente"
+          />
+          <StatCard
+            title="Capital Afectado"
+            value={`$${logic.analytics.capitalEnRiesgo.toLocaleString('es-AR', { notation: 'compact' })}`}
+            icon={<AttachMoney />}
+            color="info"
+            loading={logic.isLoading}
+            subtitle="Monto total pendiente"
+          />
+        </Stack>
+
+        {/* Chart */}
+        <RiskDistributionChart data={logic.analytics.chartData} theme={logic.theme} />
       </Box>
 
-      {/* ALERTA CRÍTICA */}
-      {analytics.riesgoCritico > 0 && (
-        <Alert
-          severity="error"
-          variant="outlined"
-          icon={<Warning />}
-          sx={{
-            mb: 3,
-            borderRadius: 2,
-            borderLeft: '5px solid',
-            borderLeftColor: 'error.main',
-          }}
-        >
-          <Typography variant="subtitle2">
-            ATENCIÓN CRÍTICA
-          </Typography>
-          <Typography variant="body2">
-            {analytics.riesgoCritico} lote{analytics.riesgoCritico !== 1 ? 's están' : ' está'} en riesgo de liberación por falta de pago del ganador.
-          </Typography>
+      {/* ALERTA */}
+      {logic.analytics.cantidadCritica > 0 && (
+        <Alert severity="error" variant="outlined" icon={<Warning />} sx={{ mb: 3, borderLeft: '4px solid', borderLeftColor: 'error.main' }}>
+          <Typography variant="subtitle2" fontWeight={700}>ATENCIÓN REQUERIDA</Typography>
+          {logic.analytics.cantidadCritica} lotes han superado el umbral de seguridad y requieren revisión manual o reasignación.
         </Alert>
       )}
 
-      {/* SELECTOR DE VISTA + GRÁFICO */}
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '2fr 1fr' }, gap: 3, mb: 3 }}>
-        <Box>
-          <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
-            <Typography variant="h5">
-              Lotes con Incidencias de Pago
-            </Typography>
-            <ToggleButtonGroup
-              value={viewMode}
-              exclusive
-              onChange={(_, newMode) => newMode && setViewMode(newMode)}
-              size="small"
-              sx={{
-                bgcolor: alpha(theme.palette.background.paper, 0.8),
-                '& .MuiToggleButton-root': {
-                  px: 2,
-                  textTransform: 'none',
-                  borderRadius: 1.5,
-                },
-              }}
-            >
-              <ToggleButton value="table">Tabla</ToggleButton>
-              <ToggleButton value="cards">Cards</ToggleButton>
-            </ToggleButtonGroup>
-          </Stack>
-        </Box>
+      {/* TOGGLE VISTA */}
+      <Stack direction="row" justifyContent="flex-end" mb={2}>
+        <ToggleButtonGroup
+          value={logic.viewMode}
+          exclusive
+          onChange={(_, val) => val && logic.setViewMode(val)}
+          size="small"
+        >
+          <ToggleButton value="table">Tabla</ToggleButton>
+          <ToggleButton value="cards">Tarjetas</ToggleButton>
+        </ToggleButtonGroup>
+      </Stack>
 
-        <RiskDistributionChart data={analytics.chartData} isLoading={isLoading} />
-      </Box>
-
-      {/* CONTENIDO SEGÚN VISTA */}
-      <QueryHandler isLoading={isLoading} error={error as Error}>
-        {viewMode === 'cards' ? (
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' },
-              gap: 3,
-            }}
-          >
-            {analytics.detalles.map((lote) => (
-              <RiskLoteCard key={lote.id} lote={lote} />
+      {/* LISTA / CARDS */}
+      <QueryHandler isLoading={logic.isLoading} error={logic.error as Error}>
+        {logic.viewMode === 'cards' ? (
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)', xl: 'repeat(3, 1fr)' }, gap: 3 }}>
+            {logic.lotes.map(lote => (
+              <RiskLoteCard
+                key={lote.id}
+                lote={lote}
+                theme={logic.theme}
+                diasRestantes={logic.calcularDiasRestantes(lote.fecha_fin)}
+              />
             ))}
           </Box>
         ) : (
           <DataTable
             columns={columns}
-            data={analytics.detalles}
-            getRowKey={(row) => row.id}
-            isRowActive={(lote) => (lote.intentos_fallidos_pago || 0) < 2}
-            showInactiveToggle={true}
-            inactiveLabel="Riesgo Crítico"
-            highlightedRowId={highlightedId}
-            emptyMessage="No hay lotes con incidencias de pago registradas."
-            pagination={true}
-            defaultRowsPerPage={10}
+            data={logic.lotes}
+            getRowKey={row => row.id}
+            isRowActive={() => true} // En este dashboard todos son relevantes
+            showInactiveToggle={false} // Desactivamos filtro interno
+            emptyMessage="No hay incidencias de pago registradas."
+            pagination
+            defaultRowsPerPage={5}
           />
         )}
       </QueryHandler>
 
-      {/* PROTOCOLO INFO */}
-      <Paper
-        sx={{
-          p: 4,
-          mt: 4,
-          bgcolor: alpha(theme.palette.background.paper, 0.4),
-          borderRadius: 2,
-          border: '1px solid',
-          borderColor: theme.palette.secondary.main,
-        }}
-        elevation={0}
-      >
-        <Typography
-          variant="overline"
-          color="primary.main"
-          sx={{ mb: 2, display: 'block' }}
-        >
-          🔄 Protocolo Automático de Reasignación
-        </Typography>
-        <Stack spacing={2}>
-          <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.8 }}>
-            • <b>Intento de Pago:</b> El ganador dispone de 90 días naturales para la entrega del
-            capital.
-            <br />
-            • <b>Fallo en Cobro:</b> Tras cada intento fallido, se notifica automáticamente al
-            usuario y al administrador.
-            <br />
-            • <b>Reasignación:</b> Al alcanzar el <b>3er intento fallido</b>, el sistema revoca la
-            adjudicación y asigna el lote al siguiente postor de la lista.
-            <br />• <b>Disponibilidad:</b> Si no existen más postores válidos, el lote regresa a
-            estado de "Suscripción Abierta".
-          </Typography>
+      {/* FOOTER INFO */}
+      <Paper sx={{ mt: 4, p: 3, bgcolor: alpha(logic.theme.palette.info.main, 0.05), border: '1px dashed', borderColor: 'info.main' }}>
+        <Stack direction="row" spacing={2}>
+          <CheckCircle color="info" />
+          <Box>
+            <Typography variant="subtitle2">Protocolo de Reasignación</Typography>
+            <Typography variant="caption" color="text.secondary">
+              Al 3er fallo de pago, el sistema habilitará automáticamente la opción de "Reasignar" en el panel de inventario principal.
+            </Typography>
+          </Box>
         </Stack>
       </Paper>
     </PageContainer>

@@ -105,7 +105,7 @@ const AdminSuscripciones: React.FC = () => {
         message: `La tasa de morosidad es del ${logic.stats.tasaMorosidad}% (${logic.stats.totalEnRiesgo.toLocaleString()} ARS en riesgo). Requiere acción inmediata.`,
         action: {
           label: 'Ver Morosos',
-          onClick: () => logic.setFilterStatus('inactivas'),
+          onClick: () => logic.setFilterStatus('inactivas'), // Asume que inactivos incluye morosos en este contexto de filtro
         },
       });
     }
@@ -118,8 +118,7 @@ const AdminSuscripciones: React.FC = () => {
         message: `El churn rate es del ${logic.stats.tasaCancelacion}%. Considera revisar la satisfacción del cliente.`,
         action: {
           label: 'Ver Cancelaciones',
-          // CORRECCIÓN: Usar setTabIndex en lugar de llamar a tabIndex como función
-          onClick: () => logic.setTabIndex(1), 
+          onClick: () => logic.setTabIndex(1),
         },
       });
     }
@@ -402,7 +401,8 @@ const AdminSuscripciones: React.FC = () => {
               data={logic.filteredSuscripciones}
               getRowKey={(s) => s.id}
               isRowActive={(s) => s.activo}
-              showInactiveToggle={true}
+              // 🔥 CORRECCIÓN: false para respetar el filtro del select "Estado"
+              showInactiveToggle={false}
               inactiveLabel="Canceladas"
               highlightedRowId={logic.highlightedId}
               emptyMessage="No se encontraron suscripciones que coincidan con los filtros."

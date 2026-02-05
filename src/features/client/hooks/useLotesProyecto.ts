@@ -1,45 +1,61 @@
 // src/features/client/hooks/useLotesProyecto.ts
 import { useState, useMemo, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useModal } from '../../../shared/hooks/useModal';
 import { useConfirmDialog } from '../../../shared/hooks/useConfirmDialog';
 import useSnackbar from '../../../shared/hooks/useSnackbar'; 
 import type { LoteDto } from '@/core/types/dto/lote.dto';
+// ✅ Importamos ProyectoService
+import ProyectoService from '@/core/api/services/proyecto.service';
 import SuscripcionService from '@/core/api/services/suscripcion.service';
-import LoteService from '@/core/api/services/lote.service';
 import FavoritoService from '@/core/api/services/favorito.service';
+import { ROUTES } from '@/routes';
 
-export const useLotesProyecto = (idProyecto: number, isAuthenticated: boolean) => {
-  const queryClient = useQueryClient();
-  const { showSuccess, showError, showWarning, snackbar, handleClose: closeSnackbar } = useSnackbar();
+export const useLotesProyecto = (idProyecto: number, isAuthenticated: boolean) => {  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const location = useLocation();
+ const { showSuccess, showError, showWarning } = useSnackbar();
   
   const [selectedLote, setSelectedLote] = useState<LoteDto | null>(null);
   const pujarModal = useModal();
   const confirmDialog = useConfirmDialog();
 
-  // 1. Query: Obtener Lotes
-  const { data: lotes = [], isLoading, error } = useQuery<LoteDto[]>({
-    queryKey: ['lotesActivos'],
+  // ✅ CORRECCIÓN CLAVE:
+  // En lugar de llamar a LoteService (que da 403 o requiere filtrar todo),
+  // llamamos al Proyecto, el cual YA INCLUYE la lista de lotes en su respuesta.
+  const { data: proyecto, isLoading, error } = useQuery({
+    queryKey: ['proyectoConLotes', idProyecto],
     queryFn: async () => {
-      const res = await LoteService.getAllActive();
-      return res.data || [];
+      // Usamos el endpoint: /proyectos/:id/activo
+      const res = await ProyectoService.getByIdActive(idProyecto);
+      return res.data;
     },
-    select: (allLotes) => {
-      return allLotes.filter(lote => Number(lote.id_proyecto) === Number(idProyecto));
-    },
-    enabled: !!idProyecto && isAuthenticated,
-    staleTime: 1000 * 60, 
+    // Este endpoint es público en tu backend, así que siempre podemos cargar los datos
+    // aunque validamos que exista el ID.
+    enabled: !!idProyecto, 
+    staleTime: 1000 * 60 * 5, // Cacheamos 5 minutos
   });
 
-  // 2. Query: Verificar Suscripción
+  // ✅ Extraemos los lotes directamente del proyecto
+  // Si proyecto.lotes viene undefined, usamos un array vacío.
+  const lotes = useMemo(() => {
+    return proyecto?.lotes || [];
+  }, [proyecto]);
+
+  // -----------------------------------------------------------
+  // El resto del hook se mantiene igual para manejar la lógica de usuario
+  // -----------------------------------------------------------
+
+  // QUERY PRIVADA: Verifica suscripción (Solo si está logueado)
   const { data: misSuscripciones } = useQuery({
     queryKey: ['misSuscripciones'],
     queryFn: async () => (await SuscripcionService.getMisSuscripciones()).data,
-    enabled: isAuthenticated && !!idProyecto,
-    staleTime: 1000 * 60 * 2, // ✅ Reducido (tokens cambian)
+    enabled: isAuthenticated && !!idProyecto, 
+    staleTime: 1000 * 60 * 2,
   });
 
-  // ✅ 3. VALIDACIÓN CORRECTA: Suscripción + Tokens
+  // ESTADOS DE PARTICIPACIÓN
   const { isSubscribed, hasTokens, tokensDisponibles } = useMemo(() => {
     if (!misSuscripciones || !isAuthenticated) {
       return { isSubscribed: false, hasTokens: false, tokensDisponibles: 0 };
@@ -79,11 +95,10 @@ export const useLotesProyecto = (idProyecto: number, isAuthenticated: boolean) =
     }
   });
 
-  // ✅ HANDLER MEJORADO: Validar tokens
+  // HANDLERS
   const handleOpenPujar = useCallback((lote: LoteDto) => {
     if (!isAuthenticated) {
-      showWarning('Debes iniciar sesión para realizar una oferta.');
-      return; 
+      return navigate(ROUTES.LOGIN, { state: { from: location.pathname } });
     }
     
     if (!isSubscribed) {
@@ -91,19 +106,21 @@ export const useLotesProyecto = (idProyecto: number, isAuthenticated: boolean) =
       return;
     }
 
-    // ✅ VALIDACIÓN DE TOKENS
     if (!hasTokens) {
-      showWarning('Ya utilizaste tu token de subasta en este proyecto. Gana o espera la próxima ronda de lotes.');
+      showWarning('Ya utilizaste tu token de subasta en este proyecto.');
       return;
     }
 
     setSelectedLote(lote);
     pujarModal.open();
-  }, [isAuthenticated, isSubscribed, hasTokens, showWarning, pujarModal]);
+  }, [isAuthenticated, isSubscribed, hasTokens, navigate, location.pathname, showWarning, pujarModal]);
 
   const handleRequestUnfav = useCallback((loteId: number) => {
+    if (!isAuthenticated) {
+      return navigate(ROUTES.LOGIN, { state: { from: location.pathname } });
+    }
     confirmDialog.confirm('remove_favorite', loteId);
-  }, [confirmDialog]);
+  }, [isAuthenticated, navigate, location.pathname, confirmDialog]);
 
   const executeUnfav = useCallback(() => {
     if (confirmDialog.data) unfavMutation.mutate(confirmDialog.data);
@@ -115,7 +132,7 @@ export const useLotesProyecto = (idProyecto: number, isAuthenticated: boolean) =
   }, [pujarModal]);
 
   return {
-    lotes,
+    lotes, // ✅ Retorna los lotes extraídos del proyecto
     isLoading,
     error,
     selectedLote,
@@ -123,10 +140,8 @@ export const useLotesProyecto = (idProyecto: number, isAuthenticated: boolean) =
     confirmDialog,
     unfavPending: unfavMutation.isPending,
     isSubscribed,
-    hasTokens, // ✅ NUEVO
-    tokensDisponibles, // ✅ NUEVO
-    snackbar, 
-    closeSnackbar,
+    hasTokens,
+    tokensDisponibles,
     handleOpenPujar,
     handleRequestUnfav,
     executeUnfav,

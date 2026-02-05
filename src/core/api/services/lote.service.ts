@@ -1,18 +1,17 @@
-
+import type { GenericResponseDto } from '@/core/types/dto/auth.dto';
+import type { CreateLoteDto, LoteDto, UpdateLoteDto } from '@/core/types/dto/lote.dto';
 import type { AxiosResponse } from 'axios';
 import httpService from '../httpService';
-import type { CreateLoteDto, LoteDto, UpdateLoteDto } from '@/core/types/dto/lote.dto';
-import type { GenericResponseDto } from '@/core/types/dto/auth.dto';
 
 const BASE_ENDPOINT = '/lotes';
 
 // Interfaces de respuesta específicas para acciones de subasta
 export interface StartAuctionResponse {
-    mensaje: string;
+  mensaje: string;
 }
 
 export interface EndAuctionResponse {
-    mensaje: string;
+  mensaje: string;
 }
 
 const LoteService = {
@@ -20,15 +19,22 @@ const LoteService = {
   // =================================================
   // 👁️ VISTA PÚBLICA / USUARIO
   // =================================================
-  
-  getAllActive: async (): Promise<AxiosResponse<LoteDto[]>> => {
-    return await httpService.get(`${BASE_ENDPOINT}/activos`);
-  },
 
+ getAllActive: async (): Promise<AxiosResponse<LoteDto[]>> => {
+  // ✅ Este endpoint SÍ permite clientes logueados
+  return await httpService.get(`${BASE_ENDPOINT}/activos`);
+},
+
+  /**
+   * ✅ MODIFICADO: Alineado con la ruta del back /:id/activo
+   */
   getByIdActive: async (id: number): Promise<AxiosResponse<LoteDto>> => {
     return await httpService.get(`${BASE_ENDPOINT}/${id}/activo`);
   },
-  
+
+  /**
+   * ✅ Alineado con /proyecto/:idProyecto
+   */
   getByProject: async (idProyecto: number): Promise<AxiosResponse<LoteDto[]>> => {
     return await httpService.get(`${BASE_ENDPOINT}/proyecto/${idProyecto}`);
   },
@@ -57,6 +63,9 @@ const LoteService = {
     return await httpService.get(`${BASE_ENDPOINT}/${id}`);
   },
 
+  /**
+   * ✅ Alineado con la ruta estática /sin_proyecto
+   */
   findLotesNoAssociated: async (): Promise<AxiosResponse<LoteDto[]>> => {
     return await httpService.get(`${BASE_ENDPOINT}/sin_proyecto`);
   },
@@ -65,10 +74,16 @@ const LoteService = {
   // 🎯 CONTROL DE SUBASTA (ADMIN)
   // =================================================
 
+  /**
+   * ✅ Alineado con /:id/start_auction
+   */
   startAuction: async (id: number): Promise<AxiosResponse<StartAuctionResponse>> => {
     return await httpService.post(`${BASE_ENDPOINT}/${id}/start_auction`);
   },
 
+  /**
+   * ✅ Alineado con /:id/end
+   */
   endAuction: async (id: number): Promise<AxiosResponse<EndAuctionResponse>> => {
     return await httpService.put(`${BASE_ENDPOINT}/${id}/end`);
   },

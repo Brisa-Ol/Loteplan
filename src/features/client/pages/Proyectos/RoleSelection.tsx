@@ -12,7 +12,9 @@ import {
   Container,
   Divider,
   Fade,
-  Paper, Stack, Typography,
+  Paper,
+  Stack,
+  Typography,
   useTheme
 } from "@mui/material";
 
@@ -27,41 +29,100 @@ import { useAuth } from "@/core/context/AuthContext";
 import { QueryHandler } from "../../../../shared/components/data-grid/QueryHandler/QueryHandler";
 import { ProjectCard } from "./components/ProjectCard";
 import { ProjectFilters } from "./components/ProjectFilters";
+import { ROUTES } from '@/routes';
 
 // --- Highlights Section ---
-const HighlightsSection: React.FC<{ perfil: string }> = ({ perfil }) => (
-  <Paper elevation={0} sx={{ p: 3, mb: 4, borderRadius: 3, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' }}>
-    <Stack direction={{ xs: 'column', md: 'row' }} spacing={{ xs: 4, md: 8 }} justifyContent="center" alignItems={{ xs: 'flex-start', md: 'center' }} divider={<Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', md: 'block' } }} />}>
-      {perfil === 'ahorrista' ? (
-        <>
-          <Box display="flex" alignItems="center" gap={2}>
-            <Avatar sx={{ bgcolor: 'success.light', color: 'success.dark' }}><Savings /></Avatar>
-            <Box><Typography variant="subtitle1" fontWeight={700}>Cuotas Fijas</Typography><Typography variant="body2" color="text.secondary">En pesos sin interés</Typography></Box>
-          </Box>
-          <Box display="flex" alignItems="center" gap={2}>
-            <Avatar sx={{ bgcolor: 'warning.light', color: 'warning.dark' }}><HomeIcon /></Avatar>
-            <Box><Typography variant="subtitle1" fontWeight={700}>Tu Casa Propia</Typography><Typography variant="body2" color="text.secondary">Adjudicación pactada</Typography></Box>
-          </Box>
-        </>
-      ) : (
-        <>
-          <Box display="flex" alignItems="center" gap={2}>
-            <Avatar sx={{ bgcolor: 'primary.light', color: 'primary.dark' }}><TrendingUp /></Avatar>
-            <Box><Typography variant="subtitle1" fontWeight={700}>Alta Rentabilidad</Typography><Typography variant="body2" color="text.secondary">Retornos en USD</Typography></Box>
-          </Box>
-          <Box display="flex" alignItems="center" gap={2}>
-            <Avatar sx={{ bgcolor: 'info.light', color: 'info.dark' }}><Business /></Avatar>
-            <Box><Typography variant="subtitle1" fontWeight={700}>Respaldo Real</Typography><Typography variant="body2" color="text.secondary">Activos tangibles</Typography></Box>
-          </Box>
-        </>
-      )}
-    </Stack>
-  </Paper>
-);
+const HighlightsSection: React.FC<{ perfil: string }> = ({ perfil }) => {
+  const theme = useTheme();
 
-// ==========================================
-// COMPONENTE PRINCIPAL
-// ==========================================
+  return (
+    <Paper
+      elevation={0}
+      sx={{
+        p: 4,
+        mb: 5,
+        borderRadius: 2,
+        bgcolor: 'background.paper',
+        border: `1px solid ${theme.palette.divider}`
+      }}
+    >
+      <Stack
+        direction={{ xs: 'column', md: 'row' }}
+        spacing={{ xs: 4, md: 8 }}
+        justifyContent="center"
+        alignItems={{ xs: 'flex-start', md: 'center' }}
+        divider={
+          <Divider
+            orientation="vertical"
+            flexItem
+            sx={{ display: { xs: 'none', md: 'block' } }}
+          />
+        }
+      >
+        {perfil === 'ahorrista' ? (
+          <>
+            <Box display="flex" alignItems="center" gap={2}>
+              <Avatar sx={{ bgcolor: 'success.light', color: 'success.main', width: 48, height: 48 }}>
+                <Savings />
+              </Avatar>
+              <Box>
+                <Typography variant="subtitle1" fontWeight={700} color="text.primary">
+                  Cuotas Fijas
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  En pesos sin interés
+                </Typography>
+              </Box>
+            </Box>
+            <Box display="flex" alignItems="center" gap={2}>
+              <Avatar sx={{ bgcolor: 'warning.light', color: 'warning.main', width: 48, height: 48 }}>
+                <HomeIcon />
+              </Avatar>
+              <Box>
+                <Typography variant="subtitle1" fontWeight={700} color="text.primary">
+                  Tu Casa Propia
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Adjudicación pactada
+                </Typography>
+              </Box>
+            </Box>
+          </>
+        ) : (
+          <>
+            <Box display="flex" alignItems="center" gap={2}>
+              <Avatar sx={{ bgcolor: 'info.light', color: 'info.main', width: 48, height: 48 }}>
+                <TrendingUp />
+              </Avatar>
+              <Box>
+                <Typography variant="subtitle1" fontWeight={700} color="text.primary">
+                  Alta Rentabilidad
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Retornos en USD
+                </Typography>
+              </Box>
+            </Box>
+            <Box display="flex" alignItems="center" gap={2}>
+              <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main', width: 48, height: 48 }}>
+                <Business />
+              </Avatar>
+              <Box>
+                <Typography variant="subtitle1" fontWeight={700} color="text.primary">
+                  Respaldo Real
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Activos tangibles
+                </Typography>
+              </Box>
+            </Box>
+          </>
+        )}
+      </Stack>
+    </Paper>
+  );
+};
+
 const ProyectosUnificados: React.FC = () => {
   const navigate = useNavigate();
   const theme = useTheme();
@@ -70,62 +131,42 @@ const ProyectosUnificados: React.FC = () => {
   // Estados
   const [perfilSeleccionado, setPerfilSeleccionado] = useState<'ahorrista' | 'inversionista'>('ahorrista');
   const [itemsVisibles, setItemsVisibles] = useState(9);
+  const [filtros, setFiltros] = useState({ search: '', status: 'todos' });
 
-  // Estado de Filtros
-  const [filtros, setFiltros] = useState({
-    search: '',
-    status: 'todos'
-  });
-
-  // ✅ MEJORA 1: Caché más agresivo (de 5 a 10 minutos)
+  // Queries
   const { data: proyectosInv, isLoading: loadingInv } = useQuery({
     queryKey: ['proyectosInversionista'],
     queryFn: async () => (await proyectoService.getInversionistasActive()).data,
     staleTime: 10 * 60 * 1000,
-    gcTime: 15 * 60 * 1000,
   });
 
   const { data: proyectosAho, isLoading: loadingAho } = useQuery({
     queryKey: ['proyectosAhorrista'],
     queryFn: async () => (await proyectoService.getAhorristasActive()).data,
     staleTime: 10 * 60 * 1000,
-    gcTime: 15 * 60 * 1000,
   });
 
   const isLoading = loadingInv || loadingAho;
 
   // Lógica de Filtrado
   const proyectosFiltrados = useMemo(() => {
-    let baseProyectos = perfilSeleccionado === 'inversionista'
-      ? (proyectosInv || [])
-      : (proyectosAho || []);
-
+    let baseProyectos = perfilSeleccionado === 'inversionista' ? (proyectosInv || []) : (proyectosAho || []);
     return baseProyectos.filter(p => {
       const searchTerm = filtros.search.toLowerCase().trim();
-
-      const matchSearch = searchTerm
-        ? (p.nombre_proyecto || '').toLowerCase().includes(searchTerm)
-        : true;
-
-      const matchStatus = filtros.status === 'todos'
-        ? true
-        : p.estado_proyecto === filtros.status;
-
+      const matchSearch = searchTerm ? (p.nombre_proyecto || '').toLowerCase().includes(searchTerm) : true;
+      const matchStatus = filtros.status === 'todos' || p.estado_proyecto === filtros.status;
       return matchSearch && matchStatus;
     });
   }, [proyectosInv, proyectosAho, perfilSeleccionado, filtros]);
 
   const proyectosVisibles = proyectosFiltrados.slice(0, itemsVisibles);
   const hayMasProyectos = proyectosFiltrados.length > itemsVisibles;
-
-  // ✅ MEJORA 2: Indicador de filtros activos
   const tieneFiltrosActivos = filtros.search || filtros.status !== 'todos';
 
   // Handlers
   const handleProjectClick = (projectId: number | string) => {
-    const targetPath = `/proyectos/${projectId}`;
-    if (isAuthenticated) navigate(targetPath);
-    else navigate("/login", { state: { from: targetPath } });
+   const targetPath = ROUTES.PROYECTOS.DETALLE.replace(':id', String(projectId));
+  navigate(targetPath);
   };
 
   const handleCambioPerfil = (nuevoPerfil: 'ahorrista' | 'inversionista') => {
@@ -134,105 +175,122 @@ const ProyectosUnificados: React.FC = () => {
     setFiltros({ search: '', status: 'todos' });
   };
 
-  const handleFilter = (newFilters: { search: string; status: string }) => {
-    setFiltros(newFilters);
-    setItemsVisibles(9);
-  };
-
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
-
-      {/* 1. HERO HEADER */}
+      {/* 1. HERO HEADER (mb: 0 para permitir el solapamiento) */}
       <Box sx={{
         background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
         color: 'primary.contrastText',
-        py: { xs: 6, md: 8 },
+        py: { xs: 10, md: 12 },
         textAlign: 'center',
-        mb: 6,
+        mb: 0,
         borderBottomLeftRadius: { xs: 24, md: 48 },
         borderBottomRightRadius: { xs: 24, md: 48 },
-        boxShadow: 3
+        boxShadow: "0 10px 30px " + alpha(theme.palette.primary.dark, 0.3)
       }}>
         <Container maxWidth="lg">
-          <Typography variant="h3" component="h1" fontWeight={800} gutterBottom sx={{ letterSpacing: -1 }}>
+          <Typography variant="h1" gutterBottom sx={{ color: 'white' }}>
             Explora Oportunidades
           </Typography>
-          <Typography variant="h6" sx={{ maxWidth: 'md', mx: 'auto', opacity: 0.9, fontWeight: 400 }}>
+          <Typography variant="h6" sx={{ maxWidth: 'md', mx: 'auto', opacity: 0.9, fontWeight: 400, lineHeight: 1.7 }}>
             Encuentra el proyecto ideal para hacer crecer tu capital o asegurar tu futuro lote.
           </Typography>
         </Container>
       </Box>
 
-      <Container maxWidth="xl" sx={{ pb: 12 }}>
-
-        {/* 2. CONTROLES DE PERFIL (TOGGLE) */}
-        <Stack spacing={4} mb={2} alignItems="center">
-          <Paper
-            elevation={0}
+      {/* 2. BARRA DE NAVEGACIÓN (ESTILO UNIFICADO) */}
+      <Container maxWidth="md" sx={{ mt: -5, mb: 8, position: 'relative', zIndex: 10 }}>
+        <Paper
+          elevation={0}
+          sx={{
+            p: 0.6,
+            borderRadius: 10,
+            display: 'flex',
+            bgcolor: '#F2F2F2',
+            border: `1px solid ${theme.palette.divider}`,
+            boxShadow: theme.shadows[3]
+          }}
+        >
+          <Button
+            onClick={() => handleCambioPerfil('ahorrista')}
+            fullWidth
+            startIcon={<HomeIcon fontSize="medium" />}
             sx={{
-              p: 0.8,
-              borderRadius: 50,
-              bgcolor: 'background.paper',
-              display: 'flex',
-              maxWidth: 600,
-              width: '100%',
-              border: `1px solid ${theme.palette.divider}`,
-              boxShadow: `0 4px 20px ${alpha(theme.palette.common.black, 0.05)}`
+              borderRadius: 8,
+              py: 1.5,
+              textTransform: 'none',
+              fontSize: '1rem',
+              fontWeight: 700,
+              transition: 'all 0.3s ease',
+              ...(perfilSeleccionado === 'ahorrista'
+                ? {
+                  bgcolor: 'primary.main',
+                  color: 'white',
+                  boxShadow: '0 4px 12px ' + alpha(theme.palette.primary.main, 0.3),
+                  border: `1px solid ${theme.palette.primary.dark}`,
+                  '&:hover': { bgcolor: 'primary.dark' }
+                }
+                : {
+                  color: 'text.primary',
+                  '&:hover': { bgcolor: alpha(theme.palette.common.black, 0.04) }
+                })
             }}
           >
-            <Button
-              onClick={() => handleCambioPerfil('ahorrista')}
-              fullWidth
-              startIcon={<HomeIcon />}
-              sx={{
-                borderRadius: 50,
-                py: 1.5,
-                transition: 'all 0.3s ease',
-                ...(perfilSeleccionado === 'ahorrista'
-                  ? { bgcolor: 'primary.main', color: 'white', '&:hover': { bgcolor: 'primary.dark' } }
-                  : { color: 'text.secondary', '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.05) } })
-              }}
-            >
-              Modo Ahorrista
-            </Button>
-            <Button
-              onClick={() => handleCambioPerfil('inversionista')}
-              fullWidth
-              startIcon={<TrendingUp />}
-              sx={{
-                borderRadius: 50,
-                py: 1.5,
-                transition: 'all 0.3s ease',
-                ...(perfilSeleccionado === 'inversionista'
-                  ? { bgcolor: 'primary.main', color: 'white', '&:hover': { bgcolor: 'primary.dark' } }
-                  : { color: 'text.secondary', '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.05) } })
-              }}
-            >
-              Modo Inversionista
-            </Button>
-          </Paper>
+            Modo Ahorrista
+          </Button>
+          <Button
+            onClick={() => handleCambioPerfil('inversionista')}
+            fullWidth
+            startIcon={<TrendingUp fontSize="medium" />}
+            sx={{
+              borderRadius: 8,
+              py: 1.5,
+              textTransform: 'none',
+              fontSize: '1rem',
+              fontWeight: 700,
+              transition: 'all 0.3s ease',
+              ...(perfilSeleccionado === 'inversionista'
+                ? {
+                  bgcolor: 'primary.main',
+                  color: 'white',
+                  boxShadow: '0 4px 12px ' + alpha(theme.palette.primary.main, 0.3),
+                  border: `1px solid ${theme.palette.primary.dark}`,
+                  '&:hover': { bgcolor: 'primary.dark' }
+                }
+                : {
+                  color: 'text.primary',
+                  '&:hover': { bgcolor: alpha(theme.palette.common.black, 0.04) }
+                })
+            }}
+          >
+            Modo Inversionista
+          </Button>
+        </Paper>
+      </Container>
 
+      <Container maxWidth="xl" sx={{ pb: 14 }}>
+        <Stack spacing={2} mb={7} alignItems="center">
           <HighlightsSection perfil={perfilSeleccionado} />
         </Stack>
 
-        {/* 3. BARRA DE FILTROS (Con debounce integrado) */}
-        <Box mb={6}>
-          <ProjectFilters onFilter={handleFilter} />
+        {/* 3. BARRA DE FILTROS */}
+        <Box mb={7}>
+          <ProjectFilters onFilter={(f) => { setFiltros(f); setItemsVisibles(9); }} />
         </Box>
 
-        {/* ✅ MEJORA 3: Chip de resultados con filtros activos */}
+        {/* Chip de resultados */}
         {tieneFiltrosActivos && (
-          <Box mb={3} display="flex" justifyContent="center">
+          <Box mb={4} display="flex" justifyContent="center">
             <Chip
               label={`${proyectosFiltrados.length} ${proyectosFiltrados.length === 1 ? 'resultado encontrado' : 'resultados encontrados'}`}
               color="primary"
               variant="outlined"
-              sx={{ fontWeight: 600 }}
+              sx={{ px: 2, height: 40, fontSize: '0.9rem', fontWeight: 600 }}
             />
           </Box>
         )}
 
-        {/* 4. GRID DE RESULTADOS - ✅ MEJORA 4: Skeleton Loading */}
+        {/* 4. GRID DE RESULTADOS */}
         <QueryHandler
           isLoading={isLoading}
           error={null}
@@ -243,25 +301,21 @@ const ProyectosUnificados: React.FC = () => {
         >
           <>
             {proyectosFiltrados.length === 0 ? (
-              <Box textAlign="center" py={8} bgcolor="background.paper" borderRadius={4} border={`1px dashed ${theme.palette.divider}`}>
-                <FilterListOff sx={{ fontSize: 60, color: 'text.disabled', mb: 2 }} />
-                <Typography variant="h6" color="text.secondary" fontWeight={500}>
+              <Box textAlign="center" py={10} bgcolor="secondary.light" borderRadius={2} border={`1px dashed ${theme.palette.divider}`}>
+                <FilterListOff sx={{ fontSize: 60, color: 'text.disabled', mb: 3 }} />
+                <Typography variant="h5" color="text.secondary" fontWeight={500}>
                   No se encontraron proyectos con estos filtros.
                 </Typography>
-                <Button variant="text" onClick={() => setFiltros({ search: '', status: 'todos' })} sx={{ mt: 2 }}>
+                <Button variant="text" color="primary" onClick={() => setFiltros({ search: '', status: 'todos' })} sx={{ mt: 3, fontWeight: 600 }}>
                   Limpiar filtros
                 </Button>
               </Box>
             ) : (
               <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", md: "repeat(3, 1fr)" }, gap: 4, width: "100%" }}>
-                {/* ✅ MEJORA 5: Animación escalonada */}
                 {proyectosVisibles.map((project, index) => (
                   <Fade in={true} key={project.id} timeout={500} style={{ transitionDelay: `${index * 50}ms` }}>
                     <Box>
-                      <ProjectCard
-                        project={project}
-                        onClick={() => handleProjectClick(project.id)}
-                      />
+                      <ProjectCard project={project} onClick={() => handleProjectClick(project.id)} />
                     </Box>
                   </Fade>
                 ))}
@@ -269,18 +323,12 @@ const ProyectosUnificados: React.FC = () => {
             )}
 
             {hayMasProyectos && (
-              <Box textAlign="center" py={6}>
+              <Box textAlign="center" py={8}>
                 <Button
                   variant="outlined"
                   size="large"
                   onClick={() => setItemsVisibles(prev => prev + 9)}
-                  sx={{
-                    px: 4, py: 1.5,
-                    borderWidth: 2,
-                    fontWeight: 700,
-                    borderRadius: 50,
-                    '&:hover': { borderWidth: 2 }
-                  }}
+                  sx={{ px: 6, borderRadius: 2, borderWidth: 2, fontWeight: 700, '&:hover': { borderWidth: 2 } }}
                 >
                   Cargar más proyectos
                 </Button>

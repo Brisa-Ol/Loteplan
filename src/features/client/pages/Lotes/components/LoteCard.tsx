@@ -1,27 +1,13 @@
+// src/features/client/pages/Lotes/components/LoteCard.tsx
+import { BrokenImage, Gavel, Lock, ArrowForward } from '@mui/icons-material';
 import {
-  BrokenImage,
-  Gavel,
-  Lock
-} from '@mui/icons-material';
-import {
-  Box,
-  Button,
-  Card, CardContent, CardMedia,
-  Chip,
-  Fade,
-  keyframes, Skeleton,
-  Stack,
-  Typography,
-  useTheme
+  Box, Button, Card, CardContent, CardMedia, Chip, Fade, keyframes, Skeleton, Stack, Typography, useTheme, alpha
 } from '@mui/material';
 import React, { useMemo } from 'react';
-
 import ImagenService from '@/core/api/services/imagen.service';
 import type { LoteDto } from '@/core/types/dto/lote.dto';
-
 import { useCurrencyFormatter } from '@/features/client/hooks/useCurrencyFormatter';
 import { useImageLoader } from '@/features/client/hooks/useImageLoader';
-
 
 const pulse = keyframes`
   0% { box-shadow: 0 0 0 0 rgba(46, 125, 50, 0.7); }
@@ -29,7 +15,7 @@ const pulse = keyframes`
   100% { box-shadow: 0 0 0 0 rgba(46, 125, 50, 0); }
 `;
 
-interface LoteCardProps {
+export interface LoteCardProps {
   lote: LoteDto;
   onNavigate: (id: number) => void;
   onPujar: (lote: LoteDto) => void;
@@ -38,11 +24,12 @@ interface LoteCardProps {
   hasTokens: boolean;
   tokensDisponibles: number;
   isLoadingSub: boolean;
+  isAuthenticated: boolean; // ✅ Prop añadida para seguridad
 }
 
 const LoteCard: React.FC<LoteCardProps> = ({
   lote, onNavigate, onPujar, onRemoveFav,
-  isSubscribed, hasTokens, tokensDisponibles, isLoadingSub
+  isSubscribed, hasTokens, tokensDisponibles, isLoadingSub, isAuthenticated
 }) => {
   const theme = useTheme();
   const formatCurrency = useCurrencyFormatter();
@@ -54,12 +41,17 @@ const LoteCard: React.FC<LoteCardProps> = ({
   }, [lote.imagenes]);
 
   const isActiva = lote.estado_subasta === 'activa';
-  const isFinalizada = lote.estado_subasta === 'finalizada';
 
   const handleBotonClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (isSubscribed && hasTokens) onPujar(lote);
-    else onNavigate(lote.id);
+    // La lógica de redirección al login la maneja el componente padre vía onPujar
+    if (!isAuthenticated) {
+      onPujar(lote); 
+    } else if (isSubscribed && hasTokens && isActiva) {
+      onPujar(lote);
+    } else {
+      onNavigate(lote.id);
+    }
   };
 
   return (
@@ -79,41 +71,19 @@ const LoteCard: React.FC<LoteCardProps> = ({
         }}
       >
         <Box position="relative" sx={{ paddingTop: '65%', bgcolor: 'grey.100' }}>
-          {/* ✅ Skeleton de carga */}
           {!loaded && !error && imgUrl && (
-            <Skeleton
-              variant="rectangular"
-              animation="wave"
-              sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
-            />
+            <Skeleton variant="rectangular" animation="wave" sx={{ position: 'absolute', inset: 0 }} />
           )}
-
           {imgUrl && !error ? (
-            <CardMedia
-              className="lote-img"
-              component="img"
-              image={imgUrl}
-              onLoad={handleLoad}
-              onError={handleError}
-              sx={{
-                position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
-                objectFit: 'cover', transition: 'all 0.6s ease',
-                opacity: loaded ? 1 : 0
-              }}
-            />
+            <CardMedia className="lote-img" component="img" image={imgUrl} onLoad={handleLoad} onError={handleError} sx={{ position: 'absolute', inset: 0, objectFit: 'cover', transition: 'all 0.6s ease', opacity: loaded ? 1 : 0 }} />
           ) : (
-            <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <BrokenImage sx={{ fontSize: 48, color: 'grey.400' }} />
-            </Box>
+            <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><BrokenImage sx={{ fontSize: 48, color: 'grey.400' }} /></Box>
           )}
-
           <Box sx={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 60%)' }} />
-
           <Box position="absolute" top={12} left={12}>
             {isActiva && <Chip label="EN VIVO" color="success" size="small" sx={{ fontWeight: 800, animation: `${pulse} 2s infinite` }} />}
           </Box>
-
-          <Box position="absolute" bottom={12} left={12} right={12}>
+          <Box position="absolute" bottom={12} left={12}>
             <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.8)', display: 'block' }}>PRECIO BASE</Typography>
             <Typography variant="h5" sx={{ color: 'white', fontWeight: 800 }}>{formatCurrency(lote.precio_base)}</Typography>
           </Box>
@@ -123,27 +93,25 @@ const LoteCard: React.FC<LoteCardProps> = ({
           <Typography variant="caption" color="primary.main" fontWeight={800}>{lote.proyecto?.nombre_proyecto}</Typography>
           <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>{lote.nombre_lote}</Typography>
 
-          <Stack direction="row" spacing={1.5}>
-            <Button
-              variant="contained"
-              fullWidth
-              onClick={handleBotonClick}
-              disabled={isLoadingSub}
-              startIcon={isSubscribed && hasTokens ? <Gavel /> : <Lock />}
-              sx={{ fontWeight: 700 }}
-            >
-              {isLoadingSub ? "..." : (isSubscribed && hasTokens ? "Pujar Ahora" : "Ver Requisitos")}
-            </Button>
-          </Stack>
+          <Button
+            variant="contained"
+            fullWidth
+            onClick={handleBotonClick}
+            disabled={isLoadingSub}
+            // ✅ Candado visual si no hay sesión
+            startIcon={!isAuthenticated ? <Lock /> : (isSubscribed && hasTokens && isActiva ? <Gavel /> : <ArrowForward />)}
+            sx={{ fontWeight: 700 }}
+          >
+            {isLoadingSub ? "..." : (
+              !isAuthenticated 
+                ? "Ingresar para Pujar" 
+                : (isSubscribed && hasTokens && isActiva ? "Pujar Ahora" : "Ver Detalles")
+            )}
+          </Button>
 
-          {isSubscribed && isActiva && (
+          {isAuthenticated && isSubscribed && isActiva && (
             <Box display="flex" justifyContent="center" mt={2}>
-              <Chip
-                label={hasTokens ? `${tokensDisponibles} disponible` : 'Token en uso'}
-                size="small"
-                variant="outlined"
-                sx={{ alignSelf: 'center' }} // ✅ CORRECCIÓN: sx para evitar error de tipos
-              />
+              <Chip label={hasTokens ? `${tokensDisponibles} disponible` : 'Token en uso'} size="small" variant="outlined" />
             </Box>
           )}
         </CardContent>
