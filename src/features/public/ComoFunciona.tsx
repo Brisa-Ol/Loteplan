@@ -29,6 +29,9 @@ import {
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+// ✅ IMPORTAR EL CONTEXTO DE AUTENTICACIÓN
+import { useAuth } from '@/core/context/AuthContext';
+
 // ==========================================
 // CONTENIDO AHORRISTA
 // ==========================================
@@ -348,6 +351,9 @@ const ComoFunciona: React.FC = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(0);
   const theme = useTheme();
+  
+  // ✅ OBTENEMOS EL ESTADO DE AUTENTICACIÓN
+  const { isAuthenticated } = useAuth();
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
@@ -382,43 +388,47 @@ const ComoFunciona: React.FC = () => {
         {activeTab === 0 ? <AhorristaContent /> : <InversionistaContent />}
       </Container>
 
-      {/* Footer CTA (MÁS CHICO Y REDIRECCIÓN A REGISTRO) */}
-      <Box
-        sx={{
-          background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
-          color: 'white',
-          py: 7, // Sección más pequeña
-          textAlign: 'center',
-        }}
-      >
-        <Container maxWidth="md">
-          <Typography variant="h4" fontWeight={700} gutterBottom sx={{ mb: 1 }}>
-            ¿Listo para empezar?
-          </Typography>
-          <Typography variant="body1" sx={{ mb: 4, opacity: 0.9 }}>
-            Únete a nuestra comunidad y da el primer paso hacia tu objetivo
-          </Typography>
-          <Button
-            variant="contained"
-            size="large"
-            startIcon={<HomeIcon />}
-            onClick={() => navigate(ROUTES.REGISTER)} // Redirige a registro
-            sx={{
-              bgcolor: 'common.white',
-              color: 'primary.main',
-              fontWeight: 700,
-              px: 5,
-              '&:hover': {
-                bgcolor: alpha(theme.palette.common.white, 0.9),
-                transform: 'scale(1.02)'
-              },
-              transition: 'all 0.2s ease'
-            }}
-          >
-            Registrate ahora
-          </Button>
-        </Container>
-      </Box>
+      {/* ✅ FOOTER CONDICIONAL 
+          Solo se muestra si el usuario NO está autenticado.
+      */}
+      {!isAuthenticated && (
+        <Box
+          sx={{
+            background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+            color: 'white',
+            py: 7, // Sección más pequeña
+            textAlign: 'center',
+          }}
+        >
+          <Container maxWidth="md">
+            <Typography variant="h4" fontWeight={700} gutterBottom sx={{ mb: 1 }}>
+              ¿Listo para empezar?
+            </Typography>
+            <Typography variant="body1" sx={{ mb: 4, opacity: 0.9 }}>
+              Únete a nuestra comunidad y da el primer paso hacia tu objetivo
+            </Typography>
+            <Button
+              variant="contained"
+              size="large"
+              startIcon={<HomeIcon />}
+              onClick={() => navigate(ROUTES.REGISTER)} // Redirige a registro
+              sx={{
+                bgcolor: 'common.white',
+                color: 'primary.main',
+                fontWeight: 700,
+                px: 5,
+                '&:hover': {
+                  bgcolor: alpha(theme.palette.common.white, 0.9),
+                  transform: 'scale(1.02)'
+                },
+                transition: 'all 0.2s ease'
+              }}
+            >
+              Registrate ahora
+            </Button>
+          </Container>
+        </Box>
+      )}
     </Box>
   );
 };

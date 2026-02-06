@@ -11,6 +11,8 @@ import {
   Construction as ConstructionIcon,
   // Navegación General
   Dashboard as DashboardIcon,
+  Home as HomeIcon, // ✅ Nuevo para Inicio
+  Info as InfoIcon, // ✅ Nuevo para Cómo Funciona
   // Gestión & Documentos
   Description as DescriptionIcon,
   Favorite as FavoriteIcon,
@@ -20,7 +22,6 @@ import {
   LockOpen as LockOpenIcon,
   Logout as LogoutIcon,
   Message as MessageIcon,
-  MoreHoriz as MoreHorizIcon,
   Person as PersonIcon,
   Receipt as ReceiptIcon,
   Settings as SettingsIcon,
@@ -126,7 +127,7 @@ export const useNavbarMenu = () => {
             icon: PersonIcon,
             submenu: [
               { label: "Lista de Usuarios", path: ROUTES.ADMIN.USUARIOS.LISTA, icon: PersonIcon },
-              { label: "Verificaciones KYC", path: ROUTES.ADMIN.USUARIOS.KYC, icon: VerifiedUserIcon, badge: 0 }, // Aquí podrías pasar un prop de conteo
+              { label: "Verificaciones KYC", path: ROUTES.ADMIN.USUARIOS.KYC, icon: VerifiedUserIcon, badge: 0 },
             ]
           },
           {
@@ -184,7 +185,7 @@ export const useNavbarMenu = () => {
     }
 
     // ----------------------------------------------------------------------
-    // B. CLIENTE (Estructura Optimizada + Perfil con Seguridad)
+    // B. CLIENTE (Actualizado con Home y Cómo Funciona)
     // ----------------------------------------------------------------------
     if (user?.rol === "cliente") {
       // Analizar Estados de Seguridad
@@ -201,14 +202,29 @@ export const useNavbarMenu = () => {
 
         // 1. MENÚ PRINCIPAL (Izquierda)
         navItems: [
+          // === ZONA PÚBLICA / INFORMATIVA ===
           {
             label: "Inicio",
+            path: ROUTES.PUBLIC.HOME,
+            icon: HomeIcon,
+            description: "Ir a la portada del sitio web"
+          },
+          {
+            label: "Cómo funciona",
+            path: ROUTES.PUBLIC.COMO_FUNCIONA,
+            icon: InfoIcon,
+            description: "Guía paso a paso"
+          },
+
+          // === ZONA PRIVADA / GESTIÓN ===
+          {
+            label: "Mi Panel",
             path: ROUTES.CLIENT.DASHBOARD,
             icon: DashboardIcon,
             description: "Resumen de cuenta"
           },
           {
-            label: "Oportunidades", // Mejor que "Invertir" o "Proyectos"
+            label: "Oportunidades",
             path: ROUTES.PROYECTOS.SELECCION_ROL,
             icon: ConstructionIcon,
             description: "Explorar catálogo de inversiones"
@@ -236,15 +252,11 @@ export const useNavbarMenu = () => {
             ]
           },
           {
-            label: "Más",
-            icon: MoreHorizIcon,
-            submenu: [
-              { label: "Lotes Favoritos", path: ROUTES.CLIENT.CUENTA.FAVORITOS, icon: FavoriteIcon },
-              { isDivider: true, label: "" },
-              //{ label: "Ayuda Ahorristas", path: ROUTES.PUBLIC.COMO_FUNCIONA_AHORRISTA, icon: HelpOutlineIcon },
-              //{ label: "Ayuda Inversores", path: ROUTES.PUBLIC.COMO_FUNCIONA_INVERSIONISTA, icon: HelpOutlineIcon },
-            ]
-          }
+            label: "Favoritos",
+            path: ROUTES.CLIENT.CUENTA.FAVORITOS,
+            icon: FavoriteIcon,
+            description: "Lotes guardados"
+          },
         ],
 
         // 2. MENÚ DE USUARIO (Perfil + Seguridad Mejorada)
@@ -252,7 +264,6 @@ export const useNavbarMenu = () => {
           {
             label: user?.nombre || "Mi Cuenta",
             icon: AccountCircleIcon,
-            // Badge en el avatar si falta algo crítico
             badge: (!isKycApproved || !is2faEnabled) ? 1 : undefined,
             submenu: [
               // --- Datos ---
@@ -275,25 +286,20 @@ export const useNavbarMenu = () => {
               {
                 label: isKycApproved ? "Identidad Verificada" : "Verificar Identidad",
                 path: ROUTES.CLIENT.CUENTA.KYC,
-                // Si está aprobado: Check Verde. Si no: Escudo con alerta o Badge.
                 icon: isKycApproved ? VerifiedUserIcon : BadgeIcon,
                 description: isKycApproved
                   ? "Cuenta validada correctamente"
                   : (isKycPending ? "Verificación en revisión" : "Requerido para operar"),
-                // Si no está aprobado, mostramos badge para llamar la atención
                 color: isKycApproved ? "success" : "warning",
                 badge: !isKycApproved ? 1 : undefined
               },
               {
                 label: is2faEnabled ? "2FA Activo" : "Activar 2FA",
                 path: ROUTES.CLIENT.CUENTA.SEGURIDAD,
-                // Candado cerrado (seguro) vs Candado abierto (inseguro)
                 icon: is2faEnabled ? LockIcon : LockOpenIcon,
                 description: is2faEnabled
                   ? "Cuenta protegida"
                   : "Recomendado para seguridad",
-                // Opcional: Badge si quieres forzar la seguridad
-                // badge: !is2faEnabled ? 1 : undefined
                 color: is2faEnabled ? "success" : "warning"
               },
 
@@ -327,7 +333,7 @@ export const useNavbarMenu = () => {
       navItems: [
         { label: "Inicio", path: ROUTES.PUBLIC.HOME },
         { label: "Cómo Funciona", path: ROUTES.PUBLIC.COMO_FUNCIONA },
-        { label: "Proyectos", path: ROUTES.PROYECTOS.SELECCION_ROL },
+        { label: "Oportunidades", path: ROUTES.PROYECTOS.SELECCION_ROL },
         { label: "Nosotros", path: ROUTES.PUBLIC.NOSOTROS },
       ],
       userNavItems: [],

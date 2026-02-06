@@ -1,5 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React, { useMemo } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import {
@@ -28,70 +27,20 @@ import { DataTable, type DataTableColumn } from '../../../../shared/components/d
 import { PageContainer } from '../../../../shared/components/layout/containers/PageContainer/PageContainer';
 import { PageHeader } from '../../../../shared/components/layout/headers/PageHeader';
 import { QueryHandler } from '../../../../shared/components/data-grid/QueryHandler/QueryHandler';
-import { StatCard } from '../../../../shared/components/domain/cards/StatCard/StatCard'; // ✅ Agregado
-import { useModal } from '../../../../shared/hooks/useModal';
-
+import { StatCard } from '../../../../shared/components/domain/cards/StatCard/StatCard';
 import { VerContratoFirmadoModal } from '../Proyectos/modals/VerContratoFirmadoModal';
+
+// --- HOOK Y DTO ---
+import { useHistorialContratos } from '../../hooks/useHistorialContratos'; // Ajusta la ruta de importación
 import type { ContratoFirmadoDto } from '@/core/types/dto/contrato-firmado.dto';
-import ContratoGeneralService from '@/core/api/services/contrato-general.service';
 
 const HistorialContratos: React.FC = () => {
   const theme = useTheme();
-  const verModal = useModal();
+  
+  // ✅ Usamos el hook optimizado
+  const logic = useHistorialContratos();
 
-  // Estados Locales
-  const [contratoSeleccionado, setContratoSeleccionado] = useState<ContratoFirmadoDto | null>(null);
-  const [downloadingId, setDownloadingId] = useState<number | null>(null);
-  const [highlightedId, setHighlightedId] = useState<number | null>(null);
-
-  // Queries
-  const { data: contratos = [], isLoading, error } = useQuery({
-    queryKey: ['misContratos'],
-    queryFn: async () => (await ContratoGeneralService.findMyContracts()).data,
-    refetchOnWindowFocus: false
-  });
-
-  // 1. Stats (Cálculos simples para las tarjetas)
-  const stats = useMemo(() => {
-    if (!contratos.length) return { total: 0, verified: 0, lastDate: '-' };
-
-    // Ordenamos para encontrar el último
-    const sorted = [...contratos].sort((a, b) => new Date(b.fecha_firma).getTime() - new Date(a.fecha_firma).getTime());
-
-    return {
-      total: contratos.length,
-      verified: contratos.length, // Asumimos que si están aquí, están firmados
-      lastDate: sorted[0].fecha_firma
-        ? format(new Date(sorted[0].fecha_firma), 'dd MMM yyyy', { locale: es })
-        : '-'
-    };
-  }, [contratos]);
-
-  // Handlers
-  const handleVerContrato = useCallback((contrato: ContratoFirmadoDto) => {
-    setContratoSeleccionado(contrato);
-    verModal.open();
-  }, [verModal]);
-
-  const handleCloseModal = useCallback(() => {
-    verModal.close();
-    setTimeout(() => setContratoSeleccionado(null), 300);
-  }, [verModal]);
-
-  const handleDownload = useCallback(async (contrato: ContratoFirmadoDto) => {
-    try {
-      setDownloadingId(contrato.id);
-      await ContratoGeneralService.downloadAndSave(contrato.id, contrato.nombre_archivo);
-      setHighlightedId(contrato.id);
-      setTimeout(() => setHighlightedId(null), 2500);
-    } catch (err) {
-      console.error("Error al descargar", err);
-    } finally {
-      setDownloadingId(null);
-    }
-  }, []);
-
-  // Definición de Columnas
+  // Definición de Columnas (Memoizado)
   const columns = useMemo<DataTableColumn<ContratoFirmadoDto>[]>(() => [
     {
       id: 'archivo',
@@ -156,7 +105,7 @@ const HistorialContratos: React.FC = () => {
           label="Verificado y Firmado"
           size="small"
           color="success"
-          variant="filled" // Filled para dar sensación de seguridad sólida
+          variant="filled"
           sx={{ fontWeight: 600 }}
         />
       )
@@ -171,7 +120,7 @@ const HistorialContratos: React.FC = () => {
           <Tooltip title="Vista Previa">
             <IconButton
               size="small"
-              onClick={() => handleVerContrato(row)}
+              onClick={() => logic.handleVerContrato(row)}
               sx={{
                 color: 'text.secondary',
                 border: `1px solid ${theme.palette.divider}`,
@@ -181,30 +130,34 @@ const HistorialContratos: React.FC = () => {
               <VisibilityIcon fontSize="small" />
             </IconButton>
           </Tooltip>
+          
           <Tooltip title="Descargar Original">
             <span>
               <IconButton
                 size="small"
-                onClick={() => handleDownload(row)}
-                disabled={downloadingId === row.id}
+                onClick={() => logic.handleDownload(row)}
+                disabled={logic.downloadingId === row.id}
                 sx={{
                   color: 'primary.main',
                   bgcolor: alpha(theme.palette.primary.main, 0.1),
                   '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) }
                 }}
               >
-                {downloadingId === row.id ? <CircularProgress size={20} color="inherit" /> : <DownloadIcon fontSize="small" />}
+                {logic.downloadingId === row.id ? (
+                  <CircularProgress size={20} color="inherit" />
+                ) : (
+                  <DownloadIcon fontSize="small" />
+                )}
               </IconButton>
             </span>
           </Tooltip>
         </Stack>
       )
     }
-  ], [theme, downloadingId, handleVerContrato, handleDownload]);
+  ], [theme, logic.downloadingId, logic.handleVerContrato, logic.handleDownload]);
 
   return (
-    <PageContainer maxWidth="lg"> {/* Cambiado a lg para dar aire a las cards */}
-
+    <PageContainer maxWidth="lg">
       {/* HEADER SIMÉTRICO */}
       <PageHeader
         title="Mis Contratos"
@@ -215,18 +168,18 @@ const HistorialContratos: React.FC = () => {
       <Box mb={4} display="grid" gridTemplateColumns={{ xs: '1fr', md: 'repeat(3, 1fr)' }} gap={3}>
         <StatCard
           title="Total Firmados"
-          value={stats.total.toString()}
+          value={logic.stats.total.toString()}
           icon={<Gavel />}
           color="primary"
-          loading={isLoading}
+          loading={logic.isLoading}
           subtitle="Documentos legales"
         />
         <StatCard
           title="Última Firma"
-          value={stats.lastDate}
+          value={logic.stats.lastDate}
           icon={<HistoryIcon />}
           color="info"
-          loading={isLoading}
+          loading={logic.isLoading}
           subtitle="Actividad reciente"
         />
         <StatCard
@@ -234,18 +187,18 @@ const HistorialContratos: React.FC = () => {
           value="100%"
           icon={<VerifiedUser />}
           color="success"
-          loading={isLoading}
+          loading={logic.isLoading}
           subtitle="Integridad validada"
         />
       </Box>
 
       {/* TABLA */}
-      <QueryHandler isLoading={isLoading} error={error as Error | null}>
+      <QueryHandler isLoading={logic.isLoading} error={logic.error as Error | null}>
         <DataTable
           columns={columns}
-          data={contratos}
+          data={logic.contratos}
           getRowKey={(row) => row.id}
-          highlightedRowId={highlightedId}
+          highlightedRowId={logic.highlightedId}
           emptyMessage="No tienes contratos firmados aún."
           pagination={true}
           defaultRowsPerPage={5}
@@ -254,9 +207,9 @@ const HistorialContratos: React.FC = () => {
 
       {/* Modal Reutilizable */}
       <VerContratoFirmadoModal
-        open={verModal.isOpen}
-        onClose={handleCloseModal}
-        contrato={contratoSeleccionado}
+        open={logic.verModal.isOpen}
+        onClose={logic.handleCloseModal}
+        contrato={logic.contratoSeleccionado}
       />
     </PageContainer>
   );

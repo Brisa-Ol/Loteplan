@@ -1,13 +1,16 @@
 // src/components/Admin/Proyectos/Components/modals/VerContratoModal.tsx
 
-import React from 'react';
-import { Box, CircularProgress, Alert } from '@mui/material';
-import { Description as DescriptionIcon } from '@mui/icons-material';
+import React, { useState } from 'react';
+import { Box, CircularProgress, Alert, Button } from '@mui/material';
+import { Description as DescriptionIcon, Download } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
+
 import ContratoPlantillaService from '@/core/api/services/contrato-plantilla.service';
+import ImagenService from '@/core/api/services/imagen.service';
 import BaseModal from '@/shared/components/domain/modals/BaseModal/BaseModal';
 import PDFViewerMejorado from './PDFViewerMejorado';
-import ImagenService from '@/core/api/services/imagen.service';
+import { downloadSecureFile } from '@/shared/utils';
+
 
 
 interface Props {
@@ -20,6 +23,7 @@ interface Props {
 export const VerContratoModal: React.FC<Props> = ({
   open, onClose, idProyecto, nombreProyecto
 }) => {
+  const [downloading, setDownloading] = useState(false);
 
   // Query al servicio de PLANTILLAS
   const { data: plantillas, isLoading, error } = useQuery({
@@ -29,6 +33,21 @@ export const VerContratoModal: React.FC<Props> = ({
   });
 
   const plantilla = plantillas && plantillas.length > 0 ? plantillas[0] : null;
+
+  // ✅ Handler de descarga
+  const handleDownload = async () => {
+    if (plantilla) {
+        try {
+            setDownloading(true);
+            await downloadSecureFile(plantilla.url_archivo, plantilla.nombre_archivo);
+        } catch (e) {
+            console.error("Error descarga", e);
+            // Si tienes un hook de toast úsalo aquí, si no, el error se loguea en consola
+        } finally {
+            setDownloading(false);
+        }
+    }
+  };
 
   return (
     <BaseModal
@@ -40,9 +59,23 @@ export const VerContratoModal: React.FC<Props> = ({
       headerColor="primary"
       maxWidth="lg"
       // Configuración de botones
-      confirmText="Entendido"
+      confirmText="Cerrar"
       onConfirm={onClose}
       hideCancelButton
+      // ✅ AÑADIDO: Botón de descarga en el modal
+      customActions={
+        plantilla ? (
+            <Button 
+                startIcon={downloading ? <CircularProgress size={20} color="inherit" /> : <Download />} 
+                onClick={handleDownload} 
+                color="primary"
+                variant="outlined"
+                disabled={downloading}
+            >
+                Descargar Modelo
+            </Button>
+        ) : undefined
+      }
       // Layout específico para PDF
       PaperProps={{ sx: { height: '85vh' } }}
     >

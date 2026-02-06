@@ -1,8 +1,7 @@
-// src/components/Admin/Contratos/Modals/ModalFirmaContrato.tsx
-
 import {
   Clear,
-  CloudUpload, Draw,
+  CloudUpload,
+  Draw,
   GppGood,
   LocationOn,
   Save,
@@ -10,29 +9,35 @@ import {
 } from '@mui/icons-material';
 import {
   Alert,
-  alpha,
   Box,
   Button,
   CircularProgress,
   Fade,
   Paper,
   Stack,
-  Step, StepLabel,
+  Step,
+  StepLabel,
   Stepper,
   TextField,
   Typography,
-  useTheme
+  useTheme,
+  alpha
 } from '@mui/material';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { PDFDocument } from 'pdf-lib';
 import React, { useEffect, useRef, useState } from 'react';
 
-
+// Componentes y Servicios
 import PDFViewerMejorado from './PDFViewerMejorado';
 import ContratoPlantillaService from '@/core/api/services/contrato-plantilla.service';
 import ContratoFirmadoService from '@/core/api/services/contrato-firmado.service';
 import ImagenService from '@/core/api/services/imagen.service';
 import BaseModal from '@/shared/components/domain/modals/BaseModal/BaseModal';
+
+// ✅ UTILS Y API CORE
+import httpService from '@/core/api/httpService';
+import { calculateFileHash } from '@/shared/utils';
+
 
 interface ModalFirmaContratoProps {
   open: boolean;
@@ -104,18 +109,18 @@ const SignatureCanvas: React.FC<{ onSave: (data: string) => void; disabled?: boo
 
   return (
     <Box>
-      <Paper 
-        variant="outlined" 
-        sx={{ 
-            mb: 2, overflow: 'hidden', touchAction: 'none',
-            bgcolor: 'background.default', border: `2px dashed ${theme.palette.divider}`,
-            borderRadius: 2, position: 'relative'
+      <Paper
+        variant="outlined"
+        sx={{
+          mb: 2, overflow: 'hidden', touchAction: 'none',
+          bgcolor: 'background.default', border: `2px dashed ${theme.palette.divider}`,
+          borderRadius: 2, position: 'relative'
         }}
       >
         {!isDrawing && (
-            <Typography variant="caption" sx={{ position: 'absolute', top: 10, left: 10, color: 'text.disabled' }}>
-                Firma aquí dentro
-            </Typography>
+          <Typography variant="caption" sx={{ position: 'absolute', top: 10, left: 10, color: 'text.disabled' }}>
+            Firma aquí dentro
+          </Typography>
         )}
         <canvas
           ref={canvasRef}
@@ -133,10 +138,10 @@ const SignatureCanvas: React.FC<{ onSave: (data: string) => void; disabled?: boo
       </Paper>
       <Stack direction="row" spacing={2} justifyContent="center">
         <Button size="small" onClick={clear} startIcon={<Clear />} disabled={disabled} variant="outlined" color="error">
-            Limpiar
+          Limpiar
         </Button>
         <Button size="small" variant="contained" onClick={save} startIcon={<Save />} disabled={disabled} sx={{ fontWeight: 700 }}>
-            Guardar Firma
+          Guardar Firma
         </Button>
       </Stack>
     </Box>
@@ -149,15 +154,15 @@ const SignatureCanvas: React.FC<{ onSave: (data: string) => void; disabled?: boo
 
 const steps = ['Revisión', 'Dibujar Firma', 'Colocar Firma', 'Seguridad', 'Confirmar'];
 
-const ModalFirmaContrato: React.FC<ModalFirmaContratoProps> = ({ 
-  open, onClose, idProyecto, idUsuario, onFirmaExitosa 
+const ModalFirmaContrato: React.FC<ModalFirmaContratoProps> = ({
+  open, onClose, idProyecto, idUsuario, onFirmaExitosa
 }) => {
   const theme = useTheme();
   const [activeStep, setActiveStep] = useState(0);
   const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
   const [signaturePosition, setSignaturePosition] = useState<{ x: number; y: number; page: number } | null>(null);
   const [codigo2FA, setCodigo2FA] = useState('');
-  const [location, setLocation] = useState<{lat: string, lng: string} | null>(null);
+  const [location, setLocation] = useState<{ lat: string, lng: string } | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const { data: plantillas, isLoading: loadingPlantilla } = useQuery({
@@ -178,31 +183,49 @@ const ModalFirmaContrato: React.FC<ModalFirmaContratoProps> = ({
     mutationFn: async () => {
       if (!plantillaActual || !signatureDataUrl || !signaturePosition) throw new Error("Datos incompletos");
 
+      // 1. Obtener URL y descargar PDF Base con Autenticación
       const pdfUrl = ImagenService.resolveImageUrl(plantillaActual.url_archivo);
-      const pdfBytes = await fetch(pdfUrl).then(res => res.arrayBuffer());
+
+      // ✅ Usar httpService para enviar token si es necesario
+      const response = await httpService.get(pdfUrl, { responseType: 'arraybuffer' });
+      const pdfBytes = response.data;
+
+      // 2. Manipulación del PDF
       const pdfDoc = await PDFDocument.load(pdfBytes);
       const signatureImage = await pdfDoc.embedPng(signatureDataUrl);
-      
+
       const pageIndex = (signaturePosition.page || 1) - 1;
       const page = pdfDoc.getPages()[pageIndex];
       const { height } = page.getSize();
-      
+
       page.drawImage(signatureImage, {
         x: signaturePosition.x,
-        y: height - signaturePosition.y - 50, 
+        y: height - signaturePosition.y - 50,
         width: 150,
         height: 50,
       });
 
+      // 3. Generar PDF firmado
       const signedPdfBytes = await pdfDoc.save();
-      const signedFile = new File([signedPdfBytes as any], `firmado_${plantillaActual.nombre_archivo}`, { type: 'application/pdf' });
 
+      // ✅ FIX: "as any" soluciona el error 'Uint8Array is not assignable to BlobPart'
+      const signedFile = new File(
+        [signedPdfBytes as any],
+        `firmado_${plantillaActual.nombre_archivo}`,
+        { type: 'application/pdf' }
+      );
+
+      // ✅ Calcular Hash SHA-256 en el cliente
+      const fileHash = await calculateFileHash(signedFile);
+
+      // 4. Enviar al backend
       return await ContratoFirmadoService.registrarFirma({
         file: signedFile,
         id_contrato_plantilla: plantillaActual.id,
         id_proyecto: idProyecto,
         id_usuario_firmante: idUsuario,
         codigo_2fa: codigo2FA,
+        hash_archivo_firmado: fileHash,
         latitud_verificacion: location?.lat,
         longitud_verificacion: location?.lng
       });
@@ -219,99 +242,101 @@ const ModalFirmaContrato: React.FC<ModalFirmaContratoProps> = ({
 
   const handleNext = () => setActiveStep(p => p + 1);
   const handleBack = () => setActiveStep(p => p - 1);
-  
+
   const handleClose = () => {
     onClose();
     setTimeout(() => {
-        setActiveStep(0);
-        setSignatureDataUrl(null);
-        setCodigo2FA('');
-        setSignaturePosition(null);
-        setErrorMsg(null);
+      setActiveStep(0);
+      setSignatureDataUrl(null);
+      setCodigo2FA('');
+      setSignaturePosition(null);
+      setErrorMsg(null);
     }, 200);
   };
 
   const renderStep = (step: number) => {
     if (!plantillaActual) return <Alert severity="warning">No hay plantilla disponible.</Alert>;
-    
+
     switch (step) {
       case 0: // Revisión
         return (
           <Box height={400} bgcolor="grey.100" borderRadius={2} overflow="hidden" border={`1px solid ${theme.palette.divider}`}>
-             <iframe 
-                src={ImagenService.resolveImageUrl(plantillaActual.url_archivo)} 
-                width="100%" height="100%" title="Vista previa" style={{ border: 'none' }}
-             />
+            <PDFViewerMejorado
+              pdfUrl={ImagenService.resolveImageUrl(plantillaActual.url_archivo)}
+              signatureDataUrl={null}
+              onSignaturePositionSet={() => { }}
+              readOnlyMode={true}
+            />
           </Box>
         );
       case 1: // Dibujar Firma
         return (
           <Stack spacing={3} mt={2}>
             <Alert severity="info" icon={<Draw />} sx={{ borderRadius: 2 }}>
-                Dibuja tu firma en el recuadro. Intenta que sea clara y legible.
+              Dibuja tu firma en el recuadro. Intenta que sea clara y legible.
             </Alert>
             <SignatureCanvas onSave={setSignatureDataUrl} />
             <Fade in={!!signatureDataUrl}>
-                <Box>
-                    {signatureDataUrl && (
-                        <Alert severity="success" variant="outlined" sx={{ boxShadow: 1, borderRadius: 2 }}>
-                            <Typography variant="subtitle2" fontWeight="bold">¡Firma capturada!</Typography>
-                            <Typography variant="caption">Pulsa "Siguiente" para ubicarla en el documento.</Typography>
-                        </Alert>
-                    )}
-                </Box>
+              <Box>
+                {signatureDataUrl && (
+                  <Alert severity="success" variant="outlined" sx={{ boxShadow: 1, borderRadius: 2 }}>
+                    <Typography variant="subtitle2" fontWeight="bold">¡Firma capturada!</Typography>
+                    <Typography variant="caption">Pulsa "Siguiente" para ubicarla en el documento.</Typography>
+                  </Alert>
+                )}
+              </Box>
             </Fade>
           </Stack>
         );
       case 2: // Colocar Firma
         return (
           <Box height={450} borderRadius={2} overflow="hidden" border={`1px solid ${theme.palette.divider}`}>
-              <PDFViewerMejorado 
-                pdfUrl={ImagenService.resolveImageUrl(plantillaActual.url_archivo)}
-                signatureDataUrl={signatureDataUrl}
-                onSignaturePositionSet={setSignaturePosition}
-              />
+            <PDFViewerMejorado
+              pdfUrl={ImagenService.resolveImageUrl(plantillaActual.url_archivo)}
+              signatureDataUrl={signatureDataUrl}
+              onSignaturePositionSet={setSignaturePosition}
+            />
           </Box>
         );
       case 3: // Seguridad
         return (
-            <Stack spacing={3} mt={2}>
-                <Paper variant="outlined" sx={{ p: 2, bgcolor: alpha(theme.palette.info.main, 0.05), borderColor: theme.palette.info.main }}>
-                    <Stack direction="row" spacing={2} alignItems="center">
-                        <LocationOn color="info" />
-                        <Box>
-                            <Typography variant="subtitle2" fontWeight={700}>Geolocalización</Typography>
-                            <Typography variant="caption" color="text.secondary">
-                                {location ? "Ubicación detectada para auditoría de firma." : "Detectando ubicación..."}
-                            </Typography>
-                        </Box>
-                        {!location && <CircularProgress size={20} />}
-                    </Stack>
-                </Paper>
-                
-                <TextField 
-                    label="Código Authenticator (2FA)"
-                    value={codigo2FA}
-                    onChange={(e) => setCodigo2FA(e.target.value)}
-                    placeholder="000 000"
-                    fullWidth
-                    InputProps={{ 
-                        startAdornment: <VpnKey color="action" sx={{ mr: 1 }}/>,
-                        style: { fontSize: '1.2rem', letterSpacing: 2 }
-                    }}
-                />
-            </Stack>
+          <Stack spacing={3} mt={2}>
+            <Paper variant="outlined" sx={{ p: 2, bgcolor: alpha(theme.palette.info.main, 0.05), borderColor: theme.palette.info.main }}>
+              <Stack direction="row" spacing={2} alignItems="center">
+                <LocationOn color="info" />
+                <Box>
+                  <Typography variant="subtitle2" fontWeight={700}>Geolocalización</Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {location ? "Ubicación detectada para auditoría de firma." : "Detectando ubicación..."}
+                  </Typography>
+                </Box>
+                {!location && <CircularProgress size={20} />}
+              </Stack>
+            </Paper>
+
+            <TextField
+              label="Código Authenticator (2FA)"
+              value={codigo2FA}
+              onChange={(e) => setCodigo2FA(e.target.value)}
+              placeholder="000 000"
+              fullWidth
+              InputProps={{
+                startAdornment: <VpnKey color="action" sx={{ mr: 1 }} />,
+                style: { fontSize: '1.2rem', letterSpacing: 2 }
+              }}
+            />
+          </Stack>
         );
       case 4: // Confirmar
         return (
-            <Box textAlign="center" py={4}>
-                <CloudUpload sx={{ fontSize: 80, color: 'primary.main', mb: 2 }} />
-                <Typography variant="h5" fontWeight={700} gutterBottom>Todo Listo</Typography>
-                <Typography color="text.secondary" paragraph>
-                    Se generará un documento PDF firmado digitalmente con un hash SHA-256 inmutable.
-                </Typography>
-                {errorMsg && <Alert severity="error" sx={{ mt: 2, borderRadius: 2 }}>{errorMsg}</Alert>}
-            </Box>
+          <Box textAlign="center" py={4}>
+            <CloudUpload sx={{ fontSize: 80, color: 'primary.main', mb: 2 }} />
+            <Typography variant="h5" fontWeight={700} gutterBottom>Todo Listo</Typography>
+            <Typography color="text.secondary" paragraph>
+              Se generará un documento PDF firmado digitalmente con un hash SHA-256 inmutable.
+            </Typography>
+            {errorMsg && <Alert severity="error" sx={{ mt: 2, borderRadius: 2 }}>{errorMsg}</Alert>}
+          </Box>
         );
       default: return null;
     }
@@ -327,56 +352,55 @@ const ModalFirmaContrato: React.FC<ModalFirmaContratoProps> = ({
       headerColor="success"
       maxWidth="md"
       isLoading={firmaMutation.isPending}
-      // Usamos customActions para manejar el flujo del Stepper
       customActions={
         <>
-            <Button 
-                onClick={activeStep === 0 ? handleClose : handleBack} 
-                color="inherit" 
-                disabled={firmaMutation.isPending}
-                sx={{ mr: 'auto', borderRadius: 2 }}
-            >
-                {activeStep === 0 ? 'Cancelar' : 'Atrás'}
-            </Button>
+          <Button
+            onClick={activeStep === 0 ? handleClose : handleBack}
+            color="inherit"
+            disabled={firmaMutation.isPending}
+            sx={{ mr: 'auto', borderRadius: 2 }}
+          >
+            {activeStep === 0 ? 'Cancelar' : 'Atrás'}
+          </Button>
 
-            {activeStep < 4 ? (
-                <Button 
-                    variant="contained" 
-                    onClick={handleNext} 
-                    disabled={!plantillaActual || (activeStep === 1 && !signatureDataUrl)}
-                    sx={{ px: 4, fontWeight: 700, borderRadius: 2 }}
-                >
-                    Siguiente
-                </Button>
-            ) : (
-                <Button 
-                    variant="contained" 
-                    color="success" 
-                    onClick={() => firmaMutation.mutate()} 
-                    disabled={firmaMutation.isPending}
-                    startIcon={firmaMutation.isPending && <CircularProgress size={20} color="inherit" />}
-                    sx={{ px: 4, fontWeight: 700, borderRadius: 2 }}
-                >
-                    {firmaMutation.isPending ? 'Firmando...' : 'Finalizar Firma'}
-                </Button>
-            )}
+          {activeStep < 4 ? (
+            <Button
+              variant="contained"
+              onClick={handleNext}
+              disabled={!plantillaActual || (activeStep === 1 && !signatureDataUrl)}
+              sx={{ px: 4, fontWeight: 700, borderRadius: 2 }}
+            >
+              Siguiente
+            </Button>
+          ) : (
+            <Button
+              variant="contained"
+              color="success"
+              onClick={() => firmaMutation.mutate()}
+              disabled={firmaMutation.isPending}
+              startIcon={firmaMutation.isPending && <CircularProgress size={20} color="inherit" />}
+              sx={{ px: 4, fontWeight: 700, borderRadius: 2 }}
+            >
+              {firmaMutation.isPending ? 'Firmando...' : 'Finalizar Firma'}
+            </Button>
+          )}
         </>
       }
     >
       <Box sx={{ width: '100%', mb: 4 }}>
         <Stepper activeStep={activeStep} alternativeLabel>
-            {steps.map(s => (
-                <Step key={s}>
-                    <StepLabel StepIconProps={{ sx: { '&.Mui-active': { color: 'success.main' }, '&.Mui-completed': { color: 'success.main' } } }}>
-                        {s}
-                    </StepLabel>
-                </Step>
-            ))}
+          {steps.map(s => (
+            <Step key={s}>
+              <StepLabel StepIconProps={{ sx: { '&.Mui-active': { color: 'success.main' }, '&.Mui-completed': { color: 'success.main' } } }}>
+                {s}
+              </StepLabel>
+            </Step>
+          ))}
         </Stepper>
       </Box>
 
       {loadingPlantilla ? (
-          <Box display="flex" justifyContent="center" py={5}><CircularProgress /></Box>
+        <Box display="flex" justifyContent="center" py={5}><CircularProgress /></Box>
       ) : renderStep(activeStep)}
 
     </BaseModal>

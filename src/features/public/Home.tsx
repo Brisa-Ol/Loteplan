@@ -4,6 +4,7 @@ import {
   CheckCircle,
   Home as HomeIcon,
   TrendingUp,
+  Dashboard as DashboardIcon // ✅ Nuevo icono para usuario logueado
 } from '@mui/icons-material';
 import {
   alpha,
@@ -19,6 +20,9 @@ import {
 } from '@mui/material';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+
+// ✅ IMPORTAR EL CONTEXTO DE AUTENTICACIÓN
+import { useAuth } from '@/core/context/AuthContext';
 
 // ==========================================
 // DEFINICIÓN DE TIPOS
@@ -83,6 +87,9 @@ const Home: React.FC = () => {
   const theme = useTheme();
   const navigate = useNavigate();
   const [hoveredMode, setHoveredMode] = useState<string | null>(null);
+
+  // ✅ OBTENEMOS EL ESTADO DE AUTENTICACIÓN
+  const { isAuthenticated } = useAuth();
 
   return (
     <Box sx={{ bgcolor: 'background.default', color: 'text.primary' }}>
@@ -159,41 +166,66 @@ const Home: React.FC = () => {
                 </Box>
               </Typography>
 
+              {/* ✅ BOTONES DEL HERO: LÓGICA CONDICIONAL */}
               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 7 }}>
-                <Button
-                  variant="contained"
-                  size="large"
-                  startIcon={<HomeIcon />}
-                  onClick={() => navigate(ROUTES.REGISTER)}
-                  sx={{
-                    bgcolor: 'common.white',
-                    color: 'primary.main',
-                    fontWeight: 600,
-                    '&:hover': {
-                      bgcolor: alpha(theme.palette.common.white, 0.9),
-                    },
-                  }}
-                >
-                  Registrate
-                </Button>
-                <Button
-                  variant="outlined"
-                  size="large"
-                  startIcon={<TrendingUp />}
-                  onClick={() => navigate(ROUTES.LOGIN)}
-                  sx={{
-                    borderColor: 'common.white',
-                    color: 'common.white',
-                    fontWeight: 600,
-                    '&:hover': {
-                      borderColor: 'common.white',
-                      bgcolor: alpha(theme.palette.common.white, 0.1),
-                      borderWidth: '2px',
-                    },
-                  }}
-                >
-                  Inicia Sesión
-                </Button>
+                {!isAuthenticated ? (
+                  // CASO 1: NO LOGUEADO -> Mostrar Registro y Login
+                  <>
+                    <Button
+                      variant="contained"
+                      size="large"
+                      startIcon={<HomeIcon />}
+                      onClick={() => navigate(ROUTES.REGISTER)}
+                      sx={{
+                        bgcolor: 'common.white',
+                        color: 'primary.main',
+                        fontWeight: 600,
+                        '&:hover': {
+                          bgcolor: alpha(theme.palette.common.white, 0.9),
+                        },
+                      }}
+                    >
+                      Registrate
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      size="large"
+                      startIcon={<TrendingUp />}
+                      onClick={() => navigate(ROUTES.LOGIN)}
+                      sx={{
+                        borderColor: 'common.white',
+                        color: 'common.white',
+                        fontWeight: 600,
+                        '&:hover': {
+                          borderColor: 'common.white',
+                          bgcolor: alpha(theme.palette.common.white, 0.1),
+                          borderWidth: '2px',
+                        },
+                      }}
+                    >
+                      Inicia Sesión
+                    </Button>
+                  </>
+                ) : (
+                  // CASO 2: LOGUEADO -> Mostrar botón al Dashboard
+                  <Button
+                    variant="contained"
+                    size="large"
+                    startIcon={<DashboardIcon />}
+                    onClick={() => navigate(ROUTES.CLIENT.DASHBOARD)}
+                    sx={{
+                      bgcolor: 'common.white',
+                      color: 'primary.main',
+                      fontWeight: 600,
+                      px: 4,
+                      '&:hover': {
+                        bgcolor: alpha(theme.palette.common.white, 0.9),
+                      },
+                    }}
+                  >
+                    Ir a mi Panel
+                  </Button>
+                )}
               </Stack>
 
               <Box sx={{
@@ -381,80 +413,83 @@ const Home: React.FC = () => {
 
       {/* ==========================================
           CTA FINAL
+          ✅ SOLO SE MUESTRA SI NO ESTÁ AUTENTICADO
           ========================================== */}
-      <Box
-        sx={{
-          py: { xs: 12, md: 14 },
-          background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
-          color: 'white',
-          textAlign: 'center',
-        }}
-      >
-        <Container maxWidth="md">
-          <Typography variant="h3" gutterBottom sx={{ mb: 3, fontWeight: 800 }}>
-            ¿Listo para tu terreno propio?
-          </Typography>
-          <Typography variant="h6" sx={{ mb: 6, color: alpha(theme.palette.common.white, 0.9), fontWeight: 400, lineHeight: 1.7 }}>
-            Registrate gratis y explorá todas las oportunidades disponibles. Sin compromiso, sin
-            cargos ocultos.
-          </Typography>
+      {!isAuthenticated && (
+        <Box
+          sx={{
+            py: { xs: 12, md: 14 },
+            background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+            color: 'white',
+            textAlign: 'center',
+          }}
+        >
+          <Container maxWidth="md">
+            <Typography variant="h3" gutterBottom sx={{ mb: 3, fontWeight: 800 }}>
+              ¿Listo para tu terreno propio?
+            </Typography>
+            <Typography variant="h6" sx={{ mb: 6, color: alpha(theme.palette.common.white, 0.9), fontWeight: 400, lineHeight: 1.7 }}>
+              Registrate gratis y explorá todas las oportunidades disponibles. Sin compromiso, sin
+              cargos ocultos.
+            </Typography>
 
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="center">
-            <Button
-              variant="contained"
-              size="large"
-              startIcon={<HomeIcon />}
-              onClick={() => navigate(ROUTES.REGISTER)}
-              sx={{
-                bgcolor: 'white',
-                color: 'primary.main',
-                fontWeight: 600,
-                '&:hover': {
-                  bgcolor: alpha(theme.palette.common.white, 0.9),
-                },
-              }}
-            >
-              Registrarme
-            </Button>
-            <Button
-              variant="outlined"
-              size="large"
-              startIcon={<TrendingUp />}
-              onClick={() => navigate(ROUTES.LOGIN)}
-              sx={{
-                borderColor: 'white',
-                color: 'white',
-                fontWeight: 600,
-                '&:hover': {
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="center">
+              <Button
+                variant="contained"
+                size="large"
+                startIcon={<HomeIcon />}
+                onClick={() => navigate(ROUTES.REGISTER)}
+                sx={{
+                  bgcolor: 'white',
+                  color: 'primary.main',
+                  fontWeight: 600,
+                  '&:hover': {
+                    bgcolor: alpha(theme.palette.common.white, 0.9),
+                  },
+                }}
+              >
+                Registrarme
+              </Button>
+              <Button
+                variant="outlined"
+                size="large"
+                startIcon={<TrendingUp />}
+                onClick={() => navigate(ROUTES.LOGIN)}
+                sx={{
                   borderColor: 'white',
-                  bgcolor: alpha(theme.palette.common.white, 0.1),
-                },
-              }}
-            >
-              Iniciar Sesión
-            </Button>
-          </Stack>
+                  color: 'white',
+                  fontWeight: 600,
+                  '&:hover': {
+                    borderColor: 'white',
+                    bgcolor: alpha(theme.palette.common.white, 0.1),
+                  },
+                }}
+              >
+                Iniciar Sesión
+              </Button>
+            </Stack>
 
-          <Typography variant="body1" sx={{ mt: 5, color: alpha(theme.palette.common.white, 0.8) }}>
-            ¿Tenés dudas?{' '}
-            <Box
-              component="span"
-              onClick={() => navigate('/como-funciona')}
-              sx={{
-                color: 'white',
-                textDecoration: 'underline',
-                fontWeight: 700,
-                cursor: 'pointer',
-                '&:hover': {
-                  color: alpha(theme.palette.common.white, 0.9),
-                },
-              }}
-            >
-              Conocé más sobre cómo funciona
-            </Box>
-          </Typography>
-        </Container>
-      </Box>
+            <Typography variant="body1" sx={{ mt: 5, color: alpha(theme.palette.common.white, 0.8) }}>
+              ¿Tenés dudas?{' '}
+              <Box
+                component="span"
+                onClick={() => navigate('/como-funciona')}
+                sx={{
+                  color: 'white',
+                  textDecoration: 'underline',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  '&:hover': {
+                    color: alpha(theme.palette.common.white, 0.9),
+                  },
+                }}
+              >
+                Conocé más sobre cómo funciona
+              </Box>
+            </Typography>
+          </Container>
+        </Box>
+      )}
     </Box>
   );
 };

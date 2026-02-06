@@ -12,7 +12,6 @@ import {
   Info, InsertPhoto, ViewList, LocationOn,
   GppGood, Gavel, AutoGraph, Explore,
   Close, MonetizationOn, CheckCircle,
-  // ✅ Iconos agregados para la Ficha Técnica:
   CalendarMonth, AccountBalance, Groups
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -24,7 +23,7 @@ import { ProjectHero } from './components/ProjectHero';
 import { ProjectGallery } from './components/ProjectGallery';
 import { ProjectSidebar } from './components/ProjectSidebar';
 import { ListaLotesProyecto } from '../Lotes/ListaLotesProyecto';
-import { CheckoutWizardModal } from './modals/CheckoutWizardModal';
+
 import type { ProyectoDto } from '@/core/types/dto/proyecto.dto';
 
 // Seguridad y Rutas
@@ -32,12 +31,12 @@ import { useSecurityGuard } from '@/shared/hooks/useSecurityGuard';
 import { SecurityRequirementModal } from '@/shared/components/domain/modals/SecurityRequirementModal/SecurityRequirementModal';
 import { ROUTES } from '@/routes';
 import { useAuth } from '@/core/context/AuthContext';
+import { CheckoutWizardModal } from './modals/CheckoutWizardModal';
 
 // ===================================================
 // SUB-COMPONENTES (DataPoint y FeatureItem)
 // ===================================================
 
-// ✅ Definimos DataPoint aquí para que TabOverview pueda usarlo
 const DataPoint = React.memo<{ label: string; value: string | number; icon?: React.ReactNode }>(({ label, value, icon }) => (
   <Stack direction="row" spacing={1.5} alignItems="center">
     {icon && <Box sx={{ color: 'action.active', display: 'flex' }}>{icon}</Box>}
@@ -81,7 +80,7 @@ const TabOverview = React.memo<{ proyecto: ProyectoDto; esMensual: boolean; goog
           <Typography variant="body1" sx={{ whiteSpace: 'pre-line', lineHeight: 1.8, color: 'text.secondary', textAlign: 'justify' }}>{proyecto.descripcion}</Typography>
         </Box>
 
-        {/* 3. ✅ NUEVA FICHA TÉCNICA AGREGADA */}
+        {/* 3. Ficha Técnica */}
         <Paper variant="outlined" sx={{ p: 3, borderRadius: 3, bgcolor: alpha(theme.palette.action.hover, 0.4) }}>
           <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 3, textTransform: 'uppercase' }}>Ficha Técnica del Activo</Typography>
           
@@ -113,11 +112,13 @@ TabOverview.displayName = 'TabOverview';
 // MAIN COMPONENT
 // ===================================================
 const DetalleProyecto: React.FC = () => {
-  const logic = useDetalleProyecto();
+  const logic = useDetalleProyecto(); // Usando el hook refactorizado
   const theme = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated } = useAuth();
+  
+  // Guardía de seguridad para acciones (KYC/2FA)
   const { withSecurityCheck, securityModalProps } = useSecurityGuard();
 
   const [lightbox, setLightbox] = useState({ open: false, img: '' });
@@ -127,28 +128,32 @@ const DetalleProyecto: React.FC = () => {
   
   const googleMapsUrl = useMemo(() => {
     if (!logic.proyecto?.latitud || !logic.proyecto?.longitud) return null;
-    return `https://www.google.com/maps/search/?api=1&query=${logic.proyecto.latitud},${logic.proyecto.longitud}`;
+    return `http://maps.google.com/maps?q=${logic.proyecto.latitud},${logic.proyecto.longitud}`;
   }, [logic.proyecto?.latitud, logic.proyecto?.longitud]);
 
+  // ✅ MANEJADOR CENTRAL DE APERTURA SEGURA
   const handleOpenCheckoutSecurely = useCallback(() => {
     if (!isAuthenticated) {
       navigate(ROUTES.LOGIN, { state: { from: location.pathname } });
       return;
     }
     
+    // Verificamos seguridad antes de abrir el wizard
     withSecurityCheck(() => {
+      // El wizard se encargará de determinar en qué paso está (inicio, pago, firma)
       logic.modales.checkoutWizard.open();
     });
   }, [isAuthenticated, navigate, location.pathname, withSecurityCheck, logic.modales.checkoutWizard]);
 
+  // Construimos la lógica segura para el Sidebar
   const secureLogic = useMemo(() => ({
     ...logic,
+    // Sobrescribimos las acciones para que pasen por el chequeo de seguridad
+    handleMainAction: handleOpenCheckoutSecurely,
+    handleClickFirmar: handleOpenCheckoutSecurely, // El mismo handler abre el modal en el paso correcto
     modales: {
       ...logic.modales,
-      checkoutWizard: {
-        ...logic.modales.checkoutWizard,
-        open: handleOpenCheckoutSecurely
-      }
+      contrato: logic.modales.contrato
     }
   }), [logic, handleOpenCheckoutSecurely]);
 
@@ -161,14 +166,13 @@ const DetalleProyecto: React.FC = () => {
 
   return (
     <PageContainer maxWidth="xl" sx={{ pb: 8 }}>
-      <Backdrop sx={{ color: '#fff', zIndex: 9999, flexDirection: 'column', gap: 2 }} open={logic.verificandoPago}>
-        <CircularProgress color="inherit" size={60} />
-        <Typography variant="h6">Verificando transacción...</Typography>
-      </Backdrop>
-
+      
+      {/* 1. HERO SECTION */}
       <ProjectHero proyecto={proyecto} />
 
       <Box sx={{ display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, gap: 5, alignItems: 'flex-start' }}>
+        
+        {/* 2. CONTENIDO PRINCIPAL (IZQUIERDA) */}
         <Box sx={{ flex: 1, width: '100%', minWidth: 0 }}>
           <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
             <Tabs value={logic.tabValue} onChange={logic.handleTabChange} variant="scrollable">
@@ -198,14 +202,18 @@ const DetalleProyecto: React.FC = () => {
           </Box>
         </Box>
 
+        {/* 3. SIDEBAR DE ACCIÓN (DERECHA) */}
         <Box sx={{ width: { xs: '100%', lg: 380 }, flexShrink: 0 }}>
           <ProjectSidebar logic={secureLogic} proyecto={proyecto} />
         </Box>
       </Box>
 
-      {/* MODALES DEL SISTEMA */}
+      {/* 4. MODALES */}
+      
+      {/* Modal de Seguridad (KYC/2FA Check) */}
       <SecurityRequirementModal {...securityModalProps} />
       
+      {/* Wizard de Inversión/Firma */}
       {isAuthenticated && (
         <CheckoutWizardModal
           open={logic.modales.checkoutWizard.isOpen}
@@ -215,19 +223,21 @@ const DetalleProyecto: React.FC = () => {
           inversionId={logic.inversionId}
           pagoId={logic.pagoId}
           onConfirmInvestment={logic.wizardCallbacks.onConfirmInvestment}
+          // El hook se encarga de la lógica post-firma (limpieza de storage, invalidación de queries)
           onSignContract={logic.wizardCallbacks.onSignContract}
           isProcessing={logic.isProcessingWizard}
           error2FA={logic.error2FA}
         />
       )}
 
+      {/* Lightbox para imágenes */}
       {lightbox.open && (
         <Dialog open={lightbox.open} onClose={() => setLightbox({ open: false, img: '' })} maxWidth="lg" fullWidth>
           <Box component="img" src={lightbox.img} alt="Ampliación" sx={{ width: '100%', height: 'auto', borderRadius: 2 }} />
         </Dialog>
       )}
 
-      {/* MODAL INFORMACIÓN DE TOKENS / SUBASTA */}
+      {/* Modal Info Tokens */}
       <Dialog 
         open={tokenInfoOpen} 
         onClose={() => setTokenInfoOpen(false)}
