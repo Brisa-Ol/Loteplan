@@ -1,14 +1,22 @@
-import React from 'react';
 import {
-  Typography, Chip, Stack, Paper, Box, Divider, Button, useTheme, alpha
-} from '@mui/material';
-import { 
-  Person,
   Business,
-  ReceiptLong,
   CalendarToday,
-  OpenInNew as OpenIcon
+  OpenInNew as OpenIcon,
+  Person,
+  ReceiptLong
 } from '@mui/icons-material';
+import {
+  alpha,
+  Box,
+  Button,
+  Chip,
+  Divider,
+  Paper,
+  Stack,
+  Typography,
+  useTheme
+} from '@mui/material';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { InversionDto } from '../../../../../core/types/dto/inversion.dto';
 import BaseModal from '../../../../../shared/components/domain/modals/BaseModal/BaseModal';
@@ -17,13 +25,13 @@ interface Props {
   open: boolean;
   onClose: () => void;
   inversion: InversionDto | null;
-  userName?: string; 
+  userName?: string;
   userEmail?: string;
   projectName?: string;
 }
 
-const DetalleInversionModal: React.FC<Props> = ({ 
-  open, onClose, inversion, userName, userEmail, projectName 
+const DetalleInversionModal: React.FC<Props> = ({
+  open, onClose, inversion, userName, userEmail, projectName
 }) => {
   const navigate = useNavigate();
   const theme = useTheme();
@@ -65,24 +73,24 @@ const DetalleInversionModal: React.FC<Props> = ({
       hideConfirmButton
       cancelText="Cerrar"
       headerExtra={
-        <Chip 
-          label={inversion.estado.toUpperCase()} 
-          color={statusColor} 
+        <Chip
+          label={inversion.estado.toUpperCase()}
+          color={statusColor}
           variant="filled"
           sx={{ fontWeight: 'bold', borderRadius: 1.5 }}
         />
       }
     >
       <Stack spacing={3}>
-        
+
         {/* SECCIÓN 1: KPI MONTO */}
-        <Paper 
+        <Paper
           elevation={0}
-          sx={{ 
-            p: 2.5, borderRadius: 2, 
-            border: '1px solid', 
+          sx={{
+            p: 2.5, borderRadius: 2,
+            border: '1px solid',
             borderColor: alpha(themeColorMain, 0.3),
-            bgcolor: alpha(themeColorMain, 0.04) 
+            bgcolor: alpha(themeColorMain, 0.04)
           }}
         >
           <Box>
@@ -97,7 +105,7 @@ const DetalleInversionModal: React.FC<Props> = ({
 
         {/* COLUMNAS: USUARIO Y PROYECTO */}
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-          
+
           {/* INVERSOR */}
           <Paper elevation={0} sx={{ flex: 1, p: 2.5, borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
             <Stack direction="row" alignItems="center" spacing={1} mb={2}>
@@ -137,9 +145,9 @@ const DetalleInversionModal: React.FC<Props> = ({
                 <Typography variant="caption" color="text.secondary" display="block">ID Proyecto</Typography>
                 <Typography variant="body2" color="text.secondary">#{inversion.id_proyecto}</Typography>
               </Box>
-              <Button 
-                variant="outlined" 
-                size="small" 
+              <Button
+                variant="outlined"
+                size="small"
                 startIcon={<OpenIcon />}
                 onClick={() => navigate(`/admin/proyectos`)}
                 sx={{ borderRadius: 2, mt: 1, fontWeight: 700 }}
@@ -156,7 +164,7 @@ const DetalleInversionModal: React.FC<Props> = ({
             <CalendarToday color="action" fontSize="small" />
             <Typography variant="subtitle2" fontWeight={800}>CRONOLOGÍA</Typography>
           </Stack>
-          
+
           <Stack direction="row" spacing={4} divider={<Divider orientation="vertical" flexItem />}>
             <Box>
               <Typography variant="caption" color="text.secondary">Fecha Inversión</Typography>

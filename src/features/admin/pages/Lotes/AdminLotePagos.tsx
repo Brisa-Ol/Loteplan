@@ -1,6 +1,7 @@
 import {
   AttachMoney, CheckCircle, ErrorOutline,
-  Image as ImageIcon, Info, Person, Refresh, Timeline, TrendingUp, Warning
+  Image as ImageIcon, Info, Person,
+  Timeline, TrendingUp, Warning
 } from '@mui/icons-material';
 import {
   Alert, Avatar, Box, Card, CardContent, Chip,

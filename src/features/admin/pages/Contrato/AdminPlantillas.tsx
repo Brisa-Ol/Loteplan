@@ -172,12 +172,12 @@ const AdminPlantillas: React.FC = () => {
           </Avatar>
           <Box>
             <Stack direction="row" alignItems="center" spacing={1}>
-                <Typography variant="body2" fontWeight={700}>
+              <Typography variant="body2" fontWeight={700}>
                 {row.nombre_archivo}
-                </Typography>
-                {row.integrity_compromised && (
-                    <Chip label="ERROR DE HASH" size="small" color="error" sx={{ height: 16, fontSize: '0.6rem', fontWeight: 700 }} />
-                )}
+              </Typography>
+              {row.integrity_compromised && (
+                <Chip label="ERROR DE HASH" size="small" color="error" sx={{ height: 16, fontSize: '0.6rem', fontWeight: 700 }} />
+              )}
             </Stack>
             <Tooltip title={`Hash Original: ${row.hash_archivo_original}`}>
               <Typography variant="caption" sx={{ fontFamily: 'monospace', color: 'text.secondary', fontSize: '0.65rem' }}>
@@ -261,17 +261,17 @@ const AdminPlantillas: React.FC = () => {
       minWidth: 180,
       render: (row) => (
         <Stack direction="row" spacing={0.5} justifyContent="flex-end">
-          
+
           {/* ✅ Nueva acción: Descargar */}
           <Tooltip title="Descargar Plantilla">
             <span>
-                <IconButton
-                    size="small"
-                    onClick={() => logic.handleDownload(row)}
-                    sx={{ color: 'text.secondary', '&:hover': { color: 'primary.main' } }}
-                >
-                    <DownloadIcon fontSize="small" />
-                </IconButton>
+              <IconButton
+                size="small"
+                onClick={() => logic.handleDownload(row)}
+                sx={{ color: 'text.secondary', '&:hover': { color: 'primary.main' } }}
+              >
+                <DownloadIcon fontSize="small" />
+              </IconButton>
             </span>
           </Tooltip>
 
@@ -346,12 +346,12 @@ const AdminPlantillas: React.FC = () => {
 
       {/* Alerta de Integridad Comprometida si existe alguna */}
       {stats.compromised > 0 && (
-          <AlertBanner 
-            severity="error" 
-            title="Integridad Comprometida" 
-            message={`Se detectaron ${stats.compromised} plantillas con hash no coincidente. Revise los archivos marcados.`} 
-            sx={{ mb: 3 }}
-          />
+        <AlertBanner
+          severity="error"
+          title="Integridad Comprometida"
+          message={`Se detectaron ${stats.compromised} plantillas con hash no coincidente. Revise los archivos marcados.`}
+          sx={{ mb: 3 }}
+        />
       )}
 
       <MetricsGrid columns={{ xs: 1, sm: 2, lg: 4 }}>

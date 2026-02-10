@@ -26,7 +26,7 @@ export const useAdminPagos = () => {
   const [selectedPago, setSelectedPago] = useState<PagoDto | null>(null);
 
   // --- QUERIES ---
-  
+
   // 1. Pagos (Data Cruda)
   const { data: pagosRaw = [], isLoading: l1, error: e1 } = useQuery({
     queryKey: ['adminPagos'],
@@ -109,9 +109,9 @@ export const useAdminPagos = () => {
       const pName = getProjectName(pago.id_proyecto).toLowerCase();
       const term = searchTerm.toLowerCase();
 
-      const matchesSearch = 
-        uName.includes(term) || 
-        pName.includes(term) || 
+      const matchesSearch =
+        uName.includes(term) ||
+        pName.includes(term) ||
         pago.id.toString().includes(term);
 
       const matchesState = filterState === 'all' || pago.estado_pago === filterState;
@@ -135,12 +135,12 @@ export const useAdminPagos = () => {
   const handleUpdate = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['adminPagos'] });
     queryClient.invalidateQueries({ queryKey: ['adminPagosMetrics'] });
-    
+
     // ✨ Highlight Automático
     if (selectedPago?.id) {
-        triggerHighlight(selectedPago.id);
+      triggerHighlight(selectedPago.id);
     }
-    
+
     showSuccess('Estado de pago actualizado correctamente');
   }, [queryClient, selectedPago, showSuccess, triggerHighlight]);
 
@@ -161,10 +161,10 @@ export const useAdminPagos = () => {
     filterState, setFilterState,
     dateStart, setDateStart,
     dateEnd, setDateEnd,
-    
+
     // ✨ UX Props
     highlightedId,
-    
+
     selectedPago,
 
     // Data
@@ -173,7 +173,7 @@ export const useAdminPagos = () => {
     metrics,
     alerts,
     globalStats,
-    
+
     // Loading
     isLoading,
     error,

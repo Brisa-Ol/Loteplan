@@ -23,7 +23,7 @@ function useDebouncedValue<T>(value: T, delay: number = 300): T {
 export const useAdminResumenes = () => {
   // --- MODALES (Nivel Superior) ---
   const detalleModal = useModal();
-  
+
   // --- ESTADOS DE FILTRO ---
   const [searchTerm, setSearchTerm] = useState('');
   const [filterState, setFilterState] = useState<'all' | 'active' | 'completed' | 'overdue'>('all');
@@ -47,7 +47,7 @@ export const useAdminResumenes = () => {
   // --- FILTRADO (Memoizado + Debounce) ---
   const filteredResumenes = useMemo(() => {
     const term = debouncedSearchTerm.toLowerCase();
-    
+
     return resumenesOrdenados.filter(resumen => {
       // 1. Filtro de Estado (Rápido)
       let matchesState = true;
@@ -88,7 +88,7 @@ export const useAdminResumenes = () => {
     searchTerm, setSearchTerm,
     filterState, setFilterState,
     selectedResumen,
-    
+
     // ✨ UX
     highlightedId,
 

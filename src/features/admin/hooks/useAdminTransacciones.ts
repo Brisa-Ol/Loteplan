@@ -59,7 +59,7 @@ export const useAdminTransacciones = () => {
   // --- FILTRADO (Optimizado con Debounce) ---
   const filteredData = useMemo(() => {
     const term = debouncedSearchTerm.toLowerCase();
-    
+
     return transaccionesOrdenadas.filter(t => {
       // 1. Filtro rápido de estado
       if (filterStatus !== 'all' && t.estado_transaccion !== filterStatus) {
@@ -72,13 +72,13 @@ export const useAdminTransacciones = () => {
       const nombreUsuario = t.usuario ? `${t.usuario.nombre} ${t.usuario.apellido}`.toLowerCase() : '';
       const emailUsuario = t.usuario?.email.toLowerCase() || '';
       const nombreProyecto = t.proyectoTransaccion?.nombre_proyecto.toLowerCase() || '';
-      
-      const refPasarela = t.pagoPasarela?.id_transaccion_pasarela?.toLowerCase() || 
-                          t.id_pago_pasarela?.toString() || 
-                          '';
+
+      const refPasarela = t.pagoPasarela?.id_transaccion_pasarela?.toLowerCase() ||
+        t.id_pago_pasarela?.toString() ||
+        '';
 
       return (
-        t.id.toString().includes(term) || 
+        t.id.toString().includes(term) ||
         nombreUsuario.includes(term) ||
         emailUsuario.includes(term) ||
         nombreProyecto.includes(term) ||
@@ -92,16 +92,16 @@ export const useAdminTransacciones = () => {
     mutationFn: (id: number) => TransaccionService.forceConfirm(id),
     onSuccess: (response, id) => {
       queryClient.invalidateQueries({ queryKey: ['adminTransacciones'] });
-      
-      triggerHighlight(id); 
+
+      triggerHighlight(id);
       showSuccess(`✅ Éxito: ${response.data.mensaje}`);
-      
+
       if (modales.detail.isOpen) handleCloseModal();
       modales.confirm.close();
     },
     onError: (err: any) => {
-        modales.confirm.close();
-        showError(err.response?.data?.message || 'Error al confirmar transacción');
+      modales.confirm.close();
+      showError(err.response?.data?.message || 'Error al confirmar transacción');
     }
   });
 
@@ -113,9 +113,9 @@ export const useAdminTransacciones = () => {
   }, [modales.confirm, transaccionesRaw]);
 
   const handleConfirmAction = useCallback(() => {
-      if (modales.confirm.action === 'force_confirm_transaction' && modales.confirm.data) {
-          confirmMutation.mutate(modales.confirm.data.id);
-      }
+    if (modales.confirm.action === 'force_confirm_transaction' && modales.confirm.data) {
+      confirmMutation.mutate(modales.confirm.data.id);
+    }
   }, [modales.confirm, confirmMutation]);
 
   const handleViewDetails = useCallback((row: TransaccionDto) => {
@@ -133,14 +133,14 @@ export const useAdminTransacciones = () => {
     // State
     searchTerm, setSearchTerm,
     filterStatus, setFilterStatus,
-    
+
     // UX Props
     highlightedId,
     selectedTransaccion,
-    
+
     // Data
     filteredData,
-    
+
     // Loading
     isLoading,
     isConfirming: confirmMutation.isPending,

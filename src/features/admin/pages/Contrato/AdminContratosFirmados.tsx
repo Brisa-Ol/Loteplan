@@ -168,11 +168,11 @@ const AdminContratosFirmados: React.FC = () => {
     {
       id: 'usuario',
       label: 'Datos del Firmante',
-      minWidth: 260, 
+      minWidth: 260,
       render: (row) => {
         // Accedemos al objeto anidado gracias al backend corregido
         const user = row.usuarioFirmante;
-        
+
         return (
           <Stack direction="row" alignItems="center" spacing={2}>
             {/* Avatar con Inicial */}
@@ -184,7 +184,7 @@ const AdminContratosFirmados: React.FC = () => {
             }}>
               {user ? user.nombre.charAt(0).toUpperCase() : <Person fontSize="inherit" />}
             </Avatar>
-            
+
             <Box>
               {user ? (
                 <>
@@ -192,17 +192,17 @@ const AdminContratosFirmados: React.FC = () => {
                   <Typography variant="body2" fontWeight={700}>
                     {user.nombre} {user.apellido}
                   </Typography>
-                  
+
                   {/* Email + ID pequeño */}
                   <Stack direction="row" alignItems="center" spacing={0.5} flexWrap="wrap">
                     <Typography variant="caption" color="text.secondary">
                       {user.email}
                     </Typography>
-                    <Typography 
-                      variant="caption" 
-                      sx={{ 
+                    <Typography
+                      variant="caption"
+                      sx={{
                         fontSize: '0.65rem',      // 👈 ID en chico
-                        color: 'text.disabled', 
+                        color: 'text.disabled',
                         fontFamily: 'monospace',
                         bgcolor: alpha(theme.palette.action.hover, 0.5),
                         px: 0.5,
@@ -232,7 +232,7 @@ const AdminContratosFirmados: React.FC = () => {
       render: (row) => {
         // Accedemos al objeto anidado
         const proj = row.proyectoAsociado;
-        
+
         return (
           <Stack direction="row" alignItems="center" spacing={1.5}>
             <Business fontSize="small" color="action" />

@@ -63,11 +63,11 @@ const KYCMetrics = memo<{
   };
   isLoading?: boolean;
 }>(({ metrics, isLoading }) => {
-  const approvalRate = metrics.total > 0 
-    ? ((metrics.approved / metrics.total) * 100).toFixed(1) 
+  const approvalRate = metrics.total > 0
+    ? ((metrics.approved / metrics.total) * 100).toFixed(1)
     : '0';
-  const rejectionRate = metrics.total > 0 
-    ? ((metrics.rejected / metrics.total) * 100).toFixed(1) 
+  const rejectionRate = metrics.total > 0
+    ? ((metrics.rejected / metrics.total) * 100).toFixed(1)
     : '0';
 
   return (
@@ -121,13 +121,13 @@ const AdminKYC: React.FC = () => {
   const metrics = useMemo(() => {
     // Necesitamos contar sobre TODA la data, no solo el tab actual
     // Como solo cargamos el tab activo, necesitamos una estrategia diferente
-    
+
     // Opción 1: Usar la data del tab actual y hacer conteo parcial
     // Opción 2: Hacer queries separadas solo para conteo
     // Para simplificar, usamos la data disponible del tab actual
-    
+
     const all = logic.kycList || [];
-    
+
     return {
       pending: logic.currentTab === 'pendiente' ? all.length : 0,
       approved: logic.currentTab === 'aprobada' ? all.length : 0,
@@ -207,10 +207,10 @@ const AdminKYC: React.FC = () => {
             <Typography variant="body2" color="text.secondary" fontWeight={500}>
               {fecha
                 ? new Date(fecha).toLocaleDateString('es-AR', {
-                    day: '2-digit',
-                    month: 'short',
-                    year: 'numeric',
-                  })
+                  day: '2-digit',
+                  month: 'short',
+                  year: 'numeric',
+                })
                 : '-'}
             </Typography>
           );
@@ -334,9 +334,8 @@ const AdminKYC: React.FC = () => {
         <AlertBanner
           severity="warning"
           title="Verificaciones Pendientes"
-          message={`Hay ${metrics.pending} solicitud${
-            metrics.pending !== 1 ? 'es' : ''
-          } de identidad esperando revisión manual.`}
+          message={`Hay ${metrics.pending} solicitud${metrics.pending !== 1 ? 'es' : ''
+            } de identidad esperando revisión manual.`}
           action={{
             label: 'Revisar Ahora',
             onClick: () => logic.setCurrentTab('pendiente'),
@@ -419,9 +418,8 @@ const AdminKYC: React.FC = () => {
           showInactiveToggle={logic.currentTab === 'todas'}
           inactiveLabel="Ver Procesadas"
           highlightedRowId={logic.highlightedId}
-          emptyMessage={`No hay solicitudes ${
-            logic.currentTab === 'todas' ? '' : logic.currentTab.toLowerCase()
-          } para mostrar.`}
+          emptyMessage={`No hay solicitudes ${logic.currentTab === 'todas' ? '' : logic.currentTab.toLowerCase()
+            } para mostrar.`}
           pagination
           defaultRowsPerPage={10}
         />

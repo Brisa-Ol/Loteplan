@@ -22,7 +22,7 @@ interface Props {
 const ProyectoPriceHistory: React.FC<Props> = ({ proyectoId }) => {
   const theme = useTheme();
 
-const { data: historial = [], isLoading, error } = useQuery<CuotaMensualDto[]>({
+  const { data: historial = [], isLoading, error } = useQuery<CuotaMensualDto[]>({
     queryKey: ['cuotasByProyecto', proyectoId],
     queryFn: async () => {
       try {
@@ -30,10 +30,10 @@ const { data: historial = [], isLoading, error } = useQuery<CuotaMensualDto[]>({
         // ✅ CORRECCIÓN: El array está dentro de res.data.cuotas (según tu backend controller)
         // O si tu servicio ya devuelve response.data, entonces es response.cuotas
         // Verifica si tu servicio retorna AxiosResponse completo o solo data.
-        
+
         // Asumiendo que CuotaMensualService retorna AxiosResponse:
         // El controller devuelve: { success: true, cuotas: [...] }
-        return res.data.cuotas || []; 
+        return res.data.cuotas || [];
       } catch (err: any) {
         if (err.response?.status === 404) {
           return [];

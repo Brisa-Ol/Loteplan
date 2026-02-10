@@ -2,7 +2,7 @@
 
 import React from 'react';
 import {
-  Box, Paper, Typography, Button, Stack, Alert, Divider, Chip, 
+  Box, Paper, Typography, Button, Stack, Alert, Divider, Chip,
   useTheme, alpha, Avatar
 } from '@mui/material';
 import {
@@ -34,8 +34,8 @@ export const ProyectoStateActions: React.FC<ProyectoStateActionsProps> = ({
   const theme = useTheme();
 
   // Lógica de estado
-  const canIniciarProceso = 
-    proyecto.tipo_inversion === 'mensual' && 
+  const canIniciarProceso =
+    proyecto.tipo_inversion === 'mensual' &&
     proyecto.estado_proyecto === 'En Espera';
 
   const canFinalizar = proyecto.estado_proyecto === 'En proceso';
@@ -49,8 +49,8 @@ export const ProyectoStateActions: React.FC<ProyectoStateActionsProps> = ({
     letterSpacing: 1,
     textTransform: 'uppercase' as const,
     mb: 1,
-    display: 'flex', 
-    alignItems: 'center', 
+    display: 'flex',
+    alignItems: 'center',
     gap: 0.5
   };
 
@@ -64,51 +64,51 @@ export const ProyectoStateActions: React.FC<ProyectoStateActionsProps> = ({
       </Stack>
 
       <Stack spacing={3}>
-        
+
         {/* 1. TARJETA DE ESTADO ACTUAL */}
-        <Paper 
-          elevation={0} 
-          sx={{ 
-            p: 3, 
-            borderRadius: 3, 
+        <Paper
+          elevation={0}
+          sx={{
+            p: 3,
+            borderRadius: 3,
             border: '1px solid',
             borderColor: 'divider',
             bgcolor: alpha(theme.palette.background.paper, 0.4)
           }}
         >
           <Typography sx={labelStyle}>Estado Actual</Typography>
-          
+
           <Stack direction="row" spacing={2} alignItems="center" mb={2}>
             <Chip
               label={proyecto.estado_proyecto}
               // Mapeo manual de colores para asegurar compatibilidad
               color={
                 proyecto.estado_proyecto === 'En Espera' ? 'warning' :
-                proyecto.estado_proyecto === 'En proceso' ? 'success' : 
-                proyecto.estado_proyecto === 'Finalizado' ? 'info' : 'default'
+                  proyecto.estado_proyecto === 'En proceso' ? 'success' :
+                    proyecto.estado_proyecto === 'Finalizado' ? 'info' : 'default'
               }
-              sx={{ 
-                fontSize: '0.9rem', 
-                height: 32, 
+              sx={{
+                fontSize: '0.9rem',
+                height: 32,
                 px: 1,
                 fontWeight: 700,
                 // Estilo "Theme Global"
                 bgcolor: proyecto.estado_proyecto === 'En Espera' ? alpha(theme.palette.warning.main, 0.1) :
-                         proyecto.estado_proyecto === 'En proceso' ? alpha(theme.palette.success.main, 0.1) :
-                         proyecto.estado_proyecto === 'Finalizado' ? alpha(theme.palette.info.main, 0.1) : 
-                         alpha(theme.palette.grey[500], 0.1),
+                  proyecto.estado_proyecto === 'En proceso' ? alpha(theme.palette.success.main, 0.1) :
+                    proyecto.estado_proyecto === 'Finalizado' ? alpha(theme.palette.info.main, 0.1) :
+                      alpha(theme.palette.grey[500], 0.1),
                 color: proyecto.estado_proyecto === 'En Espera' ? 'warning.main' :
-                       proyecto.estado_proyecto === 'En proceso' ? 'success.main' :
-                       proyecto.estado_proyecto === 'Finalizado' ? 'info.main' : 
-                       'text.secondary',
+                  proyecto.estado_proyecto === 'En proceso' ? 'success.main' :
+                    proyecto.estado_proyecto === 'Finalizado' ? 'info.main' :
+                      'text.secondary',
                 border: '1px solid',
                 borderColor: proyecto.estado_proyecto === 'En Espera' ? alpha(theme.palette.warning.main, 0.2) :
-                             proyecto.estado_proyecto === 'En proceso' ? alpha(theme.palette.success.main, 0.2) :
-                             proyecto.estado_proyecto === 'Finalizado' ? alpha(theme.palette.info.main, 0.2) :
-                             theme.palette.divider
+                  proyecto.estado_proyecto === 'En proceso' ? alpha(theme.palette.success.main, 0.2) :
+                    proyecto.estado_proyecto === 'Finalizado' ? alpha(theme.palette.info.main, 0.2) :
+                      theme.palette.divider
               }}
             />
-            
+
             {proyecto.tipo_inversion === 'mensual' && proyecto.estado_proyecto === 'En proceso' && (
               <Stack direction="row" spacing={1} alignItems="center" sx={{ color: 'text.secondary' }}>
                 <TimerIcon fontSize="small" />
@@ -122,14 +122,14 @@ export const ProyectoStateActions: React.FC<ProyectoStateActionsProps> = ({
           <Alert severity="info" variant="outlined" sx={{ borderStyle: 'dashed', bgcolor: 'transparent' }}>
             {proyecto.estado_proyecto === 'En Espera' && (
               <>
-                El proyecto está en espera de lanzamiento. {proyecto.tipo_inversion === 'mensual' ? 
-                  'Requiere iniciar el proceso manualmente para activar cobros.' : 
+                El proyecto está en espera de lanzamiento. {proyecto.tipo_inversion === 'mensual' ?
+                  'Requiere iniciar el proceso manualmente para activar cobros.' :
                   'Hazlo visible para comenzar a recibir inversiones.'}
               </>
             )}
             {proyecto.estado_proyecto === 'En proceso' && (
               <>
-                El proyecto está activo y operativo. {proyecto.tipo_inversion === 'mensual' && 
+                El proyecto está activo y operativo. {proyecto.tipo_inversion === 'mensual' &&
                   `El sistema genera cuotas automáticas mensualmente.`}
               </>
             )}
@@ -141,14 +141,14 @@ export const ProyectoStateActions: React.FC<ProyectoStateActionsProps> = ({
 
         {/* 2. ACCIÓN: INICIAR PROCESO (Solo Mensuales en Espera) */}
         {canIniciarProceso && (
-          <Paper 
+          <Paper
             elevation={0}
-            sx={{ 
-                p: 3, 
-                borderRadius: 3, 
-                border: '1px solid',
-                borderColor: alpha(theme.palette.success.main, 0.3),
-                bgcolor: alpha(theme.palette.success.main, 0.04)
+            sx={{
+              p: 3,
+              borderRadius: 3,
+              border: '1px solid',
+              borderColor: alpha(theme.palette.success.main, 0.3),
+              bgcolor: alpha(theme.palette.success.main, 0.04)
             }}
           >
             <Stack direction="row" alignItems="center" spacing={2} mb={2}>
@@ -168,24 +168,24 @@ export const ProyectoStateActions: React.FC<ProyectoStateActionsProps> = ({
             <Divider sx={{ mb: 2, borderColor: alpha(theme.palette.success.main, 0.2) }} />
 
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} mb={3}>
-                <Box flex={1}>
-                    <Typography sx={labelStyle}><TrendingUpIcon fontSize="inherit"/> Objetivo Suscripciones</Typography>
-                    <Typography variant="body1" fontWeight={600}>
-                        {proyecto.suscripciones_actuales} / {proyecto.obj_suscripciones}
-                    </Typography>
-                </Box>
-                <Box flex={1}>
-                    <Typography sx={labelStyle}><EventIcon fontSize="inherit"/> Plazo</Typography>
-                    <Typography variant="body1" fontWeight={600}>
-                        {proyecto.plazo_inversion} Meses
-                    </Typography>
-                </Box>
-                <Box flex={1}>
-                    <Typography sx={labelStyle}><MoneyIcon fontSize="inherit"/> Cuota Base</Typography>
-                    <Typography variant="body1" fontWeight={600}>
-                        ${Number(proyecto.monto_inversion).toLocaleString()}
-                    </Typography>
-                </Box>
+              <Box flex={1}>
+                <Typography sx={labelStyle}><TrendingUpIcon fontSize="inherit" /> Objetivo Suscripciones</Typography>
+                <Typography variant="body1" fontWeight={600}>
+                  {proyecto.suscripciones_actuales} / {proyecto.obj_suscripciones}
+                </Typography>
+              </Box>
+              <Box flex={1}>
+                <Typography sx={labelStyle}><EventIcon fontSize="inherit" /> Plazo</Typography>
+                <Typography variant="body1" fontWeight={600}>
+                  {proyecto.plazo_inversion} Meses
+                </Typography>
+              </Box>
+              <Box flex={1}>
+                <Typography sx={labelStyle}><MoneyIcon fontSize="inherit" /> Cuota Base</Typography>
+                <Typography variant="body1" fontWeight={600}>
+                  ${Number(proyecto.monto_inversion).toLocaleString()}
+                </Typography>
+              </Box>
             </Stack>
 
             <Alert severity="success" variant="filled" sx={{ mb: 2, borderRadius: 2 }}>
@@ -209,14 +209,14 @@ export const ProyectoStateActions: React.FC<ProyectoStateActionsProps> = ({
 
         {/* 3. ACCIÓN: FINALIZAR PROCESO */}
         {canFinalizar && (
-          <Paper 
+          <Paper
             elevation={0}
-            sx={{ 
-                p: 3, 
-                borderRadius: 3, 
-                border: '1px solid',
-                borderColor: alpha(theme.palette.info.main, 0.3),
-                bgcolor: alpha(theme.palette.info.main, 0.04)
+            sx={{
+              p: 3,
+              borderRadius: 3,
+              border: '1px solid',
+              borderColor: alpha(theme.palette.info.main, 0.3),
+              bgcolor: alpha(theme.palette.info.main, 0.04)
             }}
           >
             <Stack direction="row" alignItems="center" spacing={2} mb={2}>
@@ -254,13 +254,13 @@ export const ProyectoStateActions: React.FC<ProyectoStateActionsProps> = ({
 
         {/* 4. ESTADO FINALIZADO (Solo informativo) */}
         {isFinished && (
-          <Paper 
-            variant="outlined" 
-            sx={{ 
-                p: 2, 
-                bgcolor: alpha(theme.palette.action.disabledBackground, 0.1),
-                borderStyle: 'dashed',
-                borderRadius: 3
+          <Paper
+            variant="outlined"
+            sx={{
+              p: 2,
+              bgcolor: alpha(theme.palette.action.disabledBackground, 0.1),
+              borderStyle: 'dashed',
+              borderRadius: 3
             }}
           >
             <Stack direction="row" alignItems="center" spacing={2}>

@@ -116,12 +116,12 @@ const DetallePagoModal: React.FC<Props> = ({ open, onClose, pago, userName, proj
     >
       <Stack spacing={3}>
         {/* SECCIÓN 1: DATOS FINANCIEROS */}
-        <Paper 
+        <Paper
           elevation={0}
-          sx={{ 
-            p: 2.5, borderRadius: 2, border: '1px solid', 
+          sx={{
+            p: 2.5, borderRadius: 2, border: '1px solid',
             borderColor: alpha(themeColor.main, 0.3),
-            bgcolor: alpha(themeColor.main, 0.04) 
+            bgcolor: alpha(themeColor.main, 0.04)
           }}
         >
           <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems="center" spacing={2}>

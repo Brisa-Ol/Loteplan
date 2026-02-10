@@ -4,7 +4,7 @@ import React from 'react';
 import {
   Typography, Chip, Stack, Paper, Box, Divider, useTheme, alpha
 } from '@mui/material';
-import { 
+import {
   MoneyOff,
   Person,
   Business,
@@ -40,24 +40,24 @@ const DetalleCancelacionModal: React.FC<Props> = ({ open, onClose, cancelacion }
       hideConfirmButton
       cancelText="Cerrar"
       headerExtra={
-        <Chip 
-          label="CANCELADO" 
-          color="error" 
-          variant="filled" 
+        <Chip
+          label="CANCELADO"
+          color="error"
+          variant="filled"
           sx={{ fontWeight: 'bold', borderRadius: 1.5 }}
         />
       }
     >
       <Stack spacing={3}>
-        
+
         {/* SECCIÓN 1: KPI PRINCIPAL (Monto a Liquidar) */}
-        <Paper 
+        <Paper
           elevation={0}
-          sx={{ 
-            p: 2.5, borderRadius: 2, 
-            border: '1px solid', 
+          sx={{
+            p: 2.5, borderRadius: 2,
+            border: '1px solid',
             borderColor: alpha(themeColorMain, 0.3),
-            bgcolor: alpha(themeColorMain, 0.04) 
+            bgcolor: alpha(themeColorMain, 0.04)
           }}
         >
           <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems="center" spacing={2}>
@@ -77,7 +77,7 @@ const DetalleCancelacionModal: React.FC<Props> = ({ open, onClose, cancelacion }
 
         {/* CONTENEDOR FLEX: Usuario y Proyecto */}
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-          
+
           {/* SECCIÓN 2: Usuario */}
           <Paper elevation={0} sx={{ flex: 1, p: 2.5, borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
             <Stack direction="row" alignItems="center" spacing={1} mb={2}>
@@ -94,7 +94,7 @@ const DetalleCancelacionModal: React.FC<Props> = ({ open, onClose, cancelacion }
               <Box>
                 <Typography variant="caption" color="text.secondary">Email</Typography>
                 <Typography variant="body1" fontWeight={500}>
-                    {cancelacion.usuario?.email || '-'}
+                  {cancelacion.usuario?.email || '-'}
                 </Typography>
               </Box>
             </Stack>
@@ -131,10 +131,10 @@ const DetalleCancelacionModal: React.FC<Props> = ({ open, onClose, cancelacion }
               DETALLES DE LA BAJA
             </Typography>
           </Stack>
-          
-          <Stack 
-            direction="row" 
-            spacing={4} 
+
+          <Stack
+            direction="row"
+            spacing={4}
             divider={<Divider orientation="vertical" flexItem />}
             alignItems="center"
           >

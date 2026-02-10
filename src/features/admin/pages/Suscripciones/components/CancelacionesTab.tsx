@@ -187,14 +187,14 @@ const CancelacionesTab: React.FC = () => {
           title="Total Cancelaciones"
           value={metrics?.total_canceladas || 0}
           subtitle={`De ${metrics?.total_suscripciones || 0} suscripciones`}
-          color="error" 
+          color="error"
           icon={<Cancel />}
           loading={loadingMetrics}
         />
         <StatCard
           title="Tasa de Churn"
           value={`${metrics?.tasa_cancelacion || 0}%`}
-          color="warning" 
+          color="warning"
           icon={<TrendingDown />}
           subtitle="Tasa de abandono"
           loading={loadingMetrics}
@@ -210,10 +210,10 @@ const CancelacionesTab: React.FC = () => {
       </Box>
 
       {/* ========== 2. FILTROS REFINADOS ========== */}
-      <Paper 
-        elevation={0} 
-        sx={{ 
-          p: 2.5, mb: 3, 
+      <Paper
+        elevation={0}
+        sx={{
+          p: 2.5, mb: 3,
           borderRadius: 2, // 16px
           border: '1px solid',
           borderColor: theme.palette.secondary.main,
@@ -225,9 +225,9 @@ const CancelacionesTab: React.FC = () => {
           <TextField
             placeholder="Buscar por usuario, email o proyecto..."
             size="small"
-            sx={{ 
+            sx={{
               flex: 2,
-              '& .MuiOutlinedInput-root': { borderRadius: 1 } 
+              '& .MuiOutlinedInput-root': { borderRadius: 1 }
             }}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}

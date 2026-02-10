@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Dialog, DialogTitle, DialogContent, DialogActions, 
-  Button, Stack, Alert, Typography, TextField, useTheme, alpha, CircularProgress 
+import {
+  Dialog, DialogTitle, DialogContent, DialogActions,
+  Button, Stack, Alert, Typography, TextField, useTheme, alpha, CircularProgress
 } from '@mui/material';
 import { ContentCopy, Send } from '@mui/icons-material';
 import { useMutation } from '@tanstack/react-query';
@@ -63,17 +63,17 @@ const ContactarGanadorModal: React.FC<Props> = ({ open, onClose, lote, montoGana
   };
 
   return (
-    <Dialog 
-        open={open} 
-        onClose={enviarMensajeMutation.isPending ? undefined : onClose} 
-        maxWidth="sm" 
-        fullWidth 
-        PaperProps={{ sx: { borderRadius: 3, boxShadow: theme.shadows[10] } }}
+    <Dialog
+      open={open}
+      onClose={enviarMensajeMutation.isPending ? undefined : onClose}
+      maxWidth="sm"
+      fullWidth
+      PaperProps={{ sx: { borderRadius: 3, boxShadow: theme.shadows[10] } }}
     >
       <DialogTitle sx={{ bgcolor: alpha(theme.palette.primary.main, 0.05), pb: 2 }}>
         Contactar Ganador - Lote #{lote.id}
       </DialogTitle>
-      
+
       <DialogContent sx={{ mt: 2 }}>
         <Stack spacing={2}>
           <Alert severity="info" variant="outlined" sx={{ borderRadius: 2 }}>
@@ -87,8 +87,8 @@ const ContactarGanadorModal: React.FC<Props> = ({ open, onClose, lote, montoGana
 
           <TextField
             label="Mensaje personalizado"
-            multiline 
-            rows={6} 
+            multiline
+            rows={6}
             fullWidth
             value={mensajePersonalizado}
             onChange={(e) => setMensajePersonalizado(e.target.value)}
@@ -102,35 +102,35 @@ const ContactarGanadorModal: React.FC<Props> = ({ open, onClose, lote, montoGana
 
       <DialogActions sx={{ p: 2, borderTop: `1px solid ${theme.palette.divider}` }}>
         {/* Botón Copiar (Secundario) */}
-        <Button 
-            onClick={handleCopiar} 
-            color="primary" 
-            startIcon={<ContentCopy />}
-            disabled={enviarMensajeMutation.isPending}
-            sx={{ mr: 'auto' }} // Alinea a la izquierda
+        <Button
+          onClick={handleCopiar}
+          color="primary"
+          startIcon={<ContentCopy />}
+          disabled={enviarMensajeMutation.isPending}
+          sx={{ mr: 'auto' }} // Alinea a la izquierda
         >
-            Copiar Texto
+          Copiar Texto
         </Button>
 
         {/* Botón Cerrar */}
-        <Button 
-            onClick={onClose} 
-            color="inherit" 
-            disabled={enviarMensajeMutation.isPending}
+        <Button
+          onClick={onClose}
+          color="inherit"
+          disabled={enviarMensajeMutation.isPending}
         >
-            Cancelar
+          Cancelar
         </Button>
 
         {/* Botón Enviar (Principal) */}
-        <Button 
-            onClick={handleEnviar} 
-            variant="contained" 
-            color="primary"
-            startIcon={enviarMensajeMutation.isPending ? <CircularProgress size={20} color="inherit"/> : <Send />}
-            disabled={enviarMensajeMutation.isPending}
-            sx={{ borderRadius: 2, px: 3, fontWeight: 700 }}
+        <Button
+          onClick={handleEnviar}
+          variant="contained"
+          color="primary"
+          startIcon={enviarMensajeMutation.isPending ? <CircularProgress size={20} color="inherit" /> : <Send />}
+          disabled={enviarMensajeMutation.isPending}
+          sx={{ borderRadius: 2, px: 3, fontWeight: 700 }}
         >
-            {enviarMensajeMutation.isPending ? 'Enviando...' : 'Enviar Ahora'}
+          {enviarMensajeMutation.isPending ? 'Enviando...' : 'Enviar Ahora'}
         </Button>
       </DialogActions>
     </Dialog>

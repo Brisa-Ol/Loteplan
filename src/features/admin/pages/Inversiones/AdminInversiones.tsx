@@ -90,7 +90,7 @@ const TrendChart = React.memo<{
           </ResponsiveContainer>
         ) : (
           <Stack height={250} alignItems="center" justifyContent="center">
-             <Typography color="text.secondary">No hay movimientos registrados</Typography>
+            <Typography color="text.secondary">No hay movimientos registrados</Typography>
           </Stack>
         )}
       </CardContent>

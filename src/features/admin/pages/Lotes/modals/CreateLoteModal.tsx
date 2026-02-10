@@ -1,22 +1,22 @@
-import React from 'react';
-import { useFormik } from 'formik';
-import * as Yup from 'yup';
 import {
   Add as AddIcon,
   CalendarMonth as CalendarIcon,
   Description as DescriptionIcon,
-  MonetizationOn as MonetizationIcon,
-  LocationOn
+  LocationOn,
+  MonetizationOn as MonetizationIcon
 } from '@mui/icons-material';
 import {
   Alert,
   Box,
   Divider,
+  InputAdornment,
   Stack,
   TextField,
-  Typography,
-  InputAdornment
+  Typography
 } from '@mui/material';
+import { useFormik } from 'formik';
+import React from 'react';
+import * as Yup from 'yup';
 
 import type { CreateLoteDto } from '../../../../../core/types/dto/lote.dto';
 import BaseModal from '../../../../../shared/components/domain/modals/BaseModal/BaseModal';
@@ -34,15 +34,15 @@ const validationSchema = Yup.object({
   fecha_inicio: Yup.date().nullable(),
   fecha_fin: Yup.date().nullable()
     .when('fecha_inicio', {
-        is: (val: any) => val != null,
-        then: (schema) => schema.min(Yup.ref('fecha_inicio'), 'La finalización debe ser posterior al inicio')
+      is: (val: any) => val != null,
+      then: (schema) => schema.min(Yup.ref('fecha_inicio'), 'La finalización debe ser posterior al inicio')
     }),
 });
 
-const CreateLoteModal: React.FC<CreateLoteModalProps> = ({ 
-  open, onClose, onSubmit, isLoading = false 
+const CreateLoteModal: React.FC<CreateLoteModalProps> = ({
+  open, onClose, onSubmit, isLoading = false
 }) => {
-  
+
   const formik = useFormik<any>({
     initialValues: {
       nombre_lote: '',
@@ -67,12 +67,12 @@ const CreateLoteModal: React.FC<CreateLoteModalProps> = ({
 
       if (!values.fecha_inicio) delete dataToSubmit.fecha_inicio;
       if (!values.fecha_fin) delete dataToSubmit.fecha_fin;
-      
+
       Object.keys(dataToSubmit).forEach(key => {
         if (dataToSubmit[key] === '' || dataToSubmit[key] === undefined) delete dataToSubmit[key];
       });
 
-      await onSubmit(dataToSubmit); 
+      await onSubmit(dataToSubmit);
       formik.resetForm();
       onClose();
     },
@@ -81,8 +81,8 @@ const CreateLoteModal: React.FC<CreateLoteModalProps> = ({
   const sectionTitleSx = { fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', mb: 1, display: 'flex', alignItems: 'center', gap: 1, fontSize: '0.75rem' };
 
   const formatPreview = (val: any) => {
-      if (!val || isNaN(Number(val))) return '';
-      return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(Number(val));
+    if (!val || isNaN(Number(val))) return '';
+    return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(Number(val));
   };
 
   return (
@@ -98,16 +98,16 @@ const CreateLoteModal: React.FC<CreateLoteModalProps> = ({
       maxWidth="md"
     >
       <Stack spacing={3}>
-        
+
         {/* 1. INFORMACIÓN GENERAL */}
         <Box>
           <Typography sx={sectionTitleSx}><DescriptionIcon fontSize="inherit" /> Información General</Typography>
           <Stack spacing={2}>
-            <TextField 
-                fullWidth label="Nombre del Lote" placeholder="Ej: Lote 45 - Sector Norte"
-                {...formik.getFieldProps('nombre_lote')} 
-                error={formik.touched.nombre_lote && Boolean(formik.errors.nombre_lote)} 
-                helperText={formik.touched.nombre_lote && (formik.errors.nombre_lote as string)} 
+            <TextField
+              fullWidth label="Nombre del Lote" placeholder="Ej: Lote 45 - Sector Norte"
+              {...formik.getFieldProps('nombre_lote')}
+              error={formik.touched.nombre_lote && Boolean(formik.errors.nombre_lote)}
+              helperText={formik.touched.nombre_lote && (formik.errors.nombre_lote as string)}
             />
             <TextField fullWidth multiline rows={2} label="Descripción (Opcional)" {...formik.getFieldProps('descripcion')} />
           </Stack>
@@ -118,41 +118,41 @@ const CreateLoteModal: React.FC<CreateLoteModalProps> = ({
         {/* 2. VALOR Y UBICACIÓN (REFACTORIZADO CON STACK) */}
         {/* Stack en row para pantallas md+, column para móviles. Gap de 3 para separación. */}
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
-            
-            {/* Columna Izquierda: Precio */}
-            <Box flex={1}>
-                <Typography sx={sectionTitleSx}><MonetizationIcon fontSize="inherit" /> Valor Base</Typography>
-                <TextField 
-                    fullWidth 
-                    label="Precio Base" 
-                    type="number" 
-                    {...formik.getFieldProps('precio_base')} 
-                    error={formik.touched.precio_base && Boolean(formik.errors.precio_base)}
-                    helperText={
-                        (formik.touched.precio_base && formik.errors.precio_base) 
-                        ? (formik.errors.precio_base as string)
-                        : formik.values.precio_base ? `Vista previa: ${formatPreview(formik.values.precio_base)}` : "Ingrese el monto sin puntos"
-                    }
-                    InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }}
-                />
-            </Box>
-            
-            {/* Columna Derecha: Coordenadas */}
-            <Box flex={1}>
-                <Typography sx={sectionTitleSx}><LocationOn fontSize="inherit" /> Coordenadas (Opcional)</Typography>
-                <Stack direction="row" spacing={2}>
-                    <TextField 
-                        fullWidth label="Latitud" type="number" size="small" placeholder="-32.xxx"
-                        inputProps={{ step: "any" }}
-                        {...formik.getFieldProps('latitud')} 
-                    />
-                    <TextField 
-                        fullWidth label="Longitud" type="number" size="small" placeholder="-68.xxx"
-                        inputProps={{ step: "any" }}
-                        {...formik.getFieldProps('longitud')} 
-                    />
-                </Stack>
-            </Box>
+
+          {/* Columna Izquierda: Precio */}
+          <Box flex={1}>
+            <Typography sx={sectionTitleSx}><MonetizationIcon fontSize="inherit" /> Valor Base</Typography>
+            <TextField
+              fullWidth
+              label="Precio Base"
+              type="number"
+              {...formik.getFieldProps('precio_base')}
+              error={formik.touched.precio_base && Boolean(formik.errors.precio_base)}
+              helperText={
+                (formik.touched.precio_base && formik.errors.precio_base)
+                  ? (formik.errors.precio_base as string)
+                  : formik.values.precio_base ? `Vista previa: ${formatPreview(formik.values.precio_base)}` : "Ingrese el monto sin puntos"
+              }
+              InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }}
+            />
+          </Box>
+
+          {/* Columna Derecha: Coordenadas */}
+          <Box flex={1}>
+            <Typography sx={sectionTitleSx}><LocationOn fontSize="inherit" /> Coordenadas (Opcional)</Typography>
+            <Stack direction="row" spacing={2}>
+              <TextField
+                fullWidth label="Latitud" type="number" size="small" placeholder="-32.xxx"
+                inputProps={{ step: "any" }}
+                {...formik.getFieldProps('latitud')}
+              />
+              <TextField
+                fullWidth label="Longitud" type="number" size="small" placeholder="-68.xxx"
+                inputProps={{ step: "any" }}
+                {...formik.getFieldProps('longitud')}
+              />
+            </Stack>
+          </Box>
         </Stack>
 
         <Divider />
@@ -161,20 +161,20 @@ const CreateLoteModal: React.FC<CreateLoteModalProps> = ({
         <Box>
           <Typography sx={sectionTitleSx}><CalendarIcon fontSize="inherit" /> Planificación de Subasta (Opcional)</Typography>
           <Alert severity="info" sx={{ mb: 2, py: 0, '& .MuiAlert-message': { fontSize: '0.85rem' } }}>
-             Si omite las fechas, el lote quedará en estado <strong>Pendiente</strong> y podrá iniciarlo manualmente luego.
+            Si omite las fechas, el lote quedará en estado <strong>Pendiente</strong> y podrá iniciarlo manualmente luego.
           </Alert>
-          
+
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-            <TextField 
-              fullWidth type="datetime-local" label="Inicio Previsto" InputLabelProps={{ shrink: true }} 
-              {...formik.getFieldProps('fecha_inicio')} 
-              error={formik.touched.fecha_inicio && Boolean(formik.errors.fecha_inicio)} 
+            <TextField
+              fullWidth type="datetime-local" label="Inicio Previsto" InputLabelProps={{ shrink: true }}
+              {...formik.getFieldProps('fecha_inicio')}
+              error={formik.touched.fecha_inicio && Boolean(formik.errors.fecha_inicio)}
               helperText={formik.touched.fecha_inicio && (formik.errors.fecha_inicio as string)}
             />
-            <TextField 
-              fullWidth type="datetime-local" label="Cierre Previsto" InputLabelProps={{ shrink: true }} 
-              {...formik.getFieldProps('fecha_fin')} 
-              error={formik.touched.fecha_fin && Boolean(formik.errors.fecha_fin)} 
+            <TextField
+              fullWidth type="datetime-local" label="Cierre Previsto" InputLabelProps={{ shrink: true }}
+              {...formik.getFieldProps('fecha_fin')}
+              error={formik.touched.fecha_fin && Boolean(formik.errors.fecha_fin)}
               helperText={formik.touched.fecha_fin && (formik.errors.fecha_fin as string)}
             />
           </Stack>

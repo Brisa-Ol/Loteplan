@@ -1,22 +1,38 @@
-import React, { useMemo, useCallback } from 'react';
 import {
-  AccountBalance, Gavel, AttachMoney, ReceiptLong,
-  AssignmentTurnedIn, Person, Handyman, Landscape,
-  Assessment, Timeline, Speed, QueryStats, Star, Security
+  AccountBalance,
+  Assessment,
+  AssignmentTurnedIn,
+  AttachMoney,
+  Gavel,
+  Handyman, Landscape,
+  Person,
+  QueryStats,
+  ReceiptLong,
+  Security,
+  Speed,
+  Star,
+  Timeline
 } from '@mui/icons-material';
 import {
-  alpha, Box, Button, Card, CardContent, Paper,
-  Stack, Tab, Tabs, Typography, useTheme, Chip, Avatar, MenuItem, Select
+  alpha,
+  Avatar,
+  Box, Button, Card, CardContent,
+  Chip,
+  MenuItem,
+  Paper,
+  Select,
+  Stack, Tab, Tabs, Typography, useTheme
 } from '@mui/material';
+import React, { useMemo } from 'react';
 import {
   Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart,
   Tooltip as RechartsTooltip, ResponsiveContainer, XAxis, YAxis
 } from 'recharts';
 
 // Componentes Compartidos
-import { PageContainer } from '@/shared/components/layout/containers/PageContainer/PageContainer';
 import { QueryHandler } from '@/shared/components/data-grid/QueryHandler/QueryHandler';
 import { StatCard } from '@/shared/components/domain/cards/StatCard/StatCard';
+import { PageContainer } from '@/shared/components/layout/containers/PageContainer/PageContainer';
 
 // Hook de Lógica
 import { useAdminDashboard } from '../../hooks/useAdminDashboard';
@@ -100,11 +116,11 @@ const AdminDashboard: React.FC = () => {
   const theme = useTheme();
 
   const accionesRapidas = useMemo(() => [
-    { label: 'Usuarios',   icon: <Person fontSize="small" />,     path: '/admin/usuarios' },
-    { label: 'Proyectos',  icon: <Handyman fontSize="small" />,    path: '/admin/proyectos' },
-    { label: 'Lotes',      icon: <Landscape fontSize="small" />,   path: '/admin/lotes' },
-    { label: 'Subastas',   icon: <Gavel fontSize="small" />,      path: '/admin/pujas' },
-    { label: 'Contratos',  icon: <Assessment fontSize="small" />,  path: '/admin/plantillas' },
+    { label: 'Usuarios', icon: <Person fontSize="small" />, path: '/admin/usuarios' },
+    { label: 'Proyectos', icon: <Handyman fontSize="small" />, path: '/admin/proyectos' },
+    { label: 'Lotes', icon: <Landscape fontSize="small" />, path: '/admin/lotes' },
+    { label: 'Subastas', icon: <Gavel fontSize="small" />, path: '/admin/pujas' },
+    { label: 'Contratos', icon: <Assessment fontSize="small" />, path: '/admin/plantillas' },
   ], []);
 
   return (
@@ -216,9 +232,9 @@ const AdminDashboard: React.FC = () => {
                 variant="scrollable"
                 scrollButtons="auto"
               >
-                <Tab icon={<Timeline />}   iconPosition="start" label="Progreso"    sx={{ textTransform: 'none', minHeight: 64 }} />
-                <Tab icon={<QueryStats />} iconPosition="start" label="Riesgo"      sx={{ textTransform: 'none', minHeight: 64 }} />
-                <Tab icon={<Star />}       iconPosition="start" label="Popularidad"  sx={{ textTransform: 'none', minHeight: 64 }} />
+                <Tab icon={<Timeline />} iconPosition="start" label="Progreso" sx={{ textTransform: 'none', minHeight: 64 }} />
+                <Tab icon={<QueryStats />} iconPosition="start" label="Riesgo" sx={{ textTransform: 'none', minHeight: 64 }} />
+                <Tab icon={<Star />} iconPosition="start" label="Popularidad" sx={{ textTransform: 'none', minHeight: 64 }} />
               </Tabs>
             </Box>
 

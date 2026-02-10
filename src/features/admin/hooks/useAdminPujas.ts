@@ -42,7 +42,7 @@ export const useAdminPujas = () => {
   const [tabValue, setTabValue] = useState(0);
   const [filterLoteNombre, setFilterLoteNombre] = useState('');
   const [filterUserId, setFilterUserId] = useState('');
-  
+
   // Selección
   const [pujaSeleccionada, setPujaSeleccionada] = useState<PujaDto | null>(null);
 
@@ -60,9 +60,9 @@ export const useAdminPujas = () => {
   });
 
   // 2. Lotes
-  const { 
-    data: lotesRaw = [], 
-    isLoading: loadingLotes, 
+  const {
+    data: lotesRaw = [],
+    isLoading: loadingLotes,
     error: errorLotes // 🔴 Capturamos error aquí
   } = useQuery<LoteDto[]>({
     queryKey: ['adminLotes', tabValue === 0 ? 'active' : 'all'],
@@ -75,8 +75,8 @@ export const useAdminPujas = () => {
   });
 
   // 3. Pujas (SOLO para TAB 0 - En Vivo)
-  const { 
-    data: pujasActivas = [], 
+  const {
+    data: pujasActivas = [],
     isLoading: loadingPujas,
     error: errorPujas // 🔴 Capturamos error aquí también
   } = useQuery<PujaDto[]>({
@@ -99,7 +99,7 @@ export const useAdminPujas = () => {
   const pujasPorLote = useMemo(() => {
     if (tabValue !== 0) return {};
     const map: Record<number, PujaDto[]> = {};
-    
+
     pujasActivas.forEach(p => {
       if (!map[p.id_lote]) map[p.id_lote] = [];
       map[p.id_lote].push(p);
@@ -108,7 +108,7 @@ export const useAdminPujas = () => {
     Object.keys(map).forEach(key => {
       map[Number(key)].sort((a, b) => Number(b.monto_puja) - Number(a.monto_puja));
     });
-    
+
     return map;
   }, [pujasActivas, tabValue]);
 
@@ -118,18 +118,18 @@ export const useAdminPujas = () => {
   // Analytics y Listas por Tab
   const analytics = useMemo(() => {
     const search = debouncedFilterLote.toLowerCase();
-    
-    const lotesFiltradosPorNombre = filteredLotes.filter(l => 
-        !search || l.nombre_lote.toLowerCase().includes(search)
+
+    const lotesFiltradosPorNombre = filteredLotes.filter(l =>
+      !search || l.nombre_lote.toLowerCase().includes(search)
     );
 
     // Tab 0: Activos
     const activos = lotesFiltradosPorNombre.filter(l => l.estado_subasta === 'activa');
 
     // Tab 1: Gestión de Cobros
-    const pendientesPago = lotesFiltradosPorNombre.filter(l => 
-      l.estado_subasta === 'finalizada' && 
-      l.id_ganador && 
+    const pendientesPago = lotesFiltradosPorNombre.filter(l =>
+      l.estado_subasta === 'finalizada' &&
+      l.id_ganador &&
       (l.intentos_fallidos_pago || 0) < 3
     );
 
@@ -141,12 +141,12 @@ export const useAdminPujas = () => {
       return acc + (topPuja ? Number(topPuja.monto_puja) : Number(lote.precio_base));
     }, 0);
 
-    return { 
-        activos, 
-        pendientesPago, 
-        lotesEnRiesgo, 
-        dineroEnJuego,
-        totalPujas: pujasActivas.length 
+    return {
+      activos,
+      pendientesPago,
+      lotesEnRiesgo,
+      dineroEnJuego,
+      totalPujas: pujasActivas.length
     };
   }, [filteredLotes, debouncedFilterLote, pujasPorLote, pujasActivas.length]);
 
@@ -200,24 +200,24 @@ export const useAdminPujas = () => {
 
   const handleCancelarAdjudicacion = useCallback(async (lote: LoteDto) => {
     try {
-        if (lote.id_puja_mas_alta) {
-             modales.confirmDialog.confirm('cancel_ganadora_anticipada', {
-                ...lote,
-                pujaId: lote.id_puja_mas_alta,
-                id_ganador: lote.id_ganador
-            });
-        } else {
-            showError('No se pudo identificar la puja ganadora automáticamente.');
-        }
+      if (lote.id_puja_mas_alta) {
+        modales.confirmDialog.confirm('cancel_ganadora_anticipada', {
+          ...lote,
+          pujaId: lote.id_puja_mas_alta,
+          id_ganador: lote.id_ganador
+        });
+      } else {
+        showError('No se pudo identificar la puja ganadora automáticamente.');
+      }
     } catch (e) {
-        console.error(e);
-        showError('Error al preparar cancelación');
+      console.error(e);
+      showError('Error al preparar cancelación');
     }
   }, [modales.confirmDialog, showError]);
 
   const handleConfirmAction = useCallback((inputValue?: string) => {
     const { action, data } = modales.confirmDialog;
-    
+
     if (action === 'end_auction' && data) {
       endAuctionMutation.mutate(data.id);
     }
@@ -243,7 +243,7 @@ export const useAdminPujas = () => {
     loading: loadingLotes || (tabValue === 0 && loadingPujas),
     // 🟢 AQUÍ ESTÁ LA CORRECCIÓN: Devolvemos el error combinado
     error: errorLotes || (tabValue === 0 ? errorPujas : null),
-    
+
     analytics,
     pujasPorLote,
     getUserName,

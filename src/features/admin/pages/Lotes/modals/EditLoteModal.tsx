@@ -1,11 +1,11 @@
-import React, { useEffect } from 'react';
-import { TextField, Stack, Box, Typography, MenuItem, Alert, useTheme, alpha, InputAdornment, Divider } from '@mui/material';
-import { Save as SaveIcon, Edit as EditIcon, Inventory as InventoryIcon, Link as LinkIcon, LocationOn, MonetizationOn } from '@mui/icons-material';
-import { useFormik } from 'formik';
-import * as Yup from 'yup';
+import { Edit as EditIcon, Inventory as InventoryIcon, Link as LinkIcon, LocationOn, Save as SaveIcon } from '@mui/icons-material';
+import { Alert, alpha, Box, Divider, InputAdornment, MenuItem, Stack, TextField, Typography, useTheme } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
-import type { LoteDto, UpdateLoteDto } from '../../../../../core/types/dto/lote.dto';
+import { useFormik } from 'formik';
+import React, { useEffect } from 'react';
+import * as Yup from 'yup';
 import ProyectoService from '../../../../../core/api/services/proyecto.service';
+import type { LoteDto, UpdateLoteDto } from '../../../../../core/types/dto/lote.dto';
 import BaseModal from '../../../../../shared/components/domain/modals/BaseModal/BaseModal';
 
 interface EditLoteModalProps {
@@ -31,22 +31,22 @@ const EditLoteModal: React.FC<EditLoteModalProps> = ({ open, onClose, onSubmit, 
     queryKey: ['adminProyectosSelect'],
     queryFn: async () => (await ProyectoService.getAllAdmin()).data,
     enabled: open,
-    staleTime: 1000 * 60 * 5, 
+    staleTime: 1000 * 60 * 5,
   });
 
   const formik = useFormik<any>({
-    initialValues: { 
-        nombre_lote: '', 
-        precio_base: '', // Para edición también usamos string vacío inicial si es necesario
-        id_proyecto: null, 
-        latitud: 0, 
-        longitud: 0 
+    initialValues: {
+      nombre_lote: '',
+      precio_base: '', // Para edición también usamos string vacío inicial si es necesario
+      id_proyecto: null,
+      latitud: 0,
+      longitud: 0
     },
     validationSchema,
     enableReinitialize: true,
     onSubmit: async (values) => {
       if (!lote) return;
-      
+
       const payload: UpdateLoteDto = {
         nombre_lote: values.nombre_lote,
         precio_base: String(values.precio_base),
@@ -72,7 +72,7 @@ const EditLoteModal: React.FC<EditLoteModalProps> = ({ open, onClose, onSubmit, 
       formik.setTouched({});
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lote, open]); 
+  }, [lote, open]);
 
   if (!lote) return null;
 
@@ -98,29 +98,29 @@ const EditLoteModal: React.FC<EditLoteModalProps> = ({ open, onClose, onSubmit, 
       maxWidth="md"
     >
       <Stack spacing={3}>
-        
+
         {/* SECCIÓN 1: INFO BÁSICA Y PRECIO (Stack Responsive) */}
         <Box>
-          <Typography sx={sectionTitleSx}><InventoryIcon fontSize="inherit"/> INFORMACIÓN PRINCIPAL</Typography>
+          <Typography sx={sectionTitleSx}><InventoryIcon fontSize="inherit" /> INFORMACIÓN PRINCIPAL</Typography>
           <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
-             <TextField 
-                fullWidth label="Nombre del Lote" 
-                {...formik.getFieldProps('nombre_lote')} 
-                error={formik.touched.nombre_lote && !!formik.errors.nombre_lote}
-                helperText={formik.touched.nombre_lote && (formik.errors.nombre_lote as string)}
-             />
-             <TextField 
-                fullWidth label="Precio Base" type="number"
-                {...formik.getFieldProps('precio_base')}
-                disabled={subastaActiva} // Bloqueado si está en subasta
-                error={formik.touched.precio_base && !!formik.errors.precio_base}
-                helperText={
-                    (formik.touched.precio_base && formik.errors.precio_base) 
-                    ? (formik.errors.precio_base as string)
-                    : formik.values.precio_base ? `Actual: ${formatPreview(formik.values.precio_base)}` : ""
-                }
-                InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }}
-             />
+            <TextField
+              fullWidth label="Nombre del Lote"
+              {...formik.getFieldProps('nombre_lote')}
+              error={formik.touched.nombre_lote && !!formik.errors.nombre_lote}
+              helperText={formik.touched.nombre_lote && (formik.errors.nombre_lote as string)}
+            />
+            <TextField
+              fullWidth label="Precio Base" type="number"
+              {...formik.getFieldProps('precio_base')}
+              disabled={subastaActiva} // Bloqueado si está en subasta
+              error={formik.touched.precio_base && !!formik.errors.precio_base}
+              helperText={
+                (formik.touched.precio_base && formik.errors.precio_base)
+                  ? (formik.errors.precio_base as string)
+                  : formik.values.precio_base ? `Actual: ${formatPreview(formik.values.precio_base)}` : ""
+              }
+              InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }}
+            />
           </Stack>
           {subastaActiva && <Alert severity="warning" sx={{ mt: 1, py: 0 }}>El precio no se puede editar durante una subasta activa.</Alert>}
         </Box>
@@ -129,17 +129,17 @@ const EditLoteModal: React.FC<EditLoteModalProps> = ({ open, onClose, onSubmit, 
 
         {/* SECCIÓN 2: ASOCIACIÓN */}
         <Box>
-          <Typography sx={sectionTitleSx}><LinkIcon fontSize="inherit"/> ASOCIACIÓN</Typography>
-          <TextField 
-            select fullWidth label="Proyecto Asociado" 
+          <Typography sx={sectionTitleSx}><LinkIcon fontSize="inherit" /> ASOCIACIÓN</Typography>
+          <TextField
+            select fullWidth label="Proyecto Asociado"
             name="id_proyecto"
-            value={formik.values.id_proyecto ?? ''} 
+            value={formik.values.id_proyecto ?? ''}
             onChange={formik.handleChange}
             onBlur={formik.handleBlur}
-            disabled={lote.estado_subasta !== 'pendiente'} 
+            disabled={lote.estado_subasta !== 'pendiente'}
             error={formik.touched.id_proyecto && !!formik.errors.id_proyecto}
             SelectProps={{
-                MenuProps: { PaperProps: { sx: { maxHeight: 300, '&::-webkit-scrollbar': { width: '8px' }, '&::-webkit-scrollbar-thumb': { backgroundColor: alpha(theme.palette.primary.main, 0.2), borderRadius: '4px' } } } }
+              MenuProps: { PaperProps: { sx: { maxHeight: 300, '&::-webkit-scrollbar': { width: '8px' }, '&::-webkit-scrollbar-thumb': { backgroundColor: alpha(theme.palette.primary.main, 0.2), borderRadius: '4px' } } } }
             }}
           >
             <MenuItem value=""><em>Sin Asignar (General)</em></MenuItem>
@@ -149,11 +149,11 @@ const EditLoteModal: React.FC<EditLoteModalProps> = ({ open, onClose, onSubmit, 
 
         {/* SECCIÓN 3: UBICACIÓN */}
         <Box>
-            <Typography sx={sectionTitleSx}><LocationOn fontSize="inherit"/> COORDENADAS GEOGRÁFICAS</Typography>
-            <Stack direction="row" spacing={2}>
-                <TextField fullWidth label="Latitud" type="number" {...formik.getFieldProps('latitud')} value={formik.values.latitud ?? ''} InputLabelProps={{ shrink: true }} inputProps={{ step: "any" }} />
-                <TextField fullWidth label="Longitud" type="number" {...formik.getFieldProps('longitud')} value={formik.values.longitud ?? ''} InputLabelProps={{ shrink: true }} inputProps={{ step: "any" }} />
-            </Stack>
+          <Typography sx={sectionTitleSx}><LocationOn fontSize="inherit" /> COORDENADAS GEOGRÁFICAS</Typography>
+          <Stack direction="row" spacing={2}>
+            <TextField fullWidth label="Latitud" type="number" {...formik.getFieldProps('latitud')} value={formik.values.latitud ?? ''} InputLabelProps={{ shrink: true }} inputProps={{ step: "any" }} />
+            <TextField fullWidth label="Longitud" type="number" {...formik.getFieldProps('longitud')} value={formik.values.longitud ?? ''} InputLabelProps={{ shrink: true }} inputProps={{ step: "any" }} />
+          </Stack>
         </Box>
 
       </Stack>

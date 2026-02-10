@@ -1,4 +1,3 @@
-import { useTheme } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
@@ -11,180 +10,109 @@ import ProyectoService from '@/core/api/services/proyecto.service';
 import { useConfirmDialog } from '@/shared/hooks/useConfirmDialog';
 import { useModal } from '@/shared/hooks/useModal';
 import useSnackbar from '@/shared/hooks/useSnackbar';
-
 import type { CreateProyectoDto, ProyectoDto, UpdateProyectoDto } from '@/core/types/dto/proyecto.dto';
 import { useSortedData } from './useSortedData';
 
-
 export type TipoInversionFilter = 'all' | 'mensual' | 'directo';
 
-// ============================================================================
-// HOOK DE DEBOUNCE
-// ============================================================================
+// Hook de Debounce optimizado
 function useDebouncedValue<T>(value: T, delay: number = 300): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
-
   useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedValue(value);
-    }, delay);
-
-    return () => {
-      clearTimeout(handler);
-    };
+    const handler = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(handler);
   }, [value, delay]);
-
   return debouncedValue;
 }
 
-// ============================================================================
-// HOOK PRINCIPAL - ULTRA OPTIMIZADO
-// ============================================================================
 export const useAdminProyectos = () => {
-  const theme = useTheme();
   const queryClient = useQueryClient();
   const { showSuccess, showError, showWarning } = useSnackbar();
 
-  // --- ESTADOS LOCALES ---
+  // --- ESTADOS ---
   const [selectedProject, setSelectedProject] = useState<ProyectoDto | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterTipo, setFilterTipo] = useState<TipoInversionFilter>('all');
-
-  // ✨ DEBOUNCE del search term para reducir re-renders durante escritura
   const debouncedSearchTerm = useDebouncedValue(searchTerm, 300);
 
-  // --- MODALES (CORREGIDO: Hooks llamados en el nivel superior) ---
-  const createModal = useModal();
-  const cuotasModal = useModal();
-  const lotesModal = useModal();
-  const editModal = useModal();
-  const imagesModal = useModal();
+  // --- MODALES ---
+  const create = useModal();
+  const cuotas = useModal();
+  const lotes = useModal();
+  const edit = useModal();
+  const images = useModal();
   const confirmDialog = useConfirmDialog();
 
-  // Ahora sí podemos agruparlos (Memoizamos el objeto contenedor)
   const modales = useMemo(() => ({
-    create: createModal,
-    cuotas: cuotasModal,
-    lotes: lotesModal,
-    edit: editModal,
-    images: imagesModal,
-    confirmDialog: confirmDialog
-  }), [createModal, cuotasModal, lotesModal, editModal, imagesModal, confirmDialog]);
+    create, cuotas, lotes, edit, images, confirmDialog
+  }), [create, cuotas, lotes, edit, images, confirmDialog]);
 
-  // --- QUERIES CON CACHE OPTIMIZADO ---
+  // --- QUERIES ---
   const { data: proyectosRaw = [], isLoading, error } = useQuery({
     queryKey: ['adminProyectos'],
     queryFn: async () => (await ProyectoService.getAllAdmin()).data,
-    staleTime: 30000,        // ✨ Cache de 30 segundos
-    gcTime: 5 * 60 * 1000,   // ✨ Mantener en cache 5 minutos
-    refetchOnWindowFocus: false, // ✨ No refetch al volver a la pestaña
+    staleTime: 30000,
   });
 
-  // ✨ ORDENAMIENTO + HIGHLIGHT
   const { sortedData: proyectosOrdenados, highlightedId, triggerHighlight } = useSortedData(proyectosRaw);
 
-  // --- MUTACIONES CON OPTIMISTIC UPDATES ---
+  // --- LOGICA REUTILIZABLE DE MUTACIONES ---
+  const handleMutationOptimistic = async () => {
+    await queryClient.cancelQueries({ queryKey: ['adminProyectos'] });
+    return queryClient.getQueryData<ProyectoDto[]>(['adminProyectos']);
+  };
 
+  const handleMutationError = (context: any) => {
+    if (context?.previousProyectos) {
+      queryClient.setQueryData(['adminProyectos'], context.previousProyectos);
+    }
+    showError('Error al procesar la solicitud');
+  };
+
+  const handleMutationSuccess = (id: number, message: string) => {
+    queryClient.invalidateQueries({ queryKey: ['adminProyectos'] });
+    triggerHighlight(id);
+    showSuccess(message);
+    confirmDialog.close();
+  };
+
+  // --- MUTACIONES ---
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number, data: UpdateProyectoDto }) => ProyectoService.update(id, data),
-    onMutate: async ({ id, data }) => {
-      await queryClient.cancelQueries({ queryKey: ['adminProyectos'] });
-      const previousProyectos = queryClient.getQueryData(['adminProyectos']);
-
-      queryClient.setQueryData(['adminProyectos'], (old: ProyectoDto[] = []) =>
-        old.map(p => p.id === id ? { ...p, ...data } : p)
-      );
-
-      return { previousProyectos };
-    },
-    onError: (err, variables, context) => {
-      if (context?.previousProyectos) {
-        queryClient.setQueryData(['adminProyectos'], context.previousProyectos);
-      }
-      showError('Error al actualizar proyecto');
-    },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['adminProyectos'] });
-      modales.edit.close();
-      setTimeout(() => setSelectedProject(null), 300);
-
-      triggerHighlight(variables.id);
-      showSuccess('Proyecto actualizado correctamente');
+    mutationFn: ({ id, data }: { id: number; data: UpdateProyectoDto }) => ProyectoService.update(id, data),
+    onMutate: handleMutationOptimistic,
+    onError: (_, __, ctx) => handleMutationError(ctx),
+    onSuccess: (_, vars) => {
+      handleMutationSuccess(vars.id, 'Proyecto actualizado correctamente');
+      edit.close();
+      setSelectedProject(null);
     }
   });
 
   const toggleActiveMutation = useMutation({
-    mutationFn: async ({ id, activo }: { id: number; activo: boolean }) => ProyectoService.update(id, { activo }),
-    onMutate: async ({ id, activo }) => {
-      await queryClient.cancelQueries({ queryKey: ['adminProyectos'] });
-      const previousProyectos = queryClient.getQueryData(['adminProyectos']);
-
-      // ✨ Actualización INSTANTÁNEA en la UI
-      queryClient.setQueryData(['adminProyectos'], (old: ProyectoDto[] = []) =>
-        old.map(p => p.id === id ? { ...p, activo } : p)
-      );
-
-      return { previousProyectos };
-    },
-    onError: (err, variables, context) => {
-      if (context?.previousProyectos) {
-        queryClient.setQueryData(['adminProyectos'], context.previousProyectos);
-      }
-      showError('Error al actualizar visibilidad');
-    },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['adminProyectos'] });
-      modales.confirmDialog.close();
-
-      triggerHighlight(variables.id);
-      showSuccess(variables.activo ? 'Proyecto ahora es visible' : 'Proyecto ocultado');
-    }
+    mutationFn: ({ id, activo }: { id: number; activo: boolean }) => ProyectoService.update(id, { activo }),
+    onMutate: handleMutationOptimistic,
+    onError: (_, __, ctx) => handleMutationError(ctx),
+    onSuccess: (_, vars) => handleMutationSuccess(vars.id, vars.activo ? 'Proyecto ahora es visible' : 'Proyecto ocultado')
   });
 
   const startMutation = useMutation({
     mutationFn: (id: number) => ProyectoService.startProcess(id),
-    onMutate: async (id) => {
-      await queryClient.cancelQueries({ queryKey: ['adminProyectos'] });
-      const previousProyectos = queryClient.getQueryData(['adminProyectos']);
-
-      // Actualización optimista del estado del proyecto
-      queryClient.setQueryData(['adminProyectos'], (old: ProyectoDto[] = []) =>
-        old.map(p => p.id === id ? { ...p, estado_proyecto: 'En Proceso' } : p)
-      );
-
-      return { previousProyectos };
-    },
-    onError: (err, variables, context) => {
-      if (context?.previousProyectos) {
-        queryClient.setQueryData(['adminProyectos'], context.previousProyectos);
-      }
-      showError('Error al iniciar proceso');
-    },
-    onSuccess: (_, id) => {
-      queryClient.invalidateQueries({ queryKey: ['adminProyectos'] });
-      modales.confirmDialog.close();
-
-      triggerHighlight(id);
-      showSuccess('Proceso de cobros iniciado');
-    }
+    onMutate: handleMutationOptimistic,
+    onError: (_, __, ctx) => handleMutationError(ctx),
+    onSuccess: (_, id) => handleMutationSuccess(id, 'Proceso de cobros iniciado')
   });
 
-  // --- HANDLERS (Callbacks estables) ---
-
+  // --- HANDLERS ---
   const handleCreateSubmit = useCallback(async (data: any, image: File | null) => {
     try {
-      const proyectoData: CreateProyectoDto = { ...data };
-      const resProyecto = await ProyectoService.create(proyectoData);
-
-      const nuevoProyecto = resProyecto.data;
-      const nuevoId = nuevoProyecto.id;
+      const resProyecto = await ProyectoService.create(data as CreateProyectoDto);
+      const nuevoId = resProyecto.data.id;
 
       if (data.tipo_inversion === 'mensual') {
         await CuotaMensualService.create({
           id_proyecto: nuevoId,
           nombre_proyecto: data.nombre_proyecto,
           total_cuotas_proyecto: data.plazo_inversion,
-          nombre_cemento_cemento: data.nombre_cemento_cemento,
           valor_cemento_unidades: data.valor_cemento_unidades,
           valor_cemento: data.valor_cemento,
           porcentaje_plan: data.porcentaje_plan,
@@ -195,69 +123,39 @@ export const useAdminProyectos = () => {
 
       if (image) {
         try {
-          await ImagenService.create({
-            file: image,
-            descripcion: 'Portada del Proyecto',
-            id_proyecto: nuevoId,
-            id_lote: null
-          });
-        } catch (imgError) {
-          console.error("Error al subir imagen inicial:", imgError);
-          showWarning('El proyecto se creó, pero hubo un error al subir la imagen.');
+          await ImagenService.create({ file: image, descripcion: 'Portada', id_proyecto: nuevoId, id_lote: null });
+        } catch {
+          showWarning('Proyecto creado, pero la imagen falló al subirse.');
         }
       }
 
       queryClient.invalidateQueries({ queryKey: ['adminProyectos'] });
-      modales.create.close();
-
+      create.close();
       triggerHighlight(nuevoId);
-
-      if (!image) {
-        showSuccess('Proyecto creado exitosamente.');
-      } else {
-        showSuccess('Proyecto e imagen creados exitosamente.');
-      }
-
-    } catch (error: any) {
-      console.error(error);
-      const msg = error.response?.data?.message || 'Error al crear el proyecto';
-      showError(msg);
+      showSuccess('Proyecto creado exitosamente.');
+    } catch (err: any) {
+      showError(err.response?.data?.message || 'Error al crear el proyecto');
     }
-  }, [modales.create, queryClient, showSuccess, showError, showWarning, triggerHighlight]);
+  }, [queryClient, create, triggerHighlight, showSuccess, showError, showWarning]);
 
-  const handleUpdateSubmit = useCallback(async (id: number, data: UpdateProyectoDto) => {
-    await updateMutation.mutateAsync({ id, data });
-  }, [updateMutation]);
-
-  const handleAction = useCallback((proyecto: ProyectoDto, action: 'edit' | 'images' | 'cuotas' | 'lotes', e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
+  const handleAction = useCallback((proyecto: ProyectoDto, action: keyof typeof modales, e?: React.MouseEvent) => {
+    e?.stopPropagation();
     setSelectedProject(proyecto);
-
-    if (action === 'edit') modales.edit.open();
-    else if (action === 'images') modales.images.open();
-    else if (action === 'cuotas') modales.cuotas.open();
-    else if (action === 'lotes') modales.lotes.open();
+    (modales[action] as any).open();
   }, [modales]);
 
   const handleConfirmAction = useCallback(() => {
-    if (!modales.confirmDialog.data) return;
-    const project = modales.confirmDialog.data as ProyectoDto;
+    const project = confirmDialog.data as ProyectoDto;
+    if (!project) return;
 
-    if (modales.confirmDialog.action === 'start_project_process') {
-      startMutation.mutate(project.id);
-    }
-    else if (modales.confirmDialog.action === 'toggle_project_visibility') {
-      toggleActiveMutation.mutate({ id: project.id, activo: !project.activo });
-    }
-  }, [modales.confirmDialog, startMutation, toggleActiveMutation]);
+    if (confirmDialog.action === 'start_project_process') startMutation.mutate(project.id);
+    else if (confirmDialog.action === 'toggle_project_visibility') toggleActiveMutation.mutate({ id: project.id, activo: !project.activo });
+  }, [confirmDialog, startMutation, toggleActiveMutation]);
 
-  // --- FILTRADO ULTRA OPTIMIZADO ---
+  // --- FILTRADO ---
   const filteredProyectos = useMemo(() => {
-    // ✨ Usar el valor debounceed para evitar filtrado en cada tecla
     const search = debouncedSearchTerm.toLowerCase();
-
     return proyectosOrdenados.filter(p => {
-      // ✨ Short-circuit: si no hay search term, skip la comparación
       const matchesSearch = !search || p.nombre_proyecto.toLowerCase().includes(search);
       const matchesType = filterTipo === 'all' || p.tipo_inversion === filterTipo;
       return matchesSearch && matchesType;
@@ -265,33 +163,26 @@ export const useAdminProyectos = () => {
   }, [proyectosOrdenados, debouncedSearchTerm, filterTipo]);
 
   return {
-    theme,
-    // Estado
-    searchTerm,
-    setSearchTerm,
-    filterTipo,
-    setFilterTipo,
+    // State & Data
+    searchTerm, setSearchTerm,
+    filterTipo, setFilterTipo,
     selectedProject,
-    setSelectedProject,
-
-    // Highlight
     highlightedId,
-
-    // Data
     filteredProyectos,
-    isLoading,
-    error,
-
+    isLoading, error,
+    
     // Modales
     modales,
-
+    
     // Handlers
     handleCreateSubmit,
-    handleUpdateSubmit,
+ handleUpdateSubmit: async (id: number, data: UpdateProyectoDto) => {
+    await updateMutation.mutateAsync({ id, data });
+  },
     handleAction,
     handleConfirmAction,
-
-    // Loading states
+    
+    // Status
     isUpdating: updateMutation.isPending,
     isToggling: toggleActiveMutation.isPending,
     isStarting: startMutation.isPending

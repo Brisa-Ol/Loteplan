@@ -56,7 +56,7 @@ const DetalleSuscripcionModal: React.FC<Props> = ({ open, onClose, suscripcion }
     queryFn: async () => {
       if (!suscripcion) return [];
       const res = await PagoService.getPendingBySubscription(suscripcion.id);
-      
+
       console.log("Respuesta API Pagos:", res.data); // Debug
 
       // Lógica de seguridad: detecta si es array directo, o si viene dentro de .pagos o .data

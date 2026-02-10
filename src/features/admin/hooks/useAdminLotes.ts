@@ -1,14 +1,14 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTheme } from '@mui/material';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 import LoteService from '@/core/api/services/lote.service';
 import ProyectoService from '@/core/api/services/proyecto.service';
 import type { CreateLoteDto, LoteDto, UpdateLoteDto } from '@/core/types/dto/lote.dto';
 
-import { useModal } from '@/shared/hooks/useModal';
 import { useConfirmDialog } from '@/shared/hooks/useConfirmDialog';
+import { useModal } from '@/shared/hooks/useModal';
 import useSnackbar from '@/shared/hooks/useSnackbar';
 import { useSortedData } from './useSortedData';
 
@@ -90,11 +90,11 @@ export const useAdminLotes = () => {
   // --- FILTRADO (Memoizado) ---
   const filteredLotes = useMemo(() => {
     const term = debouncedSearchTerm.toLowerCase();
-    
+
     return sortedLotes.filter((lote) => {
       // 1. Buscador texto
-      const matchesSearch = !term || 
-        lote.nombre_lote.toLowerCase().includes(term) || 
+      const matchesSearch = !term ||
+        lote.nombre_lote.toLowerCase().includes(term) ||
         lote.id.toString().includes(term);
 
       // 2. Filtro Proyecto
@@ -226,13 +226,13 @@ export const useAdminLotes = () => {
     filterProject, setFilterProject,
     viewMode, setViewMode,
     selectedLote,
-    
+
     // Data
     filteredLotes,
     proyectos,
     stats,
     highlightedId,
-    
+
     // Loading
     loadingLotes,
     error,
@@ -253,7 +253,7 @@ export const useAdminLotes = () => {
     handleAuctionClick,
     handleToggleActive,
     handleConfirmAction,
-    
+
     // Mutations (Exposed functions)
     saveLote: saveMutation.mutateAsync,
     startAuctionFn: startAuction.mutate,

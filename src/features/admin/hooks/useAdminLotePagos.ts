@@ -1,6 +1,6 @@
+import { useTheme } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
-import { useTheme } from '@mui/material';
 
 import LoteService from '@/core/api/services/lote.service';
 import { useSortedData } from './useSortedData';
@@ -41,20 +41,20 @@ export const useAdminLotePagos = () => {
     const capitalEnRiesgo = riesgoCriticoItems.reduce((acc, l) => acc + Number(l.precio_base), 0);
 
     const chartData = [
-      { 
-        name: 'Bajo (1 int.)', 
-        value: lotes.filter(l => l.intentos_fallidos_pago === 1).length, 
-        color: theme.palette.warning.light 
+      {
+        name: 'Bajo (1 int.)',
+        value: lotes.filter(l => l.intentos_fallidos_pago === 1).length,
+        color: theme.palette.warning.light
       },
-      { 
-        name: 'Alto (2 int.)', 
-        value: lotes.filter(l => l.intentos_fallidos_pago === 2).length, 
-        color: theme.palette.error.main 
+      {
+        name: 'Alto (2 int.)',
+        value: lotes.filter(l => l.intentos_fallidos_pago === 2).length,
+        color: theme.palette.error.main
       },
-      { 
-        name: 'Crítico (3 int.)', 
-        value: lotes.filter(l => l.intentos_fallidos_pago >= 3).length, 
-        color: theme.palette.error.dark 
+      {
+        name: 'Crítico (3 int.)',
+        value: lotes.filter(l => l.intentos_fallidos_pago >= 3).length,
+        color: theme.palette.error.dark
       },
     ];
 
@@ -71,16 +71,16 @@ export const useAdminLotePagos = () => {
     // State
     viewMode,
     setViewMode,
-    
+
     // Data
     lotes, // Lista filtrada y ordenada
     analytics,
-    
+
     // UX
     isLoading,
     error,
     highlightedId,
-    
+
     // Helpers
     calcularDiasRestantes
   };

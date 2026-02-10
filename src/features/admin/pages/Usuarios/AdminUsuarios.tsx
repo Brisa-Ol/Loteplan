@@ -7,7 +7,6 @@ import {
   MarkEmailRead,
   Person,
   PersonAdd,
-  Search,
   Security,
   PhonelinkLock as TwoFaIcon,
   VerifiedUser as VerifiedUserIcon
@@ -20,22 +19,22 @@ import {
   Chip,
   CircularProgress,
   IconButton,
-  InputAdornment,
   MenuItem,
   Stack,
   Switch,
-  TextField,
   Tooltip,
   Typography,
   useTheme
 } from '@mui/material';
 import React, { memo, useMemo } from 'react';
 
+import { AdminPageHeader } from '@/shared/components/admin/Adminpageheader';
+import MetricsGrid from '@/shared/components/admin/Metricsgrid';
 import { DataTable, type DataTableColumn } from '@/shared/components/data-grid/DataTable/DataTable';
 import { QueryHandler } from '@/shared/components/data-grid/QueryHandler/QueryHandler';
 import { StatCard } from '@/shared/components/domain/cards/StatCard/StatCard';
 import { ConfirmDialog } from '@/shared/components/domain/modals/ConfirmDialog/ConfirmDialog';
-import { FilterBar } from '@/shared/components/forms/filters/FilterBar';
+import { FilterBar, FilterSearch, FilterSelect } from '@/shared/components/forms/filters/FilterBar';
 import { PageContainer } from '@/shared/components/layout/containers/PageContainer/PageContainer';
 
 import CreateUserModal from './modals/CreateUserModal';
@@ -45,7 +44,7 @@ import type { UsuarioDto } from '@/core/types/dto/usuario.dto';
 import { useAdminUsuarios } from '../../hooks/useAdminUsuarios';
 
 // ============================================================================
-// COMPONENTE: BADGES DE SEGURIDAD (Memoizado)
+// BADGES DE SEGURIDAD (MEMOIZADO)
 // ============================================================================
 const SecurityBadges = memo<{
   emailConfirmed: boolean;
@@ -54,11 +53,11 @@ const SecurityBadges = memo<{
 }>(({ emailConfirmed, twoFaEnabled, isCurrentUser }) => (
   <Stack direction="row" spacing={0.5} alignItems="center">
     {isCurrentUser && (
-      <Chip 
-        label="TÚ" 
-        size="small" 
-        color="primary" 
-        sx={{ height: 18, fontSize: '0.6rem', fontWeight: 900 }} 
+      <Chip
+        label="TÚ"
+        size="small"
+        color="primary"
+        sx={{ height: 18, fontSize: '0.6rem', fontWeight: 900 }}
       />
     )}
     {emailConfirmed && (
@@ -75,72 +74,6 @@ const SecurityBadges = memo<{
 ));
 
 SecurityBadges.displayName = 'SecurityBadges';
-
-// ============================================================================
-// COMPONENTE: QUICK STATS (Memoizado)
-// ============================================================================
-const UserQuickStats = memo<{
-  stats: {
-    total: number;
-    activos: number;
-    confirmados: number;
-    con2FA: number;
-    admins: number;
-  };
-  isLoading?: boolean;
-}>(({ stats, isLoading }) => (
-  <Box
-    sx={{
-      display: 'grid',
-      gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(5, 1fr)' },
-      gap: 2,
-      mb: 4,
-    }}
-  >
-    <StatCard
-      title="Total Usuarios"
-      value={stats.total}
-      icon={<GroupIcon />}
-      color="primary"
-      loading={isLoading}
-      subtitle="Base de datos"
-    />
-    <StatCard
-      title="Activos"
-      value={stats.activos}
-      icon={<CheckCircle />}
-      color="success"
-      loading={isLoading}
-      subtitle="Con acceso"
-    />
-    <StatCard
-      title="Verificados"
-      value={stats.confirmados}
-      icon={<MarkEmailRead />}
-      color="info"
-      loading={isLoading}
-      subtitle="Email validado"
-    />
-    <StatCard
-      title="Seguridad 2FA"
-      value={stats.con2FA}
-      icon={<Security />}
-      color="warning"
-      loading={isLoading}
-      subtitle="Capa extra"
-    />
-    <StatCard
-      title="Administradores"
-      value={stats.admins}
-      icon={<AdminPanelSettings />}
-      color="error"
-      loading={isLoading}
-      subtitle="Rol elevado"
-    />
-  </Box>
-));
-
-UserQuickStats.displayName = 'UserQuickStats';
 
 // ============================================================================
 // COMPONENTE PRINCIPAL
@@ -260,12 +193,9 @@ const AdminUsuarios: React.FC = () => {
           const isSelf = user.id === logic.currentUser?.id;
           const isAdminAndActive = user.rol === 'admin' && user.activo;
           const isProcessing =
-            logic.toggleStatusMutation.isPending && 
+            logic.toggleStatusMutation.isPending &&
             logic.confirmDialog.data?.id === user.id;
-          const isDisabled = 
-            logic.toggleStatusMutation.isPending || 
-            isAdminAndActive || 
-            isSelf;
+          const isDisabled = logic.toggleStatusMutation.isPending || isAdminAndActive || isSelf;
 
           return (
             <Stack direction="row" alignItems="center" spacing={1} justifyContent="center">
@@ -296,10 +226,7 @@ const AdminUsuarios: React.FC = () => {
                     )
                   }
                   color={user.activo ? 'success' : 'default'}
-                  sx={{
-                    fontSize: '0.6rem',
-                    opacity: isSelf ? 0.5 : 1,
-                  }}
+                  sx={{ fontSize: '0.6rem', opacity: isSelf ? 0.5 : 1 }}
                 />
               )}
             </Stack>
@@ -339,55 +266,77 @@ const AdminUsuarios: React.FC = () => {
 
   return (
     <PageContainer maxWidth="xl" sx={{ py: 3 }}>
-      {/* CABECERA */}
-      <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        justifyContent="space-between"
-        alignItems={{ xs: 'flex-start', sm: 'center' }}
-        mb={4}
-        spacing={2}
-      >
-        <Box>
-          <Typography variant="h1">Gestión de Usuarios</Typography>
-          <Typography variant="subtitle1" color="text.secondary">
-            Control de accesos, roles y seguridad perimetral
-          </Typography>
-        </Box>
-
-        <Button
-          variant="contained"
-          startIcon={<PersonAdd />}
-          onClick={logic.createModal.open}
-          sx={{ whiteSpace: 'nowrap', fontWeight: 700 }}
-        >
-          Nuevo Usuario
-        </Button>
-      </Stack>
+      {/* CABECERA ESTANDARIZADA */}
+      <AdminPageHeader
+        title="Gestión de Usuarios"
+        subtitle="Control de accesos, roles y seguridad perimetral"
+        action={
+          <Button
+            variant="contained"
+            startIcon={<PersonAdd />}
+            onClick={logic.createModal.open}
+            sx={{ whiteSpace: 'nowrap', fontWeight: 700 }}
+          >
+            Nuevo Usuario
+          </Button>
+        }
+      />
 
       {/* MÉTRICAS */}
-      <UserQuickStats stats={statsWithAdmins} isLoading={logic.isLoading} />
+      <MetricsGrid columns={{ xs: 1, sm: 2, lg: 5 }}>
+        <StatCard
+          title="Total Usuarios"
+          value={statsWithAdmins.total}
+          icon={<GroupIcon />}
+          color="primary"
+          loading={logic.isLoading}
+          subtitle="Base de datos"
+        />
+        <StatCard
+          title="Activos"
+          value={statsWithAdmins.activos}
+          icon={<CheckCircle />}
+          color="success"
+          loading={logic.isLoading}
+          subtitle="Con acceso"
+        />
+        <StatCard
+          title="Verificados"
+          value={statsWithAdmins.confirmados}
+          icon={<MarkEmailRead />}
+          color="info"
+          loading={logic.isLoading}
+          subtitle="Email validado"
+        />
+        <StatCard
+          title="Seguridad 2FA"
+          value={statsWithAdmins.con2FA}
+          icon={<Security />}
+          color="warning"
+          loading={logic.isLoading}
+          subtitle="Capa extra"
+        />
+        <StatCard
+          title="Administradores"
+          value={statsWithAdmins.admins}
+          icon={<AdminPanelSettings />}
+          color="error"
+          loading={logic.isLoading}
+          subtitle="Rol elevado"
+        />
+      </MetricsGrid>
 
       {/* FILTROS */}
       <FilterBar sx={{ mb: 3 }}>
-        <TextField
+        <FilterSearch
           placeholder="Buscar por nombre, email o usuario..."
-          size="small"
-          sx={{ flexGrow: 1, minWidth: 200 }}
           value={logic.searchTerm}
-          onChange={(e) => logic.setSearchTerm(e.target.value)}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <Search color="action" />
-              </InputAdornment>
-            ),
-          }}
+          onSearch={logic.setSearchTerm}
+          sx={{ flexGrow: 1 }}
         />
 
-        <TextField
-          select
+        <FilterSelect
           label="Filtrar por Estado"
-          size="small"
           value={logic.filterStatus}
           onChange={(e) => logic.setFilterStatus(e.target.value)}
           sx={{ minWidth: 160 }}
@@ -395,7 +344,7 @@ const AdminUsuarios: React.FC = () => {
           <MenuItem value="all">Todos los estados</MenuItem>
           <MenuItem value="active">Solo Activos</MenuItem>
           <MenuItem value="inactive">Solo Inactivos</MenuItem>
-        </TextField>
+        </FilterSelect>
       </FilterBar>
 
       {/* TABLA */}
@@ -405,9 +354,7 @@ const AdminUsuarios: React.FC = () => {
           data={logic.users}
           getRowKey={(user) => user.id}
           isRowActive={(user) => user.activo}
-          // 🔥 CORRECCIÓN AQUÍ: false para respetar el filtro externo del Select
-          showInactiveToggle={false} 
-          inactiveLabel="Inactivos"
+          showInactiveToggle={false}
           highlightedRowId={logic.highlightedUserId}
           emptyMessage="No se encontraron usuarios."
           pagination
@@ -431,7 +378,9 @@ const AdminUsuarios: React.FC = () => {
             logic.setEditingUser(null);
           }}
           user={logic.editingUser}
-          onSubmit={(id, data) => logic.updateMutation.mutateAsync({ id, data })}
+          onSubmit={async (id, data) => {
+            await logic.updateMutation.mutateAsync({ id, data });
+          }}
           isLoading={logic.updateMutation.isPending}
         />
       )}
@@ -439,7 +388,7 @@ const AdminUsuarios: React.FC = () => {
       <ConfirmDialog
         controller={logic.confirmDialog}
         onConfirm={() =>
-          logic.confirmDialog.data && 
+          logic.confirmDialog.data &&
           logic.toggleStatusMutation.mutate(logic.confirmDialog.data)
         }
         isLoading={logic.toggleStatusMutation.isPending}

@@ -1,28 +1,33 @@
 // src/components/Admin/Proyectos/Components/modals/CreateProyectoModal.tsx
 
-import React, { useEffect, useState, useMemo } from 'react';
 import {
-  TextField, MenuItem, Stack, Box, Typography,
-  Divider, Alert, InputAdornment, useTheme, alpha, Paper,
-  Stepper, Step, StepLabel, Button
-} from '@mui/material';
-import { 
-  Add as AddIcon, 
-  LocationOn as LocationIcon,
-  Description as DescriptionIcon,
-  MonetizationOn as MonetizationIcon,
+  Add as AddIcon,
+  ArrowForward,
   CalendarMonth as CalendarIcon,
-  Image as ImageIcon,
-  Savings as SavingsIcon,
-  Calculate as CalculateIcon,
-  ArrowForward
+  MonetizationOn as MonetizationIcon
 } from '@mui/icons-material';
+import {
+  Alert,
+  alpha,
+  Box,
+  Button,
+  InputAdornment,
+  MenuItem,
+  Paper,
+  Stack,
+  Step, StepLabel,
+  Stepper,
+  TextField,
+  Typography,
+  useTheme
+} from '@mui/material';
 import { useFormik } from 'formik';
+import React, { useEffect, useMemo, useState } from 'react';
 import * as Yup from 'yup';
 
 // Componentes Shared
-import SingleImageUpload from '@/shared/components/forms/upload/singleImageUpload/SingleImageUpload';
 import BaseModal from '@/shared/components/domain/modals/BaseModal/BaseModal';
+import SingleImageUpload from '@/shared/components/forms/upload/singleImageUpload/SingleImageUpload';
 
 // Interfaces
 interface FullProjectFormValues {
@@ -37,7 +42,7 @@ interface FullProjectFormValues {
   obj_suscripciones: number;
   fecha_inicio: string;
   fecha_cierre: string;
-  latitud: number | ''; 
+  latitud: number | '';
   longitud: number | '';
   nombre_cemento_cemento?: string;
   valor_cemento_unidades?: number;
@@ -77,8 +82,8 @@ const quotaSchema = Yup.object({
   valor_cemento: Yup.number().min(0.01, 'Precio inválido').required('Requerido'),
 });
 
-const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({ 
-  open, onClose, onSubmit, isLoading = false 
+const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
+  open, onClose, onSubmit, isLoading = false
 }) => {
   const theme = useTheme();
   const [activeStep, setActiveStep] = useState(0);
@@ -89,7 +94,7 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
       nombre_proyecto: '', descripcion: '', tipo_inversion: 'mensual',
       plazo_inversion: 12, forma_juridica: 'Fideicomiso', monto_inversion: 0,
       moneda: 'ARS', suscripciones_minimas: 1, obj_suscripciones: 10,
-      fecha_inicio: '', fecha_cierre: '', 
+      fecha_inicio: '', fecha_cierre: '',
       latitud: '', longitud: '',
       nombre_cemento_cemento: 'Bolsa de Cemento', valor_cemento_unidades: 1, valor_cemento: 0,
       porcentaje_plan: 70, porcentaje_administrativo: 10, porcentaje_iva: 21,
@@ -101,8 +106,8 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
       const cleanData = Object.fromEntries(
         Object.entries(values).map(([key, val]) => [key, val === '' ? null : val])
       );
-      await onSubmit(cleanData, image); 
-      handleReset(); 
+      await onSubmit(cleanData, image);
+      handleReset();
     },
   });
 
@@ -120,16 +125,16 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
   // 🧮 CÁLCULOS OPTIMIZADOS (useMemo)
   const simulation = useMemo(() => {
     const { plazo_inversion, valor_cemento_unidades, valor_cemento, porcentaje_plan, porcentaje_administrativo, porcentaje_iva } = formik.values;
-    
+
     const plazo = plazo_inversion || 1;
     const unidades = valor_cemento_unidades || 0;
     const precio = valor_cemento || 0;
-    
+
     const valorMovil = unidades * precio;
     const cuotaPura = (valorMovil * ((porcentaje_plan || 0) / 100)) / plazo;
     const gastosAdmin = cuotaPura * ((porcentaje_administrativo || 0) / 100);
     const iva = gastosAdmin * ((porcentaje_iva || 0) / 100);
-    
+
     return {
       pura: cuotaPura,
       admin: gastosAdmin,
@@ -140,7 +145,7 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
   const handleNext = async () => {
     const isStep0 = activeStep === 0;
     const schema = isStep0 ? projectSchema : quotaSchema;
-    
+
     try {
       await schema.validate(formik.values, { abortEarly: false });
       if (isStep0 && formik.values.tipo_inversion === 'directo') setActiveStep(2);
@@ -152,8 +157,8 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
     }
   };
 
-  const steps = formik.values.tipo_inversion === 'mensual' 
-    ? ['Información', 'Cuotas', 'Multimedia'] 
+  const steps = formik.values.tipo_inversion === 'mensual'
+    ? ['Información', 'Cuotas', 'Multimedia']
     : ['Información', 'Multimedia'];
 
   const sectionTitleSx = { fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', mb: 2, mt: 1, display: 'flex', alignItems: 'center', gap: 1, fontSize: '0.75rem' };
@@ -190,15 +195,15 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
 
               {/* ✅ DESCRIPCIÓN OPTIMIZADA CON CONTADOR */}
               <Box>
-                <TextField 
-                  fullWidth multiline rows={4} maxRows={10} label="Descripción Comercial" 
-                  {...formik.getFieldProps('descripcion')} 
+                <TextField
+                  fullWidth multiline rows={4} maxRows={10} label="Descripción Comercial"
+                  {...formik.getFieldProps('descripcion')}
                   error={Boolean(formik.touched.descripcion && formik.errors.descripcion)}
                   helperText={formik.errors.descripcion || `${formik.values.descripcion.length} caracteres`}
                 />
               </Box>
 
-              <Typography variant="subtitle2" sx={sectionTitleSx}><MonetizationIcon fontSize="inherit"/> Finanzas</Typography>
+              <Typography variant="subtitle2" sx={sectionTitleSx}><MonetizationIcon fontSize="inherit" /> Finanzas</Typography>
               <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
                 <TextField fullWidth select label="Tipo" {...formik.getFieldProps('tipo_inversion')}>
                   <MenuItem value="mensual">Plan de Ahorro</MenuItem>
@@ -216,7 +221,7 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
                 </Paper>
               )}
 
-              <Typography variant="subtitle2" sx={sectionTitleSx}><CalendarIcon fontSize="inherit"/> Fechas Clave</Typography>
+              <Typography variant="subtitle2" sx={sectionTitleSx}><CalendarIcon fontSize="inherit" /> Fechas Clave</Typography>
               <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
                 <TextField fullWidth type="date" label="Apertura" InputLabelProps={{ shrink: true }} {...formik.getFieldProps('fecha_inicio')} />
                 <TextField fullWidth type="date" label="Cierre" InputLabelProps={{ shrink: true }} {...formik.getFieldProps('fecha_cierre')} />

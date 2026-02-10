@@ -45,11 +45,11 @@ import { FilterBar, FilterSearch, FilterSelect } from '@/shared/components/forms
 import { PageContainer } from '@/shared/components/layout/containers/PageContainer/PageContainer';
 
 // Modales
-import ConfigCuotasModal from './components/modals/ConfigCuotasModal';
-import CreateProyectoModal from './components/modals/CreateProyectoModal';
-import EditProyectoModal from './components/modals/EditProyectoModal';
-import ManageImagesModal from './components/modals/ManageImagesModal';
-import ProjectLotesModal from './components/modals/ProjectLotesModal';
+import ConfigCuotasModal from './modals/ConfigCuotasModal';
+import CreateProyectoModal from './modals/CreateProyectoModal';
+import EditProyectoModal from './modals/EditProyectoModal';
+import ManageImagesModal from './modals/ManageImagesModal';
+import ProjectLotesModal from './modals/ProjectLotesModal';
 
 import type { ProyectoDto } from '@/core/types/dto/proyecto.dto';
 import { useAdminProyectos, type TipoInversionFilter } from '../../hooks/useAdminProyectos';

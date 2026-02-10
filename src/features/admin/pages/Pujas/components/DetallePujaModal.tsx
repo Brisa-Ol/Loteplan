@@ -2,7 +2,7 @@ import React from 'react';
 import {
   Typography, Chip, Stack, Paper, Box, Divider, useTheme, alpha, Button, Alert
 } from '@mui/material';
-import { 
+import {
   Gavel, Person, CalendarToday, Business as LoteIcon, Warning, Receipt, OpenInNew, EmojiEvents
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
@@ -18,12 +18,12 @@ interface Props {
   loteName?: string;
   userName?: string;
   // ✅ CORRECCIÓN: Permitimos 'null' además de 'undefined' y 'boolean/number'
-  isHighest?: boolean | null; 
-  rankingPosition?: number | null; 
+  isHighest?: boolean | null;
+  rankingPosition?: number | null;
 }
 
-const DetallePujaModal: React.FC<Props> = ({ 
-  open, onClose, puja, loteName, userName, isHighest, rankingPosition 
+const DetallePujaModal: React.FC<Props> = ({
+  open, onClose, puja, loteName, userName, isHighest, rankingPosition
 }) => {
   const theme = useTheme();
   const navigate = useNavigate();
@@ -56,39 +56,39 @@ const DetallePujaModal: React.FC<Props> = ({
       hideConfirmButton
       cancelText="Cerrar"
       headerExtra={
-        <Chip 
-          label={puja.estado_puja.toUpperCase().replace('_', ' ')} 
-          color={statusColor as any} 
+        <Chip
+          label={puja.estado_puja.toUpperCase().replace('_', ' ')}
+          color={statusColor as any}
           variant="filled"
           sx={{ fontWeight: 'bold', borderRadius: 1.5 }}
         />
       }
     >
       <Stack spacing={3}>
-        
+
         {/* SECCIÓN 0: CONTEXTO DE RANKING (Solo si está activa) */}
         {puja.estado_puja === 'activa' && rankingPosition && (
-           <Paper elevation={0} sx={{ p: 2, bgcolor: alpha(theme.palette.info.main, 0.05), borderLeft: `4px solid ${theme.palette.info.main}` }}>
-             <Stack direction="row" alignItems="center" justifyContent="space-between">
-               <Box>
-                 <Typography variant="subtitle2" fontWeight={700} color="info.main">POSICIÓN ACTUAL</Typography>
-                 <Typography variant="body2">
-                   Esta puja está en la posición <strong>#{rankingPosition}</strong> del ranking de este lote.
-                 </Typography>
-               </Box>
-               {isHighest && (
-                 <Chip label="LIDERANDO SUBASTA" color="success" size="small" icon={<EmojiEvents />} />
-               )}
-             </Stack>
-           </Paper>
+          <Paper elevation={0} sx={{ p: 2, bgcolor: alpha(theme.palette.info.main, 0.05), borderLeft: `4px solid ${theme.palette.info.main}` }}>
+            <Stack direction="row" alignItems="center" justifyContent="space-between">
+              <Box>
+                <Typography variant="subtitle2" fontWeight={700} color="info.main">POSICIÓN ACTUAL</Typography>
+                <Typography variant="body2">
+                  Esta puja está en la posición <strong>#{rankingPosition}</strong> del ranking de este lote.
+                </Typography>
+              </Box>
+              {isHighest && (
+                <Chip label="LIDERANDO SUBASTA" color="success" size="small" icon={<EmojiEvents />} />
+              )}
+            </Stack>
+          </Paper>
         )}
 
         {/* SECCIÓN 1: MONTO OFERTADO */}
-        <Paper 
+        <Paper
           elevation={0}
-          sx={{ 
-            p: 2.5, borderRadius: 2, 
-            border: '1px solid', 
+          sx={{
+            p: 2.5, borderRadius: 2,
+            border: '1px solid',
             borderColor: alpha(themeColorMain, 0.3),
             bgcolor: alpha(themeColorMain, 0.04),
             textAlign: 'center'
@@ -113,9 +113,9 @@ const DetallePujaModal: React.FC<Props> = ({
                   <Typography variant="caption">ID Ref: #{puja.id_transaccion}</Typography>
                 </Box>
               </Stack>
-              <Button 
-                size="small" 
-                endIcon={<OpenInNew />} 
+              <Button
+                size="small"
+                endIcon={<OpenInNew />}
                 onClick={() => navigate(`/admin/transacciones/${puja.id_transaccion}`)}
               >
                 Ver Detalle
@@ -177,7 +177,7 @@ const DetallePujaModal: React.FC<Props> = ({
             <CalendarToday color="action" fontSize="small" />
             <Typography variant="subtitle2" fontWeight={800} color="text.primary">CRONOLOGÍA</Typography>
           </Stack>
-          
+
           <Stack direction="row" spacing={4} divider={<Divider orientation="vertical" flexItem />}>
             <Box>
               <Typography variant="caption" color="text.secondary">Fecha Realizada</Typography>
@@ -185,7 +185,7 @@ const DetallePujaModal: React.FC<Props> = ({
                 {new Date(puja.fecha_puja).toLocaleDateString('es-AR')} {new Date(puja.fecha_puja).toLocaleTimeString('es-AR')}
               </Typography>
             </Box>
-            
+
             {puja.estado_puja === 'ganadora_pendiente' && puja.fecha_vencimiento_pago && (
               <Box>
                 <Typography variant="caption" color="text.secondary">Vencimiento de Pago</Typography>
@@ -200,10 +200,10 @@ const DetallePujaModal: React.FC<Props> = ({
         {/* ALERTA DE IMPAGO */}
         {puja.estado_puja === 'ganadora_incumplimiento' && (
           <Alert severity="error" variant="outlined" icon={<Warning fontSize="inherit" />}>
-             <Typography variant="subtitle2" fontWeight={800}>
-                IMPAGO REGISTRADO
-             </Typography>
-             Esta puja fue anulada por incumplimiento de pago. El token del usuario fue gestionado según políticas.
+            <Typography variant="subtitle2" fontWeight={800}>
+              IMPAGO REGISTRADO
+            </Typography>
+            Esta puja fue anulada por incumplimiento de pago. El token del usuario fue gestionado según políticas.
           </Alert>
         )}
 

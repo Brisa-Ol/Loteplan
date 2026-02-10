@@ -1,104 +1,73 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../../core/context/AuthContext';
-import useSnackbar from '../../../shared/hooks/useSnackbar';
-import { useModal } from '../../../shared/hooks/useModal';
 import { useConfirmDialog } from '../../../shared/hooks/useConfirmDialog';
+import { useModal } from '../../../shared/hooks/useModal';
+import useSnackbar from '../../../shared/hooks/useSnackbar';
 
-import type { CreateUsuarioDto, UpdateUserAdminDto, UsuarioDto } from '../../../core/types/dto/usuario.dto';
 import UsuarioService from '../../../core/api/services/usuario.service';
+import type { CreateUsuarioDto, UpdateUserAdminDto, UsuarioDto } from '../../../core/types/dto/usuario.dto';
 import { useSortedData } from './useSortedData';
 
 // ============================================================================
-// HOOK DE DEBOUNCE (Inline para búsqueda)
+// HOOK DE DEBOUNCE OPTIMIZADO
 // ============================================================================
 function useDebouncedValue<T>(value: T, delay: number = 300): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
-
   useEffect(() => {
     const handler = setTimeout(() => setDebouncedValue(value), delay);
     return () => clearTimeout(handler);
   }, [value, delay]);
-
   return debouncedValue;
 }
 
 // ============================================================================
-// HOOK PRINCIPAL - ULTRA OPTIMIZADO
+// HOOK PRINCIPAL
 // ============================================================================
 export const useAdminUsuarios = () => {
   const queryClient = useQueryClient();
   const { user: currentUser } = useAuth();
   const { showSuccess, showError } = useSnackbar();
 
-  // --- MODALES (CORREGIDO: Hooks llamados en nivel superior) ---
+  // --- ESTADOS ---
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [editingUser, setEditingUser] = useState<UsuarioDto | null>(null);
+  const debouncedSearchTerm = useDebouncedValue(searchTerm, 300);
+
+  // --- MODALES ---
   const createModal = useModal();
   const editModal = useModal();
   const confirmDialog = useConfirmDialog();
 
-  const modales = useMemo(() => ({
-    create: createModal,
-    edit: editModal,
-    confirmDialog: confirmDialog
-  }), [createModal, editModal, confirmDialog]);
-
-  // --- ESTADOS LOCALES ---
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [editingUser, setEditingUser] = useState<UsuarioDto | null>(null);
-
-  // ✨ DEBOUNCE del search term
-  const debouncedSearchTerm = useDebouncedValue(searchTerm, 300);
-
-  // --- QUERY CON CACHE OPTIMIZADO ---
+  // --- QUERY ---
   const { data: usuariosRaw = [], isLoading, error } = useQuery({
     queryKey: ['adminUsuarios'],
     queryFn: async () => (await UsuarioService.findAll()).data,
     staleTime: 30000,
-    gcTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    gcTime: 300000,
   });
 
-  // ✨ ORDENAMIENTO + HIGHLIGHT
   const { sortedData: usuariosOrdenados, highlightedId, triggerHighlight } = useSortedData(usuariosRaw);
 
-  // --- FILTRADO OPTIMIZADO ---
-  const filteredUsers = useMemo(() => {
-    const term = debouncedSearchTerm.toLowerCase();
-    
-    return usuariosOrdenados.filter(user => {
-      // ✨ Short-circuit en búsqueda
-      const matchesSearch = !term || (
-        user.nombre_usuario.toLowerCase().includes(term) ||
-        user.email.toLowerCase().includes(term) ||
-        user.nombre.toLowerCase().includes(term) ||
-        user.apellido.toLowerCase().includes(term)
-      );
-      
-      // ✨ Filtro por estado
-      const matchesStatus = 
-        filterStatus === 'all' ? true :
-        filterStatus === 'active' ? user.activo : !user.activo;
+  // --- HELPERS PARA MUTACIONES ---
+  const setupOptimistic = async () => {
+    await queryClient.cancelQueries({ queryKey: ['adminUsuarios'] });
+    return queryClient.getQueryData<UsuarioDto[]>(['adminUsuarios']);
+  };
 
-      return matchesSearch && matchesStatus;
-    });
-  }, [usuariosOrdenados, debouncedSearchTerm, filterStatus]);
+  const rollbackOptimistic = (context: any) => {
+    if (context?.previousUsuarios) {
+      queryClient.setQueryData(['adminUsuarios'], context.previousUsuarios);
+    }
+  };
 
-  // --- KPIS OPTIMIZADOS ---
-  const stats = useMemo(() => ({
-    total: usuariosRaw.length,
-    activos: usuariosRaw.filter(u => u.activo).length,
-    confirmados: usuariosRaw.filter(u => u.confirmado_email).length,
-    con2FA: usuariosRaw.filter(u => u.is_2fa_enabled).length
-  }), [usuariosRaw]);
-
-  // --- MUTACIONES CON OPTIMISTIC UPDATES ---
-  
+  // --- MUTACIONES ---
   const createMutation = useMutation({
     mutationFn: (data: CreateUsuarioDto) => UsuarioService.create(data),
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ['adminUsuarios'] });
-      modales.create.close();
+      createModal.close();
       showSuccess('Usuario creado exitosamente');
       if (res.data?.id) triggerHighlight(res.data.id);
     },
@@ -107,110 +76,108 @@ export const useAdminUsuarios = () => {
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: number, data: UpdateUserAdminDto }) => UsuarioService.update(id, data),
-    // ✨ Optimistic Update
-    onMutate: async ({ id, data }) => {
-      await queryClient.cancelQueries({ queryKey: ['adminUsuarios'] });
-      const previousUsuarios = queryClient.getQueryData(['adminUsuarios']);
-      
-      queryClient.setQueryData(['adminUsuarios'], (old: UsuarioDto[] = []) => 
-        old.map(u => u.id === id ? { ...u, ...data } : u)
-      );
-      
-      return { previousUsuarios };
-    },
-    onError: (err: any, variables, context) => {
-      if (context?.previousUsuarios) {
-        queryClient.setQueryData(['adminUsuarios'], context.previousUsuarios);
-      }
+    onMutate: setupOptimistic,
+    onError: (err: any, _, ctx) => {
+      rollbackOptimistic(ctx);
       showError(err.response?.data?.message || 'Error al actualizar usuario');
     },
-    onSuccess: (_, variables) => {
+    onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ['adminUsuarios'] });
-      modales.edit.close();
+      editModal.close();
       setEditingUser(null);
       showSuccess('Usuario actualizado correctamente');
-      triggerHighlight(variables.id);
+      triggerHighlight(vars.id);
     }
   });
 
   const toggleStatusMutation = useMutation({
-    mutationFn: async (usuario: UsuarioDto) => {
-      return usuario.activo 
-        ? await UsuarioService.update(usuario.id, { activo: false })
-        : await UsuarioService.reactivateAccount(usuario.id);
-    },
-    // ✨ Optimistic Update
-    onMutate: async (usuario) => {
-      await queryClient.cancelQueries({ queryKey: ['adminUsuarios'] });
-      const previousUsuarios = queryClient.getQueryData(['adminUsuarios']);
-      
-      queryClient.setQueryData(['adminUsuarios'], (old: UsuarioDto[] = []) => 
-        old.map(u => u.id === usuario.id ? { ...u, activo: !usuario.activo } : u)
-      );
-      
-      return { previousUsuarios };
-    },
-    onError: (err: any, usuario, context) => {
-      if (context?.previousUsuarios) {
-        queryClient.setQueryData(['adminUsuarios'], context.previousUsuarios);
-      }
-      modales.confirmDialog.close();
+    mutationFn: async (user: UsuarioDto) =>
+      user.activo
+        ? UsuarioService.update(user.id, { activo: false })
+        : UsuarioService.reactivateAccount(user.id),
+    onMutate: setupOptimistic,
+    onError: (err: any, _, ctx) => {
+      rollbackOptimistic(ctx);
+      confirmDialog.close();
       showError(err.response?.data?.message || 'Error al cambiar estado');
     },
-    onSuccess: (_, usuario) => {
+    onSuccess: (_, user) => {
       queryClient.invalidateQueries({ queryKey: ['adminUsuarios'] });
-      modales.confirmDialog.close();
-      showSuccess(`Usuario ${usuario.activo ? 'bloqueado' : 'reactivado'} correctamente`);
-      triggerHighlight(usuario.id);
+      confirmDialog.close();
+      showSuccess(`Usuario ${user.activo ? 'bloqueado' : 'reactivado'} correctamente`);
+      triggerHighlight(user.id);
     }
   });
 
-  // --- HANDLERS (Callbacks estables) ---
-  
+  // --- FILTRADO Y KPIS ---
+  const filteredUsers = useMemo(() => {
+    const term = debouncedSearchTerm.toLowerCase();
+    return usuariosOrdenados.filter(u => {
+      const matchesSearch = !term ||
+        [u.nombre_usuario, u.email, u.nombre, u.apellido]
+          .some(field => field?.toLowerCase().includes(term));
+      const matchesStatus =
+        filterStatus === 'all' ||
+        (filterStatus === 'active' ? u.activo : !u.activo);
+      return matchesSearch && matchesStatus;
+    });
+  }, [usuariosOrdenados, debouncedSearchTerm, filterStatus]);
+
+  const stats = useMemo(() => ({
+    total: usuariosRaw.length,
+    activos: usuariosRaw.filter(u => u.activo).length,
+    confirmados: usuariosRaw.filter(u => u.confirmado_email).length,
+    con2FA: usuariosRaw.filter(u => u.is_2fa_enabled).length
+  }), [usuariosRaw]);
+
+  // --- HANDLERS ---
   const handleEditUser = useCallback((user: UsuarioDto) => {
     setEditingUser(user);
-    modales.edit.open();
-  }, [modales.edit]);
+    editModal.open();
+  }, [editModal]);
 
-  const handleToggleStatusClick = useCallback((usuario: UsuarioDto) => {
-    if (usuario.id === currentUser?.id) {
+  const handleToggleStatusClick = useCallback((user: UsuarioDto) => {
+    if (user.id === currentUser?.id) {
       return showError('No puedes bloquear tu propia cuenta.');
     }
-    if (usuario.activo && usuario.rol === 'admin') {
+    if (user.activo && user.rol === 'admin') {
       return showError('No se puede bloquear a un administrador.');
     }
-    modales.confirmDialog.confirm('toggle_user_status', usuario);
-  }, [modales.confirmDialog, currentUser, showError]);
+    confirmDialog.confirm('toggle_user_status', user);
+  }, [confirmDialog, currentUser, showError]);
 
+  // --- RETURN OPTIMIZADO ---
   return {
-    // Data
+    // Data & State
     users: filteredUsers,
     stats,
     isLoading,
     error,
-    currentUser,
     highlightedUserId: highlightedId,
+    currentUser, // ✅ AGREGADO
 
-    // State
-    searchTerm, 
+    // Filters
+    searchTerm,
     setSearchTerm,
-    filterStatus, 
+    filterStatus,
     setFilterStatus,
-    editingUser, 
+
+    // Edit State
+    editingUser,
     setEditingUser,
-    
-    // Modales
-    createModal: modales.create,
-    editModal: modales.edit,
-    confirmDialog: modales.confirmDialog,
-    
+
+    // Modals
+    createModal, // ✅ AGREGADO
+    editModal, // ✅ AGREGADO
+    confirmDialog, // ✅ AGREGADO
+
     // Mutations
     createMutation,
     updateMutation,
-    toggleStatusMutation,
-    
+    toggleStatusMutation, // ✅ AGREGADO
+
     // Handlers
     handleEditUser,
-    handleToggleStatusClick
+    handleToggleStatusClick,
   };
 };

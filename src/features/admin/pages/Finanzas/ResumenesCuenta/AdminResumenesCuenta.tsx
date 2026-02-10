@@ -355,7 +355,7 @@ const AdminResumenesCuenta: React.FC = () => {
             getRowKey={(row) => row.id}
             isRowActive={(row) => row.porcentaje_pagado < 100}
             // 🔥 CORRECCIÓN: false para respetar filtros
-            showInactiveToggle={false} 
+            showInactiveToggle={false}
             inactiveLabel="Ver Completados"
             highlightedRowId={logic.highlightedId}
             emptyMessage="No se encontraron resúmenes de cuenta registrados."

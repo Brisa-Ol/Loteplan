@@ -43,12 +43,12 @@ const DetalleResumenModal: React.FC<DetalleResumenModalProps> = ({ open, onClose
     >
       <Stack spacing={3}>
         {/* 1. INFORMACIÓN PRINCIPAL DEL PROYECTO */}
-        <Paper 
+        <Paper
           elevation={0}
-          sx={{ 
-            p: 2.5, borderRadius: 2, border: '1px solid', 
+          sx={{
+            p: 2.5, borderRadius: 2, border: '1px solid',
             borderColor: alpha(theme.palette.primary.main, 0.3),
-            bgcolor: alpha(theme.palette.primary.main, 0.04) 
+            bgcolor: alpha(theme.palette.primary.main, 0.04)
           }}
         >
           <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={2}>
@@ -61,7 +61,7 @@ const DetalleResumenModal: React.FC<DetalleResumenModalProps> = ({ open, onClose
                 Suscripción ID: <strong>{resumen.id_suscripcion}</strong>
               </Typography>
             </Box>
-            
+
             <Chip
               label={isCompleted ? 'Plan Completado' : hasOverdue ? 'Con Deuda Vencida' : 'Plan Activo'}
               color={isCompleted ? 'success' : hasOverdue ? 'error' : 'info'}
@@ -76,7 +76,7 @@ const DetalleResumenModal: React.FC<DetalleResumenModalProps> = ({ open, onClose
           <Typography variant="subtitle2" fontWeight={800} gutterBottom sx={{ textTransform: 'uppercase', letterSpacing: 1, color: 'text.secondary' }}>
             Progreso del Plan
           </Typography>
-          
+
           <Paper elevation={0} variant="outlined" sx={{ p: 3, borderRadius: 2 }}>
             <Stack spacing={3}>
               <Box>
@@ -115,7 +115,7 @@ const DetalleResumenModal: React.FC<DetalleResumenModalProps> = ({ open, onClose
               Estructura de la Cuota
             </Typography>
           </Stack>
-          
+
           <Paper elevation={0} variant="outlined" sx={{ borderRadius: 2, overflow: 'hidden' }}>
             <Box sx={{ p: 2, bgcolor: alpha(theme.palette.action.active, 0.04), borderBottom: '1px solid', borderColor: 'divider' }}>
               <Typography variant="caption" fontWeight="bold" color="text.secondary" display="block" mb={1}>BASE DEL CÁLCULO</Typography>
@@ -133,9 +133,9 @@ const DetalleResumenModal: React.FC<DetalleResumenModalProps> = ({ open, onClose
               <Divider sx={{ borderStyle: 'dashed' }} />
               <FilaDetalle label="Carga Administrativa" value={resumen.detalle_cuota.carga_administrativa} />
               <FilaDetalle label="IVA Carga Admin." value={resumen.detalle_cuota.iva_carga_administrativa} />
-              
-              <Box sx={{ 
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
+
+              <Box sx={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                 bgcolor: 'primary.main', color: 'white', p: 2, borderRadius: 1.5, mt: 1
               }}>
                 <Typography variant="subtitle2" fontWeight="bold">CUOTA FINAL</Typography>
@@ -162,15 +162,15 @@ const FilaDetalle: React.FC<{ label: string; value: number }> = ({ label, value 
   </Box>
 );
 
-const StatusCard: React.FC<{ label: string; value: number; color: 'success'|'error'|'default' }> = ({ label, value, color }) => {
+const StatusCard: React.FC<{ label: string; value: number; color: 'success' | 'error' | 'default' }> = ({ label, value, color }) => {
   const theme = useTheme();
   const isDefault = color === 'default';
 
   return (
-    <Paper 
-      elevation={0} 
-      variant="outlined" 
-      sx={{ 
+    <Paper
+      elevation={0}
+      variant="outlined"
+      sx={{
         flex: 1, p: 2, textAlign: 'center', borderRadius: 2,
         bgcolor: isDefault ? 'background.default' : alpha(theme.palette[color].main, 0.05),
         borderColor: isDefault ? 'divider' : alpha(theme.palette[color].main, 0.2)

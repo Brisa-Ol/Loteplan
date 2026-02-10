@@ -1,18 +1,17 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTheme } from '@mui/material';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import useSnackbar from '@/shared/hooks/useSnackbar';
-import { useModal } from '@/shared/hooks/useModal';
 import { useConfirmDialog } from '@/shared/hooks/useConfirmDialog';
+import { useModal } from '@/shared/hooks/useModal';
+import useSnackbar from '@/shared/hooks/useSnackbar';
 
-import type { ContratoPlantillaDto } from '@/core/types/dto/contrato-plantilla.dto';
 import ContratoPlantillaService from '@/core/api/services/contrato-plantilla.service';
 import ProyectoService from '@/core/api/services/proyecto.service';
+import type { ContratoPlantillaDto } from '@/core/types/dto/contrato-plantilla.dto';
 
-import { useSortedData } from './useSortedData';
-import { downloadFromUrl } from '@/shared/utils/download.utils';
 import { downloadSecureFile } from '@/shared/utils/fileUtils';
+import { useSortedData } from './useSortedData';
 
 // ============================================================================
 // DEBOUNCE HELPER
@@ -82,7 +81,7 @@ export const useAdminPlantillas = () => {
   // --- FILTRADO (Memoizado + Debounce) ---
   const filteredPlantillas = useMemo(() => {
     const term = debouncedSearchTerm.toLowerCase();
-    
+
     return plantillasOrdenadas.filter(plantilla => {
       const matchesSearch = plantilla.nombre_archivo.toLowerCase().includes(term);
       const matchesProject = filterProject === 'all' || plantilla.id_proyecto === Number(filterProject);
@@ -103,10 +102,10 @@ export const useAdminPlantillas = () => {
     mutationFn: ContratoPlantillaService.create,
     // 🔴 CORRECCIÓN AQUÍ: Usamos 'as any' para acceder a la propiedad dinámica
     onSuccess: (res) => {
-        const payload = res.data as any;
-        // Buscamos el ID en 'plantilla', 'data' o directamente en la raíz
-        const newId = payload.plantilla?.id || payload.data?.id || payload.id;
-        handleSuccess('Plantilla creada correctamente.', modales.create.close, newId);
+      const payload = res.data as any;
+      // Buscamos el ID en 'plantilla', 'data' o directamente en la raíz
+      const newId = payload.plantilla?.id || payload.data?.id || payload.id;
+      handleSuccess('Plantilla creada correctamente.', modales.create.close, newId);
     },
     onError: () => showError('Error al crear la plantilla.')
   });
@@ -118,14 +117,14 @@ export const useAdminPlantillas = () => {
   });
 
   const updateMetaMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number, data: Partial<ContratoPlantillaDto> }) => 
+    mutationFn: ({ id, data }: { id: number, data: Partial<ContratoPlantillaDto> }) =>
       ContratoPlantillaService.update(id, data),
     onSuccess: (_, vars) => handleSuccess('Datos actualizados.', modales.updateMeta.close, vars.id),
     onError: () => showError('Error al actualizar metadatos.')
   });
 
   const toggleActiveMutation = useMutation({
-    mutationFn: (plantilla: ContratoPlantillaDto) => 
+    mutationFn: (plantilla: ContratoPlantillaDto) =>
       ContratoPlantillaService.toggleActive(plantilla.id, !plantilla.activo),
     onSuccess: (_, plantilla) => {
       queryClient.invalidateQueries({ queryKey: ['adminPlantillas'] });
@@ -134,8 +133,8 @@ export const useAdminPlantillas = () => {
       showSuccess(plantilla.activo ? 'Plantilla ocultada' : 'Plantilla activada');
     },
     onError: () => {
-        modales.confirmDialog.close();
-        showError('Error al cambiar estado.');
+      modales.confirmDialog.close();
+      showError('Error al cambiar estado.');
     }
   });
 
@@ -147,8 +146,8 @@ export const useAdminPlantillas = () => {
       showSuccess('Plantilla eliminada (enviada a papelera).');
     },
     onError: () => {
-        modales.confirmDialog.close();
-        showError('Error al eliminar.');
+      modales.confirmDialog.close();
+      showError('Error al eliminar.');
     }
   });
 
@@ -161,33 +160,33 @@ export const useAdminPlantillas = () => {
     modales.confirmDialog.confirm('delete_plantilla', plantilla);
   }, [modales.confirmDialog]);
 
-const handleDownload = useCallback(async (plantilla: ContratoPlantillaDto) => {
-  if (plantilla.url_archivo) {
-     try {
-       // Usamos la descarga segura
-       await downloadSecureFile(plantilla.url_archivo, plantilla.nombre_archivo);
-     } catch (e) {
-       showError('Error al descargar el archivo.');
-     }
-  } else {
-     showError('La plantilla no tiene un archivo asociado.');
-  }
-}, [showError]);
+  const handleDownload = useCallback(async (plantilla: ContratoPlantillaDto) => {
+    if (plantilla.url_archivo) {
+      try {
+        // Usamos la descarga segura
+        await downloadSecureFile(plantilla.url_archivo, plantilla.nombre_archivo);
+      } catch (e) {
+        showError('Error al descargar el archivo.');
+      }
+    } else {
+      showError('La plantilla no tiene un archivo asociado.');
+    }
+  }, [showError]);
 
   const handleConfirmAction = useCallback(() => {
     if (!modales.confirmDialog.data) return;
-    
+
     if (modales.confirmDialog.action === 'toggle_plantilla_status') {
-        toggleActiveMutation.mutate(modales.confirmDialog.data);
+      toggleActiveMutation.mutate(modales.confirmDialog.data);
     }
     else if (modales.confirmDialog.action === 'delete_plantilla') {
-        softDeleteMutation.mutate(modales.confirmDialog.data.id);
+      softDeleteMutation.mutate(modales.confirmDialog.data.id);
     }
   }, [modales.confirmDialog, toggleActiveMutation, softDeleteMutation]);
 
   const handleOpenUpdatePdf = useCallback((row: ContratoPlantillaDto) => {
     setPlantillaSelected(row);
-    modales.updatePdf.open(); 
+    modales.updatePdf.open();
   }, [modales.updatePdf]);
 
   const handleOpenUpdateMeta = useCallback((row: ContratoPlantillaDto) => {
@@ -201,7 +200,7 @@ const handleDownload = useCallback(async (plantilla: ContratoPlantillaDto) => {
     searchTerm, setSearchTerm,
     filterProject, setFilterProject,
     plantillaSelected, setPlantillaSelected,
-    
+
     // UX
     highlightedId,
 
@@ -228,7 +227,7 @@ const handleDownload = useCallback(async (plantilla: ContratoPlantillaDto) => {
     isUpdatingMeta: updateMetaMutation.isPending,
     isToggling: toggleActiveMutation.isPending,
     isDeleting: softDeleteMutation.isPending,
-    
+
     // Mutation Runners
     createMutation,
     updatePdfMutation,

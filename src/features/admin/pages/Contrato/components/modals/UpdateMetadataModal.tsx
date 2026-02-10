@@ -48,7 +48,7 @@ const UpdateMetadataModal: React.FC<Props> = ({
   // Estados locales
   const [nombre, setNombre] = useState('');
   const [version, setVersion] = useState<number | string>(1);
-  const [idProyecto, setIdProyecto] = useState<number | ''>(''); 
+  const [idProyecto, setIdProyecto] = useState<number | ''>('');
 
   // Cargar datos
   useEffect(() => {
@@ -149,21 +149,21 @@ const UpdateMetadataModal: React.FC<Props> = ({
             }}
             // ✅ APLICAMOS EL ESTILO DE SCROLL DE UI ESTANDARIZADA
             SelectProps={{
-                MenuProps: {
-                    PaperProps: {
-                        sx: {
-                            maxHeight: 300,
-                            '&::-webkit-scrollbar': { width: '8px' },
-                            '&::-webkit-scrollbar-thumb': {
-                                backgroundColor: alpha(theme.palette.primary.main, 0.2),
-                                borderRadius: '4px',
-                            },
-                            '&::-webkit-scrollbar-track': {
-                                backgroundColor: 'transparent',
-                            }
-                        }
+              MenuProps: {
+                PaperProps: {
+                  sx: {
+                    maxHeight: 300,
+                    '&::-webkit-scrollbar': { width: '8px' },
+                    '&::-webkit-scrollbar-thumb': {
+                      backgroundColor: alpha(theme.palette.primary.main, 0.2),
+                      borderRadius: '4px',
+                    },
+                    '&::-webkit-scrollbar-track': {
+                      backgroundColor: 'transparent',
                     }
+                  }
                 }
+              }
             }}
           >
             <MenuItem value="">

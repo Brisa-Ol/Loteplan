@@ -47,7 +47,7 @@ export const useAdminSuscripciones = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterProject, setFilterProject] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | 'activas' | 'inactivas'>('activas');
-  
+
   // Selección
   const [selectedSuscripcion, setSelectedSuscripcion] = useState<SuscripcionDto | null>(null);
 
@@ -126,17 +126,17 @@ export const useAdminSuscripciones = () => {
 
   // Cálculos Stats
   const stats = useMemo(() => {
-      const totalSuscripciones = Number(cancelacionStats?.total_suscripciones || 0);
-      const totalCanceladas = Number(cancelacionStats?.total_canceladas || 0);
-      return {
-          totalSuscripciones,
-          totalCanceladas,
-          totalActivas: Math.max(0, totalSuscripciones - totalCanceladas),
-          tasaCancelacion: Number(cancelacionStats?.tasa_cancelacion || 0),
-          tasaMorosidad: Number(morosidadStats?.tasa_morosidad || 0),
-          totalEnRiesgo: Number(morosidadStats?.total_en_riesgo || 0),
-          totalGenerado: Number(morosidadStats?.total_pagos_generados || 0)
-      };
+    const totalSuscripciones = Number(cancelacionStats?.total_suscripciones || 0);
+    const totalCanceladas = Number(cancelacionStats?.total_canceladas || 0);
+    return {
+      totalSuscripciones,
+      totalCanceladas,
+      totalActivas: Math.max(0, totalSuscripciones - totalCanceladas),
+      tasaCancelacion: Number(cancelacionStats?.tasa_cancelacion || 0),
+      tasaMorosidad: Number(morosidadStats?.tasa_morosidad || 0),
+      totalEnRiesgo: Number(morosidadStats?.total_en_riesgo || 0),
+      totalGenerado: Number(morosidadStats?.total_pagos_generados || 0)
+    };
   }, [cancelacionStats, morosidadStats]);
 
   // --- MUTACIONES ---
@@ -149,15 +149,15 @@ export const useAdminSuscripciones = () => {
       queryClient.invalidateQueries({ queryKey: ['metricsMorosidad'] });
 
       modales.confirm.close();
-      
+
       // ✨ Highlight Automático
       triggerHighlight(id);
       showSuccess('Suscripción cancelada correctamente.');
     },
     onError: (err: any) => {
-        modales.confirm.close();
-        const msg = err.response?.data?.error || 'Error al cancelar la suscripción.';
-        showError(msg);
+      modales.confirm.close();
+      const msg = err.response?.data?.error || 'Error al cancelar la suscripción.';
+      showError(msg);
     }
   });
 
@@ -190,22 +190,22 @@ export const useAdminSuscripciones = () => {
   return {
     theme,
     // State
-    tabIndex, 
+    tabIndex,
     setTabIndex, // Exportado para uso en alertas
     handleTabChange,
     searchTerm, setSearchTerm,
     filterProject, setFilterProject,
     filterStatus, setFilterStatus,
     selectedSuscripcion,
-    
+
     // ✨ UX Props
     highlightedId,
-    
+
     // Data & Stats
     stats,
     proyectos,
     filteredSuscripciones,
-    
+
     // Loading
     isLoading,
     isLoadingStats: l2 || l3,
