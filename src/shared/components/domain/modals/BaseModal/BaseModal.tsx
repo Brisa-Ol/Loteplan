@@ -21,7 +21,6 @@ import {
 import type { TransitionProps } from '@mui/material/transitions';
 import React from 'react';
 
-// Transición suave hacia arriba
 const Transition = React.forwardRef(function Transition(
   props: TransitionProps & { children: React.ReactElement<any, any> },
   ref: React.Ref<unknown>,
@@ -81,8 +80,6 @@ export const BaseModal: React.FC<BaseModalProps> = ({
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-
-  // Obtenemos el color dinámico de la paleta del tema
   const headerColorValue = theme.palette[headerColor].main;
 
   const handleClose = () => {
@@ -101,7 +98,6 @@ export const BaseModal: React.FC<BaseModalProps> = ({
       fullWidth
       fullScreen={isMobile}
       scroll={scroll}
-      // ✅ GLASSMORPHISM EN BACKDROP
       slotProps={{
         backdrop: {
           sx: {
@@ -113,16 +109,17 @@ export const BaseModal: React.FC<BaseModalProps> = ({
       PaperProps={{
         elevation: 0,
         sx: {
-          borderRadius: isMobile ? 0 : 3, // Bordes muy redondeados (Premium)
+          borderRadius: isMobile ? 0 : 3,
           border: '1px solid',
           borderColor: alpha(theme.palette.divider, 0.1),
           boxShadow: '0 24px 48px -12px rgba(0,0,0,0.18)',
           overflow: 'hidden',
+          // Altura dinámica si el usuario la pasa vía PaperProps en el componente padre
+          ...dialogProps.PaperProps?.sx
         },
       }}
       {...dialogProps}
     >
-      {/* ═══════════════════ HEADER ═══════════════════ */}
       <DialogTitle
         sx={{
           m: 0,
@@ -130,7 +127,6 @@ export const BaseModal: React.FC<BaseModalProps> = ({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          // Fondo sutil del color del header
           bgcolor: alpha(headerColorValue, 0.04),
         }}
       >
@@ -184,7 +180,6 @@ export const BaseModal: React.FC<BaseModalProps> = ({
 
       <Divider sx={{ opacity: 0.6 }} />
 
-      {/* ═══════════════════ CONTENT ═══════════════════ */}
       <DialogContent
         sx={{
           p: { xs: 3, md: 4 },
@@ -196,11 +191,10 @@ export const BaseModal: React.FC<BaseModalProps> = ({
 
       <Divider sx={{ opacity: 0.6 }} />
 
-      {/* ═══════════════════ FOOTER ═══════════════════ */}
       <DialogActions
         sx={{
           p: 3,
-          bgcolor: alpha(theme.palette.secondary.light, 0.4),
+          bgcolor: alpha(theme.palette.secondary.light, 0.1), // Suavizado para mejor contraste
           gap: 1.5
         }}
       >
@@ -230,6 +224,7 @@ export const BaseModal: React.FC<BaseModalProps> = ({
                 onClick={onConfirm}
                 variant={confirmButtonVariant}
                 color={confirmButtonColor}
+                // ✅ Deshabilita si está cargando O si el padre lo solicita
                 disabled={isLoading || disableConfirm}
                 startIcon={!isLoading && confirmButtonIcon}
                 sx={{
@@ -238,7 +233,6 @@ export const BaseModal: React.FC<BaseModalProps> = ({
                   borderRadius: 2,
                   fontWeight: 800,
                   minWidth: 140,
-                  // Sombra personalizada si es contained
                   boxShadow: confirmButtonVariant === 'contained'
                     ? `0 8px 16px ${alpha(theme.palette[confirmButtonColor].main, 0.25)}`
                     : 'none',

@@ -21,12 +21,12 @@ import {
   ExpandLess,
   Receipt
 } from '@mui/icons-material';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+
 import type { SuscripcionDto } from '@/core/types/dto/suscripcion.dto';
 import PagoService from '@/core/api/services/pago.service';
 import type { PagoDto } from '@/core/types/dto/pago.dto';
 import BaseModal from '@/shared/components/domain/modals/BaseModal/BaseModal';
-
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 interface Props {
   open: boolean;
@@ -50,15 +50,24 @@ const DetalleSuscripcionModal: React.FC<Props> = ({ open, onClose, suscripcion }
   const [editingPaymentId, setEditingPaymentId] = useState<number | null>(null);
   const [newMonto, setNewMonto] = useState<number>(0);
 
-  // Query para obtener pagos pendientes de esta suscripción
+  // --- CORRECCIÓN 1: Query robusta para manejar Arrays u Objetos ---
   const { data: pagosPendientes = [], isLoading: loadingPagos, refetch: refetchPagos } = useQuery({
     queryKey: ['pagosPendientes', suscripcion?.id],
     queryFn: async () => {
       if (!suscripcion) return [];
       const res = await PagoService.getPendingBySubscription(suscripcion.id);
-      return res.data;
+      
+      console.log("Respuesta API Pagos:", res.data); // Debug
+
+      // Lógica de seguridad: detecta si es array directo, o si viene dentro de .pagos o .data
+      if (Array.isArray(res.data)) {
+        return res.data;
+      }
+      // @ts-ignore: Ignoramos error de tipado temporal si data no tiene la propiedad explícita en la interfaz axios
+      return res.data.pagos || res.data.data || [];
     },
-    enabled: open && !!suscripcion && showPendingPayments
+    enabled: open && !!suscripcion && showPendingPayments,
+    initialData: [] // Asegura que siempre inicie como array vacío
   });
 
   // Mutación para generar pagos adelantados
@@ -351,7 +360,8 @@ const DetalleSuscripcionModal: React.FC<Props> = ({ open, onClose, suscripcion }
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {pagosPendientes.map((pago) => (
+                    {/* Verificación de array adicional por seguridad */}
+                    {Array.isArray(pagosPendientes) && pagosPendientes.map((pago) => (
                       <TableRow key={pago.id} hover>
                         <TableCell>Cuota #{pago.mes}</TableCell>
                         <TableCell>
@@ -499,8 +509,9 @@ const DetalleSuscripcionModal: React.FC<Props> = ({ open, onClose, suscripcion }
           <Stack direction="row" spacing={1} alignItems="center" sx={{ color: 'text.secondary' }}>
             <CalendarToday fontSize="small" sx={{ fontSize: 16 }} />
             <Typography variant="caption" fontWeight={600}>
-              Fecha de Alta: {suscripcion.createdAt
-                ? new Date(suscripcion.createdAt).toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })
+              {/* CORRECCIÓN 2: Uso de fecha_creacion en lugar de createdAt */}
+              Fecha de Alta: {suscripcion.fecha_creacion
+                ? new Date(suscripcion.fecha_creacion).toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })
                 : '-'}
             </Typography>
           </Stack>

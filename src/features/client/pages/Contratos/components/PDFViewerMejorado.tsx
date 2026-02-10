@@ -1,5 +1,3 @@
-// src/components/Admin/Contratos/Modals/PDFViewerMejorado.tsx
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
@@ -9,28 +7,23 @@ import {
   Alert, Chip, Slider, CircularProgress, Tooltip, useTheme, alpha, Typography
 } from '@mui/material';
 import { 
-  ZoomIn, ZoomOut, NavigateBefore, NavigateNext, 
-  FitScreen, Delete, TouchApp
+  ZoomIn, ZoomOut, FitScreen, Delete, TouchApp
 } from '@mui/icons-material';
 
-// ====================================================
-// 🔧 CONFIGURACIÓN DEL WORKER (Vite Friendly)
-// ====================================================
-// Usamos la importación dinámica que Vite maneja nativamente
+// Configuración del Worker para Vite
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
-
-
-interface PDFViewerMejoradoProps {
-  pdfUrl: string;
-  signatureDataUrl: string | null;
-  onSignaturePositionSet: (pos: { x: number; y: number; page: number }) => void;
-  readOnlyMode?: boolean;
-}
 
 interface SignatureStamp {
   x: number;
   y: number;
   page: number;
+}
+
+interface PDFViewerMejoradoProps {
+  pdfUrl: string;
+  signatureDataUrl: string | null;
+  onSignaturePositionSet: (pos: SignatureStamp) => void;
+  readOnlyMode?: boolean;
 }
 
 const PDFViewerMejorado: React.FC<PDFViewerMejoradoProps> = ({ 
@@ -41,7 +34,6 @@ const PDFViewerMejorado: React.FC<PDFViewerMejoradoProps> = ({
 }) => {
   const theme = useTheme();
   const [numPages, setNumPages] = useState<number>(0);
-  const [currentPage, setCurrentPage] = useState<number>(1);
   const [scale, setScale] = useState<number>(1.0);
   const [signature, setSignature] = useState<SignatureStamp | null>(null);
   const [pageWidth, setPageWidth] = useState<number>(600);
@@ -49,227 +41,146 @@ const PDFViewerMejorado: React.FC<PDFViewerMejoradoProps> = ({
   
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Ajuste automático al ancho del contenedor
+  // ResizeObserver para que el PDF sea responsive al ancho del contenedor
   useEffect(() => {
     const updateWidth = () => {
       if (containerRef.current) {
-        setPageWidth(containerRef.current.offsetWidth - 32);
+        setPageWidth(containerRef.current.offsetWidth - 48); // Margen para el scrollbar
       }
     };
-    
     const observer = new ResizeObserver(updateWidth);
     if (containerRef.current) observer.observe(containerRef.current);
-
     return () => observer.disconnect();
   }, []);
 
-  const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
-    setNumPages(numPages);
-    setLoadError(null);
-  };
-
-  const handlePageClick = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handlePageClick = (e: React.MouseEvent<HTMLDivElement>, pageNum: number) => {
     if (readOnlyMode || !signatureDataUrl) return;
 
-    const target = e.currentTarget;
-    const rect = target.getBoundingClientRect();
-    
+    const rect = e.currentTarget.getBoundingClientRect();
     const x = (e.clientX - rect.left) / scale;
     const y = (e.clientY - rect.top) / scale;
 
-    const newSignature: SignatureStamp = { x, y, page: currentPage };
-
+    const newSignature = { x, y, page: pageNum };
     setSignature(newSignature);
     onSignaturePositionSet(newSignature);
-  };
-
-  const changePage = (offset: number) => {
-    setCurrentPage(prev => Math.max(1, Math.min(prev + offset, numPages)));
-  };
-
-  const zoomInOut = (value: number) => {
-    setScale(prev => Math.min(Math.max(prev + value, 0.5), 2.5));
   };
 
   return (
     <Box ref={containerRef} sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       
-      {/* BARRA DE HERRAMIENTAS */}
+      {/* 🛠 BARRA DE HERRAMIENTAS */}
       <Paper 
         elevation={0} 
         sx={{ 
-            p: 1, mb: 1, borderRadius: 2, 
-            border: `1px solid ${theme.palette.divider}`,
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            bgcolor: 'background.paper', zIndex: 2
+          p: 1, mb: 1, borderRadius: 2, border: `1px solid ${theme.palette.divider}`,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          bgcolor: 'background.paper', zIndex: 2
         }}
       >
-        {/* Paginación */}
-        <Stack direction="row" alignItems="center" spacing={1}>
-            <IconButton onClick={() => changePage(-1)} disabled={currentPage <= 1} size="small">
-                <NavigateBefore />
-            </IconButton>
-            <Chip 
-                label={`Pág ${currentPage} de ${numPages || '-'}`} 
-                size="small" 
-                variant="outlined" 
-                sx={{ fontWeight: 600, minWidth: 80 }}
-            />
-            <IconButton onClick={() => changePage(1)} disabled={currentPage >= numPages} size="small">
-                <NavigateNext />
-            </IconButton>
+        <Stack direction="row" spacing={1} alignItems="center">
+          <Chip 
+            label={`${numPages} Páginas`} 
+            size="small" 
+            variant="outlined" 
+            sx={{ fontWeight: 700 }} 
+          />
         </Stack>
 
-        {/* Zoom */}
         <Stack direction="row" alignItems="center" spacing={1}>
-            <Tooltip title="Reducir">
-                <IconButton onClick={() => zoomInOut(-0.1)} size="small" disabled={scale <= 0.5}>
-                    <ZoomOut fontSize="small" />
-                </IconButton>
-            </Tooltip>
-            
-            <Box sx={{ width: 80, mx: 1 }}>
-                <Slider
-                    value={scale}
-                    min={0.5} max={2.5} step={0.1}
-                    onChange={(_, val) => setScale(val as number)}
-                    size="small"
-                    aria-label="Zoom"
-                />
-            </Box>
-
-            <Tooltip title="Aumentar">
-                <IconButton onClick={() => zoomInOut(0.1)} size="small" disabled={scale >= 2.5}>
-                    <ZoomIn fontSize="small" />
-                </IconButton>
-            </Tooltip>
-            
-            <Tooltip title="Restablecer">
-                <IconButton onClick={() => setScale(1.0)} size="small">
-                    <FitScreen fontSize="small" />
-                </IconButton>
-            </Tooltip>
+          <Tooltip title="Reducir"><IconButton onClick={() => setScale(s => Math.max(s - 0.1, 0.5))} size="small"><ZoomOut fontSize="small" /></IconButton></Tooltip>
+          <Box sx={{ width: 100, mx: 1 }}>
+            <Slider value={scale} min={0.5} max={2.0} step={0.1} onChange={(_, v) => setScale(v as number)} size="small" />
+          </Box>
+          <Tooltip title="Aumentar"><IconButton onClick={() => setScale(s => Math.min(s + 0.1, 2.0))} size="small"><ZoomIn fontSize="small" /></IconButton></Tooltip>
+          <Tooltip title="Restablecer"><IconButton onClick={() => setScale(1.0)} size="small"><FitScreen fontSize="small" /></IconButton></Tooltip>
         </Stack>
       </Paper>
 
-      {/* ÁREA DE DOCUMENTO CON SCROLL */}
+      {/* 📄 ÁREA DEL DOCUMENTO (SCROLL CONTINUO) */}
       <Box 
         sx={{ 
-            flex: 1, 
-            overflow: 'auto', 
-            bgcolor: 'grey.100', 
-            borderRadius: 2,
-            border: `1px solid ${theme.palette.divider}`,
-            position: 'relative',
-            display: 'flex',
-            justifyContent: 'center',
-            p: 2
+          flex: 1, overflowY: 'auto', bgcolor: 'grey.200', borderRadius: 2,
+          border: `1px solid ${theme.palette.divider}`, p: 2,
+          display: 'flex', flexDirection: 'column', alignItems: 'center'
         }}
       >
-        {!loadError ? (
-            <Document
-                file={pdfUrl}
-                onLoadSuccess={onDocumentLoadSuccess}
-                onLoadError={() => setLoadError("No se pudo cargar el documento.")}
-                loading={
-                    <Stack alignItems="center" mt={5} spacing={2}>
-                        <CircularProgress size={40} />
-                        <Typography variant="body2" color="text.secondary">Cargando PDF...</Typography>
-                    </Stack>
-                }
-                error={
-                    <Alert severity="error" sx={{ mt: 5 }}>Error al cargar el archivo PDF.</Alert>
-                }
-            >
-                {numPages > 0 && (
+        <Document
+          file={pdfUrl}
+          onLoadSuccess={({ numPages }) => setNumPages(numPages)}
+          onLoadError={() => setLoadError("No se pudo cargar el PDF")}
+          loading={<CircularProgress sx={{ mt: 10 }} />}
+        >
+          <Stack spacing={3}>
+            {Array.from(new Array(numPages), (_, i) => {
+              const pageNum = i + 1;
+              return (
+                <Box 
+                  key={`page_${pageNum}`}
+                  onClick={(e) => handlePageClick(e, pageNum)}
+                  sx={{ 
+                    position: 'relative', 
+                    boxShadow: theme.shadows[6],
+                    cursor: (signatureDataUrl && !readOnlyMode) ? 'crosshair' : 'default',
+                    lineHeight: 0 // Elimina espacios fantasma bajo el canvas
+                  }}
+                >
+                  <Page
+                    pageNumber={pageNum}
+                    scale={scale}
+                    width={pageWidth}
+                    renderTextLayer={false}
+                    renderAnnotationLayer={false}
+                  />
+
+                  {/* ✍️ ESTAMPA DE FIRMA */}
+                  {signature && signature.page === pageNum && (
                     <Box
-                        onClick={handlePageClick}
-                        sx={{
-                            position: 'relative',
-                            boxShadow: theme.shadows[4],
-                            cursor: (signatureDataUrl && !readOnlyMode) ? 'crosshair' : 'default',
-                            transition: 'cursor 0.2s',
-                            '&:hover': (signatureDataUrl && !readOnlyMode) ? {
-                                outline: `2px dashed ${theme.palette.primary.main}`,
-                                outlineOffset: '4px'
-                            } : {}
-                        }}
+                      sx={{
+                        position: 'absolute',
+                        left: signature.x * scale,
+                        top: signature.y * scale,
+                        width: 150 * scale,
+                        height: 60 * scale,
+                        border: `2px dashed ${theme.palette.primary.main}`,
+                        bgcolor: alpha(theme.palette.primary.main, 0.1),
+                        borderRadius: 1,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        zIndex: 10, pointerEvents: 'none',
+                        transform: 'translate(-50%, -50%)' // Centra la firma donde haces clic
+                      }}
                     >
-                        <Page
-                            pageNumber={currentPage}
-                            scale={scale}
-                            width={pageWidth}
-                            renderTextLayer={false}
-                            renderAnnotationLayer={false}
-                        />
-
-                        {/* ESTAMPA DE FIRMA */}
-                        {signatureDataUrl && signature && signature.page === currentPage && (
-                            <Box
-                                sx={{
-                                    position: 'absolute',
-                                    left: signature.x * scale,
-                                    top: signature.y * scale,
-                                    width: 150 * scale,
-                                    height: 50 * scale,
-                                    border: `2px dashed ${theme.palette.success.main}`,
-                                    bgcolor: alpha(theme.palette.success.main, 0.1),
-                                    borderRadius: 1,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    zIndex: 10,
-                                    pointerEvents: 'none'
-                                }}
-                            >
-                                <Box 
-                                    component="img"
-                                    src={signatureDataUrl}
-                                    sx={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                                />
-                                <IconButton 
-                                    size="small" 
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setSignature(null);
-                                    }}
-                                    sx={{ 
-                                        position: 'absolute', top: -15, right: -15, 
-                                        bgcolor: 'error.main', color: 'white',
-                                        '&:hover': { bgcolor: 'error.dark' },
-                                        pointerEvents: 'auto',
-                                        width: 24, height: 24
-                                    }}
-                                >
-                                    <Delete fontSize="small" sx={{ fontSize: 16 }} />
-                                </IconButton>
-                            </Box>
-                        )}
+                      <Box component="img" src={signatureDataUrl!} sx={{ width: '80%', height: '80%', objectFit: 'contain' }} />
+                      <IconButton 
+                        size="small" 
+                        onClick={(e) => { e.stopPropagation(); setSignature(null); }}
+                        sx={{ 
+                          position: 'absolute', top: -12, right: -12, bgcolor: 'error.main', color: 'white',
+                          '&:hover': { bgcolor: 'error.dark' }, pointerEvents: 'auto', width: 24, height: 24
+                        }}
+                      >
+                        <Delete sx={{ fontSize: 14 }} />
+                      </IconButton>
                     </Box>
-                )}
-            </Document>
-        ) : (
-            <Alert severity="error" sx={{ mt: 5 }}>{loadError}</Alert>
-        )}
+                  )}
+                </Box>
+              );
+            })}
+          </Stack>
+        </Document>
+
+        {loadError && <Alert severity="error" sx={{ mt: 5 }}>{loadError}</Alert>}
       </Box>
 
-      {/* FEEDBACK INFERIOR */}
-      <Box mt={1} textAlign="center">
-         {!signature && signatureDataUrl && !readOnlyMode && (
-             <Chip 
-                icon={<TouchApp />} 
-                label="Haz clic sobre el documento para estampar tu firma" 
-                color="primary" 
-                variant="outlined" 
-                sx={{ animation: 'pulse 2s infinite' }}
-             />
-         )}
-         {signature && (
-             <Typography variant="caption" color="success.main" fontWeight={700}>
-                 ✓ Firma colocada en página {signature.page}
-             </Typography>
-         )}
-      </Box>
+      {/* ℹ️ FEEDBACK */}
+      {!readOnlyMode && signatureDataUrl && (
+        <Box sx={{ py: 1, textAlign: 'center' }}>
+          {!signature ? (
+            <Chip icon={<TouchApp />} label="Haz clic en el documento para posicionar tu firma" color="primary" variant="outlined" />
+          ) : (
+            <Typography variant="caption" color="success.main" fontWeight={700}>✓ Firma posicionada en Pág. {signature.page}</Typography>
+          )}
+        </Box>
+      )}
     </Box>
   );
 };

@@ -1,35 +1,43 @@
-import React, { useState, useMemo, useCallback } from 'react';
-import { useMutation, useQuery } from '@tanstack/react-query';
 import {
-  ReceiptLong, Schedule, Warning, Stars, RocketLaunch, PriorityHigh, Lock
+  Lock,
+  PriorityHigh,
+  ReceiptLong,
+  RocketLaunch,
+  Schedule,
+  Stars,
+  Warning
 } from '@mui/icons-material';
 import {
-  alpha, Badge, Box, Button, Chip, Stack,
-  Tab, Tabs, Typography, useTheme, Paper, Alert, AlertTitle
+  Alert, AlertTitle,
+  alpha, Badge, Box, Button, Chip,
+  Paper,
+  Tab, Tabs, Typography, useTheme
 } from '@mui/material';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import React, { useCallback, useMemo, useState } from 'react';
 
 // Componentes
 import { DataTable, type DataTableColumn } from '../../../../../shared/components/data-grid/DataTable/DataTable';
-import { PageContainer } from '../../../../../shared/components/layout/containers/PageContainer/PageContainer';
-import { PageHeader } from '../../../../../shared/components/layout/headers/PageHeader';
 import { QueryHandler } from '../../../../../shared/components/data-grid/QueryHandler/QueryHandler';
 import { StatCard } from '../../../../../shared/components/domain/cards/StatCard/StatCard';
 import TwoFactorAuthModal from '../../../../../shared/components/domain/modals/TwoFactorAuthModal/TwoFactorAuthModal';
+import { PageContainer } from '../../../../../shared/components/layout/containers/PageContainer/PageContainer';
+import { PageHeader } from '../../../../../shared/components/layout/headers/PageHeader';
 import { useModal } from '../../../../../shared/hooks/useModal';
 import { HistorialPagosAgrupado } from './HistorialAgrupado';
 
 // Servicios y Utils
 import PagoService from '@/core/api/services/pago.service';
-import SuscripcionService from '@/core/api/services/suscripcion.service';
 import MercadoPagoService from '@/core/api/services/pagoMercado.service';
+import SuscripcionService from '@/core/api/services/suscripcion.service';
 import { useCurrencyFormatter } from '@/features/client/hooks/useCurrencyFormatter';
 
 
 // Tipos
-import type { PagoDto } from '@/core/types/dto/pago.dto';
-import type { SuscripcionDto } from '@/core/types/dto/suscripcion.dto';
 import type { ApiError } from '@/core/api/httpService';
 import { env } from '@/core/config/env';
+import type { PagoDto } from '@/core/types/dto/pago.dto';
+import type { SuscripcionDto } from '@/core/types/dto/suscripcion.dto';
 import { getStatusConfig } from '../../utils/inversionStatus';
 
 // =====================================================

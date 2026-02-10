@@ -1,14 +1,14 @@
-// src/types/dto/suscripcion.dto.ts
+// src/core/types/dto/suscripcion.dto.ts
+
 import type { BaseDTO } from "./base.dto";
 import type { ProyectoDto } from "./proyecto.dto";
 
 // ==========================================
-// 📤 REQUEST DTOs (Lo que envías al Back)
+// 📤 REQUEST DTOs
 // ==========================================
 
 export interface IniciarSuscripcionDto {
   id_proyecto: number;
-  // Agrega otros campos si tu backend los requiere en el body inicial
 }
 
 export interface ConfirmarSuscripcion2faDto {
@@ -17,24 +17,32 @@ export interface ConfirmarSuscripcion2faDto {
 }
 
 // ==========================================
-// 📥 RESPONSE DTOs (Lo que recibes del Back)
+// 📥 RESPONSE DTOs
 // ==========================================
 
 /**
- * Modelo principal de Suscripción (SuscripcionProyecto)
+ * Coincide con el modelo Sequelize: SuscripcionProyecto
  */
 export interface SuscripcionDto extends BaseDTO {
   id_usuario: number;
   id_proyecto: number;
   
-  // Campos específicos de tu modelo Sequelize
+  // Coincide con `tokens_disponibles` (defaultValue: 1)
   tokens_disponibles: number;
-  meses_a_pagar: number;       // Nuevo campo que agregaste
-  saldo_a_favor: number;       // Nuevo campo que agregaste
-  monto_total_pagado: number;  // Nuevo campo que agregaste
+
+  // Coincide con `meses_a_pagar`
+  meses_a_pagar: number;       
+
+  // Coincide con `saldo_a_favor` (DECIMAL)
+  saldo_a_favor: number;       
+
+  // ⚠️ ATENCIÓN: En tu modelo SuscripcionProyecto se llama así:
+  monto_total_pagado: number;  
+
+  // Asumo que 'activo' viene de tus baseAttributes o es un campo virtual
   activo: boolean;
 
-  // Relaciones (Include)
+  // Relaciones (Includes)
   usuario?: {
     id: number;
     nombre: string;
@@ -54,12 +62,10 @@ export interface SuscripcionInitResponse {
 }
 
 // ==========================================
-// 📊 MÉTRICAS (ADMIN - KPIs)
-// Coinciden con el return de tu controller
+// 📊 MÉTRICAS
 // ==========================================
 
 export interface MorosidadDTO {
-  // Tu backend devuelve .toFixed(2), por lo tanto son strings
   total_pagos_generados: string; 
   total_en_riesgo: string;
   tasa_morosidad: string; 
@@ -68,22 +74,31 @@ export interface MorosidadDTO {
 export interface CancelacionDTO {
   total_suscripciones: number;
   total_canceladas: number;
-  tasa_cancelacion: string; // Tu backend devuelve .toFixed(2) -> string
+  tasa_cancelacion: string; 
 }
 
 // ==========================================
 // 🛑 HISTORIAL DE CANCELADAS
 // ==========================================
 
+/**
+ * Coincide con el modelo Sequelize: SuscripcionCancelada
+ */
 export interface SuscripcionCanceladaDto extends BaseDTO {
   id_suscripcion_original: number;
   id_usuario: number;
   id_proyecto: number;
+  
+  // Coincide con `meses_pagados`
   meses_pagados: number;
-  monto_pagado_total: number;
+
+  // ⚠️ ATENCIÓN: En tu modelo SuscripcionCancelada el nombre está invertido respecto al otro:
+  monto_pagado_total: number; 
+
+  // Coincide con `fecha_cancelacion`
   fecha_cancelacion: string;
 
-  // Relaciones opcionales para mostrar nombres en tabla
+  // Relaciones opcionales
   usuario?: {
     nombre: string;
     apellido: string;

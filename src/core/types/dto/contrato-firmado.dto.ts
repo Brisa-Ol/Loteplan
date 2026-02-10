@@ -67,6 +67,20 @@ export interface ContratoFirmadoDto extends BaseDTO {
   ip_firma?: string;
   geolocalizacion_firma?: string;
   integrity_compromised?: boolean;
+  usuarioFirmante?: {
+    id: number;
+    nombre: string;
+    apellido: string;
+    email: string;
+    nombre_usuario: string;
+  }; 
+
+  proyectoAsociado?: {
+    id: number;
+    nombre_proyecto: string;
+    tipo_inversion: string;
+    estado_proyecto: string;
+  };
 }
 
 export type ContratoFirmadoListDto = ContratoFirmadoDto[];

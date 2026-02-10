@@ -36,7 +36,6 @@ type StatusType =
 
 // ============================================================================
 // COMPONENTE: STATUS BADGE
-// Chip de estado reutilizable en cualquier parte de la app
 // ============================================================================
 
 interface StatusBadgeProps extends Omit<ChipProps, 'color'> {
@@ -78,8 +77,10 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
       size="small"
       sx={{
         fontWeight: 800,
-        fontSize: '0.65rem',
-        minWidth: 90,
+        fontSize: { xs: '0.55rem', sm: '0.65rem' }, // Texto más pequeño en móvil
+        height: { xs: 20, sm: 24 }, // Altura adaptable
+        minWidth: 'auto',
+        maxWidth: '100%',
         ...sx,
       }}
       {...chipProps}
@@ -88,10 +89,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
 };
 
 // ============================================================================
-// COMPONENTE: STAT CARD
-// Tarjeta de métrica. El badge interno delega al StatusBadge cuando se le
-// pasa un `status`, o muestra un chip simple si solo se le pasa texto.
-// El ancho se amolda al contenido (no se fija height ni width).
+// COMPONENTE: STAT CARD RESPONSIVE
 // ============================================================================
 
 interface StatCardProps {
@@ -106,11 +104,8 @@ interface StatCardProps {
     value: number;
     isPositive?: boolean;
   };
-  /** Badge como texto libre → chip simple con el color de la card */
   badge?: string;
-  /** Badge como estado tipado → delega a StatusBadge */
   badgeStatus?: StatusType;
-  /** Etiqueta personalizada cuando se usa badgeStatus */
   badgeLabel?: string;
   compact?: boolean;
 }
@@ -130,18 +125,23 @@ export const StatCard: React.FC<StatCardProps> = ({
   compact = false,
 }) => {
   const theme = useTheme();
-
-  // Si el color es 'info' se mapea a 'primary' para evitar el azul por defecto de MUI
   const safeColor = color === 'info' ? 'primary' : color;
   const paletteColor = theme.palette[safeColor as StatColor] || theme.palette.primary;
 
-  // ── Badge: StatusBadge tiene prioridad sobre texto libre ──────────────────
   const renderBadge = () => {
     if (loading) return null;
 
+    // Posicionamiento responsivo del badge
+    const badgePositionSx = {
+      position: 'absolute',
+      top: { xs: 8, sm: 12 },
+      right: { xs: 8, sm: 12 },
+      zIndex: 2,
+    };
+
     if (badgeStatus) {
       return (
-        <Box sx={{ position: 'absolute', top: 12, right: 12 }}>
+        <Box sx={badgePositionSx}>
           <StatusBadge status={badgeStatus} customLabel={badgeLabel} />
         </Box>
       );
@@ -153,11 +153,9 @@ export const StatCard: React.FC<StatCardProps> = ({
           label={badge}
           size="small"
           sx={{
-            position: 'absolute',
-            top: 12,
-            right: 12,
-            height: 18,
-            fontSize: '0.65rem',
+            ...badgePositionSx,
+            height: { xs: 16, sm: 18 },
+            fontSize: { xs: '0.55rem', sm: '0.65rem' },
             fontWeight: 700,
             bgcolor: alpha(paletteColor.main, 0.1),
             color: paletteColor.main,
@@ -167,7 +165,6 @@ export const StatCard: React.FC<StatCardProps> = ({
         />
       );
     }
-
     return null;
   };
 
@@ -176,19 +173,24 @@ export const StatCard: React.FC<StatCardProps> = ({
       elevation={0}
       onClick={onClick}
       sx={{
-        p: compact ? 2 : 2.5,
-        // ── Sizing adaptativo al contenido ──────────────────────────────────
-        width: 'fit-content',
-        minWidth: compact ? 180 : 220,
-        maxWidth: '100%',
-        // ────────────────────────────────────────────────────────────────────
+        // ── RESPONSIVE PADDING ──────────────────────────────────────────────
+        p: compact ? { xs: 1.5, sm: 2 } : { xs: 2, sm: 2.5 },
+        
+        // ── WIDTH & HEIGHT ──────────────────────────────────────────────────
+        width: '100%', // Ocupa todo el ancho del grid/padre
+        height: '100%', // Para que todas las cards en una fila tengan la misma altura
+        minWidth: 0, // CRÍTICO: Permite que el flexbox encoja el contenido (truncamiento)
+        
+        // ── LAYOUT ──────────────────────────────────────────────────────────
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center',
+        
+        // ── ESTILOS VISUALES ────────────────────────────────────────────────
         borderRadius: 2,
         border: '1px solid',
-        borderColor: theme.palette.secondary.main,
-        bgcolor: theme.palette.background.default,
+        borderColor: theme.palette.divider, // Un color más neutro por defecto
+        bgcolor: theme.palette.background.paper,
         position: 'relative',
         overflow: 'hidden',
         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -209,8 +211,8 @@ export const StatCard: React.FC<StatCardProps> = ({
 
         '&:hover': {
           borderColor: paletteColor.main,
-          transform: 'translateY(-4px)',
-          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)',
+          transform: onClick ? 'translateY(-4px)' : 'none',
+          boxShadow: onClick ? '0 8px 24px rgba(0, 0, 0, 0.12)' : 'none',
           '& .stat-avatar': {
             transform: 'scale(1.1) rotate(-5deg)',
             bgcolor: alpha(paletteColor.main, 0.2),
@@ -220,57 +222,76 @@ export const StatCard: React.FC<StatCardProps> = ({
     >
       {renderBadge()}
 
-      <Stack direction="row" spacing={2} alignItems="center" sx={{ width: '100%' }}>
-        {/* Icono */}
+      <Stack 
+        direction="row" 
+        spacing={{ xs: 1.5, sm: 2 }} 
+        alignItems="center" 
+        sx={{ width: '100%', overflow: 'hidden' }}
+      >
+        {/* Icono Responsive */}
         <Avatar
           className="stat-avatar"
           variant="rounded"
           sx={{
             bgcolor: alpha(paletteColor.main, 0.1),
             color: paletteColor.main,
-            width: compact ? 44 : 52,
-            height: compact ? 44 : 52,
-            borderRadius: 1,
+            // Tamaño adaptativo
+            width: compact ? { xs: 36, sm: 44 } : { xs: 42, sm: 52 },
+            height: compact ? { xs: 36, sm: 44 } : { xs: 42, sm: 52 },
+            borderRadius: { xs: 1, sm: 1.5 },
             transition: 'all 0.3s ease',
             flexShrink: 0,
-            '& svg': { fontSize: compact ? '1.3rem' : '1.6rem' },
+            '& svg': { 
+              fontSize: compact ? { xs: '1.1rem', sm: '1.3rem' } : { xs: '1.4rem', sm: '1.6rem' } 
+            },
           }}
         >
           {icon}
         </Avatar>
 
-        {/* Contenido */}
+        {/* Contenido con minWidth 0 para permitir truncate */}
         <Box sx={{ flex: 1, minWidth: 0 }}>
           {loading ? (
             <Stack spacing={0.5}>
-              <Skeleton variant="text" width="40%" height={15} />
-              <Skeleton variant="text" width="70%" height={35} />
+              <Skeleton variant="text" width="60%" height={15} />
+              <Skeleton variant="text" width="90%" height={35} />
             </Stack>
           ) : (
             <>
-              {/* Título */}
+              {/* Título truncable */}
               <Typography
                 variant="overline"
                 color="text.secondary"
+                noWrap // Corta el texto con "..." si es muy largo
                 sx={{
                   display: 'block',
-                  mb: -0.5,
-                  fontSize: compact ? '0.6rem' : '0.7rem',
-                  lineHeight: 1,
+                  mb: { xs: -0.2, sm: -0.5 },
+                  fontSize: compact ? { xs: '0.55rem', sm: '0.6rem' } : { xs: '0.65rem', sm: '0.7rem' },
+                  lineHeight: 1.2,
+                  letterSpacing: '0.5px'
                 }}
               >
                 {title}
               </Typography>
 
               {/* Valor + Tendencia */}
-              <Stack direction="row" alignItems="baseline" spacing={1}>
+              <Stack 
+                direction="row" 
+                alignItems="baseline" 
+                spacing={1} 
+                sx={{ flexWrap: 'wrap', rowGap: 0.5 }} // Permite wrap si es muy estrecho
+              >
                 <Typography
                   variant="h4"
                   fontWeight={800}
                   color="text.primary"
+                  noWrap
                   sx={{
-                    fontSize: compact ? '1.35rem' : '1.75rem',
-                    whiteSpace: 'nowrap',
+                    // Tipografía fluida
+                    fontSize: compact 
+                      ? { xs: '1.1rem', sm: '1.35rem' } 
+                      : { xs: '1.4rem', md: '1.75rem' },
+                    lineHeight: 1.2,
                   }}
                 >
                   {value}
@@ -281,41 +302,47 @@ export const StatCard: React.FC<StatCardProps> = ({
                     sx={{
                       display: 'inline-flex',
                       alignItems: 'center',
-                      px: 0.8,
-                      py: 0.2,
+                      px: 0.6,
+                      py: 0.1,
                       borderRadius: 1,
-                      bgcolor:
-                        trend.isPositive === false
+                      bgcolor: trend.isPositive === false
                           ? alpha(theme.palette.error.main, 0.1)
                           : alpha(theme.palette.success.main, 0.1),
                       color: trend.isPositive === false ? 'error.main' : 'success.main',
+                      whiteSpace: 'nowrap', // El trend no debe romperse
                     }}
                   >
                     {trend.isPositive === false ? (
-                      <TrendingDownIcon sx={{ fontSize: 12 }} />
+                      <TrendingDownIcon sx={{ fontSize: { xs: 10, sm: 12 } }} />
                     ) : (
-                      <TrendingUpIcon sx={{ fontSize: 12 }} />
+                      <TrendingUpIcon sx={{ fontSize: { xs: 10, sm: 12 } }} />
                     )}
-                    <Typography variant="caption" fontWeight={800} sx={{ ml: 0.3, fontSize: '0.7rem' }}>
+                    <Typography 
+                      variant="caption" 
+                      fontWeight={800} 
+                      sx={{ ml: 0.3, fontSize: { xs: '0.6rem', sm: '0.7rem' } }}
+                    >
                       {trend.value}%
                     </Typography>
                   </Box>
                 )}
               </Stack>
 
-              {/* Subtítulo */}
+              {/* Subtítulo truncable */}
               {subtitle && (
                 <Typography
                   variant="caption"
                   color="text.secondary"
+                  noWrap
                   sx={{
                     display: 'flex',
                     alignItems: 'center',
                     mt: 0.5,
                     fontWeight: 500,
-                    fontSize: '0.7rem',
+                    fontSize: { xs: '0.6rem', sm: '0.7rem' },
                     '&::before': {
                       content: '""',
+                      flexShrink: 0, // El punto no se encoge
                       width: 4,
                       height: 4,
                       borderRadius: '50%',

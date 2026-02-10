@@ -1,3 +1,5 @@
+// src/pages/Admin/Contratos/AdminContratosFirmados.tsx
+
 import {
   BarChart as BarChartIcon,
   Business,
@@ -63,10 +65,11 @@ const ContratosAnalytics = React.memo<{ data: ContratoFirmadoDto[] }>(({ data })
     ].filter(i => i.value > 0);
   }, [data, theme]);
 
+  // Agrupa por Nombre de Proyecto (o ID si no tiene nombre)
   const projectData = useMemo(() => {
     const counts = data.reduce((acc, curr) => {
-      const id = `Proy #${curr.id_proyecto}`;
-      acc[id] = (acc[id] || 0) + 1;
+      const name = curr.proyectoAsociado?.nombre_proyecto || `Proy #${curr.id_proyecto}`;
+      acc[name] = (acc[name] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
@@ -108,7 +111,7 @@ const ContratosAnalytics = React.memo<{ data: ContratoFirmadoDto[] }>(({ data })
           <BarChart data={projectData} layout="vertical" margin={{ left: 10, right: 30 }}>
             <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={theme.palette.divider} />
             <XAxis type="number" hide />
-            <YAxis dataKey="name" type="category" width={80} tick={{ fontSize: 11, fontWeight: 600 }} axisLine={false} />
+            <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 11, fontWeight: 600 }} axisLine={false} />
             <RechartsTooltip cursor={{ fill: alpha(theme.palette.primary.main, 0.1) }} contentStyle={{ borderRadius: 8 }} />
             <Bar dataKey="value" fill={theme.palette.primary.main} radius={[0, 4, 4, 0]} barSize={24} />
           </BarChart>
@@ -129,9 +132,7 @@ const AdminContratosFirmados: React.FC = () => {
 
   const [viewMode, setViewMode] = useState<ViewMode>('table');
 
-  // --------------------------------------------------------------------------
-  // CÁLCULO DE KPIS
-  // --------------------------------------------------------------------------
+  // KPIS
   const stats = useMemo(() => {
     const data = logic.filteredContratos;
     const total = data.length;
@@ -142,67 +143,134 @@ const AdminContratosFirmados: React.FC = () => {
     return { total, inv, subs, verified };
   }, [logic.filteredContratos]);
 
-  // --------------------------------------------------------------------------
-  // COLUMNAS
-  // --------------------------------------------------------------------------
+  // COLUMNAS DEFINITIVAS
   const columns = useMemo<DataTableColumn<ContratoFirmadoDto>[]>(() => [
     {
       id: 'id',
-      label: 'Contrato / ID',
-      minWidth: 120,
+      label: 'ID / Archivo',
+      minWidth: 140,
       render: (row) => (
         <Stack direction="row" spacing={1.5} alignItems="center">
           <Avatar sx={{ width: 32, height: 32, bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}>
             <DescriptionIcon sx={{ fontSize: 16 }} />
           </Avatar>
-          <Typography variant="body2" fontWeight={700}>#{row.id}</Typography>
-        </Stack>
-      )
-    },
-    {
-      id: 'usuario',
-      label: 'Firmante',
-      minWidth: 220,
-      render: (row) => (
-        <Stack direction="row" alignItems="center" spacing={2}>
-          <Avatar sx={{
-            width: 32, height: 32,
-            bgcolor: alpha(theme.palette.secondary.main, 0.1),
-            color: theme.palette.secondary.main,
-            fontSize: 14, fontWeight: 800
-          }}>
-            <Person fontSize="inherit" />
-          </Avatar>
           <Box>
-            <Typography variant="body2" fontWeight={700}>Usuario #{row.id_usuario_firmante}</Typography>
-            <Typography variant="caption" color="text.secondary">ID Legal verificado</Typography>
+            <Typography variant="body2" fontWeight={700}>#{row.id}</Typography>
+            <Tooltip title={row.nombre_archivo}>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {row.nombre_archivo}
+              </Typography>
+            </Tooltip>
           </Box>
         </Stack>
       )
     },
     {
+      id: 'usuario',
+      label: 'Datos del Firmante',
+      minWidth: 260, 
+      render: (row) => {
+        // Accedemos al objeto anidado gracias al backend corregido
+        const user = row.usuarioFirmante;
+        
+        return (
+          <Stack direction="row" alignItems="center" spacing={2}>
+            {/* Avatar con Inicial */}
+            <Avatar sx={{
+              width: 36, height: 36,
+              bgcolor: alpha(theme.palette.secondary.main, 0.1),
+              color: theme.palette.secondary.main,
+              fontSize: 15, fontWeight: 800
+            }}>
+              {user ? user.nombre.charAt(0).toUpperCase() : <Person fontSize="inherit" />}
+            </Avatar>
+            
+            <Box>
+              {user ? (
+                <>
+                  {/* Nombre Completo */}
+                  <Typography variant="body2" fontWeight={700}>
+                    {user.nombre} {user.apellido}
+                  </Typography>
+                  
+                  {/* Email + ID pequeño */}
+                  <Stack direction="row" alignItems="center" spacing={0.5} flexWrap="wrap">
+                    <Typography variant="caption" color="text.secondary">
+                      {user.email}
+                    </Typography>
+                    <Typography 
+                      variant="caption" 
+                      sx={{ 
+                        fontSize: '0.65rem',      // 👈 ID en chico
+                        color: 'text.disabled', 
+                        fontFamily: 'monospace',
+                        bgcolor: alpha(theme.palette.action.hover, 0.5),
+                        px: 0.5,
+                        borderRadius: 1
+                      }}
+                    >
+                      #{user.id}
+                    </Typography>
+                  </Stack>
+                </>
+              ) : (
+                /* Fallback por si falla el JOIN */
+                <Box>
+                  <Typography variant="body2" fontWeight={700}>Usuario #{row.id_usuario_firmante}</Typography>
+                  <Typography variant="caption" color="error.main">Sin datos extendidos</Typography>
+                </Box>
+              )}
+            </Box>
+          </Stack>
+        );
+      }
+    },
+    {
       id: 'proyecto',
       label: 'Proyecto Asociado',
-      minWidth: 180,
-      render: (row) => (
-        <Stack direction="row" alignItems="center" spacing={1} sx={{ color: 'text.secondary' }}>
-          <Business fontSize="small" />
-          <Typography variant="body2" fontWeight={600}>Proyecto #{row.id_proyecto}</Typography>
-        </Stack>
-      )
+      minWidth: 200,
+      render: (row) => {
+        // Accedemos al objeto anidado
+        const proj = row.proyectoAsociado;
+        
+        return (
+          <Stack direction="row" alignItems="center" spacing={1.5}>
+            <Business fontSize="small" color="action" />
+            <Box>
+              {proj ? (
+                <>
+                  {/* Nombre Proyecto */}
+                  <Typography variant="body2" fontWeight={600} color="text.primary">
+                    {proj.nombre_proyecto}
+                  </Typography>
+                  {/* Estado y Tipo */}
+                  <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'capitalize' }}>
+                    {proj.estado_proyecto} • {proj.tipo_inversion}
+                  </Typography>
+                </>
+              ) : (
+                /* Fallback */
+                <Typography variant="body2" fontWeight={600}>
+                  Proyecto #{row.id_proyecto}
+                </Typography>
+              )}
+            </Box>
+          </Stack>
+        );
+      }
     },
     {
       id: 'tipo',
-      label: 'Relación',
+      label: 'Tipo',
       render: (row) => {
         let statusType: any = 'info';
         let label = 'GENERAL';
 
         if (row.id_inversion_asociada) {
-          statusType = 'active';
+          statusType = 'active'; // Verde
           label = 'INVERSIÓN';
         } else if (row.id_suscripcion_asociada) {
-          statusType = 'in_progress';
+          statusType = 'in_progress'; // Azul/Amarillo
           label = 'SUSCRIPCIÓN';
         }
 
@@ -225,9 +293,9 @@ const AdminContratosFirmados: React.FC = () => {
     },
     {
       id: 'hash',
-      label: 'Certificación Hash',
+      label: 'Integridad (Hash)',
       render: (row) => (
-        <Tooltip title={`SHA-256: ${row.hash_archivo_firmado}`}>
+        <Tooltip title={`SHA-256 Completo: ${row.hash_archivo_firmado}`}>
           <Stack direction="row" alignItems="center" spacing={1} sx={{ cursor: 'help' }}>
             <Fingerprint color="success" fontSize="small" />
             <Typography
@@ -276,13 +344,11 @@ const AdminContratosFirmados: React.FC = () => {
 
   return (
     <PageContainer maxWidth="xl" sx={{ py: 3 }}>
-      {/* 1. HEADER */}
       <AdminPageHeader
         title="Auditoría de Contratos"
         subtitle="Registro histórico de acuerdos legales y contratos digitalizados."
       />
 
-      {/* 2. ERROR BANNER */}
       {logic.error && (
         <AlertBanner
           severity="error"
@@ -291,7 +357,6 @@ const AdminContratosFirmados: React.FC = () => {
         />
       )}
 
-      {/* 3. KPIS GRID */}
       <MetricsGrid columns={{ xs: 1, sm: 2, lg: 4 }}>
         <StatCard
           title="Total Firmados"
@@ -327,7 +392,6 @@ const AdminContratosFirmados: React.FC = () => {
         />
       </MetricsGrid>
 
-      {/* 4. CONTROLES Y FILTROS */}
       <Stack
         direction={{ xs: 'column', sm: 'row' }}
         justifyContent="space-between"
@@ -346,7 +410,7 @@ const AdminContratosFirmados: React.FC = () => {
 
         <FilterBar sx={{ flex: 1, maxWidth: { sm: 600 } }}>
           <FilterSearch
-            placeholder="Buscar por ID, Usuario o Hash..."
+            placeholder="Buscar por Usuario, Proyecto o Hash..."
             value={logic.searchTerm}
             onSearch={logic.setSearchTerm}
             sx={{ flexGrow: 1 }}
@@ -354,7 +418,6 @@ const AdminContratosFirmados: React.FC = () => {
         </FilterBar>
       </Stack>
 
-      {/* 5. CONTENIDO */}
       {viewMode === 'analytics' ? (
         <ContratosAnalytics data={logic.filteredContratos} />
       ) : (
@@ -365,14 +428,13 @@ const AdminContratosFirmados: React.FC = () => {
             getRowKey={(row) => row.id}
             isRowActive={(row) => !!row.hash_archivo_firmado}
             highlightedRowId={logic.highlightedId}
-            showInactiveToggle={false} // Desactivamos filtro interno
+            showInactiveToggle={false}
             emptyMessage="No se han encontrado registros de contratos firmados."
             pagination={true}
             defaultRowsPerPage={10}
           />
         </QueryHandler>
       )}
-
     </PageContainer>
   );
 };

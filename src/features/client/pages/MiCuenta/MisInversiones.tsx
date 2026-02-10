@@ -1,26 +1,42 @@
 // src/components/domain/inversiones/MisInversiones.tsx
 
 import React, { useMemo } from 'react';
-import { Box, Paper, Stack, Chip, Button, Tooltip, useTheme, alpha, IconButton, Typography } from '@mui/material';
-import { Visibility, Payment, TrendingUp, MonetizationOn, PieChart } from '@mui/icons-material';
+import { 
+  Box, 
+  Paper, 
+  Stack, 
+  Chip, 
+  Button, 
+  Tooltip, 
+  useTheme, 
+  alpha, 
+  IconButton, 
+  Typography 
+} from '@mui/material';
+import { 
+  Visibility, 
+  Payment, 
+  TrendingUp, 
+  MonetizationOn, 
+  PieChart 
+} from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 
-// Componentes y Hooks compartidos
-import { DataTable, type DataTableColumn } from '../../../../shared/components/data-grid/DataTable/DataTable';
-import { PageHeader } from '../../../../shared/components/layout/headers/PageHeader';
-import { StatCard } from '../../../../shared/components/domain/cards/StatCard/StatCard';
-import { PageContainer } from '../../../../shared/components/layout/containers/PageContainer/PageContainer';
-import { QueryHandler } from '../../../../shared/components/data-grid/QueryHandler/QueryHandler';
-import TwoFactorAuthModal from '../../../../shared/components/domain/modals/TwoFactorAuthModal/TwoFactorAuthModal';
-
+// Componentes Compartidos
+import { DataTable, type DataTableColumn } from '@/shared/components/data-grid/DataTable/DataTable';
+import { PageHeader } from '@/shared/components/layout/headers/PageHeader';
+import { StatCard } from '@/shared/components/domain/cards/StatCard/StatCard';
+import { PageContainer } from '@/shared/components/layout/containers/PageContainer/PageContainer';
+import { QueryHandler } from '@/shared/components/data-grid/QueryHandler/QueryHandler';
+import TwoFactorAuthModal from '@/shared/components/domain/modals/TwoFactorAuthModal/TwoFactorAuthModal';
 
 // Servicios y Tipos
 import InversionService from '@/core/api/services/inversion.service';
 import type { InversionDto } from '@/core/types/dto/inversion.dto';
 import { env } from '@/core/config/env';
 
-// Utils Locales & Hooks
+// Utils & Hooks
 import { getStatusConfig } from '../utils/inversionStatus';
 import { useInversionPayment } from '../../hooks/useInversionPayment';
 import { useCurrencyFormatter } from '../../hooks/useCurrencyFormatter';
@@ -28,8 +44,6 @@ import { useCurrencyFormatter } from '../../hooks/useCurrencyFormatter';
 const MisInversiones: React.FC = () => {
     const navigate = useNavigate();
     const theme = useTheme();
-
-    // ✅ Inicialización del Formateador
     const formatCurrency = useCurrencyFormatter();
 
     const { 
@@ -41,7 +55,8 @@ const MisInversiones: React.FC = () => {
     const { data: inversiones = [], isLoading, error } = useQuery<InversionDto[]>({
         queryKey: ['misInversiones'],
         queryFn: async () => (await InversionService.getMisInversiones()).data,
-        retry: 1
+        retry: 1,
+        staleTime: 1000 * 60 * 5 
     });
 
     const stats = useMemo(() => {
@@ -53,19 +68,17 @@ const MisInversiones: React.FC = () => {
         };
     }, [inversiones]);
 
-    const formatDate = (date: string) => new Date(date).toLocaleDateString(env.defaultLocale, { 
-        day: '2-digit', month: 'short', year: 'numeric' 
-    });
-
     const columns = useMemo<DataTableColumn<InversionDto>[]>(() => [
         {
-            id: 'proyecto', label: 'Proyecto / Referencia', minWidth: 220,
+            id: 'proyecto',
+            label: 'Proyecto / Referencia',
+            minWidth: 220,
             render: (row) => (
                 <Box>
                     <Typography variant="subtitle2" fontWeight={700} color="text.primary">
-                        {row.proyecto?.nombre_proyecto || 'Proyecto Desconocido'}
+                        {row.proyecto?.nombre_proyecto ?? 'Proyecto Desconocido'}
                     </Typography>
-                    <Stack direction="row" spacing={1} alignItems="center" mt={0.5}>
+                    <Stack direction="row" mt={0.5}>
                         <Chip 
                             label={`REF: #${row.id}`} 
                             size="small" 
@@ -73,7 +86,8 @@ const MisInversiones: React.FC = () => {
                                 height: 20, 
                                 fontSize: '0.65rem', 
                                 fontFamily: 'monospace',
-                                bgcolor: alpha(theme.palette.secondary.main, 0.1) 
+                                bgcolor: alpha(theme.palette.secondary.main, 0.1),
+                                color: theme.palette.secondary.dark
                             }} 
                         />
                     </Stack>
@@ -81,20 +95,31 @@ const MisInversiones: React.FC = () => {
             )
         },
         {
-            id: 'fecha', label: 'Fecha Solicitud', minWidth: 120,
-            render: (row) => <Typography variant="body2" color="text.secondary">{formatDate(row.fecha_inversion)}</Typography>
+            id: 'fecha',
+            label: 'Fecha Solicitud',
+            minWidth: 120,
+            render: (row) => (
+                <Typography variant="body2" color="text.secondary">
+                    {new Date(row.fecha_inversion).toLocaleDateString(env.defaultLocale, { 
+                        day: '2-digit', month: 'short', year: 'numeric' 
+                    })}
+                </Typography>
+            )
         },
         {
-            id: 'monto', label: 'Capital', minWidth: 150,
+            id: 'monto',
+            label: 'Capital',
+            minWidth: 150,
             render: (row) => (
-                <Typography variant="body2" fontWeight={700} sx={{ color: 'success.main', fontSize: '1rem' }}>
-                    {/* ✅ Uso del hook (maneja strings automáticamente) */}
+                <Typography variant="body2" fontWeight={700} color="success.main" fontSize="1rem">
                     {formatCurrency(row.monto)}
                 </Typography>
             )
         },
         {
-            id: 'estado', label: 'Estado', minWidth: 140,
+            id: 'estado',
+            label: 'Estado',
+            minWidth: 140,
             render: (row) => {
                 const { label, color, icon } = getStatusConfig(row.estado);
                 return (
@@ -104,13 +129,16 @@ const MisInversiones: React.FC = () => {
                         icon={icon as React.ReactElement}
                         size="small"
                         variant={row.estado === 'pagado' ? 'filled' : 'outlined'}
-                        sx={{ fontWeight: 600 }}
+                        sx={{ fontWeight: 600, minWidth: 100, justifyContent: 'flex-start' }}
                     />
                 );
             }
         },
         {
-            id: 'acciones', label: 'Acciones', align: 'right', minWidth: 180,
+            id: 'acciones',
+            label: 'Acciones',
+            align: 'right',
+            minWidth: 180,
             render: (row) => (
                 <Stack direction="row" spacing={1} justifyContent="flex-end">
                     <Tooltip title="Ver Proyecto">
@@ -118,7 +146,6 @@ const MisInversiones: React.FC = () => {
                             size="small"
                             onClick={() => navigate(`/proyectos/${row.id_proyecto}`)}
                             sx={{ 
-                                color: 'text.secondary',
                                 border: `1px solid ${theme.palette.divider}`,
                                 '&:hover': { color: 'primary.main', borderColor: 'primary.main' }
                             }}
@@ -130,20 +157,14 @@ const MisInversiones: React.FC = () => {
                     {row.estado === 'pendiente' && (
                         <Button
                             variant="contained" 
-                            color="primary" 
                             size="small"
-                            startIcon={isIniciandoPago && selectedInversionId === row.id ? null : <Payment fontSize="small" />}
-                            onClick={() => iniciarPago(row.id)}
+                            color="primary"
                             disabled={isIniciandoPago}
-                            disableElevation
-                            sx={{ 
-                                borderRadius: 2,
-                                px: 2,
-                                fontWeight: 700,
-                                boxShadow: theme.shadows[2]
-                            }}
+                            onClick={() => iniciarPago(row.id)}
+                            startIcon={isIniciandoPago && selectedInversionId === row.id ? null : <Payment />}
+                            sx={{ borderRadius: 2, fontWeight: 700, minWidth: 100 }}
                         >
-                            {isIniciandoPago && selectedInversionId === row.id ? 'Procesando...' : 'Pagar'}
+                            {isIniciandoPago && selectedInversionId === row.id ? '...' : 'Pagar'}
                         </Button>
                     )}
                 </Stack>
@@ -153,30 +174,41 @@ const MisInversiones: React.FC = () => {
 
     return (
         <PageContainer maxWidth="lg">
-            
             <PageHeader
                 title="Mis Inversiones" 
                 subtitle="Monitorea el rendimiento de tu capital y diversifica tu cartera."
             />
 
-            {/* KPI CARDS */}
-            <Box mb={4} display="grid" gridTemplateColumns={{ xs: '1fr', md: 'repeat(3, 1fr)' }} gap={3}>
+            {/* ✅ LAYOUT OPTIMIZADO CON CSS GRID (Sin Grid Component)
+               Se alinea perfectamente al ancho del contenedor 'lg'.
+            */}
+            <Box 
+                sx={{
+                    display: 'grid',
+                    // Responsive: 1 columna en movil, 3 en desktop
+                    gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, 
+                    gap: 2, // Espacio de 16px entre tarjetas
+                    mb: 3,  // Margen inferior para separar de la tabla
+                    width: '100%'
+                }}
+            >
                 <StatCard 
                     title="Capital Invertido"
-                  
                     value={formatCurrency(stats.monto)} 
                     icon={<MonetizationOn />} 
                     color="primary" 
                     loading={isLoading} 
-                    subtitle="Total en cartera" 
+                    subtitle="Total en cartera"
+                    compact
                 />
                 <StatCard 
                     title="Proyectos Activos"
                     value={stats.total.toString()} 
                     icon={<PieChart />}
-                    color="secondary" 
+                    color="warning" 
                     loading={isLoading} 
-                    subtitle="Diversificación actual" 
+                    subtitle="Diversificación actual"
+                    compact
                 />
                 <StatCard 
                     title="Retornos Completados"
@@ -184,18 +216,22 @@ const MisInversiones: React.FC = () => {
                     icon={<TrendingUp />}
                     color="success" 
                     loading={isLoading} 
-                    subtitle="Inversiones finalizadas" 
+                    subtitle="Inversiones finalizadas"
+                    compact
                 />
             </Box>
 
-            {/* TABLE */}
+            {/* TABLA DE DATOS */}
             <QueryHandler isLoading={isLoading} error={error as Error | null}>
-                <Paper elevation={0} sx={{ 
-                    border: `1px solid ${theme.palette.divider}`, 
-                    borderRadius: 3, 
-                    overflow: 'hidden', 
-                    boxShadow: theme.shadows[2] 
-                }}>
+                <Paper 
+                    elevation={0} 
+                    sx={{ 
+                        border: `1px solid ${theme.palette.divider}`, 
+                        borderRadius: 3, 
+                        overflow: 'hidden', 
+                        boxShadow: theme.shadows[1] 
+                    }}
+                >
                     <DataTable
                         columns={columns}
                         data={inversiones}
