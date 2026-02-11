@@ -123,189 +123,189 @@ const ProfileHeader = ({ user, theme }: { user: any, theme: any }) => (
 );
 
 const PersonalDataForm = ({ user, isEditing, setIsEditing, onSubmit, isLoading, theme }: any) => {
-    const formik = useFormik<UpdateUserMeDto>({
-        initialValues: {
-            nombre: user?.nombre || '',
-            apellido: user?.apellido || '',
-            email: user?.email || '',
-            numero_telefono: user?.numero_telefono || '',
-            nombre_usuario: user?.nombre_usuario || '',
-        },
-        validationSchema: Yup.object({
-            nombre: Yup.string().min(2, 'Mínimo 2 caracteres').required('Requerido'),
-            apellido: Yup.string().min(2, 'Mínimo 2 caracteres').required('Requerido'),
-            email: Yup.string().email('Email inválido').required('Requerido'),
-            nombre_usuario: Yup.string().min(4, 'Mínimo 4 caracteres').required('Requerido'),
-            numero_telefono: Yup.string().min(8, 'Número inválido').required('Requerido'),
-        }),
-        onSubmit: onSubmit,
-        enableReinitialize: true,
-    });
+  const formik = useFormik<UpdateUserMeDto>({
+    initialValues: {
+      nombre: user?.nombre || '',
+      apellido: user?.apellido || '',
+      email: user?.email || '',
+      numero_telefono: user?.numero_telefono || '',
+      nombre_usuario: user?.nombre_usuario || '',
+    },
+    validationSchema: Yup.object({
+      nombre: Yup.string().min(2, 'Mínimo 2 caracteres').required('Requerido'),
+      apellido: Yup.string().min(2, 'Mínimo 2 caracteres').required('Requerido'),
+      email: Yup.string().email('Email inválido').required('Requerido'),
+      nombre_usuario: Yup.string().min(4, 'Mínimo 4 caracteres').required('Requerido'),
+      numero_telefono: Yup.string().min(8, 'Número inválido').required('Requerido'),
+    }),
+    onSubmit: onSubmit,
+    enableReinitialize: true,
+  });
 
-    const handleCancel = () => {
-        formik.resetForm();
-        setIsEditing(false);
-    };
+  const handleCancel = () => {
+    formik.resetForm();
+    setIsEditing(false);
+  };
 
-    return (
-        <Card elevation={0} sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 3 }}>
-            <CardContent sx={{ p: 4 }}>
-                <form onSubmit={formik.handleSubmit}>
-                    <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-                        <Stack direction="row" spacing={2} alignItems="center">
-                            <Avatar variant="rounded" sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}>
-                                <Person />
-                            </Avatar>
-                            <Typography variant="h6" fontWeight={700}>Datos Personales</Typography>
-                        </Stack>
-                        {!isEditing ? (
-                            <Button variant="outlined" startIcon={<EditIcon />} onClick={() => setIsEditing(true)}>Editar</Button>
-                        ) : (
-                            <Stack direction="row" spacing={1}>
-                                <Button variant="text" color="inherit" onClick={handleCancel} startIcon={<CloseIcon />}>Cancelar</Button>
-                                <Button type="submit" variant="contained" disabled={isLoading || !formik.isValid} startIcon={isLoading ? <CircularProgress size={20}/> : <SaveIcon />}>Guardar</Button>
-                            </Stack>
-                        )}
-                    </Box>
+  return (
+    <Card elevation={0} sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 3 }}>
+      <CardContent sx={{ p: 4 }}>
+        <form onSubmit={formik.handleSubmit}>
+          <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+            <Stack direction="row" spacing={2} alignItems="center">
+              <Avatar variant="rounded" sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}>
+                <Person />
+              </Avatar>
+              <Typography variant="h6" fontWeight={700}>Datos Personales</Typography>
+            </Stack>
+            {!isEditing ? (
+              <Button variant="outlined" startIcon={<EditIcon />} onClick={() => setIsEditing(true)}>Editar</Button>
+            ) : (
+              <Stack direction="row" spacing={1}>
+                <Button variant="text" color="inherit" onClick={handleCancel} startIcon={<CloseIcon />}>Cancelar</Button>
+                <Button type="submit" variant="contained" disabled={isLoading || !formik.isValid} startIcon={isLoading ? <CircularProgress size={20} /> : <SaveIcon />}>Guardar</Button>
+              </Stack>
+            )}
+          </Box>
 
-                    <Divider sx={{ mb: 4 }} />
+          <Divider sx={{ mb: 4 }} />
 
-                    <Box display="grid" gridTemplateColumns={{ xs: '1fr', md: '1fr 1fr' }} gap={3}>
-                        <TextField
-                            fullWidth label="Nombre" name="nombre"
-                            value={formik.values.nombre} onChange={formik.handleChange}
-                            disabled={!isEditing}
-                            error={formik.touched.nombre && Boolean(formik.errors.nombre)}
-                            helperText={formik.touched.nombre && formik.errors.nombre}
-                        />
-                        <TextField
-                            fullWidth label="Apellido" name="apellido"
-                            value={formik.values.apellido} onChange={formik.handleChange}
-                            disabled={!isEditing}
-                            error={formik.touched.apellido && Boolean(formik.errors.apellido)}
-                            helperText={formik.touched.apellido && formik.errors.apellido}
-                        />
+          <Box display="grid" gridTemplateColumns={{ xs: '1fr', md: '1fr 1fr' }} gap={3}>
+            <TextField
+              fullWidth label="Nombre" name="nombre"
+              value={formik.values.nombre} onChange={formik.handleChange}
+              disabled={!isEditing}
+              error={formik.touched.nombre && Boolean(formik.errors.nombre)}
+              helperText={formik.touched.nombre && formik.errors.nombre}
+            />
+            <TextField
+              fullWidth label="Apellido" name="apellido"
+              value={formik.values.apellido} onChange={formik.handleChange}
+              disabled={!isEditing}
+              error={formik.touched.apellido && Boolean(formik.errors.apellido)}
+              helperText={formik.touched.apellido && formik.errors.apellido}
+            />
 
-                        <Box sx={{ gridColumn: { md: '1 / -1' } }}>
-                            <TextField
-                                fullWidth label="Documento de Identidad (DNI)"
-                                value={user?.dni || ''} disabled
-                                helperText="El DNI no puede modificarse por seguridad."
-                            />
-                        </Box>
+            <Box sx={{ gridColumn: { md: '1 / -1' } }}>
+              <TextField
+                fullWidth label="Documento de Identidad (DNI)"
+                value={user?.dni || ''} disabled
+                helperText="El DNI no puede modificarse por seguridad."
+              />
+            </Box>
 
-                        <TextField
-                            fullWidth label="Usuario" name="nombre_usuario"
-                            value={formik.values.nombre_usuario} onChange={formik.handleChange}
-                            disabled={!isEditing}
-                            InputProps={{
-                                startAdornment: <AccountCircle color="action" sx={{ mr: 1 }} />
-                            }}
-                            error={formik.touched.nombre_usuario && Boolean(formik.errors.nombre_usuario)}
-                            helperText={formik.touched.nombre_usuario && formik.errors.nombre_usuario}
-                        />
-                        <TextField
-                            fullWidth label="Email" name="email"
-                            value={formik.values.email} onChange={formik.handleChange}
-                            disabled={!isEditing}
-                            InputProps={{
-                                startAdornment: <Email color="action" sx={{ mr: 1 }} />
-                            }}
-                            error={formik.touched.email && Boolean(formik.errors.email)}
-                            helperText={formik.touched.email && formik.errors.email}
-                        />
+            <TextField
+              fullWidth label="Usuario" name="nombre_usuario"
+              value={formik.values.nombre_usuario} onChange={formik.handleChange}
+              disabled={!isEditing}
+              InputProps={{
+                startAdornment: <AccountCircle color="action" sx={{ mr: 1 }} />
+              }}
+              error={formik.touched.nombre_usuario && Boolean(formik.errors.nombre_usuario)}
+              helperText={formik.touched.nombre_usuario && formik.errors.nombre_usuario}
+            />
+            <TextField
+              fullWidth label="Email" name="email"
+              value={formik.values.email} onChange={formik.handleChange}
+              disabled={!isEditing}
+              InputProps={{
+                startAdornment: <Email color="action" sx={{ mr: 1 }} />
+              }}
+              error={formik.touched.email && Boolean(formik.errors.email)}
+              helperText={formik.touched.email && formik.errors.email}
+            />
 
-                        <Box sx={{ gridColumn: { md: '1 / -1' } }}>
-                            <TextField
-                                fullWidth label="Teléfono" name="numero_telefono"
-                                value={formik.values.numero_telefono}
-                                onChange={(e) => formik.setFieldValue('numero_telefono', e.target.value.replace(/\D/g, ''))}
-                                disabled={!isEditing}
-                                InputProps={{
-                                    startAdornment: <Phone color="action" sx={{ mr: 1 }} />
-                                }}
-                                error={formik.touched.numero_telefono && Boolean(formik.errors.numero_telefono)}
-                                helperText={formik.touched.numero_telefono && formik.errors.numero_telefono}
-                            />
-                        </Box>
-                    </Box>
-                </form>
-            </CardContent>
-        </Card>
-    );
+            <Box sx={{ gridColumn: { md: '1 / -1' } }}>
+              <TextField
+                fullWidth label="Teléfono" name="numero_telefono"
+                value={formik.values.numero_telefono}
+                onChange={(e) => formik.setFieldValue('numero_telefono', e.target.value.replace(/\D/g, ''))}
+                disabled={!isEditing}
+                InputProps={{
+                  startAdornment: <Phone color="action" sx={{ mr: 1 }} />
+                }}
+                error={formik.touched.numero_telefono && Boolean(formik.errors.numero_telefono)}
+                helperText={formik.touched.numero_telefono && formik.errors.numero_telefono}
+              />
+            </Box>
+          </Box>
+        </form>
+      </CardContent>
+    </Card>
+  );
 };
 
 const KycStatusCard = ({ kycStatus, navigate, theme }: any) => {
-    const getKycColor = (status?: string) => {
-        switch (status) {
-            case 'APROBADA': return 'success';
-            case 'PENDIENTE': return 'warning';
-            case 'RECHAZADA': return 'error';
-            default: return 'default';
-        }
-    };
+  const getKycColor = (status?: string) => {
+    switch (status) {
+      case 'APROBADA': return 'success';
+      case 'PENDIENTE': return 'warning';
+      case 'RECHAZADA': return 'error';
+      default: return 'default';
+    }
+  };
 
-    return (
-        <Card elevation={0} sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 3 }}>
-            <CardContent sx={{ p: 4 }}>
-                <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems="center" spacing={3}>
-                    <Stack direction="row" spacing={2} alignItems="center" width="100%">
-                        <Avatar
-                            variant="rounded"
-                            sx={{
-                                bgcolor: kycStatus?.estado_verificacion === 'APROBADA'
-                                    ? alpha(theme.palette.success.main, 0.1)
-                                    : alpha(theme.palette.warning.main, 0.1),
-                                color: kycStatus?.estado_verificacion === 'APROBADA'
-                                    ? 'success.main'
-                                    : 'warning.main',
-                                width: 56, height: 56
-                            }}
-                        >
-                            <BadgeIcon fontSize="large" />
-                        </Avatar>
-                        <Box>
-                            <Typography variant="h6" fontWeight={700}>Verificación de Identidad</Typography>
-                            <Stack direction="row" spacing={1} alignItems="center" mt={0.5}>
-                                <Typography variant="body2" color="text.secondary">Estado actual:</Typography>
-                                <Chip
-                                    label={kycStatus?.estado_verificacion || 'NO INICIADO'}
-                                    color={getKycColor(kycStatus?.estado_verificacion) as any}
-                                    size="small"
-                                    variant="filled"
-                                    sx={{ fontWeight: 700 }}
-                                />
-                            </Stack>
-                        </Box>
-                    </Stack>
+  return (
+    <Card elevation={0} sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 3 }}>
+      <CardContent sx={{ p: 4 }}>
+        <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems="center" spacing={3}>
+          <Stack direction="row" spacing={2} alignItems="center" width="100%">
+            <Avatar
+              variant="rounded"
+              sx={{
+                bgcolor: kycStatus?.estado_verificacion === 'APROBADA'
+                  ? alpha(theme.palette.success.main, 0.1)
+                  : alpha(theme.palette.warning.main, 0.1),
+                color: kycStatus?.estado_verificacion === 'APROBADA'
+                  ? 'success.main'
+                  : 'warning.main',
+                width: 56, height: 56
+              }}
+            >
+              <BadgeIcon fontSize="large" />
+            </Avatar>
+            <Box>
+              <Typography variant="h6" fontWeight={700}>Verificación de Identidad</Typography>
+              <Stack direction="row" spacing={1} alignItems="center" mt={0.5}>
+                <Typography variant="body2" color="text.secondary">Estado actual:</Typography>
+                <Chip
+                  label={kycStatus?.estado_verificacion || 'NO INICIADO'}
+                  color={getKycColor(kycStatus?.estado_verificacion) as any}
+                  size="small"
+                  variant="filled"
+                  sx={{ fontWeight: 700 }}
+                />
+              </Stack>
+            </Box>
+          </Stack>
 
-                    {kycStatus?.estado_verificacion !== 'APROBADA' ? (
-                        <Button
-                            variant="contained"
-                            color="warning"
-                            onClick={() => navigate('/client/kyc')}
-                            sx={{ minWidth: 160, borderRadius: 2 }}
-                            disableElevation
-                        >
-                            {kycStatus?.estado_verificacion === 'PENDIENTE' ? 'Ver Estado' : 'Iniciar KYC'}
-                        </Button>
-                    ) : (
-                        <Box
-                            display="flex" alignItems="center" gap={1}
-                            sx={{
-                                color: 'success.main',
-                                bgcolor: alpha(theme.palette.success.main, 0.1),
-                                px: 2, py: 1, borderRadius: 2
-                            }}
-                        >
-                            <VerifiedUser />
-                            <Typography variant="body2" fontWeight={700}>Identidad Verificada</Typography>
-                        </Box>
-                    )}
-                </Stack>
-            </CardContent>
-        </Card>
-    );
+          {kycStatus?.estado_verificacion !== 'APROBADA' ? (
+            <Button
+              variant="contained"
+              color="warning"
+              onClick={() => navigate('/client/kyc')}
+              sx={{ minWidth: 160, borderRadius: 2 }}
+              disableElevation
+            >
+              {kycStatus?.estado_verificacion === 'PENDIENTE' ? 'Ver Estado' : 'Iniciar KYC'}
+            </Button>
+          ) : (
+            <Box
+              display="flex" alignItems="center" gap={1}
+              sx={{
+                color: 'success.main',
+                bgcolor: alpha(theme.palette.success.main, 0.1),
+                px: 2, py: 1, borderRadius: 2
+              }}
+            >
+              <VerifiedUser />
+              <Typography variant="body2" fontWeight={700}>Identidad Verificada</Typography>
+            </Box>
+          )}
+        </Stack>
+      </CardContent>
+    </Card>
+  );
 };
 
 // --- COMPONENTE PRINCIPAL ---
@@ -362,16 +362,16 @@ const Perfil: React.FC = () => {
   return (
     <PageContainer maxWidth="md">
       <Stack spacing={4}>
-        
+
         <ProfileHeader user={user} theme={theme} />
 
-        <PersonalDataForm 
-            user={user} 
-            isEditing={isEditing} 
-            setIsEditing={setIsEditing} 
-            onSubmit={(val: UpdateUserMeDto) => mutation.mutate(val)} 
-            isLoading={mutation.isPending}
-            theme={theme}
+        <PersonalDataForm
+          user={user}
+          isEditing={isEditing}
+          setIsEditing={setIsEditing}
+          onSubmit={(val: UpdateUserMeDto) => mutation.mutate(val)}
+          isLoading={mutation.isPending}
+          theme={theme}
         />
 
         <KycStatusCard kycStatus={kycStatus} navigate={navigate} theme={theme} />

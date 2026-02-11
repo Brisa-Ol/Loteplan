@@ -63,15 +63,15 @@ const DetalleLote: React.FC = () => {
 
   const lote = loteData as LoteConPuja;
 
-  const { estaSuscripto, tieneTokens, tokensDisponibles, isLoading: loadingSub } = 
+  const { estaSuscripto, tieneTokens, tokensDisponibles, isLoading: loadingSub } =
     useVerificarSuscripcion(lote?.id_proyecto ?? undefined);
 
   const { precioDisplay, soyGanador, hayOfertas, statusConfig } = useMemo(() => {
-    let config = { 
-      label: 'Cargando...', 
-      color: 'default' as any, 
-      icon: <AccessTime fontSize="small" />, 
-      bgColor: '' 
+    let config = {
+      label: 'Cargando...',
+      color: 'default' as any,
+      icon: <AccessTime fontSize="small" />,
+      bgColor: ''
     };
 
     if (!lote) return { precioDisplay: 0, soyGanador: false, hayOfertas: false, statusConfig: config };
@@ -122,7 +122,7 @@ const DetalleLote: React.FC = () => {
 
   return (
     <Box sx={{ maxWidth: 1400, mx: 'auto', p: { xs: 2, md: 4 }, pb: 12 }}>
-      
+
       {/* HEADER */}
       <Stack direction="row" alignItems="center" justifyContent="space-between" mb={3}>
         <Stack direction="row" alignItems="center" spacing={2}>
@@ -141,7 +141,7 @@ const DetalleLote: React.FC = () => {
       </Stack>
 
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '2fr 1fr' }, gap: 4 }}>
-        
+
         {/* IZQUIERDA: IMAGEN Y DETALLES */}
         <Box>
           <Paper elevation={0} sx={{ position: 'relative', overflow: 'hidden', borderRadius: 4, mb: 2, border: `1px solid ${theme.palette.divider}`, bgcolor: 'grey.100', height: { xs: 300, sm: 500 }, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -181,7 +181,7 @@ const DetalleLote: React.FC = () => {
             <CardContent sx={{ p: 3 }}>
               <Typography variant="caption" color="text.secondary" fontWeight="bold">{(hayOfertas || soyGanador) ? 'OFERTA ACTUAL' : 'PRECIO BASE'}</Typography>
               <Typography variant="h3" fontWeight="900" color={soyGanador ? 'success.main' : 'text.primary'} sx={{ my: 1 }}>{formatCurrency(precioDisplay)}</Typography>
-              
+
               <Divider sx={{ my: 3 }} />
 
               <Stack spacing={2} mb={3}>
@@ -202,7 +202,7 @@ const DetalleLote: React.FC = () => {
                   {estaSuscripto && !tieneTokens && !soyGanador && (
                     <Alert severity="info">Ya estás participando en otro lote.</Alert>
                   )}
-                  <Button 
+                  <Button
                     variant="contained" fullWidth size="large" onClick={handleBotonAccion}
                     disabled={loadingSub || (estaSuscripto && !tieneTokens && !soyGanador)}
                     color={soyGanador ? "success" : "primary"}
@@ -212,12 +212,12 @@ const DetalleLote: React.FC = () => {
                     {loadingSub ? "Cargando..." : !estaSuscripto ? "Suscribirse" : soyGanador ? "Mejorar Oferta" : "Ofertar Ahora"}
                   </Button>
                   {estaSuscripto && (
-  <Chip 
-    label={`${tokensDisponibles || 0} token(s) disponibles`} 
-    variant="outlined" 
-    sx={{ alignSelf: 'center' }} // <--- Movido a sx
-  />
-)}
+                    <Chip
+                      label={`${tokensDisponibles || 0} token(s) disponibles`}
+                      variant="outlined"
+                      sx={{ alignSelf: 'center' }} // <--- Movido a sx
+                    />
+                  )}
                 </Stack>
               ) : (
                 <Alert severity="info">Subasta {lote.estado_subasta}.</Alert>

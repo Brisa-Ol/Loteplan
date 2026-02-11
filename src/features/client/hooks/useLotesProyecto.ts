@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useModal } from '../../../shared/hooks/useModal';
 import { useConfirmDialog } from '../../../shared/hooks/useConfirmDialog';
-import useSnackbar from '../../../shared/hooks/useSnackbar'; 
+import useSnackbar from '../../../shared/hooks/useSnackbar';
 import type { LoteDto } from '@/core/types/dto/lote.dto';
 // ✅ Importamos ProyectoService
 import ProyectoService from '@/core/api/services/proyecto.service';
@@ -12,11 +12,12 @@ import SuscripcionService from '@/core/api/services/suscripcion.service';
 import FavoritoService from '@/core/api/services/favorito.service';
 import { ROUTES } from '@/routes';
 
-export const useLotesProyecto = (idProyecto: number, isAuthenticated: boolean) => {  const queryClient = useQueryClient();
+export const useLotesProyecto = (idProyecto: number, isAuthenticated: boolean) => {
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const location = useLocation();
- const { showSuccess, showError, showWarning } = useSnackbar();
-  
+  const { showSuccess, showError, showWarning } = useSnackbar();
+
   const [selectedLote, setSelectedLote] = useState<LoteDto | null>(null);
   const pujarModal = useModal();
   const confirmDialog = useConfirmDialog();
@@ -33,7 +34,7 @@ export const useLotesProyecto = (idProyecto: number, isAuthenticated: boolean) =
     },
     // Este endpoint es público en tu backend, así que siempre podemos cargar los datos
     // aunque validamos que exista el ID.
-    enabled: !!idProyecto, 
+    enabled: !!idProyecto,
     staleTime: 1000 * 60 * 5, // Cacheamos 5 minutos
   });
 
@@ -51,7 +52,7 @@ export const useLotesProyecto = (idProyecto: number, isAuthenticated: boolean) =
   const { data: misSuscripciones } = useQuery({
     queryKey: ['misSuscripciones'],
     queryFn: async () => (await SuscripcionService.getMisSuscripciones()).data,
-    enabled: isAuthenticated && !!idProyecto, 
+    enabled: isAuthenticated && !!idProyecto,
     staleTime: 1000 * 60 * 2,
   });
 
@@ -70,9 +71,9 @@ export const useLotesProyecto = (idProyecto: number, isAuthenticated: boolean) =
     }
 
     const tokens = suscripcion.tokens_disponibles || 0;
-    
-    return { 
-      isSubscribed: true, 
+
+    return {
+      isSubscribed: true,
       hasTokens: tokens > 0,
       tokensDisponibles: tokens
     };
@@ -82,7 +83,7 @@ export const useLotesProyecto = (idProyecto: number, isAuthenticated: boolean) =
   const unfavMutation = useMutation({
     mutationFn: (loteId: number) => FavoritoService.toggle(loteId),
     onSuccess: (response, loteId) => {
-      const esAhoraFavorito = response.data.agregado; 
+      const esAhoraFavorito = response.data.agregado;
       queryClient.setQueryData(['checkFavorito', loteId], { es_favorito: esAhoraFavorito });
       queryClient.invalidateQueries({ queryKey: ['misFavoritos'] });
       confirmDialog.close();
@@ -100,7 +101,7 @@ export const useLotesProyecto = (idProyecto: number, isAuthenticated: boolean) =
     if (!isAuthenticated) {
       return navigate(ROUTES.LOGIN, { state: { from: location.pathname } });
     }
-    
+
     if (!isSubscribed) {
       showWarning('Para participar debes estar suscripto al proyecto.');
       return;

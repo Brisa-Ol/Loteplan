@@ -24,7 +24,7 @@ export const AdminPageHeader: React.FC<AdminPageHeaderProps> = ({
   return (
     // 1. MEJORA: Margen inferior responsive (menos aire en móvil)
     <Box sx={{ mb: { xs: 3, sm: 4 }, ...sx }}>
-      
+
       {breadcrumbs && <Box sx={{ mb: 2 }}>{breadcrumbs}</Box>}
 
       <Stack
@@ -34,14 +34,14 @@ export const AdminPageHeader: React.FC<AdminPageHeaderProps> = ({
         spacing={{ xs: 2, sm: 3 }} // 2. MEJORA: Espaciado dinámico entre título y botón
       >
         <Box sx={{ maxWidth: '100%' }}>
-          <Typography 
+          <Typography
             variant="h1"
             // 3. MEJORA: Evita desbordamiento si el título es muy largo en móvil
-            sx={{ wordBreak: 'break-word' }} 
+            sx={{ wordBreak: 'break-word' }}
           >
             {title}
           </Typography>
-          
+
           {subtitle && (
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
               {subtitle}

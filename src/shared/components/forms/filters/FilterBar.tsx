@@ -1,9 +1,9 @@
 import React from 'react';
-import { 
-  Paper, 
-  Stack, 
-  TextField, 
-  useTheme, 
+import {
+  Paper,
+  Stack,
+  TextField,
+  useTheme,
   alpha,
   InputAdornment,
   type TextFieldProps,
@@ -42,8 +42,8 @@ export const FilterBar: React.FC<FilterBarProps> = ({ children, sx }) => {
         ...sx // ✅ Permitir override de estilos
       }}
     >
-      <Stack 
-        direction={{ xs: 'column', md: 'row' }} 
+      <Stack
+        direction={{ xs: 'column', md: 'row' }}
         spacing={2.5}
         alignItems={{ xs: 'stretch', md: 'center' }}
       >
@@ -116,9 +116,9 @@ interface FilterSearchProps extends Omit<TextFieldProps, 'InputProps'> {
   onSearch?: (value: string) => void;
 }
 
-export const FilterSearch: React.FC<FilterSearchProps> = ({ 
-  onSearch, 
-  ...props 
+export const FilterSearch: React.FC<FilterSearchProps> = ({
+  onSearch,
+  ...props
 }) => {
   const theme = useTheme();
 

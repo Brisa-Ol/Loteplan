@@ -35,10 +35,10 @@ import {
   Stepper,
   TextField,
   Typography,
-  keyframes,
   useMediaQuery,
   useTheme
 } from '@mui/material';
+import { useQuery } from '@tanstack/react-query';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 // Services
@@ -52,22 +52,18 @@ import BaseModal from '@/shared/components/domain/modals/BaseModal/BaseModal';
 import PDFViewerMejorado from '../../Contratos/components/PDFViewerMejorado';
 
 // Hooks
+import { useCheckoutWizard } from '@/features/client/hooks/Usecheckoutwizard';
+import { useCurrencyFormatter } from '@/features/client/hooks/useCurrencyFormatter';
 import useSnackbar from '@/shared/hooks/useSnackbar';
-import { useQuery } from '@tanstack/react-query';
-
+import { CheckoutStateManager, type CheckoutPersistedState } from './Checkout persistence';
 
 // Types
 import type { ProyectoDto } from '@/core/types/dto/proyecto.dto';
-import { useCheckoutWizard } from '@/features/client/hooks/Usecheckoutwizard';
-import { useCurrencyFormatter } from '@/features/client/hooks/useCurrencyFormatter';
-import { CheckoutStateManager, type CheckoutPersistedState } from './Checkout persistence';
 
 // ===================================================
 // CONSTANTS
 // ===================================================
 const CODIGO_2FA_LENGTH = 6;
-const SIGNATURE_WIDTH = 150;
-const SIGNATURE_HEIGHT = 50;
 
 const STEPS = [
   { label: 'Resumen', icon: <ShoppingCart /> },
@@ -76,21 +72,6 @@ const STEPS = [
   { label: 'Pago', icon: <Payment /> },
   { label: 'Firma', icon: <Draw /> },
 ] as const;
-
-// ===================================================
-// ANIMATIONS
-// ===================================================
-const bounce = keyframes`
-  0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
-  40% { transform: translateY(-10px); }
-  60% { transform: translateY(-5px); }
-`;
-
-const pulse = keyframes`
-  0% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.1); opacity: 0.7; }
-  100% { transform: scale(1); opacity: 1; }
-`;
 
 // ===================================================
 // TYPES
@@ -288,6 +269,104 @@ const SignatureCanvas = React.memo<{
 SignatureCanvas.displayName = 'SignatureCanvas';
 
 // ===================================================
+// STEP COMPONENTS
+// ===================================================
+const StepConfirmacion = React.memo<{ proyecto: ProyectoDto; tipo: string; monto: string; }>(
+  ({ proyecto, tipo, monto }) => (
+    <Stack spacing={3} maxWidth="sm" mx="auto">
+      <Alert severity="info" variant="outlined">Revisa los detalles antes de iniciar.</Alert>
+      <Paper variant="outlined" sx={{ p: 3 }}>
+        <Stack spacing={2}>
+          <Box display="flex" justifyContent="space-between">
+            <Typography>Total a Pagar</Typography>
+            <Typography fontWeight={700} color="success.main">{monto}</Typography>
+          </Box>
+          <Divider />
+          <Box display="flex" justifyContent="space-between">
+            <Typography>Proyecto</Typography>
+            <Typography fontWeight={600}>{proyecto.nombre_proyecto}</Typography>
+          </Box>
+          {tipo === 'suscripcion' && (
+            <Stack direction="row" spacing={2} alignItems="center" sx={{ color: 'primary.main' }}>
+              <Token />
+              <Typography variant="caption">Incluye 1 Token de Subasta.</Typography>
+            </Stack>
+          )}
+        </Stack>
+      </Paper>
+    </Stack>
+  )
+);
+StepConfirmacion.displayName = 'StepConfirmacion';
+
+const StepContrato = React.memo<{ plantilla: any; isLoading: boolean; }>(({ plantilla, isLoading }) => {
+  if (isLoading) return <CircularProgress />;
+  if (!plantilla) return <Typography>No hay contrato disponible.</Typography>;
+  return (
+    <Box sx={{ flex: 1, minHeight: '60vh', bgcolor: 'grey.100', borderRadius: 2, border: '1px solid #e0e0e0' }}>
+      <iframe
+        src={ImagenService.resolveImageUrl(plantilla.url_archivo)}
+        width="100%"
+        height="100%"
+        style={{ border: 'none' }}
+        title="Contrato"
+      />
+    </Box>
+  );
+});
+StepContrato.displayName = 'StepContrato';
+
+const StepSeguridad = React.memo<{
+  codigo2FA: string;
+  setCodigo2FA: (v: string) => void;
+  location: any;
+  isProcessing: boolean;
+  error: any;
+}>(({ codigo2FA, setCodigo2FA, location, isProcessing, error }) => (
+  <Stack spacing={4} alignItems="center" py={2} maxWidth="sm" mx="auto">
+    <Avatar sx={{ bgcolor: 'primary.main', width: 56, height: 56 }}>
+      <Lock />
+    </Avatar>
+    <Box textAlign="center">
+      <Typography variant="h5" fontWeight={700}>Verificación 2FA</Typography>
+      <Typography variant="body2" color="text.secondary">
+        Ingresa el código de Google Authenticator.
+      </Typography>
+    </Box>
+    {!location && <Alert severity="warning" sx={{ width: '100%' }}>Acceso a Ubicación Requerido</Alert>}
+    <TextField
+      autoFocus
+      value={codigo2FA}
+      onChange={(e) => setCodigo2FA(e.target.value.replace(/\D/g, '').slice(0, 6))}
+      placeholder="000 000"
+      disabled={isProcessing || !location}
+      error={!!error}
+      helperText={error}
+      fullWidth
+      inputProps={{ maxLength: 6 }}
+      sx={{ maxWidth: 300 }}
+    />
+  </Stack>
+));
+StepSeguridad.displayName = 'StepSeguridad';
+
+const StepPago = React.memo<{ pagoExitoso: boolean; }>(
+  ({ pagoExitoso }) => (
+    <Stack alignItems="center" justifyContent="center" height="100%" minHeight="40vh" spacing={4}>
+      {pagoExitoso ? (
+        <CheckCircle sx={{ fontSize: 60, color: 'success.main' }} />
+      ) : (
+        <CircularProgress size={80} />
+      )}
+      <Typography variant="h5" fontWeight={700}>
+        {pagoExitoso ? '¡Pago Acreditado!' : 'Procesando...'}
+      </Typography>
+    </Stack>
+  )
+);
+StepPago.displayName = 'StepPago';
+
+// ===================================================
 // MAIN COMPONENT
 // ===================================================
 export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
@@ -300,14 +379,11 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const { showSuccess, showInfo, showError } = useSnackbar();
-  const formatCurrency = useCurrencyFormatter({
-    currency: proyecto.moneda === 'USD' ? 'USD' : 'ARS'
+  const { showSuccess, showInfo } = useSnackbar();
+const formatCurrency = useCurrencyFormatter({
+    currency: proyecto.moneda === 'USD' ? 'USD' : 'ARS' 
   });
-
-  // ===================================================
   // STATE
-  // ===================================================
   const [activeStep, setActiveStep] = useState(0);
   const [codigo2FA, setCodigo2FA] = useState('');
   const [location, setLocation] = useState<Location | null>(null);
@@ -318,9 +394,7 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
 
   const hasAttemptedRecovery = useRef(false);
 
-  // ===================================================
-  // PLANTILLA DE CONTRATO
-  // ===================================================
+  // PLANTILLA
   const { data: plantillas, isLoading: loadingPlantilla } = useQuery({
     queryKey: ['plantillaContrato', proyecto.id],
     queryFn: async () => {
@@ -336,9 +410,7 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
     [plantillas]
   );
 
-  // ===================================================
   // CHECKOUT WIZARD HOOK
-  // ===================================================
   const {
     isProcessing,
     isVerificandoPago,
@@ -360,25 +432,23 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
       CheckoutStateManager.clearState();
       setTimeout(() => {
         handleClose();
-        window.location.reload(); // Recargar para ver el contrato firmado
+        window.location.reload();
       }, 2000);
     }
   });
-
-  // ===================================================
-  // MEMOIZED VALUES
-  // ===================================================
-  const montoFormateado = useMemo(
-    () => formatCurrency(Number(proyecto.monto_inversion)),
-    [formatCurrency, proyecto.monto_inversion]
-  );
+const montoAMostrar = useMemo(() => {
+    if (tipo === 'inversion') {
+      return formatCurrency(Number(proyecto.monto_inversion));
+    }
+    // Para suscripciones, el monto del primer pago suele venir de los cálculos de cuota
+    // Si no tienes el valor de la cuota aquí, usa el valor de referencia
+    return formatCurrency(Number(proyecto.valor_cuota_referencia || 0));
+  }, [formatCurrency, proyecto, tipo]);
 
   const effectiveInversionId = transaccionId || initialInversionId;
   const effectivePagoId = transaccionId || initialPagoId;
 
-  // ===================================================
-  // PERSISTENCIA DE ESTADO
-  // ===================================================
+  // PERSISTENCIA
   const persistState = useCallback(() => {
     const state: CheckoutPersistedState = {
       projectId: proyecto.id,
@@ -399,19 +469,14 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
     }
   }, [open, pagoExitoso, activeStep, transaccionId, persistState]);
 
-  // ===================================================
   // RECUPERACIÓN DE ESTADO
-  // ===================================================
   useEffect(() => {
     if (!open || hasAttemptedRecovery.current) return;
 
     const savedState = CheckoutStateManager.loadState(proyecto.id);
 
     if (savedState) {
-      console.log('🔄 Estado recuperado:', savedState);
-
       if (savedState.paymentSuccess && savedState.transactionId) {
-        console.log('✅ Pago exitoso detectado');
         setTransaccionId(savedState.transactionId);
         setPagoExitoso(true);
         setLocation(savedState.location);
@@ -429,14 +494,12 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
       }
     }
 
-    // Verificación por props (URL Return)
     if (!savedState && (effectiveInversionId || effectivePagoId)) {
       const txId = effectiveInversionId || effectivePagoId;
       MercadoPagoService.getPaymentStatus(txId!, true)
         .then(res => {
           const estado = (res.data?.transaccion?.estado || (res.data as any)?.estado) as any;
           if (estado === 'pagado' || estado === 'approved') {
-            console.log('✅ Pago verificado desde props');
             setTransaccionId(txId!);
             setPagoExitoso(true);
             CheckoutStateManager.markPaymentSuccess(proyecto.id, txId!);
@@ -450,7 +513,6 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
     hasAttemptedRecovery.current = true;
   }, [open, proyecto.id, effectiveInversionId, effectivePagoId, showInfo, setTransaccionId, setPagoExitoso]);
 
-  // HANDLERS RECUPERACIÓN
   const handleRecoverState = useCallback(() => {
     if (!recoveredState) return;
     setTransaccionId(recoveredState.transactionId);
@@ -487,9 +549,6 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
     }
   }, [activeStep, open, location]);
 
-  // ===================================================
-  // NAVIGATION & ACTIONS
-  // ===================================================
   const handleStepAction = useCallback(async () => {
     switch (activeStep) {
       case 0:
@@ -508,12 +567,9 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
       case 2:
         if (codigo2FA.length === CODIGO_2FA_LENGTH) {
           if (pagoExitoso && transaccionId) {
-            // Ya pagó, ir directo a firma
             setActiveStep(4);
           } else {
-            // ✅ Llamar al método correcto para procesar el pago
             await handleConfirmarPago2FA(codigo2FA);
-            // El método redirige a Mercado Pago automáticamente
           }
         }
         break;
@@ -578,9 +634,6 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
     return 'Continuar';
   };
 
-  // ===================================================
-  // RENDER
-  // ===================================================
   return (
     <>
       {showRecoveryPrompt && recoveredState && !recoveredState.paymentSuccess && (
@@ -679,7 +732,13 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
           )}
 
           <Box flex={1} overflow="auto" p={{ xs: 2, md: 4 }}>
-            {activeStep === 0 && <StepConfirmacion proyecto={proyecto} tipo={tipo} monto={montoFormateado} />}
+            {activeStep === 0 && (
+    <StepConfirmacion 
+        proyecto={proyecto} 
+        tipo={tipo} 
+        monto={montoAMostrar} // ✅ Usar el monto corregido
+    />
+  )}
             {activeStep === 1 && <StepContrato plantilla={plantillaActual} isLoading={loadingPlantilla} />}
             {activeStep === 2 && (
               <StepSeguridad
@@ -690,7 +749,7 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
                 error={error2FA}
               />
             )}
-            {activeStep === 3 && <StepPago isVerificando={isVerificandoPago} pagoExitoso={pagoExitoso} />}
+            {activeStep === 3 && <StepPago pagoExitoso={pagoExitoso} />}
             {activeStep === 4 && (
               <Stack spacing={3} height="100%">
                 <Fade in={!signatureDataUrl} unmountOnExit>
@@ -728,101 +787,3 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
     </>
   );
 };
-
-// ===================================================
-// STEP COMPONENTS
-// ===================================================
-const StepConfirmacion = React.memo<{ proyecto: ProyectoDto; tipo: string; monto: string; }>(
-  ({ proyecto, tipo, monto }) => (
-    <Stack spacing={3} maxWidth="sm" mx="auto">
-      <Alert severity="info" variant="outlined">Revisa los detalles antes de iniciar.</Alert>
-      <Paper variant="outlined" sx={{ p: 3 }}>
-        <Stack spacing={2}>
-          <Box display="flex" justifyContent="space-between">
-            <Typography>Total a Pagar</Typography>
-            <Typography fontWeight={700} color="success.main">{monto}</Typography>
-          </Box>
-          <Divider />
-          <Box display="flex" justifyContent="space-between">
-            <Typography>Proyecto</Typography>
-            <Typography fontWeight={600}>{proyecto.nombre_proyecto}</Typography>
-          </Box>
-          {tipo === 'suscripcion' && (
-            <Stack direction="row" spacing={2} alignItems="center" sx={{ color: 'primary.main' }}>
-              <Token />
-              <Typography variant="caption">Incluye 1 Token de Subasta.</Typography>
-            </Stack>
-          )}
-        </Stack>
-      </Paper>
-    </Stack>
-  )
-);
-StepConfirmacion.displayName = 'StepConfirmacion';
-
-const StepContrato = React.memo<{ plantilla: any; isLoading: boolean; }>(({ plantilla, isLoading }) => {
-  if (isLoading) return <CircularProgress />;
-  if (!plantilla) return <Typography>No hay contrato disponible.</Typography>;
-  return (
-    <Box sx={{ flex: 1, minHeight: '60vh', bgcolor: 'grey.100', borderRadius: 2, border: '1px solid #e0e0e0' }}>
-      <iframe
-        src={ImagenService.resolveImageUrl(plantilla.url_archivo)}
-        width="100%"
-        height="100%"
-        style={{ border: 'none' }}
-        title="Contrato"
-      />
-    </Box>
-  );
-});
-StepContrato.displayName = 'StepContrato';
-
-const StepSeguridad = React.memo<{
-  codigo2FA: string;
-  setCodigo2FA: (v: string) => void;
-  location: any;
-  isProcessing: boolean;
-  error: any;
-}>(({ codigo2FA, setCodigo2FA, location, isProcessing, error }) => (
-  <Stack spacing={4} alignItems="center" py={2} maxWidth="sm" mx="auto">
-    <Avatar sx={{ bgcolor: 'primary.main', width: 56, height: 56 }}>
-      <Lock />
-    </Avatar>
-    <Box textAlign="center">
-      <Typography variant="h5" fontWeight={700}>Verificación 2FA</Typography>
-      <Typography variant="body2" color="text.secondary">
-        Ingresa el código de Google Authenticator.
-      </Typography>
-    </Box>
-    {!location && <Alert severity="warning" sx={{ width: '100%' }}>Acceso a Ubicación Requerido</Alert>}
-    <TextField
-      autoFocus
-      value={codigo2FA}
-      onChange={(e) => setCodigo2FA(e.target.value.replace(/\D/g, '').slice(0, 6))}
-      placeholder="000 000"
-      disabled={isProcessing || !location}
-      error={!!error}
-      helperText={error}
-      fullWidth
-      inputProps={{ maxLength: 6 }}
-      sx={{ maxWidth: 300 }}
-    />
-  </Stack>
-));
-StepSeguridad.displayName = 'StepSeguridad';
-
-const StepPago = React.memo<{ isVerificando: boolean; pagoExitoso: boolean; }>(
-  ({ isVerificando, pagoExitoso }) => (
-    <Stack alignItems="center" justifyContent="center" height="100%" minHeight="40vh" spacing={4}>
-      {pagoExitoso ? (
-        <CheckCircle sx={{ fontSize: 60, color: 'success.main' }} />
-      ) : (
-        <CircularProgress size={80} />
-      )}
-      <Typography variant="h5" fontWeight={700}>
-        {pagoExitoso ? '¡Pago Acreditado!' : 'Procesando...'}
-      </Typography>
-    </Stack>
-  )
-);
-StepPago.displayName = 'StepPago';

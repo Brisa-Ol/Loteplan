@@ -1,14 +1,15 @@
+// src/core/api/services/puja.service.ts
+
 import type { ConfirmarPuja2faDto, CreatePujaDto, PujaCheckoutResponse, PujaDto } from "@/core/types/dto/puja.dto";
 import type { AxiosResponse } from "axios";
 import httpService from "../httpService";
 import type { GenericResponseDto } from "@/core/types/dto/auth.dto";
 
-
 const BASE_ENDPOINT = '/pujas';
 
 /**
  * Servicio para la gestión de Pujas (Subastas).
- * Conecta con `puja.routes.js` del backend.
+ * Sincronizado con pujaService.js y associations.js del backend.
  */
 const PujaService = {
 
@@ -17,92 +18,80 @@ const PujaService = {
   // =================================================
 
   /**
-   * Crea una nueva puja en un lote activo.
-   * * @param data - { id_lote, monto_puja }
-   * @remarks 
-   * Backend: POST /api/pujas/
-   * - Requiere autenticación.
-   * - Consume 1 token de la suscripción del usuario.
-   * - Valida que el monto sea mayor al actual y al precio base.
+   * Crea o actualiza una puja.
+   * El backend maneja internamente la lógica de "si ya existe, actualiza el monto".
    */
   create: async (data: CreatePujaDto): Promise<AxiosResponse<PujaDto>> => {
     return await httpService.post(BASE_ENDPOINT, data);
   },
 
   /**
-   * Obtiene el historial de pujas del usuario autenticado.
-   * * @remarks Backend: GET /api/pujas/mis_pujas
+   * Obtiene el historial de pujas del usuario.
+   * 🔍 ASOCIACIONES BACKEND:
+   * - `puja.lote` (incluye `lote.proyectoLote`)
+   * - `puja.proyectoAsociado` (Alias definido en associations.js)
+   * - `puja.suscripcion`
    */
   getMyPujas: async (): Promise<AxiosResponse<PujaDto[]>> => {
     return await httpService.get(`${BASE_ENDPOINT}/mis_pujas`);
   },
 
   /**
-   * Obtiene una puja específica del usuario por ID.
-   * * @remarks Backend: GET /api/pujas/mis_pujas/:id
+   * Obtiene una puja específica del usuario.
+   * Incluye relaciones completas: lote (con proyectoLote), proyectoAsociado y usuario.
    */
   getMyPujaById: async (id: number): Promise<AxiosResponse<PujaDto>> => {
     return await httpService.get(`${BASE_ENDPOINT}/mis_pujas/${id}`);
   },
 
-  /**
-   * Cancela (Soft Delete) una puja propia.
-   * * @remarks Backend: DELETE /api/pujas/mis_pujas/:id
-   */
   cancelMyPuja: async (id: number): Promise<AxiosResponse<GenericResponseDto>> => {
     return await httpService.delete(`${BASE_ENDPOINT}/mis_pujas/${id}`);
   },
 
-  /**
-   * Obtiene todas las pujas activas del sistema (público/usuarios).
-   * * @remarks Backend: GET /api/pujas/activas
-   */
   getAllActive: async (): Promise<AxiosResponse<PujaDto[]>> => {
     return await httpService.get(`${BASE_ENDPOINT}/activas`);
   },
 
+  /**
+   * Verifica si el usuario tiene alguna puja ganadora y pagada en un proyecto específico.
+   * ⚠️ IMPORTANTE: Necesario para validar si el usuario puede cancelar su suscripción.
+   * Backend: hasWonAndPaidBid
+   */
+  checkWonAndPaid: async (projectId: number): Promise<AxiosResponse<boolean>> => {
+    return await httpService.get(`${BASE_ENDPOINT}/check_won_paid/proyecto/${projectId}`);
+  },
+
   // =================================================
-  // 💳 PROCESO DE PAGO (GANADOR DE SUBASTA)
+  // 💳 PROCESO DE PAGO
   // =================================================
 
-  /**
-   * Inicia el proceso de pago para una puja ganadora pendiente.
-   * Genera una transacción pendiente y solicita verificación (puede requerir 2FA).
-   * * @param id - ID de la puja ganadora
-   * @remarks Backend: POST /api/pujas/iniciar-pago/:id
-   */
   initiatePayment: async (id: number): Promise<AxiosResponse<PujaCheckoutResponse>> => {
     return await httpService.post(`${BASE_ENDPOINT}/iniciar-pago/${id}`);
   },
 
-  /**
-   * Confirma el pago de la puja mediante código 2FA.
-   * Retorna la URL de Mercado Pago o la confirmación de éxito.
-   * * @param data - { codigo, transaccionId }
-   * @remarks Backend: POST /api/pujas/confirmar-2fa
-   */
   confirmPayment2FA: async (data: ConfirmarPuja2faDto): Promise<AxiosResponse<PujaCheckoutResponse>> => {
     return await httpService.post(`${BASE_ENDPOINT}/confirmar-2fa`, data);
   },
 
   // =================================================
-  // ⚙️ GESTIÓN ADMINISTRATIVA (ADMIN)
+  // 👮 GESTIÓN ADMINISTRATIVA (ADMIN)
   // =================================================
 
   /**
-   * Obtiene todas las pujas del sistema (Histórico completo).
-   * * @remarks Backend: GET /api/pujas/ (Admin)
+   * Busca la puja más alta de un lote.
+   * 🔍 ASOCIACIÓN: Incluye `lote` y dentro `lote.proyectoLote` (no proyectoAsociado).
    */
+  getHighestBid: async (loteId: number): Promise<AxiosResponse<PujaDto>> => {
+    return await httpService.get(`${BASE_ENDPOINT}/lote/${loteId}/highest`);
+  },
+
   getAllAdmin: async (): Promise<AxiosResponse<PujaDto[]>> => {
     return await httpService.get(BASE_ENDPOINT);
   },
 
   /**
-   * Ejecuta la lógica de cierre de subasta para un lote.
-   * Libera los tokens de los perdedores (excepto Top 3).
-   * * @param idLote - ID del lote cuya subasta finalizó
-   * * @param idGanador - ID del ganador (necesario para el backend)
-   * @remarks Backend: POST /api/pujas/gestionar_finalizacion
+   * Ejecuta el cierre de subasta.
+   * El backend se encarga de liberar tokens (excepto Top 3).
    */
   manageAuctionEnd: async (idLote: number, idGanador: number | null): Promise<AxiosResponse<GenericResponseDto>> => {
     return await httpService.post(`${BASE_ENDPOINT}/gestionar_finalizacion`, { 
@@ -112,25 +101,32 @@ const PujaService = {
   },
 
   /**
-   * ADMIN: Cancela una puja ganadora manualmente (ej: el usuario avisa que no pagará).
-   * Backend: POST /api/pujas/cancelar_puja_ganadora/:id
+   * Cancela una puja ganadora manualmente.
+   * ✅ Ejecuta lógica de impago, devuelve token y procesa reasignación del lote.
    */
   cancelarGanadoraAnticipada: async (id: number, motivo: string): Promise<AxiosResponse<GenericResponseDto>> => {
-    return await httpService.post(`${BASE_ENDPOINT}/cancelar_puja_ganadora/${id}`, { motivo_cancelacion: motivo });
+    return await httpService.post(`${BASE_ENDPOINT}/cancelar_puja_ganadora/${id}`, { 
+        motivo_cancelacion: motivo 
+    });
   },
 
   /**
-   * Obtiene una puja por ID (Admin).
-   * @remarks Backend: GET /api/pujas/:id
+   * Revierte el estado de 'ganadora_pagada' a 'ganadora_pendiente'.
+   * ⚠️ Útil para revertir transacciones o corregir errores administrativos.
+   * Backend: revertirPagoPujaGanadora
+   */
+  revertWinnerPayment: async (id: number): Promise<AxiosResponse<GenericResponseDto>> => {
+    return await httpService.post(`${BASE_ENDPOINT}/revertir_pago_ganadora/${id}`);
+  },
+
+  /**
+   * Obtiene puja por ID con todas sus relaciones para el Admin.
+   * Incluye `proyectoAsociado` y `lote.proyectoLote`.
    */
   getByIdAdmin: async (id: number): Promise<AxiosResponse<PujaDto>> => {
     return await httpService.get(`${BASE_ENDPOINT}/${id}`);
   },
 
-  /**
-   * Elimina una puja del sistema (Admin).
-   * @remarks Backend: DELETE /api/pujas/:id
-   */
   deleteAdmin: async (id: number): Promise<AxiosResponse<GenericResponseDto>> => {
     return await httpService.delete(`${BASE_ENDPOINT}/${id}`);
   }

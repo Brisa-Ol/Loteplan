@@ -1,12 +1,28 @@
-import React, { useRef, useCallback } from "react";
+// src/features/client/pages/Proyectos/components/ProjectCard.tsx
+
 import {
-  Card, CardMedia, CardContent, Typography, Chip, Box, Button,
-  useTheme, alpha, Divider, Stack, LinearProgress
-} from "@mui/material";
-import {
-  ArrowForward, CalendarMonth, GppGood, Group, 
-  AccessTime, LocalOffer, Map, BusinessCenter, BrokenImage
+  ArrowForward,
+  EventAvailable,
+  LocalOffer,
+  Timer
 } from "@mui/icons-material";
+import {
+  alpha,
+  Box,
+  Button,
+  Card,
+  CardContent,
+  CardMedia,
+  Chip,
+  Divider,
+  LinearProgress,
+  Stack,
+  Tooltip,
+  Typography,
+  useTheme,
+  Zoom
+} from "@mui/material";
+import React, { useCallback, useRef } from "react";
 
 // Tipos y Hooks
 import type { ProyectoDto } from "@/core/types/dto/proyecto.dto";
@@ -17,151 +33,239 @@ export interface ProjectCardProps {
   onClick?: () => void;
 }
 
-// --- SUBCOMPONENTES VISUALES ---
-const CardHeader: React.FC<{ 
-  imagenPrincipal: string; 
-  badge: any; 
+// ============================================================================
+// SUB-COMPONENTE: HEADER
+// ============================================================================
+const CardHeader: React.FC<{
+  imagenPrincipal: string;
+  badge: any;
   esPack: boolean;
   estadoConfig: { label: string; color: string };
-  diasRestantes: number;
+  nombreProyecto: string;
+  tiempoLabel: string;
   esUrgente: boolean;
-  nombreProyecto: string;
+  tooltipFecha: string;
   onImageError: () => void;
-  onImageLoad: () => void;
-}> = ({ imagenPrincipal, badge, esPack, estadoConfig, diasRestantes, esUrgente, nombreProyecto, onImageError, onImageLoad }) => {
-  const theme = useTheme();
-  const BadgeIcon = badge.icon;
-  const imageState = useRef<{ loaded: boolean }>({ loaded: false });
+}> = ({
+  imagenPrincipal, badge, esPack, estadoConfig,
+  nombreProyecto, tiempoLabel, esUrgente, tooltipFecha,
+  onImageError
+}) => {
+    const theme = useTheme();
+    const BadgeIcon = badge.icon;
 
-  return (
-    <Box sx={{ position: 'relative', height: 200, overflow: 'hidden', bgcolor: 'grey.100' }}>
-      <CardMedia 
-        component="img" 
-        height="100%" 
-        image={imagenPrincipal} 
-        alt={nombreProyecto}
-        loading="lazy"
-        onLoad={() => { imageState.current.loaded = true; onImageLoad(); }}
-        onError={onImageError}
-        sx={{ objectFit: 'cover', transition: 'all 0.5s ease', '&:hover': { transform: 'scale(1.05)' } }} 
-      />
-      <Box sx={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0) 40%)', pointerEvents: 'none' }} />
-      <Chip icon={<BadgeIcon sx={{ fontSize: '16px !important', color: 'inherit' }} />} label={badge.label} size="small" color="primary" sx={{ position: 'absolute', top: 12, left: 12, boxShadow: 2 }} />
-      <Stack direction="column" spacing={0.5} alignItems="flex-end" sx={{ position: 'absolute', top: 12, right: 12 }}>
-        <Chip label={estadoConfig.label} color={estadoConfig.color as any} size="small" sx={{ color: 'white', boxShadow: 2 }} />
-        {esPack && <Chip icon={<LocalOffer sx={{ fontSize: '16px !important' }}/>} label="PACK" color="warning" size="small" sx={{ boxShadow: 2 }} />}
-      </Stack>
-      {esUrgente && <Chip icon={<AccessTime sx={{ fontSize: '16px !important' }}/>} label={`${diasRestantes} días`} size="small" sx={{ position: 'absolute', bottom: 12, right: 12, bgcolor: 'rgba(0,0,0,0.7)', color: 'white', backdropFilter: 'blur(4px)' }} />}
-    </Box>
-  );
-};
+    // Lógica visual basada en props
+    const isFinalizado = estadoConfig.label.toLowerCase() === 'finalizado';
+    const timeIcon = esUrgente ? <Timer sx={{ fontSize: 16 }} /> : <EventAvailable sx={{ fontSize: 16 }} />;
+    const timeColor = esUrgente ? 'error' : (tiempoLabel?.includes('Abre') ? 'info' : 'warning');
 
-const CardInfo: React.FC<{ 
-  nombreProyecto: string;
-  descripcion: string;
-  esMensual: boolean;
-  progreso: any;
-}> = ({ nombreProyecto, descripcion, esMensual, progreso }) => {
-  const theme = useTheme();
-  return (
-    <Box>
-      <Typography variant="h6" gutterBottom fontWeight={700} sx={{ lineHeight: 1.2, height: 48, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{nombreProyecto}</Typography>
-      <Typography variant="body2" color="text.secondary" mb={2} sx={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', minHeight: 40 }}>{descripcion}</Typography>
-      {esMensual && progreso && (
-        <Box sx={{ mb: 2, p: 1.5, bgcolor: alpha(theme.palette.primary.main, 0.04), borderRadius: 2 }}>
-          <Stack direction="row" justifyContent="space-between" mb={0.5}>
-            <Typography variant="caption" fontWeight={700}>Cupos</Typography>
-            <Typography variant="caption" fontWeight={700}>{progreso.actual} / {progreso.meta}</Typography>
-          </Stack>
-          <LinearProgress variant="determinate" value={progreso.porcentaje} sx={{ height: 6, borderRadius: 3 }} />
-        </Box>
-      )}
-    </Box>
-  );
-};
+    return (
+      <Box sx={{ position: 'relative', height: 200, overflow: 'hidden', bgcolor: 'grey.200' }}>
+        <CardMedia
+          component="img"
+          height="100%"
+          image={imagenPrincipal}
+          alt={nombreProyecto}
+          loading="lazy"
+          onError={onImageError}
+          sx={{
+            objectFit: 'cover',
+            transition: 'transform 0.5s ease',
+            '&:hover': { transform: 'scale(1.05)' },
+            // Overlay gris si está finalizado
+            filter: isFinalizado ? 'grayscale(0.6)' : 'none'
+          }}
+        />
 
-const CardFinancials: React.FC<{ 
-  esMensual: boolean;
-  precioFormateado: string;
-  plazoTexto: string;
-  estaFinalizado: boolean;
-  onClick?: () => void;
-}> = ({ esMensual, precioFormateado, plazoTexto, estaFinalizado, onClick }) => {
-  return (
-    <Box mt="auto">
-      <Divider sx={{ mb: 2 }} />
-      <Stack direction="row" justifyContent="space-between" alignItems="center">
-        <Box>
-          <Typography variant="caption" color="text.secondary" fontWeight={600} display="block">{esMensual ? 'Cuota Mensual' : 'Inversión Total'}</Typography>
-          <Typography variant="h6" color="primary.main" fontWeight={700}>{precioFormateado}</Typography>
-        </Box>
-        <Box textAlign="right">
-          <Typography variant="caption" color="text.secondary" fontWeight={600} display="block">Plazo</Typography>
-          <Typography variant="body2" fontWeight={600}>{plazoTexto}</Typography>
-        </Box>
-      </Stack>
-      
-      {/* ✅ CORRECCIÓN: El botón ahora solo navega al detalle, NO intenta abrir checkout */}
-      <Button 
-        variant="contained"
-        fullWidth
-        disabled={estaFinalizado}
-        endIcon={!estaFinalizado && <ArrowForward />}
-        onClick={(e) => { 
-          e.stopPropagation(); // Evita que se dispare el onClick del Card
-          onClick?.(); // Navega al detalle del proyecto
-        }}
-        sx={{ mt: 2, fontWeight: 700 }}
-      >
-        {estaFinalizado 
-          ? 'Finalizado' 
-          : (esMensual ? 'Ver Plan Mensual' : 'Ver Disponibilidad')}
-      </Button>
-    </Box>
-  );
-};
+        <Box sx={{
+          position: 'absolute',
+          inset: 0,
+          background: 'linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0) 50%, rgba(0,0,0,0.7) 100%)',
+          pointerEvents: 'none'
+        }} />
 
+        {/* Badge de Tipo (Inversión/Ahorro) */}
+        <Chip
+          icon={<BadgeIcon sx={{ fontSize: '16px !important' }} />}
+          label={badge.label}
+          size="small"
+          color="primary"
+          sx={{ position: 'absolute', top: 12, left: 12, fontWeight: 700, boxShadow: 2 }}
+        />
+
+        {/* Estado y Pack */}
+        <Stack spacing={0.5} sx={{ position: 'absolute', top: 12, right: 12 }} alignItems="flex-end">
+          <Chip
+            label={estadoConfig.label.toUpperCase()}
+            color={estadoConfig.color as any}
+            size="small"
+            sx={{ fontWeight: 800, color: 'white', boxShadow: 2 }}
+          />
+          {esPack && (
+            <Chip
+              icon={<LocalOffer sx={{ fontSize: 14 }} />}
+              label="PACK"
+              color="warning"
+              size="small"
+              sx={{ fontWeight: 800, boxShadow: 2 }}
+            />
+          )}
+        </Stack>
+
+        {/* Chip de Tiempo / Fecha límite */}
+        {tiempoLabel && !isFinalizado && (
+          <Tooltip title={tooltipFecha} arrow TransitionComponent={Zoom} placement="top">
+            <Chip
+              icon={timeIcon}
+              label={tiempoLabel}
+              size="small"
+              color={timeColor}
+              sx={{
+                position: 'absolute',
+                bottom: 12,
+                right: 12,
+                fontWeight: 700,
+                boxShadow: 3,
+                ...(esUrgente && {
+                  animation: 'pulse-urgency 2s infinite',
+                  '@keyframes pulse-urgency': {
+                    '0%': { boxShadow: '0 0 0 0 rgba(211, 47, 47, 0.7)' },
+                    '70%': { boxShadow: '0 0 0 6px rgba(211, 47, 47, 0)' },
+                    '100%': { boxShadow: '0 0 0 0 rgba(211, 47, 47, 0)' }
+                  }
+                })
+              }}
+            />
+          </Tooltip>
+        )}
+      </Box>
+    );
+  };
+
+// ============================================================================
+// COMPONENTE PRINCIPAL: PROJECT CARD
+// ============================================================================
 export const ProjectCard: React.FC<ProjectCardProps> = ({ project, onClick }) => {
   const helpers = useProyectoHelpers(project);
+  const theme = useTheme();
+
   const imageState = useRef<{ error: boolean }>({ error: false });
-  const handleImageError = useCallback(() => { imageState.current.error = true; }, []);
-  const imagenFinal = imageState.current.error ? '/assets/placeholder-project.jpg' : helpers.imagenPrincipal;
+  const handleImageError = useCallback(() => {
+    imageState.current.error = true;
+  }, []);
+
+  const imagenFinal = imageState.current.error
+    ? '/assets/placeholder-project.jpg'
+    : helpers.imagenPrincipal;
+
+  const tooltipFecha = project.estado_proyecto === 'En Espera'
+    ? `Apertura programada: ${helpers.fechas.inicio}`
+    : `Fecha límite: ${helpers.fechas.cierre}`;
 
   return (
-    <Card 
-      sx={{ 
-        height: "100%", display: "flex", flexDirection: "column", 
-        cursor: 'pointer', transition: 'all 0.3s ease',
-        "&:hover": { transform: "translateY(-4px)", boxShadow: 8 } 
-      }} 
+    <Card
+      sx={{
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        cursor: 'pointer',
+        borderRadius: 3,
+        overflow: 'hidden',
+        border: `1px solid ${theme.palette.divider}`,
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        "&:hover": {
+          transform: "translateY(-6px)",
+          boxShadow: theme.shadows[10],
+          borderColor: theme.palette.primary.main
+        }
+      }}
       onClick={onClick}
     >
-      <CardHeader 
-        imagenPrincipal={imagenFinal} 
-        badge={helpers.badge} 
-        esPack={!!project.pack_de_lotes} 
-        estadoConfig={helpers.estadoConfig} 
-        diasRestantes={helpers.diasRestantes} 
-        esUrgente={helpers.esUrgente && project.estado_proyecto === 'En proceso'} 
-        nombreProyecto={project.nombre_proyecto} 
-        onImageError={handleImageError} 
-        onImageLoad={() => {}} 
+      <CardHeader
+        imagenPrincipal={imagenFinal}
+        badge={helpers.badge}
+        esPack={!!project.pack_de_lotes}
+        estadoConfig={helpers.estadoConfig}
+        nombreProyecto={project.nombre_proyecto}
+        tiempoLabel={helpers.tiempoLabel}
+        esUrgente={helpers.esUrgente}
+        tooltipFecha={tooltipFecha}
+        onImageError={handleImageError}
       />
+
       <CardContent sx={{ flexGrow: 1, display: "flex", flexDirection: "column", p: 3 }}>
-        <CardInfo 
-          nombreProyecto={project.nombre_proyecto} 
-          descripcion={project.descripcion} 
-          esMensual={helpers.esMensual} 
-          progreso={helpers.progreso} 
-        />
-        {/* ✅ CORRECCIÓN: Ahora el botón recibe el mismo onClick que navega al detalle */}
-        <CardFinancials 
-          esMensual={helpers.esMensual} 
-          precioFormateado={helpers.precioFormateado} 
-          plazoTexto={helpers.plazoTexto} 
-          estaFinalizado={helpers.estaFinalizado} 
-          onClick={onClick} 
-        />
+        {/* Info Básica */}
+        <Box sx={{ mb: 2 }}>
+          <Typography variant="h6" fontWeight={800} sx={{
+            lineHeight: 1.2,
+            mb: 1,
+            height: 52,
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden'
+          }}>
+            {project.nombre_proyecto}
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+            minHeight: 40
+          }}>
+            {project.descripcion}
+          </Typography>
+        </Box>
+
+        {/* Barra de Progreso para planes de ahorro/mensual */}
+        {helpers.esMensual && helpers.progreso && (
+          <Box sx={{ mb: 3, p: 1.5, bgcolor: alpha(theme.palette.primary.main, 0.04), borderRadius: 2 }}>
+            <Stack direction="row" justifyContent="space-between" mb={1}>
+              <Typography variant="caption" fontWeight={800} color="primary">CUPO DISPONIBLE</Typography>
+              <Typography variant="caption" fontWeight={800}>{helpers.progreso.actual} / {helpers.progreso.meta}</Typography>
+            </Stack>
+            <LinearProgress variant="determinate" value={helpers.progreso.porcentaje} sx={{ height: 8, borderRadius: 4 }} />
+          </Box>
+        )}
+
+        <Box sx={{ mt: 'auto' }}>
+          <Divider sx={{ mb: 2 }} />
+          <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+            <Box>
+              <Typography variant="caption" color="text.secondary" fontWeight={700}>
+                {helpers.esMensual ? 'CUOTA ESTIMADA' : 'INVERSIÓN ÚNICA'}
+              </Typography>
+              <Typography variant="h6" color="primary.main" fontWeight={900}>
+                {/* ✅ Si es inversión única, helpers debe mostrar el símbolo USD si corresponde */}
+                {helpers.precioFormateado}
+              </Typography>
+            </Box>
+            <Box textAlign="right">
+              <Typography variant="caption" color="text.secondary" fontWeight={700}>PLAZO</Typography>
+              <Typography variant="body2" fontWeight={800}>{helpers.plazoTexto}</Typography>
+            </Box>
+          </Stack>
+
+          <Button
+            variant={helpers.estaFinalizado ? "outlined" : "contained"}
+            fullWidth
+            disabled={helpers.estaFinalizado}
+            endIcon={!helpers.estaFinalizado && <ArrowForward />}
+            onClick={(e) => {
+              e.stopPropagation();
+              onClick?.();
+            }}
+            sx={{
+              py: 1.2,
+              fontWeight: 800,
+              borderRadius: 2,
+              boxShadow: helpers.estaFinalizado ? 'none' : 3
+            }}
+          >
+            {helpers.estaFinalizado ? 'CUPOS AGOTADOS' : (helpers.esMensual ? 'Más Información' : 'Más Información')}
+          </Button>
+        </Box>
       </CardContent>
     </Card>
   );

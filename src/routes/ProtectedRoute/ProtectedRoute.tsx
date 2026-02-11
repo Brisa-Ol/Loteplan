@@ -15,10 +15,10 @@ interface ProtectedRouteProps {
   requireAdmin?: boolean; // ✅ Agregado para soportar <ProtectedRoute requireAdmin>
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
-  children, 
-  allowedRoles = [], 
-  requireAdmin = false 
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
+  children,
+  allowedRoles = [],
+  requireAdmin = false
 }) => {
   const { user, isAuthenticated, isInitializing } = useAuth();
   const location = useLocation();

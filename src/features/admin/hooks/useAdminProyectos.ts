@@ -15,7 +15,6 @@ import { useSortedData } from './useSortedData';
 
 export type TipoInversionFilter = 'all' | 'mensual' | 'directo';
 
-// Hook de Debounce optimizado
 function useDebouncedValue<T>(value: T, delay: number = 300): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
   useEffect(() => {
@@ -102,6 +101,14 @@ export const useAdminProyectos = () => {
     onSuccess: (_, id) => handleMutationSuccess(id, 'Proceso de cobros iniciado')
   });
 
+  // 🆕 NUEVA MUTACIÓN: Revertir Proceso
+  const revertMutation = useMutation({
+    mutationFn: (id: number) => ProyectoService.revertProcess(id),
+    onMutate: handleMutationOptimistic,
+    onError: (_, __, ctx) => handleMutationError(ctx),
+    onSuccess: (_, id) => handleMutationSuccess(id, 'Proyecto revertido a "En Espera" correctamente')
+  });
+
   // --- HANDLERS ---
   const handleCreateSubmit = useCallback(async (data: any, image: File | null) => {
     try {
@@ -138,19 +145,29 @@ export const useAdminProyectos = () => {
     }
   }, [queryClient, create, triggerHighlight, showSuccess, showError, showWarning]);
 
+  const handleUpdateSubmit = async (id: number, data: UpdateProyectoDto) => {
+    await updateMutation.mutateAsync({ id, data });
+  };
+
   const handleAction = useCallback((proyecto: ProyectoDto, action: keyof typeof modales, e?: React.MouseEvent) => {
     e?.stopPropagation();
     setSelectedProject(proyecto);
     (modales[action] as any).open();
   }, [modales]);
 
+  // ⚡ HANDLER DE CONFIRMACIÓN ACTUALIZADO
   const handleConfirmAction = useCallback(() => {
     const project = confirmDialog.data as ProyectoDto;
     if (!project) return;
 
-    if (confirmDialog.action === 'start_project_process') startMutation.mutate(project.id);
-    else if (confirmDialog.action === 'toggle_project_visibility') toggleActiveMutation.mutate({ id: project.id, activo: !project.activo });
-  }, [confirmDialog, startMutation, toggleActiveMutation]);
+    if (confirmDialog.action === 'start_project_process') {
+      startMutation.mutate(project.id);
+    } else if (confirmDialog.action === 'toggle_project_visibility') {
+      toggleActiveMutation.mutate({ id: project.id, activo: !project.activo });
+    } else if (confirmDialog.action === 'revert_project_process') { // 🆕 MANEJAR LA ACCIÓN
+      revertMutation.mutate(project.id);
+    }
+  }, [confirmDialog, startMutation, toggleActiveMutation, revertMutation]);
 
   // --- FILTRADO ---
   const filteredProyectos = useMemo(() => {
@@ -163,7 +180,6 @@ export const useAdminProyectos = () => {
   }, [proyectosOrdenados, debouncedSearchTerm, filterTipo]);
 
   return {
-    // State & Data
     searchTerm, setSearchTerm,
     filterTipo, setFilterTipo,
     selectedProject,
@@ -171,20 +187,17 @@ export const useAdminProyectos = () => {
     filteredProyectos,
     isLoading, error,
     
-    // Modales
     modales,
     
-    // Handlers
     handleCreateSubmit,
- handleUpdateSubmit: async (id: number, data: UpdateProyectoDto) => {
-    await updateMutation.mutateAsync({ id, data });
-  },
+    handleUpdateSubmit,
     handleAction,
     handleConfirmAction,
     
     // Status
     isUpdating: updateMutation.isPending,
     isToggling: toggleActiveMutation.isPending,
-    isStarting: startMutation.isPending
+    isStarting: startMutation.isPending,
+    isReverting: revertMutation.isPending // 🆕 EXPORTAR ESTADO
   };
 };

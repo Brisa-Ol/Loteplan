@@ -1,11 +1,17 @@
-import React from 'react';
-import { 
-  Dialog, DialogTitle, DialogContent, DialogActions, 
-  Button, Typography, Box, alpha, useTheme 
-} from '@mui/material';
-import { Shield, Lock, VerifiedUser } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '@/routes';
+import { Lock, VerifiedUser } from '@mui/icons-material';
+import {
+  Box,
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Typography,
+  alpha, useTheme
+} from '@mui/material';
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
 
 export type SecurityRequirementType = '2FA_MISSING' | 'KYC_MISSING' | null;
 
@@ -15,8 +21,8 @@ interface SecurityRequirementModalProps {
   onClose: () => void;
 }
 
-export const SecurityRequirementModal: React.FC<SecurityRequirementModalProps> = ({ 
-  open, type, onClose 
+export const SecurityRequirementModal: React.FC<SecurityRequirementModalProps> = ({
+  open, type, onClose
 }) => {
   const theme = useTheme();
   const navigate = useNavigate();
@@ -48,17 +54,17 @@ export const SecurityRequirementModal: React.FC<SecurityRequirementModalProps> =
   };
 
   return (
-    <Dialog 
-      open={open} 
-      onClose={onClose} 
+    <Dialog
+      open={open}
+      onClose={onClose}
       maxWidth="xs"
       PaperProps={{ sx: { borderRadius: 3, p: 1 } }}
     >
       <Box textAlign="center" mt={2}>
-        <Box 
-          sx={{ 
-            mx: 'auto', mb: 2, width: 80, height: 80, 
-            borderRadius: '50%', 
+        <Box
+          sx={{
+            mx: 'auto', mb: 2, width: 80, height: 80,
+            borderRadius: '50%',
             bgcolor: alpha(type === '2FA_MISSING' ? theme.palette.warning.main : theme.palette.info.main, 0.1),
             display: 'flex', alignItems: 'center', justifyContent: 'center'
           }}
@@ -78,9 +84,9 @@ export const SecurityRequirementModal: React.FC<SecurityRequirementModalProps> =
       </DialogContent>
 
       <DialogActions sx={{ justifyContent: 'center', pb: 3, px: 3, flexDirection: 'column', gap: 1 }}>
-        <Button 
-          variant="contained" 
-          fullWidth 
+        <Button
+          variant="contained"
+          fullWidth
           onClick={handleAction}
           sx={{ borderRadius: 2, fontWeight: 700 }}
         >

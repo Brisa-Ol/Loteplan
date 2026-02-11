@@ -13,10 +13,10 @@ import {
   alpha,
   useTheme
 } from "@mui/material";
-import { 
-  Visibility, 
-  VisibilityOff, 
-  InfoOutlined, 
+import {
+  Visibility,
+  VisibilityOff,
+  InfoOutlined,
   LockOpen,
   ErrorOutline,
   LockClock
@@ -63,7 +63,7 @@ const LoginPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [resendSuccess, setResendSuccess] = useState(false);
   const [isSessionExpiredRedirect, setIsSessionExpiredRedirect] = useState(false);
-  
+
   // ✅ ESTADO LOCAL DEL ERROR: Esto asegura que el mensaje persista en la UI
   const [localError, setLocalError] = useState<{ type: LocalErrorType; msg: string } | null>(null);
 
@@ -91,7 +91,7 @@ const LoginPage: React.FC = () => {
 
   useEffect(() => {
     // Esta función de limpieza solo se ejecuta al DESMONTAR el componente (salir de la página)
-    return () => { 
+    return () => {
       if (clearErrorRef.current) clearErrorRef.current();
       // Nota: No limpiamos localError aquí para evitar parpadeos visuales en la transición
     };
@@ -100,8 +100,8 @@ const LoginPage: React.FC = () => {
   // 3. Redirección si ya está autenticado y no requiere 2FA
   useEffect(() => {
     if (!isInitializing && isAuthenticated && user && !requires2FA) {
-      const destino = from && from !== ROUTES.PUBLIC.HOME 
-        ? from 
+      const destino = from && from !== ROUTES.PUBLIC.HOME
+        ? from
         : (user.rol === 'admin' ? ROUTES.ADMIN.DASHBOARD : ROUTES.CLIENT.DASHBOARD);
       navigate(destino, { replace: true });
     }
@@ -118,8 +118,8 @@ const LoginPage: React.FC = () => {
       // Resetear estados visuales antes de la petición
       setResendSuccess(false);
       setIsSessionExpiredRedirect(false);
-      setLocalError(null); 
-      
+      setLocalError(null);
+
       // No llamamos a clearAuthError() aquí para no causar re-renders innecesarios antes del submit
 
       try {
@@ -133,7 +133,7 @@ const LoginPage: React.FC = () => {
         console.log("Login Error capturado:", err);
 
         let rawMsg = "Ocurrió un error inesperado.";
-        
+
         // Prioridad de extracción de mensaje
         if (typeof err === 'string') rawMsg = err;
         else if (err?.message) rawMsg = err.message; // ApiError nuestro
@@ -145,25 +145,25 @@ const LoginPage: React.FC = () => {
 
         // Clasificación para mostrar la alerta correcta
         if (
-            msgLower.includes('credenciales') || 
-            msgLower.includes('incorrect') || 
-            msgLower.includes('usuario o contraseña') ||
-            msgLower.includes('unauthorized') || 
-            msgLower.includes('401')
+          msgLower.includes('credenciales') ||
+          msgLower.includes('incorrect') ||
+          msgLower.includes('usuario o contraseña') ||
+          msgLower.includes('unauthorized') ||
+          msgLower.includes('401')
         ) {
-            type = 'invalid_credentials';
-            rawMsg = "Usuario o contraseña incorrectos.";
+          type = 'invalid_credentials';
+          rawMsg = "Usuario o contraseña incorrectos.";
         } else if (
-            msgLower.includes('cuenta no activada') || 
-            msgLower.includes('verificar') ||
-            msgLower.includes('confirmar')
+          msgLower.includes('cuenta no activada') ||
+          msgLower.includes('verificar') ||
+          msgLower.includes('confirmar')
         ) {
-            type = 'account_not_activated';
+          type = 'account_not_activated';
         } else if (
-            msgLower.includes('sesión') || 
-            msgLower.includes('token')
+          msgLower.includes('sesión') ||
+          msgLower.includes('token')
         ) {
-            type = 'session_expired';
+          type = 'session_expired';
         }
 
         // Establecer estado local para mostrar la alerta roja
@@ -178,8 +178,8 @@ const LoginPage: React.FC = () => {
       await resendConfirmation(formik.values.identificador);
       setResendSuccess(true);
       // Opcional: Limpiar el error de "no activada" si el reenvío fue exitoso para dar feedback positivo
-      setLocalError(null); 
-    } catch (err) { 
+      setLocalError(null);
+    } catch (err) {
       // El error de reenvío se mostrará por el interceptor global o puedes setearlo aquí
     }
   };
@@ -214,10 +214,10 @@ const LoginPage: React.FC = () => {
               <Typography variant="body2" fontWeight={600}>Credenciales incorrectas</Typography>
               <Typography variant="body2">Verifica tu usuario y contraseña.</Typography>
               <Box mt={1}>
-                <Link 
-                  component="button" 
-                  variant="caption" 
-                  onClick={() => navigate(ROUTES.FORGOT_PASSWORD)} 
+                <Link
+                  component="button"
+                  variant="caption"
+                  onClick={() => navigate(ROUTES.FORGOT_PASSWORD)}
                   sx={{ fontWeight: 'bold', textDecoration: 'underline', color: 'error.dark', cursor: 'pointer' }}
                 >
                   ¿Olvidaste tu contraseña?
@@ -232,11 +232,11 @@ const LoginPage: React.FC = () => {
               <Typography variant="body2" fontWeight={600}>Cuenta no activada</Typography>
               <Typography variant="body2">Debes confirmar tu email para ingresar.</Typography>
               <Box mt={1}>
-                <Link 
-                  component="button" 
-                  variant="caption" 
-                  onClick={handleResendEmail} 
-                  disabled={isLoading} 
+                <Link
+                  component="button"
+                  variant="caption"
+                  onClick={handleResendEmail}
+                  disabled={isLoading}
                   sx={{ fontWeight: 'bold', textDecoration: 'underline', color: 'info.dark', cursor: 'pointer' }}
                 >
                   Reenviar correo de confirmación
@@ -286,13 +286,13 @@ const LoginPage: React.FC = () => {
 
         <form onSubmit={formik.handleSubmit}>
           <Stack spacing={3}>
-            <FormTextField 
-              name="identificador" 
-              label="Email o Usuario" 
-              formik={formik} 
-              disabled={isLoading} 
+            <FormTextField
+              name="identificador"
+              label="Email o Usuario"
+              formik={formik}
+              disabled={isLoading}
             />
-            
+
             <FormTextField
               name="password"
               label="Contraseña"

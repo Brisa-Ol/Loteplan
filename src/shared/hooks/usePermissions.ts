@@ -16,7 +16,7 @@ export const usePermissions = () => {
      */
     const hasRole = (role: string | string[]) => {
       if (!user?.rol) return false;
-      
+
       if (Array.isArray(role)) {
         return role.includes(user.rol);
       }

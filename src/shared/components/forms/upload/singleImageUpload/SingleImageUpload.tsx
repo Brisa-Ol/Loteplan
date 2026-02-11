@@ -119,8 +119,8 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
             transition: 'all 0.2s ease-in-out',
             borderRadius: 3,
             '&:hover': !disabled ? {
-               borderColor: 'primary.main',
-               backgroundColor: alpha(theme.palette.primary.main, 0.04)
+              borderColor: 'primary.main',
+              backgroundColor: alpha(theme.palette.primary.main, 0.04)
             } : {}
           }}
         >
@@ -135,24 +135,24 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
 
           <label htmlFor="single-image-upload-input" style={{ cursor: disabled ? 'not-allowed' : 'pointer', width: '100%', display: 'block' }}>
             <Stack spacing={2} alignItems="center">
-              <Box 
-                 sx={{ 
-                    p: 2, borderRadius: '50%', 
-                    bgcolor: dragActive ? 'primary.main' : 'action.hover',
-                    color: dragActive ? 'white' : 'text.secondary',
-                    transition: '0.3s'
-                 }}
+              <Box
+                sx={{
+                  p: 2, borderRadius: '50%',
+                  bgcolor: dragActive ? 'primary.main' : 'action.hover',
+                  color: dragActive ? 'white' : 'text.secondary',
+                  transition: '0.3s'
+                }}
               >
-                 <UploadIcon sx={{ fontSize: 32 }} />
+                <UploadIcon sx={{ fontSize: 32 }} />
               </Box>
-              
+
               <Box>
-                 <Typography fontWeight={600} variant="body1" color="text.primary">
-                   {dragActive ? '¡Suelta la imagen aquí!' : 'Sube una imagen de portada'}
-                 </Typography>
-                 <Typography variant="caption" color="text.secondary">
-                   JPG, PNG, WEBP • Máx {maxSizeMB}MB
-                 </Typography>
+                <Typography fontWeight={600} variant="body1" color="text.primary">
+                  {dragActive ? '¡Suelta la imagen aquí!' : 'Sube una imagen de portada'}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  JPG, PNG, WEBP • Máx {maxSizeMB}MB
+                </Typography>
               </Box>
             </Stack>
           </label>
@@ -184,70 +184,70 @@ const SingleImageUpload: React.FC<SingleImageUploadProps> = ({
           />
 
           {/* Overlay de acciones (visible siempre o en hover) */}
-          <Box 
-             sx={{ 
-                position: 'absolute', top: 0, left: 0, right: 0, p: 1,
-                background: 'linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, transparent 100%)',
-                display: 'flex', justifyContent: 'flex-end', gap: 1
-             }}
+          <Box
+            sx={{
+              position: 'absolute', top: 0, left: 0, right: 0, p: 1,
+              background: 'linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, transparent 100%)',
+              display: 'flex', justifyContent: 'flex-end', gap: 1
+            }}
           >
-             {/* Input oculto para "Editar/Reemplazar" */}
-             <input
-                type="file"
-                accept="image/*"
-                onChange={handleChange}
-                disabled={disabled}
-                style={{ display: 'none' }}
-                id="single-image-replace-input"
-             />
+            {/* Input oculto para "Editar/Reemplazar" */}
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleChange}
+              disabled={disabled}
+              style={{ display: 'none' }}
+              id="single-image-replace-input"
+            />
 
-             <label htmlFor="single-image-replace-input">
-                <Tooltip title="Cambiar imagen">
-                   <IconButton
-                      component="span"
-                      size="small"
-                      disabled={disabled}
-                      sx={{ 
-                         bgcolor: 'rgba(255,255,255,0.2)', color: 'white', 
-                         backdropFilter: 'blur(4px)',
-                         '&:hover': { bgcolor: 'primary.main' } 
-                      }}
-                   >
-                      <EditIcon fontSize="small" />
-                   </IconButton>
-                </Tooltip>
-             </label>
-
-             <Tooltip title="Eliminar">
+            <label htmlFor="single-image-replace-input">
+              <Tooltip title="Cambiar imagen">
                 <IconButton
-                   size="small"
-                   onClick={handleRemove}
-                   disabled={disabled}
-                   sx={{ 
-                      bgcolor: 'rgba(255,255,255,0.2)', color: 'white', 
-                      backdropFilter: 'blur(4px)',
-                      '&:hover': { bgcolor: 'error.main' } 
-                   }}
+                  component="span"
+                  size="small"
+                  disabled={disabled}
+                  sx={{
+                    bgcolor: 'rgba(255,255,255,0.2)', color: 'white',
+                    backdropFilter: 'blur(4px)',
+                    '&:hover': { bgcolor: 'primary.main' }
+                  }}
                 >
-                   <DeleteIcon fontSize="small" />
+                  <EditIcon fontSize="small" />
                 </IconButton>
-             </Tooltip>
+              </Tooltip>
+            </label>
+
+            <Tooltip title="Eliminar">
+              <IconButton
+                size="small"
+                onClick={handleRemove}
+                disabled={disabled}
+                sx={{
+                  bgcolor: 'rgba(255,255,255,0.2)', color: 'white',
+                  backdropFilter: 'blur(4px)',
+                  '&:hover': { bgcolor: 'error.main' }
+                }}
+              >
+                <DeleteIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
           </Box>
 
           {/* Chip con información del archivo nuevo */}
           {image && (
-             <Box sx={{ position: 'absolute', bottom: 12, left: 12 }}>
-                <Chip
-                   icon={<ImageIcon sx={{ fontSize: 14, color: 'white !important' }} />}
-                   label={`${(image.size / 1024 / 1024).toFixed(2)} MB`}
-                   size="small"
-                   sx={{
-                      bgcolor: 'rgba(0,0,0,0.6)', color: 'white',
-                      backdropFilter: 'blur(4px)', fontWeight: 600,
-                      border: '1px solid rgba(255,255,255,0.2)'
-                   }}
-                />
-             </Box>
+            <Box sx={{ position: 'absolute', bottom: 12, left: 12 }}>
+              <Chip
+                icon={<ImageIcon sx={{ fontSize: 14, color: 'white !important' }} />}
+                label={`${(image.size / 1024 / 1024).toFixed(2)} MB`}
+                size="small"
+                sx={{
+                  bgcolor: 'rgba(0,0,0,0.6)', color: 'white',
+                  backdropFilter: 'blur(4px)', fontWeight: 600,
+                  border: '1px solid rgba(255,255,255,0.2)'
+                }}
+              />
+            </Box>
           )}
         </Paper>
       )}

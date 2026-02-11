@@ -1,12 +1,12 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { 
-  Box, Typography, Stack, Chip, Button, Tooltip, 
+import {
+  Box, Typography, Stack, Chip, Button, Tooltip,
   Tabs, Tab, Badge, TextField, InputAdornment,
   Paper, useTheme, alpha
 } from '@mui/material';
-import { 
-  TrendingUp, EventRepeat, Gavel, CheckCircle, 
+import {
+  TrendingUp, EventRepeat, Gavel, CheckCircle,
   Search, MonetizationOn, Warning, SwapHoriz, ReceiptLong
 } from '@mui/icons-material';
 
@@ -55,26 +55,26 @@ const DateCell = React.memo<{ fecha: string; id: number }>(({ fecha, id }) => {
       <Typography variant="body2" fontWeight={600} color="text.primary">
         {new Date(fecha).toLocaleDateString(env.defaultLocale)}
       </Typography>
-      <Chip 
-        label={`REF: #${id}`} 
-        size="small" 
-        sx={{ 
+      <Chip
+        label={`REF: #${id}`}
+        size="small"
+        sx={{
           height: 20, fontSize: '0.65rem', fontFamily: 'monospace', mt: 0.5,
-          bgcolor: alpha(theme.palette.secondary.main, 0.1) 
-        }} 
+          bgcolor: alpha(theme.palette.secondary.main, 0.1)
+        }}
       />
     </Box>
   );
 });
 
-const ConceptCell = React.memo<{ 
+const ConceptCell = React.memo<{
   nombreProyecto: string;
   tipoTransaccion: string;
   pagoMensual?: { mes: number } | null;
 }>(({ nombreProyecto, tipoTransaccion, pagoMensual }) => {
   const conf = getTypeConfig(tipoTransaccion);
-  const detalle = (tipoTransaccion === 'mensual' && pagoMensual) 
-    ? `Cuota #${pagoMensual.mes}` 
+  const detalle = (tipoTransaccion === 'mensual' && pagoMensual)
+    ? `Cuota #${pagoMensual.mes}`
     : conf.label;
 
   return (
@@ -82,13 +82,13 @@ const ConceptCell = React.memo<{
       <Typography variant="body2" fontWeight={600} noWrap color="text.primary">
         {nombreProyecto}
       </Typography>
-      <Chip 
-        label={detalle} 
-        size="small" 
-        variant="outlined" 
-        color={conf.color} 
+      <Chip
+        label={detalle}
+        size="small"
+        variant="outlined"
+        color={conf.color}
         icon={conf.icon}
-        sx={{ height: 22, fontSize: '0.75rem', fontWeight: 600, borderRadius: 1, mt: 0.5 }} 
+        sx={{ height: 22, fontSize: '0.75rem', fontWeight: 600, borderRadius: 1, mt: 0.5 }}
       />
     </Box>
   );
@@ -103,7 +103,7 @@ const MisTransacciones: React.FC = () => {
   const { showError } = useSnackbar();
   const formatCurrency = useCurrencyFormatter();
 
-  const [currentTab, setCurrentTab] = useState(0); 
+  const [currentTab, setCurrentTab] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [highlightedId, setHighlightedId] = useState<number | null>(null);
 
@@ -169,11 +169,11 @@ const MisTransacciones: React.FC = () => {
 
   // 4. COLUMNAS DE LA TABLA
   const columns = useMemo<DataTableColumn<TransaccionDto>[]>(() => [
-    { 
+    {
       id: 'fecha', label: 'Fecha / Ref', minWidth: 160,
       render: (row) => <DateCell fecha={row.fecha_transaccion} id={row.id} />
     },
-    { 
+    {
       id: 'descripcion', label: 'Concepto', minWidth: 240,
       render: (row) => (
         <ConceptCell
@@ -183,7 +183,7 @@ const MisTransacciones: React.FC = () => {
         />
       )
     },
-    { 
+    {
       id: 'monto', label: 'Importe', align: 'right', minWidth: 120,
       render: (row) => (
         <Typography variant="subtitle2" fontWeight={800} color={row.estado_transaccion === 'pagado' ? 'success.main' : 'text.primary'}>
@@ -191,13 +191,13 @@ const MisTransacciones: React.FC = () => {
         </Typography>
       )
     },
-    { 
+    {
       id: 'estado', label: 'Estado', align: 'center', minWidth: 140,
       render: (row) => {
         const { label, color, icon } = getStatusConfig(row.estado_transaccion);
         return (
           <Tooltip title={row.error_detalle || ''} arrow>
-            <Chip 
+            <Chip
               label={label} color={color} size="small" icon={icon}
               variant={row.estado_transaccion === 'pagado' ? 'filled' : 'outlined'}
               sx={{ fontWeight: 700 }}
@@ -206,14 +206,14 @@ const MisTransacciones: React.FC = () => {
         );
       }
     },
-    { 
+    {
       id: 'acciones', label: 'Acción', align: 'right', minWidth: 120,
       render: (row) => {
         const isPending = ['pendiente', 'fallido', 'expirado', 'en_proceso'].includes(row.estado_transaccion);
         if (!isPending) return null;
 
         return (
-          <Button 
+          <Button
             variant="contained" size="small" disableElevation
             disabled={retryMutation.isPending}
             onClick={() => handleRetry(row.id)}
@@ -255,8 +255,8 @@ const MisTransacciones: React.FC = () => {
 
       <QueryHandler isLoading={isLoading} error={error as Error | null}>
         <Paper elevation={0} sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 3, overflow: 'hidden' }}>
-          <DataTable 
-            columns={columns} data={filteredData} getRowKey={(row) => row.id} 
+          <DataTable
+            columns={columns} data={filteredData} getRowKey={(row) => row.id}
             pagination defaultRowsPerPage={10} highlightedRowId={highlightedId}
             emptyMessage="No se encontraron movimientos con los filtros seleccionados."
           />

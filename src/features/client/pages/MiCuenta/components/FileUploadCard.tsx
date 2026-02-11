@@ -35,13 +35,13 @@ export const FileUploadCard: React.FC<FileUploadCardProps> = ({
   };
 
   return (
-    <Paper 
-      variant="outlined" 
-      sx={{ 
-        p: 2, 
-        borderRadius: 3, 
-        height: '100%', 
-        display: 'flex', 
+    <Paper
+      variant="outlined"
+      sx={{
+        p: 2,
+        borderRadius: 3,
+        height: '100%',
+        display: 'flex',
         flexDirection: 'column',
         bgcolor: 'background.default' // Un fondo sutil para diferenciarlo
       }}

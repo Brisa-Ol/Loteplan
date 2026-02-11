@@ -1,3 +1,5 @@
+// src/core/api/services/proyecto.service.ts
+
 import type { AxiosResponse } from "axios";
 import httpService from "../httpService";
 import type { 
@@ -12,6 +14,17 @@ import type { GenericResponseDto } from "@/core/types/dto/auth.dto";
 
 const BASE_ENDPOINT = '/proyectos';
 
+/**
+ * Helper para asegurar que los campos calculados del backend (valor_cuota_referencia, etc.)
+ * sean tratados como números si vienen como strings de la DB.
+ */
+const mapProyectoData = (proyecto: ProyectoDto): ProyectoDto => ({
+  ...proyecto,
+  monto_inversion: Number(proyecto.monto_inversion),
+  valor_cuota_referencia: proyecto.valor_cuota_referencia ? Number(proyecto.valor_cuota_referencia) : undefined,
+  valor_cemento: proyecto.valor_cemento ? Number(proyecto.valor_cemento) : undefined,
+});
+
 const ProyectoService = {
 
   // =================================================
@@ -19,22 +32,23 @@ const ProyectoService = {
   // =================================================
 
   getAllActive: async (): Promise<AxiosResponse<ProyectoDto[]>> => {
-    return await httpService.get(`${BASE_ENDPOINT}/activos`);
+    const res = await httpService.get<ProyectoDto[]>(`${BASE_ENDPOINT}/activos`);
+    return { ...res, data: res.data.map(mapProyectoData) };
   },
 
   getAhorristasActive: async (): Promise<AxiosResponse<ProyectoDto[]>> => {
-    return await httpService.get(`${BASE_ENDPOINT}/activos/ahorristas`);
+    const res = await httpService.get<ProyectoDto[]>(`${BASE_ENDPOINT}/activos/ahorristas`);
+    return { ...res, data: res.data.map(mapProyectoData) };
   },
 
   getInversionistasActive: async (): Promise<AxiosResponse<ProyectoDto[]>> => {
-    return await httpService.get(`${BASE_ENDPOINT}/activos/inversionistas`);
+    const res = await httpService.get<ProyectoDto[]>(`${BASE_ENDPOINT}/activos/inversionistas`);
+    return { ...res, data: res.data.map(mapProyectoData) };
   },
 
-  /**
-   * ✅ Acceso público al detalle
-   */
   getByIdActive: async (id: number): Promise<AxiosResponse<ProyectoDto>> => {
-    return await httpService.get(`${BASE_ENDPOINT}/${id}/activo`);
+    const res = await httpService.get<ProyectoDto>(`${BASE_ENDPOINT}/${id}/activo`);
+    return { ...res, data: mapProyectoData(res.data) };
   },
 
   // =================================================
@@ -42,7 +56,8 @@ const ProyectoService = {
   // =================================================
 
   getMyProjects: async (): Promise<AxiosResponse<ProyectoDto[]>> => {
-    return await httpService.get(`${BASE_ENDPOINT}/mis-proyectos`);
+    const res = await httpService.get<ProyectoDto[]>(`${BASE_ENDPOINT}/mis-proyectos`);
+    return { ...res, data: res.data.map(mapProyectoData) };
   },
 
   // =================================================
@@ -50,9 +65,10 @@ const ProyectoService = {
   // =================================================
 
   create: async (data: CreateProyectoDto): Promise<AxiosResponse<ProyectoDto>> => {
+    // Al crear, forzamos que lotes sea un array vacío si no se provee
     return await httpService.post(BASE_ENDPOINT, {
       ...data,
-      lotesIds: [] 
+      lotesIds: data.lotesIds || [] 
     });
   },
 
@@ -69,12 +85,18 @@ const ProyectoService = {
     return await httpService.put(`${BASE_ENDPOINT}/${idProyecto}/iniciar-proceso`);
   },
 
+  revertProcess: async (idProyecto: number): Promise<AxiosResponse<{ mensaje: string, proyecto: ProyectoDto }>> => {
+    return await httpService.put(`${BASE_ENDPOINT}/${idProyecto}/revertir-proceso`);
+  },
+
   getAllAdmin: async (): Promise<AxiosResponse<ProyectoDto[]>> => {
-    return await httpService.get(BASE_ENDPOINT);
+    const res = await httpService.get<ProyectoDto[]>(BASE_ENDPOINT);
+    return { ...res, data: res.data.map(mapProyectoData) };
   },
 
   getByIdAdmin: async (id: number): Promise<AxiosResponse<ProyectoDto>> => {
-    return await httpService.get(`${BASE_ENDPOINT}/${id}`);
+    const res = await httpService.get<ProyectoDto>(`${BASE_ENDPOINT}/${id}`);
+    return { ...res, data: mapProyectoData(res.data) };
   },
 
   softDelete: async (id: number): Promise<AxiosResponse<GenericResponseDto>> => {

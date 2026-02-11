@@ -1,11 +1,11 @@
 import React from 'react';
-import { 
-  Snackbar, 
-  Alert, 
-  useTheme, 
-  Slide, 
-  type SlideProps, 
-  type AlertProps 
+import {
+  Snackbar,
+  Alert,
+  useTheme,
+  Slide,
+  type SlideProps,
+  type AlertProps
 } from '@mui/material';
 import { env } from '@/core/config/env';
 
@@ -14,7 +14,7 @@ import { env } from '@/core/config/env';
 export interface GlobalSnackbarProps {
   open: boolean;
   message: string;
-  severity: AlertProps['severity']; 
+  severity: AlertProps['severity'];
   onClose: () => void;
 }
 
@@ -42,7 +42,7 @@ export const GlobalSnackbar: React.FC<GlobalSnackbarProps> = ({
       sx={{
         bottom: { xs: 24, md: 32 },
         // Aseguramos que quede por encima de Modales y Fab buttons
-        zIndex: theme.zIndex.modal + 50, 
+        zIndex: theme.zIndex.modal + 50,
       }}
     >
       <Alert
@@ -57,7 +57,7 @@ export const GlobalSnackbar: React.FC<GlobalSnackbarProps> = ({
           fontSize: '0.9rem',
           alignItems: 'center',
           // ✅ Coherencia visual: 12px igual que tus Cards y Modales
-          borderRadius: '12px', 
+          borderRadius: '12px',
           color: '#fff',
           boxShadow: '0 8px 16px rgba(0,0,0,0.15)', // Sombra suave moderna
         }}

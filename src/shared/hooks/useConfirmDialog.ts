@@ -1,3 +1,5 @@
+// src/shared/hooks/useConfirmDialog.ts
+
 import { useState, useCallback, useMemo } from 'react';
 
 // 1. Tipos de acciones
@@ -22,6 +24,10 @@ export type ConfirmAction =
   | 'delete_bulk_images'
   | 'delete_single_image'
   | 'close_with_unsaved_changes'
+  // 🆕 NUEVOS TIPOS AGREGADOS PARA ADMIN PUJAS
+  | 'force_finish'
+  | 'revert_payment'
+  | 'revert_project_process'
   | null;
 
 export interface ConfirmConfig {
@@ -42,28 +48,43 @@ const BASE_CONFIGS: Record<string, Partial<ConfirmConfig>> = {
   end_auction: { title: '¿Finalizar subasta?', confirmText: 'Sí, finalizar', severity: 'error' },
   delete_plantilla: { title: '¿Eliminar plantilla?', confirmText: 'Sí, eliminar', severity: 'error' },
   force_confirm_transaction: { title: '¿Forzar confirmación?', confirmText: 'Sí, Forzar Pago', severity: 'error' },
-  cancel_ganadora_anticipada: { title: '¿Anular adjudicación?', confirmText: 'Sí, Anular', severity: 'error', requireInput: true },
+  
+  cancel_ganadora_anticipada: { title: '¿Anular adjudicación?', confirmText: 'Sí, Anular', severity: 'error', requireInput: true, inputLabel: 'Motivo de cancelación', inputPlaceholder: 'Ej: Falta de fondos...' },
+  
   delete_bulk_images: { title: '¿Eliminar imágenes?', confirmText: 'Sí, eliminar', severity: 'error' },
   delete_single_image: { title: '¿Eliminar imagen?', confirmText: 'Sí, eliminar', severity: 'error' },
   cancel_subscription: { title: '¿Cancelar suscripción?', confirmText: 'Sí, cancelar definitivamente', severity: 'error' },
+  
+  // 🆕 Configuración para Sancionar/Forzar
+  force_finish: { title: '¿Sancionar y Cerrar?', confirmText: 'Sí, ejecutar sanción', severity: 'error' },
 
-  // Advertencias / Decisiones (Naranja/Warning - Se verán como Primary)
+  // Advertencias / Decisiones (Naranja/Warning)
   close_with_unsaved_changes: { title: '¿Cerrar sin guardar?', confirmText: 'Sí, cerrar', severity: 'warning' },
-  logout: { title: '¿Cerrar sesión?', confirmText: 'Sí, salir', severity: 'info' }, // Info usa Primary por defecto
+  logout: { title: '¿Cerrar sesión?', confirmText: 'Sí, salir', severity: 'info' },
   remove_favorite: { title: '¿Quitar de favoritos?', confirmText: 'Sí, quitar', severity: 'warning' },
   cancel_puja: { title: '¿Cancelar puja?', confirmText: 'Sí, cancelar puja', severity: 'warning' },
   
+  // 🆕 Configuración para Revertir Pago
+  revert_payment: { title: '¿Revertir Pago?', confirmText: 'Sí, revertir a pendiente', severity: 'warning' },
+
   // Toggles (Warning)
   toggle_project_visibility: { severity: 'warning' },
   toggle_user_status: { severity: 'warning' },
   toggle_lote_visibility: { severity: 'warning' },
   toggle_plantilla_status: { severity: 'warning' },
-  
+
   // Acciones Operativas (Info/Success)
   start_project_process: { title: '¿Iniciar proceso de cobro?', confirmText: 'Sí, iniciar ahora', severity: 'warning' },
   start_auction: { title: '¿Iniciar subasta?', confirmText: 'Sí, iniciar', severity: 'warning' },
   approve_kyc: { title: '¿Aprobar verificación?', confirmText: 'Sí, Aprobar', severity: 'info' },
+  revert_project_process: { 
+    title: '¿Pausar y Revertir Proyecto?', 
+    confirmText: 'Sí, Revertir', 
+    severity: 'warning',
+    description: 'El proyecto volverá a estado "En Espera". Se detendrá el conteo de meses y se podrá volver a iniciar cuando se alcance el objetivo de suscriptores.'
+  },
 };
+
 
 // 3. El Hook Optimizado
 export const useConfirmDialog = () => {
@@ -91,7 +112,7 @@ export const useConfirmDialog = () => {
 
     const base = BASE_CONFIGS[state.action] || {};
     const data = state.data || {};
-    
+
     // Valores por defecto seguros
     let title = base.title || '¿Estás seguro?';
     let description = base.description || 'Esta acción podría tener consecuencias.';
@@ -122,7 +143,22 @@ export const useConfirmDialog = () => {
         const monto = data.monto_puja ? `$${data.monto_puja}` : 'tu monto';
         description = `Estás a punto de cancelar tu oferta de ${monto} para ${data.lote?.nombre_lote || 'este lote'}.`;
         break;
-      
+
+      // 🆕 Caso Dinámico: Forzar Finalización
+      case 'force_finish':
+        description = `Se finalizará el ciclo del Lote ID ${data.idLote}. Si el ganador no pagó, el lote quedará libre y se podrá aplicar una sanción.`;
+        break;
+
+      // 🆕 Caso Dinámico: Revertir Pago
+      case 'revert_payment':
+        description = `La puja ganadora (ID: ${data.pujaId}) pasará de 'Pagada' a 'Pendiente'. Úselo solo para corregir errores administrativos.`;
+        break;
+
+      // 🆕 Caso Dinámico: Cancelar Adjudicación Anticipada
+      case 'cancel_ganadora_anticipada':
+        description = `Se anulará la adjudicación del Lote ID ${data.id}. El token se devolverá al usuario y el lote se liberará. Se requiere un motivo.`;
+        break;
+
       // Toggles Genéricos (Visibilidad/Estado)
       case 'toggle_project_visibility':
       case 'toggle_lote_visibility':
@@ -132,20 +168,20 @@ export const useConfirmDialog = () => {
         const entity = state.action.split('_')[1]; // project, lote, user, plantilla
         const actionVerb = isActive ? 'Ocultar' : 'Mostrar';
         const actionVerbUser = isActive ? 'Desactivar' : 'Activar'; // Caso especial usuario/plantilla
-        
+
         if (state.action === 'toggle_user_status' || state.action === 'toggle_plantilla_status') {
-            title = `¿${actionVerbUser} ${entity}?`;
-            confirmText = `Sí, ${actionVerbUser.toLowerCase()}`;
-            description = isActive 
-                ? `El ${entity} quedará inhabilitado para operar.`
-                : `El ${entity} recuperará el acceso/disponibilidad.`;
-            if(isActive) severity = 'error'; // Desactivar usuario es grave
+          title = `¿${actionVerbUser} ${entity}?`;
+          confirmText = `Sí, ${actionVerbUser.toLowerCase()}`;
+          description = isActive
+            ? `El ${entity} quedará inhabilitado para operar.`
+            : `El ${entity} recuperará el acceso/disponibilidad.`;
+          if (isActive) severity = 'error'; // Desactivar usuario es grave
         } else {
-            title = `¿${actionVerb} ${entity}?`;
-            confirmText = `Sí, ${actionVerb.toLowerCase()}`;
-            description = isActive 
-                ? `El ${entity} dejará de ser visible públicamente.`
-                : `El ${entity} será visible para todos los usuarios.`;
+          title = `¿${actionVerb} ${entity}?`;
+          confirmText = `Sí, ${actionVerb.toLowerCase()}`;
+          description = isActive
+            ? `El ${entity} dejará de ser visible públicamente.`
+            : `El ${entity} será visible para todos los usuarios.`;
         }
         break;
 
@@ -158,13 +194,16 @@ export const useConfirmDialog = () => {
         description = `Se iniciará la subasta para "${data.nombre_lote}". Los usuarios podrán pujar inmediatamente.`;
         break;
       case 'end_auction':
-        description = `Se cerrará la subasta para "${data.nombre_lote}". Se determinará un ganador automáticamente.`;
+        // Lógica para mensaje de fin de subasta (si hay ganador o no)
+        description = data.id_ganador 
+            ? `Se cerrará la subasta. Se adjudicará al ganador actual.` 
+            : `Se cerrará la subasta sin ganador (Desierta).`;
         break;
-        
+
       case 'approve_kyc':
         description = `Estás a punto de validar la identidad de ${data.nombre_completo}. Quedará habilitado.`;
         break;
-        
+
       case 'force_confirm_transaction':
         description = `⚠️ IRREVERSIBLE. Confirmas manualmente que el dinero llegó (Transacción #${data.id}).`;
         break;

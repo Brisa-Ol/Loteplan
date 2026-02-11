@@ -31,12 +31,12 @@ const ImageUploadZone: React.FC<ImageUploadZoneProps> = ({
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-// 🔄 ACTUALIZAR VALIDACIÓN
+  // 🔄 ACTUALIZAR VALIDACIÓN
   const validateFile = useCallback((file: File): boolean => {
     // Si aceptamos video y el archivo es video, pasa
     if (accept.includes('video') && file.type.startsWith('video/')) {
-        // Validación extra de tamaño para video si quieres
-    } 
+      // Validación extra de tamaño para video si quieres
+    }
     // Si aceptamos imagen y el archivo no es imagen
     else if (!accept.includes('video') && !file.type.startsWith('image/')) {
       setError(`El archivo "${file.name}" no es un formato válido.`);
@@ -123,7 +123,7 @@ const ImageUploadZone: React.FC<ImageUploadZoneProps> = ({
           } : {}
         }}
       >
-       <input
+        <input
           type="file"
           accept={accept} // 👈 Úsalo aquí
           multiple
@@ -135,38 +135,38 @@ const ImageUploadZone: React.FC<ImageUploadZoneProps> = ({
 
         <label htmlFor="image-upload-input" style={{ cursor: disabled ? 'not-allowed' : 'pointer', width: '100%', display: 'block' }}>
           <Stack spacing={2} alignItems="center">
-            <Box 
-                sx={{ 
-                    p: 2, 
-                    borderRadius: '50%', 
-                    bgcolor: dragActive ? 'primary.main' : 'action.hover',
-                    color: dragActive ? 'white' : 'text.secondary',
-                    transition: '0.3s'
-                }}
+            <Box
+              sx={{
+                p: 2,
+                borderRadius: '50%',
+                bgcolor: dragActive ? 'primary.main' : 'action.hover',
+                color: dragActive ? 'white' : 'text.secondary',
+                transition: '0.3s'
+              }}
             >
-                <UploadIcon sx={{ fontSize: 32 }} />
+              <UploadIcon sx={{ fontSize: 32 }} />
             </Box>
 
             <Box>
-                <Typography fontWeight={600} variant="body1">
+              <Typography fontWeight={600} variant="body1">
                 {dragActive ? '¡Suelta los archivos aquí!' : 'Haz clic o arrastra imágenes'}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-               {accept.includes('video') 
-             ? `Soporta video MP4, WEBM • Máx ${maxSizeMB}MB` 
-             : `Soporta JPG, PNG, WEBP • Máx ${maxSizeMB}MB`
-           }
-                </Typography>
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {accept.includes('video')
+                  ? `Soporta video MP4, WEBM • Máx ${maxSizeMB}MB`
+                  : `Soporta JPG, PNG, WEBP • Máx ${maxSizeMB}MB`
+                }
+              </Typography>
             </Box>
 
             {images.length > 0 && (
-                <Chip
+              <Chip
                 label={`${images.length} / ${maxFiles} seleccionadas`}
                 size="small"
                 color="primary"
                 variant="outlined"
                 icon={<ImageIcon fontSize="small" />}
-                />
+              />
             )}
           </Stack>
         </label>
@@ -193,7 +193,7 @@ const ImageUploadZone: React.FC<ImageUploadZoneProps> = ({
                 elevation={3}
                 sx={{
                   // ✅ RESPONSIVE: Miniaturas más pequeñas en móvil para que quepan más
-                  width: { xs: 100, sm: 120 }, 
+                  width: { xs: 100, sm: 120 },
                   height: { xs: 100, sm: 120 },
                   borderRadius: 2,
                   overflow: 'hidden',
@@ -206,12 +206,12 @@ const ImageUploadZone: React.FC<ImageUploadZoneProps> = ({
                   component="img"
                   src={URL.createObjectURL(file)}
                   alt="preview"
-                  sx={{ 
-                      width: '100%', 
-                      height: '100%', 
-                      objectFit: 'cover',
-                      transition: '0.3s',
-                      '&:hover': { transform: 'scale(1.05)' }
+                  sx={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    transition: '0.3s',
+                    '&:hover': { transform: 'scale(1.05)' }
                   }}
                 />
 
@@ -235,19 +235,19 @@ const ImageUploadZone: React.FC<ImageUploadZoneProps> = ({
 
                 {/* Etiqueta de tamaño */}
                 <Box
-                    sx={{
-                        position: 'absolute',
-                        bottom: 0,
-                        left: 0,
-                        right: 0,
-                        bgcolor: 'rgba(0,0,0,0.6)',
-                        color: 'white',
-                        fontSize: '0.65rem',
-                        textAlign: 'center',
-                        py: 0.5
-                    }}
+                  sx={{
+                    position: 'absolute',
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    bgcolor: 'rgba(0,0,0,0.6)',
+                    color: 'white',
+                    fontSize: '0.65rem',
+                    textAlign: 'center',
+                    py: 0.5
+                  }}
                 >
-                    {(file.size / 1024 / 1024).toFixed(2)} MB
+                  {(file.size / 1024 / 1024).toFixed(2)} MB
                 </Box>
               </Paper>
             ))}

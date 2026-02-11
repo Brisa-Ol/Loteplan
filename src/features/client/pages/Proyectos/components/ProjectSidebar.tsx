@@ -1,12 +1,12 @@
 import React from 'react';
-import { 
-  Card, Box, Stack, Alert, Button, LinearProgress, 
-  Typography, useTheme, alpha, Divider 
+import {
+  Card, Box, Stack, Alert, Button, LinearProgress,
+  Typography, useTheme, alpha, Divider
 } from '@mui/material';
-import { 
-  ArrowForward, HistoryEdu, CheckCircle, Description, 
+import {
+  ArrowForward, HistoryEdu, CheckCircle, Description,
   GppGood, MonetizationOn, Download, CalendarMonth, Lock,
-  Token as TokenIcon 
+  Token as TokenIcon
 } from '@mui/icons-material';
 
 import type { ProyectoDto } from '@/core/types/dto/proyecto.dto';
@@ -21,7 +21,7 @@ import { SecurityRequirementModal } from '@/shared/components/domain/modals/Secu
 // ==========================================
 
 export interface ProjectSidebarLogic {
-  user: any | null; 
+  user: any | null;
   puedeFirmar: boolean;
   yaFirmo: boolean;
   handleMainAction: () => void;
@@ -103,15 +103,15 @@ const ProcessStepper: React.FC<{
           return (
             <React.Fragment key={idx}>
               <Box display="flex" alignItems="center" gap={2}>
-                <Box sx={{ 
-                  width: 40, height: 40, minWidth: 40, borderRadius: '50%', 
-                  bgcolor: step.completed ? 'success.main' : step.active ? 'primary.main' : alpha(theme.palette.text.disabled, 0.1), 
-                  color: step.completed || step.active ? 'white' : 'text.disabled', 
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', 
-                  boxShadow: step.active ? `0 4px 12px ${alpha(theme.palette.primary.main, 0.3)}` : 'none', 
-                  transition: 'all 0.3s ease' 
+                <Box sx={{
+                  width: 40, height: 40, minWidth: 40, borderRadius: '50%',
+                  bgcolor: step.completed ? 'success.main' : step.active ? 'primary.main' : alpha(theme.palette.text.disabled, 0.1),
+                  color: step.completed || step.active ? 'white' : 'text.disabled',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: step.active ? `0 4px 12px ${alpha(theme.palette.primary.main, 0.3)}` : 'none',
+                  transition: 'all 0.3s ease'
                 }}>
-                  <Icon fontSize="small"/>
+                  <Icon fontSize="small" />
                 </Box>
                 <Box flex={1}>
                   <Typography variant="body2" fontWeight={step.active ? 700 : 500} sx={{ textDecoration: step.completed ? 'line-through' : 'none', color: step.completed ? 'text.secondary' : step.active ? 'text.primary' : 'text.disabled' }}>
@@ -134,46 +134,46 @@ const ProcessStepper: React.FC<{
 // 4. SUBCOMPONENTE: Header de Precios
 // ==========================================
 const PriceHeader: React.FC<{ helpers: any }> = ({ helpers }) => {
-    const BadgeIcon = helpers.badge.icon;
-    const bgHeader = helpers.badge.color === 'success' ? 'success.main' : 'primary.main';
+  const BadgeIcon = helpers.badge.icon;
+  const bgHeader = helpers.badge.color === 'success' ? 'success.main' : 'primary.main';
 
-    return (
-        <Box sx={{ bgcolor: bgHeader, p: 3, color: 'white', borderRadius: '12px 12px 0 0', position: 'relative', overflow: 'hidden' }}>
-             <Box sx={{ position: 'absolute', top: -30, right: -30, width: 140, height: 140, borderRadius: '50%', bgcolor: 'rgba(255,255,255,0.08)', pointerEvents: 'none' }} />
-             <Stack direction="row" justifyContent="space-between" alignItems="start" mb={2}>
-                <Box sx={{ bgcolor: 'rgba(255,255,255,0.2)', px: 1.5, py: 0.5, borderRadius: 1, display: 'flex', alignItems: 'center', gap: 0.8, backdropFilter: 'blur(4px)' }}>
-                    <BadgeIcon sx={{ fontSize: 18 }} />
-                    <Typography variant="caption" fontWeight={700} color="inherit">{helpers.badge.label}</Typography>
-                </Box>
-                {helpers.estaActivo && (
-                    <Box sx={{ bgcolor: 'rgba(0,0,0,0.2)', px: 1.5, py: 0.5, borderRadius: 1 }}>
-                        <Typography variant="caption" fontWeight={700} color="inherit">ACTIVO</Typography>
-                    </Box>
-                )}
-            </Stack>
-            <Typography variant="caption" sx={{ opacity: 0.9, fontWeight: 500, display: 'block', mb: 0.5, color: 'inherit' }}>
-                {helpers.esMensual ? 'VALOR DE CUOTA MENSUAL' : 'INVERSIÓN TOTAL'}
-            </Typography>
-            <Typography variant="h3" fontWeight={700} sx={{ mb: 1, color: 'inherit' }}>
-                {helpers.precioFormateado}
-            </Typography>
-            {helpers.esMensual ? (
-                <Stack direction="row" alignItems="center" gap={1} sx={{ opacity: 0.95 }}>
-                    <CalendarMonth fontSize="small" />
-                    <Typography variant="body2" fontWeight={600} color="inherit">{helpers.plazoTexto}</Typography>
-                </Stack>
-            ) : (
-                helpers.hayLotes && (
-                    <Stack direction="row" alignItems="center" gap={1} sx={{ opacity: 0.95 }}>
-                        <Description fontSize="small" />
-                        <Typography variant="body2" fontWeight={600} color="inherit">
-                          Pack de {helpers.cantidadLotes} lotes
-                        </Typography>
-                    </Stack>
-                )
-            )}
+  return (
+    <Box sx={{ bgcolor: bgHeader, p: 3, color: 'white', borderRadius: '12px 12px 0 0', position: 'relative', overflow: 'hidden' }}>
+      <Box sx={{ position: 'absolute', top: -30, right: -30, width: 140, height: 140, borderRadius: '50%', bgcolor: 'rgba(255,255,255,0.08)', pointerEvents: 'none' }} />
+      <Stack direction="row" justifyContent="space-between" alignItems="start" mb={2}>
+        <Box sx={{ bgcolor: 'rgba(255,255,255,0.2)', px: 1.5, py: 0.5, borderRadius: 1, display: 'flex', alignItems: 'center', gap: 0.8, backdropFilter: 'blur(4px)' }}>
+          <BadgeIcon sx={{ fontSize: 18 }} />
+          <Typography variant="caption" fontWeight={700} color="inherit">{helpers.badge.label}</Typography>
         </Box>
-    );
+        {helpers.estaActivo && (
+          <Box sx={{ bgcolor: 'rgba(0,0,0,0.2)', px: 1.5, py: 0.5, borderRadius: 1 }}>
+            <Typography variant="caption" fontWeight={700} color="inherit">ACTIVO</Typography>
+          </Box>
+        )}
+      </Stack>
+      <Typography variant="caption" sx={{ opacity: 0.9, fontWeight: 500, display: 'block', mb: 0.5, color: 'inherit' }}>
+        {helpers.esMensual ? 'VALOR DE CUOTA MENSUAL' : 'INVERSIÓN TOTAL'}
+      </Typography>
+      <Typography variant="h3" fontWeight={700} sx={{ mb: 1, color: 'inherit' }}>
+        {helpers.precioFormateado}
+      </Typography>
+      {helpers.esMensual ? (
+        <Stack direction="row" alignItems="center" gap={1} sx={{ opacity: 0.95 }}>
+          <CalendarMonth fontSize="small" />
+          <Typography variant="body2" fontWeight={600} color="inherit">{helpers.plazoTexto}</Typography>
+        </Stack>
+      ) : (
+        helpers.hayLotes && (
+          <Stack direction="row" alignItems="center" gap={1} sx={{ opacity: 0.95 }}>
+            <Description fontSize="small" />
+            <Typography variant="body2" fontWeight={600} color="inherit">
+              Pack de {helpers.cantidadLotes} lotes
+            </Typography>
+          </Stack>
+        )
+      )}
+    </Box>
+  );
 };
 
 // ==========================================
@@ -182,7 +182,7 @@ const PriceHeader: React.FC<{ helpers: any }> = ({ helpers }) => {
 
 export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({ logic, proyecto }) => {
   const theme = useTheme();
-  const helpers = useProyectoHelpers(proyecto); 
+  const helpers = useProyectoHelpers(proyecto);
   const { withSecurityCheck, securityModalProps } = useSecurityGuard();
 
   const user = logic.user;
@@ -191,23 +191,23 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({ logic, proyecto 
 
   return (
     <>
-      <Card 
-        sx={{ 
-          position: { lg: 'sticky' }, 
-          top: { lg: 100 }, 
-          overflow: 'visible' 
+      <Card
+        sx={{
+          position: { lg: 'sticky' },
+          top: { lg: 100 },
+          overflow: 'visible'
         }}
       >
         <PriceHeader helpers={helpers} />
 
         <Box p={3}>
           <Stack spacing={3}>
-            
+
             {user && (
-              <ProcessStepper 
-                  paso1Completo={paso1Completo} 
-                  paso2Completo={paso2Completo} 
-                  esMensual={helpers.esMensual} 
+              <ProcessStepper
+                paso1Completo={paso1Completo}
+                paso2Completo={paso2Completo}
+                esMensual={helpers.esMensual}
               />
             )}
 
@@ -215,12 +215,12 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({ logic, proyecto 
               {!user ? (
                 <Stack spacing={2}>
                   {helpers.esMensual && <TokenValueProposition />}
-                  <Button 
-                    variant="contained" 
-                    fullWidth 
-                    size="large" 
-                    onClick={logic.handleMainAction} 
-                    startIcon={<Lock />} 
+                  <Button
+                    variant="contained"
+                    fullWidth
+                    size="large"
+                    onClick={logic.handleMainAction}
+                    startIcon={<Lock />}
                     sx={{ fontWeight: 700 }}
                   >
                     {helpers.esMensual ? 'Identificate para Suscribirte' : 'Identificate para Invertir'}
@@ -232,29 +232,29 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({ logic, proyecto 
                   {!paso1Completo && (
                     <Stack spacing={2}>
                       {helpers.esMensual && <TokenValueProposition />}
-                      <Button 
-                          variant="contained" 
-                          fullWidth 
-                          size="large" 
-                          onClick={logic.handleMainAction} 
-                          disabled={logic.handleInversion.isPending}
-                          endIcon={!logic.handleInversion.isPending && <ArrowForward />}
-                          sx={{ fontWeight: 700 }}
+                      <Button
+                        variant="contained"
+                        fullWidth
+                        size="large"
+                        onClick={logic.handleMainAction}
+                        disabled={logic.handleInversion.isPending}
+                        endIcon={!logic.handleInversion.isPending && <ArrowForward />}
+                        sx={{ fontWeight: 700 }}
                       >
-                        {logic.handleInversion.isPending 
-                          ? 'Procesando...' 
+                        {logic.handleInversion.isPending
+                          ? 'Procesando...'
                           : helpers.esMensual ? 'Suscribirme al Plan' : 'Invertir en el Pack'
                         }
                       </Button>
-                      
+
                       {helpers.esMensual && helpers.progreso && (
-                          <Box sx={{ p: 2, bgcolor: alpha(theme.palette.success.main, 0.08), borderRadius: 2 }}>
-                              <Stack direction="row" justifyContent="space-between" mb={1}>
-                                  <Typography variant="caption" fontWeight={700} color="success.dark">Cupos Disponibles</Typography>
-                                  <Typography variant="caption" fontWeight={800} color="success.main">{helpers.progreso.disponibles}</Typography>
-                              </Stack>
-                              <LinearProgress variant="determinate" value={helpers.progreso.porcentaje} color="success" sx={{ height: 6, borderRadius: 3 }} />
-                          </Box>
+                        <Box sx={{ p: 2, bgcolor: alpha(theme.palette.success.main, 0.08), borderRadius: 2 }}>
+                          <Stack direction="row" justifyContent="space-between" mb={1}>
+                            <Typography variant="caption" fontWeight={700} color="success.dark">Cupos Disponibles</Typography>
+                            <Typography variant="caption" fontWeight={800} color="success.main">{helpers.progreso.disponibles}</Typography>
+                          </Stack>
+                          <LinearProgress variant="determinate" value={helpers.progreso.porcentaje} color="success" sx={{ height: 6, borderRadius: 3 }} />
+                        </Box>
                       )}
                     </Stack>
                   )}
@@ -263,20 +263,20 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({ logic, proyecto 
                   {paso1Completo && !paso2Completo && (
                     <Stack spacing={2}>
                       <Alert severity="warning" icon={<HistoryEdu />}>
-                          Pago confirmado. Firma tu contrato para finalizar.
+                        Pago confirmado. Firma tu contrato para finalizar.
                       </Alert>
-                      <Button 
-                          variant="contained" 
-                          color="warning" 
-                          fullWidth 
-                          size="large" 
-                          onClick={() => withSecurityCheck(logic.handleClickFirmar)} 
-                          sx={{ color: 'white', fontWeight: 700 }}
+                      <Button
+                        variant="contained"
+                        color="warning"
+                        fullWidth
+                        size="large"
+                        onClick={() => withSecurityCheck(logic.handleClickFirmar)}
+                        sx={{ color: 'white', fontWeight: 700 }}
                       >
                         Firmar Contrato Digital
                       </Button>
                       <Button variant="text" size="small" onClick={logic.modales.contrato.open} sx={{ fontWeight: 600 }}>
-                          Ver borrador del contrato
+                        Ver borrador del contrato
                       </Button>
                     </Stack>
                   )}
@@ -285,15 +285,15 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({ logic, proyecto 
                   {paso2Completo && (
                     <Stack spacing={2}>
                       <Alert severity="success" icon={<CheckCircle />}>
-                          ¡Inversión completada exitosamente!
+                        ¡Inversión completada exitosamente!
                       </Alert>
-                      <Button 
-                          variant="outlined" 
-                          color="success" 
-                          fullWidth 
-                          onClick={logic.handleVerContratoFirmado} 
-                          startIcon={<Download />} 
-                          sx={{ fontWeight: 700 }}
+                      <Button
+                        variant="outlined"
+                        color="success"
+                        fullWidth
+                        onClick={logic.handleVerContratoFirmado}
+                        startIcon={<Download />}
+                        sx={{ fontWeight: 700 }}
                       >
                         Descargar Contrato Firmado
                       </Button>
@@ -302,28 +302,28 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({ logic, proyecto 
                 </>
               )}
             </Box>
-            
+
             <Divider />
-            
+
             <Stack spacing={1.5}>
-               <Stack direction="row" alignItems="center" gap={1.5}>
-                  <Box sx={{ bgcolor: alpha(theme.palette.success.main, 0.1), p: 1, borderRadius: 1.5, display: 'flex' }}>
-                      <GppGood color="success" fontSize="small" />
-                  </Box>
-                  <Box>
-                      <Typography variant="subtitle2" color="text.primary" display="block" fontWeight={700}>Operación Legal</Typography>
-                      <Typography variant="caption" color="text.secondary">Protección jurídica garantizada</Typography>
-                  </Box>
-               </Stack>
-               <Stack direction="row" alignItems="center" gap={1.5}>
-                  <Box sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), p: 1, borderRadius: 1.5, display: 'flex' }}>
-                      <Description color="primary" fontSize="small" />
-                  </Box>
-                  <Box>
-                      <Typography variant="subtitle2" color="text.primary" display="block" fontWeight={700}>Contrato Digital</Typography>
-                      <Typography variant="caption" color="text.secondary">Firma electrónica válida</Typography>
-                  </Box>
-               </Stack>
+              <Stack direction="row" alignItems="center" gap={1.5}>
+                <Box sx={{ bgcolor: alpha(theme.palette.success.main, 0.1), p: 1, borderRadius: 1.5, display: 'flex' }}>
+                  <GppGood color="success" fontSize="small" />
+                </Box>
+                <Box>
+                  <Typography variant="subtitle2" color="text.primary" display="block" fontWeight={700}>Operación Legal</Typography>
+                  <Typography variant="caption" color="text.secondary">Protección jurídica garantizada</Typography>
+                </Box>
+              </Stack>
+              <Stack direction="row" alignItems="center" gap={1.5}>
+                <Box sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), p: 1, borderRadius: 1.5, display: 'flex' }}>
+                  <Description color="primary" fontSize="small" />
+                </Box>
+                <Box>
+                  <Typography variant="subtitle2" color="text.primary" display="block" fontWeight={700}>Contrato Digital</Typography>
+                  <Typography variant="caption" color="text.secondary">Firma electrónica válida</Typography>
+                </Box>
+              </Stack>
             </Stack>
 
           </Stack>

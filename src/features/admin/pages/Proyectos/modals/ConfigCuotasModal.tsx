@@ -29,6 +29,7 @@ import type { CreateCuotaMensualDto } from '@/core/types/dto/cuotaMensual.dto';
 import BaseModal from '@/shared/components/domain/modals/BaseModal/BaseModal';
 import ProyectoPriceHistory from '../components/ProyectoPriceHistory';
 
+
 interface ConfigCuotasModalProps {
     open: boolean;
     onClose: () => void;

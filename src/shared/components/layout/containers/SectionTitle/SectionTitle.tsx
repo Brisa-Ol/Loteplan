@@ -18,23 +18,23 @@ const fadeIn = keyframes`
 interface SectionTitleProps extends Omit<TypographyProps, 'align' | 'variant'> {
   children: React.ReactNode;
   /** Texto descriptivo debajo del título principal */
-  subtitle?: string; 
-  
+  subtitle?: string;
+
   align?: "left" | "center" | "right";
-  variant?: TypographyVariant; 
-  
+  variant?: TypographyVariant;
+
   /** Ancho de la línea decorativa (px o %). Default: 80px */
   lineWidth?: number | string;
   /** Color de la línea. Default: 'secondary.main' */
   lineColor?: string;
   /** Si es true, usa un gradiente con el color primario del tema */
   useGradient?: boolean;
-  
+
   component?: React.ElementType;
 }
 
-export const SectionTitle: React.FC<SectionTitleProps> = ({ 
-  children, 
+export const SectionTitle: React.FC<SectionTitleProps> = ({
+  children,
   subtitle, // ✨ Nuevo Prop
   align = "center",
   variant = "h2",
@@ -45,7 +45,7 @@ export const SectionTitle: React.FC<SectionTitleProps> = ({
   sx,
   ...rest
 }) => {
-  
+
   // Mapeo seguro de variantes
   const mapVariantToTag = (v: string): React.ElementType => {
     const validTags = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'span', 'div'];
@@ -68,7 +68,7 @@ export const SectionTitle: React.FC<SectionTitleProps> = ({
       {/* 1. TÍTULO PRINCIPAL */}
       <Typography
         variant={variant}
-        component={semanticTag} 
+        component={semanticTag}
         align={align}
         sx={{
           fontWeight: 700,
@@ -80,31 +80,31 @@ export const SectionTitle: React.FC<SectionTitleProps> = ({
         {...rest}
       >
         {children}
-        
+
         {/* Línea Decorativa */}
         <Box
-            component="span"
-            sx={{
-                position: "absolute",
-                bottom: 0,
-                left: align === "center" ? "50%" : align === "right" ? "100%" : 0,
-                transform: align === "center" ? "translateX(-50%)" : align === "right" ? "translateX(-100%)" : "none",
-                height: 4,
-                width: lineWidth,
-                maxWidth: '100%',
-                borderRadius: 2,
-                background: useGradient 
-                    ? `linear-gradient(90deg, ${lineColor} 0%, #CC6333 100%)`
-                    : (theme) => {
-                        const colorParts = lineColor.split('.');
-                        if (colorParts.length === 2) {
-                            const palette = theme.palette as any;
-                            return palette[colorParts[0]]?.[colorParts[1]] || lineColor;
-                        }
-                        return lineColor;
-                    },
-                animation: `${expandLine} 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards`,
-            }}
+          component="span"
+          sx={{
+            position: "absolute",
+            bottom: 0,
+            left: align === "center" ? "50%" : align === "right" ? "100%" : 0,
+            transform: align === "center" ? "translateX(-50%)" : align === "right" ? "translateX(-100%)" : "none",
+            height: 4,
+            width: lineWidth,
+            maxWidth: '100%',
+            borderRadius: 2,
+            background: useGradient
+              ? `linear-gradient(90deg, ${lineColor} 0%, #CC6333 100%)`
+              : (theme) => {
+                const colorParts = lineColor.split('.');
+                if (colorParts.length === 2) {
+                  const palette = theme.palette as any;
+                  return palette[colorParts[0]]?.[colorParts[1]] || lineColor;
+                }
+                return lineColor;
+              },
+            animation: `${expandLine} 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards`,
+          }}
         />
       </Typography>
 

@@ -1,26 +1,11 @@
-// src/features/client/pages/Lotes/ListaLotesProyecto.tsx
+import React, { useCallback, useMemo, useState } from 'react';
 import {
-  AccessTime,
-  Apps, Block,
-  EmojiEvents,
-  Gavel,
-  Lock
+  AccessTime, Apps, Block, EmojiEvents, Gavel, Lock
 } from '@mui/icons-material';
 import {
-  Alert,
-  Box,
-  Button,
-  Fade,
-  Skeleton,
-  Stack,
-  Tab,
-  Tabs,
-  Typography,
-  alpha,
-  useTheme
+  Alert, Box, Button, Fade, Skeleton, Stack, Tab, Tabs, Typography, alpha, useTheme
 } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
-import React, { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import ProyectoService from '@/core/api/services/proyecto.service';
@@ -29,7 +14,6 @@ import type { LoteDto } from '@/core/types/dto/lote.dto';
 import type { ProyectoDto } from '@/core/types/dto/proyecto.dto';
 import { ROUTES } from '@/routes';
 import { ConfirmDialog } from '@/shared/components/domain/modals/ConfirmDialog/ConfirmDialog';
-import { GlobalSnackbar } from '../../../../shared/components/ui/feedback/GlobalSnackbarProps/GlobalSnackbarProps';
 import { useLotesProyecto } from '../../hooks/useLotesProyecto';
 import LoteCard from './components/LoteCard';
 import PujarModal from './components/PujarModal';
@@ -47,7 +31,6 @@ const getPesoEstado = (estado: string) => {
   }
 };
 
-// ✅ OPTIMIZACIÓN 1: Memoizar LoteCard con comparador personalizado
 const MemoizedLoteCard = React.memo(LoteCard, (prevProps, nextProps) => {
   return (
     prevProps.lote.id === nextProps.lote.id &&
@@ -58,7 +41,7 @@ const MemoizedLoteCard = React.memo(LoteCard, (prevProps, nextProps) => {
     prevProps.hasTokens === nextProps.hasTokens &&
     prevProps.tokensDisponibles === nextProps.tokensDisponibles &&
     prevProps.isLoadingSub === nextProps.isLoadingSub &&
-    prevProps.isAuthenticated === nextProps.isAuthenticated && // ✅ Nueva prop
+    prevProps.isAuthenticated === nextProps.isAuthenticated &&
     (prevProps.lote.pujas?.length || 0) === (nextProps.lote.pujas?.length || 0)
   );
 });
@@ -72,7 +55,7 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
 
   const [tabValue, setTabValue] = useState('todos');
 
-  // 1. VALIDACIÓN: VERIFICAR TIPO DE PROYECTO
+  // Query de Proyecto
   const { data: proyecto, isLoading: loadingProyecto } = useQuery<ProyectoDto>({
     queryKey: ['proyecto', idProyecto],
     queryFn: async () => (await ProyectoService.getByIdActive(idProyecto)).data,
@@ -82,7 +65,7 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
 
   const logic = useLotesProyecto(idProyecto, isAuthenticated);
 
-  // ✅ OPTIMIZACIÓN 2: Memoizar filtrado y sorting
+  // Filtrado y Ordenamiento
   const { filteredLotes, counts } = useMemo(() => {
     if (!logic.lotes) return { filteredLotes: [], counts: { todos: 0, activa: 0, pendiente: 0, finalizada: 0 } };
 
@@ -105,27 +88,24 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
     return { filteredLotes: result, counts };
   }, [logic.lotes, tabValue]);
 
-const handleNavigate = useCallback((id: number) => {
-    // ✅ Asegúrate de que esta constante apunte a la vista de cliente, no admin
+  // Handlers
+  const handleNavigate = useCallback((id: number) => {
     const ruta = ROUTES.CLIENT.LOTES.DETALLE.replace(':id', String(id));
     navigate(ruta);
   }, [navigate]);
+
   const handlePujar = useCallback((lote: LoteDto) => {
     if (!isAuthenticated) {
-      // ✅ Guardamos la URL actual para regresar después del login
-      // Usamos el path completo para que el guard de auth sepa a dónde volver
-      navigate(ROUTES.LOGIN, { 
+      navigate(ROUTES.LOGIN, {
         state: { from: window.location.pathname },
-        replace: false 
+        replace: false
       });
       return;
     }
     logic.handleOpenPujar(lote);
   }, [isAuthenticated, logic, navigate]);
-  const handleRemoveFav = useCallback((id: number) => {
-    logic.handleRequestUnfav(id);
-  }, [logic]);
 
+  // Grid Styles
   const gridStyles = {
     display: 'grid',
     gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' },
@@ -133,7 +113,8 @@ const handleNavigate = useCallback((id: number) => {
     alignItems: 'stretch'
   };
 
-  // VALIDACIÓN 1: CARGANDO PROYECTO
+  // --- RENDERS CONDICIONALES ---
+
   if (loadingProyecto) {
     return (
       <Box mt={4}>
@@ -153,83 +134,45 @@ const handleNavigate = useCallback((id: number) => {
     );
   }
 
-  // VALIDACIÓN 2: BLOQUEO PARA INVERSIONISTAS DIRECTOS
   if (proyecto?.tipo_inversion === 'directo') {
     return (
       <Fade in timeout={500}>
         <Box mt={{ xs: 2, md: 4 }} p={{ xs: 3, md: 5 }} textAlign="center" bgcolor="background.paper" borderRadius={4} border={`1px solid ${theme.palette.divider}`}>
           <Block sx={{ fontSize: 60, color: 'warning.main', mb: 2, opacity: 0.7 }} />
-          <Typography variant="h6" fontWeight="bold" gutterBottom>
-            Inventario No Disponible
-          </Typography>
-          <Typography variant="body2" color="text.secondary" paragraph>
-            Este es un proyecto de <strong>inversión directa</strong>.
-            Los lotes forman parte del pack completo y no se subastan individualmente.
-          </Typography>
-          <Button
-            variant="outlined"
-            onClick={() => navigate(ROUTES.PUBLIC.HOME)}
-          >
-            Volver a Proyectos
-          </Button>
+          <Typography variant="h6" fontWeight="bold" gutterBottom>Inventario No Disponible</Typography>
+          <Typography variant="body2" color="text.secondary" paragraph>Este es un proyecto de <strong>inversión directa</strong>. Los lotes forman parte del pack completo.</Typography>
+          <Button variant="outlined" onClick={() => navigate(ROUTES.PUBLIC.HOME)}>Volver a Proyectos</Button>
         </Box>
       </Fade>
     );
   }
 
-  // VALIDACIÓN 4: CARGANDO LOTES
   if (logic.isLoading) {
-    return (
-      <Box mt={4}>
-        <Skeleton variant="rectangular" width="100%" height={200} sx={{ borderRadius: 2 }} />
-      </Box>
-    );
+    return <Box mt={4}><Skeleton variant="rectangular" width="100%" height={200} sx={{ borderRadius: 2 }} /></Box>;
   }
 
   if (logic.error) return <Alert severity="error">Error al cargar inventario.</Alert>;
 
   return (
     <Box mt={{ xs: 3, md: 4 }}>
-
-      {/* ✅ ALERTA PARA INVITADOS */}
+      {/* Alertas Auth */}
       {!isAuthenticated && (
-        <Alert
-          severity="info"
-          variant="outlined"
-          icon={<Lock />}
-          sx={{ mb: 3, borderRadius: 2, bgcolor: alpha(theme.palette.info.main, 0.02) }}
-        >
-          <Typography variant="body2">
-            Estás viendo el <strong>inventario público</strong>. Inicia sesión para poder participar en las subastas y asegurar tu lote.
-          </Typography>
-          <Button
-            size="small"
-            variant="text"
-            onClick={() => navigate(ROUTES.LOGIN)}
-            sx={{ mt: 1, fontWeight: 700, textTransform: 'none' }}
-          >
-            Iniciar Sesión ahora
-          </Button>
+        <Alert severity="info" variant="outlined" icon={<Lock />} sx={{ mb: 3, borderRadius: 2, bgcolor: alpha(theme.palette.info.main, 0.02) }}>
+          <Typography variant="body2">Estás viendo el <strong>inventario público</strong>. Inicia sesión para participar.</Typography>
+          <Button size="small" variant="text" onClick={() => navigate(ROUTES.LOGIN)} sx={{ mt: 1, fontWeight: 700, textTransform: 'none' }}>Iniciar Sesión ahora</Button>
         </Alert>
       )}
 
-      {/* ✅ ALERTAS PARA USUARIOS LOGUEADOS */}
       {isAuthenticated && !logic.isSubscribed && !logic.isLoading && (
         <Alert severity="warning" variant="outlined" icon={<Lock />} sx={{ mb: 3, borderRadius: 2 }}>
-          <Typography variant="body2" fontWeight={600} gutterBottom>
-            Suscripción Requerida
-          </Typography>
-          <Typography variant="body2">
-            Debes estar suscripto al proyecto para participar en las subastas.
-          </Typography>
+          <Typography variant="body2" fontWeight={600}>Suscripción Requerida</Typography>
+          <Typography variant="body2">Debes estar suscripto al proyecto para participar en las subastas.</Typography>
         </Alert>
       )}
 
-      {/* ... (Alertas de tokens y suscripción activa se mantienen igual) */}
-
-      {/* HEADER CON PESTAÑAS */}
+      {/* Tabs */}
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-        <Tabs value={tabValue} onChange={(_, newValue) => setTabValue(newValue)} variant="scrollable" scrollButtons="auto">
+        <Tabs value={tabValue} onChange={(_, v) => setTabValue(v)} variant="scrollable" scrollButtons="auto">
           <Tab value="todos" label={`Todos (${counts.todos})`} icon={<Apps fontSize="small" />} iconPosition="start" />
           <Tab value="activa" label={`En Curso (${counts.activa})`} icon={<Gavel fontSize="small" />} iconPosition="start" disabled={counts.activa === 0} />
           <Tab value="pendiente" label={`Próximos (${counts.pendiente})`} icon={<AccessTime fontSize="small" />} iconPosition="start" disabled={counts.pendiente === 0} />
@@ -237,7 +180,7 @@ const handleNavigate = useCallback((id: number) => {
         </Tabs>
       </Box>
 
-      {/* GRID DE RESULTADOS */}
+      {/* Listado */}
       {filteredLotes.length > 0 ? (
         <Fade in key={tabValue} timeout={300}>
           <Box sx={gridStyles}>
@@ -247,12 +190,12 @@ const handleNavigate = useCallback((id: number) => {
                 lote={lote}
                 onNavigate={handleNavigate}
                 onPujar={handlePujar}
-                onRemoveFav={handleRemoveFav}
+                // ✅ CORRECCIÓN: Se eliminó onRemoveFav porque el hijo ya no la espera
                 isSubscribed={logic.isSubscribed}
                 hasTokens={logic.hasTokens}
                 tokensDisponibles={logic.tokensDisponibles}
                 isLoadingSub={logic.isLoading}
-                isAuthenticated={isAuthenticated} // ✅ Prop para el candado visual
+                isAuthenticated={isAuthenticated}
               />
             ))}
           </Box>
@@ -263,10 +206,7 @@ const handleNavigate = useCallback((id: number) => {
         </Box>
       )}
 
-      {/* MODALES Y FEEDBACK */}
-      {logic.selectedLote && (
-        <PujarModal open={logic.pujarModal.isOpen} lote={logic.selectedLote} onClose={logic.closePujarModal} />
-      )}
+      {logic.selectedLote && <PujarModal open={logic.pujarModal.isOpen} lote={logic.selectedLote} onClose={logic.closePujarModal} />}
       <ConfirmDialog controller={logic.confirmDialog} onConfirm={logic.executeUnfav} isLoading={logic.unfavPending} />
     </Box>
   );

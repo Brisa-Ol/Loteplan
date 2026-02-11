@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
+import {
   Box, CircularProgress, Alert, Button, Typography, Fade, Avatar, useTheme, alpha
 } from '@mui/material';
 import { ErrorOutline, VerifiedUser } from '@mui/icons-material';
@@ -13,7 +13,7 @@ const ConfirmEmailPage: React.FC = () => {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
   const theme = useTheme();
-  
+
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('');
   const [countdown, setCountdown] = useState(5);
@@ -64,7 +64,7 @@ const ConfirmEmailPage: React.FC = () => {
   return (
     <AuthFormContainer title={title} subtitle={subtitle} maxWidth="sm">
       <Box display="flex" flexDirection="column" alignItems="center" textAlign="center" minHeight={300} justifyContent="center">
-        
+
         {status === 'loading' && (
           <Fade in={true}>
             <Box>

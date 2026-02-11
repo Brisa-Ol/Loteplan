@@ -1,12 +1,12 @@
 import React from 'react';
-import { 
-  Alert, 
-  AlertTitle, 
-  Button, 
-  Stack, 
-  Typography, 
-  alpha, 
-  useTheme, 
+import {
+  Alert,
+  AlertTitle,
+  Button,
+  Stack,
+  Typography,
+  alpha,
+  useTheme,
   Box,
   type AlertProps,
   type PaletteColor
@@ -52,11 +52,11 @@ export const AlertBanner: React.FC<AlertBannerProps> = ({
       sx={{
         mb: 3,
         // 1. MEJORA: Usamos '12px' para coincidir con tus Cards y Skeletons del theme
-        borderRadius: '12px', 
+        borderRadius: '12px',
         border: '1px solid', // 2px suele ser muy grueso, 1px es más elegante
         borderColor: colorPalette.main,
         // Fondo con alpha basado en el color real del theme
-        bgcolor: alpha(colorPalette.main, 0.08), 
+        bgcolor: alpha(colorPalette.main, 0.08),
         '& .MuiAlert-message': { width: '100%' },
         // Alineación vertical centrada si hay acción
         alignItems: action ? 'center' : 'flex-start',
@@ -71,7 +71,7 @@ export const AlertBanner: React.FC<AlertBannerProps> = ({
               color={severity}
               size="small"
               onClick={action.onClick}
-              sx={{ 
+              sx={{
                 fontWeight: 600, // Coincide con tu theme.typography.button
                 whiteSpace: 'nowrap',
                 boxShadow: 'none',
@@ -92,23 +92,23 @@ export const AlertBanner: React.FC<AlertBannerProps> = ({
       }
     >
       <Stack spacing={0.5}>
-        <AlertTitle 
-          sx={{ 
+        <AlertTitle
+          sx={{
             // 2. MEJORA: Usamos 700 para coincidir con la negrita de tu theme (h1)
-            fontWeight: 700, 
+            fontWeight: 700,
             fontSize: '1rem',
             lineHeight: 1.5,
-            mb: 0.5 
+            mb: 0.5
           }}
         >
           {title}
         </AlertTitle>
-        <Typography 
-          variant="body2" 
-          sx={{ 
+        <Typography
+          variant="body2"
+          sx={{
             color: theme.palette.text.secondary,
             // Asegura legibilidad sobre fondos de color
-            fontWeight: 400 
+            fontWeight: 400
           }}
         >
           {message}

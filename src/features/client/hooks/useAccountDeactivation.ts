@@ -42,12 +42,12 @@ export const useAccountDeactivation = (): UseAccountDeactivationReturn => {
     staleTime: 60 * 1000, // 1 minuto
   });
 
-  const hasBlockers = useMemo(() => 
+  const hasBlockers = useMemo(() =>
     !data?.canDeactivate,
     [data]
   );
 
-  const warnings = useMemo(() => 
+  const warnings = useMemo(() =>
     data?.warnings || [],
     [data]
   );

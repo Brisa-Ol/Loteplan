@@ -21,6 +21,9 @@ import {
 import type { TransitionProps } from '@mui/material/transitions';
 import React from 'react';
 
+// ============================================================================
+// TRANSICIÓN
+// ============================================================================
 const Transition = React.forwardRef(function Transition(
   props: TransitionProps & { children: React.ReactElement<any, any> },
   ref: React.Ref<unknown>,
@@ -28,6 +31,9 @@ const Transition = React.forwardRef(function Transition(
   return <Slide direction="up" ref={ref} {...props} />;
 });
 
+// ============================================================================
+// INTERFAZ DE PROPS
+// ============================================================================
 export interface BaseModalProps extends Omit<DialogProps, 'onClose'> {
   open: boolean;
   onClose: () => void;
@@ -53,6 +59,9 @@ export interface BaseModalProps extends Omit<DialogProps, 'onClose'> {
   disableClose?: boolean;
 }
 
+// ============================================================================
+// COMPONENTE BASE MODAL
+// ============================================================================
 export const BaseModal: React.FC<BaseModalProps> = ({
   open,
   onClose,
@@ -90,7 +99,8 @@ export const BaseModal: React.FC<BaseModalProps> = ({
     <Dialog
       open={open}
       TransitionComponent={Transition}
-      onClose={(event, reason) => {
+      // ✅ CORRECCIÓN: Eliminado el parámetro 'event' no utilizado
+      onClose={(_, reason) => {
         if ((isLoading || disableClose) && (reason === 'backdropClick' || reason === 'escapeKeyDown')) return;
         handleClose();
       }}
@@ -114,7 +124,6 @@ export const BaseModal: React.FC<BaseModalProps> = ({
           borderColor: alpha(theme.palette.divider, 0.1),
           boxShadow: '0 24px 48px -12px rgba(0,0,0,0.18)',
           overflow: 'hidden',
-          // Altura dinámica si el usuario la pasa vía PaperProps en el componente padre
           ...dialogProps.PaperProps?.sx
         },
       }}
@@ -180,24 +189,13 @@ export const BaseModal: React.FC<BaseModalProps> = ({
 
       <Divider sx={{ opacity: 0.6 }} />
 
-      <DialogContent
-        sx={{
-          p: { xs: 3, md: 4 },
-          bgcolor: 'background.default',
-        }}
-      >
+      <DialogContent sx={{ p: { xs: 3, md: 4 }, bgcolor: 'background.default' }}>
         {children}
       </DialogContent>
 
       <Divider sx={{ opacity: 0.6 }} />
 
-      <DialogActions
-        sx={{
-          p: 3,
-          bgcolor: alpha(theme.palette.secondary.light, 0.1), // Suavizado para mejor contraste
-          gap: 1.5
-        }}
-      >
+      <DialogActions sx={{ p: 3, bgcolor: alpha(theme.palette.secondary.light, 0.1), gap: 1.5 }}>
         {customActions ? (
           customActions
         ) : (
@@ -224,7 +222,6 @@ export const BaseModal: React.FC<BaseModalProps> = ({
                 onClick={onConfirm}
                 variant={confirmButtonVariant}
                 color={confirmButtonColor}
-                // ✅ Deshabilita si está cargando O si el padre lo solicita
                 disabled={isLoading || disableConfirm}
                 startIcon={!isLoading && confirmButtonIcon}
                 sx={{

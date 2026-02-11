@@ -175,17 +175,17 @@ export const StatCard: React.FC<StatCardProps> = ({
       sx={{
         // ── RESPONSIVE PADDING ──────────────────────────────────────────────
         p: compact ? { xs: 1.5, sm: 2 } : { xs: 2, sm: 2.5 },
-        
+
         // ── WIDTH & HEIGHT ──────────────────────────────────────────────────
         width: '100%', // Ocupa todo el ancho del grid/padre
         height: '100%', // Para que todas las cards en una fila tengan la misma altura
         minWidth: 0, // CRÍTICO: Permite que el flexbox encoja el contenido (truncamiento)
-        
+
         // ── LAYOUT ──────────────────────────────────────────────────────────
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center',
-        
+
         // ── ESTILOS VISUALES ────────────────────────────────────────────────
         borderRadius: 2,
         border: '1px solid',
@@ -222,10 +222,10 @@ export const StatCard: React.FC<StatCardProps> = ({
     >
       {renderBadge()}
 
-      <Stack 
-        direction="row" 
-        spacing={{ xs: 1.5, sm: 2 }} 
-        alignItems="center" 
+      <Stack
+        direction="row"
+        spacing={{ xs: 1.5, sm: 2 }}
+        alignItems="center"
         sx={{ width: '100%', overflow: 'hidden' }}
       >
         {/* Icono Responsive */}
@@ -241,8 +241,8 @@ export const StatCard: React.FC<StatCardProps> = ({
             borderRadius: { xs: 1, sm: 1.5 },
             transition: 'all 0.3s ease',
             flexShrink: 0,
-            '& svg': { 
-              fontSize: compact ? { xs: '1.1rem', sm: '1.3rem' } : { xs: '1.4rem', sm: '1.6rem' } 
+            '& svg': {
+              fontSize: compact ? { xs: '1.1rem', sm: '1.3rem' } : { xs: '1.4rem', sm: '1.6rem' }
             },
           }}
         >
@@ -275,10 +275,10 @@ export const StatCard: React.FC<StatCardProps> = ({
               </Typography>
 
               {/* Valor + Tendencia */}
-              <Stack 
-                direction="row" 
-                alignItems="baseline" 
-                spacing={1} 
+              <Stack
+                direction="row"
+                alignItems="baseline"
+                spacing={1}
                 sx={{ flexWrap: 'wrap', rowGap: 0.5 }} // Permite wrap si es muy estrecho
               >
                 <Typography
@@ -288,8 +288,8 @@ export const StatCard: React.FC<StatCardProps> = ({
                   noWrap
                   sx={{
                     // Tipografía fluida
-                    fontSize: compact 
-                      ? { xs: '1.1rem', sm: '1.35rem' } 
+                    fontSize: compact
+                      ? { xs: '1.1rem', sm: '1.35rem' }
                       : { xs: '1.4rem', md: '1.75rem' },
                     lineHeight: 1.2,
                   }}
@@ -306,8 +306,8 @@ export const StatCard: React.FC<StatCardProps> = ({
                       py: 0.1,
                       borderRadius: 1,
                       bgcolor: trend.isPositive === false
-                          ? alpha(theme.palette.error.main, 0.1)
-                          : alpha(theme.palette.success.main, 0.1),
+                        ? alpha(theme.palette.error.main, 0.1)
+                        : alpha(theme.palette.success.main, 0.1),
                       color: trend.isPositive === false ? 'error.main' : 'success.main',
                       whiteSpace: 'nowrap', // El trend no debe romperse
                     }}
@@ -317,9 +317,9 @@ export const StatCard: React.FC<StatCardProps> = ({
                     ) : (
                       <TrendingUpIcon sx={{ fontSize: { xs: 10, sm: 12 } }} />
                     )}
-                    <Typography 
-                      variant="caption" 
-                      fontWeight={800} 
+                    <Typography
+                      variant="caption"
+                      fontWeight={800}
                       sx={{ ml: 0.3, fontSize: { xs: '0.6rem', sm: '0.7rem' } }}
                     >
                       {trend.value}%

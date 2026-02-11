@@ -12,16 +12,16 @@ export interface Use2FAManagementReturn {
   setRequires2FA: (value: boolean) => void;
   setTwoFaToken: (token: string | null) => void;
   verify2FA: (code: string, onSuccess: () => Promise<void>) => Promise<LoginSuccessResponse>;
-  
+
   secret: string | null;
   qrCodeUrl: string | null;
   isLoading: boolean;
   error: string | null;
-  
+
   generate2FASecret: () => Promise<Generate2faSecretResponseDto>;
   enable2FA: (code: string, onSuccess: () => Promise<void>) => Promise<void>;
   disable2FA: (password: string, code: string, onSuccess: () => Promise<void>) => Promise<void>;
-  
+
   clearError: () => void;
   reset2FAState: () => void;
 }
@@ -59,10 +59,10 @@ export const use2FAManagement = (): Use2FAManagementReturn => {
       setError(null);
       try {
         const { data } = await AuthService.verify2fa({ twoFaToken, token: code });
-        
+
         // Guardamos el token definitivo
         secureStorage.setToken(data.token);
-        
+
         setRequires2FA(false);
         setTwoFaToken(null);
         await onSuccess(); // Recargar usuario

@@ -1,3 +1,5 @@
+// src/features/admin/hooks/useAdminLotes.ts
+
 import { useTheme } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -5,13 +7,15 @@ import { useSearchParams } from 'react-router-dom';
 
 import LoteService from '@/core/api/services/lote.service';
 import ProyectoService from '@/core/api/services/proyecto.service';
+// 🆕 IMPORTAMOS PUJA SERVICE PARA UNA FINALIZACIÓN SEGURA
+import PujaService from '@/core/api/services/puja.service'; 
+
 import type { CreateLoteDto, LoteDto, UpdateLoteDto } from '@/core/types/dto/lote.dto';
 
 import { useConfirmDialog } from '@/shared/hooks/useConfirmDialog';
 import { useModal } from '@/shared/hooks/useModal';
 import useSnackbar from '@/shared/hooks/useSnackbar';
 import { useSortedData } from './useSortedData';
-
 
 // ============================================================================
 // DEBOUNCE HELPER
@@ -52,7 +56,6 @@ export const useAdminLotes = () => {
   // --- ESTADOS UI ---
   const [selectedLote, setSelectedLote] = useState<LoteDto | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  // Inicializar filtro desde URL
   const [filterProject, setFilterProject] = useState<string>(searchParams.get('proyecto') || 'all');
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
 
@@ -81,7 +84,7 @@ export const useAdminLotes = () => {
   const { data: proyectos = [] } = useQuery({
     queryKey: ['adminProyectosSelect'],
     queryFn: async () => (await ProyectoService.getAllAdmin()).data,
-    staleTime: 60000, // Los proyectos cambian menos frecuente
+    staleTime: 60000,
   });
 
   // Ordenamiento
@@ -155,10 +158,12 @@ export const useAdminLotes = () => {
     },
   });
 
+  // Iniciar Subasta
   const startAuction = useMutation({
     mutationFn: (id: number) => LoteService.startAuction(id),
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ['adminLotes'] });
+      queryClient.invalidateQueries({ queryKey: ['adminPujas'] }); // 🟢 Invalidamos pujas también
       modales.auction.close();
       triggerHighlight(id);
       showSuccess('✅ Subasta iniciada');
@@ -166,15 +171,22 @@ export const useAdminLotes = () => {
     onError: () => showError('Error al iniciar subasta'),
   });
 
+  // Finalizar Subasta (CORREGIDO)
+  // ⚠️ Usamos PujaService.manageAuctionEnd para garantizar liberación de tokens y lógica de ganador
   const endAuction = useMutation({
-    mutationFn: (id: number) => LoteService.endAuction(id),
+    mutationFn: async (id: number) => {
+        // null en el segundo parámetro indica que el backend decida el ganador (lógica por defecto)
+        // o que se cierra sin forzar un ganador específico manualmente.
+        return await PujaService.manageAuctionEnd(id, null); 
+    },
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ['adminLotes'] });
+      queryClient.invalidateQueries({ queryKey: ['adminPujas'] }); // 🟢 Invalidamos pujas también
       modales.auction.close();
       triggerHighlight(id);
-      showSuccess('✅ Subasta finalizada');
+      showSuccess('✅ Subasta finalizada y procesada');
     },
-    onError: () => showError('Error al finalizar subasta'),
+    onError: (err: any) => showError(err.response?.data?.message || 'Error al finalizar subasta'),
   });
 
   // --- HANDLERS ---

@@ -1,7 +1,5 @@
-// src/routes/index.ts
-
 export const ROUTES = {
-  // Auth
+  // --- Auth ---
   LOGIN: '/login',
   REGISTER: '/register',
   FORGOT_PASSWORD: '/forgot-password',
@@ -9,7 +7,7 @@ export const ROUTES = {
   CONFIRM_EMAIL: '/confirm-email',
   UNAUTHORIZED: '/unauthorized',
 
-  // Rutas Públicas
+  // --- Rutas Públicas ---
   PUBLIC: {
     HOME: '/',
     COMO_FUNCIONA: '/como-funciona',
@@ -17,15 +15,17 @@ export const ROUTES = {
     PREGUNTAS: '/preguntas',
   },
 
-  // ✅ Proyectos (PÚBLICOS - Cualquiera puede ver)
+  // --- Proyectos (Públicos) ---
   PROYECTOS: {
     SELECCION_ROL: '/proyectos/rol-seleccion',
-    DETALLE: '/proyectos/:id', // ✅ Ahora es público
+    DETALLE: '/proyectos/:id',
   },
 
-  // Área Cliente
+  // --- Área Cliente (Protegida) ---
   CLIENT: {
     DASHBOARD: '/client/dashboard',
+    
+    // Sub-sección Finanzas
     FINANZAS: {
       PAGOS: '/client/finanzas/pagos',
       INVERSIONES: '/client/finanzas/inversiones',
@@ -33,8 +33,10 @@ export const ROUTES = {
       PUJAS: '/client/finanzas/pujas',
       TRANSACCIONES: '/client/finanzas/transacciones',
       RESUMENES: '/client/finanzas/resumenes',
-      PAGO_ESTADO: '/client/finanzas/pago-estado',
+      PAGO_ESTADO: '/client/finanzas/pago-estado', // Callback MP
     },
+
+    // Sub-sección Cuenta
     CUENTA: {
       PERFIL: '/client/perfil',
       KYC: '/client/verificacion',
@@ -43,34 +45,41 @@ export const ROUTES = {
       FAVORITOS: '/client/favoritos',
       CONTRATOS: '/client/contratos',
     },
+
+    // Sub-sección Lotes
     LOTES: {
-      DETALLE: '/client/lotes/:id', // ✅ Este sigue protegido
+      DETALLE: '/client/lotes/:id',
     }
   },
 
-  // Área Admin
+  // --- Área Admin (Protegida) ---
   ADMIN: {
     DASHBOARD: '/admin/dashboard',
+    
     USUARIOS: {
       LISTA: '/admin/usuarios',
       KYC: '/admin/kyc',
       PERFIL: '/admin/perfil',
       CONFIGURACION: '/admin/configuracion',
     },
+    
     PROYECTOS: {
       LISTA: '/admin/proyectos',
       PLANES_AHORRO: '/admin/suscripciones',
       INVERSIONES: '/admin/inversiones',
     },
+    
     LOTES: {
       LISTA: '/admin/lotes',
       PAGOS: '/admin/lote-pagos',
       PUJAS: '/admin/pujas',
     },
+    
     CONTRATOS: {
       PLANTILLAS: '/admin/plantillas',
       FIRMADOS: '/admin/firmados',
     },
+    
     FINANZAS: {
       PAGOS: '/admin/pagos',
       TRANSACCIONES: '/admin/transacciones',

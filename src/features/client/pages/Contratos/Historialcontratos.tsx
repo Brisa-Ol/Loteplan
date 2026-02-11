@@ -36,7 +36,7 @@ import type { ContratoFirmadoDto } from '@/core/types/dto/contrato-firmado.dto';
 
 const HistorialContratos: React.FC = () => {
   const theme = useTheme();
-  
+
   // ✅ Usamos el hook optimizado
   const logic = useHistorialContratos();
 
@@ -130,7 +130,7 @@ const HistorialContratos: React.FC = () => {
               <VisibilityIcon fontSize="small" />
             </IconButton>
           </Tooltip>
-          
+
           <Tooltip title="Descargar Original">
             <span>
               <IconButton

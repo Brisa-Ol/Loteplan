@@ -137,7 +137,7 @@ const SecuritySettings: React.FC = () => {
   // --- RENDER ---
   return (
     <PageContainer maxWidth="md">
-      
+
       {/* ✅ HEADER UNIFICADO */}
       <PageHeader
         title="Seguridad de la Cuenta"
@@ -145,7 +145,7 @@ const SecuritySettings: React.FC = () => {
       />
 
       <Box sx={{ width: '100%', maxWidth: 800, mx: 'auto' }}>
-        
+
         {successMessage && (
           <Alert severity="success" onClose={() => setSuccessMessage(null)} sx={{ mb: 3, borderRadius: 2 }}>
             {successMessage}
@@ -199,13 +199,13 @@ const SecuritySettings: React.FC = () => {
         {/* --- TARJETA 2: INFORMACIÓN EDUCATIVA --- */}
         <Card elevation={0} sx={{ mb: 4, borderRadius: 3, border: `1px solid ${theme.palette.divider}` }}>
           <CardContent sx={{ p: 4 }}>
-            
-            <Box sx={{ 
-              display: 'grid', 
-              gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, 
-              gap: 6 
+
+            <Box sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+              gap: 6
             }}>
-              
+
               {/* Columna Izquierda */}
               <Box>
                 <Box display="flex" alignItems="center" gap={1} mb={3}>
@@ -218,16 +218,16 @@ const SecuritySettings: React.FC = () => {
                     <Typography variant="subtitle2" fontWeight={700} gutterBottom>
                       1. Descarga "Google Authenticator" en tu celular
                     </Typography>
-                    
+
                     <Box display="flex" alignItems="center" gap={2} mb={1}>
-                      <Box 
-                        component="img" 
-                        src="https://play-lh.googleusercontent.com/NntMALIH4odanPPYSqUOXsX8zy_giiK2olJiqkcxwFIOOspVrhMi9Miv6LYdRnKIg-3R=w480-h960-rw" 
+                      <Box
+                        component="img"
+                        src="https://play-lh.googleusercontent.com/NntMALIH4odanPPYSqUOXsX8zy_giiK2olJiqkcxwFIOOspVrhMi9Miv6LYdRnKIg-3R=w480-h960-rw"
                         alt="Google Authenticator Logo"
                         sx={{ width: 48, height: 48 }}
                       />
                     </Box>
-                      <Typography variant="subtitle2" fontWeight={400} gutterBottom>
+                    <Typography variant="subtitle2" fontWeight={400} gutterBottom>
                       Disponible en Google Play y App Store
                     </Typography>
                   </Box>
@@ -266,18 +266,18 @@ const SecuritySettings: React.FC = () => {
                 <List dense sx={{ bgcolor: 'background.default', borderRadius: 2, border: `1px solid ${theme.palette.divider}` }}>
                   <ListItem sx={{ py: 2 }}>
                     <ListItemIcon><Timer color="action" /></ListItemIcon>
-                    <ListItemText 
-                      primary="Inicio de Sesión" 
-                      secondary="Se solicitará el token la primera vez y luego cada 15 días en este dispositivo." 
+                    <ListItemText
+                      primary="Inicio de Sesión"
+                      secondary="Se solicitará el token la primera vez y luego cada 15 días en este dispositivo."
                       primaryTypographyProps={{ fontWeight: 700, fontSize: '0.9rem' }}
                     />
                   </ListItem>
                   <Divider variant="middle" component="li" />
                   <ListItem sx={{ py: 2 }}>
                     <ListItemIcon><Payment color="action" /></ListItemIcon>
-                    <ListItemText 
-                      primary="Pagos y Retiros" 
-                      secondary="Por seguridad, siempre pediremos el token al realizar transacciones monetarias." 
+                    <ListItemText
+                      primary="Pagos y Retiros"
+                      secondary="Por seguridad, siempre pediremos el token al realizar transacciones monetarias."
                       primaryTypographyProps={{ fontWeight: 700, fontSize: '0.9rem' }}
                     />
                   </ListItem>
@@ -306,8 +306,8 @@ const SecuritySettings: React.FC = () => {
               <Box>
                 <Typography variant="h6" fontWeight={700} gutterBottom>Configuración</Typography>
                 <Typography variant="body2" color="text.secondary">
-                  {is2FAEnabled 
-                    ? 'Tu cuenta está protegida. Si necesitas cambiar de dispositivo, deberás desactivarlo primero.' 
+                  {is2FAEnabled
+                    ? 'Tu cuenta está protegida. Si necesitas cambiar de dispositivo, deberás desactivarlo primero.'
                     : 'Escanea el código QR con Google Authenticator para vincular tu cuenta.'}
                 </Typography>
               </Box>
@@ -358,7 +358,7 @@ const SecuritySettings: React.FC = () => {
             </Typography>
           </Stack>
           <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 500, mx: 'auto' }}>
-            Si perdiste tu celular o borraste la app por error, no podrás ingresar a tu cuenta automáticamente. 
+            Si perdiste tu celular o borraste la app por error, no podrás ingresar a tu cuenta automáticamente.
             Por favor, ponte en contacto con un administrador para verificar tu identidad y restablecer el acceso manual.
           </Typography>
         </Box>

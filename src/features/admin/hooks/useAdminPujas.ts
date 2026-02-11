@@ -1,5 +1,7 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
+// src/features/admin/hooks/useAdminPujas.ts
+
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useConfirmDialog } from '../../../shared/hooks/useConfirmDialog';
 import { useModal } from '../../../shared/hooks/useModal';
 import useSnackbar from '../../../shared/hooks/useSnackbar';
@@ -63,7 +65,7 @@ export const useAdminPujas = () => {
   const {
     data: lotesRaw = [],
     isLoading: loadingLotes,
-    error: errorLotes // 🔴 Capturamos error aquí
+    error: errorLotes
   } = useQuery<LoteDto[]>({
     queryKey: ['adminLotes', tabValue === 0 ? 'active' : 'all'],
     queryFn: async () => {
@@ -78,7 +80,7 @@ export const useAdminPujas = () => {
   const {
     data: pujasActivas = [],
     isLoading: loadingPujas,
-    error: errorPujas // 🔴 Capturamos error aquí también
+    error: errorPujas
   } = useQuery<PujaDto[]>({
     queryKey: ['adminPujas', 'active'],
     queryFn: async () => (await PujaService.getAllActive()).data,
@@ -171,8 +173,12 @@ export const useAdminPujas = () => {
       showSuccess("Gestión ejecutada manualmente.");
       queryClient.invalidateQueries({ queryKey: ['adminLotes'] });
       triggerHighlight(variables.idLote);
+      modales.confirmDialog.close();
     },
-    onError: (err: any) => showError(`Error: ${err.response?.data?.error || 'Datos inválidos'}`)
+    onError: (err: any) => {
+      showError(`Error: ${err.response?.data?.error || 'Datos inválidos'}`);
+      modales.confirmDialog.close();
+    }
   });
 
   const cancelarGanadoraMutation = useMutation({
@@ -181,7 +187,6 @@ export const useAdminPujas = () => {
     },
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ['adminLotes'] });
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const msg = res.data?.message || 'Adjudicación anulada y token devuelto.';
       showSuccess(`✅ ${msg}`);
       modales.confirmDialog.close();
@@ -192,11 +197,47 @@ export const useAdminPujas = () => {
     }
   });
 
+  // 🆕 Mutación para Revertir Pago
+  const revertirPagoMutation = useMutation({
+    mutationFn: async (idPuja: number) => {
+      return await PujaService.revertWinnerPayment(idPuja);
+    },
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ['adminLotes'] });
+      queryClient.invalidateQueries({ queryKey: ['adminPujas'] });
+      showSuccess('✅ Pago revertido a estado pendiente.');
+      modales.confirmDialog.close();
+    },
+    onError: (err: any) => {
+      showError(err.response?.data?.message || 'Error al revertir pago');
+      modales.confirmDialog.close();
+    }
+  });
+
   // --- HANDLERS ---
 
   const handleFinalizarSubasta = useCallback((lote: LoteDto) => {
     modales.confirmDialog.confirm('end_auction', lote);
   }, [modales.confirmDialog]);
+
+  // 🆕 Handler para el botón "Sancionar/Forzar Finalización"
+  const handleForceFinish = useCallback((lote: LoteDto) => {
+    modales.confirmDialog.confirm('force_finish', {
+      idLote: lote.id,
+      idGanador: lote.id_ganador
+    });
+  }, [modales.confirmDialog]);
+
+  // 🆕 Handler para el botón "Revertir Pago"
+  const handleRevertirPago = useCallback((lote: LoteDto) => {
+    if (lote.id_puja_mas_alta) {
+      modales.confirmDialog.confirm('revert_payment', {
+        pujaId: lote.id_puja_mas_alta
+      });
+    } else {
+      showError('No hay puja ganadora asociada para revertir.');
+    }
+  }, [modales.confirmDialog, showError]);
 
   const handleCancelarAdjudicacion = useCallback(async (lote: LoteDto) => {
     try {
@@ -215,20 +256,34 @@ export const useAdminPujas = () => {
     }
   }, [modales.confirmDialog, showError]);
 
+  // ⚡ ORQUESTADOR CENTRAL DE CONFIRMACIONES
   const handleConfirmAction = useCallback((inputValue?: string) => {
     const { action, data } = modales.confirmDialog;
 
-    if (action === 'end_auction' && data) {
-      endAuctionMutation.mutate(data.id);
+    if (!data) return;
+
+    switch (action) {
+      case 'end_auction':
+        endAuctionMutation.mutate(data.id);
+        break;
+      case 'cancel_ganadora_anticipada':
+        if (!inputValue) return; // Requiere motivo
+        cancelarGanadoraMutation.mutate({
+          id: data.pujaId,
+          motivo: inputValue
+        });
+        break;
+      case 'force_finish':
+        forceFinishMutation.mutate({
+          idLote: data.idLote,
+          idGanador: data.idGanador
+        });
+        break;
+      case 'revert_payment':
+        revertirPagoMutation.mutate(data.pujaId);
+        break;
     }
-    if (action === 'cancel_ganadora_anticipada' && data) {
-      if (!inputValue) return;
-      cancelarGanadoraMutation.mutate({
-        id: data.pujaId,
-        motivo: inputValue
-      });
-    }
-  }, [modales.confirmDialog, endAuctionMutation, cancelarGanadoraMutation]);
+  }, [modales.confirmDialog, endAuctionMutation, cancelarGanadoraMutation, forceFinishMutation, revertirPagoMutation]);
 
   return {
     // Estado
@@ -241,8 +296,13 @@ export const useAdminPujas = () => {
 
     // Datos y Loading
     loading: loadingLotes || (tabValue === 0 && loadingPujas),
-    // 🟢 AQUÍ ESTÁ LA CORRECCIÓN: Devolvemos el error combinado
     error: errorLotes || (tabValue === 0 ? errorPujas : null),
+
+    // Estado global de mutación (útil para deshabilitar botones)
+    isMutating: endAuctionMutation.isPending ||
+      forceFinishMutation.isPending ||
+      cancelarGanadoraMutation.isPending ||
+      revertirPagoMutation.isPending,
 
     analytics,
     pujasPorLote,
@@ -254,14 +314,17 @@ export const useAdminPujas = () => {
     // Modales
     modales,
 
-    // Actions
+    // Actions (API para el Componente)
     handleFinalizarSubasta,
     handleCancelarAdjudicacion,
+    handleRevertirPago, // ✅ Ahora existe
+    handleForceFinish,  // ✅ Ahora existe
     handleConfirmAction,
 
-    // Mutations
+    // Mutations (por si se necesitan individualmente)
     forceFinishMutation,
     cancelarGanadoraMutation,
-    endAuctionMutation
+    endAuctionMutation,
+    revertirPagoMutation
   };
 };

@@ -1,16 +1,34 @@
 // src/features/client/hooks/useProyectoHelpers.ts
 
-import { useMemo } from 'react';
-import { Savings, TrendingUp } from '@mui/icons-material';
 import ImagenService from '@/core/api/services/imagen.service';
 import type { ProyectoDto } from '@/core/types/dto/proyecto.dto';
+import { Savings, TrendingUp } from '@mui/icons-material';
+import { useMemo } from 'react';
 
-/**
- * Hook centralizado para lógica de negocio de proyectos.
- * Elimina duplicación de código entre ProjectCard, ProjectHero y ProjectSidebar.
- * * @param proyecto - El proyecto a procesar
- * @returns Objeto con helpers y datos calculados
- */
+// --- UTILS ---
+const normalizarFecha = (fechaStr: string) => {
+  if (!fechaStr) return null;
+  const fecha = new Date(fechaStr);
+  // Si viene sin hora (YYYY-MM-DD), ajustamos para evitar el desfase UTC
+  if (fechaStr.indexOf('T') === -1) {
+    fecha.setMinutes(fecha.getMinutes() + fecha.getTimezoneOffset());
+  }
+  return fecha;
+};
+
+const calcularDiasDiferencia = (fechaObjetivo: Date) => {
+  const ahora = new Date();
+  ahora.setHours(0, 0, 0, 0); // Reset a medianoche actual
+
+  const objetivo = new Date(fechaObjetivo);
+  objetivo.setHours(0, 0, 0, 0); // Reset a medianoche objetivo
+
+  const diffMs = objetivo.getTime() - ahora.getTime();
+  const dias = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+  return dias; // Puede ser negativo si ya pasó
+};
+
 export const useProyectoHelpers = (proyecto: ProyectoDto) => {
   return useMemo(() => {
     // ==========================================
@@ -31,7 +49,7 @@ export const useProyectoHelpers = (proyecto: ProyectoDto) => {
     // ==========================================
     // 💰 FORMATO DE MONEDA
     // ==========================================
-    const formatMoney = (amount: number): string => 
+    const formatMoney = (amount: number): string =>
       new Intl.NumberFormat('es-AR', {
         style: 'currency',
         currency: proyecto.moneda === 'USD' ? 'USD' : 'ARS',
@@ -44,34 +62,43 @@ export const useProyectoHelpers = (proyecto: ProyectoDto) => {
     // ==========================================
     // 📅 PLAZO Y FECHAS
     // ==========================================
-    const plazoTexto = esMensual && proyecto.plazo_inversion 
-      ? `${proyecto.plazo_inversion} Cuotas` 
+    const plazoTexto = esMensual && proyecto.plazo_inversion
+      ? `${proyecto.plazo_inversion} Cuotas`
       : 'Pago Único';
 
-    const getDaysRemaining = (): number => {
-      if (!proyecto.fecha_cierre) return 0;
-      const end = new Date(proyecto.fecha_cierre);
-      const now = new Date();
-      const diff = end.getTime() - now.getTime();
-      return Math.ceil(diff / (1000 * 3600 * 24));
-    };
+    // Cálculo Inteligente de Tiempo
+    const fechaInicio = normalizarFecha(proyecto.fecha_inicio);
+    const fechaCierre = normalizarFecha(proyecto.fecha_cierre);
 
-    const diasRestantes = getDaysRemaining();
-    const esUrgente = diasRestantes > 0 && diasRestantes < 30;
+    let diasRestantes = 0;
+    let esUrgente = false;
+    let tiempoLabel = '';
+
+    if (proyecto.estado_proyecto === 'En Espera' && fechaInicio) {
+      // Caso 1: Aún no empieza
+      diasRestantes = calcularDiasDiferencia(fechaInicio);
+      tiempoLabel = diasRestantes <= 0 ? 'Abre hoy' : `Abre en ${diasRestantes} días`;
+    } else if (proyecto.estado_proyecto === 'En proceso' && fechaCierre) {
+      // Caso 2: Está activo, contamos para el cierre
+      diasRestantes = calcularDiasDiferencia(fechaCierre);
+      esUrgente = diasRestantes >= 0 && diasRestantes <= 10; // Urgente si faltan 10 días o menos
+
+      if (diasRestantes < 0) tiempoLabel = 'Finalizado';
+      else if (diasRestantes === 0) tiempoLabel = '¡Cierra hoy!';
+      else if (diasRestantes === 1) tiempoLabel = '¡Cierra mañana!';
+      else tiempoLabel = `Cierra en ${diasRestantes} días`;
+    }
+
+    const fechaInicioTexto = fechaInicio?.toLocaleDateString('es-AR', { day: '2-digit', month: 'short' }) || '-';
+    const fechaCierreTexto = fechaCierre?.toLocaleDateString('es-AR', { day: '2-digit', month: 'short' }) || '-';
 
     // ==========================================
-    // 🖼️ IMÁGENES (CORREGIDO ✅)
+    // 🖼️ IMÁGENES
     // ==========================================
-    
-    // 1. Filtramos las imágenes que NO estén marcadas como inactivas (soft delete)
-    // Usamos (img as any) por seguridad si la propiedad 'activo' no está en tu DTO estricto aún
     const imagenesActivas = proyecto.imagenes?.filter(img => (img as any).activo !== false) || [];
-
-    // 2. Resolvemos las URLs o asignamos el placeholder si no quedan imágenes
     const imagenes = imagenesActivas.length > 0
       ? imagenesActivas.map(img => ImagenService.resolveImageUrl(img.url))
       : ['/assets/placeholder-project.jpg'];
-
     const imagenPrincipal = imagenes[0];
 
     // ==========================================
@@ -81,7 +108,7 @@ export const useProyectoHelpers = (proyecto: ProyectoDto) => {
       meta: proyecto.obj_suscripciones || 1,
       actual: proyecto.suscripciones_actuales || 0,
       porcentaje: Math.min(
-        ((proyecto.suscripciones_actuales || 0) / (proyecto.obj_suscripciones || 1)) * 100, 
+        ((proyecto.suscripciones_actuales || 0) / (proyecto.obj_suscripciones || 1)) * 100,
         100
       ),
       disponibles: Math.max(
@@ -89,13 +116,6 @@ export const useProyectoHelpers = (proyecto: ProyectoDto) => {
         0
       )
     } : null;
-
-    // ==========================================
-    // 🏘️ LOTES
-    // ==========================================
-    const cantidadLotes = proyecto.lotes?.length || 0;
-    const hayLotes = cantidadLotes > 0;
-    const tieneUbicacion = !!(proyecto.latitud && proyecto.longitud);
 
     // ==========================================
     // 📍 ESTADO DEL PROYECTO
@@ -106,50 +126,28 @@ export const useProyectoHelpers = (proyecto: ProyectoDto) => {
       'Finalizado': { color: 'default', label: 'Finalizado' }
     }[proyecto.estado_proyecto] || { color: 'default', label: proyecto.estado_proyecto };
 
-    const estaActivo = proyecto.estado_proyecto === 'En proceso';
     const estaFinalizado = proyecto.estado_proyecto === 'Finalizado';
 
-    // ==========================================
-    // 🎁 CARACTERÍSTICAS ESPECIALES
-    // ==========================================
-    const esPack = !!proyecto.pack_de_lotes;
-
     return {
-      // Tipo
       esMensual,
       esDirecto,
-      
-      // Visual
       badge,
-      
-      // Dinero
       formatMoney,
       precioFormateado,
-      
-      // Tiempo
+
+      // Tiempo Mejorado
       plazoTexto,
-      diasRestantes,
+      diasRestantes, // Número crudo para lógica
+      tiempoLabel,   // Texto listo para UI ("Cierra en 5 días")
       esUrgente,
-      
-      // Imágenes
+      fechas: { inicio: fechaInicioTexto, cierre: fechaCierreTexto },
+
       imagenes,
       imagenPrincipal,
-      
-      // Progreso
       progreso,
-      
-      // Lotes
-      cantidadLotes,
-      hayLotes,
-      tieneUbicacion,
-      
-      // Estado
       estadoConfig,
-      estaActivo,
       estaFinalizado,
-      
-      // Especiales
-      esPack
+      esPack: !!proyecto.pack_de_lotes
     };
   }, [proyecto]);
 };

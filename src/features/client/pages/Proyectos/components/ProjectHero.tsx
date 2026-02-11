@@ -1,14 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Box, Chip, Typography, Stack, IconButton, useTheme, 
-  alpha, Tooltip, Fade, Container
-} from '@mui/material';
-import { 
-  KeyboardArrowLeft, KeyboardArrowRight, Share, 
-  FavoriteBorder, Favorite 
-} from '@mui/icons-material';
 import type { ProyectoDto } from '@/core/types/dto/proyecto.dto';
 import { useProyectoHelpers } from '@/features/client/hooks/useProyectoHelpers';
+import {
+  Favorite,
+  FavoriteBorder,
+  KeyboardArrowLeft, KeyboardArrowRight, Share
+} from '@mui/icons-material';
+import {
+  alpha,
+  Box, Chip,
+  Fade,
+  IconButton,
+  Stack,
+  Tooltip,
+  Typography,
+  useTheme
+} from '@mui/material';
+import React, { useEffect, useState } from 'react';
 
 interface ProjectHeroProps {
   proyecto: ProyectoDto;
@@ -17,7 +24,7 @@ interface ProjectHeroProps {
 export const ProjectHero: React.FC<ProjectHeroProps> = ({ proyecto }) => {
   const theme = useTheme();
   const helpers = useProyectoHelpers(proyecto);
-  
+
   // Estados locales
   const [activeStep, setActiveStep] = useState(0);
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -41,14 +48,14 @@ export const ProjectHero: React.FC<ProjectHeroProps> = ({ proyecto }) => {
   // ==========================================
   // 🎯 HANDLERS
   // ==========================================
-  const handleNext = () => { 
-    setImageLoaded(false); 
-    setActiveStep((prev) => (prev + 1) % maxSteps); 
+  const handleNext = () => {
+    setImageLoaded(false);
+    setActiveStep((prev) => (prev + 1) % maxSteps);
   };
 
-  const handleBack = () => { 
-    setImageLoaded(false); 
-    setActiveStep((prev) => (prev - 1 + maxSteps) % maxSteps); 
+  const handleBack = () => {
+    setImageLoaded(false);
+    setActiveStep((prev) => (prev - 1 + maxSteps) % maxSteps);
   };
 
   const handleShare = async () => {
@@ -75,17 +82,17 @@ export const ProjectHero: React.FC<ProjectHeroProps> = ({ proyecto }) => {
   };
 
   return (
-    <Box sx={{ 
-      position: 'relative', 
+    <Box sx={{
+      position: 'relative',
       height: { xs: 400, md: 600 },
       // El borde redondeado solo en desktop para encajar con el layout
-      borderRadius: { xs: 0, md: 4 }, 
-      overflow: 'hidden', 
-      mb: 4, 
+      borderRadius: { xs: 0, md: 4 },
+      overflow: 'hidden',
+      mb: 4,
       bgcolor: 'common.black',
       boxShadow: theme.shadows[10] // Sombra más fuerte del theme
     }}>
-      
+
       {/* ==========================================
           🖼️ IMAGEN PRINCIPAL (CAROUSEL)
       ========================================== */}
@@ -94,13 +101,13 @@ export const ProjectHero: React.FC<ProjectHeroProps> = ({ proyecto }) => {
           component="img"
           src={helpers.imagenes[activeStep]}
           onLoad={() => setImageLoaded(true)}
-          onError={(e) => { 
-            (e.target as HTMLImageElement).src = '/assets/placeholder-project.jpg'; 
-            setImageLoaded(true); 
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = '/assets/placeholder-project.jpg';
+            setImageLoaded(true);
           }}
-          sx={{ 
-            width: '100%', 
-            height: '100%', 
+          sx={{
+            width: '100%',
+            height: '100%',
             objectFit: 'cover',
             transition: 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
             transform: imageLoaded ? 'scale(1)' : 'scale(1.05)'
@@ -117,7 +124,7 @@ export const ProjectHero: React.FC<ProjectHeroProps> = ({ proyecto }) => {
         background: `linear-gradient(to top, ${alpha(theme.palette.common.black, 0.9)} 0%, ${alpha(theme.palette.common.black, 0.4)} 50%, transparent 100%)`,
         pointerEvents: 'none'
       }} />
-      
+
       {/* Gradiente Superior: Para legibilidad de botones */}
       <Box sx={{
         position: 'absolute', top: 0, left: 0, right: 0, height: '25%',
@@ -128,32 +135,32 @@ export const ProjectHero: React.FC<ProjectHeroProps> = ({ proyecto }) => {
       {/* ==========================================
           🎯 ACCIONES (TOP RIGHT)
       ========================================== */}
-      <Stack 
-        direction="row" 
-        spacing={1.5} 
+      <Stack
+        direction="row"
+        spacing={1.5}
         sx={{ position: 'absolute', top: 24, right: 24, zIndex: 10 }}
       >
         {[
-          { 
-            label: isFavorite ? "Quitar de favoritos" : "Guardar", 
-            icon: isFavorite ? <Favorite color="error" /> : <FavoriteBorder />, 
-            action: handleFavorite 
+          {
+            label: isFavorite ? "Quitar de favoritos" : "Guardar",
+            icon: isFavorite ? <Favorite color="error" /> : <FavoriteBorder />,
+            action: handleFavorite
           },
-          { 
-            label: showShareTooltip ? "¡Link copiado!" : "Compartir", 
-            icon: <Share />, 
+          {
+            label: showShareTooltip ? "¡Link copiado!" : "Compartir",
+            icon: <Share />,
             action: handleShare,
-            open: showShareTooltip 
+            open: showShareTooltip
           }
         ].map((btn, idx) => (
           <Tooltip key={idx} title={btn.label} arrow open={btn.open}>
-            <IconButton 
+            <IconButton
               onClick={btn.action}
-              sx={{ 
+              sx={{
                 bgcolor: alpha(theme.palette.background.paper, 0.9),
                 backdropFilter: 'blur(8px)',
                 transition: theme.transitions.create(['transform', 'background-color']),
-                '&:hover': { 
+                '&:hover': {
                   bgcolor: theme.palette.background.paper,
                   transform: 'scale(1.1)'
                 }
@@ -170,30 +177,30 @@ export const ProjectHero: React.FC<ProjectHeroProps> = ({ proyecto }) => {
       ========================================== */}
       {maxSteps > 1 && (
         <>
-          <IconButton 
+          <IconButton
             onClick={handleBack}
-            sx={{ 
+            sx={{
               position: 'absolute', left: { xs: 8, md: 24 }, top: '50%', transform: 'translateY(-50%)',
-              color: 'common.white', 
+              color: 'common.white',
               bgcolor: alpha(theme.palette.common.black, 0.3),
               '&:hover': { bgcolor: alpha(theme.palette.common.black, 0.6) }
             }}
           >
             <KeyboardArrowLeft fontSize="large" />
           </IconButton>
-          
-          <IconButton 
+
+          <IconButton
             onClick={handleNext}
-            sx={{ 
+            sx={{
               position: 'absolute', right: { xs: 8, md: 24 }, top: '50%', transform: 'translateY(-50%)',
-              color: 'common.white', 
+              color: 'common.white',
               bgcolor: alpha(theme.palette.common.black, 0.3),
               '&:hover': { bgcolor: alpha(theme.palette.common.black, 0.6) }
             }}
           >
             <KeyboardArrowRight fontSize="large" />
           </IconButton>
-          
+
           {/* Indicadores (Dots) */}
           <Stack
             direction="row"
@@ -226,46 +233,46 @@ export const ProjectHero: React.FC<ProjectHeroProps> = ({ proyecto }) => {
       {/* ==========================================
           📝 TEXTO E INFO
       ========================================== */}
-      <Box sx={{ 
-        position: 'absolute', 
+      <Box sx={{
+        position: 'absolute',
         bottom: { xs: 40, md: 56 }, // Ajustado para no chocar con dots
-        left: { xs: 24, md: 48 }, 
-        right: { xs: 24, md: 120 }, 
+        left: { xs: 24, md: 48 },
+        right: { xs: 24, md: 120 },
         zIndex: 5,
         color: 'common.white'
       }}>
         {/* Badges */}
         <Stack direction="row" spacing={1} mb={2} flexWrap="wrap" gap={1}>
-          <Chip 
+          <Chip
             icon={<BadgeIcon sx={{ color: 'white !important', fontSize: '18px !important' }} />}
-            label={helpers.badge.label} 
+            label={helpers.badge.label}
             color="primary"
-            // El theme ya define borderRadius y fontWeight
+          // El theme ya define borderRadius y fontWeight
           />
-          
-          <Chip 
+
+          <Chip
             label={helpers.estadoConfig.label}
             color={helpers.estadoConfig.color as any}
-            sx={{ 
-               // Override para efecto cristal
-               bgcolor: alpha(theme.palette.common.white, 0.2),
-               backdropFilter: 'blur(10px)',
-               color: 'white',
-               border: `1px solid ${alpha(theme.palette.common.white, 0.3)}`
-            }} 
+            sx={{
+              // Override para efecto cristal
+              bgcolor: alpha(theme.palette.common.white, 0.2),
+              backdropFilter: 'blur(10px)',
+              color: 'white',
+              border: `1px solid ${alpha(theme.palette.common.white, 0.3)}`
+            }}
           />
 
           {helpers.esPack && (
             <Chip label="PACK EXCLUSIVO" color="warning" />
           )}
         </Stack>
-        
+
         {/* Título */}
-        <Typography 
-          variant="h1" 
-          sx={{ 
+        <Typography
+          variant="h1"
+          sx={{
             // Override local para tamaño "Hero" específico
-            fontSize: { xs: '2rem', md: '3.5rem' }, 
+            fontSize: { xs: '2rem', md: '3.5rem' },
             lineHeight: 1.1,
             mb: 1,
             textShadow: '0 4px 20px rgba(0,0,0,0.5)'
@@ -273,20 +280,20 @@ export const ProjectHero: React.FC<ProjectHeroProps> = ({ proyecto }) => {
         >
           {proyecto.nombre_proyecto}
         </Typography>
-        
+
         {/* Descripción (visible en MD+) */}
         {proyecto.descripcion && (
-          <Typography 
+          <Typography
             variant="subtitle1"
-            sx={{ 
+            sx={{
               color: alpha(theme.palette.common.white, 0.9),
               maxWidth: 800,
               display: { xs: 'none', md: 'block' },
               textShadow: '0 2px 10px rgba(0,0,0,0.5)'
             }}
           >
-            {proyecto.descripcion.length > 180 
-              ? `${proyecto.descripcion.substring(0, 180)}...` 
+            {proyecto.descripcion.length > 180
+              ? `${proyecto.descripcion.substring(0, 180)}...`
               : proyecto.descripcion
             }
           </Typography>

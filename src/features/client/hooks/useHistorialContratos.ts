@@ -40,7 +40,7 @@ export const useHistorialContratos = () => {
   // --- STATS (Cálculos para las tarjetas) ---
   const stats = useMemo(() => {
     if (!contratos.length) return { total: 0, verified: 0, lastDate: '-' };
-    
+
     // Ordenamos temporalmente solo para obtener la fecha más reciente
     const sortedByDate = [...contratos].sort((a, b) => new Date(b.fecha_firma).getTime() - new Date(a.fecha_firma).getTime());
 
@@ -54,7 +54,7 @@ export const useHistorialContratos = () => {
   }, [contratos]);
 
   // --- HANDLERS ---
-  
+
   const handleVerContrato = useCallback((contrato: ContratoFirmadoDto) => {
     setContratoSeleccionado(contrato);
     verModal.open();
@@ -69,15 +69,15 @@ export const useHistorialContratos = () => {
   const handleDownload = useCallback(async (contrato: ContratoFirmadoDto) => {
     try {
       setDownloadingId(contrato.id);
-      
+
       // 1. Obtenemos la ruta segura de la API desde el servicio.
       // Esto apunta a /api/contratos/descargar/:id, donde el backend valida KYC y 2FA.
       const apiPath = ContratoFirmadoService.getDownloadUrl(contrato.id);
-      
+
       // 2. Usamos la utilidad que detecta que NO es /uploads y usa Axios + Token automáticamente.
       // El nombre del archivo es importante para que el navegador lo guarde correctamente.
       await downloadSecureFile(apiPath, contrato.nombre_archivo);
-      
+
       // Feedback visual (ilumina la fila)
       triggerHighlight(contrato.id);
 
@@ -95,15 +95,15 @@ export const useHistorialContratos = () => {
     stats,
     isLoading,
     error,
-    
+
     // UI States
     highlightedId,
     downloadingId,
     contratoSeleccionado,
-    
+
     // Modales
     verModal,
-    
+
     // Actions
     handleVerContrato,
     handleCloseModal,

@@ -37,15 +37,15 @@ export const VerContratoModal: React.FC<Props> = ({
   // ✅ Handler de descarga
   const handleDownload = async () => {
     if (plantilla) {
-        try {
-            setDownloading(true);
-            await downloadSecureFile(plantilla.url_archivo, plantilla.nombre_archivo);
-        } catch (e) {
-            console.error("Error descarga", e);
-            // Si tienes un hook de toast úsalo aquí, si no, el error se loguea en consola
-        } finally {
-            setDownloading(false);
-        }
+      try {
+        setDownloading(true);
+        await downloadSecureFile(plantilla.url_archivo, plantilla.nombre_archivo);
+      } catch (e) {
+        console.error("Error descarga", e);
+        // Si tienes un hook de toast úsalo aquí, si no, el error se loguea en consola
+      } finally {
+        setDownloading(false);
+      }
     }
   };
 
@@ -65,48 +65,48 @@ export const VerContratoModal: React.FC<Props> = ({
       // ✅ AÑADIDO: Botón de descarga en el modal
       customActions={
         plantilla ? (
-            <Button 
-                startIcon={downloading ? <CircularProgress size={20} color="inherit" /> : <Download />} 
-                onClick={handleDownload} 
-                color="primary"
-                variant="outlined"
-                disabled={downloading}
-            >
-                Descargar Modelo
-            </Button>
+          <Button
+            startIcon={downloading ? <CircularProgress size={20} color="inherit" /> : <Download />}
+            onClick={handleDownload}
+            color="primary"
+            variant="outlined"
+            disabled={downloading}
+          >
+            Descargar Modelo
+          </Button>
         ) : undefined
       }
       // Layout específico para PDF
       PaperProps={{ sx: { height: '85vh' } }}
     >
       <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-        
+
         {isLoading && (
-            <Box display="flex" justifyContent="center" alignItems="center" flex={1}>
-                <CircularProgress />
-            </Box>
+          <Box display="flex" justifyContent="center" alignItems="center" flex={1}>
+            <CircularProgress />
+          </Box>
         )}
-        
+
         {error && (
-            <Box p={3}>
-                <Alert severity="error" variant="outlined">Error cargando el modelo de contrato. Por favor, intente nuevamente.</Alert>
-            </Box>
+          <Box p={3}>
+            <Alert severity="error" variant="outlined">Error cargando el modelo de contrato. Por favor, intente nuevamente.</Alert>
+          </Box>
         )}
-        
+
         {!isLoading && !error && !plantilla && (
-            <Box p={3}>
-                <Alert severity="info" variant="outlined">No hay una plantilla de contrato disponible para este proyecto.</Alert>
-            </Box>
+          <Box p={3}>
+            <Alert severity="info" variant="outlined">No hay una plantilla de contrato disponible para este proyecto.</Alert>
+          </Box>
         )}
 
         {plantilla && (
           <Box flex={1} overflow="hidden" sx={{ bgcolor: 'background.default', borderRadius: 2 }}>
-              <PDFViewerMejorado
-                pdfUrl={ImagenService.resolveImageUrl(plantilla.url_archivo)}
-                signatureDataUrl={null}
-                onSignaturePositionSet={() => {}}
-                readOnlyMode={true}
-              />
+            <PDFViewerMejorado
+              pdfUrl={ImagenService.resolveImageUrl(plantilla.url_archivo)}
+              signatureDataUrl={null}
+              onSignaturePositionSet={() => { }}
+              readOnlyMode={true}
+            />
           </Box>
         )}
 

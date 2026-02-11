@@ -11,7 +11,7 @@ import { ROUTES } from '.';
 
 // Layouts
 const AdminLayout = lazy(() => import('@/shared/layouts/AdminLayout'));
-const ClientLayout = lazy(() => import('@/shared/layouts/ClientLayout')); 
+const ClientLayout = lazy(() => import('@/shared/layouts/ClientLayout'));
 
 // Auth Pages
 const LoginPage = lazy(() => import('@/features/auth/pages/LoginPage'));
@@ -73,17 +73,17 @@ const AppRouter = () => {
   return (
     <Suspense fallback={<LoadingFallback />}>
       <Routes>
-        
+
         {/* ==========================================================
             1. RUTAS CLIENTE / PÚBLICAS (Usan ClientLayout)
             ========================================================== */}
         <Route element={<ClientLayout />}>
-          
+
           {/* ---- RUTAS PÚBLICAS (Sin Login) ---- */}
           <Route path={ROUTES.PUBLIC.HOME} element={<Home />} />
           <Route path={ROUTES.PUBLIC.COMO_FUNCIONA} element={<ComoFunciona />} />
           <Route path={ROUTES.PUBLIC.NOSOTROS} element={<Nosotros />} />
-          
+
           {/* ✅ PROYECTOS PÚBLICOS - Cualquiera puede ver */}
           <Route path={ROUTES.PROYECTOS.SELECCION_ROL} element={<RoleSelection />} />
           <Route path={ROUTES.PROYECTOS.DETALLE} element={<DetalleProyecto />} />
@@ -125,10 +125,10 @@ const AppRouter = () => {
             2. RUTAS DE ADMINISTRADOR (Usan AdminLayout)
             ========================================================== */}
         <Route path="/admin/*" element={
-            <ProtectedRoute requireAdmin>
-              <AdminLayout />
-            </ProtectedRoute>
-          }
+          <ProtectedRoute requireAdmin>
+            <AdminLayout />
+          </ProtectedRoute>
+        }
         >
           <Route path="dashboard" element={<AdminDashboard />} />
           <Route path="usuarios" element={<AdminUsuarios />} />

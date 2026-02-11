@@ -53,7 +53,7 @@ interface AdminSidebarProps {
   onMobileClose?: () => void;
 }
 
-const AdminSidebar: React.FC<AdminSidebarProps> = ({ 
+const AdminSidebar: React.FC<AdminSidebarProps> = ({
   pendingKYC = 0,
   mobileOpen = false,
   onMobileClose
@@ -62,7 +62,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
-  
+
   // Detectar móvil
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
@@ -82,8 +82,8 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
 
   const handleNavigate = (path?: string) => {
     if (path) {
-        navigate(path);
-        if (isMobile && onMobileClose) onMobileClose();
+      navigate(path);
+      if (isMobile && onMobileClose) onMobileClose();
     }
   };
 
@@ -96,13 +96,13 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
   const filteredNavItems = useMemo(() => {
     if (!searchQuery.trim()) return navItems;
     const query = searchQuery.toLowerCase();
-    
+
     return navItems.map(item => {
       const parentMatch = item.label.toLowerCase().includes(query);
-      const filteredSubmenu = item.submenu?.filter(sub => 
+      const filteredSubmenu = item.submenu?.filter(sub =>
         !sub.isDivider && sub.label.toLowerCase().includes(query)
       );
-      
+
       if (parentMatch || (filteredSubmenu && filteredSubmenu.length > 0)) {
         return { ...item, submenu: parentMatch ? item.submenu : filteredSubmenu };
       }
@@ -141,56 +141,56 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
               {IconComponent && <IconComponent />}
             </Badge>
           </ListItemIcon>
-          
-          <ListItemText 
-              primary={item.label} 
-              primaryTypographyProps={{ 
-                  fontWeight: active ? 700 : 500,
-                  color: active ? 'primary.main' : 'text.primary',
-                  fontSize: '0.9rem'
-              }} 
+
+          <ListItemText
+            primary={item.label}
+            primaryTypographyProps={{
+              fontWeight: active ? 700 : 500,
+              color: active ? 'primary.main' : 'text.primary',
+              fontSize: '0.9rem'
+            }}
           />
           {hasSubmenu && (isOpen ? <ExpandLess sx={{ color: 'text.secondary' }} /> : <ExpandMore sx={{ color: 'text.disabled' }} />)}
         </ListItemButton>
 
         {/* Submenú */}
         {hasSubmenu && (
-            <Collapse in={isOpen} timeout="auto" unmountOnExit>
-                <List component="div" disablePadding>
-                    {item.submenu?.map((sub, idx) => {
-                        if (sub.isDivider) return <Divider key={idx} sx={{ my: 1, borderColor: 'divider' }} />;
-                        const SubIcon = sub.icon;
-                        const subActive = isActive(sub.path);
-                        return (
-                            <ListItemButton
-                                key={sub.label}
-                                selected={subActive}
-                                onClick={() => sub.action ? sub.action() : handleNavigate(sub.path)}
-                                sx={{
-                                    pl: 4, 
-                                    mx: 1.5, 
-                                    borderRadius: 2,
-                                    mb: 0.25,
-                                    '&.Mui-selected': { bgcolor: alpha(theme.palette.primary.main, 0.08) }
-                                }}
-                            >
-                                {SubIcon && (
-                                    <ListItemIcon sx={{ minWidth: 30, color: subActive ? 'primary.main' : 'text.secondary' }}>
-                                        <SubIcon fontSize="small" />
-                                    </ListItemIcon>
-                                )}
-                                <ListItemText 
-                                    primary={sub.label} 
-                                    primaryTypographyProps={{ 
-                                        fontSize: '0.85rem',
-                                        fontWeight: subActive ? 600 : 400
-                                    }}
-                                />
-                            </ListItemButton>
-                        )
-                    })}
-                </List>
-            </Collapse>
+          <Collapse in={isOpen} timeout="auto" unmountOnExit>
+            <List component="div" disablePadding>
+              {item.submenu?.map((sub, idx) => {
+                if (sub.isDivider) return <Divider key={idx} sx={{ my: 1, borderColor: 'divider' }} />;
+                const SubIcon = sub.icon;
+                const subActive = isActive(sub.path);
+                return (
+                  <ListItemButton
+                    key={sub.label}
+                    selected={subActive}
+                    onClick={() => sub.action ? sub.action() : handleNavigate(sub.path)}
+                    sx={{
+                      pl: 4,
+                      mx: 1.5,
+                      borderRadius: 2,
+                      mb: 0.25,
+                      '&.Mui-selected': { bgcolor: alpha(theme.palette.primary.main, 0.08) }
+                    }}
+                  >
+                    {SubIcon && (
+                      <ListItemIcon sx={{ minWidth: 30, color: subActive ? 'primary.main' : 'text.secondary' }}>
+                        <SubIcon fontSize="small" />
+                      </ListItemIcon>
+                    )}
+                    <ListItemText
+                      primary={sub.label}
+                      primaryTypographyProps={{
+                        fontSize: '0.85rem',
+                        fontWeight: subActive ? 600 : 400
+                      }}
+                    />
+                  </ListItemButton>
+                )
+              })}
+            </List>
+          </Collapse>
         )}
       </Box>
     );
@@ -200,44 +200,44 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
   const drawerContent = (
     <>
       <DrawerHeader>
-         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Box 
-               component="img"
-               src={"/navbar/nav.png"} // O la ruta "/navbar/nav.png"
-               alt="Logo"
-               sx={{ 
-                 height: 40, // Altura fija para que entre en el header (ajusta según necesites)
-                 maxWidth: 180, // Ancho máximo para que no rompa el diseño
-                 objectFit: 'contain', // Asegura que se vea TODO el logo sin recortes
-                 // Si quieres que ocupe todo el ancho disponible y empuje el texto:
-                 // flexGrow: 1 
-               }} 
-             />
-            
-          
-         </Box>
-         
-         {/* Solo mostramos botón de cerrar en móvil */}
-         {isMobile && (
-             <IconButton onClick={onMobileClose}>
-                <ChevronLeft />
-             </IconButton>
-         )}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Box
+            component="img"
+            src={"/navbar/nav.png"} // O la ruta "/navbar/nav.png"
+            alt="Logo"
+            sx={{
+              height: 40, // Altura fija para que entre en el header (ajusta según necesites)
+              maxWidth: 180, // Ancho máximo para que no rompa el diseño
+              objectFit: 'contain', // Asegura que se vea TODO el logo sin recortes
+              // Si quieres que ocupe todo el ancho disponible y empuje el texto:
+              // flexGrow: 1 
+            }}
+          />
+
+
+        </Box>
+
+        {/* Solo mostramos botón de cerrar en móvil */}
+        {isMobile && (
+          <IconButton onClick={onMobileClose}>
+            <ChevronLeft />
+          </IconButton>
+        )}
       </DrawerHeader>
-      
+
       <Divider />
 
       <Box sx={{ p: 2 }}>
         <TextField
-            fullWidth
-            size="small"
-            placeholder="Buscar..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            InputProps={{
-                startAdornment: <InputAdornment position="start"><SearchIcon color="action" /></InputAdornment>,
-                sx: { borderRadius: 2, bgcolor: alpha(theme.palette.background.default, 0.5) }
-            }}
+          fullWidth
+          size="small"
+          placeholder="Buscar..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          InputProps={{
+            startAdornment: <InputAdornment position="start"><SearchIcon color="action" /></InputAdornment>,
+            sx: { borderRadius: 2, bgcolor: alpha(theme.palette.background.default, 0.5) }
+          }}
         />
       </Box>
 
@@ -250,29 +250,29 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
 
       {/* Footer Usuario */}
       <Box sx={{ p: 2 }}>
-        <Box sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: 2.5,
-            p: 2.5, 
-            borderRadius: 4,
-            bgcolor: alpha(theme.palette.background.default, 0.5),
-            border: `1px solid ${theme.palette.divider}`
+        <Box sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 2.5,
+          p: 2.5,
+          borderRadius: 4,
+          bgcolor: alpha(theme.palette.background.default, 0.5),
+          border: `1px solid ${theme.palette.divider}`
         }}>
-            <Avatar sx={{ bgcolor: 'primary.main', width: 36, height: 36, fontWeight: 'bold' }}>
-                {user?.nombre?.charAt(0) || 'A'}
-            </Avatar>
-            
-            <Box sx={{ flex: 1, overflow: 'hidden' }}>
-                <Typography variant="subtitle2" noWrap>{user?.nombre}</Typography>
-                <Typography variant="caption" color="text.secondary">Admin</Typography>
-            </Box>
-            
-            <Tooltip title="Cerrar sesión">
-                <IconButton onClick={handleLogoutClick} size="small" color="error">
-                    <Logout fontSize="small" />
-                </IconButton>
-            </Tooltip>
+          <Avatar sx={{ bgcolor: 'primary.main', width: 36, height: 36, fontWeight: 'bold' }}>
+            {user?.nombre?.charAt(0) || 'A'}
+          </Avatar>
+
+          <Box sx={{ flex: 1, overflow: 'hidden' }}>
+            <Typography variant="subtitle2" noWrap>{user?.nombre}</Typography>
+            <Typography variant="caption" color="text.secondary">Admin</Typography>
+          </Box>
+
+          <Tooltip title="Cerrar sesión">
+            <IconButton onClick={handleLogoutClick} size="small" color="error">
+              <Logout fontSize="small" />
+            </IconButton>
+          </Tooltip>
         </Box>
       </Box>
     </>
@@ -283,38 +283,38 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
       <Box component="nav" sx={{ width: { md: DRAWER_WIDTH }, flexShrink: { md: 0 } }}>
         {/* 1. MÓVIL: Temporary (Overlay) */}
         {isMobile ? (
-            <Drawer
-                variant="temporary"
-                open={mobileOpen}
-                onClose={onMobileClose}
-                ModalProps={{ keepMounted: true }}
-                sx={{
-                    display: { xs: 'block', md: 'none' },
-                    '& .MuiDrawer-paper': { boxSizing: 'border-box', width: DRAWER_WIDTH },
-                }}
-            >
-                {drawerContent}
-            </Drawer>
+          <Drawer
+            variant="temporary"
+            open={mobileOpen}
+            onClose={onMobileClose}
+            ModalProps={{ keepMounted: true }}
+            sx={{
+              display: { xs: 'block', md: 'none' },
+              '& .MuiDrawer-paper': { boxSizing: 'border-box', width: DRAWER_WIDTH },
+            }}
+          >
+            {drawerContent}
+          </Drawer>
         ) : (
-        /* 2. DESKTOP: Permanent (Fijo, sin colapsar) */
-            <Drawer
-                variant="permanent"
-                sx={{
-                    display: { xs: 'none', md: 'block' },
-                    '& .MuiDrawer-paper': {
-                        boxSizing: 'border-box',
-                        width: DRAWER_WIDTH, // Ancho fijo siempre
-                        borderRight: '1px solid',
-                        borderColor: 'divider',
-                        bgcolor: 'background.paper'
-                    },
-                }}
-            >
-                {drawerContent}
-            </Drawer>
+          /* 2. DESKTOP: Permanent (Fijo, sin colapsar) */
+          <Drawer
+            variant="permanent"
+            sx={{
+              display: { xs: 'none', md: 'block' },
+              '& .MuiDrawer-paper': {
+                boxSizing: 'border-box',
+                width: DRAWER_WIDTH, // Ancho fijo siempre
+                borderRight: '1px solid',
+                borderColor: 'divider',
+                bgcolor: 'background.paper'
+              },
+            }}
+          >
+            {drawerContent}
+          </Drawer>
         )}
       </Box>
-      
+
       <ConfirmDialog {...logoutDialogProps} />
     </>
   );

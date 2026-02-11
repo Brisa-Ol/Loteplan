@@ -1,12 +1,25 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography,
-  Avatar, useTheme, alpha, TextField, Stack, useMediaQuery, Slide, CircularProgress,
-  Box
+import React, { useEffect, useState } from 'react';
+import { CheckCircle, ErrorOutline, Help, WarningAmber } from '@mui/icons-material';
+import {
+  alpha,
+  Avatar,
+  Box,
+  Button,
+  CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  Slide,
+  Stack,
+  TextField,
+  Typography,
+  useTheme
 } from '@mui/material';
-import { Help, CheckCircle, ErrorOutline, WarningAmber } from '@mui/icons-material';
 import type { TransitionProps } from '@mui/material/transitions';
 
+// ============================================================================
+// TRANSICIÓN
+// ============================================================================
 const Transition = React.forwardRef(function Transition(
   props: TransitionProps & { children: React.ReactElement<any, any> },
   ref: React.Ref<unknown>,
@@ -14,6 +27,9 @@ const Transition = React.forwardRef(function Transition(
   return <Slide direction="up" ref={ref} {...props} />;
 });
 
+// ============================================================================
+// INTERFAZ
+// ============================================================================
 interface Props {
   controller: any; // Hook useConfirmDialog
   onConfirm: (inputValue?: string) => void;
@@ -22,12 +38,13 @@ interface Props {
   description?: string;
 }
 
-export const ConfirmDialog: React.FC<Props> = ({ 
+// ============================================================================
+// COMPONENTE
+// ============================================================================
+export const ConfirmDialog: React.FC<Props> = ({
   controller, onConfirm, isLoading, title, description
 }) => {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  
   const { open, close, config } = controller;
   const [inputValue, setInputValue] = useState('');
   const [touched, setTouched] = useState(false);
@@ -38,37 +55,36 @@ export const ConfirmDialog: React.FC<Props> = ({
       setTouched(false);
     }
   }, [open]);
-  
+
   if (!config) return null;
 
   const displayTitle = title || config.title;
   const displayDesc = description || config.description;
-  const severity = config.severity || 'info'; 
+  const severity = config.severity || 'info';
   const confirmText = config.confirmText || 'Confirmar';
 
-  // 🎨 MAPE DE COLORES: ADIÓS AL AZUL, HOLA NARANJA (#CC6333)
+  // 🎨 CONFIGURACIÓN DE COLORES (Primary = Naranja)
   const getSeverityData = () => {
     const configs = {
-      error: { 
-        color: theme.palette.error.main, 
-        icon: <ErrorOutline />, 
-        btnColor: 'error' as const 
+      error: {
+        color: theme.palette.error.main,
+        icon: <ErrorOutline />,
+        btnColor: 'error' as const
       },
-      success: { 
-        color: theme.palette.success.main, 
-        icon: <CheckCircle />, 
-        btnColor: 'success' as const 
+      success: {
+        color: theme.palette.success.main,
+        icon: <CheckCircle />,
+        btnColor: 'success' as const
       },
-      // ✅ Tanto warning como info ahora usan tu naranja primario
-      warning: { 
-        color: theme.palette.primary.main, 
-        icon: <WarningAmber />, 
-        btnColor: 'primary' as const 
+      warning: {
+        color: theme.palette.primary.main,
+        icon: <WarningAmber />,
+        btnColor: 'primary' as const
       },
-      info: { 
-        color: theme.palette.primary.main, 
-        icon: <Help />, 
-        btnColor: 'primary' as const 
+      info: {
+        color: theme.palette.primary.main,
+        icon: <Help />,
+        btnColor: 'primary' as const
       }
     };
     return configs[severity as keyof typeof configs] || configs.info;
@@ -85,14 +101,14 @@ export const ConfirmDialog: React.FC<Props> = ({
   };
 
   return (
-    <Dialog 
-      open={open} 
+    <Dialog
+      open={open}
       TransitionComponent={Transition}
       onClose={(_, reason) => {
         if (isLoading && (reason === 'backdropClick' || reason === 'escapeKeyDown')) return;
         close();
       }}
-      maxWidth="xs" 
+      maxWidth="xs"
       fullWidth
       slotProps={{
         backdrop: {
@@ -105,7 +121,7 @@ export const ConfirmDialog: React.FC<Props> = ({
       PaperProps={{
         elevation: 0,
         sx: {
-          borderRadius: 2, // 16px
+          borderRadius: 2,
           border: '1px solid',
           borderColor: theme.palette.secondary.main,
           boxShadow: '0 24px 48px -12px rgba(0,0,0,0.15)',
@@ -113,98 +129,99 @@ export const ConfirmDialog: React.FC<Props> = ({
         }
       }}
     >
-      {/* HEADER: Con fondo naranja muy sutil para coherencia */}
-      <Box sx={{ 
-          display: 'flex', 
-          flexDirection: 'column',
-          alignItems: 'center', 
-          textAlign: 'center',
-          pt: 5, pb: 2, px: 3,
-          bgcolor: alpha(severityColor, 0.04), 
+      {/* HEADER */}
+      <Box sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        textAlign: 'center',
+        pt: 5, pb: 2, px: 3,
+        bgcolor: alpha(severityColor, 0.04),
       }}>
-          <Avatar sx={{ 
-            bgcolor: alpha(severityColor, 0.1), 
-            color: severityColor, 
-            width: 64, height: 64, 
-            mb: 2.5,
-            border: `1px solid ${alpha(severityColor, 0.2)}`,
-            '& svg': { fontSize: 32 }
-          }}>
-            {severityIcon}
-          </Avatar>
-          <Typography variant="h4" component="h2" fontWeight={700} color="text.primary">
-            {displayTitle}
-          </Typography>
+        <Avatar sx={{
+          bgcolor: alpha(severityColor, 0.1),
+          color: severityColor,
+          width: 64, height: 64,
+          mb: 2.5,
+          border: `1px solid ${alpha(severityColor, 0.2)}`,
+          '& svg': { fontSize: 32 }
+        }}>
+          {severityIcon}
+        </Avatar>
+        <Typography variant="h4" component="h2" fontWeight={700} color="text.primary">
+          {displayTitle}
+        </Typography>
       </Box>
-      
-      <DialogContent sx={{ px: 4, py: 2 }}>
-        <Stack spacing={3}> 
-            <Typography 
-              variant="body1" 
-              textAlign="center"
-              color="text.secondary" 
-              sx={{ fontWeight: 500, lineHeight: 1.6 }}
-            >
-                {displayDesc}
-            </Typography>
 
-            {config.requireInput && (
-                <TextField
-                    autoFocus
-                    fullWidth
-                    label={config.inputLabel || "Motivo"}
-                    placeholder="Escribe aquí..."
-                    value={inputValue}
-                    onChange={(e) => setInputValue(e.target.value)}
-                    error={config.requireInput && touched && inputValue.trim().length < 3}
-                    helperText={config.requireInput && touched && inputValue.trim().length < 3 ? "Mínimo 3 caracteres" : ""}
-                    size="small"
-                    multiline
-                    minRows={3}
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        borderRadius: 1, // 8px
-                        bgcolor: alpha(theme.palette.background.paper, 0.5)
-                      }
-                    }}
-                />
-            )}
+      {/* CONTENIDO */}
+      <DialogContent sx={{ px: 4, py: 2 }}>
+        <Stack spacing={3}>
+          <Typography
+            variant="body1"
+            textAlign="center"
+            color="text.secondary"
+            sx={{ fontWeight: 500, lineHeight: 1.6 }}
+          >
+            {displayDesc}
+          </Typography>
+
+          {config.requireInput && (
+            <TextField
+              autoFocus
+              fullWidth
+              label={config.inputLabel || "Motivo"}
+              placeholder="Escribe aquí..."
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              error={config.requireInput && touched && inputValue.trim().length < 3}
+              helperText={config.requireInput && touched && inputValue.trim().length < 3 ? "Mínimo 3 caracteres" : ""}
+              size="small"
+              multiline
+              minRows={3}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 1,
+                  bgcolor: alpha(theme.palette.background.paper, 0.5)
+                }
+              }}
+            />
+          )}
         </Stack>
       </DialogContent>
-      
-      <DialogActions sx={{ 
-          p: 4, 
-          gap: 2,
-          justifyContent: 'center',
-          bgcolor: alpha(severityColor, 0.02),
+
+      {/* ACCIONES */}
+      <DialogActions sx={{
+        p: 4,
+        gap: 2,
+        justifyContent: 'center',
+        bgcolor: alpha(severityColor, 0.02),
       }}>
-        <Button 
-            onClick={close} 
-            disabled={isLoading} 
-            color="inherit" 
-            sx={{ 
-                borderRadius: 1, // 8px
-                fontWeight: 600, 
-                px: 4,
-                textTransform: 'none'
-            }}
+        <Button
+          onClick={close}
+          disabled={isLoading}
+          color="inherit"
+          sx={{
+            borderRadius: 1,
+            fontWeight: 600,
+            px: 4,
+            textTransform: 'none'
+          }}
         >
           Cancelar
         </Button>
-        <Button 
-            onClick={handleConfirmClick} 
-            disabled={isLoading || (config.requireInput && inputValue.trim().length < 3)}
-            variant="contained" 
-            color={btnColor} 
-            sx={{ 
-                borderRadius: 1, // 8px
-                fontWeight: 700, 
-                px: 5, py: 1.2,
-                minWidth: 150,
-                textTransform: 'none',
-                // Sombra naranja dinámica
-                boxShadow: btnColor === 'primary' ? `0 4px 12px ${alpha(theme.palette.primary.main, 0.3)}` : undefined,
-            }}
+        <Button
+          onClick={handleConfirmClick}
+          disabled={isLoading || (config.requireInput && inputValue.trim().length < 3)}
+          variant="contained"
+          color={btnColor}
+          sx={{
+            borderRadius: 1,
+            fontWeight: 700,
+            px: 5, py: 1.2,
+            minWidth: 150,
+            textTransform: 'none',
+            boxShadow: btnColor === 'primary' ? `0 4px 12px ${alpha(theme.palette.primary.main, 0.3)}` : undefined,
+          }}
         >
           {isLoading ? <CircularProgress size={20} color="inherit" /> : confirmText}
         </Button>

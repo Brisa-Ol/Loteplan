@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { useQueryClient } from '@tanstack/react-query'; 
+import { useQueryClient } from '@tanstack/react-query';
 
 import { secureStorage } from '@/shared/utils/secureStorage';
 import type { LoginRequestDto, LoginResponseDto, RegisterRequestDto, UserDto } from '@/core/types/dto/auth.dto';
@@ -25,7 +25,7 @@ export interface UseAuthCoreReturn {
 
 export const useAuthCore = (): UseAuthCoreReturn => {
   const queryClient = useQueryClient();
-  
+
   const [user, setUser] = useState<UserDto | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
@@ -39,7 +39,7 @@ export const useAuthCore = (): UseAuthCoreReturn => {
   // 🚀 CARGA DE USUARIO + KYC (Combinados)
   const loadUser = useCallback(async () => {
     const token = secureStorage.getToken();
-    
+
     // Si no hay token, cortamos la inicialización
     if (!token) {
       setIsInitializing(false);
@@ -49,7 +49,7 @@ export const useAuthCore = (): UseAuthCoreReturn => {
     try {
       // 1. Obtenemos datos base del usuario
       const { data: userData } = await UsuarioService.getMe();
-      
+
       // Creamos una copia para mutarla con el estado KYC
       let fullUser: UserDto = { ...userData };
 
@@ -58,20 +58,20 @@ export const useAuthCore = (): UseAuthCoreReturn => {
         try {
           // ✅ CORRECTO: El servicio ya devuelve la data limpia, no desestructuramos
           const kycData = await kycService.getStatus();
-          
+
           // Agregamos el estado al objeto de usuario
-          fullUser = { 
-            ...userData, 
-            estado_kyc: kycData.estado_verificacion 
+          fullUser = {
+            ...userData,
+            estado_kyc: kycData.estado_verificacion
           };
         } catch (kycError) {
           // Si falla (ej: 404 porque nunca inició), asumimos NO_INICIADO
           console.warn("No se pudo obtener estado KYC, asumiendo NO_INICIADO", kycError);
-          
+
           // ✅ TypeScript ya no se queja porque actualizamos UserDto en auth.dto.ts
-          fullUser = { 
-            ...userData, 
-            estado_kyc: 'NO_INICIADO' 
+          fullUser = {
+            ...userData,
+            estado_kyc: 'NO_INICIADO'
           };
         }
       }
@@ -131,15 +131,15 @@ export const useAuthCore = (): UseAuthCoreReturn => {
   // LOGOUT (Hard Reload)
   const logout = useCallback(() => {
     AuthService.logout().catch(console.error);
-    
-    secureStorage.clearToken(); 
-    sessionStorage.clear();     
-    queryClient.clear(); 
+
+    secureStorage.clearToken();
+    sessionStorage.clear();
+    queryClient.clear();
 
     setUser(null);
     setError(null);
-    
-    window.location.href = '/login'; 
+
+    window.location.href = '/login';
   }, [queryClient]);
 
   const clearError = useCallback(() => setError(null), []);

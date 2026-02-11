@@ -42,7 +42,7 @@ export interface CheckoutPersistedState {
 // ===================================================
 export class CheckoutStateManager {
   private static readonly STATE_EXPIRATION_MS = 24 * 60 * 60 * 1000; // 24 horas
-  
+
   /**
    * Guarda el estado completo del checkout
    */
@@ -52,31 +52,31 @@ export class CheckoutStateManager {
         ...state,
         timestamp: Date.now()
       };
-      
+
       // Guardar estado completo
       localStorage.setItem(
-        STORAGE_KEYS.CHECKOUT_STATE, 
+        STORAGE_KEYS.CHECKOUT_STATE,
         JSON.stringify(stateWithTimestamp)
       );
-      
+
       // También guardar claves individuales para compatibilidad y recuperación rápida
       if (state.transactionId) {
         localStorage.setItem(STORAGE_KEYS.TRANSACTION_ID, String(state.transactionId));
         localStorage.setItem(STORAGE_KEYS.PROJECT_ID, String(state.projectId));
       }
-      
+
       localStorage.setItem(STORAGE_KEYS.ACTIVE_STEP, String(state.activeStep));
       localStorage.setItem(STORAGE_KEYS.PAYMENT_SUCCESS, String(state.paymentSuccess));
       localStorage.setItem(STORAGE_KEYS.TIPO, state.tipo);
-      
+
       if (state.signatureDataUrl) {
         localStorage.setItem(STORAGE_KEYS.SIGNATURE_DATA, state.signatureDataUrl);
       }
-      
+
       if (state.location) {
         localStorage.setItem(STORAGE_KEYS.LOCATION, JSON.stringify(state.location));
       }
-      
+
       console.log('✅ Estado del checkout guardado:', state);
     } catch (error) {
       console.error('❌ Error guardando estado del checkout:', error);
@@ -227,7 +227,7 @@ export const useCheckoutRecovery = (
     if (!isOpen || hasAttemptedRecovery.current) return;
 
     const savedState = CheckoutStateManager.loadState(projectId);
-    
+
     if (savedState && (savedState.paymentSuccess || savedState.activeStep >= 3)) {
       setRecoveredState(savedState);
       setShowRecoveryPrompt(true);

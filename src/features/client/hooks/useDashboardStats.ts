@@ -38,11 +38,11 @@ export const useDashboardStats = ({
     // --- 3. TOTALES GENERALES ---
     const granTotalInvertido = totalInvertidoSuscripciones + totalInvertidoDirecto;
     const totalProyectos = (resumenes.length) + (inversiones.length);
-    
+
     // --- 4. PAGOS Y DEUDA ---
     const pagosPendientes = pagos.filter(p => p.estado_pago === 'pendiente');
     const pagosVencidos = pagos.filter(p => p.estado_pago === 'vencido');
-    
+
     // Próximo vencimiento
     const proximoVencimiento = pagosPendientes
       .sort((a, b) => new Date(a.fecha_vencimiento).getTime() - new Date(b.fecha_vencimiento).getTime())[0] || null;
@@ -54,16 +54,16 @@ export const useDashboardStats = ({
       // Financiero
       saldoTotalAFavor,
       granTotalInvertido,
-      
+
       // Contadores
       totalProyectos,
       totalCuotasPagadas,
-      
+
       // Estado de Cuenta
       pagosVencidos, // Array completo por si necesitas iterarlo en alertas
       cantidadPagosVencidos: pagosVencidos.length,
       proximoVencimiento,
-      
+
       // Mensajería (Auxiliar si quisieras meterlo aquí, pero mejor dejarlo fuera)
     };
   }, [resumenes, suscripciones, inversiones, pagos]);

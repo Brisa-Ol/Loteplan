@@ -1,36 +1,56 @@
 // src/features/client/pages/Proyectos/DetalleProyecto.tsx
 
-import React, { useState, useMemo, useCallback } from 'react';
 import {
-  Backdrop, Box, CircularProgress, Stack, Tab, Tabs,
-  Typography, Skeleton, Alert, Dialog, IconButton,
-  Paper, Fade, Avatar, Button, alpha, useTheme,
-  List, ListItem, ListItemIcon, ListItemText, DialogTitle,
-  DialogContent, DialogActions
-} from '@mui/material';
-import {
-  Info, InsertPhoto, ViewList, LocationOn,
-  GppGood, Gavel, AutoGraph, Explore,
-  Close, MonetizationOn, CheckCircle,
-  CalendarMonth, AccountBalance, Groups
+  AccountBalance,
+  AutoGraph,
+  CalendarMonth,
+  CheckCircle,
+  Close,
+  Explore,
+  Gavel,
+  GppGood,
+  Groups,
+  Info, InsertPhoto,
+  LocationOn,
+  MonetizationOn,
+  ViewList
 } from '@mui/icons-material';
-import { useNavigate, useLocation } from 'react-router-dom';
+import {
+  Alert,
+  Avatar,
+  Box,
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Fade,
+  IconButton,
+  List, ListItem, ListItemIcon, ListItemText,
+  Paper,
+  Skeleton,
+  Stack, Tab, Tabs,
+  Typography,
+  alpha, useTheme
+} from '@mui/material';
+import React, { useCallback, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 // Hooks y Componentes
-import { useDetalleProyecto } from '../../hooks/useDetalleProyecto';
 import { PageContainer } from '@/shared/components/layout/containers/PageContainer/PageContainer';
-import { ProjectHero } from './components/ProjectHero';
-import { ProjectGallery } from './components/ProjectGallery';
-import { ProjectSidebar } from './components/ProjectSidebar';
+import { useDetalleProyecto } from '../../hooks/useDetalleProyecto';
 import { ListaLotesProyecto } from '../Lotes/ListaLotesProyecto';
+import { ProjectGallery } from './components/ProjectGallery';
+import { ProjectHero } from './components/ProjectHero';
+import { ProjectSidebar } from './components/ProjectSidebar';
 
 import type { ProyectoDto } from '@/core/types/dto/proyecto.dto';
 
 // Seguridad y Rutas
-import { useSecurityGuard } from '@/shared/hooks/useSecurityGuard';
-import { SecurityRequirementModal } from '@/shared/components/domain/modals/SecurityRequirementModal/SecurityRequirementModal';
-import { ROUTES } from '@/routes';
 import { useAuth } from '@/core/context/AuthContext';
+import { ROUTES } from '@/routes';
+import { SecurityRequirementModal } from '@/shared/components/domain/modals/SecurityRequirementModal/SecurityRequirementModal';
+import { useSecurityGuard } from '@/shared/hooks/useSecurityGuard';
 import { CheckoutWizardModal } from './modals/CheckoutWizardModal';
 
 // ===================================================
@@ -63,7 +83,7 @@ const FeatureItem = React.memo<{ icon: React.ReactNode; title: string; desc: str
 // ===================================================
 const TabOverview = React.memo<{ proyecto: ProyectoDto; esMensual: boolean; googleMapsUrl: string | null; }>(({ proyecto, esMensual, googleMapsUrl }) => {
   const theme = useTheme();
-  
+
   return (
     <Fade in>
       <Stack spacing={4}>
@@ -83,7 +103,7 @@ const TabOverview = React.memo<{ proyecto: ProyectoDto; esMensual: boolean; goog
         {/* 3. Ficha Técnica */}
         <Paper variant="outlined" sx={{ p: 3, borderRadius: 3, bgcolor: alpha(theme.palette.action.hover, 0.4) }}>
           <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 3, textTransform: 'uppercase' }}>Ficha Técnica del Activo</Typography>
-          
+
           <Box display="grid" gridTemplateColumns={{ xs: '1fr 1fr', md: 'repeat(4, 1fr)' }} gap={4}>
             <DataPoint label="Moneda" value={proyecto.moneda} icon={<MonetizationOn fontSize="small" />} />
             <DataPoint label="Modalidad" value={esMensual ? 'Ahorro Mensual' : 'Inversión Directa'} icon={<CalendarMonth fontSize="small" />} />
@@ -117,7 +137,7 @@ const DetalleProyecto: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated } = useAuth();
-  
+
   // Guardía de seguridad para acciones (KYC/2FA)
   const { withSecurityCheck, securityModalProps } = useSecurityGuard();
 
@@ -125,7 +145,7 @@ const DetalleProyecto: React.FC = () => {
   const [tokenInfoOpen, setTokenInfoOpen] = useState(false);
 
   const esMensual = useMemo(() => logic.proyecto?.tipo_inversion === 'mensual', [logic.proyecto?.tipo_inversion]);
-  
+
   const googleMapsUrl = useMemo(() => {
     if (!logic.proyecto?.latitud || !logic.proyecto?.longitud) return null;
     return `http://maps.google.com/maps?q=${logic.proyecto.latitud},${logic.proyecto.longitud}`;
@@ -137,7 +157,7 @@ const DetalleProyecto: React.FC = () => {
       navigate(ROUTES.LOGIN, { state: { from: location.pathname } });
       return;
     }
-    
+
     // Verificamos seguridad antes de abrir el wizard
     withSecurityCheck(() => {
       // El wizard se encargará de determinar en qué paso está (inicio, pago, firma)
@@ -166,12 +186,12 @@ const DetalleProyecto: React.FC = () => {
 
   return (
     <PageContainer maxWidth="xl" sx={{ pb: 8 }}>
-      
+
       {/* 1. HERO SECTION */}
       <ProjectHero proyecto={proyecto} />
 
       <Box sx={{ display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, gap: 5, alignItems: 'flex-start' }}>
-        
+
         {/* 2. CONTENIDO PRINCIPAL (IZQUIERDA) */}
         <Box sx={{ flex: 1, width: '100%', minWidth: 0 }}>
           <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
@@ -209,10 +229,10 @@ const DetalleProyecto: React.FC = () => {
       </Box>
 
       {/* 4. MODALES */}
-      
+
       {/* Modal de Seguridad (KYC/2FA Check) */}
       <SecurityRequirementModal {...securityModalProps} />
-      
+
       {/* Wizard de Inversión/Firma */}
       {isAuthenticated && (
         <CheckoutWizardModal
@@ -222,11 +242,7 @@ const DetalleProyecto: React.FC = () => {
           tipo={esMensual ? 'suscripcion' : 'inversion'}
           inversionId={logic.inversionId}
           pagoId={logic.pagoId}
-          onConfirmInvestment={logic.wizardCallbacks.onConfirmInvestment}
-          // El hook se encarga de la lógica post-firma (limpieza de storage, invalidación de queries)
-          onSignContract={logic.wizardCallbacks.onSignContract}
-          isProcessing={logic.isProcessingWizard}
-          error2FA={logic.error2FA}
+
         />
       )}
 
@@ -238,8 +254,8 @@ const DetalleProyecto: React.FC = () => {
       )}
 
       {/* Modal Info Tokens */}
-      <Dialog 
-        open={tokenInfoOpen} 
+      <Dialog
+        open={tokenInfoOpen}
         onClose={() => setTokenInfoOpen(false)}
         maxWidth="sm"
         fullWidth
@@ -258,7 +274,7 @@ const DetalleProyecto: React.FC = () => {
             <Close fontSize="small" />
           </IconButton>
         </DialogTitle>
-        
+
         <DialogContent dividers>
           <Typography variant="body2" color="text.secondary" paragraph>
             Este proyecto utiliza un sistema de asignación por subasta para garantizar transparencia en la entrega de lotes.
@@ -269,9 +285,9 @@ const DetalleProyecto: React.FC = () => {
               <ListItemIcon>
                 <MonetizationOn color="warning" />
               </ListItemIcon>
-              <ListItemText 
-                primary="1. Obtén Tokens" 
-                secondary="Al suscribirte al proyecto, recibes tokens de participación según tu nivel de inversión." 
+              <ListItemText
+                primary="1. Obtén Tokens"
+                secondary="Al suscribirte al proyecto, recibes tokens de participación según tu nivel de inversión."
                 primaryTypographyProps={{ fontWeight: 700, fontSize: '0.9rem' }}
               />
             </ListItem>
@@ -279,9 +295,9 @@ const DetalleProyecto: React.FC = () => {
               <ListItemIcon>
                 <Gavel color="warning" />
               </ListItemIcon>
-              <ListItemText 
-                primary="2. Realiza tu Puja" 
-                secondary="Usa un token para ofertar por el lote que deseas. El token se bloquea temporalmente." 
+              <ListItemText
+                primary="2. Realiza tu Puja"
+                secondary="Usa un token para ofertar por el lote que deseas. El token se bloquea temporalmente."
                 primaryTypographyProps={{ fontWeight: 700, fontSize: '0.9rem' }}
               />
             </ListItem>
@@ -289,9 +305,9 @@ const DetalleProyecto: React.FC = () => {
               <ListItemIcon>
                 <CheckCircle color="success" />
               </ListItemIcon>
-              <ListItemText 
-                primary="3. Gana y Asigna" 
-                secondary="Si ganas la subasta, el lote es tuyo y se inicia el plan de pagos. Si pierdes, recuperas tu token." 
+              <ListItemText
+                primary="3. Gana y Asigna"
+                secondary="Si ganas la subasta, el lote es tuyo y se inicia el plan de pagos. Si pierdes, recuperas tu token."
                 primaryTypographyProps={{ fontWeight: 700, fontSize: '0.9rem' }}
               />
             </ListItem>
@@ -303,12 +319,12 @@ const DetalleProyecto: React.FC = () => {
             </Typography>
           </Alert>
         </DialogContent>
-        
+
         <DialogActions sx={{ p: 2.5 }}>
-          <Button 
-            onClick={() => setTokenInfoOpen(false)} 
-            variant="contained" 
-            color="primary" 
+          <Button
+            onClick={() => setTokenInfoOpen(false)}
+            variant="contained"
+            color="primary"
             fullWidth
             sx={{ borderRadius: 2, fontWeight: 700 }}
           >

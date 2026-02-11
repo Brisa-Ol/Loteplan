@@ -2,13 +2,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useModal } from '@/shared/hooks/useModal';
 import type { InversionDto } from '@/core/types/dto/inversion.dto';
-
 import InversionService from '@/core/api/services/inversion.service';
-import ProyectoService from '@/core/api/services/proyecto.service';
-import UsuarioService from '@/core/api/services/usuario.service';
 import { useSortedData } from './useSortedData';
 
-// Hook auxiliar para debounce
+// --- HELPERS ---
 function useDebouncedValue<T>(value: T, delay: number = 300): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
   useEffect(() => {
@@ -30,102 +27,103 @@ export const useAdminInversiones = () => {
   const debouncedSearchTerm = useDebouncedValue(searchTerm, 300);
 
   // --- QUERIES ---
-  const { data: inversionesRaw = [], isLoading: l1, error } = useQuery({
+  
+  // 1. Listado de Inversiones (Retorno directo del array según controlador)
+  const { data: inversionesRaw = [], isLoading: loadingInv, error } = useQuery({
     queryKey: ['adminInversiones'],
-    queryFn: async () => (await InversionService.findAll()).data,
+    queryFn: async () => {
+      const response = await InversionService.findAll();
+      return Array.isArray(response.data) ? response.data : [];
+    },
     staleTime: 30000,
   });
 
-  const { data: liquidezData, isLoading: l2 } = useQuery({
+  // 2. Métricas de Liquidez (Wrapper .data.data)
+  const { data: liquidezData, isLoading: loadingLiq } = useQuery({
     queryKey: ['adminInversionesLiquidez'],
     queryFn: async () => (await InversionService.getLiquidityMetrics()).data.data,
     staleTime: 60000,
   });
 
-  const { data: topInvestors = [], isLoading: l3 } = useQuery({
+  // 3. Top Inversores Agregados (Wrapper .data.data)
+  const { data: topInvestors = [], isLoading: loadingTop } = useQuery({
     queryKey: ['adminTopInvestors'],
     queryFn: async () => (await InversionService.getAggregatedMetrics()).data.data,
     staleTime: 60000,
   });
 
-  const { data: usuarios = [] } = useQuery({
-    queryKey: ['adminUsuariosMap'],
-    queryFn: async () => (await UsuarioService.findAll()).data,
-    staleTime: 600000,
-  });
+  const isLoading = loadingInv || loadingLiq || loadingTop;
 
-  const { data: allProyectos = [] } = useQuery({
-    queryKey: ['adminProyectosMap'],
-    queryFn: async () => (await ProyectoService.getAllAdmin()).data,
-    staleTime: 600000,
-  });
+  // --- PROCESAMIENTO DE DERIVADOS ---
 
-  const isLoading = l1 || l2 || l3;
+  // Proyectos únicos para el filtro (derivado de las inversiones cargadas)
+const proyectosUnicos = useMemo(() => {
+    const map = new Map();
+    inversionesRaw.forEach(inv => {
+        // ✅ CORRECCIÓN: Usar el nombre exacto del DTO/Backend
+        const proj = inv.proyectoInvertido; 
+        if (proj) map.set(proj.id, proj);
+    });
+    return Array.from(map.values());
+  }, [inversionesRaw]);
 
-  // --- MAPAS PARA ACCESO RÁPIDO ---
-  const usuariosMap = useMemo(() => new Map(usuarios.map(u => [u.id, u])), [usuarios]);
-  const proyectosMap = useMemo(() => new Map(allProyectos.map(p => [p.id, p])), [allProyectos]);
-
-  const getUserInfo = useCallback((id: number) => {
-    const user = usuariosMap.get(id);
-    return user 
-      ? { name: `${user.nombre} ${user.apellido}`, email: user.email } 
-      : { name: `Usuario #${id}`, email: 'Sin datos' };
-  }, [usuariosMap]);
-
-  const getProjectName = useCallback((id: number) => {
-    return proyectosMap.get(id)?.nombre_proyecto ?? `Proyecto #${id}`;
-  }, [proyectosMap]);
-
-  // --- LÓGICA DE FILTRADO Y ORDENAMIENTO ---
+  // Ordenamiento base
   const { sortedData: inversionesOrdenadas, highlightedId } = useSortedData(inversionesRaw);
 
+  // --- FILTRADO OPTIMIZADO ---
   const filteredInversiones = useMemo(() => {
-    const term = debouncedSearchTerm.toLowerCase();
+    const term = debouncedSearchTerm.toLowerCase().trim();
+
     return inversionesOrdenadas.filter(inv => {
+      // A. Filtros de Categoría
       const matchProject = filterProject === 'all' || inv.id_proyecto === Number(filterProject);
-      const matchStatus = filterStatus === 'all' || inv.estado === filterStatus;
+      const matchStatus = filterStatus === 'all' || inv.estado.toLowerCase() === filterStatus.toLowerCase();
       
       if (!matchProject || !matchStatus) return false;
       if (!term) return true;
 
-      const userInfo = getUserInfo(inv.id_usuario);
-      const projName = getProjectName(inv.id_proyecto);
+      // B. Filtros de Búsqueda
+      const inversor = (inv as any).inversor;
+      const proyecto = inv.proyectoInvertido;
 
-      return (
-        userInfo.name.toLowerCase().includes(term) ||
-        userInfo.email.toLowerCase().includes(term) ||
-        projName.toLowerCase().includes(term) ||
-        inv.id.toString().includes(term)
-      );
+      const userName = inversor ? `${inversor.nombre} ${inversor.apellido}`.toLowerCase() : '';
+      const userEmail = inversor?.email?.toLowerCase() || '';
+      const projName = (proyecto?.nombre_proyecto || '').toLowerCase();
+
+      return userName.includes(term) || userEmail.includes(term) || projName.includes(term) || inv.id.toString().includes(term);
     });
-  }, [inversionesOrdenadas, debouncedSearchTerm, filterProject, filterStatus, getUserInfo, getProjectName]);
+  }, [inversionesOrdenadas, debouncedSearchTerm, filterProject, filterStatus]);
 
-  // --- DATA PARA GRÁFICOS ---
+  // --- DATA PARA GRÁFICOS (RECHARTS) ---
+  
   const chartData = useMemo(() => {
-    return topInvestors.slice(0, 10).map(item => ({
-      name: getUserInfo(item.id_usuario).name,
-      monto: Number(item.monto_total_invertido),
-    }));
-  }, [topInvestors, getUserInfo]);
+    return topInvestors.slice(0, 10).map(item => {
+      const foundInv = inversionesRaw.find(inv => inv.id_usuario === item.id_usuario);
+      const user = (foundInv as any)?.inversor;
+      return {
+        name: user ? `${user.nombre} ${user.apellido}` : `ID #${item.id_usuario}`,
+        monto: Number(item.monto_total_invertido),
+      };
+    });
+  }, [topInvestors, inversionesRaw]);
 
   const trendData = useMemo(() => {
-    if (!inversionesRaw.length) return [];
+    if (inversionesRaw.length === 0) return [];
 
-    const validas = inversionesRaw
-      .filter(i => !['fallido', 'reembolsado'].includes(i.estado))
-      .sort((a, b) => new Date(a.fecha_inversion).getTime() - new Date(b.fecha_inversion).getTime());
-
+    const historyMap: Map<string, number> = new Map();
     let acumulado = 0;
-    const historial: Map<string, number> = new Map();
 
-    validas.forEach(inv => {
-      acumulado += Number(inv.monto);
-      const fecha = new Date(inv.fecha_inversion).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
-      historial.set(fecha, acumulado);
-    });
+    [...inversionesRaw]
+      .filter(i => i.estado === 'pagado' || i.estado === 'pendiente')
+      .map(i => ({ ...i, date: new Date(i.fecha_inversion || (i as any).createdAt || Date.now()) }))
+      .sort((a, b) => a.date.getTime() - b.date.getTime())
+      .forEach(inv => {
+        acumulado += Number(inv.monto);
+        const label = inv.date.toLocaleDateString('es-AR', { day: '2-digit', month: 'short' });
+        historyMap.set(label, acumulado);
+      });
 
-    return Array.from(historial, ([fecha, monto]) => ({ fecha, monto })).slice(-20);
+    return Array.from(historyMap, ([fecha, monto]) => ({ fecha, monto })).slice(-20);
   }, [inversionesRaw]);
 
   // --- HANDLERS ---
@@ -140,27 +138,25 @@ export const useAdminInversiones = () => {
   }, [detailModal]);
 
   return {
-    // Estados y Filtros
+    // UI State
     searchTerm, setSearchTerm,
     filterProject, setFilterProject,
     filterStatus, setFilterStatus,
     selectedInversion,
     highlightedId,
     
-    // Data procesada
+    // Data
     filteredInversiones,
     chartData,
     trendData,
     liquidezData,
-    proyectos: useMemo(() => allProyectos.filter(p => p.tipo_inversion === 'directo'), [allProyectos]),
+    proyectos: proyectosUnicos,
     
-    // Info Helpers
+    // Helpers
     isLoading,
     error,
-    getUserInfo,
-    getProjectName,
     
-    // Modales y Handlers
+    // Modal Bridge
     modales: { detail: detailModal },
     handleViewDetails,
     handleCloseModal

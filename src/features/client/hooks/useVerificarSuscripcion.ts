@@ -41,13 +41,13 @@ export const useVerificarSuscripcion = (idProyecto?: number): EstadoSuscripcion 
     motivoBloqueo = 'Ya utilizaste tu token en otra subasta de este proyecto';
   }
 
-  return { 
-    suscripcion, 
-    estaSuscripto, 
+  return {
+    suscripcion,
+    estaSuscripto,
     tieneTokens,
     tokensDisponibles,
-    puedePujar, 
+    puedePujar,
     motivoBloqueo,
-    isLoading 
+    isLoading
   };
 };

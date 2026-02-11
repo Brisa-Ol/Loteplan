@@ -351,7 +351,7 @@ const ComoFunciona: React.FC = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(0);
   const theme = useTheme();
-  
+
   // ✅ OBTENEMOS EL ESTADO DE AUTENTICACIÓN
   const { isAuthenticated } = useAuth();
 

@@ -8,19 +8,19 @@ import Footer from '../components/layout/navigation/Footer';
 
 const ClientLayout: React.FC = () => {
   return (
-    <Box sx={{ 
-      display: 'flex', 
-      flexDirection: 'column', 
-      minHeight: '100vh', 
+    <Box sx={{
+      display: 'flex',
+      flexDirection: 'column',
+      minHeight: '100vh',
       bgcolor: 'background.default' // Usa token del theme
     }}>
       <ClientNavbar />
 
-      <Box 
-        component="main" 
-        sx={{ 
-          flexGrow: 1, 
-          width: '100%', 
+      <Box
+        component="main"
+        sx={{
+          flexGrow: 1,
+          width: '100%',
           py: 3,
           // Scrollbar global se aplica automáticamente aquí
         }}

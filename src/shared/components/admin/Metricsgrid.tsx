@@ -57,7 +57,7 @@ export const MetricsGrid: React.FC<MetricsGridProps> = ({
           xl: `repeat(${cols.xl}, 1fr)`,
         },
         // 'gap' en sx usa automáticamente theme.spacing (3 * 8px = 24px)
-        gap: spacing, 
+        gap: spacing,
         mb: 4,
         ...sx,
       }}

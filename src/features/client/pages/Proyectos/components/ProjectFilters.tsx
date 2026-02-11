@@ -1,14 +1,22 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { 
-  Box, TextField, MenuItem, Button, Stack, InputAdornment, 
-  Paper, useTheme, alpha, IconButton, Tooltip, Typography, Chip
-} from "@mui/material";
-import { 
-  FilterList as FilterIcon, 
-  Search as SearchIcon, 
-  Clear as ClearIcon,
+import {
   Category,
+  Clear as ClearIcon,
+  Search as SearchIcon
 } from "@mui/icons-material";
+import {
+  alpha,
+  Box,
+  Chip,
+  IconButton,
+  InputAdornment,
+  MenuItem,
+  Paper,
+  Stack,
+  TextField,
+  Tooltip, Typography,
+  useTheme
+} from "@mui/material";
+import React, { useCallback, useEffect, useState } from "react";
 
 import type { EstadoProyecto } from "@/core/types/dto/proyecto.dto";
 
@@ -18,13 +26,13 @@ interface ProjectFiltersProps {
 
 export const ProjectFilters: React.FC<ProjectFiltersProps> = ({ onFilter }) => {
   const theme = useTheme();
-  
+
   // Estado local para input (actualización inmediata)
   const [localSearch, setLocalSearch] = useState("");
-  
+
   // Estado para filtros aplicados (con debounce)
   const [status, setStatus] = useState<EstadoProyecto | "todos">("todos");
-  
+
   // ✅ MEJORA 1: Debounce para búsqueda (300ms)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const debouncedSearch = useCallback(
@@ -66,7 +74,7 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({ onFilter }) => {
         elevation={0}
         sx={{
           p: 2,
-          borderRadius: 4, 
+          borderRadius: 4,
           boxShadow: `0 8px 32px ${alpha(theme.palette.common.black, 0.08)}`,
           border: `1px solid ${theme.palette.divider}`,
           maxWidth: 900,
@@ -80,9 +88,9 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({ onFilter }) => {
           }
         }}
       >
-        <Stack 
-          direction={{ xs: "column", md: "row" }} 
-          spacing={2} 
+        <Stack
+          direction={{ xs: "column", md: "row" }}
+          spacing={2}
           alignItems="center"
         >
           {/* 🔍 Búsqueda con Debounce */}
@@ -122,59 +130,59 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({ onFilter }) => {
             size="small"
             sx={{ maxWidth: { md: 250 } }}
             InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Category color="action" fontSize="small" />
-                  </InputAdornment>
-                ),
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Category color="action" fontSize="small" />
+                </InputAdornment>
+              ),
             }}
           >
             <MenuItem value="todos">
-                <Typography variant="body2" fontWeight={500}>Todos los estados</Typography>
+              <Typography variant="body2" fontWeight={500}>Todos los estados</Typography>
             </MenuItem>
-            
+
             <MenuItem value="En proceso">
-                <Box display="flex" alignItems="center" gap={1}>
-                    <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'success.main' }} />
-                    <Typography variant="body2">En proceso</Typography>
-                </Box>
+              <Box display="flex" alignItems="center" gap={1}>
+                <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'success.main' }} />
+                <Typography variant="body2">En proceso</Typography>
+              </Box>
             </MenuItem>
-            
+
             <MenuItem value="En Espera">
-                <Box display="flex" alignItems="center" gap={1}>
-                    <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'warning.main' }} />
-                    <Typography variant="body2">Próximamente</Typography>
-                </Box>
+              <Box display="flex" alignItems="center" gap={1}>
+                <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'warning.main' }} />
+                <Typography variant="body2">Próximamente</Typography>
+              </Box>
             </MenuItem>
-            
+
             <MenuItem value="Finalizado">
-                <Box display="flex" alignItems="center" gap={1}>
-                    <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'text.disabled' }} />
-                    <Typography variant="body2">Finalizados</Typography>
-                </Box>
+              <Box display="flex" alignItems="center" gap={1}>
+                <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'text.disabled' }} />
+                <Typography variant="body2">Finalizados</Typography>
+              </Box>
             </MenuItem>
           </TextField>
 
           {/* ✅ MEJORA 4: Botón de limpiar solo cuando hay filtros */}
           {tieneFiltrosActivos && (
             <Tooltip title="Limpiar todos los filtros">
-              <IconButton 
+              <IconButton
                 onClick={handleClearFilters}
                 size="small"
-                sx={{ 
-                    border: `1px solid ${theme.palette.divider}`,
-                    borderRadius: 2,
-                    color: 'text.secondary',
-                    minWidth: 40,
-                    height: 40,
-                    '&:hover': {
-                        borderColor: theme.palette.error.main,
-                        color: theme.palette.error.main,
-                        bgcolor: alpha(theme.palette.error.main, 0.05)
-                    }
+                sx={{
+                  border: `1px solid ${theme.palette.divider}`,
+                  borderRadius: 2,
+                  color: 'text.secondary',
+                  minWidth: 40,
+                  height: 40,
+                  '&:hover': {
+                    borderColor: theme.palette.error.main,
+                    color: theme.palette.error.main,
+                    bgcolor: alpha(theme.palette.error.main, 0.05)
+                  }
                 }}
               >
-               <ClearIcon fontSize="small" />
+                <ClearIcon fontSize="small" />
               </IconButton>
             </Tooltip>
           )}

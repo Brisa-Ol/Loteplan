@@ -1,9 +1,9 @@
 // src/pages/User/ResumenesCuenta/components/DetalleCuotaModal.tsx
 
 import React, { useMemo } from 'react';
-import { 
-    Dialog, DialogTitle, DialogContent, DialogActions, Box, Typography, 
-    Button, Stack, Paper, Divider, IconButton, Avatar, alpha, useTheme, Tooltip 
+import {
+    Dialog, DialogTitle, DialogContent, DialogActions, Box, Typography,
+    Button, Stack, Paper, Divider, IconButton, Avatar, alpha, useTheme, Tooltip
 } from '@mui/material';
 import { Close, ReceiptLong, LocalShipping, Calculate, TrendingUp, Savings, InfoOutlined } from '@mui/icons-material';
 
@@ -13,7 +13,7 @@ import type { ResumenCuentaDto } from '@/core/types/dto/resumenCuenta.dto';
 interface Props {
     open: boolean;
     onClose: () => void;
-    resumen: ResumenCuentaDto | null; 
+    resumen: ResumenCuentaDto | null;
 }
 
 export const DetalleCuotaModal: React.FC<Props> = ({ open, onClose, resumen }) => {
@@ -25,13 +25,13 @@ export const DetalleCuotaModal: React.FC<Props> = ({ open, onClose, resumen }) =
             style: 'currency', currency: env.defaultCurrency, maximumFractionDigits: 2
         }).format(val);
 
-    const formatNumber = (val: number) => 
+    const formatNumber = (val: number) =>
         new Intl.NumberFormat(env.defaultLocale, { maximumFractionDigits: 2 }).format(val);
 
     // Helper para visualizar el porcentaje (ej: 0.19 -> "19%")
     const formatPercent = (decimalVal: number) => {
         // Asumimos que si calculamos 0.19 es 19%
-        const percent = Math.round(decimalVal * 100); 
+        const percent = Math.round(decimalVal * 100);
         return `${percent}%`;
     };
 
@@ -49,18 +49,18 @@ export const DetalleCuotaModal: React.FC<Props> = ({ open, onClose, resumen }) =
         const valorCapital = d.valor_mensual_final - d.carga_administrativa - d.iva_carga_administrativa;
 
         // 3. 🧮 CÁLCULO INVERSO DE PORCENTAJES (Ya que no están en el DTO)
-        
+
         // Base Teórica Mensual (Valor Móvil / Plazo)
         const baseMensualFull = d.valor_movil / meses_proyecto;
 
         // % Admin = Carga / Base
-        const pctAdminCalculado = baseMensualFull > 0 
-            ? (d.carga_administrativa / baseMensualFull) 
+        const pctAdminCalculado = baseMensualFull > 0
+            ? (d.carga_administrativa / baseMensualFull)
             : 0;
 
         // % IVA = IVA / Carga
-        const pctIvaCalculado = d.carga_administrativa > 0 
-            ? (d.iva_carga_administrativa / d.carga_administrativa) 
+        const pctIvaCalculado = d.carga_administrativa > 0
+            ? (d.iva_carga_administrativa / d.carga_administrativa)
             : 0;
 
         return {
@@ -80,12 +80,12 @@ export const DetalleCuotaModal: React.FC<Props> = ({ open, onClose, resumen }) =
     const { detalle_cuota: data } = resumen;
 
     return (
-        <Dialog 
+        <Dialog
             open={open} onClose={onClose} maxWidth="md" fullWidth
             PaperProps={{ sx: { borderRadius: 3, overflow: 'hidden' } }}
         >
             {/* HEADER */}
-            <DialogTitle display="flex" justifyContent="space-between" alignItems="center" 
+            <DialogTitle display="flex" justifyContent="space-between" alignItems="center"
                 sx={{ bgcolor: alpha(theme.palette.primary.main, 0.05), borderBottom: `1px solid ${theme.palette.divider}` }}>
                 <Box display="flex" alignItems="center" gap={2}>
                     <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}>
@@ -105,20 +105,20 @@ export const DetalleCuotaModal: React.FC<Props> = ({ open, onClose, resumen }) =
 
             <DialogContent sx={{ p: 3 }}>
                 <Stack direction={{ xs: 'column', md: 'row' }} spacing={4}>
-                    
+
                     {/* --- COLUMNA IZQUIERDA: DESGLOSE DE CUOTA --- */}
                     <Box sx={{ flex: 7, width: '100%' }}>
                         <Typography variant="overline" color="text.secondary" fontWeight={700}>
                             Composición de la Cuota
                         </Typography>
-                        
+
                         {/* Tarjeta Ingredientes */}
                         <Paper variant="outlined" sx={{ p: 2, mt: 1, mb: 2, bgcolor: alpha(theme.palette.info.main, 0.02) }}>
                             <Box display="flex" alignItems="center" gap={1} mb={2}>
                                 <LocalShipping fontSize="small" color="info" />
                                 <Typography variant="subtitle2" fontWeight={600}>Valor de Referencia (Total)</Typography>
                             </Box>
-                            
+
                             <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
                                 <Box textAlign="center">
                                     <Typography variant="h6" fontWeight={700}>{data.valor_cemento_unidades}</Typography>
@@ -142,30 +142,30 @@ export const DetalleCuotaModal: React.FC<Props> = ({ open, onClose, resumen }) =
                         {/* Lista Sumatoria */}
                         <Stack spacing={2} sx={{ mb: 2 }}>
                             {/* Capital */}
-                            <RowItem 
-                                label="Cuota Pura (Capital)" 
-                                value={formatCurrency(stats.valorCapital)} 
-                                bold 
+                            <RowItem
+                                label="Cuota Pura (Capital)"
+                                value={formatCurrency(stats.valorCapital)}
+                                bold
                                 tooltip="La parte de tu cuota que va directamente a tu ahorro."
                             />
-                            
+
                             {/* Gastos Admin (Usamos el % calculado en stats) */}
-                            <RowItem 
-                                label={`Carga Admin (~${formatPercent(stats.pctAdminCalculado)})`} 
-                                value={`+ ${formatCurrency(data.carga_administrativa)}`} 
+                            <RowItem
+                                label={`Carga Admin (~${formatPercent(stats.pctAdminCalculado)})`}
+                                value={`+ ${formatCurrency(data.carga_administrativa)}`}
                                 tooltip="Gastos operativos y de gestión del proyecto."
                             />
-                            
+
                             {/* IVA (Usamos el % calculado en stats) */}
-                            <RowItem 
-                                label={`IVA (~${formatPercent(stats.pctIvaCalculado)} s/ Admin)`} 
-                                value={`+ ${formatCurrency(data.iva_carga_administrativa)}`} 
+                            <RowItem
+                                label={`IVA (~${formatPercent(stats.pctIvaCalculado)} s/ Admin)`}
+                                value={`+ ${formatCurrency(data.iva_carga_administrativa)}`}
                             />
-                            
+
                             <Divider sx={{ borderStyle: 'dashed' }} />
-                            
+
                             {/* Total */}
-                            <Box display="flex" justifyContent="space-between" alignItems="center" 
+                            <Box display="flex" justifyContent="space-between" alignItems="center"
                                 sx={{ bgcolor: 'primary.main', color: 'primary.contrastText', p: 2, borderRadius: 2, boxShadow: theme.shadows[3] }}>
                                 <Typography variant="subtitle1" fontWeight={600}>Total a Pagar</Typography>
                                 <Typography variant="h5" fontWeight={700}>{formatCurrency(data.valor_mensual_final)}</Typography>
@@ -175,20 +175,20 @@ export const DetalleCuotaModal: React.FC<Props> = ({ open, onClose, resumen }) =
 
                     {/* --- COLUMNA DERECHA: PROYECCIONES --- */}
                     <Box sx={{ flex: 5, width: '100%' }}>
-                         <Typography variant="overline" color="text.secondary" fontWeight={700}>
+                        <Typography variant="overline" color="text.secondary" fontWeight={700}>
                             Proyección de Inversión
                         </Typography>
-                        
+
                         <Stack spacing={2} mt={1}>
-                            <InfoCard 
+                            <InfoCard
                                 icon={<Calculate fontSize="small" />}
                                 title="Inversión Total Estimada"
                                 value={formatCurrency(stats.inversionTotalEstimada)}
                                 subtitle={`Valor proyectado a ${resumen.meses_proyecto} cuotas`}
                                 color="primary"
                             />
-                            
-                            <InfoCard 
+
+                            <InfoCard
                                 icon={<TrendingUp fontSize="small" />}
                                 title="Saldo Restante Estimado"
                                 value={formatCurrency(stats.saldoRestanteEstimado)}
@@ -196,7 +196,7 @@ export const DetalleCuotaModal: React.FC<Props> = ({ open, onClose, resumen }) =
                                 color="warning"
                             />
 
-                            <InfoCard 
+                            <InfoCard
                                 icon={<Savings fontSize="small" />}
                                 title="Capital Acumulado"
                                 value={`${formatNumber(stats.capitalAcumuladoUnidades)} Unidades`}
@@ -231,11 +231,11 @@ const RowItem = ({ label, value, bold = false, tooltip }: { label: string, value
             <Typography variant="body2" color="text.secondary" fontWeight={bold ? 700 : 400}>
                 {label}
             </Typography>
-             {tooltip && (
+            {tooltip && (
                 <Tooltip title={tooltip} arrow>
-                     <InfoOutlined sx={{ fontSize: 14, color: 'text.disabled', cursor: 'help' }} />
+                    <InfoOutlined sx={{ fontSize: 14, color: 'text.disabled', cursor: 'help' }} />
                 </Tooltip>
-             )}
+            )}
         </Box>
         <Typography variant="body2" fontWeight={bold ? 700 : 500} color={bold ? 'text.primary' : 'text.secondary'}>
             {value}

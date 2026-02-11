@@ -1,13 +1,13 @@
 // src/pages/Auth/components/AuthFormContainer/AuthFormContainer.tsx
 
 import React from "react";
-import { 
-  Box, 
-  Container, 
-  Paper, 
-  Typography, 
-  useTheme, 
-  alpha 
+import {
+  Box,
+  Container,
+  Paper,
+  Typography,
+  useTheme,
+  alpha
 } from "@mui/material";
 
 interface AuthFormContainerProps {
@@ -33,7 +33,7 @@ const AuthFormContainer: React.FC<AuthFormContainerProps> = ({
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
-      
+
       {/* ==========================================
           1. HERO HEADER (Fondo Gradiente)
           ========================================== */}
@@ -44,27 +44,27 @@ const AuthFormContainer: React.FC<AuthFormContainerProps> = ({
           py: { xs: 6, md: 8 },
           textAlign: 'center',
           // Este margen negativo es clave para el efecto de superposición
-          mb: { xs: -4, md: -6 } 
+          mb: { xs: -4, md: -6 }
         }}
       >
         <Container maxWidth="lg">
-          <Typography 
-            variant="h3" 
-            component="h1" 
-            fontWeight={800} 
+          <Typography
+            variant="h3"
+            component="h1"
+            fontWeight={800}
             gutterBottom
           >
             {title}
           </Typography>
-          
+
           {subtitle && (
-            <Typography 
-              variant="h6" 
-              sx={{ 
-                maxWidth: 'md', 
-                mx: 'auto', 
-                opacity: 0.9, 
-                fontWeight: 400 
+            <Typography
+              variant="h6"
+              sx={{
+                maxWidth: 'md',
+                mx: 'auto',
+                opacity: 0.9,
+                fontWeight: 400
               }}
             >
               {subtitle}
@@ -87,7 +87,7 @@ const AuthFormContainer: React.FC<AuthFormContainerProps> = ({
             border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
             boxShadow: '0 20px 40px -10px rgba(0,0,0,0.1)',
             // Evitamos animaciones de movimiento en el contenedor principal para no marear en formularios
-            transition: 'none' 
+            transition: 'none'
           }}
         >
           {children}

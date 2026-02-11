@@ -22,7 +22,7 @@ class SecureStorage {
       const metadata: TokenMetadata = {
         timestamp: Date.now(),
         // Usamos 55 min como seguridad antes de la hora típica de expiración del JWT
-        expiresIn: 55 * 60 * 1000, 
+        expiresIn: 55 * 60 * 1000,
         userAgent: navigator.userAgent, // Previene robo de sesión copiando LocalStorage a otro PC
       };
 

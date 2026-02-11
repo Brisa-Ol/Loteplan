@@ -1,13 +1,18 @@
+// src/features/admin/pages/Lotes/modals/AuctionControlModal.tsx
+
 import { AccessTime, Gavel, PlayCircleFilled, StopCircle } from '@mui/icons-material';
 import { Alert, Box, Chip, Stack, TextField, Typography } from '@mui/material';
 import React, { useEffect, useState } from 'react';
-import type { LoteDto } from '../../../../../core/types/dto/lote.dto';
-import BaseModal from '../../../../../shared/components/domain/modals/BaseModal/BaseModal';
+
+// ✅ Uso de Alias para imports más limpios
+import type { LoteDto } from '@/core/types/dto/lote.dto';
+import BaseModal from '@/shared/components/domain/modals/BaseModal/BaseModal';
 
 interface Props {
   open: boolean;
   onClose: () => void;
   lote: LoteDto | null;
+  // El modal envía las fechas, asegúrate de que tu Hook (useAdminLotes) las reciba si el backend las necesita
   onStart: (id: number, dates: { fecha_inicio: string; fecha_fin: string }) => void;
   onEnd: (id: number) => void;
   isLoading: boolean;
@@ -64,6 +69,8 @@ const AuctionControlModal: React.FC<Props> = ({ open, onClose, lote, onStart, on
     if (isPending) {
       onStart(lote.id, { fecha_inicio: formData.fecha_inicio, fecha_fin: formData.fecha_fin });
     } else if (isActive) {
+      // ✅ Al ejecutar esto, el padre llamará a PujaService.manageAuctionEnd(id, null)
+      // tal como lo configuraste en el Hook useAdminLotes.
       onEnd(lote.id);
     }
   };
@@ -77,7 +84,7 @@ const AuctionControlModal: React.FC<Props> = ({ open, onClose, lote, onStart, on
     if (isActive) return {
       title: `Finalizar Subasta: ${lote.nombre_lote}`,
       icon: <StopCircle />, color: 'error', btnText: 'Finalizar Ahora',
-      desc: 'Se cerrará la subasta inmediatamente y se adjudicará al ganador actual.'
+      desc: 'Se cerrará la subasta inmediatamente y se adjudicará al ganador actual (si existe).'
     };
     return { title: 'Subasta Finalizada', icon: <Gavel />, color: 'primary', btnText: 'Cerrar', desc: 'Esta subasta ya terminó.' };
   };

@@ -7,9 +7,9 @@ import type { ContratoFirmadoDto, ContratoPlantillaDto } from "@/core/types/dto"
  */
 export const formatContratoDate = (dateString?: string): string => {
   if (!dateString) return 'N/A';
-  
+
   const date = new Date(dateString);
-  
+
   // Validación extra por seguridad
   if (isNaN(date.getTime())) return 'Fecha inválida';
 
@@ -30,7 +30,7 @@ export const generateDownloadFileName = (contrato: ContratoFirmadoDto): string =
   // Intentamos usar la fecha de firma, si no la de creación, o la actual
   const fechaBase = contrato.fecha_firma || contrato.fecha_creacion || new Date().toISOString();
   const fechaStr = new Date(fechaBase).toISOString().split('T')[0];
-  
+
   return `contrato_${contrato.id}_${fechaStr}.pdf`;
 };
 

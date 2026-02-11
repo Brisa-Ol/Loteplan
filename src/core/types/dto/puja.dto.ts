@@ -1,40 +1,11 @@
+// src/core/types/dto/puja.dto.ts
 
 import type { BaseDTO } from "./base.dto";
 import type { LoteDto } from "./lote.dto";
+import type { ProyectoDto } from "./proyecto.dto";
 
 // ==========================================
-// 📤 REQUEST DTOs (Lo que envías)
-// ==========================================
-
-/**
- * DTO para crear una nueva puja.
- * Backend: puja.controller.js -> create()
- */
-
-export interface CreatePujaDto {
-  id_lote: number;
-  monto_puja: number;
-
-}
-/**
- * DTO para confirmar pago con 2FA.
- * Backend: puja.controller.js -> confirmarPujaCon2FA()
- */
-export interface ConfirmarPuja2faDto {
-  pujaId: number;
-  codigo_2fa: string;
-}
-/**
- * DTO para gestión manual de fin de subasta (Admin).
- * Backend: puja.controller.js -> manageAuctionEnd()
- */
-export interface ManageAuctionEndDto {
-  id_lote: number;
-  id_ganador: number;
-}
-
-// ==========================================
-// 📥 RESPONSE DTOs (Lo que recibes)
+// 🛠️ ENUMS & TYPES
 // ==========================================
 
 export type EstadoPuja = 
@@ -45,63 +16,87 @@ export type EstadoPuja =
   | 'cancelada' 
   | 'cubierto_por_puja' 
   | 'ganadora_incumplimiento';
+
+// ==========================================
+// 📤 REQUEST DTOs (Lo que envías)
+// ==========================================
+
+export interface CreatePujaDto {
+  id_lote: number;
+  monto_puja: number;
+}
+
+export interface ConfirmarPuja2faDto {
+  pujaId: number;
+  codigo_2fa: string;
+}
+
+export interface ManageAuctionEndDto {
+  id_lote: number;
+  id_ganador: number | null;
+}
+
+// ==========================================
+// 📥 RESPONSE DTOs (Lo que recibes)
+// ==========================================
+
 /**
- * DTO completo de Puja según el modelo del backend.
- * Backend: models/Puja.js
+ * DTO completo de Puja.
+ * ✅ Sincronizado con los 'includes' del backend: Lote, Proyecto y Usuario.
  */
 export interface PujaDto extends BaseDTO {
   monto_puja: number;
   fecha_puja: string; // ISO Date
-  
   estado_puja: EstadoPuja;
-  fecha_vencimiento_pago?: string; // ISO Date (Solo si es ganadora_pendiente)
+  fecha_vencimiento_pago?: string; 
+  
   id_proyecto: number;
   id_lote: number;
   id_usuario: number;
   id_transaccion?: number;
   id_suscripcion: number;
 
-  // Relaciones opcionales (depende del include del backend)
+  // --- Relaciones Anidadas (Includes) ---
+  
+  // El lote donde se realizó la puja
   lote?: LoteDto;
+
+  // El proyecto al que pertenece el lote (alias 'proyectoAsociado' en el back)
+  proyectoAsociado?: Partial<ProyectoDto>;
+
+  // Datos del usuario que realizó la puja (útil para el Admin)
+  usuario?: {
+    id: number;
+    nombre: string;
+    apellido: string;
+    email: string;
+    nombre_usuario?: string;
+  };
+
+  // Suscripción del usuario al proyecto
+  suscripcion?: {
+    id: number;
+    tokens_disponibles: number;
+  };
 }
 
 /**
- * Respuesta al intentar iniciar el pago de una puja ganadora.
- * Backend: puja.controller.js -> requestCheckout() y confirmarPujaCon2FA()
+ * Respuesta del proceso de pago de subasta
  */
 export interface PujaCheckoutResponse {
   message: string;
-  
-  // Caso A: Redirección directa
-  url_checkout?: string; // Nota: En tu controller de puja se llama 'url_checkout'
+  url_checkout?: string; 
   transaccion_id?: number;
-  
-  // Caso B: Requiere 2FA
   is2FARequired?: boolean;
   pujaId?: number;
 }
-export interface ManageAuctionEndResponse {
-  message: string;
-}
 
 // ==========================================
-// 📊 DTOs AUXILIARES (Opcionales, para vistas específicas)
+// 📊 DTOs AUXILIARES
 // ==========================================
 
 /**
- * DTO simplificado para mostrar resumen de pujas en tablas.
- */
-export interface PujaResumenDto {
-  id: number;
-  monto_puja: number;
-  fecha_puja: string;
-  estado_puja: EstadoPuja;
-  id_usuario: number;
-  nombre_lote?: string; // Si incluyes el lote
-}
-
-/**
- * DTO para mostrar el historial de un usuario.
+ * Para el historial consolidado del usuario
  */
 export interface MisPujasDto {
   activas: PujaDto[];

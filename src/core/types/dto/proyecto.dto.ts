@@ -84,7 +84,9 @@ export interface ProyectoDto extends BaseDTO {
   suscripciones_minimas: number; // ✅ Agregado del modelo
   obj_suscripciones: number;
   objetivo_notificado: boolean; // ✅ Agregado del modelo
-  
+  valor_cuota_referencia?: number; // Este mapea a cuota.valor_mensual_final
+  nombre_cemento_cemento?: string; 
+  valor_cemento?: number;
   // Datos de Tiempo
   fecha_inicio: string;
   fecha_cierre: string;

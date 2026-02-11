@@ -1,6 +1,9 @@
+// src/features/admin/pages/Pujas/AdminPujas.tsx
+
 import {
   Block, CancelScheduleSend, EmojiEvents, ErrorOutline, Gavel,
   Image as ImageIcon, MonetizationOn, Person, ReceiptLong,
+  Restore, // 🆕 Icono para Revertir Pago
   StopCircle, Timer, TrendingUp,
   ViewList,
   ViewModule,
@@ -34,7 +37,7 @@ import { PageContainer } from '@/shared/components/layout/containers/PageContain
 import DetallePujaModal from './components/DetallePujaModal';
 
 // ============================================================================
-// SUB-COMPONENTES MEMOIZADOS (Evitan re-renders masivos en polling)
+// SUB-COMPONENTES MEMOIZADOS
 // ============================================================================
 
 const Top3List = React.memo<{ pujas: PujaDto[]; getUserName: (id: number) => string }>(({ pujas, getUserName }) => {
@@ -132,7 +135,6 @@ const AdminPujas: React.FC = () => {
     },
     {
       id: 'monto', label: 'Monto a Cobrar', render: (l) => {
-        // En vista Gestión, usamos datos del Lote, no buscamos en array de pujas
         const monto = l.monto_ganador_lote || l.precio_base;
         return <Typography fontWeight={700} fontFamily="monospace">${Number(monto).toLocaleString()}</Typography>
       }
@@ -140,13 +142,30 @@ const AdminPujas: React.FC = () => {
     {
       id: 'acciones', label: 'Acciones', align: 'right', render: (l) => (
         <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+          
+          {/* 🆕 BOTÓN REVERTIR PAGO (Service: revertWinnerPayment) */}
+          {/* Solo visible si ya se pagó o para corregir errores administrativos */}
+          <Tooltip title="Revertir Estado de Pago (Corrección)">
+            <span>
+              <IconButton
+                size="small"
+                sx={{ color: 'warning.main', bgcolor: alpha(theme.palette.warning.main, 0.05) }}
+                onClick={() => logic.handleRevertirPago(l)} 
+                disabled={logic.isMutating} 
+              >
+                <Restore fontSize="small" />
+              </IconButton>
+            </span>
+          </Tooltip>
+
+          {/* 🆕 BOTÓN CANCELAR/IMPAGO (Service: cancelarGanadoraAnticipada) */}
           <Tooltip title="Anular Adjudicación (Impago)">
             <span>
               <IconButton
                 size="small"
                 sx={{ color: 'error.main', bgcolor: alpha(theme.palette.error.main, 0.05) }}
                 onClick={() => logic.handleCancelarAdjudicacion(l)}
-                disabled={logic.cancelarGanadoraMutation.isPending || !l.id_puja_mas_alta} // Deshabilitar si no tenemos ID de puja
+                disabled={logic.isMutating || !l.id_puja_mas_alta}
               >
                 <CancelScheduleSend fontSize="small" />
               </IconButton>
@@ -175,7 +194,7 @@ const AdminPujas: React.FC = () => {
     {
       id: 'acciones', label: 'Acciones', align: 'right', render: (l) => (
         <Tooltip title="Bloquear / Forzar Finalización">
-          <Button variant="contained" color="error" size="small" startIcon={<Block />} onClick={() => logic.forceFinishMutation.mutate({ idLote: l.id, idGanador: l.id_ganador })}>
+          <Button variant="contained" color="error" size="small" startIcon={<Block />} onClick={() => logic.handleForceFinish(l)}>
             Sancionar
           </Button>
         </Tooltip>
@@ -290,7 +309,7 @@ const AdminPujas: React.FC = () => {
         rankingPosition={logic.pujaSeleccionada ? (logic.pujasPorLote[logic.pujaSeleccionada.id_lote]?.findIndex(p => p.id === logic.pujaSeleccionada?.id) + 1) : undefined}
       />
 
-      <ConfirmDialog controller={logic.modales.confirmDialog} onConfirm={logic.handleConfirmAction} isLoading={logic.endAuctionMutation.isPending || logic.cancelarGanadoraMutation.isPending} />
+      <ConfirmDialog controller={logic.modales.confirmDialog} onConfirm={logic.handleConfirmAction} isLoading={logic.isMutating} />
     </PageContainer>
   );
 };

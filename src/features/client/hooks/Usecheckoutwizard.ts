@@ -61,7 +61,7 @@ export const useCheckoutWizard = ({
   const [pagoExitoso, setPagoExitoso] = useState(false);
   const [transaccionId, setTransaccionId] = useState<number | null>(null);
   const [error2FA, setError2FA] = useState<string | null>(null);
-  
+
   const isVerifyingRef = useRef(false);
 
   // ===================================================
@@ -73,7 +73,7 @@ export const useCheckoutWizard = ({
       setError2FA(null);
 
       let response;
-      
+
       if (tipo === 'inversion') {
         // ✅ Usa el método correcto: iniciar
         response = await InversionService.iniciar({
@@ -87,7 +87,7 @@ export const useCheckoutWizard = ({
       }
 
       const data = response?.data as any;
-      
+
       // Pueden venir diferentes campos según el caso
       const txId = data?.inversionId || data?.transaccionId || data?.id;
 
@@ -146,7 +146,7 @@ export const useCheckoutWizard = ({
           location: null,
           timestamp: Date.now()
         });
-        
+
         // Redirigir a Mercado Pago
         window.location.href = urlPago;
       } else {
@@ -181,19 +181,19 @@ export const useCheckoutWizard = ({
             showSuccess('¡Pago confirmado exitosamente!');
             return true;
           }
-          
+
           if (estado === 'fallido' || estado === 'rejected') {
             setIsVerificandoPago(false);
             showError('El pago fue rechazado.');
             return false;
           }
-          
+
           await new Promise(resolve => setTimeout(resolve, PAYMENT_VERIFICATION_INTERVAL_MS));
         } catch (error) {
           console.error('Error verificando pago:', error);
         }
       }
-      
+
       setIsVerificandoPago(false);
       showWarning('El pago sigue procesándose. Puedes cerrar y volver más tarde.');
       return false;
@@ -237,7 +237,7 @@ export const useCheckoutWizard = ({
       const signatureImage = await pdfDoc.embedPng(signatureDataUrl);
 
       let page, x, y;
-      
+
       if (signaturePosition) {
         // Usuario colocó la firma manualmente
         const pages = pdfDoc.getPages();
@@ -299,7 +299,7 @@ export const useCheckoutWizard = ({
       console.log('✅ Contrato firmado registrado:', response.data);
 
       showSuccess('¡Contrato firmado exitosamente!');
-      
+
       // Callback de éxito
       if (onSuccess) {
         onSuccess();
@@ -327,13 +327,13 @@ export const useCheckoutWizard = ({
     pagoExitoso,
     transaccionId,
     error2FA,
-    
+
     // Actions
     handleConfirmInvestment,
     handleConfirmarPago2FA,
     handleSignContract,
     iniciarVerificacionPago,
-    
+
     // Setters (para control externo si es necesario)
     setPagoExitoso,
     setTransaccionId,

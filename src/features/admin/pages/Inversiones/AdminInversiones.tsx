@@ -1,3 +1,5 @@
+// src/features/admin/pages/Inversiones/AdminInversiones.tsx
+
 import {
   AccountBalanceWallet, AttachMoney,
   BarChart as BarChartIcon,
@@ -6,9 +8,10 @@ import {
 } from '@mui/icons-material';
 import {
   alpha, Box, Card, CardContent, Chip, IconButton,
-  MenuItem, Skeleton, Stack, Tooltip, Typography, useTheme
+  MenuItem, Skeleton, Stack, Tooltip, Typography, useTheme, Avatar
 } from '@mui/material';
 import React, { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom'; // ✅ Añadido
 import {
   Bar, BarChart, CartesianGrid, Cell, Line, LineChart,
   Tooltip as RechartsTooltip,
@@ -17,8 +20,6 @@ import {
 } from 'recharts';
 
 import type { InversionDto } from '@/core/types/dto/inversion.dto';
-import type { ProyectoDto } from '@/core/types/dto/proyecto.dto';
-
 import { AdminPageHeader } from '@/shared/components/admin/Adminpageheader';
 import AlertBanner from '@/shared/components/admin/Alertbanner';
 import MetricsGrid from '@/shared/components/admin/Metricsgrid';
@@ -32,13 +33,15 @@ import { PageContainer } from '@/shared/components/layout/containers/PageContain
 import { useAdminInversiones } from '../../hooks/useAdminInversiones';
 import DetalleInversionModal from './components/DetalleInversionModal';
 
-// ... (TrendChart y TopInversoresCard se mantienen igual) ...
+// ============================================================================
+// SUB-COMPONENTES PARA GRÁFICOS
+// ============================================================================
+
 const TrendChart = React.memo<{
   data: Array<{ fecha: string; monto: number }>;
   isLoading?: boolean;
 }>(({ data, isLoading }) => {
   const theme = useTheme();
-
   if (isLoading) return <Skeleton variant="rectangular" height={280} sx={{ borderRadius: 2 }} />;
 
   return (
@@ -47,45 +50,18 @@ const TrendChart = React.memo<{
         <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
           <Box>
             <Typography variant="h6" fontWeight={800}>Evolución de Capital</Typography>
-            <Typography variant="caption" color="text.secondary">
-              Acumulado histórico
-            </Typography>
+            <Typography variant="caption" color="text.secondary">Acumulado histórico</Typography>
           </Box>
-          <Chip
-            icon={<ShowChart />}
-            label="En Vivo"
-            size="small"
-            color="success"
-            sx={{ fontWeight: 700 }}
-          />
+          <Chip icon={<ShowChart />} label="En Vivo" size="small" color="success" sx={{ fontWeight: 700 }} />
         </Stack>
-
         {data.length > 0 ? (
           <ResponsiveContainer width="100%" height={250}>
             <LineChart data={data} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={theme.palette.divider} />
-              <XAxis
-                dataKey="fecha"
-                axisLine={false}
-                tick={{ fontSize: 11, fill: theme.palette.text.secondary }}
-              />
-              <YAxis
-                axisLine={false}
-                tick={{ fontSize: 11, fill: theme.palette.text.secondary }}
-                tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
-              />
-              <RechartsTooltip
-                formatter={(value: number) => [`$${value.toLocaleString('es-AR')}`, 'Monto']}
-                contentStyle={{ borderRadius: 8, border: 'none', boxShadow: theme.shadows[4] }}
-              />
-              <Line
-                type="monotone"
-                dataKey="monto"
-                stroke={theme.palette.primary.main}
-                strokeWidth={3}
-                dot={{ fill: theme.palette.primary.main, r: 4 }}
-                activeDot={{ r: 6 }}
-              />
+              <XAxis dataKey="fecha" axisLine={false} tick={{ fontSize: 11, fill: theme.palette.text.secondary }} />
+              <YAxis axisLine={false} tick={{ fontSize: 11, fill: theme.palette.text.secondary }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
+              <RechartsTooltip formatter={(value: number) => [`$${value.toLocaleString('es-AR')}`, 'Monto']} contentStyle={{ borderRadius: 8, border: 'none', boxShadow: theme.shadows[4] }} />
+              <Line type="monotone" dataKey="monto" stroke={theme.palette.primary.main} strokeWidth={3} dot={{ fill: theme.palette.primary.main, r: 4 }} activeDot={{ r: 6 }} />
             </LineChart>
           </ResponsiveContainer>
         ) : (
@@ -97,14 +73,12 @@ const TrendChart = React.memo<{
     </Card>
   );
 });
-TrendChart.displayName = 'TrendChart';
 
 const TopInversoresCard = React.memo<{
   data: Array<{ name: string; monto: number }>;
   isLoading?: boolean;
 }>(({ data, isLoading }) => {
   const theme = useTheme();
-
   if (isLoading) return <Skeleton variant="rectangular" height={320} sx={{ borderRadius: 2 }} />;
 
   return (
@@ -116,17 +90,8 @@ const TopInversoresCard = React.memo<{
             <BarChart data={data} layout="vertical" margin={{ left: 10, right: 20 }}>
               <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={theme.palette.divider} />
               <XAxis type="number" hide />
-              <YAxis
-                type="category"
-                dataKey="name"
-                axisLine={false}
-                tick={{ fontSize: 12, fontWeight: 600, fill: theme.palette.text.primary }}
-                width={100}
-              />
-              <RechartsTooltip
-                formatter={(val: number) => [`$${val.toLocaleString('es-AR')}`, 'Invertido']}
-                contentStyle={{ borderRadius: 8, border: 'none', boxShadow: theme.shadows[4] }}
-              />
+              <YAxis type="category" dataKey="name" axisLine={false} tick={{ fontSize: 12, fontWeight: 600, fill: theme.palette.text.primary }} width={100} />
+              <RechartsTooltip formatter={(val: number) => [`$${val.toLocaleString('es-AR')}`, 'Invertido']} contentStyle={{ borderRadius: 8, border: 'none', boxShadow: theme.shadows[4] }} />
               <Bar dataKey="monto" radius={[0, 6, 6, 0]} barSize={24}>
                 {data.map((_, index) => (
                   <Cell key={`cell-${index}`} fill={index < 3 ? theme.palette.warning.main : theme.palette.primary.main} />
@@ -143,13 +108,13 @@ const TopInversoresCard = React.memo<{
     </Card>
   );
 });
-TopInversoresCard.displayName = 'TopInversoresCard';
 
 // ============================================================================
 // COMPONENTE PRINCIPAL
 // ============================================================================
 const AdminInversiones: React.FC = () => {
   const theme = useTheme();
+  const navigate = useNavigate(); // ✅ Añadido
   const logic = useAdminInversiones();
   const [viewMode, setViewMode] = useState<ViewMode>('table');
 
@@ -166,22 +131,22 @@ const AdminInversiones: React.FC = () => {
         label: 'Inversor',
         minWidth: 200,
         render: (inv) => {
-          const user = logic.getUserInfo(inv.id_usuario);
+          const user = inv.inversor;
+          const userName = user?.nombre_usuario || `ID #${inv.id_usuario}`;
+          const fullName = user ? `${user.nombre} ${user.apellido}` : 'Cargando...';
+
           return (
             <Stack direction="row" spacing={1.5} alignItems="center">
-              <Box
-                sx={{
-                  width: 32, height: 32, borderRadius: '50%',
-                  bgcolor: alpha(theme.palette.primary.main, 0.1),
-                  color: 'primary.main', display: 'flex', alignItems: 'center',
-                  justifyContent: 'center', fontSize: 13, fontWeight: 700,
-                }}
-              >
-                {user.name.charAt(0) || 'U'}
-              </Box>
-              <Box sx={{ minWidth: 0 }}>
-                <Typography variant="body2" fontWeight={600} noWrap>{user.name}</Typography>
-                <Typography variant="caption" color="text.secondary" noWrap>{user.email}</Typography>
+              <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main', fontWeight: 700, fontSize: 14 }}>
+                {userName.charAt(0).toUpperCase()}
+              </Avatar>
+              <Box>
+                <Typography variant="body2" fontWeight={700} color="primary.main">
+                  @{userName}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {fullName}
+                </Typography>
               </Box>
             </Stack>
           );
@@ -189,14 +154,41 @@ const AdminInversiones: React.FC = () => {
       },
       {
         id: 'proyecto',
-        label: 'Proyecto',
-        minWidth: 140,
-        render: (inv) => <Typography variant="body2" fontWeight={500} noWrap>{logic.getProjectName(inv.id_proyecto)}</Typography>,
+        label: 'Proyecto / Referencia',
+        minWidth: 220,
+        render: (row) => {
+          const proyecto = row.proyectoInvertido;
+          return (
+            <Box 
+              sx={{ 
+                cursor: 'pointer', 
+                '&:hover .proj-name': { color: 'primary.main' } 
+              }}
+              onClick={() => navigate(`/admin/proyectos?highlight=${row.id_proyecto}`)}
+            >
+              <Typography 
+                variant="subtitle2" 
+                fontWeight={700} 
+                className="proj-name"
+                sx={{ transition: 'color 0.2s' }}
+              >
+                {proyecto?.nombre_proyecto ?? 'Proyecto Desconocido'}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
+                REF: #{row.id} • ID Proj: {row.id_proyecto}
+              </Typography>
+            </Box>
+          );
+        }
       },
       {
         id: 'monto',
         label: 'Monto',
-        render: (inv) => <Typography variant="body2" fontWeight={700} sx={{ fontFamily: 'monospace', color: 'primary.main' }}>${Number(inv.monto).toLocaleString('es-AR')}</Typography>,
+        render: (inv) => (
+          <Typography variant="body2" fontWeight={700} sx={{ fontFamily: 'monospace', color: 'primary.main' }}>
+            ${Number(inv.monto).toLocaleString('es-AR')}
+          </Typography>
+        ),
       },
       {
         id: 'estado',
@@ -218,7 +210,7 @@ const AdminInversiones: React.FC = () => {
         id: 'fecha',
         label: 'Fecha',
         render: (inv) => {
-          const dateObj = new Date(inv.fecha_inversion || inv.fecha_creacion || '');
+          const dateObj = new Date(inv.fecha_inversion || (inv as any).createdAt || new Date());
           return (
             <Box>
               <Typography variant="body2" fontWeight={500}>
@@ -249,7 +241,7 @@ const AdminInversiones: React.FC = () => {
         ),
       },
     ],
-    [theme, logic]
+    [theme, logic, navigate]
   );
 
   return (
@@ -281,7 +273,7 @@ const AdminInversiones: React.FC = () => {
             </FilterSelect>
             <FilterSelect label="Proyecto" value={logic.filterProject} onChange={(e) => logic.setFilterProject(e.target.value)} sx={{ minWidth: 150 }}>
               <MenuItem value="all">Todos</MenuItem>
-              {logic.proyectos.map((p: ProyectoDto) => <MenuItem key={p.id} value={p.id}>{p.nombre_proyecto}</MenuItem>)}
+              {logic.proyectos.map((p: any) => <MenuItem key={p.id} value={p.id}>{p.nombre_proyecto}</MenuItem>)}
             </FilterSelect>
           </FilterBar>
         )}
@@ -289,18 +281,34 @@ const AdminInversiones: React.FC = () => {
 
       {viewMode === 'analytics' ? (
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }, gap: 3 }}>
-          {/* ✅ Usamos logic.trendData real en lugar de datos falsos */}
           <TrendChart data={logic.trendData} isLoading={logic.isLoading} />
           <TopInversoresCard data={logic.chartData} isLoading={logic.isLoading} />
         </Box>
       ) : (
         <QueryHandler isLoading={logic.isLoading} error={logic.error as Error | null}>
-          <DataTable columns={columns} data={logic.filteredInversiones} getRowKey={(row) => row.id} isRowActive={(row) => row.estado !== 'fallido'} highlightedRowId={logic.highlightedId} showInactiveToggle={false} emptyMessage="No se encontraron registros de inversión." pagination defaultRowsPerPage={10} />
+          <DataTable
+            columns={columns}
+            data={logic.filteredInversiones}
+            getRowKey={(row) => row.id}
+            isRowActive={(row) => row.estado === 'pagado' || row.estado === 'pendiente'}
+            highlightedRowId={logic.highlightedId}
+            showInactiveToggle={true}
+            emptyMessage="No se encontraron registros de inversión."
+            pagination
+            defaultRowsPerPage={10}
+          />
         </QueryHandler>
       )}
 
       {logic.selectedInversion && (
-        <DetalleInversionModal open={logic.modales.detail.isOpen} onClose={logic.handleCloseModal} inversion={logic.selectedInversion} userName={logic.getUserInfo(logic.selectedInversion.id_usuario).name} userEmail={logic.getUserInfo(logic.selectedInversion.id_usuario).email} projectName={logic.getProjectName(logic.selectedInversion.id_proyecto)} />
+        <DetalleInversionModal
+          open={logic.modales.detail.isOpen}
+          onClose={logic.handleCloseModal}
+          inversion={logic.selectedInversion}
+          userName={logic.selectedInversion.inversor ? `@${logic.selectedInversion.inversor.nombre_usuario}` : `Usuario #${logic.selectedInversion.id_usuario}`}
+          userEmail={logic.selectedInversion.inversor?.email}
+          projectName={logic.selectedInversion.proyectoInvertido?.nombre_proyecto || 'Proyecto'}
+        />
       )}
     </PageContainer>
   );

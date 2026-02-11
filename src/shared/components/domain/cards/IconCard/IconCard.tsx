@@ -54,19 +54,19 @@ export const IconCard: React.FC<IconCardProps> = ({
       </Avatar>
 
       <CardContent sx={{ flexGrow: 1, p: 0 }}>
-        <Typography 
-            variant="h5" 
-            color="text.primary" // Mejor contraste que primary.main para lectura
-            fontWeight={800} 
-            gutterBottom
+        <Typography
+          variant="h5"
+          color="text.primary" // Mejor contraste que primary.main para lectura
+          fontWeight={800}
+          gutterBottom
         >
           {title}
         </Typography>
-        
-        <Typography 
-            variant="body1" 
-            color="text.secondary" 
-            sx={{ lineHeight: 1.7 }}
+
+        <Typography
+          variant="body1"
+          color="text.secondary"
+          sx={{ lineHeight: 1.7 }}
         >
           {description}
         </Typography>

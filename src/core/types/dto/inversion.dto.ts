@@ -27,7 +27,7 @@ export interface ConfirmInversion2faDto {
  * Modelo de Inversión Base
  */
 export interface InversionDto extends BaseDTO {
-  monto: number;
+  monto: string;
   fecha_inversion: string; // ISO Date
   estado: 'pendiente' | 'pagado' | 'fallido' | 'reembolsado';
   
@@ -36,10 +36,21 @@ export interface InversionDto extends BaseDTO {
   
   // ✅ ADAPTADO: Marcado como opcional (?) porque el endpoint 
   // /mis_inversiones actual NO devuelve estos datos.
-  proyecto?: {
+inversor?: {
+    id: number;
+    nombre: string;
+    apellido: string;
+    email: string;
+    nombre_usuario: string;
+  };
+
+  // ✅ Relación Proyecto (Backend: as "proyectoInvertido")
+  proyectoInvertido?: {
+    id: number;
     nombre_proyecto: string;
-    monto_inversion?: number;
-    imagen_url?: string;
+    tipo_inversion: string;
+    estado_proyecto: string;
+    monto_inversion: string;
   };
 }
 

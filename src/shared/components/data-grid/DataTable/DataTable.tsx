@@ -1,3 +1,4 @@
+import React, { memo, useMemo, useState } from 'react';
 import { FilterListOff } from '@mui/icons-material';
 import {
   alpha,
@@ -19,7 +20,6 @@ import {
   type SxProps,
   type Theme
 } from '@mui/material';
-import React, { memo, useMemo, useState } from 'react';
 
 // ============================================================================
 // COMPONENTE: DATA SWITCH (Auxiliar)
@@ -62,7 +62,7 @@ export const DataSwitch: React.FC<DataSwitchProps> = memo(({
 DataSwitch.displayName = 'DataSwitch';
 
 // ============================================================================
-// COMPONENTE PRINCIPAL: DATA TABLE
+// TIPOS Y COMPONENTE PRINCIPAL
 // ============================================================================
 
 export interface DataTableColumn<T> {
@@ -93,7 +93,7 @@ interface DataTableProps<T> {
 }
 
 // ============================================================================
-// FILA MEMOIZADA PARA MEJOR PERFORMANCE
+// FILA MEMOIZADA (Optimización de render)
 // ============================================================================
 interface TableRowMemoProps<T> {
   row: T;
@@ -109,15 +109,12 @@ interface TableRowMemoProps<T> {
 const TableRowMemo = memo(<T,>({
   row,
   columns,
-  getRowKey,
   isHighlighted,
   isActive,
   onRowClick,
   getRowSx,
   theme
 }: TableRowMemoProps<T>) => {
-  const rowKey = getRowKey(row);
-
   return (
     <TableRow
       hover={isActive && !!onRowClick}
@@ -158,7 +155,7 @@ const TableRowMemo = memo(<T,>({
     </TableRow>
   );
 }, (prevProps, nextProps) => {
-  // Custom comparison para optimizar re-renders
+  // Comparación personalizada para evitar re-renders innecesarios
   return (
     prevProps.getRowKey(prevProps.row) === nextProps.getRowKey(nextProps.row) &&
     prevProps.isHighlighted === nextProps.isHighlighted &&
@@ -169,7 +166,7 @@ const TableRowMemo = memo(<T,>({
 (TableRowMemo as any).displayName = 'TableRowMemo';
 
 // ============================================================================
-// TABLA PRINCIPAL
+// COMPONENTE: DATA TABLE
 // ============================================================================
 export function DataTable<T>({
   columns,
@@ -201,7 +198,7 @@ export function DataTable<T>({
     setPage(0);
   };
 
-  // ✨ PROCESAMIENTO DE DATA OPTIMIZADO
+  // --- LÓGICA DE FILTRADO Y ORDENAMIENTO ---
   const processedData = useMemo(() => {
     let result = [...data];
 
@@ -221,19 +218,19 @@ export function DataTable<T>({
     return result;
   }, [data, isRowActive, showInactive, showInactiveToggle]);
 
-  // ✨ CONTEO DE INACTIVOS
+  // --- CONTEO DE INACTIVOS ---
   const inactiveCount = useMemo(() => {
     if (!isRowActive) return 0;
     return data.filter(row => !isRowActive(row)).length;
   }, [data, isRowActive]);
 
-  // ✨ PAGINACIÓN
+  // --- PAGINACIÓN ---
   const paginatedData = useMemo(() => {
     if (!pagination) return processedData;
     return processedData.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
   }, [pagination, processedData, page, rowsPerPage]);
 
-  // ✨ COLUMNAS RESPONSIVAS
+  // --- COLUMNAS RESPONSIVAS ---
   const visibleColumns = useMemo(() =>
     columns.filter(col => !(isMobile && col.hideOnMobile)),
     [columns, isMobile]
@@ -241,7 +238,7 @@ export function DataTable<T>({
 
   return (
     <Box sx={{ width: '100%' }}>
-      {/* TOOLBAR SUPERIOR */}
+      {/* Toggle de Inactivos */}
       {showInactiveToggle && inactiveCount > 0 && (
         <Stack direction="row" justifyContent="flex-end" sx={{ mb: 1, px: 1 }}>
           <FormControlLabel
@@ -346,12 +343,8 @@ export function DataTable<T>({
             sx={{
               borderTop: '1px solid',
               borderColor: 'divider',
-              '.MuiTablePagination-toolbar': {
-                px: { xs: 1, sm: 2 }
-              },
-              '.MuiTablePagination-selectLabel': {
-                display: { xs: 'none', sm: 'block' }
-              }
+              '.MuiTablePagination-toolbar': { px: { xs: 1, sm: 2 } },
+              '.MuiTablePagination-selectLabel': { display: { xs: 'none', sm: 'block' } }
             }}
           />
         )}

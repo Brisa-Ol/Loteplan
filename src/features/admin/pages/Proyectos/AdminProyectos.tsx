@@ -9,6 +9,7 @@ import {
   MonetizationOn as MonetizationOnIcon,
   PlayArrow,
   TrendingUp,
+  Undo, // 🆕 Icono Revertir
   ViewList,
   Visibility as VisibilityIcon
 } from '@mui/icons-material';
@@ -44,15 +45,13 @@ import { ConfirmDialog } from '@/shared/components/domain/modals/ConfirmDialog/C
 import { FilterBar, FilterSearch, FilterSelect } from '@/shared/components/forms/filters/FilterBar';
 import { PageContainer } from '@/shared/components/layout/containers/PageContainer/PageContainer';
 
-// Modales
+import type { ProyectoDto } from '@/core/types/dto/proyecto.dto';
+import { useAdminProyectos, type TipoInversionFilter } from '../../hooks/useAdminProyectos';
 import ConfigCuotasModal from './modals/ConfigCuotasModal';
 import CreateProyectoModal from './modals/CreateProyectoModal';
 import EditProyectoModal from './modals/EditProyectoModal';
 import ManageImagesModal from './modals/ManageImagesModal';
 import ProjectLotesModal from './modals/ProjectLotesModal';
-
-import type { ProyectoDto } from '@/core/types/dto/proyecto.dto';
-import { useAdminProyectos, type TipoInversionFilter } from '../../hooks/useAdminProyectos';
 
 // ============================================================================
 // COMPONENTE: VISTA DE CARDS (MEMOIZADO)
@@ -60,12 +59,18 @@ import { useAdminProyectos, type TipoInversionFilter } from '../../hooks/useAdmi
 const ProjectCard = memo<{
   proyecto: ProyectoDto;
   onAction: (proyecto: ProyectoDto, action: any, e?: React.MouseEvent) => void;
+  onRevert: (proyecto: ProyectoDto) => void; // 🆕 Prop para revertir
   onToggle: (proyecto: ProyectoDto) => void;
   isToggling: boolean;
-}>(({ proyecto, onAction, onToggle, isToggling }) => {
+}>(({ proyecto, onAction, onToggle, onRevert, isToggling }) => {
   const theme = useTheme();
   const isMensual = proyecto.tipo_inversion === 'mensual';
+
+  // ✅ CORRECCIÓN DEL ERROR DE TIPOS:
+  // El backend devuelve "En proceso" (con 'p' minúscula), así que ajustamos la comparación.
+  // Si tu DTO dice otra cosa, usa `as string` temporalmente: (proyecto.estado_proyecto as string) === ...
   const canStart = isMensual && proyecto.estado_proyecto === 'En Espera';
+  const canRevert = isMensual && proyecto.estado_proyecto === 'En proceso';
 
   return (
     <Card
@@ -145,7 +150,7 @@ const ProjectCard = memo<{
             </Stack>
             <LinearProgress
               variant="determinate"
-              value={65} // Mock - implementar cálculo real
+              value={65} // Mock - implementar cálculo real si tienes el dato
               sx={{
                 height: 6,
                 borderRadius: 3,
@@ -162,11 +167,7 @@ const ProjectCard = memo<{
       <CardActions sx={{ px: 2, py: 1.5, justifyContent: 'space-between' }}>
         <Stack direction="row" spacing={0.5}>
           <Tooltip title="Imágenes">
-            <IconButton
-              onClick={(e) => onAction(proyecto, 'images', e)}
-              size="small"
-              color="primary"
-            >
+            <IconButton onClick={(e) => onAction(proyecto, 'images', e)} size="small" color="primary">
               <ImageIcon fontSize="small" />
             </IconButton>
           </Tooltip>
@@ -192,17 +193,35 @@ const ProjectCard = memo<{
           </Tooltip>
         </Stack>
 
-        {canStart && (
-          <Tooltip title="Iniciar Cobros">
-            <IconButton
-              onClick={() => onAction(proyecto, 'start')}
-              size="small"
-              sx={{ color: 'success.main' }}
-            >
-              <PlayArrow fontSize="small" />
-            </IconButton>
-          </Tooltip>
-        )}
+        <Stack direction="row" spacing={1}>
+          {canStart && (
+            <Tooltip title="Iniciar Cobros">
+              <IconButton
+                onClick={() => onAction(proyecto, 'start')}
+                size="small"
+                sx={{ color: 'success.main' }}
+              >
+                <PlayArrow fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+
+          {/* 🆕 BOTÓN DE REVERTIR */}
+          {canRevert && (
+            <Tooltip title="Pausar / Revertir a Espera">
+              <IconButton
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRevert(proyecto);
+                }}
+                size="small"
+                sx={{ color: 'warning.main' }}
+              >
+                <Undo fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+        </Stack>
       </CardActions>
     </Card>
   );
@@ -218,9 +237,6 @@ const AdminProyectos: React.FC = () => {
   const logic = useAdminProyectos();
   const [viewMode, setViewMode] = useState<ViewMode>('table');
 
-  // --------------------------------------------------------------------------
-  // CÁLCULO DE KPIS (derivado de filteredProyectos) - ✨ OPTIMIZADO
-  // --------------------------------------------------------------------------
   const stats = useMemo(() => {
     const data = logic.filteredProyectos;
     const total = data.length;
@@ -232,7 +248,7 @@ const AdminProyectos: React.FC = () => {
   }, [logic.filteredProyectos]);
 
   // --------------------------------------------------------------------------
-  // COLUMNAS - ✨ OPTIMIZADO con callbacks memoizados
+  // COLUMNAS (TABLA)
   // --------------------------------------------------------------------------
   const columns = useMemo<DataTableColumn<ProyectoDto>[]>(
     () => [
@@ -291,9 +307,10 @@ const AdminProyectos: React.FC = () => {
         render: (p) => {
           if (p.tipo_inversion !== 'mensual') return <Typography variant="caption">-</Typography>;
 
+          // ✅ CORRECCIÓN DE COLORES: Usamos las claves reales del backend
           const statusColors: Record<string, string> = {
             'En Espera': theme.palette.warning.main,
-            'En Proceso': theme.palette.info.main,
+            'En proceso': theme.palette.info.main, // Corregido: 'En proceso' minúscula
             'Completado': theme.palette.success.main,
           };
 
@@ -357,6 +374,7 @@ const AdminProyectos: React.FC = () => {
               </Tooltip>
             )}
 
+            {/* Acciones de Estado (Tabla) */}
             {p.tipo_inversion === 'mensual' && p.estado_proyecto === 'En Espera' && (
               <Tooltip title="Iniciar Cobros">
                 <IconButton
@@ -368,6 +386,22 @@ const AdminProyectos: React.FC = () => {
                   sx={{ color: 'success.main' }}
                 >
                   <PlayArrow fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
+
+            {/* 🆕 BOTÓN DE REVERTIR (TABLA) */}
+            {p.tipo_inversion === 'mensual' && p.estado_proyecto === 'En proceso' && ( // Corregido: 'En proceso'
+              <Tooltip title="Revertir a Espera">
+                <IconButton
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    logic.modales.confirmDialog.confirm('revert_project_process', p);
+                  }}
+                  size="small"
+                  sx={{ color: 'warning.main' }}
+                >
+                  <Undo fontSize="small" />
                 </IconButton>
               </Tooltip>
             )}
@@ -392,7 +426,7 @@ const AdminProyectos: React.FC = () => {
 
   return (
     <PageContainer maxWidth="xl" sx={{ py: 3 }}>
-      {/* 1. HEADER ESTANDARIZADO */}
+      {/* 1. HEADER */}
       <AdminPageHeader
         title="Gestión de Proyectos"
         subtitle="Administra el catálogo de inversiones y estados"
@@ -509,7 +543,17 @@ const AdminProyectos: React.FC = () => {
               <ProjectCard
                 key={proyecto.id}
                 proyecto={proyecto}
-                onAction={logic.handleAction}
+                onAction={(p, action, e) => {
+                  // Si la acción es 'start', usamos el confirmDialog
+                  if (action === 'start') {
+                    e?.stopPropagation();
+                    logic.modales.confirmDialog.confirm('start_project_process', p);
+                  } else {
+                    logic.handleAction(p, action, e);
+                  }
+                }}
+                // Pasamos una función dedicada para revertir que activa el modal correcto
+                onRevert={(p) => logic.modales.confirmDialog.confirm('revert_project_process', p)}
                 onToggle={(p) => logic.modales.confirmDialog.confirm('toggle_project_visibility', p)}
                 isToggling={logic.isToggling}
               />
@@ -565,7 +609,8 @@ const AdminProyectos: React.FC = () => {
       <ConfirmDialog
         controller={logic.modales.confirmDialog}
         onConfirm={logic.handleConfirmAction}
-        isLoading={logic.isStarting || logic.isToggling}
+        // 🆕 isReverting agregado al estado de carga
+        isLoading={logic.isStarting || logic.isToggling || logic.isReverting}
       />
     </PageContainer>
   );
