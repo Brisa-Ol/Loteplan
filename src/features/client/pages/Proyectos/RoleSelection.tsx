@@ -115,23 +115,23 @@ const ProyectosUnificados: React.FC = () => {
   const isLoading = loadingInv || loadingAho;
 
   // Lógica de Filtrado Memoizada
-const proyectosFiltrados = useMemo(() => {
+  const proyectosFiltrados = useMemo(() => {
     const baseProyectos = perfilSeleccionado === 'inversionista' ? (proyectosInv || []) : (proyectosAho || []);
     const searchTerm = filtros.search.toLowerCase().trim();
 
     return baseProyectos.filter(p => {
-        const matchSearch = !searchTerm || (p.nombre_proyecto || '').toLowerCase().includes(searchTerm);
-        const matchStatus = filtros.status === 'todos' || p.estado_proyecto === filtros.status;
-        
-        // ✅ MEJORA: Filtro de seguridad adicional para asegurar que el perfil 
-        // coincida con el tipo_inversion real que viene del back
-        const matchTipo = perfilSeleccionado === 'inversionista' 
-            ? p.tipo_inversion === 'directo' 
-            : p.tipo_inversion === 'mensual';
+      const matchSearch = !searchTerm || (p.nombre_proyecto || '').toLowerCase().includes(searchTerm);
+      const matchStatus = filtros.status === 'todos' || p.estado_proyecto === filtros.status;
 
-        return matchSearch && matchStatus && matchTipo;
+      // ✅ MEJORA: Filtro de seguridad adicional para asegurar que el perfil 
+      // coincida con el tipo_inversion real que viene del back
+      const matchTipo = perfilSeleccionado === 'inversionista'
+        ? p.tipo_inversion === 'directo'
+        : p.tipo_inversion === 'mensual';
+
+      return matchSearch && matchStatus && matchTipo;
     });
-}, [proyectosInv, proyectosAho, perfilSeleccionado, filtros]);
+  }, [proyectosInv, proyectosAho, perfilSeleccionado, filtros]);
 
   const proyectosVisibles = useMemo(() => proyectosFiltrados.slice(0, itemsVisibles), [proyectosFiltrados, itemsVisibles]);
   const hayMasProyectos = proyectosFiltrados.length > itemsVisibles;

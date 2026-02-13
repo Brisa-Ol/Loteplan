@@ -88,6 +88,9 @@ const LoteService = {
     return await httpService.put(`${BASE_ENDPOINT}/${id}/end`);
   },
 
+  cancelarAdjudicacion: async (id: number): Promise<AxiosResponse<any>> => {
+    return await httpService.post(`${BASE_ENDPOINT}/${id}/impago`);
+  },
   // =================================================
   // 🛠️ HELPERS VISUALES
   // =================================================

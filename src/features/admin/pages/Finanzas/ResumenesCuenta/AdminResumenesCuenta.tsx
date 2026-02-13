@@ -32,8 +32,9 @@ import AdminPageHeader from '@/shared/components/admin/Adminpageheader';
 import AlertBanner from '@/shared/components/admin/Alertbanner';
 import MetricsGrid from '@/shared/components/admin/Metricsgrid';
 import { ViewModeToggle, type ViewMode } from '@/shared/components/admin/Viewmodetoggle';
-import { useAdminResumenes } from '@/features/admin/hooks/useAdminResumenes';
+
 import DetalleResumenModal from './modals/DetalleResumenModal';
+import { useAdminResumenes } from '@/features/admin/hooks/finanzas/useAdminResumenes';
 
 
 // ============================================================================

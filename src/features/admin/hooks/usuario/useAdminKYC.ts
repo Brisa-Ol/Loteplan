@@ -5,7 +5,8 @@ import type { KycDTO } from '@/core/types/dto/kyc.dto';
 import { useConfirmDialog } from '@/shared/hooks/useConfirmDialog';
 import { useModal } from '@/shared/hooks/useModal';
 import useSnackbar from '@/shared/hooks/useSnackbar';
-import { useSortedData } from './useSortedData';
+import { useSortedData } from '../useSortedData';
+
 
 export type TabValue = 'pendiente' | 'aprobada' | 'rechazada' | 'todas';
 

@@ -3,7 +3,8 @@ import { useQuery } from '@tanstack/react-query';
 import { useModal } from '@/shared/hooks/useModal';
 import type { InversionDto } from '@/core/types/dto/inversion.dto';
 import InversionService from '@/core/api/services/inversion.service';
-import { useSortedData } from './useSortedData';
+import { useSortedData } from '../useSortedData';
+
 
 // --- HELPERS ---
 function useDebouncedValue<T>(value: T, delay: number = 300): T {

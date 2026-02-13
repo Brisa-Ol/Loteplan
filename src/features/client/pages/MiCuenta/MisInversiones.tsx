@@ -1,15 +1,29 @@
 // src/components/domain/inversiones/MisInversiones.tsx
 
-import {
-    MonetizationOn, Payment, PieChart, TrendingUp, Visibility
-} from '@mui/icons-material';
-import {
-    alpha,
-    Box, Button, Chip, IconButton, Paper, Stack, Tooltip, Typography, useTheme
-} from '@mui/material';
-import { useQuery } from '@tanstack/react-query';
 import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+
+// Material UI Components
+import {
+    alpha, Box, Button, Chip, IconButton, Paper, Stack, Tooltip, Typography, useTheme
+} from '@mui/material';
+
+// Material UI Icons
+import {
+    AccountBalanceWallet,
+    CheckCircle,
+    ErrorOutline,
+    HelpOutline,
+    HourglassEmpty,
+    MonetizationOn,
+    Payment,
+    PieChart,
+    Refresh,
+    Schedule,
+    TrendingUp,
+    Visibility
+} from '@mui/icons-material';
 
 // Componentes Compartidos
 import { DataTable, type DataTableColumn } from '@/shared/components/data-grid/DataTable/DataTable';
@@ -27,8 +41,39 @@ import type { InversionDto } from '@/core/types/dto/inversion.dto';
 // Utils & Hooks
 import { useCurrencyFormatter } from '../../hooks/useCurrencyFormatter';
 import { useInversionPayment } from '../../hooks/useInversionPayment';
-import { getStatusConfig } from '../utils/inversionStatus';
 
+// ============================================================================
+// HELPER INTERNO: Configuración de Estados (Colores e Iconos)
+// ============================================================================
+const getStatusConfig = (estado: string) => {
+    const configs: Record<string, any> = {
+        // Estados de Éxito
+        pagado: { label: 'Pagado', color: 'success', icon: <CheckCircle fontSize="small" /> },
+        cubierto_por_puja: { label: 'Cubierto (Puja)', color: 'success', icon: <AccountBalanceWallet fontSize="small" /> },
+
+        // Estados de Alerta / Pendientes
+        pendiente: { label: 'Pendiente', color: 'info', icon: <Schedule fontSize="small" /> },
+        en_proceso: { label: 'En Proceso', color: 'warning', icon: <HourglassEmpty fontSize="small" /> },
+
+        // Estados de Error / Peligro
+        vencido: { label: 'Vencido', color: 'error', icon: <ErrorOutline fontSize="small" /> },
+        fallido: { label: 'Fallido', color: 'error', icon: <ErrorOutline fontSize="small" /> },
+        expirado: { label: 'Expirado', color: 'error', icon: <ErrorOutline fontSize="small" /> },
+
+        // Otros
+        reembolsado: { label: 'Reembolsado', color: 'info', icon: <Refresh fontSize="small" /> },
+    };
+
+    return configs[estado] || {
+        label: estado,
+        color: 'default',
+        icon: <HelpOutline fontSize="small" />
+    };
+};
+
+// ============================================================================
+// COMPONENTE PRINCIPAL
+// ============================================================================
 const MisInversiones: React.FC = () => {
     const navigate = useNavigate();
     const theme = useTheme();
@@ -115,6 +160,7 @@ const MisInversiones: React.FC = () => {
             label: 'Estado',
             minWidth: 140,
             render: (row) => {
+                // Usamos la función local definida arriba
                 const { label, color, icon } = getStatusConfig(row.estado);
                 return (
                     <Chip

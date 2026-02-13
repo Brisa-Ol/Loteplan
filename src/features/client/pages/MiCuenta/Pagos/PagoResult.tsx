@@ -198,6 +198,7 @@ const PagoResult: React.FC = () => {
         )}
 
         {/* ACCIONES */}
+       {/* ACCIONES */}
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="center">
           <Button 
             variant="outlined" 
@@ -213,11 +214,25 @@ const PagoResult: React.FC = () => {
           >
             Inicio
           </Button>
+
           <Button 
             variant="contained" 
             size="large"
             endIcon={<ArrowForward />}
-            onClick={() => navigate('/client/MiCuenta/MisTransacciones')}
+            onClick={() => {
+              // 💡 LÓGICA DINÁMICA DE REDIRECCIÓN basada en tu DTO
+              const tipoTx = data?.transaccion?.tipo;
+              
+              // Evaluamos según los tipos de transacción que maneja tu sistema
+              if (tipoTx === 'Puja' || tipoTx === 'pago_puja') {
+                navigate('/client/finanzas/pujas');
+              } else if (tipoTx === 'pago_suscripcion_inicial' || tipoTx === 'inversion') {
+                navigate('/client/finanzas/resumenes');
+              } else {
+                // Si es 'mensual' o 'pago' regular
+                navigate('/client/finanzas/pagos'); 
+              }
+            }}
             disableElevation
             sx={{ 
                 borderRadius: 2,

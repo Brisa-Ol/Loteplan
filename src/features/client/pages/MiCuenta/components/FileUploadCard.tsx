@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Box, Typography, Paper } from '@mui/material';
-import ImageUploadZone from '@/shared/components/forms/upload/ImageUploadZone/ImageUploadZone';
+import ImageUploadZone from '@/shared/components/forms/upload/ImageUploadZone';
 
 
 interface FileUploadCardProps {

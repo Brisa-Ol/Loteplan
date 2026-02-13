@@ -30,8 +30,9 @@ import { StatCard, StatusBadge } from '@/shared/components/domain/cards/StatCard
 import { FilterBar, FilterSearch, FilterSelect } from '@/shared/components/forms/filters/FilterBar';
 import { PageContainer } from '@/shared/components/layout/containers/PageContainer/PageContainer';
 
-import { useAdminInversiones } from '../../hooks/useAdminInversiones';
+
 import DetalleInversionModal from './components/DetalleInversionModal';
+import { useAdminInversiones } from '../../hooks/finanzas/useAdminInversiones';
 
 // ============================================================================
 // SUB-COMPONENTES PARA GRÁFICOS

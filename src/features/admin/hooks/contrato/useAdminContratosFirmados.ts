@@ -4,8 +4,8 @@ import useSnackbar from '@/shared/hooks/useSnackbar';
 import type { ContratoFirmadoDto } from '@/core/types/dto/contrato-firmado.dto';
 import ContratoService from '@/core/api/services/contrato.service';
 
-import { useSortedData } from './useSortedData';
 import { downloadSecureFile } from '@/shared/utils';
+import { useSortedData } from '../useSortedData';
 
 // ============================================================================
 // DEBOUNCE HELPER

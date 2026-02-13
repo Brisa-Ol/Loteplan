@@ -11,23 +11,74 @@ import {
 } from '@mui/icons-material';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
-import useSnackbar from '../../../../../shared/hooks/useSnackbar';
-import BaseModal from '../../../../../shared/components/domain/modals/BaseModal/BaseModal';
-import type { UpdateUserAdminDto, UsuarioDto } from '../../../../../core/types/dto/usuario.dto';
-import UsuarioService from '../../../../../core/api/services/usuario.service';
-import { useAuth } from '../../../../../core/context/AuthContext';
 
-// ... (Disable2FADialog se mantiene igual) ...
+import useSnackbar from '@/shared/hooks/useSnackbar';
+import BaseModal from '@/shared/components/domain/modals/BaseModal/BaseModal';
+import type { UpdateUserAdminDto, UsuarioDto } from '@/core/types/dto/usuario.dto';
+import UsuarioService from '@/core/api/services/usuario.service';
+import { useAuth } from '@/core/context/AuthContext';
 
 // ════════════════════════════════════════════════════════════
-// COMPONENTE PRINCIPAL
+// SUB-COMPONENTE: DIÁLOGO 2FA (Definido UNA SOLA vez)
+// ════════════════════════════════════════════════════════════
+
+const Disable2FADialog: React.FC<{
+  open: boolean; 
+  onClose: () => void; 
+  onConfirm: (justificacion: string) => void;
+  isLoading: boolean; 
+  userName: string;
+}> = ({ open, onClose, onConfirm, isLoading, userName }) => {
+  const [justificacion, setJustificacion] = useState('');
+  const { showError } = useSnackbar();
+  
+  const handleConfirm = () => {
+    if (justificacion.trim().length < 10) {
+        return showError('La justificación debe tener al menos 10 caracteres');
+    }
+    onConfirm(justificacion); 
+    setJustificacion('');
+  };
+
+  return (
+    <BaseModal
+        open={open}
+        onClose={onClose}
+        title="Confirmar Desactivación 2FA"
+        subtitle={`Acción de seguridad para: ${userName}`}
+        icon={<WarningIcon />}
+        headerColor="warning"
+        confirmText="Confirmar Desactivación"
+        confirmButtonColor="warning"
+        onConfirm={handleConfirm}
+        isLoading={isLoading}
+        disableConfirm={justificacion.trim().length < 10 || isLoading}
+        maxWidth="sm"
+    >
+        <Alert severity="warning" variant="outlined" sx={{ mb: 3, borderRadius: 2 }}>
+            Esta acción reducirá la seguridad de la cuenta. Se requiere justificación obligatoria para auditoría.
+        </Alert>
+        <TextField 
+          fullWidth multiline rows={4} 
+          label="Justificación obligatoria" 
+          placeholder="Ingrese el motivo por el cual se desactiva el 2FA..."
+          value={justificacion} 
+          onChange={(e) => setJustificacion(e.target.value)} 
+          disabled={isLoading}
+          sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+        />
+    </BaseModal>
+  );
+};
+
+// ════════════════════════════════════════════════════════════
+// COMPONENTE PRINCIPAL: EDIT USER MODAL
 // ════════════════════════════════════════════════════════════
 
 interface EditUserModalProps {
   open: boolean;
   onClose: () => void;
   user: UsuarioDto | null;
-  // 👇 CAMBIO AQUÍ: Promise<any> en lugar de Promise<void>
   onSubmit: (id: number, data: UpdateUserAdminDto) => Promise<any>;
   isLoading?: boolean;
 }
@@ -93,7 +144,6 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ open, onClose, user, onSu
 
         onClose();
       } catch (error: any) {
-        console.error('Error update:', error);
         const errorMsg = error.response?.data?.error || error.message || 'Error al guardar';
         setReactivationError(errorMsg);
       }
@@ -119,7 +169,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ open, onClose, user, onSu
     setIsDisabling2FA(true);
     try {
       await UsuarioService.adminReset2FA(user.id, { justificacion });
-      showSuccess('✅ 2FA desactivado.');
+      showSuccess('✅ 2FA desactivado correctamente.');
       setShowDisable2FADialog(false);
       onClose();
     } catch (error: any) {
@@ -168,7 +218,6 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ open, onClose, user, onSu
         }
       >
         <Stack spacing={4}>
-
           {isInactiveUser && (
             <Alert severity="warning" sx={{ borderRadius: 2 }}>
               <strong>Cuenta desactivada.</strong> Modifica email o nombre de usuario si hay conflictos,
@@ -209,7 +258,6 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ open, onClose, user, onSu
           <Box>
             <Typography sx={sectionTitleSx}><SettingsIcon fontSize="inherit" /> Permisos y Estado</Typography>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="stretch">
-
               <Tooltip title={isSelfEditing ? "No puedes cambiar tu propio rol" : ""}>
                 <TextField
                   select
@@ -266,11 +314,6 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ open, onClose, user, onSu
                 Al guardar, este usuario será desconectado inmediatamente.
               </Alert>
             )}
-            {isSelfEditing && (
-              <Alert severity="info" sx={{ mt: 2, borderRadius: 2 }}>
-                Estás editando tu propio perfil. Ciertas acciones de seguridad están bloqueadas.
-              </Alert>
-            )}
           </Box>
 
           {/* ZONA DE SEGURIDAD 2FA */}
@@ -311,11 +354,10 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ open, onClose, user, onSu
               </Tooltip>
             )}
           </Box>
-
         </Stack>
       </BaseModal>
 
-      {/* Sub-modal de confirmación (Se asume definido antes o importado, aquí omití la re-definición para no duplicar código en la respuesta si ya estaba arriba) */}
+      {/* SUB-MODAL DE CONFIRMACIÓN 2FA */}
       <Disable2FADialog
         open={showDisable2FADialog}
         onClose={() => setShowDisable2FADialog(false)}
@@ -324,52 +366,6 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ open, onClose, user, onSu
         userName={`${user.nombre} ${user.apellido}`}
       />
     </>
-  );
-};
-
-// IMPORTANTE: Asegúrate de tener Disable2FADialog definido o importado.
-// En tu código original estaba en el mismo archivo, asegúrate de mantenerlo.
-const Disable2FADialog: React.FC<{
-  open: boolean; onClose: () => void; onConfirm: (justificacion: string) => void;
-  isLoading: boolean; userName: string;
-}> = ({ open, onClose, onConfirm, isLoading, userName }) => {
-  const [justificacion, setJustificacion] = useState('');
-  const { showError } = useSnackbar();
-
-  const handleConfirm = () => {
-    if (justificacion.trim().length < 10) return showError('La justificación debe tener al menos 10 caracteres');
-    onConfirm(justificacion);
-    setJustificacion('');
-  };
-
-  return (
-    <BaseModal
-      open={open}
-      onClose={onClose}
-      title="Confirmar Desactivación 2FA"
-      subtitle={`Acción de seguridad para: ${userName}`}
-      icon={<WarningIcon />}
-      headerColor="warning"
-      confirmText="Confirmar Desactivación"
-      confirmButtonColor="warning"
-      onConfirm={handleConfirm}
-      isLoading={isLoading}
-      disableConfirm={justificacion.trim().length < 10 || isLoading}
-      maxWidth="sm"
-    >
-      <Alert severity="warning" variant="outlined" sx={{ mb: 3, borderRadius: 2 }}>
-        Esta acción reducirá la seguridad de la cuenta. Se requiere justificación obligatoria para auditoría.
-      </Alert>
-      <TextField
-        fullWidth multiline rows={4}
-        label="Justificación obligatoria"
-        placeholder="Ingrese el motivo por el cual se desactiva el 2FA..."
-        value={justificacion}
-        onChange={(e) => setJustificacion(e.target.value)}
-        disabled={isLoading}
-        sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-      />
-    </BaseModal>
   );
 };
 

@@ -2,9 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useConfirmDialog } from '../../../shared/hooks/useConfirmDialog';
-import { useModal } from '../../../shared/hooks/useModal';
-import useSnackbar from '../../../shared/hooks/useSnackbar';
+
 
 import LoteService from '@/core/api/services/lote.service';
 import PujaService from '@/core/api/services/puja.service';
@@ -13,7 +11,9 @@ import UsuarioService from '@/core/api/services/usuario.service';
 import type { LoteDto } from '@/core/types/dto/lote.dto';
 import type { PujaDto } from '@/core/types/dto/puja.dto';
 import type { UsuarioDto } from '@/core/types/dto/usuario.dto';
-import { useSortedData } from './useSortedData';
+import { useConfirmDialog, useModal, useSnackbar } from '@/shared/hooks';
+import { useSortedData } from '../useSortedData';
+
 
 // ============================================================================
 // DEBOUNCE HELPER
@@ -90,12 +90,18 @@ export const useAdminPujas = () => {
 
   // --- PROCESAMIENTO DE DATOS ---
 
-  // Helper Nombres
-  const getUserName = useCallback((id: number) => {
-    const user = usuarios.find(u => u.id === id);
-    if (user) return user.nombre_usuario || `${user.nombre} ${user.apellido}`;
-    return `ID #${id}`;
+  const usuariosMap = useMemo(() => {
+    const map: Record<number, string> = {};
+    usuarios.forEach(u => {
+      map[u.id] = u.nombre_usuario || `${u.nombre} ${u.apellido}`;
+    });
+    return map;
   }, [usuarios]);
+
+  // ✅ La función ahora simplemente busca en el diccionario
+  const getUserName = useCallback((id: number) => {
+    return usuariosMap[id] || `ID #${id}`;
+  }, [usuariosMap]);
 
   // Mapa de Pujas
   const pujasPorLote = useMemo(() => {
@@ -267,10 +273,11 @@ export const useAdminPujas = () => {
         endAuctionMutation.mutate(data.id);
         break;
       case 'cancel_ganadora_anticipada':
-        if (!inputValue) return; // Requiere motivo
+        // ✅ CAMBIO 2: Si no hay inputValue, mandamos un string genérico 
+        // o dejamos que pase para que el backend asigne el suyo por defecto.
         cancelarGanadoraMutation.mutate({
           id: data.pujaId,
-          motivo: inputValue
+          motivo: inputValue?.trim() || "Cancelación administrativa desde el panel"
         });
         break;
       case 'force_finish':

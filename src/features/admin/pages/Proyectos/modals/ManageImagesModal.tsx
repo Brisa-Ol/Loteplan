@@ -1,4 +1,5 @@
 // src/components/Admin/Proyectos/Components/modals/ManageImagesModal.tsx
+// ✅ VERSIÓN MIGRADA - Usando ImageUpload unificado
 
 import {
   Close as CloseIcon,
@@ -38,12 +39,13 @@ import type { ProyectoDto } from '@/core/types/dto/proyecto.dto';
 // --- COMPONENTES SHARED ---
 import { QueryHandler } from '@/shared/components/data-grid/QueryHandler/QueryHandler';
 import { ConfirmDialog } from '@/shared/components/domain/modals/ConfirmDialog/ConfirmDialog';
-import ImageUploadZone from '@/shared/components/forms/upload/ImageUploadZone/ImageUploadZone';
+
 
 // --- HOOKS ---
 import { env } from '@/core/config/env';
 import { useConfirmDialog } from '@/shared/hooks/useConfirmDialog';
 import useSnackbar from '@/shared/hooks/useSnackbar';
+import ImageUpload from '@/shared/components/forms/upload/ImageUploadZone';
 
 const MAX_TOTAL_IMAGES = 10;
 
@@ -127,7 +129,11 @@ const ManageImagesModal: React.FC<ManageImagesModalProps> = ({
     confirmDialog.confirm('delete_single_image', { imagen });
   };
 
-  const handleFilesSelected = (files: File[]) => {
+  // ✅ HANDLER CORREGIDO - Acepta la firma genérica del componente unificado
+  const handleFilesSelected = (files: File | File[] | null) => {
+    // Guard: Si viene null o un solo File, ignoramos (no debería pasar en modo múltiple)
+    if (!files || !Array.isArray(files)) return;
+
     setUploadError(null);
 
     // Validación de Duplicados y Tamaño
@@ -258,7 +264,6 @@ const ManageImagesModal: React.FC<ManageImagesModalProps> = ({
         PaperProps={{
           elevation: 0,
           sx: {
-            // Theme radius (12px = 1.5 * 8)
             borderRadius: 1.5,
             boxShadow: theme.shadows[8],
             overflow: 'hidden'
@@ -321,12 +326,16 @@ const ManageImagesModal: React.FC<ManageImagesModalProps> = ({
               )}
 
               {!isLimitReached ? (
-                <ImageUploadZone
-                  images={[]}
+                // ✅ COMPONENTE MIGRADO
+                <ImageUpload
+                  multiple={true}
+                  images={[]} // Array vacío porque usamos stagedFiles separadamente
                   onChange={handleFilesSelected}
                   maxFiles={remainingSlots}
                   maxSizeMB={15}
                   disabled={isWorking}
+                  label="Arrastra o selecciona imágenes para la galería"
+                  helperText={`Puedes agregar hasta ${remainingSlots} imágenes más`}
                 />
               ) : (
                 <Alert severity="warning" variant="outlined" sx={{ borderRadius: 1 }}>

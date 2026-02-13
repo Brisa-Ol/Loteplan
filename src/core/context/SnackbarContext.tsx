@@ -1,4 +1,4 @@
-import GlobalSnackbar from '@/shared/components/ui/feedback/GlobalSnackbarProps/GlobalSnackbarProps';
+import GlobalSnackbar from '@/shared/components/ui/feedback/GlobalSnackbarProps';
 import { setGlobalSnackbar } from '@/shared/utils/snackbarUtils';
 import React, { createContext, useState, useCallback, useEffect, type ReactNode } from 'react';
 

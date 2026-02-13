@@ -1,11 +1,11 @@
 // src/routes/AppRouter.tsx
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Box, CircularProgress } from '@mui/material';
 import { Suspense, lazy } from 'react';
-import { CircularProgress, Box } from '@mui/material';
+import { Navigate, Route, Routes } from 'react-router-dom';
 
 // Guards
-import ProtectedRoute from './ProtectedRoute/ProtectedRoute';
 import { ROUTES } from '.';
+import ProtectedRoute from './ProtectedRoute/ProtectedRoute';
 
 // ============ LAZY LOADING ============
 

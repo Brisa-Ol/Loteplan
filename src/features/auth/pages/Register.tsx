@@ -1,7 +1,6 @@
 import { PersonAdd, Visibility, VisibilityOff } from "@mui/icons-material";
 import {
   Alert,
-  alpha,
   Box,
   Button,
   CircularProgress,
@@ -15,105 +14,54 @@ import {
   Link,
   Stack,
   Typography,
+  alpha,
   useTheme
 } from "@mui/material";
-import { useFormik } from "formik";
-import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import * as Yup from "yup";
-
-import { useAuth } from "@/core/context/AuthContext";
-import type { RegisterRequestDto } from "@/core/types/dto/auth.dto";
+import React from "react";
 import FormTextField from "../../../shared/components/forms/inputs/FormTextField";
-import AuthFormContainer from "./components/AuthFormContainer/AuthFormContainer";
+import AuthFormContainer from "./components/AuthFormContainer";
+import { useRegister } from "../hooks/useRegister";
 
+
+// --- Subcomponente: Modal de Éxito ---
+const SuccessDialog = ({ open, email, onClose, onResend, resendStatus }: any) => (
+  <Dialog open={open} onClose={onClose} PaperProps={{ sx: { borderRadius: 3, p: 1, maxWidth: 400 } }}>
+    <DialogTitle sx={{ textAlign: 'center', fontWeight: 800, fontSize: '1.5rem' }}>
+      ¡Bienvenido! 🎉
+    </DialogTitle>
+    <DialogContent>
+      <DialogContentText textAlign="center" sx={{ fontSize: '1rem', mb: 2 }}>
+        Hemos enviado un enlace de confirmación a <strong>{email}</strong>.
+        <br />Por favor activa tu cuenta para ingresar.
+      </DialogContentText>
+      {resendStatus.msg && (
+        <Alert severity={resendStatus.msg.includes("Error") ? "error" : "info"} sx={{ mt: 2, borderRadius: 2 }}>
+          {resendStatus.msg}
+        </Alert>
+      )}
+    </DialogContent>
+    <DialogActions sx={{ justifyContent: 'center', pb: 3, px: 3, flexDirection: 'column', gap: 1 }}>
+      <Button onClick={onClose} variant="contained" fullWidth size="large" sx={{ fontWeight: 700, borderRadius: 2 }}>
+        Ir al Login
+      </Button>
+      <Button 
+        onClick={onResend} 
+        disabled={resendStatus.loading} 
+        size="small" 
+        sx={{ textTransform: 'none' }}
+      >
+        {resendStatus.loading ? "Enviando..." : "No recibí el email, reenviar"}
+      </Button>
+    </DialogActions>
+  </Dialog>
+);
+
+// --- Componente Principal ---
 const Register: React.FC = () => {
-  const navigate = useNavigate();
   const theme = useTheme();
+  const { formik, status, actions } = useRegister();
 
-  const {
-    register,
-    isLoading,
-    isInitializing,
-    error,
-    clearError,
-    resendConfirmation
-  } = useAuth();
-
-  const [showPassword, setShowPassword] = useState(false);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [registeredEmail, setRegisteredEmail] = useState("");
-  const [resending, setResending] = useState(false);
-  const [resendStatus, setResendStatus] = useState<string | null>(null);
-
-  // Limpiar errores al entrar o salir
-  useEffect(() => {
-    clearError();
-    return () => clearError();
-  }, [clearError]);
-
-  const validationSchema = Yup.object({
-    nombre: Yup.string().min(2, "Mínimo 2 caracteres").required("Requerido"),
-    apellido: Yup.string().min(2, "Mínimo 2 caracteres").required("Requerido"),
-    email: Yup.string().email("Formato inválido").required("Requerido"),
-    dni: Yup.string().matches(/^\d+$/, "Solo números").min(7, "Mínimo 7 dígitos").max(8, "Máximo 8 dígitos").required("Requerido"),
-    nombre_usuario: Yup.string().min(4, "Mínimo 4 caracteres").required("Requerido"),
-    numero_telefono: Yup.string().matches(/^\d+$/, "Solo números").min(10, "Mínimo 10 dígitos").required("Requerido"),
-    contraseña: Yup.string().min(8, "Mínimo 8 caracteres").matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, "Requiere mayúscula, minúscula y número").required("Requerida"),
-    confirmPassword: Yup.string().oneOf([Yup.ref("contraseña")], "Las contraseñas no coinciden").required("Confirma tu contraseña"),
-  });
-
-  const formik = useFormik({
-    initialValues: {
-      nombre: "", apellido: "", email: "", dni: "",
-      nombre_usuario: "", numero_telefono: "", contraseña: "", confirmPassword: "",
-    },
-    validationSchema,
-    onSubmit: async (values) => {
-      clearError();
-      const data: RegisterRequestDto = {
-        nombre: values.nombre,
-        apellido: values.apellido,
-        email: values.email,
-        contraseña: values.contraseña,
-        dni: values.dni,
-        nombre_usuario: values.nombre_usuario,
-        numero_telefono: values.numero_telefono,
-      };
-      try {
-        await register(data);
-        setRegisteredEmail(values.email);
-        setModalOpen(true);
-      } catch (err) {
-        // Error manejado por el contexto, se mostrará en la UI
-      }
-    },
-  });
-
-  const handleResend = async () => {
-    setResending(true);
-    setResendStatus(null);
-    try {
-      await resendConfirmation(registeredEmail);
-      setResendStatus("Email reenviado correctamente.");
-    } catch {
-      setResendStatus("Error al reenviar. Intente nuevamente.");
-    } finally {
-      setResending(false);
-    }
-  };
-
-  const handleClose = () => {
-    setModalOpen(false);
-    navigate("/login");
-  };
-
-  // Si ocurre un error mientras el modal está abierto (raro, pero posible), lo cerramos
-  useEffect(() => {
-    if (error && modalOpen) setModalOpen(false);
-  }, [error, modalOpen]);
-
-  if (isInitializing) {
+  if (status.isInitializing) {
     return (
       <Box display="flex" height="100vh" justifyContent="center" alignItems="center" bgcolor="background.default">
         <CircularProgress color="primary" />
@@ -125,54 +73,73 @@ const Register: React.FC = () => {
     <>
       <AuthFormContainer
         title="Crea tu Cuenta"
-        subtitle="Únete a nuestra comunidad de inversores y ahorristas hoy mismo."
+        subtitle="Únete a nuestra comunidad de inversores hoy mismo."
         maxWidth="sm"
       >
         <Box textAlign="center" mb={4}>
-          <Box sx={{ width: 56, height: 56, borderRadius: '50%', bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main', display: 'flex', alignItems: 'center', justifyContent: 'center', mx: 'auto', mb: 2 }}>
+          <Box sx={{ 
+            width: 56, height: 56, borderRadius: '50%', mx: 'auto', mb: 2,
+            bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main', 
+            display: 'flex', alignItems: 'center', justifyContent: 'center' 
+          }}>
             <PersonAdd fontSize="large" />
           </Box>
           <Typography variant="h5" fontWeight={700} gutterBottom>Regístrate</Typography>
-          <Typography variant="body2" color="text.secondary">Completa el formulario para comenzar</Typography>
         </Box>
 
-        {error && (
-          <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }} onClose={clearError}>
-            {error}
+        {status.error && (
+          <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>
+            {status.error}
           </Alert>
         )}
 
         <form onSubmit={formik.handleSubmit}>
           <Stack spacing={2}>
+            {/* Fila 1: Nombre y Apellido */}
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
-              <FormTextField name="nombre" label="Nombre" formik={formik} disabled={isLoading} />
-              <FormTextField name="apellido" label="Apellido" formik={formik} disabled={isLoading} />
+              <FormTextField name="nombre" label="Nombre" formik={formik} disabled={status.isLoading} />
+              <FormTextField name="apellido" label="Apellido" formik={formik} disabled={status.isLoading} />
             </Box>
-            <FormTextField name="email" label="Email" type="email" formik={formik} disabled={isLoading} />
+
+            {/* Fila 2: Email */}
+            <FormTextField name="email" label="Email" type="email" formik={formik} disabled={status.isLoading} />
+
+            {/* Fila 3: DNI y Teléfono */}
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
-              <FormTextField name="dni" label="DNI" formik={formik} disabled={isLoading} />
-              <FormTextField name="numero_telefono" label="Teléfono" formik={formik} disabled={isLoading} />
+              <FormTextField name="dni" label="DNI" formik={formik} disabled={status.isLoading} />
+              <FormTextField name="numero_telefono" label="Teléfono" formik={formik} disabled={status.isLoading} />
             </Box>
-            <FormTextField name="nombre_usuario" label="Usuario" formik={formik} disabled={isLoading} />
+
+            {/* Fila 4: Usuario */}
+            <FormTextField name="nombre_usuario" label="Usuario" formik={formik} disabled={status.isLoading} />
+
+            {/* Fila 5: Password */}
             <FormTextField
               name="contraseña"
               label="Contraseña"
-              type={showPassword ? "text" : "password"}
+              type={status.showPassword ? "text" : "password"}
               formik={formik}
-              disabled={isLoading}
+              disabled={status.isLoading}
               InputProps={{
                 endAdornment: (
                   <InputAdornment position="end">
-                    <IconButton onClick={() => setShowPassword(!showPassword)} edge="end">
-                      {showPassword ? <VisibilityOff /> : <Visibility />}
+                    <IconButton onClick={actions.togglePassword} edge="end">
+                      {status.showPassword ? <VisibilityOff /> : <Visibility />}
                     </IconButton>
                   </InputAdornment>
                 ),
               }}
             />
-            <FormTextField name="confirmPassword" label="Confirmar Contraseña" type="password" formik={formik} disabled={isLoading} />
-            <Button fullWidth variant="contained" type="submit" size="large" disabled={isLoading} sx={{ py: 1.5, fontWeight: 700, mt: 2, borderRadius: 2 }}>
-              {isLoading ? <CircularProgress size={24} color="inherit" /> : "REGISTRARSE"}
+            
+            {/* Fila 6: Confirmar Password */}
+            <FormTextField name="confirmPassword" label="Confirmar Contraseña" type="password" formik={formik} disabled={status.isLoading} />
+
+            <Button 
+              fullWidth variant="contained" type="submit" size="large" 
+              disabled={status.isLoading} 
+              sx={{ py: 1.5, fontWeight: 700, mt: 2, borderRadius: 2 }}
+            >
+              {status.isLoading ? <CircularProgress size={24} color="inherit" /> : "REGISTRARSE"}
             </Button>
           </Stack>
         </form>
@@ -180,28 +147,23 @@ const Register: React.FC = () => {
         <Box textAlign="center" mt={4}>
           <Typography variant="body2" color="text.secondary">
             ¿Ya tienes cuenta?{' '}
-            <Link component="button" variant="body2" onClick={() => navigate("/login")} underline="hover" fontWeight={700} color="primary">
+            <Link 
+              component="button" variant="body2" fontWeight={700} color="primary" underline="hover"
+              onClick={actions.navigateToLogin} 
+            >
               Inicia sesión aquí
             </Link>
           </Typography>
         </Box>
       </AuthFormContainer>
 
-      <Dialog open={modalOpen} onClose={handleClose} PaperProps={{ sx: { borderRadius: 3, p: 1 } }}>
-        <DialogTitle sx={{ textAlign: 'center', fontWeight: 800, fontSize: '1.5rem' }}>¡Bienvenido! 🎉</DialogTitle>
-        <DialogContent>
-          <DialogContentText textAlign="center" sx={{ fontSize: '1rem', mb: 2 }}>
-            Hemos enviado un enlace de confirmación a <strong>{registeredEmail}</strong>.<br />Por favor activa tu cuenta para ingresar.
-          </DialogContentText>
-          {resendStatus && <Alert severity="info" sx={{ mt: 2, borderRadius: 2 }}>{resendStatus}</Alert>}
-        </DialogContent>
-        <DialogActions sx={{ justifyContent: 'center', pb: 3, px: 3, flexDirection: 'column', gap: 1 }}>
-          <Button onClick={handleClose} variant="contained" fullWidth size="large" sx={{ fontWeight: 700, borderRadius: 2 }}>Ir al Login</Button>
-          <Button onClick={handleResend} disabled={resending} size="small" sx={{ textTransform: 'none' }}>
-            {resending ? "Enviando..." : "No recibí el email, reenviar"}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <SuccessDialog 
+        open={status.modalOpen} 
+        email={status.registeredEmail}
+        onClose={actions.closeModal}
+        onResend={actions.handleResend}
+        resendStatus={status.resendStatus}
+      />
     </>
   );
 };

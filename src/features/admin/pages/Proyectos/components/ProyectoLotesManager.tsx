@@ -98,7 +98,7 @@ export const ProyectoLotesManager: React.FC<ProyectoLotesManagerProps> = ({
           onClick={onAssignLotes}
           sx={{ borderRadius: 2, fontWeight: 700, boxShadow: theme.shadows[2] }}
         >
-          Nuevo Lote
+          Gestionar Lotes
         </Button>
       </Stack>
 

@@ -15,7 +15,7 @@ import type { CreateLoteDto, LoteDto, UpdateLoteDto } from '@/core/types/dto/lot
 import { useConfirmDialog } from '@/shared/hooks/useConfirmDialog';
 import { useModal } from '@/shared/hooks/useModal';
 import useSnackbar from '@/shared/hooks/useSnackbar';
-import { useSortedData } from './useSortedData';
+import { useSortedData } from '../useSortedData';
 
 // ============================================================================
 // DEBOUNCE HELPER

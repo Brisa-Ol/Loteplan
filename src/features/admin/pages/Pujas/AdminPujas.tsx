@@ -1,43 +1,36 @@
 // src/features/admin/pages/Pujas/AdminPujas.tsx
 
 import {
-  Block, CancelScheduleSend, EmojiEvents, ErrorOutline, Gavel,
-  Image as ImageIcon, MonetizationOn, Person, ReceiptLong,
-  Restore, // 🆕 Icono para Revertir Pago
-  StopCircle, Timer, TrendingUp,
-  ViewList,
-  ViewModule,
-  Warning
+  EmojiEvents, Gavel, Image as ImageIcon,
+  StopCircle, Timer, TrendingUp, ViewList, ViewModule
 } from '@mui/icons-material';
 import {
   alpha, Avatar, Box, Button, Card, CardActions, CardContent,
-  Divider,
-  IconButton,
-  Paper, Stack, Tab, Tabs, Tooltip,
-  Typography, useTheme
+  Divider, Paper, Stack, Typography, useTheme
 } from '@mui/material';
 import React, { useMemo, useState } from 'react';
 
 import imagenService from '@/core/api/services/imagen.service';
 import type { LoteDto } from '@/core/types/dto/lote.dto';
 import type { PujaDto } from '@/core/types/dto/puja.dto';
-import { useAdminPujas } from '../../hooks/useAdminPujas';
+
 
 import { AdminPageHeader } from '@/shared/components/admin/Adminpageheader';
 import AlertBanner from '@/shared/components/admin/Alertbanner';
 import MetricsGrid from '@/shared/components/admin/Metricsgrid';
 import { ViewModeToggle, type ViewMode } from '@/shared/components/admin/Viewmodetoggle';
-import { DataTable, type DataTableColumn } from '@/shared/components/data-grid/DataTable/DataTable';
+import { DataTable } from '@/shared/components/data-grid/DataTable/DataTable';
 import { QueryHandler } from '@/shared/components/data-grid/QueryHandler/QueryHandler';
-import { StatCard, StatusBadge } from '@/shared/components/domain/cards/StatCard/StatCard';
+import { StatCard } from '@/shared/components/domain/cards/StatCard/StatCard';
 import { ConfirmDialog } from '@/shared/components/domain/modals/ConfirmDialog/ConfirmDialog';
 import { FilterBar, FilterSearch } from '@/shared/components/forms/filters/FilterBar';
 import { PageContainer } from '@/shared/components/layout/containers/PageContainer/PageContainer';
 
+import { useAdminPujas } from '../../hooks/lotes/useAdminPujas';
 import DetallePujaModal from './components/DetallePujaModal';
 
 // ============================================================================
-// SUB-COMPONENTES MEMOIZADOS
+// SUB-COMPONENTES (Podio y Card en Vivo)
 // ============================================================================
 
 const Top3List = React.memo<{ pujas: PujaDto[]; getUserName: (id: number) => string }>(({ pujas, getUserName }) => {
@@ -107,194 +100,63 @@ const AdminPujas: React.FC = () => {
   const logic = useAdminPujas();
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
 
-  // --- COLUMNAS (Memoizadas) ---
-  const columnsCobros: DataTableColumn<LoteDto>[] = useMemo(() => [
-    {
-      id: 'lote', label: 'Lote / ID', minWidth: 220, render: (l) => (
-        <Stack direction="row" spacing={2} alignItems="center">
-          <Avatar src={imagenService.resolveImageUrl(l.imagenes?.[0]?.url || '')} variant="rounded" sx={{ width: 40, height: 40 }}><ImageIcon /></Avatar>
-          <Box>
-            <Typography fontWeight={700} variant="body2">{l.nombre_lote}</Typography>
-            <Typography variant="caption" color="text.secondary">ID: {l.id}</Typography>
-          </Box>
-        </Stack>
-      )
-    },
-    {
-      id: 'ganador', label: 'Ganador', minWidth: 180, render: (l) => (
-        <Stack direction="row" alignItems="center" spacing={1.5}>
-          <Avatar sx={{ width: 28, height: 28, fontSize: 12, bgcolor: alpha(theme.palette.secondary.main, 0.1), color: theme.palette.secondary.main }}><Person fontSize="inherit" /></Avatar>
-          <Box>
-            <Typography variant="body2" fontWeight={600}>
-              {l.id_ganador ? logic.getUserName(l.id_ganador) : '-'}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">Cliente Verificado</Typography>
-          </Box>
-        </Stack>
-      )
-    },
-    {
-      id: 'monto', label: 'Monto a Cobrar', render: (l) => {
-        const monto = l.monto_ganador_lote || l.precio_base;
-        return <Typography fontWeight={700} fontFamily="monospace">${Number(monto).toLocaleString()}</Typography>
-      }
-    },
-    {
-      id: 'acciones', label: 'Acciones', align: 'right', render: (l) => (
-        <Stack direction="row" spacing={0.5} justifyContent="flex-end">
-          
-          {/* 🆕 BOTÓN REVERTIR PAGO (Service: revertWinnerPayment) */}
-          {/* Solo visible si ya se pagó o para corregir errores administrativos */}
-          <Tooltip title="Revertir Estado de Pago (Corrección)">
-            <span>
-              <IconButton
-                size="small"
-                sx={{ color: 'warning.main', bgcolor: alpha(theme.palette.warning.main, 0.05) }}
-                onClick={() => logic.handleRevertirPago(l)} 
-                disabled={logic.isMutating} 
-              >
-                <Restore fontSize="small" />
-              </IconButton>
-            </span>
-          </Tooltip>
-
-          {/* 🆕 BOTÓN CANCELAR/IMPAGO (Service: cancelarGanadoraAnticipada) */}
-          <Tooltip title="Anular Adjudicación (Impago)">
-            <span>
-              <IconButton
-                size="small"
-                sx={{ color: 'error.main', bgcolor: alpha(theme.palette.error.main, 0.05) }}
-                onClick={() => logic.handleCancelarAdjudicacion(l)}
-                disabled={logic.isMutating || !l.id_puja_mas_alta}
-              >
-                <CancelScheduleSend fontSize="small" />
-              </IconButton>
-            </span>
-          </Tooltip>
-        </Stack>
-      )
-    }
-  ], [logic, theme]);
-
-  const columnsImpagos: DataTableColumn<LoteDto>[] = useMemo(() => [
-    {
-      id: 'lote', label: 'Lote', minWidth: 200, render: (l) => (
-        <Stack direction="row" spacing={1.5} alignItems="center">
-          <ErrorOutline color="error" fontSize="small" />
-          <Typography fontWeight={700} variant="body2">{l.nombre_lote}</Typography>
-        </Stack>
-      )
-    },
-    {
-      id: 'intentos', label: 'Severidad', render: (l) => {
-        const intentos = l.intentos_fallidos_pago || 0;
-        return <StatusBadge status={intentos >= 3 ? 'failed' : 'warning'} customLabel={`${intentos}/3 FALLOS`} />;
-      }
-    },
-    {
-      id: 'acciones', label: 'Acciones', align: 'right', render: (l) => (
-        <Tooltip title="Bloquear / Forzar Finalización">
-          <Button variant="contained" color="error" size="small" startIcon={<Block />} onClick={() => logic.handleForceFinish(l)}>
-            Sancionar
-          </Button>
-        </Tooltip>
-      )
-    }
-  ], [logic]);
-
   return (
     <PageContainer maxWidth="xl" sx={{ py: 3 }}>
-      <AdminPageHeader title="Sala de Control de Subastas" subtitle="Gestión en tiempo real de subastas, adjudicaciones y control de pagos." />
+      <AdminPageHeader title="Sala de Subastas (En Vivo)" subtitle="Monitoreo en tiempo real y adjudicación de lotes." />
 
-      {/* METRICS */}
-      <MetricsGrid columns={{ xs: 1, sm: 2, lg: 4 }}>
-        <StatCard title="En Vivo" value={logic.analytics.activos.length} icon={<Gavel />} color="success" loading={logic.loading} subtitle="Subastas activas" />
-        <StatCard title="Por Cobrar" value={logic.analytics.pendientesPago.length} icon={<ReceiptLong />} color="info" loading={logic.loading} subtitle="Adjudicaciones pendientes" />
-        <StatCard title="Volumen en Juego" value={`$${logic.analytics.dineroEnJuego.toLocaleString()}`} icon={<MonetizationOn />} color="warning" loading={logic.loading} subtitle="Capital potencial total" />
-        <StatCard title="Impagos / Riesgo" value={logic.analytics.lotesEnRiesgo.length} icon={<ErrorOutline />} color="error" loading={logic.loading} subtitle="Atención requerida" />
+      {/* METRICS (Solo relevantes para la subasta en vivo) */}
+      <MetricsGrid columns={{ xs: 1, sm: 2, lg: 3 }}>
+        <StatCard title="Subastas Activas" value={logic.analytics.activos.length} icon={<Gavel />} color="success" loading={logic.loading} subtitle="Lotes recibiendo ofertas" />
+        <StatCard title="Volumen en Juego" value={`$${logic.analytics.dineroEnJuego.toLocaleString()}`} icon={<TrendingUp />} color="warning" loading={logic.loading} subtitle="Suma de pujas actuales" />
+        <StatCard title="Total Ofertas Hoy" value={Object.values(logic.pujasPorLote).flat().length} icon={<Timer />} color="info" loading={logic.loading} subtitle="Interacción de usuarios" />
       </MetricsGrid>
 
-      {/* TABS & FILTERS */}
-      <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems="flex-end" mb={3} spacing={2}>
-        <Paper elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', p: 0.5, bgcolor: alpha(theme.palette.background.paper, 0.6) }}>
-          <Tabs value={logic.tabValue} onChange={(_, v) => logic.setTabValue(v)} indicatorColor="primary" textColor="primary">
-            <Tab icon={<Timer />} label="En Vivo" iconPosition="start" sx={{ fontWeight: 700, minHeight: 48 }} />
-            <Tab icon={<ReceiptLong />} label="Gestión de Cobros" iconPosition="start" sx={{ fontWeight: 700, minHeight: 48 }} />
-            <Tab icon={<Warning />} label="Impagos" iconPosition="start" sx={{ fontWeight: 700, minHeight: 48 }} />
-          </Tabs>
+      {/* CONTROLES Y FILTROS */}
+      <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems="center" mb={3} spacing={2}>
+        <FilterBar sx={{ flex: 1, maxWidth: 500 }}>
+          <FilterSearch placeholder="Buscar lote activo..." value={logic.filterLoteNombre} onChange={(e) => logic.setFilterLoteNombre(e.target.value)} sx={{ flexGrow: 1 }} />
+        </FilterBar>
+
+        <Paper elevation={0} sx={{ borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
+          <ViewModeToggle value={viewMode} onChange={(m) => setViewMode(m)} options={[{ value: 'grid', label: 'Grid', icon: <ViewModule fontSize="small" /> }, { value: 'table', label: 'Lista', icon: <ViewList fontSize="small" /> }]} />
         </Paper>
-        <Stack direction="row" spacing={2} width={{ xs: '100%', md: 'auto' }}>
-          {logic.tabValue === 0 && (
-            <ViewModeToggle value={viewMode} onChange={(m) => setViewMode(m)} options={[{ value: 'grid', label: 'Grid', icon: <ViewModule fontSize="small" /> }, { value: 'table', label: 'Lista', icon: <ViewList fontSize="small" /> }]} />
-          )}
-          <FilterBar sx={{ width: { xs: '100%', md: 400 } }}>
-            <FilterSearch placeholder="Buscar lote..." value={logic.filterLoteNombre} onChange={(e) => logic.setFilterLoteNombre(e.target.value)} sx={{ flexGrow: 1 }} />
-          </FilterBar>
-        </Stack>
       </Stack>
 
-      {/* CONTENT */}
+      {/* CONTENIDO: SOLO SUBASTAS ACTIVAS */}
       <QueryHandler isLoading={logic.loading} error={logic.error as Error}>
-
-        {/* TAB 0: EN VIVO */}
-        {logic.tabValue === 0 && (
-          <>
-            {logic.analytics.activos.length === 0 ? (
-              <AlertBanner severity="info" title="Sin Actividad" message="No hay subastas en curso en este momento." />
-            ) : viewMode === 'grid' ? (
-              <Box display="grid" gridTemplateColumns={{ xs: '1fr', md: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' }} gap={3}>
-                {logic.analytics.activos.map(lote => (
-                  <LiveAuctionCard
-                    key={lote.id}
-                    lote={lote}
-                    pujas={logic.pujasPorLote[lote.id] || []}
-                    getUserName={logic.getUserName}
-                    onFinish={logic.handleFinalizarSubasta}
-                  />
-                ))}
-              </Box>
-            ) : (
-              <DataTable
-                data={logic.analytics.activos}
-                columns={[
-                  { id: 'id', label: 'Lote', render: (l) => l.nombre_lote },
-                  { id: 'precio', label: 'Oferta Actual', render: (l) => `$${Number(logic.pujasPorLote[l.id]?.[0]?.monto_puja || l.precio_base).toLocaleString()}` },
-                  { id: 'pujas', label: 'Cant. Pujas', align: 'center', render: (l) => logic.pujasPorLote[l.id]?.length || 0 },
-                  { id: 'acciones', label: '', align: 'right', render: (l) => <Button size="small" variant="contained" color="error" onClick={() => logic.handleFinalizarSubasta(l)}>Finalizar</Button> }
-                ]}
-                getRowKey={r => r.id}
-                showInactiveToggle={false} // Siempre mostrar todo lo filtrado
-                pagination
-                defaultRowsPerPage={10}
+        {logic.analytics.activos.length === 0 ? (
+          <AlertBanner severity="info" title="Sala Vacía" message="No hay subastas programadas o en curso en este momento." />
+        ) : viewMode === 'grid' ? (
+          <Box display="grid" gridTemplateColumns={{ xs: '1fr', md: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' }} gap={3}>
+            {logic.analytics.activos.map(lote => (
+              <LiveAuctionCard
+                key={lote.id}
+                lote={lote}
+                pujas={logic.pujasPorLote[lote.id] || []}
+                getUserName={logic.getUserName}
+                onFinish={logic.handleFinalizarSubasta}
               />
-            )}
-          </>
-        )}
-
-        {/* TAB 1: GESTIÓN DE COBROS */}
-        {logic.tabValue === 1 && (
+            ))}
+          </Box>
+        ) : (
           <DataTable
-            columns={columnsCobros}
-            data={logic.analytics.pendientesPago}
-            getRowKey={(row) => row.id}
-            highlightedRowId={logic.highlightedId}
+            data={logic.analytics.activos}
+            columns={[
+              {
+                id: 'lote', label: 'Lote', minWidth: 200, render: (l) => (
+                  <Stack direction="row" spacing={2} alignItems="center">
+                    <Avatar src={imagenService.resolveImageUrl(l.imagenes?.[0]?.url || '')} variant="rounded"><ImageIcon /></Avatar>
+                    <Typography fontWeight={700} variant="body2">{l.nombre_lote}</Typography>
+                  </Stack>
+                )
+              },
+              { id: 'precio', label: 'Oferta Actual', render: (l) => <Typography fontWeight={700} color="primary">${Number(logic.pujasPorLote[l.id]?.[0]?.monto_puja || l.precio_base).toLocaleString()}</Typography> },
+              { id: 'pujas', label: 'Pujas', align: 'center', render: (l) => logic.pujasPorLote[l.id]?.length || 0 },
+              { id: 'acciones', label: '', align: 'right', render: (l) => <Button size="small" variant="contained" color="error" onClick={() => logic.handleFinalizarSubasta(l)}>Finalizar</Button> }
+            ]}
+            getRowKey={r => r.id}
             showInactiveToggle={false}
-            emptyMessage="No hay cobros pendientes de adjudicación."
-            pagination={true}
-            defaultRowsPerPage={10}
-          />
-        )}
-
-        {/* TAB 2: IMPAGOS */}
-        {logic.tabValue === 2 && (
-          <DataTable
-            columns={columnsImpagos}
-            data={logic.analytics.lotesEnRiesgo}
-            getRowKey={(row) => row.id}
-            highlightedRowId={logic.highlightedId}
-            showInactiveToggle={false}
-            emptyMessage="Excelente, no hay lotes en situación de impago."
-            pagination={true}
+            pagination
             defaultRowsPerPage={10}
           />
         )}

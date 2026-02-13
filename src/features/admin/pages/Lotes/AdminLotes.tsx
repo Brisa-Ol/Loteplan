@@ -23,7 +23,8 @@ import ManageLoteImagesModal from './modals/ManageLoteImagesModal';
 
 import imagenService from '@/core/api/services/imagen.service';
 import type { LoteDto } from '@/core/types/dto/lote.dto';
-import { useAdminLotes } from '../../hooks/useAdminLotes';
+import { useAdminLotes } from '../../hooks/lotes/useAdminLotes';
+
 
 // ============================================================================
 // COMPONENTE: CARD DE LOTE (Memoizado)

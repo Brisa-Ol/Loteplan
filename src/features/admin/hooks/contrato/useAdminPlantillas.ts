@@ -11,7 +11,7 @@ import ProyectoService from '@/core/api/services/proyecto.service';
 import type { ContratoPlantillaDto } from '@/core/types/dto/contrato-plantilla.dto';
 
 import { downloadSecureFile } from '@/shared/utils/fileUtils';
-import { useSortedData } from './useSortedData';
+import { useSortedData } from '../useSortedData';
 
 // ============================================================================
 // DEBOUNCE HELPER

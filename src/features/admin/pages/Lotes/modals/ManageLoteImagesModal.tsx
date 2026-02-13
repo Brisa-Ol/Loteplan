@@ -19,7 +19,7 @@ import type { CreateImagenDto, ImagenDto } from '../../../../../core/types/dto/i
 import type { LoteDto } from '../../../../../core/types/dto/lote.dto';
 import { QueryHandler } from '../../../../../shared/components/data-grid/QueryHandler/QueryHandler';
 import { ConfirmDialog } from '../../../../../shared/components/domain/modals/ConfirmDialog/ConfirmDialog'; // 👈 IMPORTAR COMPONENTE
-import ImageUploadZone from '../../../../../shared/components/forms/upload/ImageUploadZone/ImageUploadZone';
+import ImageUploadZone from '../../../../../shared/components/forms/upload/ImageUploadZone';
 import { useConfirmDialog } from '../../../../../shared/hooks/useConfirmDialog'; // 👈 IMPORTAR HOOK
 import useSnackbar from '../../../../../shared/hooks/useSnackbar';
 

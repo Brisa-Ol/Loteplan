@@ -1,6 +1,6 @@
 // src/features/client/pages/Lotes/components/LoteCard.tsx
 
-import { ArrowForward, BrokenImage, Gavel, Lock } from '@mui/icons-material';
+import { ArrowForward, BrokenImage, EmojiEmotions, Gavel, Lock } from '@mui/icons-material';
 import {
   Box, Button, Card, CardContent, CardMedia, Chip, Fade,
   keyframes, Skeleton, Typography, useTheme
@@ -11,6 +11,9 @@ import ImagenService from '@/core/api/services/imagen.service';
 import type { LoteDto } from '@/core/types/dto/lote.dto';
 import { useCurrencyFormatter } from '@/features/client/hooks/useCurrencyFormatter';
 import { useImageLoader } from '@/features/client/hooks/useImageLoader';
+
+// ✅ NUEVO: Importamos el contexto de autenticación
+import { useAuth } from '@/core/context/AuthContext';
 
 // Animación para estado "En Vivo"
 const pulse = keyframes`
@@ -44,6 +47,9 @@ const LoteCard: React.FC<LoteCardProps> = ({
   const formatCurrency = useCurrencyFormatter();
   const { loaded, error, handleLoad, handleError } = useImageLoader();
 
+  // ✅ Obtenemos el usuario actual
+  const { user } = useAuth();
+
   // Memoización de la URL de la imagen
   const imgUrl = useMemo(() => {
     const img = lote.imagenes?.[0];
@@ -52,15 +58,26 @@ const LoteCard: React.FC<LoteCardProps> = ({
 
   const isActiva = lote.estado_subasta === 'activa';
 
+  // ✅ LÓGICA CLAVE: Determinamos si el usuario va ganando
+  const soyGanador = useMemo(() => {
+    if (!isAuthenticated || !user) return false;
+    return isActiva
+      ? (lote as any).ultima_puja?.id_usuario === user.id
+      : lote.id_ganador === user.id;
+  }, [isActiva, lote, isAuthenticated, user]);
+
+  // ✅ CONDICIÓN CORREGIDA: Puede pujar si tiene tokens O si ya es el ganador
+  const puedePujar = isSubscribed && isActiva && (hasTokens || soyGanador);
+
   // Lógica principal de interacción
   const handleBotonClick = (e: React.MouseEvent) => {
     e.stopPropagation();
 
-    // Si no está autenticado o cumple condiciones de subasta, intenta pujar (el padre maneja el login)
-    if (!isAuthenticated || (isSubscribed && hasTokens && isActiva)) {
+    // Si no está autenticado o tiene permisos para pujar, abre el modal/login
+    if (!isAuthenticated || puedePujar) {
       onPujar(lote);
     } else {
-      // Si no, navega al detalle
+      // Si no, navega al detalle (ej. si no tiene tokens y no es el ganador)
       onNavigate(lote.id);
     }
   };
@@ -69,7 +86,13 @@ const LoteCard: React.FC<LoteCardProps> = ({
   const getButtonContent = () => {
     if (isLoadingSub) return { text: "...", icon: null };
     if (!isAuthenticated) return { text: "Ingresar para Pujar", icon: <Lock /> };
-    if (isSubscribed && hasTokens && isActiva) return { text: "Pujar Ahora", icon: <Gavel /> };
+
+    if (puedePujar) {
+      // ✅ Si va ganando, le mostramos un botón para defender su posición
+      if (soyGanador) return { text: "Mejorar Oferta", icon: <EmojiEmotions /> };
+      return { text: "Pujar Ahora", icon: <Gavel /> };
+    }
+
     return { text: "Ver Detalles", icon: <ArrowForward /> };
   };
 
@@ -88,12 +111,14 @@ const LoteCard: React.FC<LoteCardProps> = ({
           cursor: 'pointer',
           overflow: 'hidden',
           borderRadius: 3,
-          borderColor: isActiva ? 'primary.light' : 'divider',
+          // ✅ Feedback visual si va ganando
+          borderColor: soyGanador ? 'success.main' : (isActiva ? 'primary.light' : 'divider'),
+          borderWidth: soyGanador ? 2 : 1,
           transition: 'all 0.3s ease',
           '&:hover': {
             transform: 'translateY(-4px)',
             boxShadow: theme.shadows[10],
-            borderColor: isActiva ? 'primary.main' : 'divider',
+            borderColor: soyGanador ? 'success.main' : (isActiva ? 'primary.main' : 'divider'),
             '& .lote-img': { transform: 'scale(1.05)' }
           }
         }}
@@ -136,13 +161,18 @@ const LoteCard: React.FC<LoteCardProps> = ({
             )}
           </Box>
 
-          {/* Precio Base */}
+          {/* Precio Base / Oferta Actual */}
           <Box position="absolute" bottom={12} left={12}>
             <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.8)', display: 'block' }}>
-              PRECIO BASE
+              {/* ✅ Muestra "OFERTA ACTUAL" si ya hay una puja */}
+              {(lote as any).ultima_puja?.monto ? 'OFERTA ACTUAL' : 'PRECIO BASE'}
             </Typography>
             <Typography variant="h5" sx={{ color: 'white', fontWeight: 800 }}>
-              {formatCurrency(lote.precio_base)}
+              {formatCurrency(
+                (lote as any).ultima_puja?.monto
+                  ? Number((lote as any).ultima_puja.monto)
+                  : lote.precio_base
+              )}
             </Typography>
           </Box>
         </Box>
@@ -162,6 +192,8 @@ const LoteCard: React.FC<LoteCardProps> = ({
             onClick={handleBotonClick}
             disabled={isLoadingSub}
             startIcon={buttonState.icon}
+            // ✅ Botón verde si va ganando
+            color={soyGanador ? 'success' : 'primary'}
             sx={{ fontWeight: 700 }}
           >
             {buttonState.text}
@@ -170,12 +202,22 @@ const LoteCard: React.FC<LoteCardProps> = ({
           {/* Estado de Tokens (Solo si aplica) */}
           {isAuthenticated && isSubscribed && isActiva && (
             <Box display="flex" justifyContent="center" mt={2}>
-              <Chip
-                label={hasTokens ? `${tokensDisponibles} disponible` : 'Token en uso'}
-                size="small"
-                variant="outlined"
-                color={hasTokens ? 'default' : 'warning'}
-              />
+              {soyGanador ? (
+                // ✅ Chip especial si es el líder de la subasta
+                <Chip
+                  label="¡Vas Ganando!"
+                  size="small"
+                  color="success"
+                  sx={{ fontWeight: 'bold' }}
+                />
+              ) : (
+                <Chip
+                  label={hasTokens ? `${tokensDisponibles} disponible` : 'Token en uso'}
+                  size="small"
+                  variant="outlined"
+                  color={hasTokens ? 'default' : 'warning'}
+                />
+              )}
             </Box>
           )}
         </CardContent>

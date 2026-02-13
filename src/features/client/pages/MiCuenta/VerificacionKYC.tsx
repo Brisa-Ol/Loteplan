@@ -52,10 +52,6 @@ import { FileUploadCard } from './components/FileUploadCard';
 
 const TIPOS_DOCUMENTO: TipoDocumento[] = ['DNI', 'PASAPORTE', 'LICENCIA'];
 
-// ... (ApprovedView, PendingView y KycInfoCard SE MANTIENEN IGUALES) ...
-// Para ahorrar espacio en la respuesta, asumo que copias los sub-componentes visuales
-// ApprovedView, PendingView, KycInfoCard aquí. 
-// 👇👇👇 COPIA Y PEGA TUS SUBCOMPONENTES VISUALES AQUI 👇👇👇
 
 const ApprovedView = () => {
   const theme = useTheme();

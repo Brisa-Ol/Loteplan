@@ -49,7 +49,8 @@ import KycDetailModal from './modals/KycDetailModal';
 
 // --- TYPES & HOOKS ---
 import type { KycDTO } from '@/core/types/dto/kyc.dto';
-import { useAdminKYC } from '../../hooks/useAdminKYC';
+import { useAdminKYC } from '../../hooks/usuario/useAdminKYC';
+
 
 // ============================================================================
 // COMPONENTE: MÉTRICAS (Memoizado)

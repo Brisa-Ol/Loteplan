@@ -1,13 +1,11 @@
+import { useAuth } from '@/core/context';
+import type { CreateUsuarioDto, UpdateUserAdminDto, UsuarioDto } from '@/core/types/dto';
+import { useConfirmDialog, useModal, useSnackbar } from '@/shared/hooks';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useAuth } from '../../../core/context/AuthContext';
-import { useConfirmDialog } from '../../../shared/hooks/useConfirmDialog';
-import { useModal } from '../../../shared/hooks/useModal';
-import useSnackbar from '../../../shared/hooks/useSnackbar';
+import { useSortedData } from '../useSortedData';
+import UsuarioService from '@/core/api/services/usuario.service';
 
-import UsuarioService from '../../../core/api/services/usuario.service';
-import type { CreateUsuarioDto, UpdateUserAdminDto, UsuarioDto } from '../../../core/types/dto/usuario.dto';
-import { useSortedData } from './useSortedData';
 
 // ============================================================================
 // HOOK DE DEBOUNCE OPTIMIZADO

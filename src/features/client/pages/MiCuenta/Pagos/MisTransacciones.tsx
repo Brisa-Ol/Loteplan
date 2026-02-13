@@ -1,38 +1,89 @@
-import React, { useState, useMemo, useCallback } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
+// src/features/client/pages/Transacciones/MisTransacciones.tsx
+
 import {
-  Box, Typography, Stack, Chip, Button, Tooltip,
-  Tabs, Tab, Badge, TextField, InputAdornment,
-  Paper, useTheme, alpha
-} from '@mui/material';
-import {
-  TrendingUp, EventRepeat, Gavel, CheckCircle,
-  Search, MonetizationOn, Warning, SwapHoriz, ReceiptLong
+  AccountBalanceWallet,
+  CheckCircle,
+  ErrorOutline,
+  EventRepeat, Gavel,
+  HelpOutline, HourglassEmpty,
+  MonetizationOn,
+  ReceiptLong,
+  Refresh, Schedule,
+  Search,
+  SwapHoriz,
+  TrendingUp,
+  Warning
 } from '@mui/icons-material';
+import {
+  alpha,
+  Badge,
+  Box,
+  Button,
+  Chip,
+  InputAdornment,
+  Paper,
+  Stack,
+  Tab,
+  Tabs,
+  TextField,
+  Tooltip,
+  Typography,
+  useTheme
+} from '@mui/material';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import React, { useCallback, useMemo, useState, type JSX } from 'react';
 
 // Componentes Compartidos
+import { DataTable, type DataTableColumn } from '@/shared/components/data-grid/DataTable/DataTable';
+import { QueryHandler } from '@/shared/components/data-grid/QueryHandler/QueryHandler';
+import { StatCard } from '@/shared/components/domain/cards/StatCard/StatCard';
 import { PageContainer } from '@/shared/components/layout/containers/PageContainer/PageContainer';
 import { PageHeader } from '@/shared/components/layout/headers/PageHeader';
-import { QueryHandler } from '@/shared/components/data-grid/QueryHandler/QueryHandler';
-import { DataTable, type DataTableColumn } from '@/shared/components/data-grid/DataTable/DataTable';
-import { StatCard } from '@/shared/components/domain/cards/StatCard/StatCard';
 
 // Hooks y Servicios
-import useSnackbar from '@/shared/hooks/useSnackbar';
-import TransaccionService from '@/core/api/services/transaccion.service';
 import MercadoPagoService from '@/core/api/services/pagoMercado.service';
+import TransaccionService from '@/core/api/services/transaccion.service';
 import { useCurrencyFormatter } from '@/features/client/hooks/useCurrencyFormatter';
-
+import useSnackbar from '@/shared/hooks/useSnackbar';
 
 // Tipos
-import type { TransaccionDto } from '@/core/types/dto/transaccion.dto';
 import type { ApiError } from '@/core/api/httpService';
 import { env } from '@/core/config/env';
-import { getStatusConfig } from '../../utils/inversionStatus';
+import type { TransaccionDto } from '@/core/types/dto/transaccion.dto';
+
 
 // =====================================================
-// HELPERS DE CONFIGURACIÓN
+// UTILS & HELPERS DE CONFIGURACIÓN
 // =====================================================
+
+type ChipColor = 'success' | 'info' | 'warning' | 'error' | 'default' | 'primary' | 'secondary';
+
+// ✅ Lógica de Estados Incorporada
+const getStatusConfig = (estado: string): { label: string; color: ChipColor; icon: JSX.Element } => {
+  const configs: Record<string, { label: string; color: ChipColor; icon: JSX.Element }> = {
+    // Estados de Éxito
+    pagado: { label: 'Pagado', color: 'success', icon: <CheckCircle fontSize="small" /> },
+    cubierto_por_puja: { label: 'Cubierto (Puja)', color: 'success', icon: <AccountBalanceWallet fontSize="small" /> },
+
+    // Estados de Alerta / Pendientes
+    pendiente: { label: 'Pendiente', color: 'info', icon: <Schedule fontSize="small" /> },
+    en_proceso: { label: 'En Proceso', color: 'warning', icon: <HourglassEmpty fontSize="small" /> },
+
+    // Estados de Error / Peligro
+    vencido: { label: 'Vencido', color: 'error', icon: <ErrorOutline fontSize="small" /> },
+    fallido: { label: 'Fallido', color: 'error', icon: <ErrorOutline fontSize="small" /> },
+    expirado: { label: 'Expirado', color: 'error', icon: <ErrorOutline fontSize="small" /> },
+
+    // Otros
+    reembolsado: { label: 'Reembolsado', color: 'info', icon: <Refresh fontSize="small" /> },
+  };
+
+  return configs[estado] || {
+    label: estado.toUpperCase(),
+    color: 'default',
+    icon: <HelpOutline fontSize="small" />
+  };
+};
 
 const getTypeConfig = (tipo: string) => {
   switch (tipo) {
@@ -67,6 +118,8 @@ const DateCell = React.memo<{ fecha: string; id: number }>(({ fecha, id }) => {
   );
 });
 
+DateCell.displayName = 'DateCell';
+
 const ConceptCell = React.memo<{
   nombreProyecto: string;
   tipoTransaccion: string;
@@ -93,6 +146,8 @@ const ConceptCell = React.memo<{
     </Box>
   );
 });
+
+ConceptCell.displayName = 'ConceptCell';
 
 // =====================================================
 // COMPONENTE PRINCIPAL
@@ -194,6 +249,7 @@ const MisTransacciones: React.FC = () => {
     {
       id: 'estado', label: 'Estado', align: 'center', minWidth: 140,
       render: (row) => {
+        // ✅ APLICAMOS LA FUNCIÓN IMPORTADA
         const { label, color, icon } = getStatusConfig(row.estado_transaccion);
         return (
           <Tooltip title={row.error_detalle || ''} arrow>

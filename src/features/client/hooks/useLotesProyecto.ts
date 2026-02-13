@@ -6,49 +6,41 @@ import { useModal } from '../../../shared/hooks/useModal';
 import { useConfirmDialog } from '../../../shared/hooks/useConfirmDialog';
 import useSnackbar from '../../../shared/hooks/useSnackbar';
 import type { LoteDto } from '@/core/types/dto/lote.dto';
-// ✅ Importamos ProyectoService
 import ProyectoService from '@/core/api/services/proyecto.service';
 import SuscripcionService from '@/core/api/services/suscripcion.service';
 import FavoritoService from '@/core/api/services/favorito.service';
 import { ROUTES } from '@/routes';
+
+// ✅ NUEVO: Importamos el auth context para saber el ID del usuario
+import { useAuth } from '@/core/context/AuthContext';
 
 export const useLotesProyecto = (idProyecto: number, isAuthenticated: boolean) => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const location = useLocation();
   const { showSuccess, showError, showWarning } = useSnackbar();
+  
+  // ✅ Obtenemos el usuario actual
+  const { user } = useAuth();
 
   const [selectedLote, setSelectedLote] = useState<LoteDto | null>(null);
   const pujarModal = useModal();
   const confirmDialog = useConfirmDialog();
 
-  // ✅ CORRECCIÓN CLAVE:
-  // En lugar de llamar a LoteService (que da 403 o requiere filtrar todo),
-  // llamamos al Proyecto, el cual YA INCLUYE la lista de lotes en su respuesta.
   const { data: proyecto, isLoading, error } = useQuery({
     queryKey: ['proyectoConLotes', idProyecto],
     queryFn: async () => {
-      // Usamos el endpoint: /proyectos/:id/activo
       const res = await ProyectoService.getByIdActive(idProyecto);
       return res.data;
     },
-    // Este endpoint es público en tu backend, así que siempre podemos cargar los datos
-    // aunque validamos que exista el ID.
     enabled: !!idProyecto,
-    staleTime: 1000 * 60 * 5, // Cacheamos 5 minutos
+    staleTime: 1000 * 60 * 5, 
   });
 
-  // ✅ Extraemos los lotes directamente del proyecto
-  // Si proyecto.lotes viene undefined, usamos un array vacío.
   const lotes = useMemo(() => {
     return proyecto?.lotes || [];
   }, [proyecto]);
 
-  // -----------------------------------------------------------
-  // El resto del hook se mantiene igual para manejar la lógica de usuario
-  // -----------------------------------------------------------
-
-  // QUERY PRIVADA: Verifica suscripción (Solo si está logueado)
   const { data: misSuscripciones } = useQuery({
     queryKey: ['misSuscripciones'],
     queryFn: async () => (await SuscripcionService.getMisSuscripciones()).data,
@@ -56,7 +48,6 @@ export const useLotesProyecto = (idProyecto: number, isAuthenticated: boolean) =
     staleTime: 1000 * 60 * 2,
   });
 
-  // ESTADOS DE PARTICIPACIÓN
   const { isSubscribed, hasTokens, tokensDisponibles } = useMemo(() => {
     if (!misSuscripciones || !isAuthenticated) {
       return { isSubscribed: false, hasTokens: false, tokensDisponibles: 0 };
@@ -79,7 +70,6 @@ export const useLotesProyecto = (idProyecto: number, isAuthenticated: boolean) =
     };
   }, [misSuscripciones, idProyecto, isAuthenticated]);
 
-  // Mutation: Favoritos
   const unfavMutation = useMutation({
     mutationFn: (loteId: number) => FavoritoService.toggle(loteId),
     onSuccess: (response, loteId) => {
@@ -96,8 +86,8 @@ export const useLotesProyecto = (idProyecto: number, isAuthenticated: boolean) =
     }
   });
 
-  // HANDLERS
-  const handleOpenPujar = useCallback((lote: LoteDto) => {
+  // ✅ HANDLERS CORREGIDOS
+  const handleOpenPujar = useCallback((lote: any) => { // Usamos any o extendemos LoteDto si typescript se queja de ultima_puja
     if (!isAuthenticated) {
       return navigate(ROUTES.LOGIN, { state: { from: location.pathname } });
     }
@@ -107,14 +97,21 @@ export const useLotesProyecto = (idProyecto: number, isAuthenticated: boolean) =
       return;
     }
 
-    if (!hasTokens) {
+    // ✅ LÓGICA DE GANADOR: Verificamos si este usuario va ganando ESTE lote en particular
+    const esGanadorActual = lote.estado_subasta === 'activa' 
+      ? lote.ultima_puja?.id_usuario === user?.id 
+      : lote.id_ganador === user?.id;
+
+    // ✅ CONDICIÓN CORREGIDA: Si NO tiene tokens Y TAMPOCO es el ganador, lo bloqueamos.
+    // Si es el ganador, la condición es falsa y lo deja pasar a defender su puja.
+    if (!hasTokens && !esGanadorActual) {
       showWarning('Ya utilizaste tu token de subasta en este proyecto.');
       return;
     }
 
     setSelectedLote(lote);
     pujarModal.open();
-  }, [isAuthenticated, isSubscribed, hasTokens, navigate, location.pathname, showWarning, pujarModal]);
+  }, [isAuthenticated, isSubscribed, hasTokens, user?.id, navigate, location.pathname, showWarning, pujarModal]);
 
   const handleRequestUnfav = useCallback((loteId: number) => {
     if (!isAuthenticated) {
@@ -133,7 +130,7 @@ export const useLotesProyecto = (idProyecto: number, isAuthenticated: boolean) =
   }, [pujarModal]);
 
   return {
-    lotes, // ✅ Retorna los lotes extraídos del proyecto
+    lotes, 
     isLoading,
     error,
     selectedLote,

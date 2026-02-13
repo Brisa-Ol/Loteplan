@@ -34,7 +34,7 @@ import {
 
 // Hooks y DTOs
 import type { ContratoFirmadoDto } from '@/core/types/dto/contrato-firmado.dto';
-import { useAdminContratosFirmados } from '../../hooks/useAdminContratosFirmados';
+
 
 // Componentes Compartidos
 import { AdminPageHeader } from '@/shared/components/admin/Adminpageheader';
@@ -46,6 +46,7 @@ import { DataTable, type DataTableColumn } from '@/shared/components/data-grid/D
 import { QueryHandler } from '@/shared/components/data-grid/QueryHandler/QueryHandler';
 import { FilterBar, FilterSearch } from '@/shared/components/forms/filters/FilterBar';
 import { PageContainer } from '@/shared/components/layout/containers/PageContainer/PageContainer';
+import { useAdminContratosFirmados } from '../../hooks/contrato/useAdminContratosFirmados';
 
 // ============================================================================
 // SUB-COMPONENTE: ANALYTICS (Memoizado para performance)

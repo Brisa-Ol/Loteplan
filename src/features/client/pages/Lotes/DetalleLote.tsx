@@ -66,7 +66,7 @@ const DetalleLote: React.FC = () => {
   const { estaSuscripto, tieneTokens, tokensDisponibles, isLoading: loadingSub } =
     useVerificarSuscripcion(lote?.id_proyecto ?? undefined);
 
-  const { precioDisplay, soyGanador, hayOfertas, statusConfig } = useMemo(() => {
+const { precioDisplay, soyGanador, hayOfertas, statusConfig } = useMemo(() => {
     let config = {
       label: 'Cargando...',
       color: 'default' as any,
@@ -82,7 +82,14 @@ const DetalleLote: React.FC = () => {
     const precioBase = Number(lote.precio_base);
 
     const precioDisplay = ofertaActual > 0 ? ofertaActual : precioBase;
-    const soyGanador = isAuthenticated && (lote.id_ganador === user?.id);
+    
+    // ✅ CORRECCIÓN CLAVE: 
+    // Si la subasta está activa, el "ganador temporal" es el dueño de la última puja.
+    // Si finalizó, usamos el id_ganador oficial del lote.
+    const soyElPostorMasAlto = isAuthenticated && (lote.ultima_puja?.id_usuario === user?.id);
+    const soyElGanadorFinal = isAuthenticated && (lote.id_ganador === user?.id);
+    
+    const soyGanador = lote.estado_subasta === 'activa' ? soyElPostorMasAlto : soyElGanadorFinal;
 
     switch (lote.estado_subasta) {
       case 'activa':

@@ -38,54 +38,41 @@ const FavoritoService = {
   // 📊 ESTADÍSTICAS (Admin) - LÓGICA CORREGIDA
   // =================================================
 
-  getPopularidadLotes: async (idProyecto?: number | 'global'): Promise<PopularidadLoteDTO[]> => {
+getPopularidadLotes: async (idProyecto?: number | 'global'): Promise<PopularidadLoteDTO[]> => {
       const params: any = {};
 
-      // 1. Configurar parámetros según modo
       if (typeof idProyecto === 'number') {
           params.id_proyecto = idProyecto;
       } else {
           params.modo = 'global';
-          params.limit = 10; // Traemos un poco más para tener margen al filtrar
+          // ⚠️ Quitamos el limit o lo ponemos muy alto para traer todo del back
+          params.limit = 100; 
       }
 
-      // 2. Llamada al Backend
-      // Usamos 'any' en la respuesta axios porque la estructura varía según el modo
       const { data } = await httpService.get<any>('/favoritos/estadisticas', { params });
-
-      // 3. 🔍 DETECCIÓN DE ESTRUCTURA (Desestructuración)
-      // Si viene por proyecto, la lista está en 'estadisticas_lotes'.
-      // Si viene global, la lista está en 'ranking'.
       const rawList = data.estadisticas_lotes || data.ranking || [];
 
-      // 4. 🛑 FILTRO DE NEGOCIO: Excluir lotes finalizados o cancelados
+      // 1. FILTRO: Dejamos pasar 'finalizada', solo ocultamos 'cancelada'
       const activeList = rawList.filter((item: any) => {
           const estado = item.estado_subasta?.toLowerCase();
-          return estado !== 'finalizada' && estado !== 'cancelada';
+          return estado !== 'cancelada'; 
       });
 
-      // 5. Calcular el total SOBRE LA LISTA FILTRADA
-      // Esto es importante para que el porcentaje (barra de progreso) sea relativo a lo que se ve
       const totalVotos = activeList.reduce((acc: number, item: any) => acc + Number(item.total_favoritos), 0);
 
-      // 6. Mapeo a DTO del Frontend
       const mappedStats: PopularidadLoteDTO[] = activeList.map((item: any) => ({
         id_lote: item.id_lote,           
         nombre_lote: item.nombre_lote,   
-        // Aseguramos que sean números
         cantidad_favoritos: Number(item.total_favoritos),
         precio_base: Number(item.precio_base),
-        
-        // Cálculo del porcentaje para la barra de progreso
         porcentaje_popularidad: totalVotos > 0 
           ? Math.round((Number(item.total_favoritos) / totalVotos) * 100) 
           : 0
       }));
 
-      // Ordenar y cortar al Top 5 final
-      return mappedStats
-        .sort((a, b) => b.cantidad_favoritos - a.cantidad_favoritos)
-        .slice(0, 5);
+      // 2. RETORNO SIN CORTE: Eliminamos .slice(0, 5)
+      // Devolvemos la lista completa ordenada
+      return mappedStats.sort((a, b) => b.cantidad_favoritos - a.cantidad_favoritos);
   },
 
   // =================================================

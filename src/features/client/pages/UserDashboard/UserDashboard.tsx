@@ -52,8 +52,13 @@ const calculateDaysRemaining = (dateString?: string): number => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const dueDate = new Date(dateString);
+  dueDate.setHours(0, 0, 0, 0);
+  
   const diffTime = dueDate.getTime() - today.getTime();
-  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  // Evitamos números negativos si la fecha ya pasó
+  return Math.max(0, days); 
 };
 
 const UserDashboard: React.FC = () => {
@@ -158,30 +163,36 @@ const UserDashboard: React.FC = () => {
 
               <Box>
                 {/* ========== ALERTA DE SUBASTA GANADA ========== */}
-                {cantidadGanadas > 0 && (
-                  <Fade in={true}>
-                    <Alert
-                      severity={hayPujasUrgentes ? "warning" : "success"}
-                      variant="filled"
-                      icon={<EmojiEvents fontSize="large" />}
-                      action={
-                        <Button variant="contained" color="inherit" size="small" onClick={() => navigate('/client/finanzas/pujas')} sx={{ fontWeight: 800, color: 'text.primary', bgcolor: 'white' }}>
-                          Gestionar Pago
-                        </Button>
-                      }
-                      sx={{ borderRadius: 2, mb: 4, py: 2, boxShadow: `0 8px 24px ${alpha(theme.palette.success.main, 0.25)}` }}
-                    >
-                      <Typography variant="subtitle1" fontWeight={800}>
-                        {hayPujasUrgentes ? `¡Acción Requerida! Tienes ${cantidadGanadas} subasta(s) pendiente(s)` : `¡Felicitaciones! Has ganado ${cantidadGanadas} subasta(s)`}
-                      </Typography>
-                      {pujaMasUrgente && (
-                        <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                          Lote: {pujaMasUrgente.lote?.nombre_lote} • Quedan <strong>{pujaMasUrgente.diasRestantes} días</strong> para pagar.
-                        </Typography>
-                      )}
-                    </Alert>
-                  </Fade>
-                )}
+               {/* ========== ALERTA DE SUBASTA GANADA ========== */}
+{cantidadGanadas > 0 && (
+  <Fade in={true}>
+    <Alert
+      severity={hayPujasUrgentes ? "warning" : "success"}
+      variant="filled"
+      icon={<EmojiEvents fontSize="large" />}
+      action={
+        <Button variant="contained" color="inherit" size="small" onClick={() => navigate('/client/finanzas/pujas')} sx={{ fontWeight: 800, color: 'text.primary', bgcolor: 'white' }}>
+          Gestionar Pago
+        </Button>
+      }
+      sx={{ borderRadius: 2, mb: 4, py: 2, boxShadow: `0 8px 24px ${alpha(theme.palette.success.main, 0.25)}` }}
+    >
+      <Typography variant="subtitle1" fontWeight={800}>
+        {hayPujasUrgentes ? `¡Acción Requerida! Tienes ${cantidadGanadas} subasta(s) pendiente(s)` : `¡Felicitaciones! Has ganado ${cantidadGanadas} subasta(s)`}
+      </Typography>
+      
+      {/* ✅ CORRECCIÓN AQUÍ: Manejo de días en 0 */}
+      {pujaMasUrgente && (
+        <Typography variant="body2" sx={{ opacity: 0.9 }}>
+          Lote: {pujaMasUrgente.lote?.nombre_lote} • 
+          {pujaMasUrgente.diasRestantes > 0 
+            ? ` Quedan ${pujaMasUrgente.diasRestantes} días para pagar.` 
+            : ` El plazo de pago ha vencido (Pendiente de anulación).`}
+        </Typography>
+      )}
+    </Alert>
+  </Fade>
+)}
 
                 {/* ========== GRID DE ESTADO FINANCIERO (Mejorado) ========== */}
                 <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 3, mb: 5 }}>

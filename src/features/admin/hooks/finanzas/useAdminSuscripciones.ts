@@ -8,7 +8,8 @@ import { useConfirmDialog } from '@/shared/hooks/useConfirmDialog';
 import type { SuscripcionDto } from '@/core/types/dto/suscripcion.dto';
 import SuscripcionService from '@/core/api/services/suscripcion.service';
 import ProyectoService from '@/core/api/services/proyecto.service';
-import { useSortedData } from './useSortedData';
+import { useSortedData } from '../useSortedData';
+
 
 // ============================================================================
 // HOOK DE DEBOUNCE (Inline para consistencia)

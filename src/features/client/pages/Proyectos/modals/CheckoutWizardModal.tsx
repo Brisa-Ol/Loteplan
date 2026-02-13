@@ -380,8 +380,8 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { showSuccess, showInfo } = useSnackbar();
-const formatCurrency = useCurrencyFormatter({
-    currency: proyecto.moneda === 'USD' ? 'USD' : 'ARS' 
+  const formatCurrency = useCurrencyFormatter({
+    currency: proyecto.moneda === 'USD' ? 'USD' : 'ARS'
   });
   // STATE
   const [activeStep, setActiveStep] = useState(0);
@@ -436,7 +436,7 @@ const formatCurrency = useCurrencyFormatter({
       }, 2000);
     }
   });
-const montoAMostrar = useMemo(() => {
+  const montoAMostrar = useMemo(() => {
     if (tipo === 'inversion') {
       return formatCurrency(Number(proyecto.monto_inversion));
     }
@@ -733,12 +733,12 @@ const montoAMostrar = useMemo(() => {
 
           <Box flex={1} overflow="auto" p={{ xs: 2, md: 4 }}>
             {activeStep === 0 && (
-    <StepConfirmacion 
-        proyecto={proyecto} 
-        tipo={tipo} 
-        monto={montoAMostrar} // ✅ Usar el monto corregido
-    />
-  )}
+              <StepConfirmacion
+                proyecto={proyecto}
+                tipo={tipo}
+                monto={montoAMostrar} // ✅ Usar el monto corregido
+              />
+            )}
             {activeStep === 1 && <StepContrato plantilla={plantillaActual} isLoading={loadingPlantilla} />}
             {activeStep === 2 && (
               <StepSeguridad

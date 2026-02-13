@@ -30,12 +30,13 @@ import { ConfirmDialog } from '@/shared/components/domain/modals/ConfirmDialog/C
 import { FilterBar, FilterSearch, FilterSelect } from '@/shared/components/forms/filters/FilterBar';
 import { PageContainer } from '@/shared/components/layout/containers/PageContainer/PageContainer';
 
-import { useAdminTransacciones } from '@/features/admin/hooks/useAdminTransacciones';
+
 import { AdminPageHeader } from '@/shared/components/admin/Adminpageheader';
 import AlertBanner from '@/shared/components/admin/Alertbanner';
 import MetricsGrid from '@/shared/components/admin/Metricsgrid';
 import { ViewModeToggle, type ViewMode } from '@/shared/components/admin/Viewmodetoggle';
 import ModalDetalleTransaccion from './modal/ModalDetalleTransaccion';
+import { useAdminTransacciones } from '@/features/admin/hooks/finanzas/useAdminTransacciones';
 
 // ============================================================================
 // SUB-COMPONENTE: ANALYTICS (Memoizado para performance)

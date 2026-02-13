@@ -36,7 +36,7 @@ import {
 
 // Hooks y DTOs
 import type { ContratoPlantillaDto } from '@/core/types/dto/contrato-plantilla.dto';
-import { useAdminPlantillas } from '../../hooks/useAdminPlantillas';
+
 
 // Componentes Compartidos
 import { DataTable, type DataTableColumn } from '@/shared/components/data-grid/DataTable/DataTable';
@@ -54,6 +54,7 @@ import { ViewModeToggle, type ViewMode } from '@/shared/components/admin/Viewmod
 import CreatePlantillaModal from './components/modals/CreatePlantillaModal';
 import UpdateMetadataModal from './components/modals/UpdateMetadataModal';
 import UpdatePdfModal from './components/modals/UpdatePdfModal';
+import { useAdminPlantillas } from '../../hooks/contrato/useAdminPlantillas';
 
 // ============================================================================
 // SUB-COMPONENTE: ANALYTICS (Memoizado)

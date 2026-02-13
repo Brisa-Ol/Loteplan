@@ -46,12 +46,13 @@ import { FilterBar, FilterSearch, FilterSelect } from '@/shared/components/forms
 import { PageContainer } from '@/shared/components/layout/containers/PageContainer/PageContainer';
 
 import type { ProyectoDto } from '@/core/types/dto/proyecto.dto';
-import { useAdminProyectos, type TipoInversionFilter } from '../../hooks/useAdminProyectos';
+
 import ConfigCuotasModal from './modals/ConfigCuotasModal';
 import CreateProyectoModal from './modals/CreateProyectoModal';
 import EditProyectoModal from './modals/EditProyectoModal';
 import ManageImagesModal from './modals/ManageImagesModal';
 import ProjectLotesModal from './modals/ProjectLotesModal';
+import { useAdminProyectos, type TipoInversionFilter } from '../../hooks/proyecto/useAdminProyectos';
 
 // ============================================================================
 // COMPONENTE: VISTA DE CARDS (MEMOIZADO)

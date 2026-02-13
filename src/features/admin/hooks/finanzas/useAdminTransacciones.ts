@@ -2,13 +2,13 @@ import { useCallback, useMemo, useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTheme } from '@mui/material';
 
-import useSnackbar from '../../../shared/hooks/useSnackbar';
-import { useModal } from '../../../shared/hooks/useModal';
-import { useConfirmDialog } from '../../../shared/hooks/useConfirmDialog';
+
 
 import TransaccionService from '@/core/api/services/transaccion.service';
 import type { TransaccionDto } from '@/core/types/dto/transaccion.dto';
-import { useSortedData } from './useSortedData';
+import { useConfirmDialog, useModal, useSnackbar } from '@/shared/hooks';
+import { useSortedData } from '../useSortedData';
+
 
 // ============================================================================
 // DEBOUNCE HELPER

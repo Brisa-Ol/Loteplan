@@ -1,4 +1,7 @@
+// src/features/client/pages/Pagos/MisPagos.tsx
+
 import {
+  CheckCircle,
   Lock,
   PriorityHigh,
   ReceiptLong,
@@ -32,13 +35,32 @@ import MercadoPagoService from '@/core/api/services/pagoMercado.service';
 import SuscripcionService from '@/core/api/services/suscripcion.service';
 import { useCurrencyFormatter } from '@/features/client/hooks/useCurrencyFormatter';
 
-
 // Tipos
 import type { ApiError } from '@/core/api/httpService';
 import { env } from '@/core/config/env';
 import type { PagoDto } from '@/core/types/dto/pago.dto';
 import type { SuscripcionDto } from '@/core/types/dto/suscripcion.dto';
-import { getStatusConfig } from '../../utils/inversionStatus';
+
+// =====================================================
+// UTILS
+// =====================================================
+
+const getStatusConfig = (status: string) => {
+  switch (status) {
+    case 'pendiente':
+      return { label: 'PENDIENTE', color: 'info' as const, icon: <Schedule fontSize="small" /> };
+    case 'pagado':
+      return { label: 'PAGADO', color: 'success' as const, icon: <CheckCircle fontSize="small" /> };
+    case 'vencido':
+      return { label: 'VENCIDO', color: 'error' as const, icon: <PriorityHigh fontSize="small" /> };
+    case 'cubierto_por_puja':
+      return { label: 'CUBIERTO (PUJA)', color: 'secondary' as const, icon: <Stars fontSize="small" /> };
+    case 'cancelado':
+      return { label: 'CANCELADO', color: 'default' as const, icon: <Warning fontSize="small" /> };
+    default:
+      return { label: status.toUpperCase(), color: 'default' as const, icon: undefined };
+  }
+};
 
 // =====================================================
 // COMPONENTES DE CELDA (MEMOIZADOS)
@@ -56,6 +78,8 @@ const ProjectCell = React.memo<{ nombre: string; idSuscripcion: number }>(({ nom
   );
 });
 
+ProjectCell.displayName = 'ProjectCell';
+
 const ActionButton = React.memo<{
   pagoId: number; estadoPago: string; isProcessing: boolean; isThisProcessing: boolean; onPay: (id: number) => void;
 }>(({ pagoId, estadoPago, isProcessing, isThisProcessing, onPay }) => (
@@ -71,6 +95,8 @@ const ActionButton = React.memo<{
     {isThisProcessing ? '...' : estadoPago === 'vencido' ? 'Regularizar' : 'Pagar'}
   </Button>
 ));
+
+ActionButton.displayName = 'ActionButton';
 
 // =====================================================
 // COMPONENTE PRINCIPAL
@@ -149,7 +175,6 @@ const MisPagos: React.FC = () => {
     onError: () => setSelectedPagoId(null)
   });
 
-  // ✅ ESTA ERA LA QUE FALTABA
   const confirmar2FAMutation = useMutation({
     mutationFn: async (codigo: string) => {
       if (!selectedPagoId) throw new Error("ID de pago perdido.");
@@ -187,6 +212,7 @@ const MisPagos: React.FC = () => {
     },
     {
       id: 'estado_pago', label: 'Estado', minWidth: 140,
+      // ✅ CORREGIDO: Se restauró la función render
       render: (row) => {
         const { label, color, icon } = getStatusConfig(row.estado_pago);
         return (
@@ -252,7 +278,7 @@ const MisPagos: React.FC = () => {
       <TwoFactorAuthModal
         open={twoFaModal.isOpen}
         onClose={() => { twoFaModal.close(); setSelectedPagoId(null); setTwoFAError(null); }}
-        onSubmit={(code) => confirmar2FAMutation.mutate(code)} // ✅ Ahora existe
+        onSubmit={(code) => confirmar2FAMutation.mutate(code)}
         isLoading={confirmar2FAMutation.isPending}
         error={twoFAError}
         title="Confirmar Pago Seguro"

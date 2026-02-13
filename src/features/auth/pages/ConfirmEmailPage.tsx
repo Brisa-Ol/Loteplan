@@ -5,7 +5,7 @@ import {
 } from '@mui/material';
 import { ErrorOutline, VerifiedUser } from '@mui/icons-material';
 
-import AuthFormContainer from './components/AuthFormContainer/AuthFormContainer';
+import AuthFormContainer from './components/AuthFormContainer';
 import AuthService from '@/core/api/services/auth.service';
 import type { ApiError } from '@/core/api/httpService';
 

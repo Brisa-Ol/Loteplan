@@ -31,7 +31,8 @@ import DetalleSuscripcionModal from './components/DetalleSuscripcionModal';
 
 // Hooks y tipos
 import type { SuscripcionDto } from '@/core/types/dto/suscripcion.dto';
-import { useAdminSuscripciones } from '../../hooks/useAdminSuscripciones';
+import { useAdminSuscripciones } from '../../hooks/finanzas/useAdminSuscripciones';
+
 
 // ============================================================================
 // SUB-COMPONENTE: UserCell

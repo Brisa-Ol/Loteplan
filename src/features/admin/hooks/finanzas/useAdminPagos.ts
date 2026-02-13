@@ -8,7 +8,8 @@ import type { PagoDto } from '@/core/types/dto/pago.dto';
 import UsuarioService from '@/core/api/services/usuario.service';
 import PagoService from '@/core/api/services/pago.service';
 import ProyectoService from '@/core/api/services/proyecto.service';
-import { useSortedData } from './useSortedData';
+import { useSortedData } from '../useSortedData';
+
 
 export const useAdminPagos = () => {
   const theme = useTheme();

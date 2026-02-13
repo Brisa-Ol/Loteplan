@@ -322,35 +322,50 @@ const AdminDashboard: React.FC = () => {
                     </Select>
                   </Stack>
 
-                  <Box sx={{ height: 400 }}>
-                    <QueryHandler isLoading={logic.loadingPopularidad} error={null}>
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={logic.topLotes} layout="vertical" margin={{ left: 50, right: 30 }}>
-                          <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={theme.palette.divider} />
-                          <XAxis type="number" hide />
-                          <YAxis
-                            type="category"
-                            dataKey="nombre_lote"
-                            axisLine={false}
-                            tick={{ fontSize: 12, fontWeight: 600 }}
-                            width={100}
-                          />
-                          <RechartsTooltip
-                            cursor={{ fill: alpha(theme.palette.warning.main, 0.05) }}
-                            contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: theme.shadows[3] }}
-                          />
-                          <Bar
-                            dataKey="total_pujas"
-                            name="Favoritos"
-                            fill={theme.palette.warning.main}
-                            radius={[0, 6, 6, 0]}
-                            maxBarSize={30}
-                          />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </QueryHandler>
-                  </Box>
-                </Stack>
+                 {/* CÁLCULO DE ALTURA DINÁMICA */}
+    {/* 60px por cada lote, con un mínimo de 400px de altura */}
+    <Box sx={{ 
+        height: Math.max(400, logic.topLotes.length * 60), 
+        transition: 'height 0.3s ease',
+        overflowX: 'hidden'
+      }}>
+      <QueryHandler isLoading={logic.loadingPopularidad} error={null}>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart 
+            data={logic.topLotes} 
+            layout="vertical" 
+            // Ajustamos márgenes para que quepan los nombres largos
+            margin={{ left: 20, right: 30, top: 20, bottom: 20 }} 
+          >
+            <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={theme.palette.divider} />
+            <XAxis type="number" hide />
+            
+            <YAxis
+              type="category"
+              dataKey="nombre_lote"
+              axisLine={false}
+              tick={{ fontSize: 12, fontWeight: 600 }}
+              width={100}
+              interval={0} // ⚠️ IMPORTANTE: Fuerza a mostrar TODOS los nombres
+            />
+            
+            <RechartsTooltip
+              cursor={{ fill: alpha(theme.palette.warning.main, 0.05) }}
+              contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: theme.shadows[3] }}
+            />
+            
+            <Bar
+              dataKey="total_favoritos" // Asegúrate de usar esta key que definimos en el service
+              name="Favoritos"
+              fill={theme.palette.warning.main}
+              radius={[0, 6, 6, 0]}
+              barSize={30} // Grosor fijo de barra
+            />
+          </BarChart>
+        </ResponsiveContainer>
+      </QueryHandler>
+    </Box>
+  </Stack>
               )}
 
             </CardContent>

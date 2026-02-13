@@ -1,4 +1,5 @@
 // src/components/Admin/Proyectos/Components/modals/CreateProyectoModal.tsx
+// ✅ VERSIÓN MIGRADA - Usando ImageUpload unificado
 
 import {
   Add as AddIcon,
@@ -27,7 +28,7 @@ import * as Yup from 'yup';
 
 // Componentes Shared
 import BaseModal from '@/shared/components/domain/modals/BaseModal/BaseModal';
-import SingleImageUpload from '@/shared/components/forms/upload/singleImageUpload/SingleImageUpload';
+import ImageUpload from '@/shared/components/forms/upload/ImageUploadZone';
 
 // Interfaces
 interface FullProjectFormValues {
@@ -36,7 +37,7 @@ interface FullProjectFormValues {
   tipo_inversion: 'directo' | 'mensual';
   plazo_inversion: number;
   forma_juridica: string;
-  monto_inversion: number | string; // ✅ Ajustado para compatibilidad
+  monto_inversion: number | string;
   moneda: string;
   suscripciones_minimas: number;
   obj_suscripciones: number;
@@ -102,12 +103,9 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
     validateOnBlur: false,
     validateOnChange: false,
     onSubmit: async (values) => {
-      // ✅ Limpieza y formateo para el Backend de Inversiones
       const cleanData = {
         ...values,
-        // Forzamos monto a string para el DECIMAL del backend
         monto_inversion: values.monto_inversion.toString(),
-        // En inversión directa, el cupo siempre es 1 (fondeo total)
         obj_suscripciones: values.tipo_inversion === 'directo' ? 1 : values.obj_suscripciones,
         suscripciones_minimas: values.tipo_inversion === 'directo' ? 1 : values.suscripciones_minimas,
         latitud: values.latitud === '' ? null : values.latitud,
@@ -126,7 +124,7 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
     onClose();
   };
 
-  // ✅ Sincronización de reglas de negocio por Tipo de Inversión
+  // Sincronización de reglas de negocio por Tipo de Inversión
   useEffect(() => {
     if (formik.values.tipo_inversion === 'directo') {
       formik.setFieldValue('moneda', 'USD');
@@ -175,25 +173,55 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
 
   const sectionTitleSx = { fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', mb: 2, mt: 1, display: 'flex', alignItems: 'center', gap: 1, fontSize: '0.75rem' };
 
+  // ✅ HANDLER PARA ImageUpload - Con type casting seguro
+  const handleImageChange = (file: File | File[] | null) => {
+    // En modo single (multiple=false), siempre recibimos File | null
+    setImage(file as File | null);
+  };
+
   return (
     <BaseModal
-      open={open} onClose={handleReset} title="Nuevo Proyecto" icon={<AddIcon />} headerColor="primary"
-      hideConfirmButton hideCancelButton maxWidth="md" isLoading={isLoading}
+      open={open} 
+      onClose={handleReset} 
+      title="Nuevo Proyecto" 
+      icon={<AddIcon />} 
+      headerColor="primary"
+      hideConfirmButton 
+      hideCancelButton 
+      maxWidth="md" 
+      isLoading={isLoading}
       customActions={
         <>
-          <Button onClick={activeStep === 0 ? handleReset : () => setActiveStep(p => p === 2 && formik.values.tipo_inversion === 'directo' ? 0 : p - 1)} color="inherit" disabled={isLoading} sx={{ mr: 'auto' }}>
+          <Button 
+            onClick={activeStep === 0 ? handleReset : () => setActiveStep(p => p === 2 && formik.values.tipo_inversion === 'directo' ? 0 : p - 1)} 
+            color="inherit" 
+            disabled={isLoading} 
+            sx={{ mr: 'auto' }}
+          >
             {activeStep === 0 ? 'Cancelar' : 'Atrás'}
           </Button>
           {activeStep === 2 ? (
-            <Button variant="contained" onClick={formik.submitForm} startIcon={<AddIcon />} disabled={isLoading}>Crear Proyecto</Button>
+            <Button 
+              variant="contained" 
+              onClick={formik.submitForm} 
+              startIcon={<AddIcon />} 
+              disabled={isLoading}
+            >
+              Crear Proyecto
+            </Button>
           ) : (
-            <Button variant="contained" onClick={handleNext} endIcon={<ArrowForward />}>Siguiente</Button>
+            <Button 
+              variant="contained" 
+              onClick={handleNext} 
+              endIcon={<ArrowForward />}
+            >
+              Siguiente
+            </Button>
           )}
         </>
       }
     >
       <Stack spacing={3}>
-        {/* ✅ Stepper corregido para saltos de inversión directa */}
         <Stepper activeStep={activeStep === 2 && formik.values.tipo_inversion === 'directo' ? 1 : activeStep} alternativeLabel>
           {steps.map((label) => (<Step key={label}><StepLabel>{label}</StepLabel></Step>))}
         </Stepper>
@@ -202,42 +230,72 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
           <Box>
             <Stack spacing={2.5}>
               <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-                <TextField fullWidth label="Nombre del Proyecto" {...formik.getFieldProps('nombre_proyecto')} error={Boolean(formik.touched.nombre_proyecto && formik.errors.nombre_proyecto)} helperText={formik.touched.nombre_proyecto && formik.errors.nombre_proyecto} />
-                <TextField fullWidth label="Forma Jurídica" {...formik.getFieldProps('forma_juridica')} />
+                <TextField 
+                  fullWidth 
+                  label="Nombre del Proyecto" 
+                  {...formik.getFieldProps('nombre_proyecto')} 
+                  error={Boolean(formik.touched.nombre_proyecto && formik.errors.nombre_proyecto)} 
+                  helperText={formik.touched.nombre_proyecto && formik.errors.nombre_proyecto} 
+                />
+                <TextField 
+                  fullWidth 
+                  label="Forma Jurídica" 
+                  {...formik.getFieldProps('forma_juridica')} 
+                />
               </Stack>
 
               <Box>
                 <TextField
-                  fullWidth multiline rows={4} maxRows={10} label="Descripción Comercial"
+                  fullWidth 
+                  multiline 
+                  rows={4} 
+                  maxRows={10} 
+                  label="Descripción Comercial"
                   {...formik.getFieldProps('descripcion')}
                   error={Boolean(formik.touched.descripcion && formik.errors.descripcion)}
                   helperText={formik.errors.descripcion || `${formik.values.descripcion.length} caracteres`}
                 />
               </Box>
 
-              <Typography variant="subtitle2" sx={sectionTitleSx}><MonetizationIcon fontSize="inherit" /> Finanzas</Typography>
+              <Typography variant="subtitle2" sx={sectionTitleSx}>
+                <MonetizationIcon fontSize="inherit" /> Finanzas
+              </Typography>
               <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-                <TextField fullWidth select label="Tipo" {...formik.getFieldProps('tipo_inversion')}>
+                <TextField 
+                  fullWidth 
+                  select 
+                  label="Tipo" 
+                  {...formik.getFieldProps('tipo_inversion')}
+                >
                   <MenuItem value="mensual">Plan de Ahorro (Cuotas)</MenuItem>
                   <MenuItem value="directo">Inversión Directa (Fondeo)</MenuItem>
                 </TextField>
                 <TextField 
-                    fullWidth 
-                    type="number" 
-                    label={formik.values.tipo_inversion === 'directo' ? "Monto Total de Inversión" : "Valor de Referencia del Lote"} 
-                    InputProps={{ 
-                        startAdornment: <InputAdornment position="start">{formik.values.moneda === 'USD' ? 'u$d' : '$'}</InputAdornment> 
-                    }} 
-                    {...formik.getFieldProps('monto_inversion')} 
+                  fullWidth 
+                  type="number" 
+                  label={formik.values.tipo_inversion === 'directo' ? "Monto Total de Inversión" : "Valor de Referencia del Lote"} 
+                  InputProps={{ 
+                    startAdornment: <InputAdornment position="start">{formik.values.moneda === 'USD' ? 'u$d' : '$'}</InputAdornment> 
+                  }} 
+                  {...formik.getFieldProps('monto_inversion')} 
                 />
               </Stack>
 
-              {/* ✅ Campos condicionales optimizados para Inversión */}
               {formik.values.tipo_inversion === 'mensual' ? (
                 <Paper variant="outlined" sx={{ p: 2, bgcolor: alpha(theme.palette.primary.main, 0.02), borderRadius: 2 }}>
                   <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-                    <TextField fullWidth type="number" label="Plazo (Meses)" {...formik.getFieldProps('plazo_inversion')} />
-                    <TextField fullWidth type="number" label="Cupo Máximo (Inversores)" {...formik.getFieldProps('obj_suscripciones')} />
+                    <TextField 
+                      fullWidth 
+                      type="number" 
+                      label="Plazo (Meses)" 
+                      {...formik.getFieldProps('plazo_inversion')} 
+                    />
+                    <TextField 
+                      fullWidth 
+                      type="number" 
+                      label="Cupo Máximo (Inversores)" 
+                      {...formik.getFieldProps('obj_suscripciones')} 
+                    />
                   </Stack>
                 </Paper>
               ) : (
@@ -246,10 +304,24 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
                 </Alert>
               )}
 
-              <Typography variant="subtitle2" sx={sectionTitleSx}><CalendarIcon fontSize="inherit" /> Fechas Clave</Typography>
+              <Typography variant="subtitle2" sx={sectionTitleSx}>
+                <CalendarIcon fontSize="inherit" /> Fechas Clave
+              </Typography>
               <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-                <TextField fullWidth type="date" label="Apertura de Ronda" InputLabelProps={{ shrink: true }} {...formik.getFieldProps('fecha_inicio')} />
-                <TextField fullWidth type="date" label="Cierre Estimado" InputLabelProps={{ shrink: true }} {...formik.getFieldProps('fecha_cierre')} />
+                <TextField 
+                  fullWidth 
+                  type="date" 
+                  label="Apertura de Ronda" 
+                  InputLabelProps={{ shrink: true }} 
+                  {...formik.getFieldProps('fecha_inicio')} 
+                />
+                <TextField 
+                  fullWidth 
+                  type="date" 
+                  label="Cierre Estimado" 
+                  InputLabelProps={{ shrink: true }} 
+                  {...formik.getFieldProps('fecha_cierre')} 
+                />
               </Stack>
             </Stack>
           </Box>
@@ -257,15 +329,38 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
 
         {activeStep === 1 && (
           <Box>
-            <Alert severity="info" sx={{ mb: 3 }}>Configura el valor de referencia para el cálculo de cuotas dinámicas.</Alert>
+            <Alert severity="info" sx={{ mb: 3 }}>
+              Configura el valor de referencia para el cálculo de cuotas dinámicas.
+            </Alert>
             <Stack spacing={3}>
-              <TextField fullWidth label="Insumo de Referencia" {...formik.getFieldProps('nombre_cemento_cemento')} />
+              <TextField 
+                fullWidth 
+                label="Insumo de Referencia" 
+                {...formik.getFieldProps('nombre_cemento_cemento')} 
+              />
               <Stack direction="row" spacing={2}>
-                <TextField fullWidth type="number" label="Unidades" {...formik.getFieldProps('valor_cemento_unidades')} />
-                <TextField fullWidth type="number" label="Precio Unitario" {...formik.getFieldProps('valor_cemento')} />
+                <TextField 
+                  fullWidth 
+                  type="number" 
+                  label="Unidades" 
+                  {...formik.getFieldProps('valor_cemento_unidades')} 
+                />
+                <TextField 
+                  fullWidth 
+                  type="number" 
+                  label="Precio Unitario" 
+                  {...formik.getFieldProps('valor_cemento')} 
+                />
               </Stack>
-              <Paper sx={{ p: 3, textAlign: 'right', border: `1px solid ${theme.palette.success.light}`, bgcolor: alpha(theme.palette.success.main, 0.02) }}>
-                <Typography variant="caption" color="text.secondary">Estimación de Cuota Inicial</Typography>
+              <Paper sx={{ 
+                p: 3, 
+                textAlign: 'right', 
+                border: `1px solid ${theme.palette.success.light}`, 
+                bgcolor: alpha(theme.palette.success.main, 0.02) 
+              }}>
+                <Typography variant="caption" color="text.secondary">
+                  Estimación de Cuota Inicial
+                </Typography>
                 <Typography variant="h4" fontWeight={900} color="success.main">
                   ${simulation.final.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </Typography>
@@ -275,9 +370,22 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
         )}
 
         {activeStep === 2 && (
-          <Box textAlign="center" py={2}>
-            <SingleImageUpload image={image} onChange={setImage} maxSizeMB={10} />
-            {!image && <Alert severity="warning" sx={{ mt: 2 }}>Debes seleccionar una imagen de portada para el proyecto.</Alert>}
+          <Box py={2}>
+            {/* ✅ COMPONENTE MIGRADO */}
+            <ImageUpload
+              multiple={false}
+              image={image}
+              onChange={handleImageChange}
+              maxSizeMB={10}
+              label="Sube una imagen de portada para el proyecto"
+              helperText="JPG, PNG o WEBP • Máximo 10MB"
+            />
+            
+            {!image && (
+              <Alert severity="warning" sx={{ mt: 2 }}>
+                Debes seleccionar una imagen de portada para el proyecto.
+              </Alert>
+            )}
           </Box>
         )}
       </Stack>

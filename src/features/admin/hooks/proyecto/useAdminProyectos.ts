@@ -11,7 +11,8 @@ import { useConfirmDialog } from '@/shared/hooks/useConfirmDialog';
 import { useModal } from '@/shared/hooks/useModal';
 import useSnackbar from '@/shared/hooks/useSnackbar';
 import type { CreateProyectoDto, ProyectoDto, UpdateProyectoDto } from '@/core/types/dto/proyecto.dto';
-import { useSortedData } from './useSortedData';
+import { useSortedData } from '../useSortedData';
+
 
 export type TipoInversionFilter = 'all' | 'mensual' | 'directo';
 
