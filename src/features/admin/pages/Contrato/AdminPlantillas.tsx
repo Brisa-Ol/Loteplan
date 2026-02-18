@@ -159,7 +159,7 @@ const AdminPlantillas: React.FC = () => {
     },
     {
       id: 'nombre_archivo',
-      label: 'Documento / Integridad',
+      label: 'Nombre del Contrato',
       minWidth: 280,
       render: (row) => (
         <Stack direction="row" spacing={2} alignItems="center">
@@ -173,7 +173,7 @@ const AdminPlantillas: React.FC = () => {
           </Avatar>
           <Box>
             <Stack direction="row" alignItems="center" spacing={1}>
-              <Typography variant="body2" fontWeight={700}>
+             <Typography variant="body2" fontWeight={800} color={row.activo ? 'text.primary' : 'text.secondary'}>
                 {row.nombre_archivo}
               </Typography>
               {row.integrity_compromised && (
@@ -211,16 +211,17 @@ const AdminPlantillas: React.FC = () => {
     },
     {
       id: 'id_proyecto',
-      label: 'Asignación',
+      label: 'Proyecto Asignado',
       minWidth: 200,
       render: (row) => {
         const proyecto = logic.proyectos.find(p => p.id === row.id_proyecto);
         return row.id_proyecto ? (
           <Stack direction="row" alignItems="center" spacing={1}>
             <FolderShared fontSize="small" color="primary" sx={{ fontSize: 16 }} />
-            <Typography variant="caption" fontWeight={700} color="primary.main">
-              {proyecto?.nombre_proyecto?.toUpperCase() || `ID: ${row.id_proyecto}`}
+           <Typography variant="body2" fontWeight={700} color="primary.main">
+              {proyecto?.nombre_proyecto || `ID: ${row.id_proyecto}`}
             </Typography>
+        
           </Stack>
         ) : (
           <Stack direction="row" alignItems="center" spacing={1}>

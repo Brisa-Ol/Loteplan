@@ -1,11 +1,11 @@
 // src/components/Admin/Proyectos/Components/modals/CreateProyectoModal.tsx
-// ✅ VERSIÓN MIGRADA - Usando ImageUpload unificado
 
 import {
   Add as AddIcon,
   ArrowForward,
   CalendarMonth as CalendarIcon,
-  MonetizationOn as MonetizationIcon
+  MonetizationOn as MonetizationIcon,
+  PictureAsPdf as PdfIcon // 🆕 Nuevo ícono para el PDF
 } from '@mui/icons-material';
 import {
   Alert,
@@ -56,7 +56,8 @@ interface FullProjectFormValues {
 interface CreateProyectoModalProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (data: any, image: File | null) => Promise<void>;
+  // ✅ Agregamos el parámetro para el nombre del contrato
+  onSubmit: (data: any, image: File | null, contrato: File | null, nombreContrato: string) => Promise<void>;
   isLoading?: boolean;
 }
 
@@ -89,6 +90,8 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
   const theme = useTheme();
   const [activeStep, setActiveStep] = useState(0);
   const [image, setImage] = useState<File | null>(null);
+const [contratoFile, setContratoFile] = useState<File | null>(null);
+const [nombreContrato, setNombreContrato] = useState<string>(''); // 🆕 Nuevo estado
 
   const formik = useFormik<FullProjectFormValues>({
     initialValues: {
@@ -110,21 +113,22 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
         suscripciones_minimas: values.tipo_inversion === 'directo' ? 1 : values.suscripciones_minimas,
         latitud: values.latitud === '' ? null : values.latitud,
         longitud: values.longitud === '' ? null : values.longitud,
+        
       };
 
-      await onSubmit(cleanData, image);
-      handleReset();
+   await onSubmit(cleanData, image, contratoFile, nombreContrato); // 🆕
+  handleReset();
     },
   });
 
   const handleReset = () => {
     formik.resetForm();
     setImage(null);
+    setContratoFile(null); // 🆕 Limpiar PDF
     setActiveStep(0);
     onClose();
   };
 
-  // Sincronización de reglas de negocio por Tipo de Inversión
   useEffect(() => {
     if (formik.values.tipo_inversion === 'directo') {
       formik.setFieldValue('moneda', 'USD');
@@ -145,21 +149,27 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
     const gastosAdmin = cuotaPura * ((porcentaje_administrativo || 0) / 100);
     const iva = gastosAdmin * ((porcentaje_iva || 0) / 100);
 
-    return {
-      pura: cuotaPura,
-      admin: gastosAdmin,
-      final: cuotaPura + gastosAdmin + iva
-    };
+    return { pura: cuotaPura, admin: gastosAdmin, final: cuotaPura + gastosAdmin + iva };
   }, [formik.values]);
 
-  const handleNext = async () => {
-    const isStep0 = activeStep === 0;
-    const schema = isStep0 ? projectSchema : quotaSchema;
+  // 🆕 Lógica de pasos dinámica (más limpia y segura)
+  const steps = useMemo(() => {
+    return formik.values.tipo_inversion === 'mensual'
+      ? ['Información', 'Cuotas', 'Multimedia', 'Contrato']
+      : ['Información', 'Multimedia', 'Contrato'];
+  }, [formik.values.tipo_inversion]);
 
+  const currentStepLabel = steps[activeStep];
+  const isLastStep = activeStep === steps.length - 1;
+
+  const handleNext = async () => {
     try {
-      await schema.validate(formik.values, { abortEarly: false });
-      if (isStep0 && formik.values.tipo_inversion === 'directo') setActiveStep(2);
-      else setActiveStep(prev => prev + 1);
+      if (currentStepLabel === 'Información') {
+        await projectSchema.validate(formik.values, { abortEarly: false });
+      } else if (currentStepLabel === 'Cuotas') {
+        await quotaSchema.validate(formik.values, { abortEarly: false });
+      }
+      setActiveStep(prev => prev + 1);
     } catch (err: any) {
       const errors: any = {};
       err.inner.forEach((e: any) => { errors[e.path] = e.message; });
@@ -167,17 +177,11 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
     }
   };
 
-  const steps = formik.values.tipo_inversion === 'mensual'
-    ? ['Información', 'Cuotas', 'Multimedia']
-    : ['Información', 'Multimedia'];
-
-  const sectionTitleSx = { fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', mb: 2, mt: 1, display: 'flex', alignItems: 'center', gap: 1, fontSize: '0.75rem' };
-
-  // ✅ HANDLER PARA ImageUpload - Con type casting seguro
   const handleImageChange = (file: File | File[] | null) => {
-    // En modo single (multiple=false), siempre recibimos File | null
     setImage(file as File | null);
   };
+
+  const sectionTitleSx = { fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', mb: 2, mt: 1, display: 'flex', alignItems: 'center', gap: 1, fontSize: '0.75rem' };
 
   return (
     <BaseModal
@@ -193,14 +197,14 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
       customActions={
         <>
           <Button 
-            onClick={activeStep === 0 ? handleReset : () => setActiveStep(p => p === 2 && formik.values.tipo_inversion === 'directo' ? 0 : p - 1)} 
+            onClick={activeStep === 0 ? handleReset : () => setActiveStep(p => p - 1)} 
             color="inherit" 
             disabled={isLoading} 
             sx={{ mr: 'auto' }}
           >
             {activeStep === 0 ? 'Cancelar' : 'Atrás'}
           </Button>
-          {activeStep === 2 ? (
+          {isLastStep ? ( // 🆕 Condición actualizada
             <Button 
               variant="contained" 
               onClick={formik.submitForm} 
@@ -222,11 +226,11 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
       }
     >
       <Stack spacing={3}>
-        <Stepper activeStep={activeStep === 2 && formik.values.tipo_inversion === 'directo' ? 1 : activeStep} alternativeLabel>
+        <Stepper activeStep={activeStep} alternativeLabel>
           {steps.map((label) => (<Step key={label}><StepLabel>{label}</StepLabel></Step>))}
         </Stepper>
 
-        {activeStep === 0 && (
+        {currentStepLabel === 'Información' && (
           <Box>
             <Stack spacing={2.5}>
               <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
@@ -327,7 +331,7 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
           </Box>
         )}
 
-        {activeStep === 1 && (
+        {currentStepLabel === 'Cuotas' && (
           <Box>
             <Alert severity="info" sx={{ mb: 3 }}>
               Configura el valor de referencia para el cálculo de cuotas dinámicas.
@@ -369,9 +373,8 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
           </Box>
         )}
 
-        {activeStep === 2 && (
+        {currentStepLabel === 'Multimedia' && (
           <Box py={2}>
-            {/* ✅ COMPONENTE MIGRADO */}
             <ImageUpload
               multiple={false}
               image={image}
@@ -380,7 +383,6 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
               label="Sube una imagen de portada para el proyecto"
               helperText="JPG, PNG o WEBP • Máximo 10MB"
             />
-            
             {!image && (
               <Alert severity="warning" sx={{ mt: 2 }}>
                 Debes seleccionar una imagen de portada para el proyecto.
@@ -388,6 +390,69 @@ const CreateProyectoModal: React.FC<CreateProyectoModalProps> = ({
             )}
           </Box>
         )}
+
+        {/* 🆕 NUEVO PASO: CONTRATO */}
+       {currentStepLabel === 'Contrato' && (
+  <Box py={3} textAlign="center">
+     <Typography variant="h6" fontWeight={700} mb={1}>
+        Plantilla de Contrato (Opcional)
+    </Typography>
+    <Typography variant="body2" color="text.secondary" mb={4} px={2}>
+        Sube el archivo PDF y asígnale un nombre para identificarlo en el panel de plantillas.
+    </Typography>
+    
+    <Button 
+        variant={contratoFile ? "outlined" : "contained"} 
+        component="label" 
+        startIcon={<PdfIcon />} 
+        size="large"
+        color={contratoFile ? "success" : "primary"}
+        sx={{ mb: 3, py: 1.5, px: 4, borderRadius: 2 }}
+    >
+        {contratoFile ? 'Cambiar PDF' : 'Seleccionar PDF'}
+        <input 
+            type="file" 
+            hidden 
+            accept="application/pdf" 
+            onChange={(e) => {
+              const file = e.target.files?.[0] || null;
+              setContratoFile(file);
+              // Autocompleta el nombre usando el nombre del archivo (sin el .pdf)
+              if (file) setNombreContrato(file.name.replace(/\.[^/.]+$/, ""));
+            }} 
+        />
+    </Button>
+
+    {contratoFile && (
+        <Stack spacing={2} sx={{ mt: 2, textAlign: 'left' }}>
+            <Paper variant="outlined" sx={{ p: 2, borderColor: 'success.main', bgcolor: alpha(theme.palette.success.main, 0.05), display: 'flex', alignItems: 'center', gap: 2 }}>
+                <PdfIcon color="success" />
+                <Box flex={1}>
+                  <Typography variant="subtitle2" color="success.main">Archivo seleccionado</Typography>
+                  <Typography variant="body2" fontWeight={600}>{contratoFile.name}</Typography>
+                </Box>
+            </Paper>
+
+            {/* 🆕 Campo para editar el nombre del contrato */}
+            <TextField
+                fullWidth
+                label="Nombre del Contrato (Visible en el sistema)"
+                value={nombreContrato}
+                onChange={(e) => setNombreContrato(e.target.value)}
+                placeholder="Ej: Fideicomiso Loteo Sur - Base"
+                helperText="Con este nombre podrás identificar rápidamente la plantilla."
+                InputLabelProps={{ shrink: true }}
+            />
+        </Stack>
+    )}
+    
+    {!contratoFile && (
+      <Alert severity="info" sx={{ mt: 2, textAlign: 'left' }}>
+        Si no subes un contrato ahora, podrás asignarle uno desde la gestión de plantillas más adelante.
+      </Alert>
+    )}
+  </Box>
+)}
       </Stack>
     </BaseModal>
   );

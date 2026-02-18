@@ -1,14 +1,27 @@
-import React, { useState, useRef, useEffect } from 'react';
+import {
+  Delete,
+  FitScreen,
+  TouchApp,
+  ZoomIn, ZoomOut
+} from '@mui/icons-material';
+import {
+  Alert,
+  alpha,
+  Box,
+  Chip,
+  CircularProgress,
+  IconButton,
+  Paper,
+  Slider,
+  Stack,
+  Tooltip,
+  Typography,
+  useTheme
+} from '@mui/material';
+import React, { useEffect, useRef, useState } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
-import { 
-  Box, Paper, Stack, IconButton, 
-  Alert, Chip, Slider, CircularProgress, Tooltip, useTheme, alpha, Typography
-} from '@mui/material';
-import { 
-  ZoomIn, ZoomOut, FitScreen, Delete, TouchApp
-} from '@mui/icons-material';
 
 // Configuración del Worker para Vite
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
@@ -26,9 +39,9 @@ interface PDFViewerMejoradoProps {
   readOnlyMode?: boolean;
 }
 
-const PDFViewerMejorado: React.FC<PDFViewerMejoradoProps> = ({ 
-  pdfUrl, 
-  signatureDataUrl, 
+const PDFViewerMejorado: React.FC<PDFViewerMejoradoProps> = ({
+  pdfUrl,
+  signatureDataUrl,
   onSignaturePositionSet,
   readOnlyMode = false
 }) => {
@@ -38,7 +51,7 @@ const PDFViewerMejorado: React.FC<PDFViewerMejoradoProps> = ({
   const [signature, setSignature] = useState<SignatureStamp | null>(null);
   const [pageWidth, setPageWidth] = useState<number>(600);
   const [loadError, setLoadError] = useState<string | null>(null);
-  
+
   const containerRef = useRef<HTMLDivElement>(null);
 
   // ResizeObserver para que el PDF sea responsive al ancho del contenedor
@@ -57,8 +70,11 @@ const PDFViewerMejorado: React.FC<PDFViewerMejoradoProps> = ({
     if (readOnlyMode || !signatureDataUrl) return;
 
     const rect = e.currentTarget.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / scale;
-    const y = (e.clientY - rect.top) / scale;
+
+    // ✅ CAMBIO CRÍTICO: Calculamos el % exacto (de 0.0 a 1.0) 
+    // dividiendo la posición del clic por el tamaño total del contenedor en pantalla.
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
 
     const newSignature = { x, y, page: pageNum };
     setSignature(newSignature);
@@ -67,22 +83,22 @@ const PDFViewerMejorado: React.FC<PDFViewerMejoradoProps> = ({
 
   return (
     <Box ref={containerRef} sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      
+
       {/* 🛠 BARRA DE HERRAMIENTAS */}
-      <Paper 
-        elevation={0} 
-        sx={{ 
+      <Paper
+        elevation={0}
+        sx={{
           p: 1, mb: 1, borderRadius: 2, border: `1px solid ${theme.palette.divider}`,
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           bgcolor: 'background.paper', zIndex: 2
         }}
       >
         <Stack direction="row" spacing={1} alignItems="center">
-          <Chip 
-            label={`${numPages} Páginas`} 
-            size="small" 
-            variant="outlined" 
-            sx={{ fontWeight: 700 }} 
+          <Chip
+            label={`${numPages} Páginas`}
+            size="small"
+            variant="outlined"
+            sx={{ fontWeight: 700 }}
           />
         </Stack>
 
@@ -97,8 +113,8 @@ const PDFViewerMejorado: React.FC<PDFViewerMejoradoProps> = ({
       </Paper>
 
       {/* 📄 ÁREA DEL DOCUMENTO (SCROLL CONTINUO) */}
-      <Box 
-        sx={{ 
+      <Box
+        sx={{
           flex: 1, overflowY: 'auto', bgcolor: 'grey.200', borderRadius: 2,
           border: `1px solid ${theme.palette.divider}`, p: 2,
           display: 'flex', flexDirection: 'column', alignItems: 'center'
@@ -114,11 +130,11 @@ const PDFViewerMejorado: React.FC<PDFViewerMejoradoProps> = ({
             {Array.from(new Array(numPages), (_, i) => {
               const pageNum = i + 1;
               return (
-                <Box 
+                <Box
                   key={`page_${pageNum}`}
                   onClick={(e) => handlePageClick(e, pageNum)}
-                  sx={{ 
-                    position: 'relative', 
+                  sx={{
+                    position: 'relative',
                     boxShadow: theme.shadows[6],
                     cursor: (signatureDataUrl && !readOnlyMode) ? 'crosshair' : 'default',
                     lineHeight: 0 // Elimina espacios fantasma bajo el canvas
@@ -137,8 +153,8 @@ const PDFViewerMejorado: React.FC<PDFViewerMejoradoProps> = ({
                     <Box
                       sx={{
                         position: 'absolute',
-                        left: signature.x * scale,
-                        top: signature.y * scale,
+                        left: `${signature.x * 100}%`,
+                        top: `${signature.y * 100}%`,
                         width: 150 * scale,
                         height: 60 * scale,
                         border: `2px dashed ${theme.palette.primary.main}`,
@@ -150,10 +166,10 @@ const PDFViewerMejorado: React.FC<PDFViewerMejoradoProps> = ({
                       }}
                     >
                       <Box component="img" src={signatureDataUrl!} sx={{ width: '80%', height: '80%', objectFit: 'contain' }} />
-                      <IconButton 
-                        size="small" 
+                      <IconButton
+                        size="small"
                         onClick={(e) => { e.stopPropagation(); setSignature(null); }}
-                        sx={{ 
+                        sx={{
                           position: 'absolute', top: -12, right: -12, bgcolor: 'error.main', color: 'white',
                           '&:hover': { bgcolor: 'error.dark' }, pointerEvents: 'auto', width: 24, height: 24
                         }}

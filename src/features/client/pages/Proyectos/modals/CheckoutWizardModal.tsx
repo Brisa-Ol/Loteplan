@@ -303,13 +303,25 @@ const StepContrato = React.memo<{ plantilla: any; isLoading: boolean; }>(({ plan
   if (isLoading) return <CircularProgress />;
   if (!plantilla) return <Typography>No hay contrato disponible.</Typography>;
   return (
-    <Box sx={{ flex: 1, minHeight: '60vh', bgcolor: 'grey.100', borderRadius: 2, border: '1px solid #e0e0e0' }}>
+    <Box sx={{
+      display: 'flex',          // ✅ CRÍTICO: Activa flexbox interno
+      flexDirection: 'column',  // ✅ CRÍTICO: Apila en columna
+      flex: 1,                  // ✅ CRÍTICO: Le dice al Box que llene el modal
+      minHeight: { xs: '70vh', md: '75vh' }, // Altura responsiva
+      bgcolor: 'grey.100',
+      borderRadius: 2,
+      border: '1px solid #e0e0e0',
+      overflow: 'hidden'
+    }}>
       <iframe
         src={ImagenService.resolveImageUrl(plantilla.url_archivo)}
-        width="100%"
-        height="100%"
-        style={{ border: 'none' }}
         title="Contrato"
+        style={{
+          width: '100%',
+          height: '100%',
+          border: 'none',
+          flex: 1                 // ✅ CRÍTICO: Obliga al iframe a estirarse
+        }}
       />
     </Box>
   );
@@ -379,13 +391,15 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const { showSuccess, showInfo } = useSnackbar();
+  const { showSuccess, showInfo, showError } = useSnackbar();
   const formatCurrency = useCurrencyFormatter({
     currency: proyecto.moneda === 'USD' ? 'USD' : 'ARS'
   });
+
   // STATE
   const [activeStep, setActiveStep] = useState(0);
   const [codigo2FA, setCodigo2FA] = useState('');
+  const [codigo2FAFirma, setCodigo2FAFirma] = useState(''); // ✅ NUEVO estado para la firma
   const [location, setLocation] = useState<Location | null>(null);
   const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
   const [signaturePosition, setSignaturePosition] = useState<SignaturePosition | null>(null);
@@ -436,12 +450,11 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
       }, 2000);
     }
   });
+
   const montoAMostrar = useMemo(() => {
     if (tipo === 'inversion') {
       return formatCurrency(Number(proyecto.monto_inversion));
     }
-    // Para suscripciones, el monto del primer pago suele venir de los cálculos de cuota
-    // Si no tienes el valor de la cuota aquí, usa el valor de referencia
     return formatCurrency(Number(proyecto.valor_cuota_referencia || 0));
   }, [formatCurrency, proyecto, tipo]);
 
@@ -480,8 +493,8 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
         setTransaccionId(savedState.transactionId);
         setPagoExitoso(true);
         setLocation(savedState.location);
-        setActiveStep(2);
-        showInfo('Pago confirmado. Ingresa tu 2FA para firmar.');
+        setActiveStep(4); // ✅ Ir directo a FIRMA (paso 4)
+        showInfo('Pago confirmado. Firma tu contrato para finalizar.');
         hasAttemptedRecovery.current = true;
         return;
       }
@@ -503,8 +516,8 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
             setTransaccionId(txId!);
             setPagoExitoso(true);
             CheckoutStateManager.markPaymentSuccess(proyecto.id, txId!);
-            setActiveStep(2);
-            showInfo('Pago confirmado. Ingresa tu 2FA para firmar.');
+            setActiveStep(4); // ✅ Ir directo a FIRMA (paso 4)
+            showInfo('Pago confirmado. Firma tu contrato para finalizar.');
           }
         })
         .catch(err => console.warn('⚠️ Error verificando pago:', err));
@@ -521,8 +534,9 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
     setLocation(recoveredState.location);
 
     if (recoveredState.paymentSuccess) {
-      setActiveStep(2);
-      showInfo('Ingresa tu 2FA para proceder a la firma.');
+      // ✅ Si el pago ya fue exitoso, ir directo a FIRMA (paso 4)
+      setActiveStep(4);
+      showInfo('Pago confirmado. Firma tu contrato para finalizar.');
     } else {
       setActiveStep(recoveredState.activeStep);
       if (recoveredState.transactionId && recoveredState.activeStep >= 3) {
@@ -549,11 +563,12 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
     }
   }, [activeStep, open, location]);
 
+  // ✅ MODIFICAR handleStepAction
   const handleStepAction = useCallback(async () => {
     switch (activeStep) {
       case 0:
         if (pagoExitoso && transaccionId) {
-          setActiveStep(2);
+          setActiveStep(4); // ✅ Saltar directo a firma si ya pagó
           return;
         }
         await handleConfirmInvestment();
@@ -567,20 +582,28 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
       case 2:
         if (codigo2FA.length === CODIGO_2FA_LENGTH) {
           if (pagoExitoso && transaccionId) {
+            // ✅ Si ya pagó antes, vamos directo a firma
             setActiveStep(4);
           } else {
+            // ✅ Si es la primera vez, confirmar pago
             await handleConfirmarPago2FA(codigo2FA);
           }
         }
         break;
 
       case 4:
+        // ✅ CAMBIO CRÍTICO: Pedir 2FA fresco para la firma
+        if (!codigo2FAFirma || codigo2FAFirma.length !== CODIGO_2FA_LENGTH) {
+          showError('Debes ingresar tu código 2FA para firmar el contrato');
+          return;
+        }
+
         if (signatureDataUrl && location) {
           await handleSignContract(
             signatureDataUrl,
             signaturePosition,
             location,
-            codigo2FA
+            codigo2FAFirma // ✅ Usar el código 2FA de firma
           );
         }
         break;
@@ -590,12 +613,14 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
     pagoExitoso,
     transaccionId,
     codigo2FA,
+    codigo2FAFirma,
     signatureDataUrl,
     signaturePosition,
     location,
     handleConfirmInvestment,
     handleConfirmarPago2FA,
-    handleSignContract
+    handleSignContract,
+    showError
   ]);
 
   const handleClose = useCallback(() => {
@@ -605,6 +630,7 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
       if (!pagoExitoso || activeStep === 0) CheckoutStateManager.clearState();
       setActiveStep(0);
       setCodigo2FA('');
+      setCodigo2FAFirma(''); // ✅ Limpiar código de firma
       setPagoExitoso(false);
       setSignatureDataUrl(null);
       setSignaturePosition(null);
@@ -616,15 +642,18 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
     }, 300);
   }, [isVerificandoPago, isProcessing, onClose, pagoExitoso, activeStep, setPagoExitoso, setTransaccionId]);
 
+  // ✅ ACTUALIZAR isStepValid
   const isStepValid = useMemo(() => {
     switch (activeStep) {
       case 0: return true;
       case 1: return true;
       case 2: return codigo2FA.length === CODIGO_2FA_LENGTH && !!location;
-      case 4: return !!signatureDataUrl;
+      case 4:
+        // ✅ Validar que tenga firma Y código 2FA fresco
+        return !!signatureDataUrl && codigo2FAFirma.length === CODIGO_2FA_LENGTH;
       default: return true;
     }
-  }, [activeStep, codigo2FA, location, signatureDataUrl]);
+  }, [activeStep, codigo2FA, codigo2FAFirma, location, signatureDataUrl]);
 
   const getButtonText = () => {
     if (isProcessing) return 'Procesando...';
@@ -644,7 +673,7 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
           subtitle="Detectamos un proceso incompleto"
           icon={<Refresh />}
           headerColor="warning"
-          maxWidth="sm"
+          maxWidth="lg"
         >
           <Stack spacing={3} p={2}>
             <Alert severity="info" icon={<Info />}>
@@ -731,12 +760,12 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
             </Stepper>
           )}
 
-          <Box flex={1} overflow="auto" p={{ xs: 2, md: 4 }}>
+          <Box flex={1} overflow="auto" p={{ xs: 2, md: 2 }} display="flex" flexDirection="column">
             {activeStep === 0 && (
               <StepConfirmacion
                 proyecto={proyecto}
                 tipo={tipo}
-                monto={montoAMostrar} // ✅ Usar el monto corregido
+                monto={montoAMostrar}
               />
             )}
             {activeStep === 1 && <StepContrato plantilla={plantillaActual} isLoading={loadingPlantilla} />}
@@ -752,6 +781,29 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
             {activeStep === 3 && <StepPago pagoExitoso={pagoExitoso} />}
             {activeStep === 4 && (
               <Stack spacing={3} height="100%">
+                {/* ✅ AGREGAR INPUT DE 2FA ANTES DE LA FIRMA */}
+                <Alert severity="warning" icon={<Lock />} sx={{ borderRadius: 2 }}>
+                  <Typography variant="body2" fontWeight={600} mb={1}>
+                    Verificación de seguridad requerida
+                  </Typography>
+                  <Typography variant="caption">
+                    Para firmar el contrato necesitas ingresar tu código 2FA actual.
+                  </Typography>
+                </Alert>
+
+                <TextField
+                  autoFocus
+                  label="Código 2FA para firmar"
+                  value={codigo2FAFirma}
+                  onChange={(e) => setCodigo2FAFirma(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  placeholder="000 000"
+                  disabled={isProcessing}
+                  fullWidth
+                  inputProps={{ maxLength: 6 }}
+                  sx={{ maxWidth: 400, mx: 'auto' }}
+                  helperText="Ingresa el código de tu aplicación Google Authenticator"
+                />
+
                 <Fade in={!signatureDataUrl} unmountOnExit>
                   <Box>
                     <Alert severity="info" icon={<Draw />} sx={{ borderRadius: 2, mb: 3 }}>
@@ -764,13 +816,22 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
                     />
                   </Box>
                 </Fade>
+
                 <Fade in={!!signatureDataUrl} unmountOnExit>
-                  <Box height="100%" display="flex" flexDirection="column">
+                  {/* ✅ Agregamos flex={1} a este Box principal */}
+                  <Box flex={1} display="flex" flexDirection="column" sx={{ minHeight: { xs: '65vh', md: '70vh' }, mt: 2 }}>
                     <Alert severity="success" variant="outlined" sx={{ borderRadius: 2, mb: 2 }}>
                       <Typography variant="body2" fontWeight={600}>✓ Firma capturada correctamente</Typography>
                       <Button size="small" onClick={() => setSignatureDataUrl(null)}>Cambiar Firma</Button>
                     </Alert>
-                    <Box flex={1} borderRadius={2} overflow="hidden" border={`1px solid ${theme.palette.divider}`}>
+
+                    <Box
+                      flex={1}
+                      borderRadius={2}
+                      overflow="hidden"
+                      border={`1px solid ${theme.palette.divider}`}
+                      sx={{ display: 'flex', flexDirection: 'column' }} // ✅ Mantiene el PDF expandido
+                    >
                       <PDFViewerMejorado
                         pdfUrl={plantillaActual ? ImagenService.resolveImageUrl(plantillaActual.url_archivo) : ''}
                         signatureDataUrl={signatureDataUrl}

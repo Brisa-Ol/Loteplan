@@ -7,11 +7,12 @@ import ImagenService from '@/core/api/services/imagen.service';
 import ProyectoService from '@/core/api/services/proyecto.service';
 
 // Hooks y Tipos
+import type { CreateProyectoDto, ProyectoDto, UpdateProyectoDto } from '@/core/types/dto/proyecto.dto';
 import { useConfirmDialog } from '@/shared/hooks/useConfirmDialog';
 import { useModal } from '@/shared/hooks/useModal';
 import useSnackbar from '@/shared/hooks/useSnackbar';
-import type { CreateProyectoDto, ProyectoDto, UpdateProyectoDto } from '@/core/types/dto/proyecto.dto';
 import { useSortedData } from '../useSortedData';
+import ContratoPlantillaService from '@/core/api/services/contrato-plantilla.service';
 
 
 export type TipoInversionFilter = 'all' | 'mensual' | 'directo';
@@ -102,7 +103,6 @@ export const useAdminProyectos = () => {
     onSuccess: (_, id) => handleMutationSuccess(id, 'Proceso de cobros iniciado')
   });
 
-  // 🆕 NUEVA MUTACIÓN: Revertir Proceso
   const revertMutation = useMutation({
     mutationFn: (id: number) => ProyectoService.revertProcess(id),
     onMutate: handleMutationOptimistic,
@@ -111,11 +111,15 @@ export const useAdminProyectos = () => {
   });
 
   // --- HANDLERS ---
-  const handleCreateSubmit = useCallback(async (data: any, image: File | null) => {
+
+  // 🆕 Actualizamos la firma de handleCreateSubmit para recibir el contrato
+const handleCreateSubmit = useCallback(async (data: any, image: File | null, contrato: File | null, nombreContrato: string) => {
     try {
+      // 1. Crear Proyecto
       const resProyecto = await ProyectoService.create(data as CreateProyectoDto);
       const nuevoId = resProyecto.data.id;
 
+      // 2. Crear Cuotas si aplica
       if (data.tipo_inversion === 'mensual') {
         await CuotaMensualService.create({
           id_proyecto: nuevoId,
@@ -129,6 +133,7 @@ export const useAdminProyectos = () => {
         });
       }
 
+      // 3. Subir Imagen
       if (image) {
         try {
           await ImagenService.create({ file: image, descripcion: 'Portada', id_proyecto: nuevoId, id_lote: null });
@@ -137,7 +142,23 @@ export const useAdminProyectos = () => {
         }
       }
 
-      queryClient.invalidateQueries({ queryKey: ['adminProyectos'] });
+      // 4. 🆕 Subir Contrato Plantilla (si el usuario adjuntó uno)
+if (contrato) {
+          try {
+              await ContratoPlantillaService.create({
+                  file: contrato,
+                  // Usamos el nombre que puso el usuario, o un fallback de seguridad
+                  nombre_archivo: nombreContrato.trim() || `Contrato - ${data.nombre_proyecto}`,
+                  version: 1,
+                  id_proyecto: nuevoId
+              });
+          } catch (err) {
+              showWarning('Proyecto creado, pero la plantilla del contrato falló al subirse.');
+          }
+      }
+
+      // 5. Refrescar interfaz
+queryClient.invalidateQueries({ queryKey: ['adminProyectos'] });
       create.close();
       triggerHighlight(nuevoId);
       showSuccess('Proyecto creado exitosamente.');
@@ -156,7 +177,6 @@ export const useAdminProyectos = () => {
     (modales[action] as any).open();
   }, [modales]);
 
-  // ⚡ HANDLER DE CONFIRMACIÓN ACTUALIZADO
   const handleConfirmAction = useCallback(() => {
     const project = confirmDialog.data as ProyectoDto;
     if (!project) return;
@@ -165,7 +185,7 @@ export const useAdminProyectos = () => {
       startMutation.mutate(project.id);
     } else if (confirmDialog.action === 'toggle_project_visibility') {
       toggleActiveMutation.mutate({ id: project.id, activo: !project.activo });
-    } else if (confirmDialog.action === 'revert_project_process') { // 🆕 MANEJAR LA ACCIÓN
+    } else if (confirmDialog.action === 'revert_project_process') {
       revertMutation.mutate(project.id);
     }
   }, [confirmDialog, startMutation, toggleActiveMutation, revertMutation]);
@@ -187,18 +207,17 @@ export const useAdminProyectos = () => {
     highlightedId,
     filteredProyectos,
     isLoading, error,
-    
     modales,
-    
+
     handleCreateSubmit,
     handleUpdateSubmit,
     handleAction,
     handleConfirmAction,
-    
+
     // Status
     isUpdating: updateMutation.isPending,
     isToggling: toggleActiveMutation.isPending,
     isStarting: startMutation.isPending,
-    isReverting: revertMutation.isPending // 🆕 EXPORTAR ESTADO
+    isReverting: revertMutation.isPending
   };
 };

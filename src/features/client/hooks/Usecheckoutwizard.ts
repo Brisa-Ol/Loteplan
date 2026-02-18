@@ -1,16 +1,17 @@
 // src/features/client/hooks/useCheckoutWizard.ts
 
-import { useState, useCallback, useRef } from 'react';
-import { PDFDocument } from 'pdf-lib';
 import ContratoFirmadoService from '@/core/api/services/contrato-firmado.service';
 import ImagenService from '@/core/api/services/imagen.service';
 import InversionService from '@/core/api/services/inversion.service';
-import SuscripcionService from '@/core/api/services/suscripcion.service';
 import MercadoPagoService from '@/core/api/services/pagoMercado.service';
+import SuscripcionService from '@/core/api/services/suscripcion.service';
+import { useAuth } from '@/core/context';
+import type { ContratoPlantillaDto } from '@/core/types/dto';
+import type { ProyectoDto } from '@/core/types/dto/proyecto.dto';
 import useSnackbar from '@/shared/hooks/useSnackbar';
 import { calculateFileHash } from '@/shared/utils/fileUtils';
-import type { ProyectoDto } from '@/core/types/dto/proyecto.dto';
-import type { ContratoPlantillaDto } from '@/core/types/dto';
+import { PDFDocument } from 'pdf-lib';
+import { useCallback, useRef, useState } from 'react';
 import { CheckoutStateManager } from '../pages/Proyectos/modals/Checkout persistence';
 
 // ===================================================
@@ -52,6 +53,7 @@ export const useCheckoutWizard = ({
   onSuccess
 }: UseCheckoutWizardProps) => {
   const { showSuccess, showError, showWarning } = useSnackbar();
+  const { user } = useAuth(); // ✅ OBTENER USUARIO AUTENTICADO
 
   // ===================================================
   // STATE
@@ -75,20 +77,16 @@ export const useCheckoutWizard = ({
       let response;
 
       if (tipo === 'inversion') {
-        // ✅ Usa el método correcto: iniciar
         response = await InversionService.iniciar({
           id_proyecto: proyecto.id,
         });
       } else {
-        // ✅ Usa el método correcto: iniciar
         response = await SuscripcionService.iniciar({
           id_proyecto: proyecto.id,
         });
       }
 
       const data = response?.data as any;
-
-      // Pueden venir diferentes campos según el caso
       const txId = data?.inversionId || data?.transaccionId || data?.id;
 
       if (txId) {
@@ -115,6 +113,12 @@ export const useCheckoutWizard = ({
       return;
     }
 
+    // ✅ VALIDACIÓN CRÍTICA: El código 2FA debe ser un código FRESCO
+    if (!codigo2FA || codigo2FA.length !== 6) {
+      showError('Debes ingresar un código 2FA válido');
+      return;
+    }
+
     try {
       setIsProcessing(true);
       let response;
@@ -135,7 +139,6 @@ export const useCheckoutWizard = ({
       const urlPago = data?.redirectUrl || data?.init_point || data?.url;
 
       if (urlPago) {
-        // Guardar estado antes de redirigir
         CheckoutStateManager.saveState({
           projectId: proyecto.id,
           tipo,
@@ -147,7 +150,6 @@ export const useCheckoutWizard = ({
           timestamp: Date.now()
         });
 
-        // Redirigir a Mercado Pago
         window.location.href = urlPago;
       } else {
         throw new Error('No se recibió el link de pago.');
@@ -209,7 +211,7 @@ export const useCheckoutWizard = ({
     signatureDataUrl: string,
     signaturePosition: SignaturePosition | null,
     location: Location | null,
-    codigo2FA: string
+    codigo2FA: string // ✅ Código 2FA FRESCO para la firma
   ) => {
     if (!plantillaContrato) {
       showError('No hay plantilla de contrato disponible');
@@ -221,12 +223,22 @@ export const useCheckoutWizard = ({
       return;
     }
 
+    // ✅ VALIDACIÓN CRÍTICA: El código 2FA debe ser un código FRESCO
+    if (!codigo2FA || codigo2FA.length !== 6) {
+      showError('Debes ingresar un código 2FA válido para firmar el contrato');
+      return;
+    }
+
+    // ✅ VALIDACIÓN: Usuario debe estar autenticado
+    if (!user || !user.id) {
+      showError('Debes estar autenticado para firmar el contrato');
+      return;
+    }
+
     try {
       setIsProcessing(true);
 
-      // ===================================================
       // 1. DESCARGAR LA PLANTILLA PDF
-      // ===================================================
       const pdfUrl = ImagenService.resolveImageUrl(plantillaContrato.url_archivo);
       const pdfBytes = await fetch(pdfUrl).then(res => res.arrayBuffer());
       const pdfDoc = await PDFDocument.load(pdfBytes);
@@ -242,9 +254,18 @@ export const useCheckoutWizard = ({
         // Usuario colocó la firma manualmente
         const pages = pdfDoc.getPages();
         page = pages[Math.min((signaturePosition.page || 1) - 1, pages.length - 1)];
-        const { height } = page.getSize();
-        x = signaturePosition.x;
-        y = height - signaturePosition.y - SIGNATURE_HEIGHT;
+
+        // Obtenemos el tamaño real y físico del PDF (ej. 595 x 842)
+        const { width, height } = page.getSize();
+
+        // Multiplicamos los porcentajes (0.0 - 1.0) por el tamaño real
+        const realX = signaturePosition.x * width;
+        const realY = signaturePosition.y * height;
+
+        // Centramos la firma exactamente en el cursor y corregimos el eje Y (invertido en PDF)
+        x = realX - (SIGNATURE_WIDTH / 2);
+        y = height - realY - (SIGNATURE_HEIGHT / 2);
+
       } else {
         // Firma por defecto al final del documento
         const pages = pdfDoc.getPages();
@@ -261,9 +282,7 @@ export const useCheckoutWizard = ({
         height: SIGNATURE_HEIGHT,
       });
 
-      // ===================================================
       // 3. GENERAR PDF FIRMADO
-      // ===================================================
       const signedPdfBytes = await pdfDoc.save();
       const signedFile = new File(
         [new Uint8Array(signedPdfBytes)],
@@ -271,25 +290,27 @@ export const useCheckoutWizard = ({
         { type: 'application/pdf' }
       );
 
-      // ===================================================
       // 4. CALCULAR HASH SHA-256
-      // ===================================================
       const hash = await calculateFileHash(signedFile);
 
       console.log('📄 PDF Firmado generado:', {
         size: signedFile.size,
         hash: hash.substring(0, 16) + '...',
-        name: signedFile.name
+        name: signedFile.name,
+        userId: user.id,
+        transactionId: transaccionId
       });
 
       // ===================================================
       // 5. ENVIAR AL BACKEND
       // ===================================================
+
+      // Enviamos el objeto normal (el Service internamente lo convierte a FormData)
       const response = await ContratoFirmadoService.registrarFirma({
         file: signedFile,
         id_contrato_plantilla: plantillaContrato.id,
         id_proyecto: proyecto.id,
-        id_usuario_firmante: 0, // ✅ El backend lo toma del token JWT (req.user.id)
+        id_usuario_firmante: user.id,
         hash_archivo_firmado: hash,
         codigo_2fa: codigo2FA,
         latitud_verificacion: location?.lat,
@@ -300,7 +321,6 @@ export const useCheckoutWizard = ({
 
       showSuccess('¡Contrato firmado exitosamente!');
 
-      // Callback de éxito
       if (onSuccess) {
         onSuccess();
       }
@@ -315,26 +335,21 @@ export const useCheckoutWizard = ({
     } finally {
       setIsProcessing(false);
     }
-  }, [plantillaContrato, transaccionId, proyecto, showSuccess, showError, onSuccess]);
+  }, [plantillaContrato, transaccionId, proyecto, user, showSuccess, showError, onSuccess]); // ✅ Dependencia "user" agregada
 
   // ===================================================
   // RETURN
   // ===================================================
   return {
-    // State
     isProcessing,
     isVerificandoPago,
     pagoExitoso,
     transaccionId,
     error2FA,
-
-    // Actions
     handleConfirmInvestment,
     handleConfirmarPago2FA,
     handleSignContract,
     iniciarVerificacionPago,
-
-    // Setters (para control externo si es necesario)
     setPagoExitoso,
     setTransaccionId,
     setError2FA,
