@@ -17,6 +17,7 @@ const ResumenCuentaService = {
 
   /**
    * Obtiene todos los resúmenes de cuenta del usuario autenticado.
+   * El backend usará el método getAccountSummariesByUserId aquí.
    */
   getMyAccountSummaries: async (): Promise<AxiosResponse<ResumenCuentaDto[]>> => {
     return await httpService.get(`${BASE_ENDPOINT}/mis_resumenes`);
@@ -35,6 +36,7 @@ const ResumenCuentaService = {
 
   /**
    * Obtiene todos los resúmenes de cuenta del sistema (solo administradores).
+   * El backend usará el método findAll() aquí (que trae usuario y proyecto anidados).
    */
   findAll: async (): Promise<AxiosResponse<ResumenCuentaDto[]>> => {
     return await httpService.get(BASE_ENDPOINT);

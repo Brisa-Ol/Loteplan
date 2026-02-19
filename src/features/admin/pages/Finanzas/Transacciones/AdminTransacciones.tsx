@@ -6,7 +6,7 @@ import {
   Visibility
 } from '@mui/icons-material';
 import {
-  Avatar, Box, IconButton, MenuItem, Stack, Tooltip, Typography, alpha, useTheme
+  Avatar, Box, IconButton, MenuItem, Stack, Tooltip, Typography, alpha, useTheme, TextField
 } from '@mui/material';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -21,7 +21,6 @@ import {
 // Hooks y DTOs
 import type { TransaccionDto } from '@/core/types/dto/transaccion.dto';
 
-
 // Componentes Compartidos
 import { DataTable, type DataTableColumn } from '@/shared/components/data-grid/DataTable/DataTable';
 import { QueryHandler } from '@/shared/components/data-grid/QueryHandler/QueryHandler';
@@ -29,7 +28,6 @@ import { StatCard, StatusBadge } from '@/shared/components/domain/cards/StatCard
 import { ConfirmDialog } from '@/shared/components/domain/modals/ConfirmDialog/ConfirmDialog';
 import { FilterBar, FilterSearch, FilterSelect } from '@/shared/components/forms/filters/FilterBar';
 import { PageContainer } from '@/shared/components/layout/containers/PageContainer/PageContainer';
-
 
 import { AdminPageHeader } from '@/shared/components/admin/Adminpageheader';
 import AlertBanner from '@/shared/components/admin/Alertbanner';
@@ -109,7 +107,7 @@ const AdminTransacciones: React.FC = () => {
     const data = logic.filteredData;
     const totalVolumen = data.reduce((acc, curr) => acc + (curr.estado_transaccion === 'pagado' ? Number(curr.monto) : 0), 0);
     const totalExitosas = data.filter(t => t.estado_transaccion === 'pagado').length;
-    const totalFallidas = data.filter(t => ['fallido', 'rechazado'].includes(t.estado_transaccion)).length;
+    const totalFallidas = data.filter(t => ['fallido', 'rechazado', 'rechazado_por_capacidad', 'rechazado_proyecto_cerrado'].includes(t.estado_transaccion)).length;
 
     return {
       totalRegistros: data.length,
@@ -140,11 +138,11 @@ const AdminTransacciones: React.FC = () => {
           }}>
             {row.usuario?.nombre?.[0]?.toUpperCase() || <Person fontSize="small" />}
           </Avatar>
-          <Box>
-            <Typography variant="body2" fontWeight={700}>
+          <Box minWidth={0}>
+            <Typography variant="body2" fontWeight={700} noWrap>
               {row.usuario ? `${row.usuario.nombre} ${row.usuario.apellido}` : `ID: ${row.id_usuario}`}
             </Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }} noWrap>
               {row.usuario?.email || 'Sin correo registrado'}
             </Typography>
           </Box>
@@ -161,11 +159,11 @@ const AdminTransacciones: React.FC = () => {
           Puja: 'Subasta'
         };
         return (
-          <Box>
+          <Box minWidth={0}>
             <Typography variant="body2" fontWeight={600}>
               {labels[row.tipo_transaccion] || row.tipo_transaccion}
             </Typography>
-            <Typography variant="caption" color="primary.main" fontWeight={700}>
+            <Typography variant="caption" color="primary.main" fontWeight={700} noWrap display="block">
               {row.proyectoTransaccion?.nombre_proyecto || 'Sin proyecto asignado'}
             </Typography>
           </Box>
@@ -303,42 +301,89 @@ const AdminTransacciones: React.FC = () => {
         />
       </MetricsGrid>
 
-      {/* 4. CONTROLES Y FILTROS */}
-      <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        justifyContent="space-between"
-        alignItems={{ xs: 'stretch', sm: 'center' }}
-        mb={3}
-        spacing={2}
-      >
-        <ViewModeToggle
-          value={viewMode}
-          onChange={(newMode) => setViewMode(newMode)}
-          options={[
-            { value: 'table', label: 'Tabla', icon: <ViewList fontSize="small" /> },
-            { value: 'analytics', label: 'Métricas', icon: <BarChartIcon fontSize="small" /> }
-          ]}
-        />
+      {/* 4. CONTROLES Y FILTROS (🚨 REORGANIZADOS PARA RESPONSIVE) */}
+      <Stack spacing={2} mb={3}>
+        
+        {/* Toggle de Vista (Arriba a la derecha) */}
+        <Stack direction="row" justifyContent="flex-end">
+          <ViewModeToggle
+            value={viewMode}
+            onChange={(newMode) => setViewMode(newMode)}
+            options={[
+              { value: 'table', label: 'Tabla', icon: <ViewList fontSize="small" /> },
+              { value: 'analytics', label: 'Métricas', icon: <BarChartIcon fontSize="small" /> }
+            ]}
+          />
+        </Stack>
 
-        <FilterBar sx={{ flex: 1, maxWidth: { sm: 600 } }}>
+        {/* Contenedor de Filtros (Responsive) */}
+{/* Contenedor de Filtros (Responsive) */}
+        <FilterBar 
+          sx={{ 
+            display: 'flex', 
+            flexWrap: 'wrap', 
+            gap: 2,
+            alignItems: 'center'
+          }}
+        >
+          {/* Búsqueda de texto (Ocupa más espacio de forma flexible) */}
           <FilterSearch
-            placeholder="Buscar por cliente, proyecto..."
+            placeholder="Buscar por cliente o proyecto..."
             value={logic.searchTerm}
             onSearch={logic.setSearchTerm}
-            sx={{ flexGrow: 1 }}
+            sx={{ flex: 1, minWidth: { xs: '100%', sm: '390px' } }} 
           />
 
+          {/* Filtro por Rango de Fechas */}
+          <Stack direction="row" spacing={1} alignItems="center" sx={{ width: { xs: '100%', sm: 'auto' } }}>
+            <TextField
+              label="Desde"
+              type="date"
+              size="small"
+              InputLabelProps={{ shrink: true }}
+              value={logic.dateFrom}
+              onChange={(e) => logic.setDateFrom(e.target.value)}
+              sx={{ width: { xs: '50%', sm: 140 }, bgcolor: 'background.paper', borderRadius: 1 }}
+            />
+            <Typography color="text.secondary">-</Typography>
+            <TextField
+              label="Hasta"
+              type="date"
+              size="small"
+              InputLabelProps={{ shrink: true }}
+              value={logic.dateTo}
+              onChange={(e) => logic.setDateTo(e.target.value)}
+              sx={{ width: { xs: '50%', sm: 140 }, bgcolor: 'background.paper', borderRadius: 1 }}
+            />
+          </Stack>
+
+          {/* Filtro Tipo */}
+          <FilterSelect
+            label="Tipo"
+            value={logic.filterType}
+            onChange={(e) => logic.setFilterType(e.target.value)}
+            sx={{ minWidth: 150, flex: { xs: 1, sm: 'none' } }}
+          >
+            <MenuItem value="all">Todos</MenuItem>
+            <MenuItem value="directo">Inversión Directa</MenuItem>
+            <MenuItem value="pago_suscripcion_inicial">Suscripción Inicial</MenuItem>
+            <MenuItem value="mensual">Cuota Mensual</MenuItem>
+            <MenuItem value="Puja">Subasta</MenuItem>
+          </FilterSelect>
+
+          {/* Filtro Estado */}
           <FilterSelect
             label="Estado"
             value={logic.filterStatus}
             onChange={(e) => logic.setFilterStatus(e.target.value)}
-            sx={{ minWidth: 160 }}
+            sx={{ minWidth: 150, flex: { xs: 1, sm: 'none' } }}
           >
             <MenuItem value="all">Todos</MenuItem>
             <MenuItem value="pagado">Completados</MenuItem>
             <MenuItem value="pendiente">Pendientes</MenuItem>
-            <MenuItem value="fallido">Fallidos</MenuItem>
+            <MenuItem value="fallido">Fallidos / Rechazados</MenuItem>
           </FilterSelect>
+
         </FilterBar>
       </Stack>
 
@@ -355,7 +400,7 @@ const AdminTransacciones: React.FC = () => {
             showInactiveToggle={false} // Mostrar todo lo filtrado por el usuario
             inactiveLabel="Mostrar Fallidas"
             highlightedRowId={logic.highlightedId}
-            emptyMessage="No se encontraron transacciones registradas."
+            emptyMessage="No se encontraron transacciones con los filtros actuales."
             pagination={true}
             defaultRowsPerPage={10}
           />

@@ -78,16 +78,41 @@ export const useAdminPlantillas = () => {
 
   const isLoading = l1 || l2;
 
-  // --- FILTRADO (Memoizado + Debounce) ---
-  const filteredPlantillas = useMemo(() => {
+  // --- FILTRADO DE PLANTILLAS (Memoizado + Debounce) ---
+const filteredPlantillas = useMemo(() => {
     const term = debouncedSearchTerm.toLowerCase();
 
     return plantillasOrdenadas.filter(plantilla => {
       const matchesSearch = plantilla.nombre_archivo.toLowerCase().includes(term);
-      const matchesProject = filterProject === 'all' || plantilla.id_proyecto === Number(filterProject);
+      
+      // ✨ Lógica de filtro de proyecto actualizada
+      let matchesProject = true;
+      if (filterProject !== 'all') {
+        if (filterProject === 'global') {
+          // Filtra los que NO tienen proyecto (Huérfanos/Globales)
+          matchesProject = plantilla.id_proyecto === null;
+        } else {
+          // Filtra por ID de proyecto específico
+          matchesProject = plantilla.id_proyecto === Number(filterProject);
+        }
+      }
+
       return matchesSearch && matchesProject;
     });
   }, [plantillasOrdenadas, debouncedSearchTerm, filterProject]);
+
+  // ✨ NUEVO: FILTRADO DE PROYECTOS DISPONIBLES (Sin plantilla)
+  const proyectosDisponibles = useMemo(() => {
+    // 1. Obtenemos los IDs de los proyectos que ya están vinculados a una plantilla
+    const proyectosConPlantilla = new Set(
+      plantillasRaw
+        .filter(plantilla => plantilla.id_proyecto !== null)
+        .map(plantilla => plantilla.id_proyecto)
+    );
+
+    // 2. Devolvemos solo los proyectos que NO están en ese Set
+    return proyectos.filter(proyecto => !proyectosConPlantilla.has(proyecto.id));
+  }, [proyectos, plantillasRaw]);
 
   // --- MUTACIONES ---
   const handleSuccess = (msg: string, modalClose?: () => void, updatedId?: number) => {
@@ -100,10 +125,8 @@ export const useAdminPlantillas = () => {
 
   const createMutation = useMutation({
     mutationFn: ContratoPlantillaService.create,
-    // 🔴 CORRECCIÓN AQUÍ: Usamos 'as any' para acceder a la propiedad dinámica
     onSuccess: (res) => {
       const payload = res.data as any;
-      // Buscamos el ID en 'plantilla', 'data' o directamente en la raíz
       const newId = payload.plantilla?.id || payload.data?.id || payload.id;
       handleSuccess('Plantilla creada correctamente.', modales.create.close, newId);
     },
@@ -163,7 +186,6 @@ export const useAdminPlantillas = () => {
   const handleDownload = useCallback(async (plantilla: ContratoPlantillaDto) => {
     if (plantilla.url_archivo) {
       try {
-        // Usamos la descarga segura
         await downloadSecureFile(plantilla.url_archivo, plantilla.nombre_archivo);
       } catch (e) {
         showError('Error al descargar el archivo.');
@@ -206,7 +228,8 @@ export const useAdminPlantillas = () => {
 
     // Data
     filteredPlantillas,
-    proyectos,
+    proyectos,             // <-- La lista completa sigue exportándose por si la necesitas
+    proyectosDisponibles,  // ✨ <-- ¡La nueva lista filtrada, lista para el Modal!
     isLoading,
     error,
 

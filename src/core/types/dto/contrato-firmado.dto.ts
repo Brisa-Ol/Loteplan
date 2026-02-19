@@ -32,8 +32,7 @@ export interface ContratoFirmadoResponseDto {
     nombre_archivo: string;
     fecha_firma: string;
     estado_firma: 'FIRMADO' | 'REVOCADO' | 'INVALIDO';
-    
-    // Información devuelta por la auto-detección del backend
+    url_archivo: string; // ✅ Agrégalo aquí
     tipo_autorizacion: 'inversion' | 'suscripcion';
     id_autorizacion: number; 
   };

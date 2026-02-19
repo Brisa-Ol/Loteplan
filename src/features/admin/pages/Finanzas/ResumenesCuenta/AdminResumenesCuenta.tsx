@@ -18,7 +18,6 @@ import {
   XAxis, YAxis
 } from 'recharts';
 
-
 import type { ResumenCuentaDto } from '@/core/types/dto/resumenCuenta.dto';
 
 // Componentes Compartidos
@@ -35,7 +34,6 @@ import { ViewModeToggle, type ViewMode } from '@/shared/components/admin/Viewmod
 
 import DetalleResumenModal from './modals/DetalleResumenModal';
 import { useAdminResumenes } from '@/features/admin/hooks/finanzas/useAdminResumenes';
-
 
 // ============================================================================
 // SUB-COMPONENTE: ANALYTICS (Memoizado)
@@ -113,40 +111,63 @@ const AdminResumenesCuenta: React.FC = () => {
   }, [logic.filteredResumenes]);
 
   // --------------------------------------------------------------------------
-  // COLUMNAS
+  // COLUMNAS (🚨 MEJORADAS)
   // --------------------------------------------------------------------------
   const columns = useMemo<DataTableColumn<ResumenCuentaDto>[]>(() => [
     {
-      id: 'id',
-      label: 'Resumen / Ref',
-      minWidth: 120,
-      render: (resumen) => (
-        <Stack direction="row" spacing={1.5} alignItems="center">
-          <Avatar sx={{ width: 32, height: 32, bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}>
-            <AssignmentIcon sx={{ fontSize: 16 }} />
-          </Avatar>
-          <Box>
-            <Typography variant="body2" fontWeight={700}>#{resumen.id}</Typography>
-            <Typography variant="caption" color="text.secondary">Susc. #{resumen.id_suscripcion}</Typography>
-          </Box>
-        </Stack>
-      )
+      id: 'inversor',
+      label: 'Inversor / Suscripción',
+      minWidth: 240,
+      render: (resumen) => {
+        // 🆕 Extraemos la info del inversor
+        const usuario = resumen.suscripcion?.usuario;
+        const nombreCompleto = usuario ? `${usuario.nombre} ${usuario.apellido}`.trim() : 'Usuario Desconocido';
+        const iniciales = usuario ? `${usuario.nombre.charAt(0)}${usuario.apellido.charAt(0)}`.toUpperCase() : '';
+
+        return (
+          <Stack direction="row" spacing={1.5} alignItems="center">
+            <Avatar 
+              sx={{ 
+                width: 38, height: 38, 
+                bgcolor: alpha(theme.palette.primary.main, 0.1), 
+                color: 'primary.main',
+                fontWeight: 800, fontSize: '0.9rem'
+              }}
+            >
+              {iniciales || <AssignmentIcon sx={{ fontSize: 18 }} />}
+            </Avatar>
+            <Box minWidth={0}> {/* minWidth 0 ayuda a que el noWrap funcione */}
+              <Typography variant="body2" fontWeight={800} color="text.primary" noWrap title={nombreCompleto}>
+                {nombreCompleto}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" noWrap display="block">
+                Suscripción #{resumen.id_suscripcion}
+              </Typography>
+            </Box>
+          </Stack>
+        )
+      }
     },
     {
       id: 'proyecto',
       label: 'Proyecto / Plan',
       minWidth: 200,
-      render: (resumen) => (
-        <Box>
-          <Typography variant="body2" fontWeight={700} color="text.primary">
-            {resumen.nombre_proyecto}
-          </Typography>
-          <Stack direction="row" alignItems="center" spacing={0.5} sx={{ color: 'text.secondary' }}>
-            <AccessTime sx={{ fontSize: 12 }} />
-            <Typography variant="caption" fontWeight={500}>Plan {resumen.meses_proyecto} meses</Typography>
-          </Stack>
-        </Box>
-      )
+      render: (resumen) => {
+        // 🆕 Extraemos el nombre del proyecto desde la relación, fallback al nombre guardado
+        const nombreProyecto = resumen.suscripcion?.proyectoAsociado?.nombre_proyecto || resumen.nombre_proyecto;
+        
+        return (
+          <Box minWidth={0}>
+            <Typography variant="body2" fontWeight={700} color="text.primary" noWrap title={nombreProyecto}>
+              {nombreProyecto}
+            </Typography>
+            <Stack direction="row" alignItems="center" spacing={0.5} sx={{ color: 'text.secondary', mt: 0.2 }}>
+              <AccessTime sx={{ fontSize: 12 }} />
+              <Typography variant="caption" fontWeight={600}>Plan {resumen.meses_proyecto} meses</Typography>
+            </Stack>
+          </Box>
+        );
+      }
     },
     {
       id: 'cuotas',
@@ -163,7 +184,7 @@ const AdminResumenesCuenta: React.FC = () => {
                 {resumen.cuotas_pagadas} DE {resumen.meses_proyecto} CUOTAS
               </Typography>
               {hasOverdue && (
-                <Typography variant="caption" fontWeight={900} color="error.main" sx={{ fontSize: '0.6rem' }}>
+                <Typography variant="caption" fontWeight={900} color="error.main" sx={{ fontSize: '0.65rem' }}>
                   {resumen.cuotas_vencidas} VENC.
                 </Typography>
               )}
@@ -325,7 +346,7 @@ const AdminResumenesCuenta: React.FC = () => {
 
         <FilterBar sx={{ flex: 1, maxWidth: { sm: 700 } }}>
           <FilterSearch
-            placeholder="Buscar por proyecto o ID..."
+            placeholder="Buscar por inversor, proyecto o ID..."
             value={logic.searchTerm}
             onSearch={logic.setSearchTerm}
             sx={{ flexGrow: 1 }}
@@ -355,7 +376,6 @@ const AdminResumenesCuenta: React.FC = () => {
             data={logic.filteredResumenes}
             getRowKey={(row) => row.id}
             isRowActive={(row) => row.porcentaje_pagado < 100}
-            // 🔥 CORRECCIÓN: false para respetar filtros
             showInactiveToggle={false}
             inactiveLabel="Ver Completados"
             highlightedRowId={logic.highlightedId}

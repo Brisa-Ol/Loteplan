@@ -5,7 +5,6 @@ import ResumenCuentaService from '@/core/api/services/resumenCuenta.service';
 import { useModal } from '@/shared/hooks/useModal';
 import { useSortedData } from '../useSortedData';
 
-
 // ============================================================================
 // DEBOUNCE HELPER
 // ============================================================================
@@ -62,11 +61,20 @@ export const useAdminResumenes = () => {
 
       if (!matchesState) return false;
 
-      // 2. Filtro de Texto (Más lento, ejecutar al final)
+      // 2. Filtro de Texto (🚨 AHORA BUSCA POR USUARIO)
       if (!term) return true;
 
+      // Extracción segura de datos para la búsqueda
+      const nombreProyecto = (resumen.suscripcion?.proyectoAsociado?.nombre_proyecto || resumen.nombre_proyecto).toLowerCase();
+      const nombreUsuario = resumen.suscripcion?.usuario?.nombre?.toLowerCase() || '';
+      const apellidoUsuario = resumen.suscripcion?.usuario?.apellido?.toLowerCase() || '';
+      const emailUsuario = resumen.suscripcion?.usuario?.email?.toLowerCase() || '';
+      const nombreCompleto = `${nombreUsuario} ${apellidoUsuario}`.trim();
+
       return (
-        resumen.nombre_proyecto.toLowerCase().includes(term) ||
+        nombreProyecto.includes(term) ||
+        nombreCompleto.includes(term) ||
+        emailUsuario.includes(term) ||
         resumen.id.toString().includes(term) ||
         resumen.id_suscripcion.toString().includes(term)
       );

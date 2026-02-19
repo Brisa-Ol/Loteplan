@@ -373,10 +373,17 @@ const AdminPlantillas: React.FC = () => {
           ]}
         />
 
-        <FilterBar sx={{ flex: 1, maxWidth: { sm: 700 } }}>
+<FilterBar sx={{ flex: 1, maxWidth: { sm: 700 } }}>
           <FilterSearch placeholder="Buscar por nombre de archivo..." value={logic.searchTerm} onSearch={logic.setSearchTerm} sx={{ flexGrow: 1 }} />
+          
           <FilterSelect label="Proyecto" value={logic.filterProject} onChange={(e) => logic.setFilterProject(e.target.value)} sx={{ minWidth: 200 }}>
             <MenuItem value="all">Todos los Proyectos</MenuItem>
+            
+            {/* ✨ NUEVO: Opción para filtrar los huérfanos / globales */}
+            <MenuItem value="global" sx={{ fontWeight: 600, color: 'info.main' }}>
+              Globales (Sin Proyecto)
+            </MenuItem>
+            
             <Divider />
             {logic.proyectos.map(p => (
               <MenuItem key={p.id} value={p.id}>{p.nombre_proyecto}</MenuItem>
@@ -405,13 +412,13 @@ const AdminPlantillas: React.FC = () => {
       )}
 
       {/* Modales */}
-      <CreatePlantillaModal
-        open={logic.modales.create.isOpen}
-        onClose={logic.modales.create.close}
-        onSubmit={async (data) => { await logic.createMutation.mutateAsync(data); }}
-        isLoading={logic.isCreating}
-        proyectos={logic.proyectos}
-      />
+   <CreatePlantillaModal
+  open={logic.modales.create.isOpen}
+  onClose={logic.modales.create.close}
+  onSubmit={async (data) => { await logic.createMutation.mutateAsync(data); }}
+  isLoading={logic.isCreating}
+  proyectos={logic.proyectosDisponibles} // 👈 ¡Usa la nueva propiedad aquí!
+/>
 
       {logic.plantillaSelected && (
         <>

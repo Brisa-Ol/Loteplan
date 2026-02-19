@@ -51,12 +51,24 @@ export const useAdminContratosFirmados = () => {
   const filteredContratos = useMemo(() => {
     const term = debouncedSearchTerm.toLowerCase();
     
+    if (!term) return contratosOrdenados;
+
     return contratosOrdenados.filter(c => {
-      if (!term) return true;
+      // Extraemos la información anidada para búsqueda robusta
+      const nombreUsuario = c.usuarioFirmante?.nombre?.toLowerCase() || '';
+      const apellidoUsuario = c.usuarioFirmante?.apellido?.toLowerCase() || '';
+      const nombreCompleto = `${nombreUsuario} ${apellidoUsuario}`.trim();
+      const emailUsuario = c.usuarioFirmante?.email?.toLowerCase() || '';
+      const nombreProyecto = c.proyectoAsociado?.nombre_proyecto?.toLowerCase() || '';
+      const hash = c.hash_archivo_firmado?.toLowerCase() || '';
+
       return (
+        nombreCompleto.includes(term) ||
+        emailUsuario.includes(term) ||
+        nombreProyecto.includes(term) ||
+        hash.includes(term) ||
         c.nombre_archivo.toLowerCase().includes(term) ||
-        c.id_usuario_firmante.toString().includes(term) ||
-        c.id_proyecto.toString().includes(term)
+        c.id_usuario_firmante.toString().includes(term)
       );
     });
   }, [contratosOrdenados, debouncedSearchTerm]);
@@ -72,7 +84,6 @@ export const useAdminContratosFirmados = () => {
       setDownloadingId(contrato.id);
       
       // ✅ Usamos tu utilidad robusta en lugar del servicio
-      // Nota: Asumimos que url_archivo es relativa tipo 'uploads/contratos/...'
       await downloadSecureFile(contrato.url_archivo, contrato.nombre_archivo);
 
       // ✨ Feedback Visual: Iluminamos la fila descargada

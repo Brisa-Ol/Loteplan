@@ -1,5 +1,3 @@
-// src/pages/Admin/Contratos/AdminContratosFirmados.tsx
-
 import {
   BarChart as BarChartIcon,
   Business,
@@ -35,7 +33,6 @@ import {
 // Hooks y DTOs
 import type { ContratoFirmadoDto } from '@/core/types/dto/contrato-firmado.dto';
 
-
 // Componentes Compartidos
 import { AdminPageHeader } from '@/shared/components/admin/Adminpageheader';
 import AlertBanner from '@/shared/components/admin/Alertbanner';
@@ -66,7 +63,6 @@ const ContratosAnalytics = React.memo<{ data: ContratoFirmadoDto[] }>(({ data })
     ].filter(i => i.value > 0);
   }, [data, theme]);
 
-  // Agrupa por Nombre de Proyecto (o ID si no tiene nombre)
   const projectData = useMemo(() => {
     const counts = data.reduce((acc, curr) => {
       const name = curr.proyectoAsociado?.nombre_proyecto || `Proy #${curr.id_proyecto}`;
@@ -82,7 +78,6 @@ const ContratosAnalytics = React.memo<{ data: ContratoFirmadoDto[] }>(({ data })
 
   return (
     <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
-      {/* Distribución por Tipo */}
       <Box sx={{ bgcolor: alpha(theme.palette.background.paper, 0.5), p: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
         <Typography variant="h6" fontWeight={800} mb={3}>Tipología Legal</Typography>
         <ResponsiveContainer width="100%" height={300}>
@@ -105,14 +100,13 @@ const ContratosAnalytics = React.memo<{ data: ContratoFirmadoDto[] }>(({ data })
         </ResponsiveContainer>
       </Box>
 
-      {/* Top Proyectos */}
       <Box sx={{ bgcolor: alpha(theme.palette.background.paper, 0.5), p: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
         <Typography variant="h6" fontWeight={800} mb={3}>Volumen por Proyecto (Top 5)</Typography>
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={projectData} layout="vertical" margin={{ left: 10, right: 30 }}>
             <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={theme.palette.divider} />
             <XAxis type="number" hide />
-            <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 11, fontWeight: 600 }} axisLine={false} />
+            <YAxis dataKey="name" type="category" width={120} tick={{ fontSize: 11, fontWeight: 600 }} axisLine={false} />
             <RechartsTooltip cursor={{ fill: alpha(theme.palette.primary.main, 0.1) }} contentStyle={{ borderRadius: 8 }} />
             <Bar dataKey="value" fill={theme.palette.primary.main} radius={[0, 4, 4, 0]} barSize={24} />
           </BarChart>
@@ -146,81 +140,62 @@ const AdminContratosFirmados: React.FC = () => {
 
   // COLUMNAS DEFINITIVAS
   const columns = useMemo<DataTableColumn<ContratoFirmadoDto>[]>(() => [
-    {
+{
       id: 'id',
-      label: 'ID / Archivo',
-      minWidth: 140,
+      label: 'Nombre del Archivo', // Cambiamos el título de la columna
+      minWidth: 200, // Le damos un poco más de espacio
       render: (row) => (
         <Stack direction="row" spacing={1.5} alignItems="center">
           <Avatar sx={{ width: 32, height: 32, bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}>
             <DescriptionIcon sx={{ fontSize: 16 }} />
           </Avatar>
-          <Box>
-            <Typography variant="body2" fontWeight={700}>#{row.id}</Typography>
+          <Box minWidth={0}>
+            {/* El Nombre del Archivo ahora es el texto principal (Body2, Bold) */}
             <Tooltip title={row.nombre_archivo}>
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <Typography 
+                variant="body2" 
+                fontWeight={700} 
+                sx={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+              >
                 {row.nombre_archivo}
               </Typography>
             </Tooltip>
+            {/* El ID pasa a ser un dato secundario abajo (Caption) */}
+            <Typography variant="caption" color="text.secondary">
+              ID Interno: #{row.id}
+            </Typography>
           </Box>
         </Stack>
       )
     },
     {
       id: 'usuario',
-      label: 'Datos del Firmante',
+      label: 'Firmante',
       minWidth: 260,
       render: (row) => {
-        // Accedemos al objeto anidado gracias al backend corregido
         const user = row.usuarioFirmante;
+        const nombreCompleto = user ? `${user.nombre} ${user.apellido}`.trim() : `Usuario #${row.id_usuario_firmante}`;
+        const inicial = user ? user.nombre.charAt(0).toUpperCase() : '';
 
         return (
-          <Stack direction="row" alignItems="center" spacing={2}>
-            {/* Avatar con Inicial */}
+          <Stack direction="row" alignItems="center" spacing={1.5}>
             <Avatar sx={{
               width: 36, height: 36,
               bgcolor: alpha(theme.palette.secondary.main, 0.1),
               color: theme.palette.secondary.main,
               fontSize: 15, fontWeight: 800
             }}>
-              {user ? user.nombre.charAt(0).toUpperCase() : <Person fontSize="inherit" />}
+              {inicial || <Person fontSize="small" />}
             </Avatar>
-
-            <Box>
-              {user ? (
-                <>
-                  {/* Nombre Completo */}
-                  <Typography variant="body2" fontWeight={700}>
-                    {user.nombre} {user.apellido}
-                  </Typography>
-
-                  {/* Email + ID pequeño */}
-                  <Stack direction="row" alignItems="center" spacing={0.5} flexWrap="wrap">
-                    <Typography variant="caption" color="text.secondary">
-                      {user.email}
-                    </Typography>
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        fontSize: '0.65rem',      // 👈 ID en chico
-                        color: 'text.disabled',
-                        fontFamily: 'monospace',
-                        bgcolor: alpha(theme.palette.action.hover, 0.5),
-                        px: 0.5,
-                        borderRadius: 1
-                      }}
-                    >
-                      #{user.id}
-                    </Typography>
-                  </Stack>
-                </>
-              ) : (
-                /* Fallback por si falla el JOIN */
-                <Box>
-                  <Typography variant="body2" fontWeight={700}>Usuario #{row.id_usuario_firmante}</Typography>
-                  <Typography variant="caption" color="error.main">Sin datos extendidos</Typography>
-                </Box>
-              )}
+            <Box minWidth={0}>
+              <Typography variant="body2" fontWeight={800} noWrap title={nombreCompleto}>
+                {nombreCompleto}
+              </Typography>
+              <Stack direction="row" alignItems="center" spacing={0.5} flexWrap="wrap">
+                <Typography variant="caption" color="text.secondary" noWrap>
+                  {user ? user.email : 'Sin datos extendidos'}
+                </Typography>
+              </Stack>
             </Box>
           </Stack>
         );
@@ -231,28 +206,18 @@ const AdminContratosFirmados: React.FC = () => {
       label: 'Proyecto Asociado',
       minWidth: 200,
       render: (row) => {
-        // Accedemos al objeto anidado
         const proj = row.proyectoAsociado;
 
         return (
           <Stack direction="row" alignItems="center" spacing={1.5}>
             <Business fontSize="small" color="action" />
-            <Box>
-              {proj ? (
-                <>
-                  {/* Nombre Proyecto */}
-                  <Typography variant="body2" fontWeight={600} color="text.primary">
-                    {proj.nombre_proyecto}
-                  </Typography>
-                  {/* Estado y Tipo */}
-                  <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'capitalize' }}>
-                    {proj.estado_proyecto} • {proj.tipo_inversion}
-                  </Typography>
-                </>
-              ) : (
-                /* Fallback */
-                <Typography variant="body2" fontWeight={600}>
-                  Proyecto #{row.id_proyecto}
+            <Box minWidth={0}>
+              <Typography variant="body2" fontWeight={700} color="text.primary" noWrap title={proj?.nombre_proyecto || `Proyecto #${row.id_proyecto}`}>
+                {proj?.nombre_proyecto || `Proyecto #${row.id_proyecto}`}
+              </Typography>
+              {proj && (
+                <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'capitalize' }} noWrap>
+                  {proj.estado_proyecto} • {proj.tipo_inversion}
                 </Typography>
               )}
             </Box>
@@ -262,16 +227,17 @@ const AdminContratosFirmados: React.FC = () => {
     },
     {
       id: 'tipo',
-      label: 'Tipo',
+      label: 'Clasificación',
+      align: 'center',
       render: (row) => {
-        let statusType: any = 'info';
+        let statusType: any = 'default';
         let label = 'GENERAL';
 
         if (row.id_inversion_asociada) {
           statusType = 'active'; // Verde
           label = 'INVERSIÓN';
         } else if (row.id_suscripcion_asociada) {
-          statusType = 'in_progress'; // Azul/Amarillo
+          statusType = 'in_progress'; // Azul/Info
           label = 'SUSCRIPCIÓN';
         }
 
@@ -294,22 +260,23 @@ const AdminContratosFirmados: React.FC = () => {
     },
     {
       id: 'hash',
-      label: 'Integridad (Hash)',
+      label: 'Integridad',
+      align: 'center',
       render: (row) => (
-        <Tooltip title={`SHA-256 Completo: ${row.hash_archivo_firmado}`}>
-          <Stack direction="row" alignItems="center" spacing={1} sx={{ cursor: 'help' }}>
-            <Fingerprint color="success" fontSize="small" />
+        <Tooltip title={row.hash_archivo_firmado ? `SHA-256: ${row.hash_archivo_firmado}` : 'Sin Hash Criptográfico'}>
+          <Stack direction="row" alignItems="center" justifyContent="center" spacing={1} sx={{ cursor: 'help' }}>
+            <Fingerprint color={row.hash_archivo_firmado ? "success" : "disabled"} fontSize="small" />
             <Typography
               variant="caption"
               sx={{
                 fontFamily: 'monospace',
-                color: 'success.main',
-                bgcolor: alpha(theme.palette.success.main, 0.05),
+                color: row.hash_archivo_firmado ? 'success.main' : 'text.disabled',
+                bgcolor: row.hash_archivo_firmado ? alpha(theme.palette.success.main, 0.05) : alpha(theme.palette.action.disabled, 0.05),
                 px: 0.8, py: 0.2, borderRadius: 1,
                 fontWeight: 700
               }}
             >
-              {row.hash_archivo_firmado ? row.hash_archivo_firmado.substring(0, 8).toUpperCase() : 'PEND...'}
+              {row.hash_archivo_firmado ? row.hash_archivo_firmado.substring(0, 8).toUpperCase() : 'N/A'}
             </Typography>
           </Stack>
         </Tooltip>
@@ -411,7 +378,7 @@ const AdminContratosFirmados: React.FC = () => {
 
         <FilterBar sx={{ flex: 1, maxWidth: { sm: 600 } }}>
           <FilterSearch
-            placeholder="Buscar por Usuario, Proyecto o Hash..."
+            placeholder="Buscar por inversor, email, proyecto o Hash..."
             value={logic.searchTerm}
             onSearch={logic.setSearchTerm}
             sx={{ flexGrow: 1 }}
