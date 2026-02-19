@@ -47,12 +47,12 @@ import { PageContainer } from '@/shared/components/layout/containers/PageContain
 
 import type { ProyectoDto } from '@/core/types/dto/proyecto.dto';
 
+import { useAdminProyectos, type TipoInversionFilter } from '../../hooks/proyecto/useAdminProyectos';
 import ConfigCuotasModal from './modals/ConfigCuotasModal';
 import CreateProyectoModal from './modals/CreateProyectoModal';
 import EditProyectoModal from './modals/EditProyectoModal';
 import ManageImagesModal from './modals/ManageImagesModal';
 import ProjectLotesModal from './modals/ProjectLotesModal';
-import { useAdminProyectos, type TipoInversionFilter } from '../../hooks/proyecto/useAdminProyectos';
 
 // ============================================================================
 // COMPONENTE: VISTA DE CARDS (MEMOIZADO)
@@ -487,35 +487,63 @@ const AdminProyectos: React.FC = () => {
           subtitle="Capital acumulado"
         />
       </MetricsGrid>
-
-      {/* 4. FILTROS Y TOGGLE DE VISTA */}
+{/* 4. FILTROS Y TOGGLE DE VISTA */}
       <Stack
-        direction={{ xs: 'column', md: 'row' }}
-        justifyContent="space-between"
-        alignItems={{ xs: 'stretch', md: 'center' }}
-        mb={3}
+        direction={{ xs: 'column', lg: 'row' }} 
         spacing={2}
+        mb={3}
+        alignItems={{ xs: 'stretch', lg: 'center' }}
+        justifyContent="space-between"
       >
-        <FilterBar sx={{ flex: 1 }}>
+        {/* Barra de Filtros Responsive */}
+        <FilterBar
+          sx={{
+            flex: 1,
+            flexWrap: 'wrap',
+            gap: 2,
+            display: 'flex',
+            alignItems: 'center',
+          }}
+        >
           <FilterSearch
             placeholder="Buscar por nombre..."
             value={logic.searchTerm}
             onSearch={logic.setSearchTerm}
-            sx={{ flexGrow: 1 }}
+            sx={{ 
+              minWidth: { xs: '100%', sm: 400 },
+              mr: { sm: 'auto' }, // ✨ LA MAGIA ESTÁ AQUÍ: Empuja el resto a la derecha en PC
+              flexGrow: { xs: 1, sm: 0 } // Permite que crezca en celular, pero mantenga su tamaño en PC
+            }}
           />
 
           <FilterSelect
             label="Tipo de Inversión"
             value={logic.filterTipo}
             onChange={(e) => logic.setFilterTipo(e.target.value as TipoInversionFilter)}
-            sx={{ minWidth: 180 }}
+            sx={{ minWidth: { xs: '100%', sm: 225 }, flex: { xs: 1, sm: 'none' } }}
           >
             <MenuItem value="all">Todos</MenuItem>
+            <Divider />
             <MenuItem value="directo">Directo</MenuItem>
             <MenuItem value="mensual">Ahorro</MenuItem>
           </FilterSelect>
+
+          {/* Estado del Proyecto */}
+          <FilterSelect
+            label="Estado"
+            value={logic.filterEstado}
+            onChange={(e) => logic.setFilterEstado(e.target.value as string)}
+            sx={{ minWidth: { xs: '100%', sm: 225 }, flex: { xs: 1, sm: 'none' } }}
+          >
+            <MenuItem value="all">Todos</MenuItem>
+            <Divider />
+            <MenuItem value="En Espera">En Espera</MenuItem>
+            <MenuItem value="En proceso">En Proceso</MenuItem>
+            <MenuItem value="Finalizado">Finalizado</MenuItem>
+          </FilterSelect>
         </FilterBar>
 
+        {/* Toggle de vista a la derecha */}
         <ViewModeToggle
           value={viewMode}
           onChange={(newMode) => setViewMode(newMode)}

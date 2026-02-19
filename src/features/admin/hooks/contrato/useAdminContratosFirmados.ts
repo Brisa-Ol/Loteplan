@@ -28,7 +28,10 @@ export const useAdminContratosFirmados = () => {
   // --- ESTADOS UI ---
   const [searchTerm, setSearchTerm] = useState('');
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
-
+const [filterTipo, setFilterTipo] = useState<string>('all');
+  const [filterEstado, setFilterEstado] = useState<string>('all');
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
   // ✨ Debounce
   const debouncedSearchTerm = useDebouncedValue(searchTerm, 300);
 
@@ -51,27 +54,62 @@ export const useAdminContratosFirmados = () => {
   const filteredContratos = useMemo(() => {
     const term = debouncedSearchTerm.toLowerCase();
     
-    if (!term) return contratosOrdenados;
-
     return contratosOrdenados.filter(c => {
-      // Extraemos la información anidada para búsqueda robusta
-      const nombreUsuario = c.usuarioFirmante?.nombre?.toLowerCase() || '';
-      const apellidoUsuario = c.usuarioFirmante?.apellido?.toLowerCase() || '';
-      const nombreCompleto = `${nombreUsuario} ${apellidoUsuario}`.trim();
-      const emailUsuario = c.usuarioFirmante?.email?.toLowerCase() || '';
-      const nombreProyecto = c.proyectoAsociado?.nombre_proyecto?.toLowerCase() || '';
-      const hash = c.hash_archivo_firmado?.toLowerCase() || '';
+      // 1. Filtro por Búsqueda de Texto
+      let matchesSearch = true;
+      if (term) {
+        const nombreCompleto = `${c.usuarioFirmante?.nombre || ''} ${c.usuarioFirmante?.apellido || ''}`.toLowerCase();
+        const emailUsuario = c.usuarioFirmante?.email?.toLowerCase() || '';
+        const nombreProyecto = c.proyectoAsociado?.nombre_proyecto?.toLowerCase() || '';
+        const hash = c.hash_archivo_firmado?.toLowerCase() || '';
 
-      return (
-        nombreCompleto.includes(term) ||
-        emailUsuario.includes(term) ||
-        nombreProyecto.includes(term) ||
-        hash.includes(term) ||
-        c.nombre_archivo.toLowerCase().includes(term) ||
-        c.id_usuario_firmante.toString().includes(term)
-      );
+        matchesSearch = (
+          nombreCompleto.includes(term) ||
+          emailUsuario.includes(term) ||
+          nombreProyecto.includes(term) ||
+          hash.includes(term) ||
+          c.nombre_archivo.toLowerCase().includes(term) ||
+          c.id_usuario_firmante.toString().includes(term)
+        );
+      }
+
+      // 2. ✨ Filtro por Tipo (Clasificación)
+      let matchesTipo = true;
+      if (filterTipo !== 'all') {
+        if (filterTipo === 'inversion') matchesTipo = !!c.id_inversion_asociada;
+        else if (filterTipo === 'suscripcion') matchesTipo = !!c.id_suscripcion_asociada;
+        else if (filterTipo === 'general') matchesTipo = !c.id_inversion_asociada && !c.id_suscripcion_asociada;
+      }
+
+      // 3. ✨ Filtro por Estado de Firma
+      let matchesEstado = true;
+      if (filterEstado !== 'all') {
+        matchesEstado = c.estado_firma === filterEstado;
+      }
+
+     // 4. ✨ Filtro por Rango de Fechas
+      let matchesDate = true;
+      if (startDate || endDate) {
+        // Aseguramos que la fecha del contrato sea un objeto Date válido
+        const contractDate = new Date(c.fecha_firma);
+
+        if (startDate) {
+          // Forzamos la zona horaria local añadiendo T00:00:00
+          const start = new Date(`${startDate}T00:00:00`);
+          if (contractDate < start) matchesDate = false;
+        }
+
+        if (endDate) {
+          // Forzamos la zona horaria local al final del día
+          const end = new Date(`${endDate}T23:59:59`);
+          if (contractDate > end) matchesDate = false;
+        }
+      }
+
+      // Retornamos la combinación de todos los filtros
+      return matchesSearch && matchesTipo && matchesEstado && matchesDate;
     });
-  }, [contratosOrdenados, debouncedSearchTerm]);
+  }, [contratosOrdenados, debouncedSearchTerm, filterTipo, filterEstado, startDate, endDate]);
 
   // --- HANDLERS ---
   const handleDownload = useCallback(async (contrato: ContratoFirmadoDto) => {
@@ -109,7 +147,11 @@ export const useAdminContratosFirmados = () => {
     filteredContratos,
     isLoading,
     error,
-
+startDate, setStartDate, // 👈 Exportamos
+    endDate, setEndDate,
+    filterTipo, setFilterTipo,       // 👈 Exportamos
+    filterEstado, setFilterEstado,   // 👈 Exportamos
+ 
     // Handlers
     handleDownload
   };

@@ -58,7 +58,8 @@ export const useAdminLotes = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterProject, setFilterProject] = useState<string>(searchParams.get('proyecto') || 'all');
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
-
+const [filterEstadoSubasta, setFilterEstadoSubasta] = useState<string>('all');
+  const [filterTipoInversion, setFilterTipoInversion] = useState<string>('all');
   const debouncedSearchTerm = useDebouncedValue(searchTerm, 300);
 
   // Sincronizar URL con filtro
@@ -91,7 +92,7 @@ export const useAdminLotes = () => {
   const { sortedData: sortedLotes, highlightedId, triggerHighlight } = useSortedData(lotesRaw);
 
   // --- FILTRADO (Memoizado) ---
-  const filteredLotes = useMemo(() => {
+const filteredLotes = useMemo(() => {
     const term = debouncedSearchTerm.toLowerCase();
 
     return sortedLotes.filter((lote) => {
@@ -105,9 +106,27 @@ export const useAdminLotes = () => {
       if (filterProject === 'huerfano') matchesProject = !lote.id_proyecto;
       else if (filterProject !== 'all') matchesProject = lote.id_proyecto === Number(filterProject);
 
-      return matchesSearch && matchesProject;
+      // 3. ✨ Filtro Estado de Subasta
+      let matchesEstadoSubasta = true;
+      if (filterEstadoSubasta !== 'all') {
+        matchesEstadoSubasta = lote.estado_subasta === filterEstadoSubasta;
+      }
+
+      // 4. ✨ Filtro Tipo de Inversión
+      let matchesTipoInversion = true;
+      if (filterTipoInversion !== 'all') {
+        const proyectoAsociado = proyectos.find(p => p.id === lote.id_proyecto);
+        // Si buscamos un tipo específico, pero el lote es huérfano (no tiene proyecto), no coincide.
+        if (!proyectoAsociado && filterTipoInversion !== 'all') {
+            matchesTipoInversion = false;
+        } else if (proyectoAsociado) {
+            matchesTipoInversion = proyectoAsociado.tipo_inversion === filterTipoInversion;
+        }
+      }
+
+      return matchesSearch && matchesProject && matchesEstadoSubasta && matchesTipoInversion;
     });
-  }, [sortedLotes, debouncedSearchTerm, filterProject]);
+  }, [sortedLotes, debouncedSearchTerm, filterProject, filterEstadoSubasta, filterTipoInversion, proyectos]);
 
   // --- STATS ---
   const stats = useMemo(() => ({
@@ -238,7 +257,8 @@ export const useAdminLotes = () => {
     filterProject, setFilterProject,
     viewMode, setViewMode,
     selectedLote,
-
+filterEstadoSubasta, setFilterEstadoSubasta, // 👈 Exportamos
+    filterTipoInversion, setFilterTipoInversion, // 👈 Exportamos
     // Data
     filteredLotes,
     proyectos,

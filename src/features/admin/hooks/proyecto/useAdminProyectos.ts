@@ -34,6 +34,7 @@ export const useAdminProyectos = () => {
   const [selectedProject, setSelectedProject] = useState<ProyectoDto | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterTipo, setFilterTipo] = useState<TipoInversionFilter>('all');
+  const [filterEstado, setFilterEstado] = useState<string>('all');
   const debouncedSearchTerm = useDebouncedValue(searchTerm, 300);
 
   // --- MODALES ---
@@ -191,19 +192,27 @@ queryClient.invalidateQueries({ queryKey: ['adminProyectos'] });
   }, [confirmDialog, startMutation, toggleActiveMutation, revertMutation]);
 
   // --- FILTRADO ---
-  const filteredProyectos = useMemo(() => {
+const filteredProyectos = useMemo(() => {
     const search = debouncedSearchTerm.toLowerCase();
     return proyectosOrdenados.filter(p => {
+      // 1. Filtro por búsqueda
       const matchesSearch = !search || p.nombre_proyecto.toLowerCase().includes(search);
+      
+      // 2. Filtro por Tipo de Inversión
       const matchesType = filterTipo === 'all' || p.tipo_inversion === filterTipo;
-      return matchesSearch && matchesType;
+      
+      // 3. ✨ Filtro por Estado
+      const matchesEstado = filterEstado === 'all' || p.estado_proyecto === filterEstado;
+
+      return matchesSearch && matchesType && matchesEstado;
     });
-  }, [proyectosOrdenados, debouncedSearchTerm, filterTipo]);
+  }, [proyectosOrdenados, debouncedSearchTerm, filterTipo, filterEstado]); // 👈 Añadir filterEstado a dependencias
 
   return {
     searchTerm, setSearchTerm,
     filterTipo, setFilterTipo,
     selectedProject,
+    filterEstado, setFilterEstado,
     highlightedId,
     filteredProyectos,
     isLoading, error,

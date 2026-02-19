@@ -5,7 +5,7 @@ import {
 import {
   Avatar, Box, Button, Card, CardContent, Chip, CircularProgress,
   Divider, IconButton, InputAdornment, MenuItem, Stack, Switch,
-  TextField, ToggleButton, ToggleButtonGroup, Tooltip, Typography, alpha, useTheme
+  ToggleButton, ToggleButtonGroup, Tooltip, Typography, alpha, useTheme
 } from '@mui/material';
 import React, { useMemo } from 'react';
 
@@ -13,7 +13,7 @@ import { DataTable, type DataTableColumn } from '@/shared/components/data-grid/D
 import { QueryHandler } from '@/shared/components/data-grid/QueryHandler/QueryHandler';
 import { StatCard } from '@/shared/components/domain/cards/StatCard/StatCard';
 import { ConfirmDialog } from '@/shared/components/domain/modals/ConfirmDialog/ConfirmDialog';
-import { FilterBar, FilterSelect } from '@/shared/components/forms/filters/FilterBar';
+import { FilterBar, FilterSearch, FilterSelect } from '@/shared/components/forms/filters/FilterBar';
 import { PageContainer } from '@/shared/components/layout/containers/PageContainer/PageContainer';
 
 import AuctionControlModal from './modals/AuctionControlModal';
@@ -24,7 +24,6 @@ import ManageLoteImagesModal from './modals/ManageLoteImagesModal';
 import imagenService from '@/core/api/services/imagen.service';
 import type { LoteDto } from '@/core/types/dto/lote.dto';
 import { useAdminLotes } from '../../hooks/lotes/useAdminLotes';
-
 
 // ============================================================================
 // COMPONENTE: CARD DE LOTE (Memoizado)
@@ -434,22 +433,31 @@ const AdminLotes: React.FC = () => {
         />
       </Box>
 
-      {/* FILTROS Y SELECTOR DE VISTA */}
+      {/* FILTROS Y SELECTOR DE VISTA EN LA MISMA FILA */}
       <Stack
-        direction={{ xs: 'column', md: 'row' }}
-        justifyContent="space-between"
-        alignItems={{ xs: 'stretch', md: 'center' }}
-        mb={3}
+        direction={{ xs: 'column', lg: 'row' }} // Columna en pantallas pequeñas, fila en grandes
         spacing={2}
+        mb={3}
+        alignItems={{ xs: 'stretch', lg: 'center' }}
+        justifyContent="space-between"
       >
-        <FilterBar sx={{ flex: 1 }}>
-          <TextField
+        {/* Barra de Filtros Responsive */}
+        <FilterBar
+          sx={{
+            flex: 1,
+            flexWrap: 'wrap',
+            gap: 2,
+            display: 'flex',
+            alignItems: 'center'
+          }}
+        >
+          <FilterSearch
             placeholder="Buscar por nombre o ID..."
             size="small"
-            sx={{ flexGrow: 1 }}
+            sx={{ flexGrow: 1, minWidth: { xs: '100%', sm: 200 } }}
             value={logic.searchTerm}
             onChange={(e) => logic.setSearchTerm(e.target.value)}
-            InputProps={{
+            inputProps={{ // Corrección: inputProps en minúscula
               startAdornment: (
                 <InputAdornment position="start">
                   <Search color="action" />
@@ -457,11 +465,12 @@ const AdminLotes: React.FC = () => {
               ),
             }}
           />
+
           <FilterSelect
-            label="Filtrar Proyecto"
+            label="Proyecto"
             value={logic.filterProject}
-            onChange={(e) => logic.setFilterProject(e.target.value)}
-            sx={{ minWidth: 250 }}
+            onChange={(e) => logic.setFilterProject(e.target.value as string)}
+            sx={{ minWidth: { xs: '100%', sm: 180 }, flex: { xs: 1, sm: 'none' } }}
           >
             <MenuItem value="all">Todos los Lotes</MenuItem>
             <MenuItem value="huerfano">⚠️ Sin Proyecto</MenuItem>
@@ -472,8 +481,36 @@ const AdminLotes: React.FC = () => {
               </MenuItem>
             ))}
           </FilterSelect>
+
+          {/* Filtro Estado Subasta */}
+          <FilterSelect
+            label="Estado Subasta"
+            value={logic.filterEstadoSubasta}
+            onChange={(e) => logic.setFilterEstadoSubasta(e.target.value as string)}
+            sx={{ minWidth: { xs: '100%', sm: 150 }, flex: { xs: 1, sm: 'none' } }}
+          >
+            <MenuItem value="all">Todos</MenuItem>
+            <Divider />
+            <MenuItem value="pendiente">Pendiente</MenuItem>
+            <MenuItem value="activa">Activa</MenuItem>
+            <MenuItem value="finalizada">Finalizada</MenuItem>
+          </FilterSelect>
+
+          {/* Filtro Tipo Inversión */}
+          <FilterSelect
+            label="Tipo Inversión"
+            value={logic.filterTipoInversion}
+            onChange={(e) => logic.setFilterTipoInversion(e.target.value as string)}
+            sx={{ minWidth: { xs: '100%', sm: 150 }, flex: { xs: 1, sm: 'none' } }}
+          >
+            <MenuItem value="all">Todos</MenuItem>
+            <Divider />
+            <MenuItem value="directo">Inversionista</MenuItem>
+            <MenuItem value="mensual">Subastable</MenuItem>
+          </FilterSelect>
         </FilterBar>
 
+        {/* Toggle de vista a la derecha del todo */}
         <ToggleButtonGroup
           value={logic.viewMode}
           exclusive
@@ -481,6 +518,8 @@ const AdminLotes: React.FC = () => {
           size="small"
           sx={{
             bgcolor: alpha(logic.theme.palette.background.paper, 0.8),
+            alignSelf: { xs: 'center', lg: 'auto' }, // Lo centra en pantallas chicas
+            flexShrink: 0, // Evita que se encoja
             '& .MuiToggleButton-root': {
               px: 2,
               textTransform: 'none',
@@ -495,6 +534,7 @@ const AdminLotes: React.FC = () => {
             <GridView fontSize="small" sx={{ mr: 0.5 }} /> Cards
           </ToggleButton>
         </ToggleButtonGroup>
+
       </Stack>
 
       {/* CONTENIDO SEGÚN VISTA */}

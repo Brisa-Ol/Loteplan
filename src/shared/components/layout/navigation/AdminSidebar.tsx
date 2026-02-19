@@ -17,7 +17,7 @@ import { useAuth } from '@/core/context/AuthContext';
 import { ConfirmDialog } from '../../domain/modals/ConfirmDialog/ConfirmDialog';
 
 // ✅ Ancho fijo constante
-const DRAWER_WIDTH = 280;
+const DRAWER_WIDTH = 250;
 
 // Header simple del Drawer
 const DrawerHeader = styled('div')(({ theme }) => ({

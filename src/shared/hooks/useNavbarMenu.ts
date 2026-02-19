@@ -118,16 +118,16 @@ export const useNavbarMenu = () => {
         actionButtons: [],
         navItems: [
           {
-            label: "Dashboard",
+            label: "Panel",
             path: ROUTES.ADMIN.DASHBOARD,
             icon: DashboardIcon
           },
           {
-            label: "Gestión Usuarios",
+            label: "Usuarios",
             icon: PersonIcon,
             submenu: [
-              { label: "Lista de Usuarios", path: ROUTES.ADMIN.USUARIOS.LISTA, icon: PersonIcon },
-              { label: "Verificaciones KYC", path: ROUTES.ADMIN.USUARIOS.KYC, icon: VerifiedUserIcon, badge: 0 },
+              { label: "Gestión de Usuarios", path: ROUTES.ADMIN.USUARIOS.LISTA, icon: PersonIcon },
+              { label: "Gestión KYC", path: ROUTES.ADMIN.USUARIOS.KYC, icon: VerifiedUserIcon, badge: 0 },
             ]
           },
           {
@@ -135,8 +135,8 @@ export const useNavbarMenu = () => {
             icon: ConstructionIcon,
             submenu: [
               { label: "Gestión Proyectos", path: ROUTES.ADMIN.PROYECTOS.LISTA, icon: ConstructionIcon },
-              { label: "Planes de Ahorro", path: ROUTES.ADMIN.PROYECTOS.PLANES_AHORRO, icon: SupervisedUserIcon },
-              { label: "Inversiones", path: ROUTES.ADMIN.PROYECTOS.INVERSIONES, icon: AttachMoneyIcon },
+              { label: "Gestión Planes de Ahorro", path: ROUTES.ADMIN.PROYECTOS.PLANES_AHORRO, icon: SupervisedUserIcon },
+              { label: "Gestión Inversiones", path: ROUTES.ADMIN.PROYECTOS.INVERSIONES, icon: AttachMoneyIcon },
             ]
           },
           {
@@ -145,23 +145,23 @@ export const useNavbarMenu = () => {
             submenu: [
               { label: "Gestión Lotes", path: ROUTES.ADMIN.LOTES.LISTA, icon: TerrainIcon },
               { label: "Gestión Pagos", path: ROUTES.ADMIN.LOTES.PAGOS, icon: AttachMoneyIcon },
-              { label: "Gestión Pujas", path: ROUTES.ADMIN.LOTES.PUJAS, icon: GavelIcon },
+              { label: "Sala Pujas", path: ROUTES.ADMIN.LOTES.PUJAS, icon: GavelIcon },
             ]
           },
           {
             label: "Finanzas",
             icon: AccountBalanceIcon,
             submenu: [
-              { label: "Transacciones", path: ROUTES.ADMIN.FINANZAS.TRANSACCIONES, icon: ReceiptIcon },
-              { label: "Reportes", path: ROUTES.ADMIN.FINANZAS.RESUMENES, icon: DescriptionIcon },
+              { label: "Movimientos", path: ROUTES.ADMIN.FINANZAS.TRANSACCIONES, icon: ReceiptIcon },
+              { label: "Resúmenes", path: ROUTES.ADMIN.FINANZAS.RESUMENES, icon: DescriptionIcon },
             ]
           },
           {
             label: "Contratos",
             icon: DescriptionIcon,
             submenu: [
-              { label: "Plantillas", path: ROUTES.ADMIN.CONTRATOS.PLANTILLAS, icon: DescriptionIcon },
-              { label: "Firmados", path: ROUTES.ADMIN.CONTRATOS.FIRMADOS, icon: AssignmentIcon },
+              { label: "Gestión Plantillas", path: ROUTES.ADMIN.CONTRATOS.PLANTILLAS, icon: DescriptionIcon },
+              { label: "Gestión Firmados", path: ROUTES.ADMIN.CONTRATOS.FIRMADOS, icon: AssignmentIcon },
             ]
           }
         ],

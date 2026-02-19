@@ -150,7 +150,7 @@ const AdminSuscripciones: React.FC = () => {
   return (
     <PageContainer maxWidth="xl" sx={{ py: 3 }}>
       <AdminPageHeader
-        title="Gestión de Suscripciones"
+        title="Gestión de Planes de Ahorro"
         subtitle="Monitoreo de recaudación, morosidad y estados de planes"
       />
 
