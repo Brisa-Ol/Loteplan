@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import CuotaMensualService from '@/core/api/services/cuotaMensual.service';
 import ImagenService from '@/core/api/services/imagen.service';
 import ProyectoService from '@/core/api/services/proyecto.service';
+import ContratoPlantillaService from '@/core/api/services/contrato-plantilla.service';
 
 // Hooks y Tipos
 import type { CreateProyectoDto, ProyectoDto, UpdateProyectoDto } from '@/core/types/dto/proyecto.dto';
@@ -12,8 +13,6 @@ import { useConfirmDialog } from '@/shared/hooks/useConfirmDialog';
 import { useModal } from '@/shared/hooks/useModal';
 import useSnackbar from '@/shared/hooks/useSnackbar';
 import { useSortedData } from '../useSortedData';
-import ContratoPlantillaService from '@/core/api/services/contrato-plantilla.service';
-
 
 export type TipoInversionFilter = 'all' | 'mensual' | 'directo';
 
@@ -35,6 +34,7 @@ export const useAdminProyectos = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterTipo, setFilterTipo] = useState<TipoInversionFilter>('all');
   const [filterEstado, setFilterEstado] = useState<string>('all');
+  const [filterRiesgo, setFilterRiesgo] = useState<boolean>(false); // 🆕 Filtro Bajo Mínimo
   const debouncedSearchTerm = useDebouncedValue(searchTerm, 300);
 
   // --- MODALES ---
@@ -58,7 +58,7 @@ export const useAdminProyectos = () => {
 
   const { sortedData: proyectosOrdenados, highlightedId, triggerHighlight } = useSortedData(proyectosRaw);
 
-  // --- LOGICA REUTILIZABLE DE MUTACIONES ---
+  // --- MUTACIONES ---
   const handleMutationOptimistic = async () => {
     await queryClient.cancelQueries({ queryKey: ['adminProyectos'] });
     return queryClient.getQueryData<ProyectoDto[]>(['adminProyectos']);
@@ -78,7 +78,6 @@ export const useAdminProyectos = () => {
     confirmDialog.close();
   };
 
-  // --- MUTACIONES ---
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: UpdateProyectoDto }) => ProyectoService.update(id, data),
     onMutate: handleMutationOptimistic,
@@ -112,15 +111,11 @@ export const useAdminProyectos = () => {
   });
 
   // --- HANDLERS ---
-
-  // 🆕 Actualizamos la firma de handleCreateSubmit para recibir el contrato
-const handleCreateSubmit = useCallback(async (data: any, image: File | null, contrato: File | null, nombreContrato: string) => {
+  const handleCreateSubmit = useCallback(async (data: any, image: File | null, contrato: File | null, nombreContrato: string) => {
     try {
-      // 1. Crear Proyecto
       const resProyecto = await ProyectoService.create(data as CreateProyectoDto);
       const nuevoId = resProyecto.data.id;
 
-      // 2. Crear Cuotas si aplica
       if (data.tipo_inversion === 'mensual') {
         await CuotaMensualService.create({
           id_proyecto: nuevoId,
@@ -134,7 +129,6 @@ const handleCreateSubmit = useCallback(async (data: any, image: File | null, con
         });
       }
 
-      // 3. Subir Imagen
       if (image) {
         try {
           await ImagenService.create({ file: image, descripcion: 'Portada', id_proyecto: nuevoId, id_lote: null });
@@ -143,23 +137,20 @@ const handleCreateSubmit = useCallback(async (data: any, image: File | null, con
         }
       }
 
-      // 4. 🆕 Subir Contrato Plantilla (si el usuario adjuntó uno)
-if (contrato) {
-          try {
-              await ContratoPlantillaService.create({
-                  file: contrato,
-                  // Usamos el nombre que puso el usuario, o un fallback de seguridad
-                  nombre_archivo: nombreContrato.trim() || `Contrato - ${data.nombre_proyecto}`,
-                  version: 1,
-                  id_proyecto: nuevoId
-              });
-          } catch (err) {
-              showWarning('Proyecto creado, pero la plantilla del contrato falló al subirse.');
-          }
+      if (contrato) {
+        try {
+          await ContratoPlantillaService.create({
+            file: contrato,
+            nombre_archivo: nombreContrato.trim() || `Contrato - ${data.nombre_proyecto}`,
+            version: 1,
+            id_proyecto: nuevoId
+          });
+        } catch (err) {
+          showWarning('Proyecto creado, pero la plantilla del contrato falló al subirse.');
+        }
       }
 
-      // 5. Refrescar interfaz
-queryClient.invalidateQueries({ queryKey: ['adminProyectos'] });
+      queryClient.invalidateQueries({ queryKey: ['adminProyectos'] });
       create.close();
       triggerHighlight(nuevoId);
       showSuccess('Proyecto creado exitosamente.');
@@ -191,39 +182,36 @@ queryClient.invalidateQueries({ queryKey: ['adminProyectos'] });
     }
   }, [confirmDialog, startMutation, toggleActiveMutation, revertMutation]);
 
-  // --- FILTRADO ---
-const filteredProyectos = useMemo(() => {
+  // --- FILTRADO FINAL ---
+  const filteredProyectos = useMemo(() => {
     const search = debouncedSearchTerm.toLowerCase();
     return proyectosOrdenados.filter(p => {
-      // 1. Filtro por búsqueda
       const matchesSearch = !search || p.nombre_proyecto.toLowerCase().includes(search);
-      
-      // 2. Filtro por Tipo de Inversión
       const matchesType = filterTipo === 'all' || p.tipo_inversion === filterTipo;
-      
-      // 3. ✨ Filtro por Estado
       const matchesEstado = filterEstado === 'all' || p.estado_proyecto === filterEstado;
+      
+      // 🆕 Lógica de filtro por riesgo (Bajo Mínimo)
+      const isBajoMinimo = p.suscripciones_actuales < (p.suscripciones_minimas || 0);
+      const matchesRiesgo = !filterRiesgo || isBajoMinimo;
 
-      return matchesSearch && matchesType && matchesEstado;
+      return matchesSearch && matchesType && matchesEstado && matchesRiesgo;
     });
-  }, [proyectosOrdenados, debouncedSearchTerm, filterTipo, filterEstado]); // 👈 Añadir filterEstado a dependencias
+  }, [proyectosOrdenados, debouncedSearchTerm, filterTipo, filterEstado, filterRiesgo]);
 
   return {
     searchTerm, setSearchTerm,
     filterTipo, setFilterTipo,
-    selectedProject,
     filterEstado, setFilterEstado,
+    filterRiesgo, setFilterRiesgo, // 🆕
+    selectedProject,
     highlightedId,
     filteredProyectos,
     isLoading, error,
     modales,
-
     handleCreateSubmit,
     handleUpdateSubmit,
     handleAction,
     handleConfirmAction,
-
-    // Status
     isUpdating: updateMutation.isPending,
     isToggling: toggleActiveMutation.isPending,
     isStarting: startMutation.isPending,

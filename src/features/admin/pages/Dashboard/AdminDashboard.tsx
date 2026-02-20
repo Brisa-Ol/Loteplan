@@ -11,7 +11,8 @@ import {
   Security,
   Speed,
   Star,
-  Timeline
+  Timeline,
+  RocketLaunch // 🆕 Importamos RocketLaunch para la nueva alerta
 } from '@mui/icons-material';
 import {
   alpha,
@@ -29,12 +30,9 @@ import {
   Tooltip as RechartsTooltip, ResponsiveContainer, XAxis, YAxis
 } from 'recharts';
 
-// Componentes Compartidos
 import { QueryHandler } from '@/shared/components/data-grid/QueryHandler/QueryHandler';
 import { StatCard } from '@/shared/components/domain/cards/StatCard/StatCard';
 import { PageContainer } from '@/shared/components/layout/containers/PageContainer/PageContainer';
-
-// Hook de Lógica
 import { useAdminDashboard } from '../../hooks/useAdminDashboard';
 
 // ===========================================================================
@@ -55,7 +53,7 @@ interface AlertaPrioritariaProps {
   value: number | string;
   description: string;
   icon: React.ReactNode;
-  severity: 'error' | 'warning' | 'success';
+  severity: 'error' | 'warning' | 'success' | 'info'; // 🆕 Añadido 'info' para el azul
   actionLabel: string;
   onAction: () => void;
 }
@@ -98,7 +96,7 @@ const AlertaPrioritaria = React.memo<AlertaPrioritariaProps>(({
           color={severity}
           onClick={onAction}
           fullWidth
-          sx={{ borderRadius: 2 }}
+          sx={{ borderRadius: 2, fontWeight: 700 }}
         >
           {actionLabel}
         </Button>
@@ -132,12 +130,7 @@ const AdminDashboard: React.FC = () => {
           <Typography variant="h1">Panel de Administración</Typography>
           <Typography variant="subtitle1" color="text.secondary">Monitoreo de activos y cumplimiento operativo.</Typography>
         </Box>
-        <Chip
-          icon={<Speed />}
-          label="Sincronización en Tiempo Real"
-          color="success"
-          variant="outlined"
-        />
+        <Chip icon={<Speed />} label="Sincronización en Tiempo Real" color="success" variant="outlined" />
       </Stack>
 
       <QueryHandler isLoading={logic.isLoading} error={null} fullHeight>
@@ -147,15 +140,9 @@ const AdminDashboard: React.FC = () => {
           <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
             {accionesRapidas.map((btn) => (
               <Button
-                key={btn.label}
-                variant="outlined"
-                size="small"
-                startIcon={btn.icon}
+                key={btn.label} variant="outlined" size="small" startIcon={btn.icon}
                 onClick={() => logic.navigate(btn.path)}
-                sx={{
-                  borderRadius: 50, textTransform: 'none',
-                  color: 'text.secondary', borderColor: 'divider',
-                }}
+                sx={{ borderRadius: 50, textTransform: 'none', color: 'text.secondary', borderColor: 'divider' }}
               >
                 {btn.label}
               </Button>
@@ -164,74 +151,61 @@ const AdminDashboard: React.FC = () => {
 
           {/* 3. ALERTAS PRIORITARIAS */}
           <Box>
-            <Typography variant="overline" color="error.main" sx={{ mb: 1, display: 'block', ml: 1 }}>
+            <Typography variant="overline" color="error.main" sx={{ mb: 1, display: 'block', ml: 1, fontWeight: 800 }}>
               Atención Requerida
             </Typography>
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 3 }}>
+              
               <AlertaPrioritaria
-                title="Identidades por Validar (KYC)"
+                title="Identidades por Validar"
                 value={logic.stats.pendingKYC}
-                description={
-                  logic.stats.pendingKYC > 0
-                    ? `Existen ${logic.stats.pendingKYC} solicitudes de identidad esperando revisión manual.`
-                    : 'No hay documentos pendientes de validación.'
-                }
+                description={logic.stats.pendingKYC > 0 ? `Existen ${logic.stats.pendingKYC} solicitudes de identidad esperando revisión manual.` : 'No hay documentos pendientes de validación.'}
                 icon={<Security />}
                 severity={logic.stats.pendingKYC > 0 ? 'error' : 'success'}
                 actionLabel="Ir a Verificaciones"
                 onAction={() => logic.navigate('/admin/kyc')}
               />
+              
               <AlertaPrioritaria
-                title="Cobros de Subasta Pendientes"
+                title="Cobros de Subasta"
                 value={logic.stats.cobrosPendientes}
                 description="Lotes adjudicados que requieren confirmación de pago por parte del ganador."
                 icon={<ReceiptLong />}
-                severity="warning"
+                severity={logic.stats.cobrosPendientes > 0 ? 'warning' : 'success'}
                 actionLabel="Ver Adjudicaciones"
                 onAction={() => logic.navigate('/admin/pujas')}
               />
+
+              {/* 🆕 NUEVA ALERTA DE PROYECTOS LLENOS */}
+              <AlertaPrioritaria
+                title="Proyectos Listos"
+                value={logic.stats.proyectosListosParaIniciar || 0}
+                description={
+                  logic.stats.proyectosListosParaIniciar > 0
+                    ? "Han alcanzado su meta de suscriptores y esperan tu autorización para emitir cuotas."
+                    : "No hay proyectos pendientes de iniciarse."
+                }
+                icon={<RocketLaunch />} 
+                severity={logic.stats.proyectosListosParaIniciar > 0 ? 'info' : 'success'}
+                actionLabel="Ir a Gestión de Proyectos"
+                onAction={() => logic.navigate('/admin/proyectos')}
+              />
+
             </Box>
           </Box>
 
           {/* 4. KPIs FINANCIEROS */}
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', lg: 'repeat(4, 1fr)' }, gap: 3 }}>
-            <StatCard
-              title="Capital Total"
-              value={formatearMoneda(logic.stats.totalInvertido)}
-              icon={<AttachMoney />}
-              color="success"
-            />
-            <StatCard
-              title="Tasa de Cobro"
-              value={`${toNumber(logic.stats.tasaLiquidez)}%`}
-              subtitle={`${formatearMoneda(logic.stats.totalPagado)} recaudados`}
-              icon={<AccountBalance />}
-              color="primary"
-            />
-            <StatCard
-              title="Éxito de Proyectos"
-              value={`${toNumber(logic.completionRate?.tasa_culminacion)}%`}
-              subtitle="Tasa de finalización"
-              icon={<AssignmentTurnedIn />}
-              color="info"
-            />
-            <StatCard
-              title="Subastas Activas"
-              value={logic.stats.subastasActivas}
-              icon={<Gavel />}
-              color="warning"
-            />
+            <StatCard title="Capital Total" value={formatearMoneda(logic.stats.totalInvertido)} icon={<AttachMoney />} color="success" />
+            <StatCard title="Tasa de Cobro" value={`${toNumber(logic.stats.tasaLiquidez)}%`} subtitle={`${formatearMoneda(logic.stats.totalPagado)} recaudados`} icon={<AccountBalance />} color="primary" />
+            <StatCard title="Éxito de Proyectos" value={`${toNumber(logic.completionRate?.tasa_culminacion)}%`} subtitle="Tasa de finalización" icon={<AssignmentTurnedIn />} color="info" />
+            <StatCard title="Subastas Activas" value={logic.stats.subastasActivas} icon={<Gavel />} color="warning" />
           </Box>
 
           {/* 5. TABS DE ANÁLISIS DETALLADO */}
           <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 3, overflow: 'hidden' }}>
             <Box sx={{ borderBottom: 1, borderColor: 'divider', bgcolor: alpha(theme.palette.background.paper, 0.8) }}>
-              <Tabs
-                value={logic.activeTab}
-                onChange={(_, v) => logic.setActiveTab(v)}
-                variant="scrollable"
-                scrollButtons="auto"
-              >
+              <Tabs value={logic.activeTab} onChange={(_, v) => logic.setActiveTab(v)} variant="scrollable" scrollButtons="auto">
                 <Tab icon={<Timeline />} iconPosition="start" label="Progreso" sx={{ textTransform: 'none', minHeight: 64 }} />
                 <Tab icon={<QueryStats />} iconPosition="start" label="Riesgo" sx={{ textTransform: 'none', minHeight: 64 }} />
                 <Tab icon={<Star />} iconPosition="start" label="Popularidad" sx={{ textTransform: 'none', minHeight: 64 }} />
@@ -239,7 +213,6 @@ const AdminDashboard: React.FC = () => {
             </Box>
 
             <CardContent sx={{ p: 4 }}>
-
               {/* TAB 0: PROGRESO */}
               {logic.activeTab === 0 && (
                 <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '2fr 1fr' }, gap: 4 }}>
@@ -259,16 +232,8 @@ const AdminDashboard: React.FC = () => {
                     <Typography variant="h5" gutterBottom>Distribución de Lotes</Typography>
                     <ResponsiveContainer width="100%" height={300}>
                       <PieChart>
-                        <Pie
-                          data={logic.estadosData}
-                          cx="50%" cy="50%"
-                          innerRadius={70} outerRadius={100}
-                          paddingAngle={5}
-                          dataKey="value"
-                        >
-                          {logic.estadosData.map((_, i) => (
-                            <Cell key={i} fill={logic.RECHART_COLORS[i % logic.RECHART_COLORS.length]} />
-                          ))}
+                        <Pie data={logic.estadosData} cx="50%" cy="50%" innerRadius={70} outerRadius={100} paddingAngle={5} dataKey="value">
+                          {logic.estadosData.map((_, i) => <Cell key={i} fill={logic.RECHART_COLORS[i % logic.RECHART_COLORS.length]} />)}
                         </Pie>
                         <RechartsTooltip />
                         <Legend />
@@ -285,18 +250,14 @@ const AdminDashboard: React.FC = () => {
                     <Stack spacing={2}>
                       <Typography variant="h3" color="warning.dark">{toNumber(logic.morosidad?.tasa_morosidad)}%</Typography>
                       <Typography variant="h6">Tasa de Morosidad</Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Representa {formatearMoneda(logic.morosidad?.total_en_riesgo)} en cuotas vencidas actuales.
-                      </Typography>
+                      <Typography variant="body2" color="text.secondary">Representa {formatearMoneda(logic.morosidad?.total_en_riesgo)} en cuotas vencidas actuales.</Typography>
                     </Stack>
                   </Paper>
                   <Paper variant="outlined" sx={{ p: 4, borderRadius: 3, border: '2px solid', borderColor: 'error.main', bgcolor: alpha(theme.palette.error.main, 0.04) }}>
                     <Stack spacing={2}>
                       <Typography variant="h3" color="error.dark">{toNumber(logic.cancelacion?.tasa_cancelacion)}%</Typography>
                       <Typography variant="h6">Tasa de Cancelación (Churn)</Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Total de {logic.cancelacion?.total_canceladas ?? 0} suscripciones dadas de baja.
-                      </Typography>
+                      <Typography variant="body2" color="text.secondary">Total de {logic.cancelacion?.total_canceladas ?? 0} suscripciones dadas de baja.</Typography>
                     </Stack>
                   </Paper>
                 </Box>
@@ -306,66 +267,25 @@ const AdminDashboard: React.FC = () => {
               {logic.activeTab === 2 && (
                 <Stack spacing={4}>
                   <Stack direction="row" justifyContent="space-between" alignItems="center">
-                    <Typography variant="h5">
-                      Ranking de Interés por Lote (Favoritos)
-                    </Typography>
-
-                    <Select
-                      size="small"
-                      value={logic.selectedPopularidadProject ?? ''}
-                      onChange={(e) => logic.setSelectedPopularidadProject(Number(e.target.value))}
-                      sx={{ minWidth: 220, borderRadius: 2 }}
-                    >
-                      {logic.proyectosActivos.map((p) => (
-                        <MenuItem key={p.id} value={p.id}>{p.nombre_proyecto}</MenuItem>
-                      ))}
+                    <Typography variant="h5">Ranking de Interés por Lote (Favoritos)</Typography>
+                    <Select size="small" value={logic.selectedPopularidadProject ?? ''} onChange={(e) => logic.setSelectedPopularidadProject(Number(e.target.value))} sx={{ minWidth: 220, borderRadius: 2 }}>
+                      {logic.proyectosActivos.map((p) => <MenuItem key={p.id} value={p.id}>{p.nombre_proyecto}</MenuItem>)}
                     </Select>
                   </Stack>
-
-                 {/* CÁLCULO DE ALTURA DINÁMICA */}
-    {/* 60px por cada lote, con un mínimo de 400px de altura */}
-    <Box sx={{ 
-        height: Math.max(400, logic.topLotes.length * 60), 
-        transition: 'height 0.3s ease',
-        overflowX: 'hidden'
-      }}>
-      <QueryHandler isLoading={logic.loadingPopularidad} error={null}>
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart 
-            data={logic.topLotes} 
-            layout="vertical" 
-            // Ajustamos márgenes para que quepan los nombres largos
-            margin={{ left: 20, right: 30, top: 20, bottom: 20 }} 
-          >
-            <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={theme.palette.divider} />
-            <XAxis type="number" hide />
-            
-            <YAxis
-              type="category"
-              dataKey="nombre_lote"
-              axisLine={false}
-              tick={{ fontSize: 12, fontWeight: 600 }}
-              width={100}
-              interval={0} // ⚠️ IMPORTANTE: Fuerza a mostrar TODOS los nombres
-            />
-            
-            <RechartsTooltip
-              cursor={{ fill: alpha(theme.palette.warning.main, 0.05) }}
-              contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: theme.shadows[3] }}
-            />
-            
-            <Bar
-              dataKey="total_favoritos" // Asegúrate de usar esta key que definimos en el service
-              name="Favoritos"
-              fill={theme.palette.warning.main}
-              radius={[0, 6, 6, 0]}
-              barSize={30} // Grosor fijo de barra
-            />
-          </BarChart>
-        </ResponsiveContainer>
-      </QueryHandler>
-    </Box>
-  </Stack>
+                  <Box sx={{ height: Math.max(400, logic.topLotes.length * 60), transition: 'height 0.3s ease', overflowX: 'hidden' }}>
+                    <QueryHandler isLoading={logic.loadingPopularidad} error={null}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={logic.topLotes} layout="vertical" margin={{ left: 20, right: 30, top: 20, bottom: 20 }}>
+                          <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={theme.palette.divider} />
+                          <XAxis type="number" hide />
+                          <YAxis type="category" dataKey="nombre_lote" axisLine={false} tick={{ fontSize: 12, fontWeight: 600 }} width={100} interval={0} />
+                          <RechartsTooltip cursor={{ fill: alpha(theme.palette.warning.main, 0.05) }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: theme.shadows[3] }} />
+                          <Bar dataKey="total_favoritos" name="Favoritos" fill={theme.palette.warning.main} radius={[0, 6, 6, 0]} barSize={30} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </QueryHandler>
+                  </Box>
+                </Stack>
               )}
 
             </CardContent>

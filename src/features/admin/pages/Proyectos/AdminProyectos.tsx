@@ -1,41 +1,19 @@
 import {
-  Add,
-  Apartment as ApartmentIcon,
-  CheckCircle,
-  Edit,
-  GridView,
-  Image as ImageIcon,
-  Layers,
-  MonetizationOn as MonetizationOnIcon,
-  PlayArrow,
-  TrendingUp,
-  Undo, // 🆕 Icono Revertir
-  ViewList,
-  Visibility as VisibilityIcon
+  Add, Apartment as ApartmentIcon, CheckCircle, Edit, GridView, Image as ImageIcon,
+  Layers, MonetizationOn as MonetizationOnIcon, PlayArrow, TrendingUp, Undo,
+  ViewList, Visibility as VisibilityIcon
 } from '@mui/icons-material';
 import {
-  alpha, Avatar,
-  Box,
-  Button,
-  Card,
-  CardActions,
+  alpha, Avatar, Box, Button, Card, CardActions,
   CardContent,
-  Chip,
-  Divider,
-  IconButton,
-  LinearProgress,
-  MenuItem,
-  Stack,
-  Switch,
+  Chip, Divider,
+  IconButton, LinearProgress, MenuItem, Stack, Switch,
   Tooltip,
-  Typography,
-  useTheme
+  Typography, useTheme
 } from '@mui/material';
 import React, { memo, useMemo, useState } from 'react';
 
-// Componentes Compartidos
 import { AdminPageHeader } from '@/shared/components/admin/Adminpageheader';
-import AlertBanner from '@/shared/components/admin/Alertbanner';
 import MetricsGrid from '@/shared/components/admin/Metricsgrid';
 import { ViewModeToggle, type ViewMode } from '@/shared/components/admin/Viewmodetoggle';
 import { DataTable, type DataTableColumn } from '@/shared/components/data-grid/DataTable/DataTable';
@@ -46,8 +24,8 @@ import { FilterBar, FilterSearch, FilterSelect } from '@/shared/components/forms
 import { PageContainer } from '@/shared/components/layout/containers/PageContainer/PageContainer';
 
 import type { ProyectoDto } from '@/core/types/dto/proyecto.dto';
+import { useAdminProyectos } from '../../hooks/proyecto/useAdminProyectos';
 
-import { useAdminProyectos, type TipoInversionFilter } from '../../hooks/proyecto/useAdminProyectos';
 import ConfigCuotasModal from './modals/ConfigCuotasModal';
 import CreateProyectoModal from './modals/CreateProyectoModal';
 import EditProyectoModal from './modals/EditProyectoModal';
@@ -55,48 +33,51 @@ import ManageImagesModal from './modals/ManageImagesModal';
 import ProjectLotesModal from './modals/ProjectLotesModal';
 
 // ============================================================================
-// COMPONENTE: VISTA DE CARDS (MEMOIZADO)
+// COMPONENTE: VISTA DE CARDS
 // ============================================================================
 const ProjectCard = memo<{
   proyecto: ProyectoDto;
   onAction: (proyecto: ProyectoDto, action: any, e?: React.MouseEvent) => void;
-  onRevert: (proyecto: ProyectoDto) => void; // 🆕 Prop para revertir
+  onRevert: (proyecto: ProyectoDto) => void;
   onToggle: (proyecto: ProyectoDto) => void;
   isToggling: boolean;
 }>(({ proyecto, onAction, onToggle, onRevert, isToggling }) => {
   const theme = useTheme();
-  const isMensual = proyecto.tipo_inversion === 'mensual';
 
-  // ✅ CORRECCIÓN DEL ERROR DE TIPOS:
-  // El backend devuelve "En proceso" (con 'p' minúscula), así que ajustamos la comparación.
-  // Si tu DTO dice otra cosa, usa `as string` temporalmente: (proyecto.estado_proyecto as string) === ...
+  const isMensual = proyecto.tipo_inversion === 'mensual';
+  const isBajoMinimo = proyecto.suscripciones_actuales < (proyecto.suscripciones_minimas || 0);
+  // 🆕 Detectar si llegó a la meta
+  const isObjetivoAlcanzado = proyecto.suscripciones_actuales >= (proyecto.obj_suscripciones || 1);
   const canStart = isMensual && proyecto.estado_proyecto === 'En Espera';
-  const canRevert = isMensual && proyecto.estado_proyecto === 'En proceso';
+  const hasLotes = proyecto.lotes && proyecto.lotes.length > 0;
+  // Si el proyecto requiere lotes, verificamos que los tenga para habilitar el inicio
+  const isReadyToStart = canStart && (!proyecto.pack_de_lotes || hasLotes);
+  const canRevert = isMensual && proyecto.estado_proyecto === 'En proceso' && !isObjetivoAlcanzado;
 
   return (
     <Card
       elevation={0}
       sx={{
         border: '1px solid',
-        borderColor: proyecto.activo ? 'divider' : alpha(theme.palette.divider, 0.3),
+        borderColor: isBajoMinimo ? 'error.light' : proyecto.activo ? 'divider' : alpha(theme.palette.divider, 0.3),
         borderRadius: 3,
         transition: 'all 0.3s ease',
         opacity: proyecto.activo ? 1 : 0.6,
         '&:hover': {
           boxShadow: proyecto.activo ? theme.shadows[4] : 'none',
-          borderColor: proyecto.activo ? 'primary.main' : 'divider',
+          borderColor: isBajoMinimo ? 'error.main' : 'primary.main',
         },
       }}
     >
+      {/* ⚠️ ESTA ES LA PARTE QUE FALTABA EN TU CÓDIGO */}
       <CardContent sx={{ p: 3 }}>
-        {/* Header */}
         <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={2}>
           <Stack direction="row" spacing={2} alignItems="center" flex={1}>
             <Avatar
               variant="rounded"
               sx={{
-                bgcolor: alpha(theme.palette.primary.main, 0.1),
-                color: 'primary.main',
+                bgcolor: alpha(isBajoMinimo ? theme.palette.error.main : theme.palette.primary.main, 0.1),
+                color: isBajoMinimo ? 'error.main' : 'primary.main',
                 width: 48,
                 height: 48,
               }}
@@ -112,123 +93,79 @@ const ProjectCard = memo<{
               </Typography>
             </Box>
           </Stack>
-
-          <Switch
-            checked={proyecto.activo}
-            onChange={() => onToggle(proyecto)}
-            size="small"
-            color="success"
-            disabled={isToggling}
-          />
+          <Switch checked={proyecto.activo} onChange={() => onToggle(proyecto)} size="small" color="success" disabled={isToggling} />
         </Stack>
 
-        {/* Tipo e Inversión */}
         <Stack direction="row" spacing={1} mb={2}>
-          <Chip
-            label={isMensual ? 'Ahorro' : 'Directo'}
-            size="small"
-            color={isMensual ? 'primary' : 'default'}
-            sx={{ fontWeight: 700 }}
-          />
-          <Chip
-            label={`${proyecto.moneda} ${Number(proyecto.monto_inversion).toLocaleString()}`}
-            size="small"
-            variant="outlined"
-            sx={{ fontWeight: 600 }}
-          />
+          <Chip label={isMensual ? 'Ahorro' : 'Directo'} size="small" color={isMensual ? 'primary' : 'default'} sx={{ fontWeight: 700 }} />
+          <Chip label={`${proyecto.moneda} ${Number(proyecto.monto_inversion).toLocaleString()}`} size="small" variant="outlined" sx={{ fontWeight: 600 }} />
         </Stack>
 
-        {/* Estado del Proyecto */}
-        {isMensual && (
-          <Box mb={2}>
-            <Stack direction="row" justifyContent="space-between" mb={0.5}>
-              <Typography variant="caption" fontWeight={600}>
-                {proyecto.estado_proyecto}
+        <Box mb={2}>
+          <Stack direction="row" justifyContent="space-between" mb={0.5}>
+            <Typography variant="caption" fontWeight={700} color={isBajoMinimo ? "error.main" : isObjetivoAlcanzado ? "success.main" : "text.primary"}>
+              {proyecto.suscripciones_actuales} / {proyecto.obj_suscripciones} Susc.
+            </Typography>
+            {isBajoMinimo && (
+              <Typography variant="caption" color="error.main" fontWeight={800}>
+                ⚠️ RIESGO (MIN: {proyecto.suscripciones_minimas})
               </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Avance
+            )}
+            {/* 🆕 AVISO PARA EL ADMIN */}
+            {isObjetivoAlcanzado && !isBajoMinimo && (
+              <Typography variant="caption" color="success.main" fontWeight={900}>
+                🎉 ¡OBJETIVO LOGRADO!
               </Typography>
-            </Stack>
-            <LinearProgress
-              variant="determinate"
-              value={65} // Mock - implementar cálculo real si tienes el dato
-              sx={{
-                height: 6,
-                borderRadius: 3,
-                bgcolor: alpha(theme.palette.primary.main, 0.1),
-              }}
-            />
-          </Box>
-        )}
+            )}
+          </Stack>
+          <LinearProgress
+            variant="determinate"
+            value={Math.min((proyecto.suscripciones_actuales / (proyecto.obj_suscripciones || 1)) * 100, 100)}
+            sx={{
+              height: 6, borderRadius: 3,
+              bgcolor: alpha(isBajoMinimo ? theme.palette.error.main : theme.palette.primary.main, 0.1),
+              '& .MuiLinearProgress-bar': {
+                bgcolor: isBajoMinimo ? 'error.main' : isObjetivoAlcanzado ? 'success.main' : 'primary.main'
+              }
+            }}
+          />
+        </Box>
       </CardContent>
+      {/* FIN DE LA PARTE RESTAURADA */}
 
       <Divider />
 
-      {/* Acciones */}
       <CardActions sx={{ px: 2, py: 1.5, justifyContent: 'space-between' }}>
         <Stack direction="row" spacing={0.5}>
-          <Tooltip title="Imágenes">
-            <IconButton onClick={(e) => onAction(proyecto, 'images', e)} size="small" color="primary">
-              <ImageIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-
+          <Tooltip title="Imágenes"><IconButton onClick={(e) => onAction(proyecto, 'images', e)} size="small" color="primary"><ImageIcon fontSize="small" /></IconButton></Tooltip>
           {isMensual && (
-            <Tooltip title="Ver/Editar Cuotas">
-              <IconButton onClick={(e) => onAction(proyecto, 'cuotas', e)} size="small">
-                <MonetizationOnIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
+            <Tooltip title="Cuotas"><IconButton onClick={(e) => onAction(proyecto, 'cuotas', e)} size="small"><MonetizationOnIcon fontSize="small" /></IconButton></Tooltip>
           )}
-
-          <Tooltip title="Editar">
-            <IconButton onClick={(e) => onAction(proyecto, 'edit', e)} size="small">
-              <Edit fontSize="small" />
-            </IconButton>
-          </Tooltip>
-
-          <Tooltip title="Lotes">
-            <IconButton onClick={(e) => onAction(proyecto, 'lotes', e)} size="small" color="info">
-              <VisibilityIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
+          <Tooltip title="Editar"><IconButton onClick={(e) => onAction(proyecto, 'edit', e)} size="small"><Edit fontSize="small" /></IconButton></Tooltip>
+          <Tooltip title="Lotes"><IconButton onClick={(e) => onAction(proyecto, 'lotes', e)} size="small" color="info"><VisibilityIcon fontSize="small" /></IconButton></Tooltip>
         </Stack>
 
         <Stack direction="row" spacing={1}>
           {canStart && (
-            <Tooltip title="Iniciar Cobros">
-              <IconButton
-                onClick={() => onAction(proyecto, 'start')}
-                size="small"
-                sx={{ color: 'success.main' }}
-              >
-                <PlayArrow fontSize="small" />
-              </IconButton>
+            <Tooltip title={isReadyToStart ? "Iniciar Cobros" : "Faltan asignar lotes para iniciar"}>
+              <span> {/* Span necesario para Tooltip en botones deshabilitados */}
+                <IconButton
+                  onClick={() => onAction(proyecto, 'start')}
+                  size="small"
+                  sx={{ color: isReadyToStart ? 'success.main' : 'text.disabled' }}
+                  disabled={!isReadyToStart}
+                >
+                  <PlayArrow fontSize="small" />
+                </IconButton>
+              </span>
             </Tooltip>
           )}
-
-          {/* 🆕 BOTÓN DE REVERTIR */}
-          {canRevert && (
-            <Tooltip title="Pausar / Revertir a Espera">
-              <IconButton
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onRevert(proyecto);
-                }}
-                size="small"
-                sx={{ color: 'warning.main' }}
-              >
-                <Undo fontSize="small" />
-              </IconButton>
-            </Tooltip>
-          )}
+          {canRevert && <Tooltip title="Pausar / Revertir a Espera"><IconButton onClick={() => onRevert(proyecto)} size="small" sx={{ color: 'warning.main' }}><Undo fontSize="small" /></IconButton></Tooltip>}
         </Stack>
       </CardActions>
     </Card>
   );
 });
-
-ProjectCard.displayName = 'ProjectCard';
 
 // ============================================================================
 // COMPONENTE PRINCIPAL
@@ -243,404 +180,200 @@ const AdminProyectos: React.FC = () => {
     const total = data.length;
     const activos = data.filter(p => p.activo).length;
     const mensuales = data.filter(p => p.tipo_inversion === 'mensual').length;
-    const volumen = data.reduce((acc, p) => acc + Number(p.monto_inversion || 0), 0);
+
+    const volumen = data.reduce((acc, p) =>
+      acc + (Number(p.monto_inversion || 0) * (p.suscripciones_actuales || 0)), 0
+    );
 
     return { total, activos, mensuales, volumen };
   }, [logic.filteredProyectos]);
 
-  // --------------------------------------------------------------------------
-  // COLUMNAS (TABLA)
-  // --------------------------------------------------------------------------
-  const columns = useMemo<DataTableColumn<ProyectoDto>[]>(
-    () => [
+  // Dentro de AdminProyectos.tsx
+  const columns = useMemo<DataTableColumn<ProyectoDto>[]>(() => {
+    const hoy = new Date();
+
+    return [
       {
         id: 'proyecto',
         label: 'Proyecto',
         minWidth: 200,
         render: (p) => (
           <Stack direction="row" alignItems="center" spacing={2}>
-            <Avatar
-              variant="rounded"
-              sx={{
-                bgcolor: alpha(theme.palette.primary.main, 0.1),
-                color: 'primary.main',
-                width: 36,
-                height: 36,
-              }}
-            >
+            <Avatar variant="rounded" sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main', width: 36, height: 36 }}>
               <ApartmentIcon fontSize="small" />
             </Avatar>
             <Box minWidth={0}>
-              <Typography variant="body2" fontWeight={700} noWrap>
-                {p.nombre_proyecto}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                ID: {p.id}
-              </Typography>
+              <Typography variant="body2" fontWeight={700} noWrap>{p.nombre_proyecto}</Typography>
+              <Typography variant="caption" color="text.secondary">ID: {p.id}</Typography>
             </Box>
           </Stack>
         ),
       },
       {
-        id: 'tipo',
-        label: 'Tipo',
-        render: (p) => (
-          <Chip
-            label={p.tipo_inversion === 'mensual' ? 'Ahorro' : 'Directo'}
-            size="small"
-            color={p.tipo_inversion === 'mensual' ? 'primary' : 'default'}
-            sx={{ fontWeight: 700, fontSize: '0.7rem' }}
-          />
-        ),
-      },
-      {
-        id: 'finanzas',
-        label: 'Inversión',
-        render: (p) => (
-          <Typography variant="body2" fontWeight={600} sx={{ fontFamily: 'monospace' }}>
-            {p.moneda} {Number(p.monto_inversion).toLocaleString()}
-          </Typography>
-        ),
-      },
-      {
-        id: 'estado',
-        label: 'Estado',
+        id: 'suscriptores',
+        label: 'Suscriptores',
+        align: 'center',
         render: (p) => {
-          if (p.tipo_inversion !== 'mensual') return <Typography variant="caption">-</Typography>;
+          const isBajoMinimo = p.suscripciones_actuales < (p.suscripciones_minimas || 0);
+          const isObjetivoAlcanzado = p.suscripciones_actuales >= (p.obj_suscripciones || 1);
 
-          // ✅ CORRECCIÓN DE COLORES: Usamos las claves reales del backend
-          const statusColors: Record<string, string> = {
-            'En Espera': theme.palette.warning.main,
-            'En proceso': theme.palette.info.main, // Corregido: 'En proceso' minúscula
-            'Completado': theme.palette.success.main,
-          };
+          let color = theme.palette.warning.main;
+          if (isBajoMinimo) color = theme.palette.error.main;
+          if (isObjetivoAlcanzado) color = theme.palette.success.main;
 
           return (
-            <Chip
-              label={p.estado_proyecto}
-              size="small"
-              sx={{
-                bgcolor: alpha(statusColors[p.estado_proyecto] || theme.palette.grey[500], 0.1),
-                color: statusColors[p.estado_proyecto] || theme.palette.text.secondary,
-                fontWeight: 700,
-                fontSize: '0.65rem',
-              }}
-            />
+            <Tooltip title={isBajoMinimo ? `Faltan ${p.suscripciones_minimas - p.suscripciones_actuales} para el mínimo` : isObjetivoAlcanzado ? '¡Objetivo logrado!' : `Meta: ${p.obj_suscripciones}`}>
+              <Stack alignItems="center" spacing={0.5}>
+                <Typography variant="body2" fontWeight={700} color={color}>
+                  {p.suscripciones_actuales} / {p.obj_suscripciones}
+                </Typography>
+                <Box sx={{ width: '60px' }}>
+                  <LinearProgress
+                    variant="determinate"
+                    value={Math.min((p.suscripciones_actuales / (p.obj_suscripciones || 1)) * 100, 100)}
+                    sx={{ height: 4, borderRadius: 2, bgcolor: alpha(color, 0.1), '& .MuiLinearProgress-bar': { bgcolor: color } }}
+                  />
+                </Box>
+                {isBajoMinimo && <Typography variant="caption" color="error.main" sx={{ fontSize: '0.6rem', fontWeight: 800 }}>RIESGO</Typography>}
+                {isObjetivoAlcanzado && !isBajoMinimo && <Typography variant="caption" color="success.main" sx={{ fontSize: '0.6rem', fontWeight: 800 }}>LLENO</Typography>}
+              </Stack>
+            </Tooltip>
           );
-        },
+        }
+      },
+      { id: 'finanzas', label: 'Inversión', render: (p) => <Typography variant="body2" fontWeight={600}>{p.moneda} {Number(p.monto_inversion).toLocaleString()}</Typography> },
+      {
+        id: 'estado', label: 'Estado', render: (p) => {
+          const isPrelanzamiento = new Date(p.fecha_inicio) > hoy && p.estado_proyecto === 'En Espera';
+
+          if (isPrelanzamiento) {
+            return <Chip label="PRÓXIMAMENTE" size="small" color="info" sx={{ fontWeight: 700, fontSize: '0.65rem' }} />;
+          }
+
+          const colors: any = { 'En Espera': 'warning', 'En proceso': 'info', 'Finalizado': 'success' };
+          return <Chip label={p.estado_proyecto.toUpperCase()} size="small" color={colors[p.estado_proyecto] || 'default'} sx={{ fontWeight: 700, fontSize: '0.65rem' }} />;
+        }
       },
       {
-        id: 'visibilidad',
-        label: 'Visibilidad',
-        align: 'center',
+        id: 'visibilidad', label: 'Visibilidad', align: 'center',
         render: (p) => (
           <Stack direction="row" alignItems="center" spacing={1} justifyContent="center">
-            <Switch
-              checked={p.activo}
-              onChange={(e) => {
-                e.stopPropagation();
-                logic.modales.confirmDialog.confirm('toggle_project_visibility', p);
-              }}
-              size="small"
-              color="success"
-              disabled={logic.isToggling}
-            />
-            <Typography
-              variant="caption"
-              fontWeight={600}
-              color={p.activo ? 'success.main' : 'text.disabled'}
-            >
-              {p.activo ? 'Visible' : 'Oculto'}
-            </Typography>
+            <Switch checked={p.activo} onChange={(e) => { e.stopPropagation(); logic.modales.confirmDialog.confirm('toggle_project_visibility', p); }} size="small" color="success" disabled={logic.isToggling} />
           </Stack>
         ),
       },
       {
-        id: 'acciones',
-        label: 'Acciones',
-        align: 'right',
-        render: (p) => (
-          <Stack direction="row" spacing={0.5} justifyContent="flex-end">
-            <Tooltip title="Imágenes">
-              <IconButton onClick={(e) => logic.handleAction(p, 'images', e)} size="small" color="primary">
-                <ImageIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
+        id: 'acciones', label: 'Acciones', align: 'right',
+        render: (p) => {
+          const isMensual = p.tipo_inversion === 'mensual';
+          const canStart = isMensual && p.estado_proyecto === 'En Espera';
+          const isObjetivoAlcanzado = p.suscripciones_actuales >= (p.obj_suscripciones || 1);
 
-            {p.tipo_inversion === 'mensual' && (
-              <Tooltip title="Ver/Editar Cuotas">
-                <IconButton onClick={(e) => logic.handleAction(p, 'cuotas', e)} size="small">
-                  <MonetizationOnIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            )}
+          // Validación de seguridad para arrancar
+          const hasLotes = p.lotes && p.lotes.length > 0;
+          const isReadyToStart = canStart && (!p.pack_de_lotes || hasLotes);
+          const canRevert = isMensual && p.estado_proyecto === 'En proceso' && !isObjetivoAlcanzado;
+          return (
+            <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+              <Tooltip title="Imágenes"><IconButton onClick={(e) => logic.handleAction(p, 'images', e)} size="small" color="primary"><ImageIcon fontSize="small" /></IconButton></Tooltip>
+              {isMensual && <Tooltip title="Configurar Cuotas"><IconButton onClick={(e) => logic.handleAction(p, 'cuotas', e)} size="small"><MonetizationOnIcon fontSize="small" /></IconButton></Tooltip>}
 
-            {/* Acciones de Estado (Tabla) */}
-            {p.tipo_inversion === 'mensual' && p.estado_proyecto === 'En Espera' && (
-              <Tooltip title="Iniciar Cobros">
-                <IconButton
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    logic.modales.confirmDialog.confirm('start_project_process', p);
-                  }}
-                  size="small"
-                  sx={{ color: 'success.main' }}
-                >
-                  <PlayArrow fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            )}
+              {/* BOTÓN DE INICIAR COBROS */}
+              {canStart && (
+                <Tooltip title={!isReadyToStart ? "Faltan lotes" : isObjetivoAlcanzado ? "¡Proyecto Lleno! Iniciar cobros" : "Iniciar Cobros (Aún hay cupos)"}>
+                  <span>
+                    <IconButton
+                      onClick={(e) => { e.stopPropagation(); logic.modales.confirmDialog.confirm('start_project_process', p); }}
+                      size="small"
+                      sx={{
+                        color: isReadyToStart ? 'success.main' : 'text.disabled',
+                        // Si ya se llenó, el botón "pulsa" para llamar la atención del admin
+                        ...(isObjetivoAlcanzado && isReadyToStart && {
+                          animation: 'pulse 2s infinite',
+                          '@keyframes pulse': {
+                            '0%': { boxShadow: `0 0 0 0 ${alpha(theme.palette.success.main, 0.4)}` },
+                            '70%': { boxShadow: `0 0 0 6px transparent` },
+                            '100%': { boxShadow: `0 0 0 0 transparent` }
+                          }
+                        })
+                      }}
+                      disabled={!isReadyToStart}
+                    >
+                      <PlayArrow fontSize="small" />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+              )}
 
-            {/* 🆕 BOTÓN DE REVERTIR (TABLA) */}
-            {p.tipo_inversion === 'mensual' && p.estado_proyecto === 'En proceso' && ( // Corregido: 'En proceso'
-              <Tooltip title="Revertir a Espera">
-                <IconButton
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    logic.modales.confirmDialog.confirm('revert_project_process', p);
-                  }}
-                  size="small"
-                  sx={{ color: 'warning.main' }}
-                >
-                  <Undo fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            )}
-
-            <Tooltip title="Editar">
-              <IconButton onClick={(e) => logic.handleAction(p, 'edit', e)} size="small">
-                <Edit fontSize="small" />
-              </IconButton>
-            </Tooltip>
-
-            <Tooltip title="Lotes">
-              <IconButton onClick={(e) => logic.handleAction(p, 'lotes', e)} size="small" color="info">
-                <VisibilityIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-          </Stack>
-        ),
+              {/* 🆕 Usamos la nueva variable canRevert */}
+              {canRevert && (
+                <Tooltip title="Pausar proyecto y Revertir a Espera">
+                  <IconButton onClick={(e) => { e.stopPropagation(); logic.modales.confirmDialog.confirm('revert_project_process', p); }} size="small" sx={{ color: 'warning.main' }}>
+                    <Undo fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              )}
+              <Tooltip title="Editar"><IconButton onClick={(e) => logic.handleAction(p, 'edit', e)} size="small"><Edit fontSize="small" /></IconButton></Tooltip>
+              <Tooltip title="Lotes"><IconButton onClick={(e) => logic.handleAction(p, 'lotes', e)} size="small" color="info"><VisibilityIcon fontSize="small" /></IconButton></Tooltip>
+            </Stack>
+          );
+        }
       },
-    ],
-    [logic, theme]
-  );
+    ];
+  }, [logic, theme]);
 
   return (
     <PageContainer maxWidth="xl" sx={{ py: 3 }}>
-      {/* 1. HEADER */}
-      <AdminPageHeader
-        title="Gestión de Proyectos"
-        subtitle="Administra el catálogo de inversiones y estados"
-        action={
-          <Button
-            variant="contained"
-            startIcon={<Add />}
-            onClick={logic.modales.create.open}
-            sx={{ whiteSpace: 'nowrap', fontWeight: 700 }}
-          >
-            Nuevo Proyecto
-          </Button>
-        }
-      />
+      <AdminPageHeader title="Gestión de Proyectos" subtitle="Catálogo y suscripciones" action={<Button variant="contained" startIcon={<Add />} onClick={logic.modales.create.open}>Nuevo Proyecto</Button>} />
 
-      {/* 2. ERRORES */}
-      {logic.error && (
-        <AlertBanner
-          severity="error"
-          title="Error de Carga"
-          message={(logic.error as Error).message || 'No se pudieron cargar los proyectos.'}
-        />
-      )}
-
-      {/* 3. KPIS GRID */}
       <MetricsGrid columns={{ xs: 1, sm: 2, lg: 4 }}>
-        <StatCard
-          title="Total Proyectos"
-          value={stats.total}
-          icon={<Layers />}
-          color="primary"
-          loading={logic.isLoading}
-          subtitle="Registrados en el sistema"
-        />
-        <StatCard
-          title="Activos / Visibles"
-          value={stats.activos}
-          icon={<CheckCircle />}
-          color="success"
-          loading={logic.isLoading}
-          subtitle="Publicados para clientes"
-        />
-        <StatCard
-          title="Planes de Ahorro"
-          value={stats.mensuales}
-          icon={<MonetizationOnIcon />}
-          color="info"
-          loading={logic.isLoading}
-          subtitle="Tipo inversión mensual"
-        />
-        <StatCard
-          title="Volumen Total"
-          value={`$${stats.volumen.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`}
-          icon={<TrendingUp />}
-          color="warning"
-          loading={logic.isLoading}
-          subtitle="Capital acumulado"
-        />
+        <StatCard title="Total de Proyectos" value={stats.total} icon={<Layers />} color="primary" loading={logic.isLoading} />
+        <StatCard title="Proyectos Visibles" value={stats.activos} icon={<CheckCircle />} color="success" loading={logic.isLoading} />
+        <StatCard title="Ahorro" value={stats.mensuales} icon={<MonetizationOnIcon />} color="info" loading={logic.isLoading} />
+        <StatCard title="Inversion" value={`$${stats.volumen.toLocaleString('es-AR')}`} icon={<TrendingUp />} color="warning" loading={logic.isLoading} />
       </MetricsGrid>
-{/* 4. FILTROS Y TOGGLE DE VISTA */}
-      <Stack
-        direction={{ xs: 'column', lg: 'row' }} 
-        spacing={2}
-        mb={3}
-        alignItems={{ xs: 'stretch', lg: 'center' }}
-        justifyContent="space-between"
-      >
-        {/* Barra de Filtros Responsive */}
-        <FilterBar
-          sx={{
-            flex: 1,
-            flexWrap: 'wrap',
-            gap: 2,
-            display: 'flex',
-            alignItems: 'center',
-          }}
-        >
-          <FilterSearch
-            placeholder="Buscar por nombre..."
-            value={logic.searchTerm}
-            onSearch={logic.setSearchTerm}
-            sx={{ 
-              minWidth: { xs: '100%', sm: 400 },
-              mr: { sm: 'auto' }, // ✨ LA MAGIA ESTÁ AQUÍ: Empuja el resto a la derecha en PC
-              flexGrow: { xs: 1, sm: 0 } // Permite que crezca en celular, pero mantenga su tamaño en PC
-            }}
-          />
 
-          <FilterSelect
-            label="Tipo de Inversión"
-            value={logic.filterTipo}
-            onChange={(e) => logic.setFilterTipo(e.target.value as TipoInversionFilter)}
-            sx={{ minWidth: { xs: '100%', sm: 225 }, flex: { xs: 1, sm: 'none' } }}
-          >
+      <Stack direction={{ xs: 'column', lg: 'row' }} spacing={2} mb={3} alignItems="center">
+        <FilterBar sx={{ flex: 1, gap: 2, display: 'flex', alignItems: 'center' }}>
+          <FilterSearch placeholder="Buscar..." value={logic.searchTerm} onSearch={logic.setSearchTerm} sx={{ minWidth: 300 }} />
+
+          <FilterSelect label="Inversión" value={logic.filterTipo} onChange={(e) => logic.setFilterTipo(e.target.value as any)}>
             <MenuItem value="all">Todos</MenuItem>
-            <Divider />
             <MenuItem value="directo">Directo</MenuItem>
             <MenuItem value="mensual">Ahorro</MenuItem>
           </FilterSelect>
-
-          {/* Estado del Proyecto */}
-          <FilterSelect
-            label="Estado"
-            value={logic.filterEstado}
-            onChange={(e) => logic.setFilterEstado(e.target.value as string)}
-            sx={{ minWidth: { xs: '100%', sm: 225 }, flex: { xs: 1, sm: 'none' } }}
-          >
+          <FilterSelect label="Estado" value={logic.filterEstado} onChange={(e) => logic.setFilterEstado(e.target.value)}>
             <MenuItem value="all">Todos</MenuItem>
-            <Divider />
             <MenuItem value="En Espera">En Espera</MenuItem>
             <MenuItem value="En proceso">En Proceso</MenuItem>
-            <MenuItem value="Finalizado">Finalizado</MenuItem>
           </FilterSelect>
         </FilterBar>
-
-        {/* Toggle de vista a la derecha */}
-        <ViewModeToggle
-          value={viewMode}
-          onChange={(newMode) => setViewMode(newMode)}
-          options={[
-            { value: 'table', label: 'Tabla', icon: <ViewList fontSize="small" /> },
-            { value: 'grid', label: 'Cards', icon: <GridView fontSize="small" /> },
-          ]}
-        />
+        <ViewModeToggle value={viewMode} onChange={setViewMode} options={[{ value: 'table', label: 'Tabla', icon: <ViewList /> }, { value: 'grid', label: 'Cards', icon: <GridView /> }]} />
       </Stack>
 
-      {/* 5. CONTENIDO SEGÚN VISTA */}
       <QueryHandler isLoading={logic.isLoading} error={logic.error as Error}>
         {viewMode === 'grid' ? (
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: {
-                xs: '1fr',
-                sm: 'repeat(2, 1fr)',
-                lg: 'repeat(3, 1fr)',
-              },
-              gap: 3,
-            }}
-          >
-            {logic.filteredProyectos.map((proyecto) => (
-              <ProjectCard
-                key={proyecto.id}
-                proyecto={proyecto}
-                onAction={(p, action, e) => {
-                  // Si la acción es 'start', usamos el confirmDialog
-                  if (action === 'start') {
-                    e?.stopPropagation();
-                    logic.modales.confirmDialog.confirm('start_project_process', p);
-                  } else {
-                    logic.handleAction(p, action, e);
-                  }
-                }}
-                // Pasamos una función dedicada para revertir que activa el modal correcto
-                onRevert={(p) => logic.modales.confirmDialog.confirm('revert_project_process', p)}
-                onToggle={(p) => logic.modales.confirmDialog.confirm('toggle_project_visibility', p)}
-                isToggling={logic.isToggling}
-              />
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' }, gap: 3 }}>
+            {logic.filteredProyectos.map(p => (
+              <ProjectCard key={p.id} proyecto={p} onAction={logic.handleAction} onRevert={(p) => logic.modales.confirmDialog.confirm('revert_project_process', p)} onToggle={(p) => logic.modales.confirmDialog.confirm('toggle_project_visibility', p)} isToggling={logic.isToggling} />
             ))}
           </Box>
         ) : (
-          <DataTable
-            columns={columns}
-            data={logic.filteredProyectos}
-            getRowKey={(p) => p.id}
-            isRowActive={(p) => p.activo}
-            highlightedRowId={logic.highlightedId}
-            pagination={true}
-            defaultRowsPerPage={10}
-            emptyMessage="No se encontraron proyectos."
-          />
+          <DataTable columns={columns} data={logic.filteredProyectos} getRowKey={(p) => p.id} isRowActive={(p) => p.activo} highlightedRowId={logic.highlightedId} pagination />
         )}
       </QueryHandler>
 
-      {/* 6. MODALES */}
+      {/* MODALES */}
       <CreateProyectoModal {...logic.modales.create.modalProps} onSubmit={logic.handleCreateSubmit} />
-
       {logic.selectedProject && (
         <>
-          <ConfigCuotasModal
-            open={logic.modales.cuotas.isOpen}
-            onClose={logic.modales.cuotas.close}
-            proyecto={logic.selectedProject}
-          />
-
-          <EditProyectoModal
-            open={logic.modales.edit.isOpen}
-            onClose={logic.modales.edit.close}
-            proyecto={logic.selectedProject}
-            onSubmit={logic.handleUpdateSubmit}
-            isLoading={logic.isUpdating}
-          />
-
-          <ProjectLotesModal
-            open={logic.modales.lotes.isOpen}
-            onClose={logic.modales.lotes.close}
-            proyecto={logic.selectedProject}
-          />
-
-          <ManageImagesModal
-            open={logic.modales.images.isOpen}
-            onClose={logic.modales.images.close}
-            proyecto={logic.selectedProject}
-          />
+          <ConfigCuotasModal open={logic.modales.cuotas.isOpen} onClose={logic.modales.cuotas.close} proyecto={logic.selectedProject} />
+          <EditProyectoModal open={logic.modales.edit.isOpen} onClose={logic.modales.edit.close} proyecto={logic.selectedProject} onSubmit={logic.handleUpdateSubmit} isLoading={logic.isUpdating} />
+          <ProjectLotesModal open={logic.modales.lotes.isOpen} onClose={logic.modales.lotes.close} proyecto={logic.selectedProject} />
+          <ManageImagesModal open={logic.modales.images.isOpen} onClose={logic.modales.images.close} proyecto={logic.selectedProject} />
         </>
       )}
-
-      <ConfirmDialog
-        controller={logic.modales.confirmDialog}
-        onConfirm={logic.handleConfirmAction}
-        // 🆕 isReverting agregado al estado de carga
-        isLoading={logic.isStarting || logic.isToggling || logic.isReverting}
-      />
+      <ConfirmDialog controller={logic.modales.confirmDialog} onConfirm={logic.handleConfirmAction} isLoading={logic.isStarting || logic.isToggling || logic.isReverting} />
     </PageContainer>
   );
 };

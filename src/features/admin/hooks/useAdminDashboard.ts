@@ -29,6 +29,8 @@ export const useAdminDashboard = () => {
       { queryKey: ['cancelacion'], queryFn: async () => (await suscripcionService.getCancellationMetrics()).data },
       { queryKey: ['proyectosActivos'], queryFn: async () => (await proyectoService.getAllActive()).data },
       { queryKey: ['adminAllPujas'], queryFn: async () => (await pujaService.getAllAdmin()).data },
+      // 🆕 Agregamos los proyectos completos para poder filtrarlos
+      { queryKey: ['allProyectosAdmin'], queryFn: async () => (await proyectoService.getAllAdmin()).data }
     ]
   });
 
@@ -41,7 +43,8 @@ export const useAdminDashboard = () => {
     { data: morosidad },
     { data: cancelacion },
     { data: proyectosActivos = [] },
-    { data: allPujas = [] }
+    { data: allPujas = [] },
+    { data: allProyectosAdmin = [] } // 🆕
   ] = results;
 
   const isLoading = results.some(result => result.isLoading);
@@ -58,6 +61,15 @@ export const useAdminDashboard = () => {
     }
   }, [proyectosActivos, selectedPopularidadProject]);
 
+  // 🆕 Extraemos la lógica de proyectos llenos ANTES de stats
+  const proyectosLlenosPendientes = useMemo(() => {
+    if (!allProyectosAdmin) return 0;
+    return allProyectosAdmin.filter(p => 
+      p.estado_proyecto === 'En Espera' && 
+      p.suscripciones_actuales >= (p.obj_suscripciones || 1)
+    ).length;
+  }, [allProyectosAdmin]);
+
   const stats = useMemo(() => ({
     pendingKYC: pendingKYC.length,
     totalInvertido: liquidityRate?.total_invertido_registrado ?? '0',
@@ -68,7 +80,9 @@ export const useAdminDashboard = () => {
     totalFinalizados: completionRate?.total_finalizados ?? 0,
     subastasActivas: allPujas.filter((p: any) => p.estado_puja === 'activa').length,
     cobrosPendientes: allPujas.filter((p: any) => p.estado_puja === 'ganadora_pendiente').length,
-  }), [pendingKYC, liquidityRate, monthlyProgress, completionRate, allPujas]);
+    // 🆕 Lo inyectamos aquí
+    proyectosListosParaIniciar: proyectosLlenosPendientes 
+  }), [pendingKYC, liquidityRate, monthlyProgress, completionRate, allPujas, proyectosLlenosPendientes]);
 
   const chartDataSuscripciones = useMemo(() => 
     monthlyProgress.map((p: any) => ({
@@ -76,14 +90,13 @@ export const useAdminDashboard = () => {
       avance: parseFloat(String(p.porcentaje_avance || 0))
     })), [monthlyProgress]);
 
-  // ✅ CORRECCIÓN: Renombrar total_pujas → total_favoritos para consistencia semántica
-const topLotes = useMemo(() =>
-  popularidadLotes.map((l: any) => ({
-    nombre_lote: l.nombre_lote,
-    total_favoritos: l.cantidad_favoritos, // <-- La propiedad se llama 'total_favoritos'
-    porcentaje: l.porcentaje_popularidad,
-  })),
-[popularidadLotes]);
+  const topLotes = useMemo(() =>
+    popularidadLotes.map((l: any) => ({
+      nombre_lote: l.nombre_lote,
+      total_favoritos: l.cantidad_favoritos, 
+      porcentaje: l.porcentaje_popularidad,
+    })),
+  [popularidadLotes]);
 
   const estadosData = useMemo(() =>
     [

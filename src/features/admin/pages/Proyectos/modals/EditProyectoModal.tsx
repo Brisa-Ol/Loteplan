@@ -5,12 +5,12 @@ import {
     Description as DescriptionIcon,
     Edit as EditIcon,
     LocationOn as LocationIcon,
+    MonetizationOn as MonetizationIcon,
     Save as SaveIcon,
-    Savings as SavingsIcon,
-    Public as WorldIcon,
-    MonetizationOn as MonetizationIcon
+    Public as WorldIcon
 } from '@mui/icons-material';
 import {
+    Alert,
     alpha,
     Box,
     Chip,
@@ -23,14 +23,35 @@ import {
     Switch,
     TextField,
     Typography,
-    useTheme,
-    Alert
+    useTheme
 } from '@mui/material';
 import { useFormik } from 'formik';
 import React, { useEffect } from 'react';
 import * as Yup from 'yup';
 import type { ProyectoDto, UpdateProyectoDto } from '../../../../../core/types/dto/proyecto.dto';
 import BaseModal from '../../../../../shared/components/domain/modals/BaseModal/BaseModal';
+
+// --- FUNCIONES Y VARIABLES AUXILIARES ---
+
+// Bloquea el tipeo de caracteres inválidos en campos numéricos (cantidades/plazos)
+const blockInvalidChar = (e: React.KeyboardEvent) =>
+    ['e', 'E', '-', '+'].includes(e.key) && e.preventDefault();
+
+// Estilos del campo de fecha para mostrar el icono de MUI e invisibilizar el del navegador
+const dateFieldSx = {
+    '& .MuiInputBase-input': { color: 'text.primary' },
+    '& input::-webkit-calendar-picker-indicator': {
+        position: 'absolute',
+        left: 0,
+        top: 0,
+        width: '100%',
+        height: '100%',
+        margin: 0,
+        padding: 0,
+        cursor: 'pointer',
+        opacity: 0,
+    },
+};
 
 interface EditProyectoModalProps {
     open: boolean;
@@ -40,19 +61,33 @@ interface EditProyectoModalProps {
     isLoading?: boolean;
 }
 
+// --- ESQUEMA DE VALIDACIÓN ---
 const validationSchema = Yup.object({
     nombre_proyecto: Yup.string().min(5, 'Mínimo 5 caracteres').required('Requerido'),
     descripcion: Yup.string().min(20, 'Describe mejor el proyecto (mín 20 car.)').required('Requerido'),
     forma_juridica: Yup.string().required('Requerido'),
     estado_proyecto: Yup.string().required('Requerido'),
+
+    // Fechas
     fecha_inicio: Yup.date().required('Requerido'),
     fecha_cierre: Yup.date()
         .required('Requerido')
         .min(Yup.ref('fecha_inicio'), 'Debe ser posterior al inicio'),
+
+    // Coordenadas (Permiten negativos)
     latitud: Yup.number().nullable().min(-90).max(90),
     longitud: Yup.number().nullable().min(-180).max(180),
+
+    // Configuración Inversión
     obj_suscripciones: Yup.number().nullable().min(1, 'Mínimo 1'),
-    suscripciones_minimas: Yup.number().nullable().min(0),
+    suscripciones_minimas: Yup.number()
+        .nullable()
+        .min(1, 'Mínimo 1')
+        .test('min-max', 'No puede superar al cupo máximo', function (value) {
+            // Si no hay valor o no hay máximo definido aún, pasamos la validación
+            if (!value || !this.parent.obj_suscripciones) return true;
+            return value <= this.parent.obj_suscripciones;
+        }),
     plazo_inversion: Yup.number().nullable().min(1, 'Mínimo 1 mes'),
 });
 
@@ -81,12 +116,10 @@ const EditProyectoModal: React.FC<EditProyectoModalProps> = ({
         onSubmit: async (values) => {
             if (!proyecto) return;
 
-            // ✅ Limpieza de datos con lógica de Inversión Directa
             const cleanData = Object.fromEntries(
                 Object.entries(values).map(([key, val]) => {
                     if (val === '') return [key, null];
-                    
-                    // Aseguramos que si es directo, el cupo se mantenga en 1 al enviar
+
                     if (proyecto.tipo_inversion === 'directo') {
                         if (key === 'obj_suscripciones' || key === 'suscripciones_minimas') return [key, 1];
                     }
@@ -129,7 +162,7 @@ const EditProyectoModal: React.FC<EditProyectoModalProps> = ({
     if (!proyecto) return null;
 
     const commonInputSx = { '& .MuiOutlinedInput-root': { borderRadius: 2 } };
-    
+
     const getHelperText = (fieldName: string) => {
         return (formik.touched[fieldName] && formik.errors[fieldName]) as string | undefined;
     };
@@ -141,18 +174,18 @@ const EditProyectoModal: React.FC<EditProyectoModalProps> = ({
 
     return (
         <BaseModal
-            open={open} 
+            open={open}
             onClose={() => { formik.resetForm(); onClose(); }}
-            title="Editar Proyecto" 
-            icon={<EditIcon />} 
+            title="Editar Proyecto"
+            icon={<EditIcon />}
             headerColor="primary"
-            confirmText="Guardar Cambios" 
-            confirmButtonIcon={<SaveIcon />} 
+            confirmText="Guardar Cambios"
+            confirmButtonIcon={<SaveIcon />}
             onConfirm={formik.submitForm}
-            isLoading={isLoading} 
-            disableConfirm={!formik.isValid || isLoading} 
+            isLoading={isLoading}
+            disableConfirm={!formik.isValid || isLoading}
             maxWidth="md"
-            disableEnforceFocus 
+            disableEnforceFocus
             headerExtra={
                 <Stack direction="row" spacing={1}>
                     <Chip label={proyecto.tipo_inversion?.toUpperCase()} size="small" color="secondary" sx={{ fontWeight: 700, borderRadius: 1.5 }} />
@@ -190,9 +223,9 @@ const EditProyectoModal: React.FC<EditProyectoModalProps> = ({
 
                         <Box>
                             <TextField
-                                fullWidth 
-                                multiline 
-                                minRows={4} 
+                                fullWidth
+                                multiline
+                                minRows={4}
                                 maxRows={10}
                                 label="Descripción Comercial"
                                 {...formik.getFieldProps('descripcion')}
@@ -227,14 +260,17 @@ const EditProyectoModal: React.FC<EditProyectoModalProps> = ({
                             {...formik.getFieldProps('fecha_inicio')}
                             error={formik.touched.fecha_inicio && Boolean(formik.errors.fecha_inicio)}
                             helperText={getHelperText('fecha_inicio')}
-                            sx={commonInputSx}
+                            InputProps={{ endAdornment: <InputAdornment position="end"><CalendarIcon color="action" sx={{ pointerEvents: 'none' }} /></InputAdornment> }}
+                            sx={{ ...commonInputSx, ...dateFieldSx }}
                         />
                         <TextField
                             fullWidth label="Fecha de Cierre" type="date" InputLabelProps={{ shrink: true }}
                             {...formik.getFieldProps('fecha_cierre')}
+                            inputProps={{ min: formik.values.fecha_inicio || '' }} // No permite fecha de cierre anterior a la de inicio
                             error={formik.touched.fecha_cierre && Boolean(formik.errors.fecha_cierre)}
                             helperText={getHelperText('fecha_cierre')}
-                            sx={commonInputSx}
+                            InputProps={{ endAdornment: <InputAdornment position="end"><CalendarIcon color="action" sx={{ pointerEvents: 'none' }} /></InputAdornment> }}
+                            sx={{ ...commonInputSx, ...dateFieldSx }}
                         />
                     </Stack>
                 </Box>
@@ -244,7 +280,7 @@ const EditProyectoModal: React.FC<EditProyectoModalProps> = ({
                     <Typography variant="subtitle2" sx={sectionTitleSx}>
                         <MonetizationIcon fontSize="inherit" /> Parámetros de Inversión
                     </Typography>
-                    
+
                     {proyecto.tipo_inversion === 'directo' ? (
                         <Alert severity="info" variant="outlined" sx={{ borderRadius: 2 }}>
                             Este es un proyecto de <b>Inversión Directa</b>. El cupo y los mínimos están fijados en 1 (fondeo total) y no pueden ser modificados.
@@ -257,7 +293,9 @@ const EditProyectoModal: React.FC<EditProyectoModalProps> = ({
                             <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
                                 <TextField
                                     fullWidth label="Cupo Máximo" type="number"
+                                    onKeyDown={blockInvalidChar} inputProps={{ min: 1 }}
                                     {...formik.getFieldProps('obj_suscripciones')}
+                                    onChange={(e) => { if (Number(e.target.value) < 0) return; formik.handleChange(e); }}
                                     error={formik.touched.obj_suscripciones && Boolean(formik.errors.obj_suscripciones)}
                                     helperText={getHelperText('obj_suscripciones')}
                                     InputProps={{ endAdornment: <InputAdornment position="end">Planes</InputAdornment> }}
@@ -265,14 +303,18 @@ const EditProyectoModal: React.FC<EditProyectoModalProps> = ({
                                 />
                                 <TextField
                                     fullWidth label="Mínimo Requerido" type="number"
+                                    onKeyDown={blockInvalidChar} inputProps={{ min: 1 }}
                                     {...formik.getFieldProps('suscripciones_minimas')}
+                                    onChange={(e) => { if (Number(e.target.value) < 0) return; formik.handleChange(e); }}
                                     error={formik.touched.suscripciones_minimas && Boolean(formik.errors.suscripciones_minimas)}
                                     helperText={getHelperText('suscripciones_minimas')}
                                     sx={commonInputSx}
                                 />
                                 <TextField
                                     fullWidth label="Plazo Inversión" type="number"
+                                    onKeyDown={blockInvalidChar} inputProps={{ min: 1 }}
                                     {...formik.getFieldProps('plazo_inversion')}
+                                    onChange={(e) => { if (Number(e.target.value) < 0) return; formik.handleChange(e); }}
                                     error={formik.touched.plazo_inversion && Boolean(formik.errors.plazo_inversion)}
                                     helperText={getHelperText('plazo_inversion')}
                                     InputProps={{ endAdornment: <InputAdornment position="end">Meses</InputAdornment> }}
@@ -292,6 +334,7 @@ const EditProyectoModal: React.FC<EditProyectoModalProps> = ({
                             <Typography variant="subtitle2" sx={sectionTitleSx}>
                                 <LocationIcon fontSize="inherit" /> Georreferenciación
                             </Typography>
+                            {/* AQUÍ NO BLOQUEAMOS LOS NEGATIVOS PARA LAT Y LNG */}
                             <Stack direction="row" spacing={2}>
                                 <TextField
                                     fullWidth label="Latitud" type="number"

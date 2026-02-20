@@ -22,11 +22,11 @@ import {
 } from '@mui/icons-material';
 import {
   Alert,
+  alpha,
   Avatar,
   Box,
   Button,
   CircularProgress,
-  Divider,
   Fade,
   Paper,
   Stack,
@@ -58,6 +58,7 @@ import useSnackbar from '@/shared/hooks/useSnackbar';
 import { CheckoutStateManager, type CheckoutPersistedState } from './Checkout persistence';
 
 // Types
+import CuotaMensualService from '@/core/api/services/cuotaMensual.service';
 import type { ProyectoDto } from '@/core/types/dto/proyecto.dto';
 
 // ===================================================
@@ -271,32 +272,179 @@ SignatureCanvas.displayName = 'SignatureCanvas';
 // ===================================================
 // STEP COMPONENTS
 // ===================================================
-const StepConfirmacion = React.memo<{ proyecto: ProyectoDto; tipo: string; monto: string; }>(
-  ({ proyecto, tipo, monto }) => (
+const StepConfirmacion = React.memo<{
+  proyecto: ProyectoDto;
+  tipo: 'suscripcion' | 'inversion';
+  montoTotalStr: string;
+  cuotaActiva?: any;
+  formatCurrency: (value: number) => string;
+}>(({ proyecto, tipo, montoTotalStr, cuotaActiva, formatCurrency }) => {
+  const theme = useTheme();
+  const isSuscripcion = tipo === 'suscripcion';
+
+  return (
     <Stack spacing={3} maxWidth="sm" mx="auto">
-      <Alert severity="info" variant="outlined">Revisa los detalles antes de iniciar.</Alert>
-      <Paper variant="outlined" sx={{ p: 3 }}>
-        <Stack spacing={2}>
-          <Box display="flex" justifyContent="space-between">
-            <Typography>Total a Pagar</Typography>
-            <Typography fontWeight={700} color="success.main">{monto}</Typography>
-          </Box>
-          <Divider />
-          <Box display="flex" justifyContent="space-between">
-            <Typography>Proyecto</Typography>
-            <Typography fontWeight={600}>{proyecto.nombre_proyecto}</Typography>
-          </Box>
-          {tipo === 'suscripcion' && (
-            <Stack direction="row" spacing={2} alignItems="center" sx={{ color: 'primary.main' }}>
-              <Token />
-              <Typography variant="caption">Incluye 1 Token de Subasta.</Typography>
+      <Alert severity="info" variant="outlined" sx={{ borderRadius: 2 }}>
+        Revisa los detalles de tu {isSuscripcion ? 'suscripción' : 'inversión'} antes de iniciar el pago.
+      </Alert>
+
+      <Paper variant="outlined" sx={{ overflow: 'hidden', borderRadius: 2 }}>
+        {/* Cabecera del Resumen */}
+        <Box sx={{ bgcolor: 'primary.main', color: 'primary.contrastText', p: 2 }}>
+          <Typography variant="h6" fontWeight={700}>
+            {proyecto.nombre_proyecto}
+          </Typography>
+          <Typography variant="body2" sx={{ opacity: 0.9 }}>
+            {isSuscripcion ? 'Plan de Ahorro Mensual' : 'Inversión Directa (Pago Único)'}
+          </Typography>
+        </Box>
+
+        <Stack spacing={0}>
+          {/* Modalidad y Plazo */}
+          <Box p={2} borderBottom={`1px solid ${theme.palette.divider}`}>
+            <Stack direction="row" justifyContent="space-between" mb={isSuscripcion && proyecto.plazo_inversion ? 1 : 0}>
+              <Typography color="text.secondary">Modalidad</Typography>
+              <Typography fontWeight={600}>
+                {isSuscripcion ? 'Suscripción Mensual' : 'Aporte Único'}
+              </Typography>
             </Stack>
+            {isSuscripcion && proyecto.plazo_inversion && (
+              <Stack direction="row" justifyContent="space-between">
+                <Typography color="text.secondary">Plazo de financiación</Typography>
+                <Typography fontWeight={600}>{proyecto.plazo_inversion} meses</Typography>
+              </Stack>
+            )}
+          </Box>
+
+          {/* ✨ DESGLOSE MATEMÁTICO ESTILO TICKET ✨ */}
+          {isSuscripcion && cuotaActiva && (
+            <Box p={2} bgcolor={alpha(theme.palette.primary.main, 0.02)}>
+
+              {/* BLOQUE 1: VALOR MÓVIL */}
+              <Typography variant="overline" color="primary.main" fontWeight={800} sx={{ display: 'block', mb: 1, lineHeight: 1 }}>
+                1. Cálculo del Valor Móvil
+              </Typography>
+              <Stack spacing={0.5} mb={3}>
+                <Stack direction="row" justifyContent="space-between">
+                  <Typography variant="body2" color="text.secondary">Precio {cuotaActiva.nombre_cemento_cemento}</Typography>
+                  <Typography variant="body2" fontWeight={500}>{formatCurrency(Number(cuotaActiva.valor_cemento))}</Typography>
+                </Stack>
+                <Stack direction="row" justifyContent="space-between">
+                  <Typography variant="body2" color="text.secondary">Multiplicado por unidades</Typography>
+                  <Typography variant="body2" fontWeight={500}>× {cuotaActiva.valor_cemento_unidades}</Typography>
+                </Stack>
+                <Box borderTop={`1px solid ${theme.palette.divider}`} pt={0.5} mt={0.5}>
+                  <Stack direction="row" justifyContent="space-between">
+                    <Typography variant="body2" fontWeight={700}>= Valor Móvil Total</Typography>
+                    <Typography variant="body2" fontWeight={700}>{formatCurrency(Number(cuotaActiva.valor_movil))}</Typography>
+                  </Stack>
+                </Box>
+              </Stack>
+
+              {/* BLOQUE 2: FINANCIACIÓN */}
+              <Typography variant="overline" color="primary.main" fontWeight={800} sx={{ display: 'block', mb: 1, lineHeight: 1 }}>
+                2. Base a Financiar
+              </Typography>
+              <Stack spacing={0.5} mb={3}>
+                <Stack direction="row" justifyContent="space-between">
+                  <Typography variant="body2" color="text.secondary">Valor Móvil Total</Typography>
+                  <Typography variant="body2" fontWeight={500}>{formatCurrency(Number(cuotaActiva.valor_movil))}</Typography>
+                </Stack>
+                <Stack direction="row" justifyContent="space-between">
+                  <Typography variant="body2" color="text.secondary">Porcentaje del plan</Typography>
+                  <Typography variant="body2" fontWeight={500}>× {Number(cuotaActiva.porcentaje_plan) * 100}%</Typography>
+                </Stack>
+                <Box borderTop={`1px solid ${theme.palette.divider}`} pt={0.5} mt={0.5}>
+                  <Stack direction="row" justifyContent="space-between">
+                    <Typography variant="body2" fontWeight={700}>= Base a financiar</Typography>
+                    <Typography variant="body2" fontWeight={700}>{formatCurrency(Number(cuotaActiva.total_del_plan))}</Typography>
+                  </Stack>
+                </Box>
+              </Stack>
+
+              {/* BLOQUE 3: COMPOSICIÓN DE LA CUOTA */}
+             {/* BLOQUE 3: COMPOSICIÓN DE LA CUOTA */}
+              <Typography variant="overline" color="primary.main" fontWeight={800} sx={{ display: 'block', mb: 1, lineHeight: 1 }}>
+                3. Composición de tu Cuota
+              </Typography>
+              
+              <Stack spacing={1} sx={{ p: 1.5, bgcolor: 'background.paper', borderRadius: 1, border: `1px solid ${theme.palette.divider}` }}>
+                
+                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                  <Box>
+                    <Typography variant="body2" fontWeight={600}>Cuota Pura Mínima</Typography>
+                    {/* 👇 AQUÍ MOSTRAMOS LA CUENTA EXACTA (ej: $1.40 ÷ 12 meses) 👇 */}
+                    <Typography variant="caption" color="text.disabled">
+                      {formatCurrency(Number(cuotaActiva.total_del_plan))} ÷ {cuotaActiva.total_cuotas_proyecto} meses
+                    </Typography>
+                  </Box>
+                  <Typography variant="body2" fontWeight={600}>{formatCurrency(Number(cuotaActiva.valor_mensual))}</Typography>
+                </Stack>
+
+                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">Gastos Administrativos</Typography>
+                    <Typography variant="caption" color="text.disabled">
+                      ({Number(cuotaActiva.porcentaje_administrativo) * 100}% sobre Cuota Pura)
+                    </Typography>
+                  </Box>
+                  <Typography variant="body2" color="text.secondary">+ {formatCurrency(Number(cuotaActiva.carga_administrativa))}</Typography>
+                </Stack>
+
+                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">IVA</Typography>
+                    <Typography variant="caption" color="text.disabled">
+                      ({Number(cuotaActiva.porcentaje_iva) * 100}% sobre Gastos)
+                    </Typography>
+                  </Box>
+                  <Typography variant="body2" color="text.secondary">+ {formatCurrency(Number(cuotaActiva.iva_carga_administrativa))}</Typography>
+                </Stack>
+
+                {/* Línea divisoria punteada antes del total */}
+                <Box borderTop={`2px dashed ${theme.palette.divider}`} pt={1} mt={1}>
+                  <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Typography variant="subtitle2" fontWeight={800} color="text.primary">Valor Final de la Cuota</Typography>
+                    <Typography variant="subtitle2" fontWeight={800} color="text.primary">= {formatCurrency(Number(cuotaActiva.valor_mensual_final))}</Typography>
+                  </Stack>
+                </Box>
+              </Stack>
+
+            </Box>
           )}
+
+          {/* Gran Total a Pagar Hoy */}
+          <Box p={3} display="flex" justifyContent="space-between" alignItems="center" bgcolor={alpha(theme.palette.success.main, 0.1)}>
+            <Box>
+              <Typography fontWeight={800} color="text.primary" variant="subtitle1">
+                {isSuscripcion ? 'Valor Final de la Cuota' : 'Monto a Invertir'}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" fontWeight={500}>
+                {isSuscripcion ? 'A pagar hoy para activar el plan' : 'A pagar hoy'}
+              </Typography>
+            </Box>
+            <Typography variant="h4" fontWeight={900} color="success.main">
+              {montoTotalStr}
+            </Typography>
+          </Box>
         </Stack>
       </Paper>
+
+      {/* Beneficio de la Suscripción */}
+      {isSuscripcion && (
+        <Alert severity="success" icon={<Token />} sx={{ borderRadius: 2 }}>
+          <Typography variant="body2" fontWeight={700} mb={0.5}>
+            ¡Beneficio Exclusivo!
+          </Typography>
+          <Typography variant="caption">
+            Al abonar esta primera cuota recibes <strong>1 Token de Subasta</strong> para participar por la adjudicación de lotes.
+          </Typography>
+        </Alert>
+      )}
     </Stack>
-  )
-);
+  );
+});
+
 StepConfirmacion.displayName = 'StepConfirmacion';
 
 const StepContrato = React.memo<{ plantilla: any; isLoading: boolean; }>(({ plantilla, isLoading }) => {
@@ -393,7 +541,9 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { showSuccess, showInfo, showError } = useSnackbar();
   const formatCurrency = useCurrencyFormatter({
-    currency: proyecto.moneda === 'USD' ? 'USD' : 'ARS'
+    currency: proyecto.moneda === 'USD' ? 'USD' : 'ARS',
+    minimumFractionDigits: 2, // 👈 Agrega esto
+    maximumFractionDigits: 2  // 👈 Agrega esto
   });
 
   // STATE
@@ -423,7 +573,28 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
     () => (plantillas && plantillas.length > 0 ? plantillas[0] : null),
     [plantillas]
   );
+  // 2. ✨ AQUÍ FALTA DEFINIR cuotaActiva ✨ (Copia y pega esto)
+  const { data: cuotaActiva, isLoading: loadingCuota } = useQuery({
+    queryKey: ['cuotaActiva', proyecto.id],
+    queryFn: async () => {
+      const response = await CuotaMensualService.getLastByProjectId(proyecto.id);
+      return response.data.cuota; // Importante el .cuota al final
+    },
+    enabled: open && tipo === 'suscripcion',
+    staleTime: 5 * 60 * 1000,
+  });
 
+  const montoAMostrar = useMemo(() => {
+    if (tipo === 'inversion') {
+      return formatCurrency(Number(proyecto.monto_inversion || 0));
+    }
+    if (loadingCuota) return "Calculando...";
+
+    const valor = cuotaActiva?.valor_mensual_final || proyecto.valor_cuota_referencia || 0;
+
+    // 👇 Retorna el valor en crudo (sin formatear) agregando un "$" en texto
+    return `$ ${valor}`;
+  }, [formatCurrency, proyecto, tipo, cuotaActiva, loadingCuota]);
   // CHECKOUT WIZARD HOOK
   const {
     isProcessing,
@@ -451,12 +622,6 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
     }
   });
 
-  const montoAMostrar = useMemo(() => {
-    if (tipo === 'inversion') {
-      return formatCurrency(Number(proyecto.monto_inversion));
-    }
-    return formatCurrency(Number(proyecto.valor_cuota_referencia || 0));
-  }, [formatCurrency, proyecto, tipo]);
 
   const effectiveInversionId = transaccionId || initialInversionId;
   const effectivePagoId = transaccionId || initialPagoId;
@@ -765,7 +930,9 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
               <StepConfirmacion
                 proyecto={proyecto}
                 tipo={tipo}
-                monto={montoAMostrar}
+                montoTotalStr={montoAMostrar}      // 👈 Coincide con el nombre en el componente
+                cuotaActiva={cuotaActiva}          // 👈 Le pasas el desglose que trajiste de la BD
+                formatCurrency={formatCurrency}    // 👈 Le pasas la función para formatear la moneda
               />
             )}
             {activeStep === 1 && <StepContrato plantilla={plantillaActual} isLoading={loadingPlantilla} />}

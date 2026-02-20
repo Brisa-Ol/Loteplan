@@ -1,34 +1,48 @@
 // src/components/Admin/Proyectos/Components/modals/ConfigCuotasModal.tsx
 
-import React, { useState, useEffect, useMemo } from 'react';
 import {
-    Button, TextField, Stack, Box, Typography,
-    CircularProgress, Alert, useTheme, alpha, Paper, InputAdornment, Skeleton,
-    Tabs, Tab, Table, TableBody, TableCell, TableContainer, TableHead, TableRow
-} from '@mui/material';
-import {
-    CreditCard as CuotaIcon,
-    Save as SaveIcon,
-    History as HistoryIcon,
     Calculate as CalculateIcon,
+    CreditCard as CuotaIcon,
+    CalendarMonth as DateIcon,
     Description as DescriptionIcon,
-    Warning as WarningIcon,
-    ListAlt as ListIcon,
     Edit as EditIcon,
-    CalendarMonth as DateIcon
+    History as HistoryIcon,
+    ListAlt as ListIcon,
+    Save as SaveIcon,
+    Warning as WarningIcon
 } from '@mui/icons-material';
-import { useFormik } from 'formik';
-import * as Yup from 'yup';
+import {
+    Alert,
+    alpha,
+    Box,
+    Button,
+    CircularProgress,
+    InputAdornment,
+    Paper,
+    Skeleton,
+    Stack,
+    Tab, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
+    Tabs,
+    TextField,
+    Typography,
+    useTheme
+} from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { addMonths } from 'date-fns';
+import { useFormik } from 'formik';
+import React, { useEffect, useMemo, useState } from 'react';
+import * as Yup from 'yup';
 
-import type { ProyectoDto } from '@/core/types/dto/proyecto.dto';
-import useSnackbar from '@/shared/hooks/useSnackbar';
 import CuotaMensualService from '@/core/api/services/cuotaMensual.service';
 import type { CreateCuotaMensualDto } from '@/core/types/dto/cuotaMensual.dto';
+import type { ProyectoDto } from '@/core/types/dto/proyecto.dto';
 import BaseModal from '@/shared/components/domain/modals/BaseModal/BaseModal';
+import useSnackbar from '@/shared/hooks/useSnackbar';
 import ProyectoPriceHistory from '../components/ProyectoPriceHistory';
 
+// --- FUNCIONES AUXILIARES ---
+const blockInvalidChar = (e: React.KeyboardEvent) =>
+    ['e', 'E', '-', '+'].includes(e.key) && e.preventDefault();
 
 interface ConfigCuotasModalProps {
     open: boolean;
@@ -38,8 +52,8 @@ interface ConfigCuotasModalProps {
 
 const validationSchema = Yup.object({
     nombre_cemento_cemento: Yup.string().nullable(),
-    valor_cemento_unidades: Yup.number().min(1, 'Mínimo 1 unidad').required('Requerido'),
-    valor_cemento: Yup.number().min(0.01, 'Debe ser mayor a 0').required('Requerido'),
+    valor_cemento_unidades: Yup.number().positive('Mínimo 1 unidad').required('Requerido'),
+    valor_cemento: Yup.number().positive('Debe ser mayor a 0').required('Requerido'),
     porcentaje_plan: Yup.number().min(0, 'Mínimo 0%').max(100, 'Máximo 100%').required('Requerido'),
     porcentaje_administrativo: Yup.number().min(0, 'Mínimo 0%').max(100, 'Máximo 100%').required('Requerido'),
     porcentaje_iva: Yup.number().min(0, 'Mínimo 0%').max(100, 'Máximo 100%').required('Requerido'),
@@ -50,11 +64,9 @@ const ConfigCuotasModal: React.FC<ConfigCuotasModalProps> = ({ open, onClose, pr
     const queryClient = useQueryClient();
     const { showSuccess, showError } = useSnackbar();
 
-    // --- 1. HOOKS (SIEMPRE PRIMERO) ---
     const [activeTab, setActiveTab] = useState(0);
     const [showHistory, setShowHistory] = useState(false);
 
-    // Query: Obtener configuración
     const { data: responseBackend, isLoading: isLoadingData } = useQuery({
         queryKey: ['cuotaActive', proyecto?.id],
         queryFn: async () => {
@@ -66,12 +78,10 @@ const ConfigCuotasModal: React.FC<ConfigCuotasModalProps> = ({ open, onClose, pr
                 return null;
             }
         },
-        // Solo se ejecuta si hay proyecto Y es mensual
         enabled: open && !!proyecto && proyecto.tipo_inversion === 'mensual',
         retry: false
     });
 
-    // Mutation: Crear Configuración
     const createMutation = useMutation({
         mutationFn: async (data: CreateCuotaMensualDto) => (await CuotaMensualService.create(data)).data,
         onSuccess: (response) => {
@@ -92,7 +102,6 @@ const ConfigCuotasModal: React.FC<ConfigCuotasModalProps> = ({ open, onClose, pr
         }
     });
 
-    // Formik
     const formik = useFormik<CreateCuotaMensualDto>({
         initialValues: {
             id_proyecto: proyecto?.id || 0,
@@ -115,7 +124,6 @@ const ConfigCuotasModal: React.FC<ConfigCuotasModalProps> = ({ open, onClose, pr
                     id_proyecto: proyecto.id,
                     nombre_proyecto: proyecto.nombre_proyecto,
                     total_cuotas_proyecto: proyecto.plazo_inversion || 12,
-                    // Conversión a decimal para backend
                     porcentaje_administrativo: values.porcentaje_administrativo / 100,
                     porcentaje_iva: values.porcentaje_iva / 100,
                     porcentaje_plan: values.porcentaje_plan / 100
@@ -126,7 +134,6 @@ const ConfigCuotasModal: React.FC<ConfigCuotasModalProps> = ({ open, onClose, pr
         },
     });
 
-    // Efecto: Cargar datos iniciales
     useEffect(() => {
         const cuotaData = responseBackend?.cuota;
         if (cuotaData) {
@@ -141,15 +148,12 @@ const ConfigCuotasModal: React.FC<ConfigCuotasModalProps> = ({ open, onClose, pr
                 nombre_cemento_cemento: cuotaData.nombre_cemento_cemento || '',
                 valor_cemento_unidades: Number(cuotaData.valor_cemento_unidades) || 0,
                 valor_cemento: Number(cuotaData.valor_cemento) || 0,
-                // Conversión a entero para input
                 porcentaje_plan: pPlan <= 1 ? pPlan * 100 : pPlan,
                 porcentaje_administrativo: pAdmin <= 1 ? pAdmin * 100 : pAdmin,
                 porcentaje_iva: pIva <= 1 ? pIva * 100 : pIva,
             });
         }
     }, [responseBackend, proyecto]);
-
-    // --- CÁLCULOS (HOOKS DEBEN ESTAR AQUÍ ANTES DE CUALQUIER RETURN) ---
 
     const plazo = proyecto?.plazo_inversion || 1;
     const unidades = Number(formik.values.valor_cemento_unidades) || 0;
@@ -167,9 +171,7 @@ const ConfigCuotasModal: React.FC<ConfigCuotasModalProps> = ({ open, onClose, pr
     const ivaCarga = cargaAdministrativa * pctIvaDecimal;
     const valorMensualFinal = valorMensualPlan + cargaAdministrativa + ivaCarga;
 
-    // useMemo: Cronograma (EL QUE DABA ERROR)
     const cronogramaProyectado = useMemo(() => {
-        // 🛡️ Guarda de seguridad DENTRO del hook
         if (!proyecto || !proyecto.fecha_inicio) return [];
 
         const cuotas = [];
@@ -188,7 +190,6 @@ const ConfigCuotasModal: React.FC<ConfigCuotasModalProps> = ({ open, onClose, pr
         return cuotas;
     }, [plazo, proyecto?.fecha_inicio, valorMensualFinal, valorMensualPlan, cargaAdministrativa, ivaCarga]);
 
-    // --- HANDLERS ---
     const handleClose = () => {
         formik.resetForm();
         setShowHistory(false);
@@ -198,7 +199,6 @@ const ConfigCuotasModal: React.FC<ConfigCuotasModalProps> = ({ open, onClose, pr
 
     const sectionTitleSx = { fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', mb: 2, display: 'flex', alignItems: 'center', gap: 1, fontSize: '0.75rem' };
 
-    // --- 2. EARLY RETURNS (AHORA SÍ ES SEGURO) ---
     if (!proyecto) return null;
 
     if (proyecto.tipo_inversion !== 'mensual') {
@@ -209,7 +209,6 @@ const ConfigCuotasModal: React.FC<ConfigCuotasModalProps> = ({ open, onClose, pr
         );
     }
 
-    // --- 3. RENDER ---
     return (
         <BaseModal
             open={open}
@@ -253,8 +252,6 @@ const ConfigCuotasModal: React.FC<ConfigCuotasModalProps> = ({ open, onClose, pr
             }
         >
             <Stack spacing={3}>
-
-                {/* HEADER INFO */}
                 <Paper elevation={0} sx={{ p: 2, borderRadius: 2, bgcolor: alpha(theme.palette.primary.main, 0.08), border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}` }}>
                     <Stack direction="row" justifyContent="space-between" alignItems="center">
                         <Box>
@@ -275,7 +272,6 @@ const ConfigCuotasModal: React.FC<ConfigCuotasModalProps> = ({ open, onClose, pr
                     </Tabs>
                 </Box>
 
-                {/* TAB 0: CONFIGURACIÓN */}
                 {activeTab === 0 && (
                     <Box sx={{ pt: 1 }}>
                         {isLoadingData ? (
@@ -291,8 +287,23 @@ const ConfigCuotasModal: React.FC<ConfigCuotasModalProps> = ({ open, onClose, pr
                                     <Stack spacing={2}>
                                         <TextField fullWidth label="Referencia (Ej: Bolsa Cemento)" {...formik.getFieldProps('nombre_cemento_cemento')} disabled={createMutation.isPending} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
                                         <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-                                            <TextField fullWidth label="Unidades" type="number" {...formik.getFieldProps('valor_cemento_unidades')} error={Boolean(formik.touched.valor_cemento_unidades && formik.errors.valor_cemento_unidades)} disabled={createMutation.isPending} sx={{ flex: 1, '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
-                                            <TextField fullWidth label="Precio Unitario" type="number" InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }} {...formik.getFieldProps('valor_cemento')} error={Boolean(formik.touched.valor_cemento && formik.errors.valor_cemento)} disabled={createMutation.isPending} sx={{ flex: 1, '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
+                                            <TextField
+                                                fullWidth label="Unidades" type="number"
+                                                onKeyDown={blockInvalidChar} inputProps={{ min: 1 }}
+                                                {...formik.getFieldProps('valor_cemento_unidades')}
+                                                onChange={(e) => { if (Number(e.target.value) < 0) return; formik.handleChange(e); }}
+                                                error={Boolean(formik.touched.valor_cemento_unidades && formik.errors.valor_cemento_unidades)}
+                                                disabled={createMutation.isPending} sx={{ flex: 1, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                                            />
+                                            <TextField
+                                                fullWidth label="Precio Unitario" type="number"
+                                                onKeyDown={blockInvalidChar} inputProps={{ min: 0 }}
+                                                InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }}
+                                                {...formik.getFieldProps('valor_cemento')}
+                                                onChange={(e) => { if (Number(e.target.value) < 0) return; formik.handleChange(e); }}
+                                                error={Boolean(formik.touched.valor_cemento && formik.errors.valor_cemento)}
+                                                disabled={createMutation.isPending} sx={{ flex: 1, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                                            />
                                         </Stack>
                                     </Stack>
                                 </Box>
@@ -300,9 +311,30 @@ const ConfigCuotasModal: React.FC<ConfigCuotasModalProps> = ({ open, onClose, pr
                                 <Box>
                                     <Typography variant="subtitle2" sx={sectionTitleSx}><CalculateIcon fontSize="inherit" /> Distribución Porcentual</Typography>
                                     <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-                                        <TextField fullWidth label="% Plan (Capital)" type="number" InputProps={{ endAdornment: <InputAdornment position="end">%</InputAdornment> }} {...formik.getFieldProps('porcentaje_plan')} disabled={createMutation.isPending} />
-                                        <TextField fullWidth label="% Admin" type="number" InputProps={{ endAdornment: <InputAdornment position="end">%</InputAdornment> }} {...formik.getFieldProps('porcentaje_administrativo')} disabled={createMutation.isPending} />
-                                        <TextField fullWidth label="% IVA" type="number" InputProps={{ endAdornment: <InputAdornment position="end">%</InputAdornment> }} {...formik.getFieldProps('porcentaje_iva')} disabled={createMutation.isPending} />
+                                        <TextField
+                                            fullWidth label="% Plan (Capital)" type="number"
+                                            onKeyDown={blockInvalidChar} inputProps={{ min: 0, max: 100 }}
+                                            InputProps={{ endAdornment: <InputAdornment position="end">%</InputAdornment> }}
+                                            {...formik.getFieldProps('porcentaje_plan')}
+                                            onChange={(e) => { if (Number(e.target.value) < 0) return; formik.handleChange(e); }}
+                                            disabled={createMutation.isPending}
+                                        />
+                                        <TextField
+                                            fullWidth label="% Admin" type="number"
+                                            onKeyDown={blockInvalidChar} inputProps={{ min: 0, max: 100 }}
+                                            InputProps={{ endAdornment: <InputAdornment position="end">%</InputAdornment> }}
+                                            {...formik.getFieldProps('porcentaje_administrativo')}
+                                            onChange={(e) => { if (Number(e.target.value) < 0) return; formik.handleChange(e); }}
+                                            disabled={createMutation.isPending}
+                                        />
+                                        <TextField
+                                            fullWidth label="% IVA" type="number"
+                                            onKeyDown={blockInvalidChar} inputProps={{ min: 0, max: 100 }}
+                                            InputProps={{ endAdornment: <InputAdornment position="end">%</InputAdornment> }}
+                                            {...formik.getFieldProps('porcentaje_iva')}
+                                            onChange={(e) => { if (Number(e.target.value) < 0) return; formik.handleChange(e); }}
+                                            disabled={createMutation.isPending}
+                                        />
                                     </Stack>
                                 </Box>
 
@@ -332,7 +364,6 @@ const ConfigCuotasModal: React.FC<ConfigCuotasModalProps> = ({ open, onClose, pr
                     </Box>
                 )}
 
-                {/* TAB 1: CRONOGRAMA */}
                 {activeTab === 1 && (
                     <Box sx={{ pt: 1 }}>
                         <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 400 }}>
