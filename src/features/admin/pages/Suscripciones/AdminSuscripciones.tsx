@@ -2,7 +2,9 @@
 
 import {
   Cancel, CheckCircle, Groups,
-  TrendingDown, Visibility
+  Token,
+  TrendingDown, Visibility,
+  WarningAmber
 } from '@mui/icons-material';
 import {
   Avatar, Box, Chip, IconButton,
@@ -25,7 +27,7 @@ import { PageContainer } from '@/shared/components/layout/containers/PageContain
 // Componentes de Filtrado Premium
 import { FilterBar, FilterSearch, FilterSelect } from '@/shared/components/forms/filters/FilterBar';
 
-// ✅ IMPORTACIONES DE SUB-COMPONENTES (Verifica que la ruta sea correcta)
+// Importaciones de Sub-componentes
 import CancelacionesTab from './components/CancelacionesTab';
 import DetalleSuscripcionModal from './components/DetalleSuscripcionModal';
 
@@ -72,7 +74,22 @@ const UserCell = React.memo<{ suscripcion: SuscripcionDto; theme: any }>(
 const AdminSuscripciones: React.FC = () => {
   const logic = useAdminSuscripciones();
   const theme = useTheme();
+  const proyectoMenuProps = {
+    anchorOrigin: { vertical: 'bottom' as const, horizontal: 'left' as const },
+    transformOrigin: { vertical: 'top' as const, horizontal: 'left' as const },
+    disableScrollLock: true,
+    PaperProps: {
+      sx: {
+        mt: 1.4, // 🚀 Baja el menú para no tapar el label
+        maxHeight: 300,
+        borderRadius: '12px',
+        minWidth: 280,
+        boxShadow: '0px 4px 20px rgba(0,0,0,0.1)',
+        '& .MuiMenuItem-root': { fontSize: '0.85rem', py: 1 }, // 🚀 Letra más chica
+      }
+    }
 
+  };
   const criticalAlerts = useMemo(() => {
     const alerts = [];
     if (logic.stats.tasaMorosidad > 15) {
@@ -80,7 +97,7 @@ const AdminSuscripciones: React.FC = () => {
         severity: 'error' as const,
         title: 'Morosidad Crítica',
         message: `La tasa de morosidad es del ${logic.stats.tasaMorosidad}% ($${Number(logic.stats.totalEnRiesgo).toLocaleString()} en riesgo).`,
-        action: { label: 'Ver Morosos', onClick: () => logic.setFilterStatus('inactivas') },
+        action: { label: 'Ver Morosos', onClick: () => logic.setFilterStatus('inactivas') }, // Ajustar filtro si existe uno de morosos
       });
     }
     return alerts;
@@ -113,13 +130,42 @@ const AdminSuscripciones: React.FC = () => {
           </Box>
         ),
       },
+      // 🆕 NUEVA COLUMNA: Progreso y Tokens
       {
-        id: 'pagado',
-        label: 'Recaudación Total',
+        id: 'progreso',
+        label: 'Estado del Plan',
+        align: 'center',
         render: (s) => (
-          <Typography variant="body2" fontWeight={700} sx={{ fontFamily: 'monospace' }}>
-            ${Number(s.monto_total_pagado || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-          </Typography>
+          <Stack alignItems="center">
+            <Chip
+              size="small"
+              icon={<Token sx={{ fontSize: '14px !important' }} />}
+              label={`${s.tokens_disponibles} Tokens`}
+              color="warning"
+              variant="outlined"
+              sx={{ fontWeight: 700, mb: 0.5, height: 20, fontSize: '0.65rem' }}
+            />
+            <Typography variant="caption" color="text.secondary" fontWeight={600}>
+              {s.meses_a_pagar} cuotas rest.
+            </Typography>
+          </Stack>
+        )
+      },
+      // 🆕 COLUMNA ACTUALIZADA: Finanzas
+      {
+        id: 'finanzas',
+        label: 'Finanzas',
+        render: (s) => (
+          <Box>
+            <Typography variant="body2" fontWeight={800} sx={{ fontFamily: 'monospace' }}>
+              ${Number(s.monto_total_pagado || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+            </Typography>
+            {Number(s.saldo_a_favor) > 0 && (
+              <Typography variant="caption" color="success.main" fontWeight={800} sx={{ display: 'block' }}>
+                + ${Number(s.saldo_a_favor).toLocaleString('es-AR')} a favor
+              </Typography>
+            )}
+          </Box>
         ),
       },
       {
@@ -128,13 +174,13 @@ const AdminSuscripciones: React.FC = () => {
         align: 'right',
         render: (s) => (
           <Stack direction="row" spacing={0.5} justifyContent="flex-end">
-            <Tooltip title="Ver Detalles">
+            <Tooltip title="Ver Detalles y Cronograma">
               <IconButton onClick={() => logic.handleVerDetalle(s)} size="small" sx={{ color: 'primary.main', bgcolor: alpha(theme.palette.primary.main, 0.05) }}>
                 <Visibility fontSize="small" />
               </IconButton>
             </Tooltip>
             {s.activo && (
-              <Tooltip title="Dar de Baja">
+              <Tooltip title="Dar de Baja / Cancelar">
                 <IconButton onClick={() => logic.handleCancelarClick(s)} disabled={logic.isCancelling} size="small" sx={{ color: 'error.main', bgcolor: alpha(theme.palette.error.main, 0.05) }}>
                   <Cancel fontSize="small" />
                 </IconButton>
@@ -178,9 +224,11 @@ const AdminSuscripciones: React.FC = () => {
 
       {logic.tabIndex === 0 ? (
         <Box>
-          <MetricsGrid columns={{ xs: 1, sm: 2, lg: 3 }}>
+          {/* 🆕 SE AGREGÓ EL KPI DE MOROSIDAD (Cambiado a 4 columnas) */}
+          <MetricsGrid columns={{ xs: 1, sm: 2, lg: 4 }}>
             <StatCard title="Total Registros" value={logic.stats.totalSuscripciones} icon={<Groups />} color="primary" loading={logic.isLoadingStats} />
             <StatCard title="Activas" value={logic.stats.totalActivas} icon={<CheckCircle />} color="success" loading={logic.isLoadingStats} />
+            <StatCard title="Morosidad" value={`${logic.stats.tasaMorosidad}%`} icon={<WarningAmber />} color="error" loading={logic.isLoadingStats} />
             <StatCard title="Churn Rate" value={`${logic.stats.tasaCancelacion}%`} icon={<TrendingDown />} color="warning" loading={logic.isLoadingStats} />
           </MetricsGrid>
 
@@ -194,23 +242,25 @@ const AdminSuscripciones: React.FC = () => {
             <FilterSelect
               label="Proyecto"
               value={logic.filterProject}
-              onChange={(e) => logic.setFilterProject(e.target.value)}
+              onChange={(e: any) => logic.setFilterProject(e.target.value)}
+              SelectProps={{
+                MenuProps: proyectoMenuProps // 👈 Usamos la config con apertura inferior y letra chica
+              }}
             >
               <MenuItem value="all">Todos los proyectos</MenuItem>
               {logic.proyectos
                 .filter((p: any) => p.tipo_inversion === 'mensual')
-                .map((p: any) => <MenuItem key={p.id} value={p.id}>{p.nombre_proyecto}</MenuItem>)
+                .map((p: any) => (
+                  <MenuItem key={p.id} value={p.id}>
+                    <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between" width="100%">
+                      <Typography variant="body2">{p.nombre_proyecto}</Typography>
+                    </Stack>
+                  </MenuItem>
+                ))
               }
             </FilterSelect>
-            <FilterSelect
-              label="Estado de Suscripción"
-              value={logic.filterStatus}
-              onChange={(e) => logic.setFilterStatus(e.target.value as any)}
-            >
-              <MenuItem value="all">Ver Todas</MenuItem>
-              <MenuItem value="activas">Solo Activas</MenuItem>
-              <MenuItem value="inactivas">Solo Canceladas</MenuItem>
-            </FilterSelect>
+
+
           </FilterBar>
 
           <QueryHandler isLoading={logic.isLoading} error={logic.error as Error | null}>

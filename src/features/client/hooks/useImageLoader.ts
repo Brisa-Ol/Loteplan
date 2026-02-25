@@ -1,4 +1,3 @@
-// src/shared/hooks/useImageLoader.ts
 
 import { useState, useCallback } from 'react';
 

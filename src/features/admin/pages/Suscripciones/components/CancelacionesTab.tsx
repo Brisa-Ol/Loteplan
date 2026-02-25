@@ -3,11 +3,11 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import {
     Box, Typography, Avatar, Stack, IconButton, useTheme, alpha,
-    Paper
+    Paper, TextField, Button
 } from '@mui/material';
 import {
     Visibility, TrendingDown, MoneyOff, Cancel,
-    DateRange as DateIcon
+    DateRange as DateIcon, Clear as ClearIcon
 } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
 
@@ -30,6 +30,8 @@ const CancelacionesTab: React.FC = () => {
 
     // 1. Estados de Filtro
     const [searchTerm, setSearchTerm] = useState('');
+    const [startDate, setStartDate] = useState<string>(''); // Formato YYYY-MM-DD
+    const [endDate, setEndDate] = useState<string>('');     // Formato YYYY-MM-DD
 
     // 2. Estado de Modal y Selección
     const detailModal = useModal();
@@ -40,7 +42,6 @@ const CancelacionesTab: React.FC = () => {
         queryKey: ['adminCancelaciones'],
         queryFn: async () => {
             const res = await SuscripcionService.getAllCanceladas();
-            // Adaptación de respuesta para asegurar que sea un array de SuscripcionCanceladaDto
             return ((res.data as any).data || res.data || []) as SuscripcionCanceladaDto[];
         },
     });
@@ -50,36 +51,56 @@ const CancelacionesTab: React.FC = () => {
         queryFn: async () => (await SuscripcionService.getCancellationMetrics()).data,
     });
 
-    // 4. Cálculos ✅ TIPADO: (acc: number, curr: SuscripcionCanceladaDto)
-    const totalMontoLiquidado = useMemo(() => {
-        return cancelaciones.reduce((acc: number, curr: SuscripcionCanceladaDto) => {
-            return acc + Number(curr.monto_pagado_total || 0);
-        }, 0);
-    }, [cancelaciones]);
-
-    // ✅ TIPADO: item: SuscripcionCanceladaDto
+    // 4. Cálculos (Aplicando los filtros de texto y fechas)
     const filteredCancelaciones = useMemo(() => {
         const term = searchTerm.toLowerCase().trim();
-        if (!term) return cancelaciones;
-
+        
         return cancelaciones.filter((item: SuscripcionCanceladaDto) => {
+            // A. Filtro de Texto
             const user = item.usuarioCancelador;
-            const userName = user ? `${user.nombre} ${user.apellido}` : '';
-            const projName = item.proyectoCancelado?.nombre_proyecto || '';
-            
-            return userName.toLowerCase().includes(term) || 
-                   projName.toLowerCase().includes(term) || 
-                   item.id.toString().includes(term) ||
-                   user?.email?.toLowerCase().includes(term);
+            const userName = user ? `${user.nombre} ${user.apellido}`.toLowerCase() : '';
+            const projName = (item.proyectoCancelado?.nombre_proyecto || '').toLowerCase();
+            const matchesSearch = !term || 
+                                  userName.includes(term) || 
+                                  projName.includes(term) || 
+                                  item.id.toString().includes(term) ||
+                                  (user?.email?.toLowerCase() || '').includes(term);
+
+            // B. Filtro de Rango de Fechas
+            let matchesDate = true;
+            if (item.fecha_cancelacion) {
+                // Extraemos solo la porción YYYY-MM-DD para comparar correctamente
+                const itemDateStr = new Date(item.fecha_cancelacion).toISOString().split('T')[0];
+                
+                if (startDate && itemDateStr < startDate) matchesDate = false;
+                if (endDate && itemDateStr > endDate) matchesDate = false;
+            }
+
+            return matchesSearch && matchesDate;
         });
-    }, [cancelaciones, searchTerm]);
+    }, [cancelaciones, searchTerm, startDate, endDate]);
+
+    // 5. Recalcular KPIs basados en lo que se está viendo en pantalla
+    const totalMontoLiquidado = useMemo(() => {
+        return filteredCancelaciones.reduce((acc: number, curr: SuscripcionCanceladaDto) => {
+            return acc + Number(curr.monto_pagado_total || 0);
+        }, 0);
+    }, [filteredCancelaciones]);
 
     const handleVerDetalle = useCallback((item: SuscripcionCanceladaDto) => {
         setSelectedCancelacion(item);
         detailModal.open();
     }, [detailModal]);
 
-    // 5. Columnas ✅ TIPADO: (item: SuscripcionCanceladaDto)
+    // Lógica para el título dinámico de la tarjeta de liquidación
+    const tituloMontoLiquidado = useMemo(() => {
+        if (startDate && endDate) return `Liquidado (${new Date(startDate).toLocaleDateString('es-AR')} - ${new Date(endDate).toLocaleDateString('es-AR')})`;
+        if (startDate) return `Liquidado (Desde ${new Date(startDate).toLocaleDateString('es-AR')})`;
+        if (endDate) return `Liquidado (Hasta ${new Date(endDate).toLocaleDateString('es-AR')})`;
+        return "Total Liquidado (Histórico)";
+    }, [startDate, endDate]);
+
+    // 6. Columnas
     const columns = useMemo<DataTableColumn<SuscripcionCanceladaDto>[]>(() => [
         {
             id: 'id',
@@ -165,8 +186,8 @@ const CancelacionesTab: React.FC = () => {
                 gap: 2, mb: 4
             }}>
                 <StatCard 
-                    title="Bajas Totales" 
-                    value={metrics?.total_canceladas || 0} 
+                    title="Bajas Filtradas" 
+                    value={(!startDate && !endDate && !searchTerm) ? (metrics?.total_canceladas || 0) : filteredCancelaciones.length} 
                     color="error" 
                     icon={<Cancel />} 
                     loading={loadingMetrics} 
@@ -179,7 +200,7 @@ const CancelacionesTab: React.FC = () => {
                     loading={loadingMetrics} 
                 />
                 <StatCard 
-                    title="Total Liquidado" 
+                    title={tituloMontoLiquidado} 
                     value={`$${totalMontoLiquidado.toLocaleString('es-AR')}`} 
                     color="info" 
                     icon={<MoneyOff />} 
@@ -187,13 +208,47 @@ const CancelacionesTab: React.FC = () => {
                 />
             </Box>
 
-            {/* BARRA DE FILTROS */}
+            {/* BARRA DE FILTROS ACTUALIZADA */}
             <FilterBar>
                 <FilterSearch 
-                    placeholder="Buscar por ex-titular, proyecto o ID de baja..."
+                    placeholder="Buscar por ex-titular, proyecto o ID..."
                     value={searchTerm}
                     onSearch={setSearchTerm}
+                    sx={{ minWidth: { xs: '100%', md: 300 } }}
                 />
+                
+                <Stack direction="row" spacing={2} alignItems="center" sx={{ flexWrap: 'wrap', gap: { xs: 2, md: 0 } }}>
+                    <TextField
+                        label="Desde"
+                        type="date"
+                        size="small"
+                        InputLabelProps={{ shrink: true }}
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                        sx={{ bgcolor: 'background.paper', borderRadius: 1 }}
+                    />
+                    <TextField
+                        label="Hasta"
+                        type="date"
+                        size="small"
+                        InputLabelProps={{ shrink: true }}
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                        inputProps={{ min: startDate }} // Bloquea seleccionar una fecha fin menor a la de inicio
+                        sx={{ bgcolor: 'background.paper', borderRadius: 1 }}
+                    />
+                    {(startDate || endDate) && (
+                        <Button 
+                            color="error" 
+                            size="small" 
+                            onClick={() => { setStartDate(''); setEndDate(''); }}
+                            startIcon={<ClearIcon />}
+                            sx={{ textTransform: 'none', fontWeight: 600 }}
+                        >
+                            Limpiar Fechas
+                        </Button>
+                    )}
+                </Stack>
             </FilterBar>
 
             {/* TABLA */}
@@ -205,7 +260,7 @@ const CancelacionesTab: React.FC = () => {
                         getRowKey={(row) => row.id} 
                         pagination 
                         defaultRowsPerPage={10}
-                        emptyMessage="No se encontraron registros de cancelaciones."
+                        emptyMessage="No se encontraron registros de cancelaciones para los filtros seleccionados."
                     />
                 </Paper>
             </QueryHandler>

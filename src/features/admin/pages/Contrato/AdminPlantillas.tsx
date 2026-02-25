@@ -1,14 +1,17 @@
+// src/features/admin/pages/Contrato/AdminPlantillas.tsx
+
 import {
   Add as AddIcon,
   BarChart as BarChartIcon,
   CheckCircle,
   Delete as DeleteIcon,
+  Download as DownloadIcon,
   Edit as EditIcon,
   Description as FileIcon,
   FolderShared, Public,
   Upload as UploadIcon,
   ViewList,
-  Download as DownloadIcon,
+  Visibility as VisibilityIcon,
   WarningAmber as WarningIcon
 } from '@mui/icons-material';
 import {
@@ -37,7 +40,6 @@ import {
 // Hooks y DTOs
 import type { ContratoPlantillaDto } from '@/core/types/dto/contrato-plantilla.dto';
 
-
 // Componentes Compartidos
 import { DataTable, type DataTableColumn } from '@/shared/components/data-grid/DataTable/DataTable';
 import { QueryHandler } from '@/shared/components/data-grid/QueryHandler/QueryHandler';
@@ -45,19 +47,21 @@ import { StatCard } from '@/shared/components/domain/cards/StatCard/StatCard';
 import { ConfirmDialog } from '@/shared/components/domain/modals/ConfirmDialog/ConfirmDialog';
 import { FilterBar, FilterSearch, FilterSelect } from '@/shared/components/forms/filters/FilterBar';
 import { PageContainer } from '@/shared/components/layout/containers/PageContainer/PageContainer';
+import { notifyError } from '@/shared/utils/snackbarUtils';
 
-// Modales y componentes
+// Modales y componentes (¡VERIFICA ESTAS RUTAS EN TU PROYECTO!)
 import { AdminPageHeader } from '@/shared/components/admin/Adminpageheader';
 import AlertBanner from '@/shared/components/admin/Alertbanner';
 import MetricsGrid from '@/shared/components/admin/Metricsgrid';
+import PdfPreviewModal from '@/shared/components/admin/PdfPreviewModal';
 import { ViewModeToggle, type ViewMode } from '@/shared/components/admin/Viewmodetoggle';
+import { useAdminPlantillas } from '../../hooks/contrato/useAdminPlantillas';
 import CreatePlantillaModal from './components/modals/CreatePlantillaModal';
 import UpdateMetadataModal from './components/modals/UpdateMetadataModal';
 import UpdatePdfModal from './components/modals/UpdatePdfModal';
-import { useAdminPlantillas } from '../../hooks/contrato/useAdminPlantillas';
 
 // ============================================================================
-// SUB-COMPONENTE: ANALYTICS (Memoizado)
+// SUB-COMPONENTE: ANALYTICS
 // ============================================================================
 const PlantillaAnalytics = React.memo<{ data: ContratoPlantillaDto[] }>(({ data }) => {
   const theme = useTheme();
@@ -76,28 +80,18 @@ const PlantillaAnalytics = React.memo<{ data: ContratoPlantillaDto[] }>(({ data 
     const inactive = data.filter(p => !p.activo).length;
     return [
       { name: 'Activas', value: active, color: theme.palette.success.main },
-      { name: 'Inactivas', value: inactive, color: theme.palette.text.disabled },
+      { name: 'Sin Proyecto', value: inactive, color: theme.palette.text.disabled },
     ];
   }, [data, theme]);
 
   return (
     <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
-      {/* Gráfico Distribución */}
       <Box sx={{ bgcolor: alpha(theme.palette.background.paper, 0.5), p: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
         <Typography variant="h6" fontWeight={800} mb={3}>Tipo de Asignación</Typography>
         <ResponsiveContainer width="100%" height={300}>
           <PieChart>
-            <Pie
-              data={pieData}
-              cx="50%" cy="50%"
-              innerRadius={60}
-              outerRadius={80}
-              paddingAngle={5}
-              dataKey="value"
-            >
-              {pieData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry.color} />
-              ))}
+            <Pie data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
+              {pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
             </Pie>
             <RechartsTooltip contentStyle={{ borderRadius: 8, border: 'none', boxShadow: theme.shadows[3] }} />
             <Legend verticalAlign="bottom" height={36} />
@@ -105,7 +99,6 @@ const PlantillaAnalytics = React.memo<{ data: ContratoPlantillaDto[] }>(({ data 
         </ResponsiveContainer>
       </Box>
 
-      {/* Gráfico Estado */}
       <Box sx={{ bgcolor: alpha(theme.palette.background.paper, 0.5), p: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
         <Typography variant="h6" fontWeight={800} mb={3}>Estado del Inventario</Typography>
         <ResponsiveContainer width="100%" height={300}>
@@ -115,9 +108,7 @@ const PlantillaAnalytics = React.memo<{ data: ContratoPlantillaDto[] }>(({ data 
             <YAxis dataKey="name" type="category" axisLine={false} tick={{ fontSize: 12, fontWeight: 600 }} />
             <RechartsTooltip cursor={{ fill: alpha(theme.palette.primary.main, 0.1) }} contentStyle={{ borderRadius: 8 }} />
             <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={30}>
-              {barData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry.color} />
-              ))}
+              {barData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
             </Bar>
           </BarChart>
         </ResponsiveContainer>
@@ -125,8 +116,6 @@ const PlantillaAnalytics = React.memo<{ data: ContratoPlantillaDto[] }>(({ data 
     </Box>
   );
 });
-
-PlantillaAnalytics.displayName = 'PlantillaAnalytics';
 
 // ============================================================================
 // COMPONENTE PRINCIPAL
@@ -136,20 +125,35 @@ const AdminPlantillas: React.FC = () => {
   const logic = useAdminPlantillas();
 
   const [viewMode, setViewMode] = useState<ViewMode>('table');
+  const [previewPlantilla, setPreviewPlantilla] = useState<ContratoPlantillaDto | null>(null);
 
-  // KPIS
+  // 🚀 CONFIGURACIÓN DE MENÚ (Igual que en Lotes y Suscripciones)
+  const proyectoMenuProps = {
+    anchorOrigin: { vertical: 'bottom' as const, horizontal: 'left' as const },
+    transformOrigin: { vertical: 'top' as const, horizontal: 'left' as const },
+    disableScrollLock: true,
+    PaperProps: {
+      sx: {
+  mt: 1.4, // 🚀 Baja el menú para no tapar el label
+        maxHeight: 300,
+        borderRadius: '12px',
+        minWidth: 280,
+        boxShadow: '0px 4px 20px rgba(0,0,0,0.1)',
+        '& .MuiMenuItem-root': { fontSize: '0.85rem', py: 1 }, // 🚀 Letra más chica
+      }
+    }
+  };
+
   const stats = useMemo(() => {
     const data = logic.filteredPlantillas;
     const total = data.length;
     const active = data.filter(p => p.activo).length;
     const global = data.filter(p => !p.id_proyecto).length;
     const assigned = total - global;
-    const compromised = data.filter(p => p.integrity_compromised).length; // ✅ Nuevo KPI
-
+    const compromised = data.filter(p => p.integrity_compromised).length;
     return { total, active, global, assigned, compromised };
   }, [logic.filteredPlantillas]);
 
-  // COLUMNAS
   const columns = useMemo<DataTableColumn<ContratoPlantillaDto>[]>(() => [
     {
       id: 'id',
@@ -168,12 +172,11 @@ const AdminPlantillas: React.FC = () => {
             color: row.integrity_compromised ? 'error.main' : (row.activo ? 'primary.main' : 'text.disabled'),
             width: 40, height: 40
           }}>
-            {/* ✅ Indicador visual de integridad comprometida */}
             {row.integrity_compromised ? <WarningIcon /> : <FileIcon />}
           </Avatar>
           <Box>
             <Stack direction="row" alignItems="center" spacing={1}>
-             <Typography variant="body2" fontWeight={800} color={row.activo ? 'text.primary' : 'text.secondary'}>
+              <Typography variant="body2" fontWeight={800} color={row.activo ? 'text.primary' : 'text.secondary'}>
                 {row.nombre_archivo}
               </Typography>
               {row.integrity_compromised && (
@@ -194,17 +197,7 @@ const AdminPlantillas: React.FC = () => {
       label: 'Versión',
       align: 'center',
       render: (row) => (
-        <Box
-          sx={{
-            display: 'inline-block',
-            px: 1, py: 0.5,
-            borderRadius: 1,
-            border: '1px dashed',
-            borderColor: 'text.disabled',
-            fontWeight: 800,
-            fontSize: '0.65rem'
-          }}
-        >
+        <Box sx={{ display: 'inline-block', px: 1, py: 0.5, borderRadius: 1, border: '1px dashed', borderColor: 'text.disabled', fontWeight: 800, fontSize: '0.65rem' }}>
           V{row.version}
         </Box>
       )
@@ -218,17 +211,14 @@ const AdminPlantillas: React.FC = () => {
         return row.id_proyecto ? (
           <Stack direction="row" alignItems="center" spacing={1}>
             <FolderShared fontSize="small" color="primary" sx={{ fontSize: 16 }} />
-           <Typography variant="body2" fontWeight={700} color="primary.main">
+            <Typography variant="body2" fontWeight={700} color="primary.main">
               {proyecto?.nombre_proyecto || `ID: ${row.id_proyecto}`}
             </Typography>
-        
           </Stack>
         ) : (
           <Stack direction="row" alignItems="center" spacing={1}>
             <Public fontSize="small" color="info" sx={{ fontSize: 16 }} />
-            <Typography variant="caption" fontWeight={700} color="text.secondary">
-              GLOBAL
-            </Typography>
+            <Typography variant="caption" fontWeight={700} color="text.secondary">GLOBAL</Typography>
           </Stack>
         );
       }
@@ -241,16 +231,8 @@ const AdminPlantillas: React.FC = () => {
         const isProcessingThis = logic.isToggling && logic.modales.confirmDialog.data?.id === row.id;
         return (
           <Stack direction="row" alignItems="center" spacing={1} justifyContent="center">
-            {isProcessingThis ? (
-              <CircularProgress size={20} color="primary" />
-            ) : (
-              <Switch
-                checked={row.activo}
-                onChange={() => logic.handleToggleActive(row)}
-                color="success"
-                size="small"
-                disabled={logic.isToggling || logic.isDeleting}
-              />
+            {isProcessingThis ? <CircularProgress size={20} color="primary" /> : (
+              <Switch checked={row.activo} onChange={() => logic.handleToggleActive(row)} color="success" size="small" disabled={logic.isToggling || logic.isDeleting} />
             )}
           </Stack>
         );
@@ -263,59 +245,41 @@ const AdminPlantillas: React.FC = () => {
       minWidth: 180,
       render: (row) => (
         <Stack direction="row" spacing={0.5} justifyContent="flex-end">
-
-          {/* ✅ Nueva acción: Descargar */}
+          <Tooltip title="Abrir Contrato (Modal)">
+            <span>
+              <IconButton size="small" onClick={(e) => { e.currentTarget.blur(); if (row.url_archivo) setPreviewPlantilla(row); else notifyError("No disponible."); }} sx={{ color: 'success.main', bgcolor: alpha(theme.palette.success.main, 0.05) }}>
+                <VisibilityIcon fontSize="small" />
+              </IconButton>
+            </span>
+          </Tooltip>
           <Tooltip title="Descargar Plantilla">
             <span>
-              <IconButton
-                size="small"
-                onClick={() => logic.handleDownload(row)}
-                sx={{ color: 'text.secondary', '&:hover': { color: 'primary.main' } }}
-              >
+              <IconButton size="small" onClick={() => logic.handleDownload(row)} sx={{ color: 'text.secondary' }}>
                 <DownloadIcon fontSize="small" />
               </IconButton>
             </span>
           </Tooltip>
-
           <Tooltip title="Editar Metadatos">
             <span>
-              <IconButton
-                size="small"
-                onClick={() => logic.handleOpenUpdateMeta(row)}
-                disabled={logic.isToggling || logic.isDeleting}
-                sx={{ bgcolor: alpha(theme.palette.primary.main, 0.05), '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.15), color: 'primary.main' } }}
-              >
+              <IconButton size="small" onClick={() => logic.handleOpenUpdateMeta(row)} disabled={logic.isToggling || logic.isDeleting} sx={{ bgcolor: alpha(theme.palette.primary.main, 0.05) }}>
                 <EditIcon fontSize="small" />
               </IconButton>
             </span>
           </Tooltip>
-
           <Tooltip title="Actualizar Archivo PDF">
             <span>
-              <IconButton
-                size="small"
-                onClick={() => logic.handleOpenUpdatePdf(row)}
-                disabled={!row.activo || logic.isToggling || logic.isDeleting}
-                sx={{ color: 'info.main', bgcolor: alpha(theme.palette.info.main, 0.05), '&:hover': { bgcolor: alpha(theme.palette.info.main, 0.15) } }}
-              >
+              <IconButton size="small" onClick={() => logic.handleOpenUpdatePdf(row)} disabled={!row.activo || logic.isToggling || logic.isDeleting} sx={{ color: 'info.main', bgcolor: alpha(theme.palette.info.main, 0.05) }}>
                 <UploadIcon fontSize="small" />
               </IconButton>
             </span>
           </Tooltip>
-
           <Tooltip title="Eliminar Plantilla">
             <span>
-              <IconButton
-                size="small"
-                onClick={() => logic.handleDelete(row)}
-                disabled={logic.isToggling || logic.isDeleting}
-                sx={{ color: 'error.main', bgcolor: alpha(theme.palette.error.main, 0.05), '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.15) } }}
-              >
+              <IconButton size="small" onClick={() => logic.handleDelete(row)} disabled={logic.isToggling || logic.isDeleting} sx={{ color: 'error.main', bgcolor: alpha(theme.palette.error.main, 0.05) }}>
                 <DeleteIcon fontSize="small" />
               </IconButton>
             </span>
           </Tooltip>
-
         </Stack>
       )
     }
@@ -326,126 +290,74 @@ const AdminPlantillas: React.FC = () => {
       <AdminPageHeader
         title="Gestión de Plantillas"
         subtitle="Control de versiones de contratos legales y documentos base."
-        action={
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={logic.modales.create.open}
-            sx={{ fontWeight: 700, px: 3 }}
-          >
-            Nueva Plantilla
-          </Button>
-        }
+        action={<Button variant="contained" startIcon={<AddIcon />} onClick={logic.modales.create.open} sx={{ fontWeight: 700, px: 3 }}>Nueva Plantilla</Button>}
       />
 
-      {logic.error && (
-        <AlertBanner
-          severity="error"
-          title="Error de Sistema"
-          message={(logic.error as Error).message || "No se pudieron cargar las plantillas."}
-        />
-      )}
-
-      {/* Alerta de Integridad Comprometida si existe alguna */}
-      {stats.compromised > 0 && (
-        <AlertBanner
-          severity="error"
-          title="Integridad Comprometida"
-          message={`Se detectaron ${stats.compromised} plantillas con hash no coincidente. Revise los archivos marcados.`}
-          sx={{ mb: 3 }}
-        />
-      )}
+      {logic.error && <AlertBanner severity="error" title="Error de Sistema" message={(logic.error as Error).message} />}
+      {stats.compromised > 0 && <AlertBanner severity="error" title="Integridad Comprometida" message={`Se detectaron ${stats.compromised} plantillas con hash no coincidente.`} sx={{ mb: 3 }} />}
 
       <MetricsGrid columns={{ xs: 1, sm: 2, lg: 4 }}>
-        <StatCard title="Total Plantillas" value={stats.total} subtitle="Inventario total" icon={<FileIcon />} color="info" loading={logic.isLoading} />
-        <StatCard title="Activas" value={stats.active} subtitle="Disponibles para uso" icon={<CheckCircle />} color="success" loading={logic.isLoading} />
-        <StatCard title="Globales" value={stats.global} subtitle="Base general" icon={<Public />} color="warning" loading={logic.isLoading} />
-        <StatCard title="Específicas" value={stats.assigned} subtitle="Asignadas a proyectos" icon={<FolderShared />} color="primary" loading={logic.isLoading} />
+        <StatCard title="Total Plantillas" value={stats.total} icon={<FileIcon />} color="info" loading={logic.isLoading} />
+        <StatCard title="Activas" value={stats.active} icon={<CheckCircle />} color="success" loading={logic.isLoading} />
+        <StatCard title="Globales" value={stats.global} icon={<Public />} color="warning" loading={logic.isLoading} />
+        <StatCard title="Específicas" value={stats.assigned} icon={<FolderShared />} color="primary" loading={logic.isLoading} />
       </MetricsGrid>
 
       <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'stretch', sm: 'center' }} mb={3} spacing={2}>
-        <ViewModeToggle
-          value={viewMode}
-          onChange={(newMode) => setViewMode(newMode)}
-          options={[
-            { value: 'table', label: 'Lista', icon: <ViewList fontSize="small" /> },
-            { value: 'analytics', label: 'Estadísticas', icon: <BarChartIcon fontSize="small" /> }
-          ]}
-        />
+        <ViewModeToggle value={viewMode} onChange={setViewMode} options={[{ value: 'table', label: 'Lista', icon: <ViewList fontSize="small" /> }, { value: 'analytics', label: 'Estadísticas', icon: <BarChartIcon fontSize="small" /> }]} />
 
-<FilterBar sx={{ flex: 1, maxWidth: { sm: 700 } }}>
+        <FilterBar sx={{ flex: 1, maxWidth: { sm: 700 } }}>
           <FilterSearch placeholder="Buscar por nombre de archivo..." value={logic.searchTerm} onSearch={logic.setSearchTerm} sx={{ flexGrow: 1 }} />
-          
-          <FilterSelect label="Proyecto" value={logic.filterProject} onChange={(e) => logic.setFilterProject(e.target.value)} sx={{ minWidth: 200 }}>
+
+          <FilterSelect
+            label="Proyecto"
+            value={logic.filterProject}
+            onChange={(e: any) => logic.setFilterProject(e.target.value)}
+            sx={{ minWidth: 200 }}
+            SelectProps={{ MenuProps: proyectoMenuProps }}
+          >
             <MenuItem value="all">Todos los Proyectos</MenuItem>
-            
-            {/* ✨ NUEVO: Opción para filtrar los huérfanos / globales */}
             <MenuItem value="global" sx={{ fontWeight: 600, color: 'info.main' }}>
-              Globales (Sin Proyecto)
+              <Stack direction="row" alignItems="center" spacing={1}>
+                <Public fontSize="inherit" />
+                <Typography variant="inherit">Contrato (sin proyecto)</Typography>
+              </Stack>
             </MenuItem>
-            
             <Divider />
             {logic.proyectos.map(p => (
-              <MenuItem key={p.id} value={p.id}>{p.nombre_proyecto}</MenuItem>
+              <MenuItem key={p.id} value={p.id}>
+                <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between" width="100%">
+                  <Typography variant="body2">{p.nombre_proyecto}</Typography>
+                  <Chip
+                    label={p.tipo_inversion === 'directo' ? 'DIRECTO' : 'MENSUAL'}
+                    size="small"
+                    sx={{ fontSize: '0.6rem', height: 18, fontWeight: 800, bgcolor: p.tipo_inversion === 'directo' ? alpha(theme.palette.info.main, 0.1) : alpha(theme.palette.warning.main, 0.1), color: p.tipo_inversion === 'directo' ? 'info.main' : 'warning.main' }}
+                  />
+                </Stack>
+              </MenuItem>
             ))}
           </FilterSelect>
         </FilterBar>
       </Stack>
 
-      {viewMode === 'analytics' ? (
-        <PlantillaAnalytics data={logic.filteredPlantillas} />
-      ) : (
+      {viewMode === 'analytics' ? <PlantillaAnalytics data={logic.filteredPlantillas} /> : (
         <QueryHandler isLoading={logic.isLoading} error={logic.error as Error | null}>
-          <DataTable
-            columns={columns}
-            data={logic.filteredPlantillas}
-            getRowKey={(row) => row.id}
-            isRowActive={(row) => row.activo}
-            showInactiveToggle={false} // 🔥 Fix: Desactivado para respetar filtros externos
-            inactiveLabel="Ver Inactivas"
-            highlightedRowId={logic.highlightedId}
-            emptyMessage="No se encontraron plantillas registradas."
-            pagination
-            defaultRowsPerPage={10}
-          />
+          <DataTable columns={columns} data={logic.filteredPlantillas} getRowKey={(row) => row.id} isRowActive={(row) => row.activo} pagination />
         </QueryHandler>
       )}
 
-      {/* Modales */}
-   <CreatePlantillaModal
-  open={logic.modales.create.isOpen}
-  onClose={logic.modales.create.close}
-  onSubmit={async (data) => { await logic.createMutation.mutateAsync(data); }}
-  isLoading={logic.isCreating}
-  proyectos={logic.proyectosDisponibles} // 👈 ¡Usa la nueva propiedad aquí!
-/>
+      {/* Modales Crud */}
+      <CreatePlantillaModal open={logic.modales.create.isOpen} onClose={logic.modales.create.close} onSubmit={async (data) => { await logic.createMutation.mutateAsync(data); }} isLoading={logic.isCreating} proyectos={logic.proyectosDisponibles} />
 
       {logic.plantillaSelected && (
         <>
-          <UpdatePdfModal
-            open={logic.modales.updatePdf.isOpen}
-            onClose={() => { logic.modales.updatePdf.close(); logic.setPlantillaSelected(null); }}
-            plantilla={logic.plantillaSelected}
-            onSubmit={async (data) => { await logic.updatePdfMutation.mutateAsync(data); }}
-            isLoading={logic.isUpdatingPdf}
-          />
-
-          <UpdateMetadataModal
-            open={logic.modales.updateMeta.isOpen}
-            onClose={() => { logic.modales.updateMeta.close(); logic.setPlantillaSelected(null); }}
-            plantilla={logic.plantillaSelected}
-            proyectos={logic.proyectos}
-            onSubmit={async (values) => { await logic.updateMetaMutation.mutateAsync({ id: logic.plantillaSelected!.id, data: values }); }}
-            isLoading={logic.isUpdatingMeta}
-          />
+          <UpdatePdfModal open={logic.modales.updatePdf.isOpen} onClose={() => { logic.modales.updatePdf.close(); logic.setPlantillaSelected(null); }} plantilla={logic.plantillaSelected} onSubmit={async (data) => { await logic.updatePdfMutation.mutateAsync(data); }} isLoading={logic.isUpdatingPdf} />
+          <UpdateMetadataModal open={logic.modales.updateMeta.isOpen} onClose={() => { logic.modales.updateMeta.close(); logic.setPlantillaSelected(null); }} plantilla={logic.plantillaSelected} proyectos={logic.proyectos} onSubmit={async (values) => { await logic.updateMetaMutation.mutateAsync({ id: logic.plantillaSelected!.id, data: values }); }} isLoading={logic.isUpdatingMeta} />
         </>
       )}
 
-      <ConfirmDialog
-        controller={logic.modales.confirmDialog}
-        onConfirm={logic.handleConfirmAction}
-        isLoading={logic.isToggling || logic.isDeleting}
-      />
+      <PdfPreviewModal open={!!previewPlantilla} onClose={() => setPreviewPlantilla(null)} urlDirecta={previewPlantilla?.url_archivo} nombreArchivo={previewPlantilla?.nombre_archivo ? `${previewPlantilla.nombre_archivo} (v${previewPlantilla.version})` : 'Documento'} />
+      <ConfirmDialog controller={logic.modales.confirmDialog} onConfirm={logic.handleConfirmAction} isLoading={logic.isToggling || logic.isDeleting} />
     </PageContainer>
   );
 };

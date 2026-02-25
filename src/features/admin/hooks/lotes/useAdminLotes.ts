@@ -1,4 +1,4 @@
-// src/features/admin/hooks/useAdminLotes.ts
+// src/features/admin/hooks/lotes/useAdminLotes.ts
 
 import { useTheme } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -7,8 +7,8 @@ import { useSearchParams } from 'react-router-dom';
 
 import LoteService from '@/core/api/services/lote.service';
 import ProyectoService from '@/core/api/services/proyecto.service';
-// 🆕 IMPORTAMOS PUJA SERVICE PARA UNA FINALIZACIÓN SEGURA
-import PujaService from '@/core/api/services/puja.service'; 
+import PujaService from '@/core/api/services/puja.service';
+import ImagenService from '@/core/api/services/imagen.service'; // 👈 Asegurar este import
 
 import type { CreateLoteDto, LoteDto, UpdateLoteDto } from '@/core/types/dto/lote.dto';
 
@@ -17,9 +17,6 @@ import { useModal } from '@/shared/hooks/useModal';
 import useSnackbar from '@/shared/hooks/useSnackbar';
 import { useSortedData } from '../useSortedData';
 
-// ============================================================================
-// DEBOUNCE HELPER
-// ============================================================================
 function useDebouncedValue<T>(value: T, delay: number = 300): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
   useEffect(() => {
@@ -29,20 +26,18 @@ function useDebouncedValue<T>(value: T, delay: number = 300): T {
   return debouncedValue;
 }
 
-// ============================================================================
-// HOOK PRINCIPAL
-// ============================================================================
 export const useAdminLotes = () => {
   const theme = useTheme();
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useSnackbar();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // --- MODALES (Nivel Superior) ---
+  // --- MODALES ---
   const createModal = useModal();
   const editModal = useModal();
   const imagesModal = useModal();
   const auctionModal = useModal();
+  const overviewModal = useModal(); 
   const confirmDialog = useConfirmDialog();
 
   const modales = useMemo(() => ({
@@ -50,35 +45,32 @@ export const useAdminLotes = () => {
     edit: editModal,
     images: imagesModal,
     auction: auctionModal,
+    overview: overviewModal,
     confirm: confirmDialog
-  }), [createModal, editModal, imagesModal, auctionModal, confirmDialog]);
+  }), [createModal, editModal, imagesModal, auctionModal, overviewModal, confirmDialog]);
 
   // --- ESTADOS UI ---
   const [selectedLote, setSelectedLote] = useState<LoteDto | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterProject, setFilterProject] = useState<string>(searchParams.get('proyecto') || 'all');
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
-const [filterEstadoSubasta, setFilterEstadoSubasta] = useState<string>('all');
+  const [filterEstadoSubasta, setFilterEstadoSubasta] = useState<string>('all');
   const [filterTipoInversion, setFilterTipoInversion] = useState<string>('all');
   const debouncedSearchTerm = useDebouncedValue(searchTerm, 300);
 
-  // Sincronizar URL con filtro
+  // Sincronizar URL
   useEffect(() => {
     const params = new URLSearchParams(searchParams);
-    if (filterProject === 'all' || filterProject === 'huerfano') {
-      params.delete('proyecto');
-    } else {
-      params.set('proyecto', filterProject);
-    }
+    if (filterProject === 'all' || filterProject === 'huerfano') params.delete('proyecto');
+    else params.set('proyecto', filterProject);
     setSearchParams(params, { replace: true });
   }, [filterProject, setSearchParams]);
 
-  // --- QUERIES OPTIMIZADAS ---
+  // --- QUERIES ---
   const { data: lotesRaw = [], isLoading: loadingLotes, error } = useQuery({
     queryKey: ['adminLotes'],
     queryFn: async () => (await LoteService.findAllAdmin()).data,
-    staleTime: 30000,      // 30s Fresh
-    gcTime: 5 * 60 * 1000, // 5m Cache
+    staleTime: 30000,
     refetchOnWindowFocus: false,
   });
 
@@ -88,47 +80,29 @@ const [filterEstadoSubasta, setFilterEstadoSubasta] = useState<string>('all');
     staleTime: 60000,
   });
 
-  // Ordenamiento
   const { sortedData: sortedLotes, highlightedId, triggerHighlight } = useSortedData(lotesRaw);
 
-  // --- FILTRADO (Memoizado) ---
-const filteredLotes = useMemo(() => {
+  // --- FILTRADO ---
+  const filteredLotes = useMemo(() => {
     const term = debouncedSearchTerm.toLowerCase();
-
     return sortedLotes.filter((lote) => {
-      // 1. Buscador texto
-      const matchesSearch = !term ||
-        lote.nombre_lote.toLowerCase().includes(term) ||
-        lote.id.toString().includes(term);
-
-      // 2. Filtro Proyecto
+      const matchesSearch = !term || lote.nombre_lote.toLowerCase().includes(term) || lote.id.toString().includes(term);
       let matchesProject = true;
       if (filterProject === 'huerfano') matchesProject = !lote.id_proyecto;
       else if (filterProject !== 'all') matchesProject = lote.id_proyecto === Number(filterProject);
-
-      // 3. ✨ Filtro Estado de Subasta
-      let matchesEstadoSubasta = true;
-      if (filterEstadoSubasta !== 'all') {
-        matchesEstadoSubasta = lote.estado_subasta === filterEstadoSubasta;
-      }
-
-      // 4. ✨ Filtro Tipo de Inversión
-      let matchesTipoInversion = true;
+      
+      const matchesEstado = filterEstadoSubasta === 'all' || lote.estado_subasta === filterEstadoSubasta;
+      
+      let matchesTipo = true;
       if (filterTipoInversion !== 'all') {
-        const proyectoAsociado = proyectos.find(p => p.id === lote.id_proyecto);
-        // Si buscamos un tipo específico, pero el lote es huérfano (no tiene proyecto), no coincide.
-        if (!proyectoAsociado && filterTipoInversion !== 'all') {
-            matchesTipoInversion = false;
-        } else if (proyectoAsociado) {
-            matchesTipoInversion = proyectoAsociado.tipo_inversion === filterTipoInversion;
-        }
+        const p = proyectos.find(proj => proj.id === lote.id_proyecto);
+        matchesTipo = p ? p.tipo_inversion === filterTipoInversion : false;
       }
 
-      return matchesSearch && matchesProject && matchesEstadoSubasta && matchesTipoInversion;
+      return matchesSearch && matchesProject && matchesEstado && matchesTipo;
     });
   }, [sortedLotes, debouncedSearchTerm, filterProject, filterEstadoSubasta, filterTipoInversion, proyectos]);
 
-  // --- STATS ---
   const stats = useMemo(() => ({
     total: lotesRaw.length,
     enSubasta: lotesRaw.filter((l) => l.estado_subasta === 'activa').length,
@@ -136,157 +110,118 @@ const filteredLotes = useMemo(() => {
     huerfanos: lotesRaw.filter((l) => !l.id_proyecto).length,
   }), [lotesRaw]);
 
-  // --- HELPERS ---
   const checkIsSubastable = useCallback((lote: LoteDto) => {
     if (!lote.id_proyecto) return { allowed: false, reason: 'Sin proyecto asignado' };
     const proyecto = proyectos.find((p) => p.id === lote.id_proyecto);
-    if (proyecto?.tipo_inversion === 'directo') {
-      return { allowed: false, reason: 'Proyecto de Inversión Directa (No Subastable)' };
-    }
-    return { allowed: true, reason: '' };
+    return proyecto?.tipo_inversion === 'directo' 
+      ? { allowed: false, reason: 'Inversión Directa (No Subastable)' } 
+      : { allowed: true, reason: '' };
   }, [proyectos]);
 
-  // --- MUTACIONES ---
+  // --- 🚀 MUTACIÓN DE GUARDADO (ACTUALIZADA) ---
   const saveMutation = useMutation({
-    mutationFn: async (payload: { dto: CreateLoteDto | UpdateLoteDto; id?: number }) => {
-      if (payload.id) return await LoteService.update(payload.id, payload.dto as UpdateLoteDto);
-      return await LoteService.create(payload.dto as CreateLoteDto);
+    mutationFn: async (payload: { dto: CreateLoteDto | UpdateLoteDto; id?: number; file?: File | null }) => {
+      let response;
+      
+      if (payload.id) {
+        // ACTUALIZACIÓN
+        response = await LoteService.update(payload.id, payload.dto as UpdateLoteDto);
+      } else {
+        // CREACIÓN: Primero el Lote para obtener el ID
+        response = await LoteService.create(payload.dto as CreateLoteDto);
+        
+        const newLote = response.data;
+
+        // 📸 SUBIDA DE IMAGEN: Solo si el lote se creó y hay un archivo físico
+        if (newLote?.id && payload.file) {
+          await ImagenService.create({
+            file: payload.file,
+            id_lote: newLote.id, // 👈 Vinculación automática con el ID real
+            descripcion: `Foto principal de ${newLote.nombre_lote}`
+          });
+        }
+      }
+      return response;
     },
     onSuccess: (response, variables) => {
+      // Forzamos el refresco de las listas para mostrar la nueva foto/datos
       queryClient.invalidateQueries({ queryKey: ['adminLotes'] });
+      queryClient.invalidateQueries({ queryKey: ['loteImages'] }); 
+      
       handleCloseAllModals();
+      
       const targetId = variables.id || response.data.id;
       if (targetId) triggerHighlight(targetId);
-      showSuccess(variables.id ? 'Lote actualizado' : 'Lote creado exitosamente');
+      
+      showSuccess(variables.id ? 'Cambios guardados correctamente' : 'Lote creado con su imagen');
     },
-    onError: (err: any) => showError(err.response?.data?.error || 'Error al guardar'),
+    onError: (err: any) => showError(err.response?.data?.error || 'Error al procesar el lote'),
   });
 
+  // --- OTRAS MUTACIONES ---
   const toggleActiveMutation = useMutation({
-    mutationFn: async ({ id, activo }: { id: number; activo: boolean }) =>
-      await LoteService.update(id, { activo }),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['adminLotes'] });
-      modales.confirm.close();
-      triggerHighlight(variables.id);
-      showSuccess(variables.activo ? 'Lote visible' : 'Lote ocultado');
-    },
-    onError: (err: any) => {
-      showError(err.response?.data?.error || 'Error al cambiar estado');
-      modales.confirm.close();
-    },
+    mutationFn: async ({ id, activo }: { id: number; activo: boolean }) => await LoteService.update(id, { activo }),
+    onSuccess: (_, v) => { queryClient.invalidateQueries({ queryKey: ['adminLotes'] }); modales.confirm.close(); triggerHighlight(v.id); showSuccess(v.activo ? 'Lote visible' : 'Lote oculto'); },
+    onError: (err: any) => { showError(err.response?.data?.error || 'Error'); modales.confirm.close(); }
   });
 
-  // Iniciar Subasta
   const startAuction = useMutation({
     mutationFn: (id: number) => LoteService.startAuction(id),
-    onSuccess: (_, id) => {
-      queryClient.invalidateQueries({ queryKey: ['adminLotes'] });
-      queryClient.invalidateQueries({ queryKey: ['adminPujas'] }); // 🟢 Invalidamos pujas también
-      modales.auction.close();
-      triggerHighlight(id);
-      showSuccess('✅ Subasta iniciada');
-    },
+    onSuccess: (_, id) => { queryClient.invalidateQueries({ queryKey: ['adminLotes'] }); modales.auction.close(); triggerHighlight(id); showSuccess('Subasta iniciada'); },
     onError: () => showError('Error al iniciar subasta'),
   });
 
-  // Finalizar Subasta (CORREGIDO)
-  // ⚠️ Usamos PujaService.manageAuctionEnd para garantizar liberación de tokens y lógica de ganador
   const endAuction = useMutation({
-    mutationFn: async (id: number) => {
-        // null en el segundo parámetro indica que el backend decida el ganador (lógica por defecto)
-        // o que se cierra sin forzar un ganador específico manualmente.
-        return await PujaService.manageAuctionEnd(id, null); 
-    },
-    onSuccess: (_, id) => {
-      queryClient.invalidateQueries({ queryKey: ['adminLotes'] });
-      queryClient.invalidateQueries({ queryKey: ['adminPujas'] }); // 🟢 Invalidamos pujas también
-      modales.auction.close();
-      triggerHighlight(id);
-      showSuccess('✅ Subasta finalizada y procesada');
-    },
-    onError: (err: any) => showError(err.response?.data?.message || 'Error al finalizar subasta'),
+    mutationFn: async (id: number) => await PujaService.manageAuctionEnd(id, null),
+    onSuccess: (_, id) => { queryClient.invalidateQueries({ queryKey: ['adminLotes'] }); modales.auction.close(); triggerHighlight(id); showSuccess('Subasta finalizada'); },
+    onError: (err: any) => showError(err.response?.data?.message || 'Error al finalizar'),
   });
 
   // --- HANDLERS ---
   const handleCloseAllModals = useCallback(() => {
-    modales.create.close();
-    modales.edit.close();
-    modales.images.close();
-    modales.auction.close();
+    modales.create.close(); modales.edit.close(); modales.images.close(); modales.auction.close(); modales.overview.close();
     setTimeout(() => setSelectedLote(null), 300);
   }, [modales]);
 
-  const handleOpenCreate = useCallback(() => {
-    setSelectedLote(null);
-    modales.create.open();
-  }, [modales.create]);
-
-  const handleOpenEdit = useCallback((lote: LoteDto) => {
-    setSelectedLote(lote);
-    modales.edit.open();
-  }, [modales.edit]);
-
-  const handleManageImages = useCallback((lote: LoteDto) => {
-    setSelectedLote(lote);
-    modales.images.open();
-  }, [modales.images]);
-
-  const handleAuctionClick = useCallback((lote: LoteDto) => {
-    setSelectedLote(lote);
-    modales.auction.open();
-  }, [modales.auction]);
-
-  const handleToggleActive = useCallback((lote: LoteDto) => {
-    modales.confirm.confirm('toggle_lote_visibility', lote);
-  }, [modales.confirm]);
+  const handleOpenCreate = useCallback(() => { setSelectedLote(null); modales.create.open(); }, [modales.create]);
+  const handleOpenEdit = useCallback((lote: LoteDto) => { setSelectedLote(lote); modales.edit.open(); }, [modales.edit]);
+  const handleManageImages = useCallback((lote: LoteDto) => { setSelectedLote(lote); modales.images.open(); }, [modales.images]);
+  const handleAuctionClick = useCallback((lote: LoteDto) => { setSelectedLote(lote); modales.auction.open(); }, [modales.auction]);
+  const handleOpenOverview = useCallback((lote: LoteDto) => { setSelectedLote(lote); modales.overview.open(); }, [modales.overview]);
+  const handleToggleActive = useCallback((lote: LoteDto) => { modales.confirm.confirm('toggle_lote_visibility', lote); }, [modales.confirm]);
 
   const handleConfirmAction = useCallback(() => {
     if (modales.confirm.action === 'toggle_lote_visibility' && modales.confirm.data) {
-      toggleActiveMutation.mutate({
-        id: modales.confirm.data.id,
-        activo: !modales.confirm.data.activo,
-      });
+      toggleActiveMutation.mutate({ id: modales.confirm.data.id, activo: !modales.confirm.data.activo });
     }
   }, [modales.confirm, toggleActiveMutation]);
 
   return {
     theme,
-    // State
     searchTerm, setSearchTerm,
     filterProject, setFilterProject,
     viewMode, setViewMode,
     selectedLote,
-filterEstadoSubasta, setFilterEstadoSubasta, // 👈 Exportamos
-    filterTipoInversion, setFilterTipoInversion, // 👈 Exportamos
-    // Data
+    filterEstadoSubasta, setFilterEstadoSubasta,
+    filterTipoInversion, setFilterTipoInversion,
     filteredLotes,
     proyectos,
     stats,
     highlightedId,
-
-    // Loading
     loadingLotes,
     error,
     isToggling: toggleActiveMutation.isPending,
     isSaving: saveMutation.isPending,
     isAuctionLoading: startAuction.isPending || endAuction.isPending,
-
-    // Helpers
     checkIsSubastable,
-
-    // Modales
     modales,
-
-    // Handlers
     handleOpenCreate,
     handleOpenEdit,
     handleManageImages,
     handleAuctionClick,
+    handleOpenOverview,
     handleToggleActive,
     handleConfirmAction,
-
-    // Mutations (Exposed functions)
     saveLote: saveMutation.mutateAsync,
     startAuctionFn: startAuction.mutate,
     endAuctionFn: endAuction.mutate

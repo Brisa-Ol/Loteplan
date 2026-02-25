@@ -380,7 +380,7 @@ const AdminContratosFirmados: React.FC = () => {
             <Divider />
             <MenuItem value="inversion">Inversiones</MenuItem>
             <MenuItem value="suscripcion">Suscripciones</MenuItem>
-            <MenuItem value="general">Generales</MenuItem>
+         
           </FilterSelect>
 
           <FilterSelect 

@@ -16,7 +16,8 @@ import { ROUTES } from '@/routes';
 import { ConfirmDialog } from '@/shared/components/domain/modals/ConfirmDialog/ConfirmDialog';
 import { useLotesProyecto } from '../../hooks/useLotesProyecto';
 import LoteCard from './components/LoteCard';
-import PujarModal from './components/PujarModal';
+import { PujarModal } from './modals/PujarModal';
+
 
 interface Props {
   idProyecto: number;

@@ -3,15 +3,21 @@
 import {
   AccountBalanceWallet, AttachMoney,
   BarChart as BarChartIcon,
+  Clear as ClearIcon,
+  DateRange as DateIcon,
   MonetizationOn, Search,
   ShowChart, ViewList
 } from '@mui/icons-material';
 import {
-  alpha, Box, Card, CardContent, Chip, IconButton,
-  MenuItem, Skeleton, Stack, Tooltip, Typography, useTheme, Avatar
+  alpha,
+  Avatar,
+  Box, Card, CardContent, Chip, IconButton,
+  MenuItem, Skeleton, Stack,
+  TextField,
+  Tooltip, Typography, useTheme
 } from '@mui/material';
 import React, { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom'; // ✅ Añadido
+import { useNavigate } from 'react-router-dom';
 import {
   Bar, BarChart, CartesianGrid, Cell, Line, LineChart,
   Tooltip as RechartsTooltip,
@@ -30,9 +36,8 @@ import { StatCard, StatusBadge } from '@/shared/components/domain/cards/StatCard
 import { FilterBar, FilterSearch, FilterSelect } from '@/shared/components/forms/filters/FilterBar';
 import { PageContainer } from '@/shared/components/layout/containers/PageContainer/PageContainer';
 
-
-import DetalleInversionModal from './components/DetalleInversionModal';
 import { useAdminInversiones } from '../../hooks/finanzas/useAdminInversiones';
+import DetalleInversionModal from './components/DetalleInversionModal';
 
 // ============================================================================
 // SUB-COMPONENTES PARA GRÁFICOS
@@ -115,9 +120,46 @@ const TopInversoresCard = React.memo<{
 // ============================================================================
 const AdminInversiones: React.FC = () => {
   const theme = useTheme();
-  const navigate = useNavigate(); // ✅ Añadido
+  const navigate = useNavigate();
   const logic = useAdminInversiones();
+
   const [viewMode, setViewMode] = useState<ViewMode>('table');
+  // 🆕 Estados para filtro de fechas
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
+
+  // 🆕 Aplicamos el filtro de fecha a los datos que provienen de `logic`
+  const filteredByDateInversiones = useMemo(() => {
+    return logic.filteredInversiones.filter(inv => {
+      let matchesDate = true;
+      const dateStr = inv.fecha_inversion ? new Date(inv.fecha_inversion).toISOString().split('T')[0] : null;
+
+      if (dateStr) {
+        if (startDate && dateStr < startDate) matchesDate = false;
+        if (endDate && dateStr > endDate) matchesDate = false;
+      }
+      return matchesDate;
+    });
+  }, [logic.filteredInversiones, startDate, endDate]);
+
+  // 🆕 Recalculamos los KPIs en base a los datos filtrados en pantalla
+  const currentMetrics = useMemo(() => {
+    let registrado = 0;
+    let consolidado = 0;
+
+    filteredByDateInversiones.forEach(inv => {
+      const montoNum = Number(inv.monto) || 0;
+      registrado += montoNum;
+      if (inv.estado === 'pagado') {
+        consolidado += montoNum;
+      }
+    });
+
+    const tasa = registrado > 0 ? ((consolidado / registrado) * 100).toFixed(1) : 0;
+
+    return { registrado, consolidado, tasa };
+  }, [filteredByDateInversiones]);
+
 
   const columns = useMemo<DataTableColumn<InversionDto>[]>(
     () => [
@@ -160,16 +202,16 @@ const AdminInversiones: React.FC = () => {
         render: (row) => {
           const proyecto = row.proyectoInvertido;
           return (
-            <Box 
-              sx={{ 
-                cursor: 'pointer', 
-                '&:hover .proj-name': { color: 'primary.main' } 
+            <Box
+              sx={{
+                cursor: 'pointer',
+                '&:hover .proj-name': { color: 'primary.main' }
               }}
               onClick={() => navigate(`/admin/proyectos?highlight=${row.id_proyecto}`)}
             >
-              <Typography 
-                variant="subtitle2" 
-                fontWeight={700} 
+              <Typography
+                variant="subtitle2"
+                fontWeight={700}
                 className="proj-name"
                 sx={{ transition: 'color 0.2s' }}
               >
@@ -213,14 +255,17 @@ const AdminInversiones: React.FC = () => {
         render: (inv) => {
           const dateObj = new Date(inv.fecha_inversion || (inv as any).createdAt || new Date());
           return (
-            <Box>
-              <Typography variant="body2" fontWeight={500}>
-                {dateObj.toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {dateObj.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
-              </Typography>
-            </Box>
+            <Stack direction="row" spacing={1} alignItems="center">
+              <DateIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+              <Box>
+                <Typography variant="body2" fontWeight={600}>
+                  {dateObj.toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {dateObj.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+                </Typography>
+              </Box>
+            </Stack>
           );
         },
       },
@@ -247,35 +292,70 @@ const AdminInversiones: React.FC = () => {
 
   return (
     <PageContainer maxWidth="xl" sx={{ py: 3 }}>
-      <AdminPageHeader title="Gestión de Inversiones" subtitle="Monitoreo de capital y análisis de conversión" />
+      <AdminPageHeader title="Gestión de Inversiones Directas" subtitle="Monitoreo de capital y análisis de conversión" />
 
       {logic.error && (
         <AlertBanner severity="error" title="Error de carga" message={(logic.error as Error).message || "No se pudieron cargar las inversiones."} />
       )}
 
+      {/* 🆕 KPIs Actualizados dinámicamente según la pantalla */}
       <MetricsGrid columns={{ xs: 1, sm: 2, lg: 4 }}>
-        <StatCard title="Total Registrado" value={`$${Number(logic.liquidezData?.total_invertido_registrado || 0).toLocaleString('es-AR', { maximumFractionDigits: 0 })}`} subtitle="Intención de inversión" color="info" icon={<AttachMoney />} loading={logic.isLoading} />
-        <StatCard title="Capital Consolidado" value={`$${Number(logic.liquidezData?.total_pagado || 0).toLocaleString('es-AR', { maximumFractionDigits: 0 })}`} subtitle="Cobros efectivos" color="success" icon={<MonetizationOn />} loading={logic.isLoading} />
-        <StatCard title="Tasa de Liquidez" value={`${logic.liquidezData?.tasa_liquidez || 0}%`} subtitle="Conversión de pagos" color="warning" icon={<ShowChart />} loading={logic.isLoading} />
-        <StatCard title="Transacciones" value={logic.filteredInversiones.length.toString()} subtitle="Volumen filtrado" color="primary" icon={<AccountBalanceWallet />} loading={logic.isLoading} />
+        <StatCard
+          title={(startDate || endDate) ? "Registrado en Periodo" : "Total Registrado"}
+          value={`$${currentMetrics.registrado.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`}
+          subtitle="Intención de inversión" color="info" icon={<AttachMoney />} loading={logic.isLoading}
+        />
+        <StatCard
+          title={(startDate || endDate) ? "Consolidado en Periodo" : "Capital Consolidado"}
+          value={`$${currentMetrics.consolidado.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`}
+          subtitle="Cobros efectivos" color="success" icon={<MonetizationOn />} loading={logic.isLoading}
+        />
+        <StatCard title="Tasa de Liquidez" value={`${currentMetrics.tasa}%`} subtitle="Conversión de pagos" color="warning" icon={<ShowChart />} loading={logic.isLoading} />
+        <StatCard title="Transacciones" value={filteredByDateInversiones.length.toString()} subtitle="Volumen filtrado" color="primary" icon={<AccountBalanceWallet />} loading={logic.isLoading} />
       </MetricsGrid>
 
-      <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'stretch', sm: 'center' }} mb={3} spacing={2}>
+      <Stack direction={{ xs: 'column', lg: 'row' }} justifyContent="space-between" alignItems={{ xs: 'stretch', lg: 'center' }} mb={3} spacing={2}>
         <ViewModeToggle value={viewMode} onChange={(newMode) => setViewMode(newMode)} options={[{ value: 'table', label: 'Tabla de Datos', icon: <ViewList fontSize="small" /> }, { value: 'analytics', label: 'Analítica Visual', icon: <BarChartIcon fontSize="small" /> }]} />
 
         {viewMode === 'table' && (
-          <FilterBar sx={{ flex: 1, width: '100%' }}>
-            <FilterSearch placeholder="Buscar inversor, ID, proyecto..." value={logic.searchTerm} onSearch={logic.setSearchTerm} sx={{ flexGrow: 1 }} />
-            <FilterSelect label="Estado" value={logic.filterStatus} onChange={(e) => logic.setFilterStatus(e.target.value as any)} sx={{ minWidth: 140 }}>
+          <FilterBar sx={{ flex: 1, width: '100%', flexWrap: 'wrap' }}>
+            <FilterSearch placeholder="Buscar inversor, ID, proyecto..." value={logic.searchTerm} onSearch={logic.setSearchTerm} sx={{ flexGrow: 1, minWidth: 200 }} />
+
+            {/* 🆕 FILTROS DE FECHAS */}
+            <Stack direction="row" spacing={1} alignItems="center">
+              <TextField
+                type="date" size="small"
+                value={startDate} onChange={(e) => setStartDate(e.target.value)}
+                sx={{ bgcolor: 'background.paper', borderRadius: 1, width: 140 }}
+              />
+              <Typography variant="body2" color="text.secondary">-</Typography>
+              <TextField
+                type="date" size="small"
+                value={endDate} onChange={(e) => setEndDate(e.target.value)}
+                inputProps={{ min: startDate }}
+                sx={{ bgcolor: 'background.paper', borderRadius: 1, width: 140 }}
+              />
+            </Stack>
+
+            <FilterSelect label="Estado" value={logic.filterStatus} onChange={(e) => logic.setFilterStatus(e.target.value as any)} sx={{ minWidth: 120 }}>
               <MenuItem value="all">Todos</MenuItem>
               <MenuItem value="pendiente">Pendiente</MenuItem>
               <MenuItem value="pagado">Pagado</MenuItem>
               <MenuItem value="fallido">Fallido</MenuItem>
             </FilterSelect>
-            <FilterSelect label="Proyecto" value={logic.filterProject} onChange={(e) => logic.setFilterProject(e.target.value)} sx={{ minWidth: 150 }}>
+            <FilterSelect label="Proyecto" value={logic.filterProject} onChange={(e) => logic.setFilterProject(e.target.value)} sx={{ minWidth: 130 }}>
               <MenuItem value="all">Todos</MenuItem>
-              {logic.proyectos.map((p: any) => <MenuItem key={p.id} value={p.id}>{p.nombre_proyecto}</MenuItem>)}
+              {logic.proyectos.filter((p: any) => p.tipo_inversion === 'directo').map((p: any) => <MenuItem key={p.id} value={p.id}>{p.nombre_proyecto}</MenuItem>)}
             </FilterSelect>
+
+            {/* 🆕 Botón para limpiar si hay filtros activos */}
+            {(startDate || endDate || logic.searchTerm || logic.filterStatus !== 'all' || logic.filterProject !== 'all') && (
+              <IconButton color="error" onClick={() => {
+                setStartDate(''); setEndDate(''); logic.setSearchTerm(''); logic.setFilterStatus('all'); logic.setFilterProject('all');
+              }}>
+                <ClearIcon />
+              </IconButton>
+            )}
           </FilterBar>
         )}
       </Stack>
@@ -289,12 +369,12 @@ const AdminInversiones: React.FC = () => {
         <QueryHandler isLoading={logic.isLoading} error={logic.error as Error | null}>
           <DataTable
             columns={columns}
-            data={logic.filteredInversiones}
+            data={filteredByDateInversiones}
             getRowKey={(row) => row.id}
             isRowActive={(row) => row.estado === 'pagado' || row.estado === 'pendiente'}
             highlightedRowId={logic.highlightedId}
             showInactiveToggle={true}
-            emptyMessage="No se encontraron registros de inversión."
+            emptyMessage="No se encontraron registros de inversión con los filtros aplicados."
             pagination
             defaultRowsPerPage={10}
           />

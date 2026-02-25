@@ -1,11 +1,7 @@
-// src/components/common/ImageUpload/ImageUpload.tsx
-
 import {
   Delete as DeleteIcon,
   Edit as EditIcon,
-  Image as ImageIcon,
-  CloudUpload as UploadIcon,
-  VideoLibrary as VideoIcon
+  CloudUpload as UploadIcon
 } from '@mui/icons-material';
 import {
   Alert,
@@ -19,420 +15,199 @@ import {
 } from '@mui/material';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
-interface ImageUploadProps {
-  // Modo múltiple o único
-  multiple?: boolean;
-
-  // Para modo único (single)
-  image?: File | null;
-  existingImageUrl?: string; // Imagen existente del backend
-
-  // Para modo múltiple (multiple)
-  images?: File[];
-
-  // Callback unificado
-  onChange: (files: File | File[] | null) => void;
-
-  // Configuración
-  maxFiles?: number;
+// 1. Props compartidas entre ambos modos
+interface BaseUploadProps {
   maxSizeMB?: number;
   disabled?: boolean;
-  accept?: string; // 'image/*' | 'video/*' | 'image/*,video/*'
-
-  // UI
+  accept?: string;
   label?: string;
   helperText?: string;
 }
 
-const ImageUpload: React.FC<ImageUploadProps> = ({
-  multiple = false,
-  image = null,
-  existingImageUrl,
-  images = [],
-  onChange,
-  maxFiles = 5,
-  maxSizeMB = 15,
-  disabled = false,
-  accept = 'image/*',
-  label,
-  helperText,
-}) => {
+// 2. Props para modo ÚNICO
+interface SingleUploadProps extends BaseUploadProps {
+  multiple?: false;
+  image?: File | null;
+  existingImageUrl?: string;
+  onChange: (file: File | null) => void;
+}
+
+// 3. Props para modo MÚLTIPLE
+interface MultipleUploadProps extends BaseUploadProps {
+  multiple: true;
+  images?: File[];
+  maxFiles?: number;
+  onChange: (files: File[]) => void;
+}
+
+// 4. Tipo unificado
+type ImageUploadProps = SingleUploadProps | MultipleUploadProps;
+
+const ImageUploadZone: React.FC<ImageUploadProps> = (props) => {
+  const {
+    multiple = false,
+    maxSizeMB = 15,
+    disabled = false,
+    accept = 'image/*',
+    label,
+    helperText,
+    onChange
+  } = props;
+
   const theme = useTheme();
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Determinar si estamos en modo video
+  // Castings internos para simplificar la lógica de renderizado
+  const image = !multiple ? (props as SingleUploadProps).image : null;
+  const images = multiple ? (props as MultipleUploadProps).images || [] : [];
+  const existingImageUrl = !multiple ? (props as SingleUploadProps).existingImageUrl : undefined;
+  const maxFiles = multiple ? (props as MultipleUploadProps).maxFiles || 5 : 1;
+
   const acceptsVideo = accept.includes('video');
   const acceptsImage = accept.includes('image');
 
-  // Para modo single: generar URL de preview
+  // Preview para modo Single
   const singleDisplayImage = useMemo(() => {
     if (!multiple && image) return URL.createObjectURL(image);
     return existingImageUrl || null;
   }, [multiple, image, existingImageUrl]);
 
-  // Cleanup de URLs object
   useEffect(() => {
     return () => {
-      if (!multiple && image && singleDisplayImage?.startsWith('blob:')) {
+      if (singleDisplayImage?.startsWith('blob:')) {
         URL.revokeObjectURL(singleDisplayImage);
       }
     };
-  }, [multiple, image, singleDisplayImage]);
+  }, [singleDisplayImage]);
 
-  // Validación unificada
   const validateFile = useCallback((file: File): boolean => {
-    // Validar tipo
     const isVideo = file.type.startsWith('video/');
     const isImage = file.type.startsWith('image/');
 
-    if (acceptsVideo && isVideo) {
-      // OK, es video y aceptamos video
-    } else if (acceptsImage && isImage) {
-      // OK, es imagen y aceptamos imagen
-    } else {
-      setError(`"${file.name}" no es un formato válido.`);
-      return false;
+    if ((acceptsVideo && isVideo) || (acceptsImage && isImage)) {
+      if (file.size / (1024 * 1024) > maxSizeMB) {
+        setError(`"${file.name}" excede los ${maxSizeMB}MB.`);
+        return false;
+      }
+      return true;
     }
-
-    // Validar tamaño
-    const sizeMB = file.size / (1024 * 1024);
-    if (sizeMB > maxSizeMB) {
-      setError(`"${file.name}" excede los ${maxSizeMB}MB permitidos.`);
-      return false;
-    }
-
-    return true;
+    setError(`"${file.name}" no es un formato válido.`);
+    return false;
   }, [maxSizeMB, acceptsVideo, acceptsImage]);
 
-  // Procesamiento de archivos
   const handleFiles = useCallback(
     (fileList: FileList | null) => {
       if (!fileList || disabled) return;
       setError(null);
 
       if (multiple) {
-        // MODO MÚLTIPLE
         const newFiles = Array.from(fileList);
-
         if (images.length + newFiles.length > maxFiles) {
-          setError(`Solo puedes subir un máximo de ${maxFiles} archivos.`);
+          setError(`Máximo ${maxFiles} archivos.`);
           return;
         }
-
         const validated = newFiles.filter(validateFile);
         if (validated.length > 0) {
-          onChange([...images, ...validated]);
+          // Casteamos el onChange para que TS sepa que estamos en modo múltiple
+          (onChange as (f: File[]) => void)([...images, ...validated]);
         }
       } else {
-        // MODO ÚNICO
         const file = fileList[0];
         if (file && validateFile(file)) {
-          onChange(file);
+          // Casteamos el onChange para modo single
+          (onChange as (f: File | null) => void)(file);
         }
       }
     },
     [multiple, images, onChange, disabled, maxFiles, validateFile]
   );
 
-  // Drag & Drop handlers
-  const handleDrag = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (disabled) return;
-
-    if (e.type === 'dragenter' || e.type === 'dragover') {
-      setDragActive(true);
-    } else if (e.type === 'dragleave') {
-      setDragActive(false);
-    }
-  }, [disabled]);
-
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-    if (disabled) return;
-    handleFiles(e.dataTransfer.files);
-  }, [handleFiles, disabled]);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    handleFiles(e.target.files);
-    e.target.value = ''; // Reset para permitir re-selección
-  };
-
-  // Remover archivo(s)
   const handleRemove = (indexToRemove?: number) => {
     if (multiple && typeof indexToRemove === 'number') {
-      onChange(images.filter((_, i) => i !== indexToRemove));
+      (onChange as (f: File[]) => void)(images.filter((_, i) => i !== indexToRemove));
     } else {
-      onChange(null);
+      (onChange as (f: File | null) => void)(null);
     }
     setError(null);
   };
 
-  // Determinar texto del helper
-  const getHelperText = () => {
-    if (helperText) return helperText;
+  const handleDrag = useCallback((e: React.DragEvent) => {
+    e.preventDefault(); e.stopPropagation();
+    if (!disabled) setDragActive(e.type === 'dragenter' || e.type === 'dragover');
+  }, [disabled]);
 
-    const formats = [];
-    if (acceptsImage) formats.push('JPG, PNG, WEBP');
-    if (acceptsVideo) formats.push('MP4, WEBM');
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault(); e.stopPropagation();
+    setDragActive(false);
+    if (!disabled) handleFiles(e.dataTransfer.files);
+  }, [handleFiles, disabled]);
 
-    return `${formats.join(' • ')} • Máx ${maxSizeMB}MB`;
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    handleFiles(e.target.files);
+    e.target.value = '';
   };
-
-  // Determinar label
-  const getLabel = () => {
-    if (label) return label;
-    if (dragActive) return '¡Suelta los archivos aquí!';
-    if (multiple) return 'Haz clic o arrastra archivos';
-    return 'Sube una imagen de portada';
-  };
-
-  // Estado de "tiene archivos"
-  const hasFiles = multiple ? images.length > 0 : !!singleDisplayImage;
 
   return (
     <Box>
-      {/* MODO SINGLE CON PREVIEW */}
       {!multiple && singleDisplayImage ? (
-        <Paper
-          elevation={3}
-          sx={{
-            position: 'relative',
-            width: '100%',
-            height: 300,
-            overflow: 'hidden',
-            borderRadius: 3,
-            border: `1px solid ${theme.palette.divider}`,
-            bgcolor: 'black'
-          }}
-        >
-          <Box
-            component="img"
-            src={singleDisplayImage}
-            alt="Vista previa"
-            sx={{
-              width: '100%',
-              height: '100%',
-              objectFit: 'contain',
-              opacity: disabled ? 0.7 : 1
-            }}
-          />
-
-          {/* Overlay de acciones */}
-          <Box
-            sx={{
-              position: 'absolute', top: 0, left: 0, right: 0, p: 1,
-              background: 'linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, transparent 100%)',
-              display: 'flex', justifyContent: 'flex-end', gap: 1
-            }}
-          >
-            <input
-              type="file"
-              accept={accept}
-              onChange={handleChange}
-              disabled={disabled}
-              style={{ display: 'none' }}
-              id="image-replace-input"
-            />
-
+        <Paper elevation={3} sx={{ position: 'relative', width: '100%', height: 300, borderRadius: 3, border: `1px solid ${theme.palette.divider}`, bgcolor: 'black', overflow: 'hidden' }}>
+          <Box component="img" src={singleDisplayImage} sx={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+          <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, p: 1, background: 'linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, transparent 100%)', display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+            <input type="file" accept={accept} onChange={handleChange} disabled={disabled} style={{ display: 'none' }} id="image-replace-input" />
             <label htmlFor="image-replace-input">
-              <Tooltip title="Cambiar archivo">
-                <IconButton
-                  component="span"
-                  size="small"
-                  disabled={disabled}
-                  sx={{
-                    bgcolor: 'rgba(255,255,255,0.2)', color: 'white',
-                    backdropFilter: 'blur(4px)',
-                    '&:hover': { bgcolor: 'primary.main' }
-                  }}
-                >
+              <Tooltip title="Cambiar">
+                <IconButton component="span" size="small" sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white', backdropFilter: 'blur(4px)', '&:hover': { bgcolor: 'primary.main' } }}>
                   <EditIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
             </label>
-
             <Tooltip title="Eliminar">
-              <IconButton
-                size="small"
-                onClick={() => handleRemove()}
-                disabled={disabled}
-                sx={{
-                  bgcolor: 'rgba(255,255,255,0.2)', color: 'white',
-                  backdropFilter: 'blur(4px)',
-                  '&:hover': { bgcolor: 'error.main' }
-                }}
-              >
+              <IconButton size="small" onClick={() => handleRemove()} sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white', backdropFilter: 'blur(4px)', '&:hover': { bgcolor: 'error.main' } }}>
                 <DeleteIcon fontSize="small" />
               </IconButton>
             </Tooltip>
           </Box>
-
-          {/* Info del archivo */}
-          {image && (
-            <Box sx={{ position: 'absolute', bottom: 12, left: 12 }}>
-              <Chip
-                icon={acceptsVideo ? <VideoIcon sx={{ fontSize: 14, color: 'white !important' }} /> : <ImageIcon sx={{ fontSize: 14, color: 'white !important' }} />}
-                label={`${(image.size / 1024 / 1024).toFixed(2)} MB`}
-                size="small"
-                sx={{
-                  bgcolor: 'rgba(0,0,0,0.6)', color: 'white',
-                  backdropFilter: 'blur(4px)', fontWeight: 600,
-                  border: '1px solid rgba(255,255,255,0.2)'
-                }}
-              />
-            </Box>
-          )}
         </Paper>
       ) : (
-        /* DROPZONE (MODO SINGLE SIN PREVIEW O MODO MULTIPLE) */
         <Paper
-          variant="outlined"
-          onDragEnter={handleDrag}
-          onDragLeave={handleDrag}
-          onDragOver={handleDrag}
-          onDrop={handleDrop}
+          variant="outlined" onDragEnter={handleDrag} onDragLeave={handleDrag} onDragOver={handleDrag} onDrop={handleDrop}
           sx={{
-            p: { xs: 2, md: 4 },
-            textAlign: 'center',
-            cursor: disabled ? 'not-allowed' : 'pointer',
-            backgroundColor: dragActive ? alpha(theme.palette.primary.main, 0.08) : 'background.paper',
-            borderStyle: 'dashed',
-            borderWidth: 2,
-            borderColor: dragActive ? 'primary.main' : 'divider',
-            opacity: disabled ? 0.6 : 1,
-            transition: 'all 0.2s ease-in-out',
-            borderRadius: 3,
-            '&:hover': !disabled ? {
-              borderColor: 'primary.main',
-              backgroundColor: alpha(theme.palette.primary.main, 0.04)
-            } : {}
+            p: 4, textAlign: 'center', cursor: disabled ? 'not-allowed' : 'pointer', borderRadius: 3, borderStyle: 'dashed', borderWidth: 2,
+            borderColor: dragActive ? 'primary.main' : 'divider', bgcolor: dragActive ? alpha(theme.palette.primary.main, 0.05) : 'background.paper',
+            '&:hover': !disabled ? { borderColor: 'primary.main', bgcolor: alpha(theme.palette.primary.main, 0.02) } : {}
           }}
         >
-          <input
-            type="file"
-            accept={accept}
-            multiple={multiple}
-            onChange={handleChange}
-            disabled={disabled}
-            style={{ display: 'none' }}
-            id="image-upload-input"
-          />
-
-          <label htmlFor="image-upload-input" style={{ cursor: disabled ? 'not-allowed' : 'pointer', width: '100%', display: 'block' }}>
+          <input type="file" accept={accept} multiple={multiple} onChange={handleChange} disabled={disabled} style={{ display: 'none' }} id="image-upload-input" />
+          <label htmlFor="image-upload-input" style={{ cursor: 'inherit', width: '100%', display: 'block' }}>
             <Stack spacing={2} alignItems="center">
-              <Box
-                sx={{
-                  p: 2,
-                  borderRadius: '50%',
-                  bgcolor: dragActive ? 'primary.main' : 'action.hover',
-                  color: dragActive ? 'white' : 'text.secondary',
-                  transition: '0.3s'
-                }}
-              >
+              <Box sx={{ p: 2, borderRadius: '50%', bgcolor: dragActive ? 'primary.main' : 'action.hover', color: dragActive ? 'white' : 'text.secondary' }}>
                 <UploadIcon sx={{ fontSize: 32 }} />
               </Box>
-
               <Box>
-                <Typography fontWeight={600} variant="body1">
-                  {getLabel()}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {getHelperText()}
-                </Typography>
+                <Typography fontWeight={600}>{label || (multiple ? 'Arrastra varios archivos' : 'Sube una imagen')}</Typography>
+                <Typography variant="caption" color="text.secondary">{helperText || `${accept.replace('/*', '')} • Máx ${maxSizeMB}MB`}</Typography>
               </Box>
-
               {multiple && images.length > 0 && (
-                <Chip
-                  label={`${images.length} / ${maxFiles} seleccionadas`}
-                  size="small"
-                  color="primary"
-                  variant="outlined"
-                  icon={acceptsVideo ? <VideoIcon fontSize="small" /> : <ImageIcon fontSize="small" />}
-                />
+                <Chip label={`${images.length} / ${maxFiles} seleccionadas`} size="small" color="primary" variant="outlined" />
               )}
             </Stack>
           </label>
         </Paper>
       )}
 
-      {/* MENSAJES DE ERROR */}
-      {error && (
-        <Alert severity="error" sx={{ mt: 2, borderRadius: 2 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
+      {error && <Alert severity="error" sx={{ mt: 2, borderRadius: 2 }} onClose={() => setError(null)}>{error}</Alert>}
 
-      {/* VISTA PREVIA PARA MODO MÚLTIPLE */}
       {multiple && images.length > 0 && (
         <Box sx={{ mt: 3 }}>
-          <Typography variant="subtitle2" gutterBottom color="text.secondary" fontWeight={600}>
-            Vista Previa
-          </Typography>
-
+          <Typography variant="subtitle2" color="text.secondary" fontWeight={600} mb={1}>Vista Previa</Typography>
           <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
             {images.map((file, i) => (
-              <Paper
-                key={`${file.name}-${i}`}
-                elevation={3}
-                sx={{
-                  width: { xs: 100, sm: 120 },
-                  height: { xs: 100, sm: 120 },
-                  borderRadius: 2,
-                  overflow: 'hidden',
-                  position: 'relative',
-                  border: '1px solid',
-                  borderColor: 'divider'
-                }}
-              >
-                <Box
-                  component="img"
-                  src={URL.createObjectURL(file)}
-                  alt="preview"
-                  sx={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
-                    transition: '0.3s',
-                    '&:hover': { transform: 'scale(1.05)' }
-                  }}
-                />
-
-                <IconButton
-                  size="small"
-                  onClick={() => handleRemove(i)}
-                  disabled={disabled}
-                  sx={{
-                    position: 'absolute',
-                    top: 4,
-                    right: 4,
-                    bgcolor: 'rgba(0,0,0,0.6)',
-                    color: 'white',
-                    padding: 0.5,
-                    '&:hover': { bgcolor: 'error.main' },
-                  }}
-                >
-                  <DeleteIcon sx={{ fontSize: 16 }} />
+              <Paper key={`${file.name}-${i}`} elevation={2} sx={{ width: 100, height: 100, borderRadius: 2, overflow: 'hidden', position: 'relative', border: '1px solid', borderColor: 'divider' }}>
+                <Box component="img" src={URL.createObjectURL(file)} sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <IconButton size="small" onClick={() => handleRemove(i)} sx={{ position: 'absolute', top: 4, right: 4, bgcolor: 'rgba(0,0,0,0.5)', color: 'white', padding: 0.5, '&:hover': { bgcolor: 'error.main' } }}>
+                  <DeleteIcon sx={{ fontSize: 14 }} />
                 </IconButton>
-
-                <Box
-                  sx={{
-                    position: 'absolute',
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    bgcolor: 'rgba(0,0,0,0.6)',
-                    color: 'white',
-                    fontSize: '0.65rem',
-                    textAlign: 'center',
-                    py: 0.5
-                  }}
-                >
-                  {(file.size / 1024 / 1024).toFixed(2)} MB
-                </Box>
               </Paper>
             ))}
           </Stack>
@@ -442,4 +217,4 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   );
 };
 
-export default ImageUpload;
+export default ImageUploadZone;

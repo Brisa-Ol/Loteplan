@@ -1,13 +1,28 @@
-import { Edit as EditIcon, Inventory as InventoryIcon, Link as LinkIcon, LocationOn, Save as SaveIcon } from '@mui/icons-material';
-import { Alert, alpha, Box, Divider, InputAdornment, MenuItem, Stack, TextField, Typography, useTheme } from '@mui/material';
+import {
+  CalendarMonth as CalendarIcon,
+  Edit as EditIcon,
+  LocationOn,
+  MonetizationOn as MonetizationIcon, Business as ProjectIcon
+} from '@mui/icons-material';
+import {
+  Alert, alpha, Box,
+  Chip,
+  Divider, InputAdornment, MenuItem,
+  Stack, TextField, Typography, useTheme
+} from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
-import { useFormik } from 'formik';
-import React, { useEffect } from 'react';
+import { FormikProvider, useFormik } from 'formik';
+import React, { useEffect, useMemo } from 'react';
 import * as Yup from 'yup';
+
 import ProyectoService from '../../../../../core/api/services/proyecto.service';
 import type { LoteDto, UpdateLoteDto } from '../../../../../core/types/dto/lote.dto';
+import type { ProyectoDto } from '../../../../../core/types/dto/proyecto.dto';
 import BaseModal from '../../../../../shared/components/domain/modals/BaseModal/BaseModal';
 
+// ============================================================================
+// INTERFACE
+// ============================================================================
 interface EditLoteModalProps {
   open: boolean;
   onClose: () => void;
@@ -16,44 +31,159 @@ interface EditLoteModalProps {
   isLoading?: boolean;
 }
 
-const validationSchema = Yup.object({
-  nombre_lote: Yup.string().min(3, 'Mínimo 3 caracteres').required('Requerido'),
-  precio_base: Yup.number().min(0, 'Debe ser positivo').required('Requerido'),
-  id_proyecto: Yup.mixed().nullable(),
-  latitud: Yup.number().nullable(),
-  longitud: Yup.number().nullable(),
+// ============================================================================
+// COMPONENTES INTERNOS MEMOIZADOS (Fluidez Total)
+// ============================================================================
+
+const ProjectSection = React.memo(({ value, proyectos, isLoading, onChange, onBlur, disabled, theme }: any) => (
+  <Box>
+    <Typography sx={SECTION_TITLE_SX}><ProjectIcon fontSize="inherit" /> Proyecto Asociado</Typography>
+    <TextField
+      select fullWidth size="small" label="Elegir Proyecto"
+      name="id_proyecto" value={value ?? ''} onChange={onChange} onBlur={onBlur}
+      disabled={isLoading || disabled}
+      SelectProps={{
+        MenuProps: {
+          PaperProps: { sx: { maxHeight: 300, mt: 0.5, borderRadius: 2, boxShadow: theme.shadows[5] } },
+          anchorOrigin: { vertical: 'bottom', horizontal: 'left' },
+          transformOrigin: { vertical: 'top', horizontal: 'left' },
+        }
+      }}
+    >
+      <MenuItem value=""><em>Ninguno (Lote Huérfano)</em></MenuItem>
+      {proyectos.map((p: ProyectoDto) => (
+        <MenuItem key={p.id} value={p.id} sx={MENU_ITEM_SX}>
+          <Stack direction="row" justifyContent="space-between" width="100%" alignItems="center">
+            <Typography variant="inherit" fontWeight={600}>{p.nombre_proyecto}</Typography>
+            <Chip
+              label={p.tipo_inversion === 'directo' ? 'DIRECTO' : 'MENSUAL'}
+              size="small"
+              sx={{
+                height: 20, fontSize: '0.6rem', fontWeight: 900,
+                bgcolor: p.tipo_inversion === 'directo' ? alpha(theme.palette.info.main, 0.1) : alpha(theme.palette.warning.main, 0.1),
+                color: p.tipo_inversion === 'directo' ? 'info.dark' : 'warning.dark'
+              }}
+            />
+          </Stack>
+        </MenuItem>
+      ))}
+    </TextField>
+  </Box>
+));
+
+const InfoSection = React.memo(({ nombre, touched, error, onChange, onBlur }: any) => (
+  <Box>
+    <Typography sx={SECTION_TITLE_SX}>Nombre del Lote</Typography>
+    <TextField
+      fullWidth label="Nombre" name="nombre_lote" value={nombre}
+      onChange={onChange} onBlur={onBlur}
+      error={touched && Boolean(error)}
+      helperText={touched && (error as string)}
+    />
+  </Box>
+));
+
+const FinanceSection = React.memo(({ precio, lat, lng, touched, error, onChange, onBlur, disabled }: any) => (
+  <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
+    <Box flex={1}>
+      <Typography sx={SECTION_TITLE_SX}><MonetizationIcon fontSize="inherit" /> Valor Base</Typography>
+      <TextField
+        fullWidth type="number" name="precio_base" value={precio}
+        onChange={onChange} onBlur={onBlur} disabled={disabled}
+        onKeyDown={(e) => (e.key === '-' || e.key === 'e' || e.key === '+') && e.preventDefault()}
+        inputProps={{ min: 1 }}
+        error={touched && Boolean(error)} helperText={touched && error}
+        InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }}
+      />
+    </Box>
+    <Box flex={1}>
+      <Typography sx={SECTION_TITLE_SX}><LocationOn fontSize="inherit" /> Ubicación (GPS)</Typography>
+      <Stack direction="row" spacing={1}>
+        <TextField fullWidth label="Lat" size="small" name="latitud" value={lat} onChange={onChange} onBlur={onBlur} InputLabelProps={{ shrink: true }} />
+        <TextField fullWidth label="Lng" size="small" name="longitud" value={lng} onChange={onChange} onBlur={onBlur} InputLabelProps={{ shrink: true }} />
+      </Stack>
+    </Box>
+  </Stack>
+));
+
+const ScheduleSection = React.memo(({ inicio, fin, touchedInicio, errorInicio, touchedFin, errorFin, onChange, onBlur, minDate, disabled }: any) => {
+  const handlePicker = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (disabled) return;
+    const input = e.currentTarget.querySelector('input');
+    if (input && 'showPicker' in input) input.showPicker();
+  };
+
+  return (
+    <Box sx={{ bgcolor: alpha('#CC6333', 0.03), p: 2, borderRadius: 2, border: '1px solid rgba(204, 99, 51, 0.1)' }}>
+      <Typography sx={SECTION_TITLE_SX}><CalendarIcon sx={{ color: '#CC6333' }} fontSize="inherit" /> Cronograma de Subasta</Typography>
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+        <TextField
+          fullWidth type="datetime-local" label="Apertura" InputLabelProps={{ shrink: true }}
+          name="fecha_inicio" value={inicio} onChange={onChange} onBlur={onBlur}
+          onMouseDown={handlePicker} disabled={disabled}
+          inputProps={{ min: minDate }}
+          error={touchedInicio && Boolean(errorInicio)} helperText={touchedInicio && errorInicio}
+          InputProps={{ startAdornment: <InputAdornment position="start"><CalendarIcon sx={{ color: '#CC6333', fontSize: '1.1rem' }} /></InputAdornment> }}
+        />
+        <TextField
+          fullWidth type="datetime-local" label="Cierre" InputLabelProps={{ shrink: true }}
+          name="fecha_fin" value={fin} onChange={onChange} onBlur={onBlur}
+          onMouseDown={handlePicker} disabled={disabled}
+          inputProps={{ min: inicio || minDate }}
+          error={touchedFin && Boolean(errorFin)} helperText={touchedFin && errorFin}
+          InputProps={{ startAdornment: <InputAdornment position="start"><CalendarIcon sx={{ color: '#CC6333', fontSize: '1.1rem' }} /></InputAdornment> }}
+        />
+      </Stack>
+    </Box>
+  );
 });
+
+// ============================================================================
+// CONSTANTES Y ESTILOS
+// ============================================================================
+const SECTION_TITLE_SX = { fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', mb: 1.5, display: 'flex', alignItems: 'center', gap: 1, fontSize: '0.7rem' };
+const MENU_ITEM_SX = { fontSize: '0.85rem', py: 1, px: 2 };
+
+// ============================================================================
+// COMPONENTE PRINCIPAL
+// ============================================================================
 
 const EditLoteModal: React.FC<EditLoteModalProps> = ({ open, onClose, onSubmit, lote, isLoading = false }) => {
   const theme = useTheme();
 
-  const { data: proyectos = [] } = useQuery({
-    queryKey: ['adminProyectosSelect'],
-    queryFn: async () => (await ProyectoService.getAllAdmin()).data,
-    enabled: open,
-    staleTime: 1000 * 60 * 5,
-  });
+  const validationSchema = useMemo(() => Yup.object({
+    nombre_lote: Yup.string().min(5, 'Mínimo 5 caracteres').required('Requerido'),
+    precio_base: Yup.number().typeError('Debe ser número').min(1, 'Mínimo 1').required('Requerido'),
+    fecha_inicio: Yup.date().transform((v, o) => o === '' ? null : v).nullable().min(new Date(new Date().setHours(0, 0, 0, 0)), 'Pasado'),
+    fecha_fin: Yup.date().transform((v, o) => o === '' ? null : v).nullable().when('fecha_inicio', {
+      is: (val: any) => val instanceof Date && !isNaN(val.getTime()),
+      then: (schema) => schema.min(Yup.ref('fecha_inicio'), 'Posterior al inicio'),
+      otherwise: (schema) => schema
+    }),
+  }), []);
 
-  const formik = useFormik<any>({
+  const formik = useFormik({
     initialValues: {
-      nombre_lote: '',
-      precio_base: '', // Para edición también usamos string vacío inicial si es necesario
-      id_proyecto: null,
-      latitud: 0,
-      longitud: 0
+      nombre_lote: '', precio_base: '', id_proyecto: '',
+      fecha_inicio: '', fecha_fin: '', latitud: '', longitud: ''
     },
     validationSchema,
     enableReinitialize: true,
+    validateOnChange: false,
+    validateOnBlur: true,
     onSubmit: async (values) => {
       if (!lote) return;
 
       const payload: UpdateLoteDto = {
         nombre_lote: values.nombre_lote,
         precio_base: String(values.precio_base),
-        id_proyecto: values.id_proyecto ? Number(values.id_proyecto) : null,
-        latitud: values.latitud ? Number(values.latitud) : null,
-        longitud: values.longitud ? Number(values.longitud) : null,
+        id_proyecto: values.id_proyecto === '' ? null : Number(values.id_proyecto),
+        latitud: values.latitud !== '' ? Number(values.latitud) : null,
+        longitud: values.longitud !== '' ? Number(values.longitud) : null,
       };
+
+      if (values.fecha_inicio) payload.fecha_inicio = values.fecha_inicio;
+      if (values.fecha_fin) payload.fecha_fin = values.fecha_fin;
 
       await onSubmit(lote.id, payload);
     },
@@ -63,100 +193,78 @@ const EditLoteModal: React.FC<EditLoteModalProps> = ({ open, onClose, onSubmit, 
     if (lote && open) {
       formik.setValues({
         nombre_lote: lote.nombre_lote || '',
-        precio_base: lote.precio_base, // Cargamos el precio existente
-        id_proyecto: lote.id_proyecto,
-        latitud: lote.latitud,
-        longitud: lote.longitud,
+        precio_base: lote.precio_base ? String(lote.precio_base) : '',
+        id_proyecto: lote.id_proyecto !== null ? String(lote.id_proyecto) : '',
+        fecha_inicio: lote.fecha_inicio ? lote.fecha_inicio.substring(0, 16) : '',
+        fecha_fin: lote.fecha_fin ? lote.fecha_fin.substring(0, 16) : '',
+        latitud: lote.latitud !== null ? String(lote.latitud) : '',
+        longitud: lote.longitud !== null ? String(lote.longitud) : '',
       });
-      formik.setErrors({});
-      formik.setTouched({});
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lote, open]);
 
+  const { data: proyectos = [], isLoading: isLoadingProyectos } = useQuery({
+    queryKey: ['adminProyectosSelect'],
+    queryFn: async () => (await ProyectoService.getAllAdmin()).data,
+    enabled: open
+  });
+
+  const nowForInput = useMemo(() => {
+    const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+    return d.toISOString().slice(0, 16);
+  }, [open]);
+
   if (!lote) return null;
-
-  const subastaActiva = lote.estado_subasta === 'activa';
-  const sectionTitleSx = { textTransform: 'uppercase', fontWeight: 800, color: 'text.secondary', fontSize: '0.7rem', mb: 1.5, display: 'flex', alignItems: 'center', gap: 1 };
-
-  const formatPreview = (val: any) => {
-    if (!val || isNaN(Number(val))) return '';
-    return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(Number(val));
-  };
+  const isSubastaActiva = lote.estado_subasta === 'activa';
 
   return (
     <BaseModal
-      open={open}
-      onClose={onClose}
-      title={`Editar Lote #${lote.id}`}
-      subtitle="Modifique la información básica, precio y ubicación."
-      icon={<EditIcon />}
-      onConfirm={formik.submitForm}
-      isLoading={isLoading}
-      confirmText="Guardar Cambios"
-      confirmButtonIcon={<SaveIcon />}
-      maxWidth="md"
+      open={open} onClose={onClose} onConfirm={formik.submitForm}
+      title={`Editar Lote #${lote.id}`} icon={<EditIcon />}
+      isLoading={isLoading} confirmText="Guardar Cambios" maxWidth="md"
     >
-      <Stack spacing={3}>
+      <FormikProvider value={formik}>
+        <Stack spacing={3}>
 
-        {/* SECCIÓN 1: INFO BÁSICA Y PRECIO (Stack Responsive) */}
-        <Box>
-          <Typography sx={sectionTitleSx}><InventoryIcon fontSize="inherit" /> INFORMACIÓN PRINCIPAL</Typography>
-          <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
-            <TextField
-              fullWidth label="Nombre del Lote"
-              {...formik.getFieldProps('nombre_lote')}
-              error={formik.touched.nombre_lote && !!formik.errors.nombre_lote}
-              helperText={formik.touched.nombre_lote && (formik.errors.nombre_lote as string)}
-            />
-            <TextField
-              fullWidth label="Precio Base" type="number"
-              {...formik.getFieldProps('precio_base')}
-              disabled={subastaActiva} // Bloqueado si está en subasta
-              error={formik.touched.precio_base && !!formik.errors.precio_base}
-              helperText={
-                (formik.touched.precio_base && formik.errors.precio_base)
-                  ? (formik.errors.precio_base as string)
-                  : formik.values.precio_base ? `Actual: ${formatPreview(formik.values.precio_base)}` : ""
-              }
-              InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }}
-            />
-          </Stack>
-          {subastaActiva && <Alert severity="warning" sx={{ mt: 1, py: 0 }}>El precio no se puede editar durante una subasta activa.</Alert>}
-        </Box>
+          {isSubastaActiva && (
+            <Alert severity="info" variant="outlined">
+              <b>Subasta activa:</b> El precio, las fechas y el proyecto están protegidos.
+            </Alert>
+          )}
 
-        <Divider />
+          <ProjectSection
+            value={formik.values.id_proyecto} proyectos={proyectos}
+            isLoading={isLoadingProyectos} onChange={formik.handleChange}
+            onBlur={formik.handleBlur} disabled={isSubastaActiva} theme={theme}
+          />
 
-        {/* SECCIÓN 2: ASOCIACIÓN */}
-        <Box>
-          <Typography sx={sectionTitleSx}><LinkIcon fontSize="inherit" /> ASOCIACIÓN</Typography>
-          <TextField
-            select fullWidth label="Proyecto Asociado"
-            name="id_proyecto"
-            value={formik.values.id_proyecto ?? ''}
+          <Divider />
+
+          <InfoSection
+            nombre={formik.values.nombre_lote}
+            touched={formik.touched.nombre_lote}
+            error={formik.errors.nombre_lote}
             onChange={formik.handleChange}
             onBlur={formik.handleBlur}
-            disabled={lote.estado_subasta !== 'pendiente'}
-            error={formik.touched.id_proyecto && !!formik.errors.id_proyecto}
-            SelectProps={{
-              MenuProps: { PaperProps: { sx: { maxHeight: 300, '&::-webkit-scrollbar': { width: '8px' }, '&::-webkit-scrollbar-thumb': { backgroundColor: alpha(theme.palette.primary.main, 0.2), borderRadius: '4px' } } } }
-            }}
-          >
-            <MenuItem value=""><em>Sin Asignar (General)</em></MenuItem>
-            {proyectos.map(p => <MenuItem key={p.id} value={p.id}>{p.nombre_proyecto}</MenuItem>)}
-          </TextField>
-        </Box>
+          />
 
-        {/* SECCIÓN 3: UBICACIÓN */}
-        <Box>
-          <Typography sx={sectionTitleSx}><LocationOn fontSize="inherit" /> COORDENADAS GEOGRÁFICAS</Typography>
-          <Stack direction="row" spacing={2}>
-            <TextField fullWidth label="Latitud" type="number" {...formik.getFieldProps('latitud')} value={formik.values.latitud ?? ''} InputLabelProps={{ shrink: true }} inputProps={{ step: "any" }} />
-            <TextField fullWidth label="Longitud" type="number" {...formik.getFieldProps('longitud')} value={formik.values.longitud ?? ''} InputLabelProps={{ shrink: true }} inputProps={{ step: "any" }} />
-          </Stack>
-        </Box>
+          <Divider />
 
-      </Stack>
+          <FinanceSection
+            precio={formik.values.precio_base} lat={formik.values.latitud} lng={formik.values.longitud}
+            touched={formik.touched.precio_base} error={formik.errors.precio_base}
+            onChange={formik.handleChange} onBlur={formik.handleBlur} disabled={isSubastaActiva}
+          />
+
+          <ScheduleSection
+            inicio={formik.values.fecha_inicio} fin={formik.values.fecha_fin}
+            touchedInicio={formik.touched.fecha_inicio} errorInicio={formik.errors.fecha_inicio}
+            touchedFin={formik.touched.fecha_fin} errorFin={formik.errors.fecha_fin}
+            onChange={formik.handleChange} onBlur={formik.handleBlur}
+            minDate={nowForInput} disabled={isSubastaActiva}
+          />
+        </Stack>
+      </FormikProvider>
     </BaseModal>
   );
 };

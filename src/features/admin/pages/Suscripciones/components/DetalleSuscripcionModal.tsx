@@ -1,30 +1,40 @@
 // src/pages/Admin/Suscripciones/modals/DetalleSuscripcionModal.tsx
 
-import React, { useState } from 'react';
 import {
-    Typography, Chip, Stack, Paper, Box, Divider, useTheme, alpha,
-    Button, TextField, Alert, CircularProgress, IconButton, Tooltip,
-    Table, TableBody, TableCell, TableHead, TableRow, Collapse
-} from '@mui/material';
-import {
-    Person,
     AccountBalance,
-    MonetizationOn,
-    Token,
-    CalendarToday,
     AddCircleOutline,
-    PaymentOutlined,
-    Edit as EditIcon,
+    CalendarToday,
     Check as CheckIcon,
     Close as CloseIcon,
-    ExpandMore,
+    Edit as EditIcon,
     ExpandLess,
-    Receipt
+    ExpandMore,
+    Person,
+    Receipt,
+    Token
 } from '@mui/icons-material';
+import {
+    Alert,
+    alpha,
+    Box,
+    Button,
+    Chip,
+    CircularProgress,
+    Collapse,
+    Divider,
+    IconButton,
+    Paper,
+    Stack,
+    Table, TableBody, TableCell, TableHead, TableRow,
+    TextField,
+    Typography,
+    useTheme
+} from '@mui/material';
+import React, { useState } from 'react';
 
-import type { SuscripcionDto } from '@/core/types/dto/suscripcion.dto';
 import PagoService from '@/core/api/services/pago.service';
 import type { PagoDto } from '@/core/types/dto/pago.dto';
+import type { SuscripcionDto } from '@/core/types/dto/suscripcion.dto';
 import BaseModal from '@/shared/components/domain/modals/BaseModal/BaseModal';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
@@ -151,16 +161,29 @@ const DetalleSuscripcionModal: React.FC<Props> = ({ open, onClose, suscripcion }
                     </Paper>
                 </Stack>
 
-                {/* 2. Resumen Financiero Central */}
+                {/* 2. Resumen Financiero Central (Mejorado con Saldo a Favor) */}
                 <Paper elevation={0} sx={{ p: 3, borderRadius: 3, bgcolor: alpha(theme.palette.info.main, 0.05), border: `1px solid ${alpha(theme.palette.info.main, 0.2)}` }}>
-                    <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', md: 'center' }} spacing={2}>
+
                         <Box>
                             <Typography variant="caption" color="text.secondary" fontWeight={700}>CAPITAL TOTAL RECAUDADO</Typography>
                             <Typography variant="h4" fontWeight={900} color="info.main" sx={{ fontFamily: 'monospace' }}>
                                 ${Number(suscripcion.monto_total_pagado || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                             </Typography>
                         </Box>
-                        <Stack spacing={1} alignItems="flex-end">
+
+                        <Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', md: 'block' } }} />
+
+                        <Box>
+                            <Typography variant="caption" color="text.secondary" fontWeight={700}>SALDO A FAVOR</Typography>
+                            <Typography variant="h6" fontWeight={800} color={Number(suscripcion.saldo_a_favor) > 0 ? "success.main" : "text.primary"} sx={{ fontFamily: 'monospace' }}>
+                                ${Number(suscripcion.saldo_a_favor || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                            </Typography>
+                        </Box>
+
+                        <Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', md: 'block' } }} />
+
+                        <Stack spacing={1} alignItems={{ xs: 'flex-start', md: 'flex-end' }}>
                             <Chip icon={<Token color="warning" />} label={`${suscripcion.tokens_disponibles} TOKENS`} color="warning" sx={{ fontWeight: 800 }} />
                             <Typography variant="caption" fontWeight={600}>{suscripcion.meses_a_pagar} cuotas restantes</Typography>
                         </Stack>
@@ -169,7 +192,7 @@ const DetalleSuscripcionModal: React.FC<Props> = ({ open, onClose, suscripcion }
 
                 {/* 3. Pagos Pendientes (Expandible) */}
                 <Paper elevation={0} sx={{ borderRadius: 2, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
-                    <Box 
+                    <Box
                         onClick={() => setShowPendingPayments(!showPendingPayments)}
                         sx={{ p: 2, display: 'flex', justifyContent: 'space-between', cursor: 'pointer', '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.02) } }}
                     >
@@ -198,8 +221,8 @@ const DetalleSuscripcionModal: React.FC<Props> = ({ open, onClose, suscripcion }
                                                 <TableCell>Mes #{pago.mes}</TableCell>
                                                 <TableCell>
                                                     {editingPaymentId === pago.id ? (
-                                                        <TextField 
-                                                            type="number" size="small" value={newMonto} 
+                                                        <TextField
+                                                            type="number" size="small" value={newMonto}
                                                             onChange={(e) => setNewMonto(Number(e.target.value))}
                                                             sx={{ width: 100 }}
                                                         />
@@ -235,9 +258,9 @@ const DetalleSuscripcionModal: React.FC<Props> = ({ open, onClose, suscripcion }
                             <Button variant="outlined" startIcon={<AddCircleOutline />} onClick={() => setShowAdvanceForm(true)}>Generar Pagos Adelantados</Button>
                         ) : (
                             <Stack direction="row" spacing={2} alignItems="center">
-                                <TextField 
-                                    type="number" label="Meses a generar" size="small" value={cantidadMeses} 
-                                    onChange={(e) => setCantidadMeses(Number(e.target.value))} sx={{ width: 140 }} 
+                                <TextField
+                                    type="number" label="Meses a generar" size="small" value={cantidadMeses}
+                                    onChange={(e) => setCantidadMeses(Number(e.target.value))} sx={{ width: 140 }}
                                 />
                                 <Button variant="contained" onClick={() => generatePaymentsMutation.mutate()} disabled={generatePaymentsMutation.isPending}>Confirmar</Button>
                                 <Button color="inherit" onClick={() => setShowAdvanceForm(false)}>Cancelar</Button>

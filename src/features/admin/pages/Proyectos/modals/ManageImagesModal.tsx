@@ -1,5 +1,4 @@
 // src/components/Admin/Proyectos/Components/modals/ManageImagesModal.tsx
-// ✅ VERSIÓN MIGRADA - Usando ImageUpload unificado
 
 import {
   Close as CloseIcon,
@@ -39,13 +38,12 @@ import type { ProyectoDto } from '@/core/types/dto/proyecto.dto';
 // --- COMPONENTES SHARED ---
 import { QueryHandler } from '@/shared/components/data-grid/QueryHandler/QueryHandler';
 import { ConfirmDialog } from '@/shared/components/domain/modals/ConfirmDialog/ConfirmDialog';
-
+import ImageUpload from '@/shared/components/forms/upload/ImageUploadZone';
 
 // --- HOOKS ---
 import { env } from '@/core/config/env';
 import { useConfirmDialog } from '@/shared/hooks/useConfirmDialog';
 import useSnackbar from '@/shared/hooks/useSnackbar';
-import ImageUpload from '@/shared/components/forms/upload/ImageUploadZone';
 
 const MAX_TOTAL_IMAGES = 10;
 
@@ -129,14 +127,11 @@ const ManageImagesModal: React.FC<ManageImagesModalProps> = ({
     confirmDialog.confirm('delete_single_image', { imagen });
   };
 
-  // ✅ HANDLER CORREGIDO - Acepta la firma genérica del componente unificado
   const handleFilesSelected = (files: File | File[] | null) => {
-    // Guard: Si viene null o un solo File, ignoramos (no debería pasar en modo múltiple)
     if (!files || !Array.isArray(files)) return;
 
     setUploadError(null);
 
-    // Validación de Duplicados y Tamaño
     const uniqueFiles: File[] = [];
     const duplicateNames: string[] = [];
 
@@ -182,6 +177,7 @@ const ManageImagesModal: React.FC<ManageImagesModalProps> = ({
     setStagedFiles(prev => prev.filter((_, i) => i !== indexToRemove));
   };
 
+  // 🚀 SUBIDA EN PARALELO ADAPTADA PARA TU BACKEND (single image)
   const handleSaveChanges = async () => {
     if (stagedFiles.length === 0) return;
 
@@ -192,36 +188,43 @@ const ManageImagesModal: React.FC<ManageImagesModalProps> = ({
     const failedFiles: File[] = [];
     let successCount = 0;
 
-    for (let i = 0; i < stagedFiles.length; i++) {
-      const file = stagedFiles[i];
-      try {
-        await uploadMutation.mutateAsync({
-          file: file,
-          descripcion: file.name
-        });
-        successCount++;
+    // Disparamos todas las peticiones al mismo tiempo
+    const uploadPromises = stagedFiles.map(file =>
+      uploadMutation.mutateAsync({
+        file: file,
+        descripcion: file.name
+      }).then(() => {
+        // Se actualiza el progreso a medida que cada petición individual termina
         setProgress(prev => prev ? { ...prev, current: prev.current + 1 } : null);
-      } catch (err) {
+        successCount++;
+      }).catch(() => {
         failedFiles.push(file);
-      }
-    }
+      })
+    );
+
+    // Esperamos a que todas las peticiones en paralelo finalicen
+    await Promise.allSettled(uploadPromises);
 
     queryClient.invalidateQueries({ queryKey: queryKey });
     setIsSaving(false);
     setProgress(null);
 
     if (failedFiles.length > 0) {
-      setUploadError(`Hubo error al subir ${failedFiles.length} imágenes.`);
+      setUploadError(`Hubo error al subir ${failedFiles.length} imagen(es). Inténtalo de nuevo.`);
       setStagedFiles(failedFiles);
+
+      if (successCount > 0) {
+        showSuccess(`Se subieron ${successCount} imágenes, pero fallaron ${failedFiles.length}.`);
+      }
     } else {
-      showSuccess(`¡${successCount} imágenes guardadas!`);
+      showSuccess(`¡${successCount} imágenes guardadas correctamente!`);
       setStagedFiles([]);
-      onClose(); // Cerrar al éxito total
+      onClose();
     }
   };
 
   // =======================================================================
-  // 🎬 CIERRE
+  // 🎬 CIERRE Y RENDER
   // =======================================================================
 
   const performClose = useCallback(() => {
@@ -304,7 +307,7 @@ const ManageImagesModal: React.FC<ManageImagesModalProps> = ({
 
         <DialogContent sx={{ p: 0 }}>
 
-          {/* BARRA DE PROGRESO */}
+          {/* BARRA DE PROGRESO DE CARGA MÚLTIPLE */}
           {isSaving && progress && (
             <Box sx={{ width: '100%', position: 'absolute', top: 0, zIndex: 10 }}>
               <LinearProgress
@@ -326,10 +329,9 @@ const ManageImagesModal: React.FC<ManageImagesModalProps> = ({
               )}
 
               {!isLimitReached ? (
-                // ✅ COMPONENTE MIGRADO
                 <ImageUpload
                   multiple={true}
-                  images={[]} // Array vacío porque usamos stagedFiles separadamente
+                  images={[]}
                   onChange={handleFilesSelected}
                   maxFiles={remainingSlots}
                   maxSizeMB={15}

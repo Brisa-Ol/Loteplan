@@ -26,18 +26,18 @@ export interface ConfirmarSuscripcion2faDto {
 export interface SuscripcionDto extends BaseDTO {
   id_usuario: number;
   id_proyecto: number;
-  
+
   // Coincide con `tokens_disponibles` (defaultValue: 1)
   tokens_disponibles: number;
 
   // Coincide con `meses_a_pagar`
-  meses_a_pagar: number;       
+  meses_a_pagar: number;
 
   // Coincide con `saldo_a_favor` (DECIMAL)
-  saldo_a_favor: number;       
+  saldo_a_favor: number;
 
   // ⚠️ ATENCIÓN: En tu modelo SuscripcionProyecto se llama así:
-  monto_total_pagado: number;  
+  monto_total_pagado: number;
 
   // Asumo que 'activo' viene de tus baseAttributes o es un campo virtual
   activo: boolean;
@@ -50,7 +50,7 @@ export interface SuscripcionDto extends BaseDTO {
     email: string;
     nombre_usuario: string;
   };
-  
+
   proyectoAsociado?: ProyectoDto;
 }
 
@@ -66,15 +66,15 @@ export interface SuscripcionInitResponse {
 // ==========================================
 
 export interface MorosidadDTO {
-  total_pagos_generados: string; 
+  total_pagos_generados: string;
   total_en_riesgo: string;
-  tasa_morosidad: string; 
+  tasa_morosidad: string;
 }
 
 export interface CancelacionDTO {
   total_suscripciones: number;
   total_canceladas: number;
-  tasa_cancelacion: string; 
+  tasa_cancelacion: string;
 }
 
 // ==========================================
@@ -89,7 +89,7 @@ export interface SuscripcionCanceladaDto extends BaseDTO {
   id_usuario: number;
   id_proyecto: number;
   meses_pagados: number;
-  monto_pagado_total: number; 
+  monto_pagado_total: number;
   fecha_cancelacion: string;
 
   // ✅ CORRECCIÓN: Alias exactos de las asociaciones del Backend
@@ -98,7 +98,7 @@ export interface SuscripcionCanceladaDto extends BaseDTO {
     apellido: string;
     email: string;
   };
-  
+
   proyectoCancelado?: {
     nombre_proyecto: string;
   };

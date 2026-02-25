@@ -27,6 +27,12 @@ export interface LoteDto extends BaseDTO {
   nombre_lote: string;
   precio_base: string; 
   monto_ganador_lote: string | null;
+  ultima_puja?: {
+    id: number;
+    monto: string | number;
+    id_usuario: number;
+    fecha_puja: string;
+  };
 
   // 3. Estado y Tiempos
   estado_subasta: EstadoSubasta;

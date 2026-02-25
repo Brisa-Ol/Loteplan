@@ -1,240 +1,284 @@
-import React, { useState, useMemo } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+// src/features/client/pages/Lotes/DetalleLote.tsx
+
 import {
-  Box, Typography, Button, Stack, Chip, Divider,
-  Card, CardContent, Alert, Skeleton, IconButton, useTheme, alpha,
-  Avatar, keyframes, Paper
-} from '@mui/material';
-import {
-  ArrowBack, Gavel, AccessTime,
-  InfoOutlined, EmojiEvents, EmojiEmotions, Share, Lock,
-  BrokenImage
+  AccessTime, ArrowBack, CheckCircle, EmojiEvents, Flag, 
+  Gavel, History, InfoOutlined, LocationOn, Payment, 
+  Timer, TrendingUp, Update, VerifiedUser
 } from '@mui/icons-material';
+import {
+  Alert, alpha, Avatar, Box, Button, Card, CardContent, Chip,
+  CircularProgress, Divider, Fade, IconButton, LinearProgress,
+  Paper, Portal, Skeleton, Stack, Typography, useTheme
+} from '@mui/material';
+import { useIsFetching, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 
-import { useModal } from '../../../../shared/hooks/useModal';
-
+// Servicios y Hooks
+import ImagenService from '@/core/api/services/imagen.service';
+import LoteService from '@/core/api/services/lote.service';
+import PujaService from '@/core/api/services/puja.service';
+import { useAuth } from '@/core/context/AuthContext';
+import { useModal } from '@/shared/hooks/useModal';
+import useSnackbar from '@/shared/hooks/useSnackbar';
+import { useCurrencyFormatter } from '../../hooks/useCurrencyFormatter';
 import { useVerificarSuscripcion } from '../../hooks/useVerificarSuscripcion';
 
-import PujarModal from './components/PujarModal';
-import LoteService from '@/core/api/services/lote.service';
-import ImagenService from '@/core/api/services/imagen.service';
+// Componentes
+import TwoFactorAuthModal from '@/shared/components/domain/modals/TwoFactorAuthModal/TwoFactorAuthModal';
 import { FavoritoButton } from '@/shared/components/ui/buttons/BotonFavorito';
+import { PujarModal } from './modals/PujarModal';
 
-import type { LoteDto } from '@/core/types/dto/lote.dto';
-import { useAuth } from '@/core/context/AuthContext';
-import { useImageLoader } from '../../hooks/useImageLoader';
+// --- SUB-COMPONENTES ---
 
-const pulse = keyframes`
-  0% { box-shadow: 0 0 0 0 rgba(46, 125, 50, 0.7); }
-  70% { box-shadow: 0 0 0 10px rgba(46, 125, 50, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(46, 125, 50, 0); }
-`;
-
-interface LoteConPuja extends LoteDto {
-  ultima_puja?: {
-    monto: string | number;
-    id_usuario: number;
-  };
-}
+const CountdownTimer = ({ endDate }: { endDate: string }) => {
+  const [timeLeft, setTimeLeft] = useState("");
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const diff = new Date(endDate).getTime() - new Date().getTime();
+      if (diff <= 0) { setTimeLeft("SUBASTA CERRADA"); clearInterval(timer); }
+      else {
+        const h = Math.floor((diff % 86400000) / 3600000);
+        const m = Math.floor((diff % 3600000) / 60000);
+        const s = Math.floor((diff % 60000) / 1000);
+        setTimeLeft(`${h}h ${m}m ${s}s`);
+      }
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [endDate]);
+  return <Typography variant="h6" fontWeight={900} sx={{ fontVariantNumeric: 'tabular-nums' }}>{timeLeft}</Typography>;
+};
 
 const DetalleLote: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const location = useLocation();
-  const { user, isAuthenticated } = useAuth();
   const theme = useTheme();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const { showSuccess, showError } = useSnackbar();
+  const formatCurrency = useCurrencyFormatter();
 
   const pujarModal = useModal();
-  const imageLoader = useImageLoader();
-  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const twoFaModal = useModal();
+  const [selectedPujaId, setSelectedPujaId] = useState<number | null>(null);
+  const [twoFAError, setTwoFAError] = useState<string | null>(null);
 
-  const { data: loteData, isLoading, error } = useQuery<LoteDto>({
+  const isFetching = useIsFetching({ queryKey: ['lote', id] });
+  const { data: loteData, isLoading } = useQuery({
     queryKey: ['lote', id],
-    queryFn: async () => {
-      if (!id) throw new Error('ID inválido');
-      const res = await LoteService.getByIdActive(Number(id));
-      return res.data;
-    },
+    queryFn: async () => (await LoteService.getByIdActive(Number(id))).data,
     refetchInterval: 3000,
-    retry: false
   });
 
-  const lote = loteData as LoteConPuja;
+  const lote = loteData as any;
+ const { estaSuscripto, tokensDisponibles } = useVerificarSuscripcion(lote?.id_proyecto);
 
-  const { estaSuscripto, tieneTokens, tokensDisponibles, isLoading: loadingSub } =
-    useVerificarSuscripcion(lote?.id_proyecto ?? undefined);
-
-const { precioDisplay, soyGanador, hayOfertas, statusConfig } = useMemo(() => {
-    let config = {
-      label: 'Cargando...',
-      color: 'default' as any,
-      icon: <AccessTime fontSize="small" />,
-      bgColor: ''
+  // 🚀 LÓGICA DE GANADOR Y PAGOS
+  const miEstadoPuja = useMemo(() => {
+    if (!lote?.pujas || !user?.id) return null;
+    const misPujas = lote.pujas.filter((p: any) => String(p.id_usuario) === String(user.id));
+    if (misPujas.length === 0) return null;
+    
+    const miUltimaPuja = [...misPujas].sort((a, b) => Number(b.monto_puja) - Number(a.monto_puja))[0];
+    const esGanadorActual = String(lote.id_ganador) === String(user.id);
+    
+    return { 
+      monto: Number(miUltimaPuja.monto_puja), 
+      esPrimero: esGanadorActual,
+      estado: miUltimaPuja.estado_puja,
+      id: miUltimaPuja.id,
+      vencimiento: miUltimaPuja.fecha_vencimiento_pago
     };
+  }, [lote, user]);
 
-    if (!lote) return { precioDisplay: 0, soyGanador: false, hayOfertas: false, statusConfig: config };
+  const subastaFinalizada = lote?.estado_subasta === 'finalizada';
 
-    const montoGanador = Number(lote.monto_ganador_lote || 0);
-    const montoUltimaPuja = Number(lote.ultima_puja?.monto || 0);
-    const ofertaActual = Math.max(montoGanador, montoUltimaPuja);
-    const precioBase = Number(lote.precio_base);
+  // 💳 PROCESO DE PAGO
+  const mutationPago = useMutation({
+    mutationFn: (pujaId: number) => {
+      setSelectedPujaId(pujaId);
+      return PujaService.initiatePayment(pujaId);
+    },
+    onSuccess: (res: any) => {
+      if (res.data?.is2FARequired) twoFaModal.open();
+      else if (res.data?.url_checkout) window.location.href = res.data.url_checkout;
+    },
+    onError: (err: any) => showError(err.message || 'No se pudo iniciar el pago')
+  });
 
-    const precioDisplay = ofertaActual > 0 ? ofertaActual : precioBase;
-    
-    // ✅ CORRECCIÓN CLAVE: 
-    // Si la subasta está activa, el "ganador temporal" es el dueño de la última puja.
-    // Si finalizó, usamos el id_ganador oficial del lote.
-    const soyElPostorMasAlto = isAuthenticated && (lote.ultima_puja?.id_usuario === user?.id);
-    const soyElGanadorFinal = isAuthenticated && (lote.id_ganador === user?.id);
-    
-    const soyGanador = lote.estado_subasta === 'activa' ? soyElPostorMasAlto : soyElGanadorFinal;
+  const confirmar2FA = useMutation({
+    mutationFn: (code: string) => PujaService.confirmPayment2FA({ pujaId: selectedPujaId!, codigo_2fa: code }),
+    onSuccess: (res: any) => { if (res.data?.url_checkout) window.location.href = res.data.url_checkout; },
+    onError: (err: any) => setTwoFAError(err.message || "Código incorrecto")
+  });
 
-    switch (lote.estado_subasta) {
-      case 'activa':
-        config = { label: 'Subasta en Vivo', color: 'success', icon: <Gavel fontSize="small" />, bgColor: alpha(theme.palette.success.main, 0.1) };
-        break;
-      case 'pendiente':
-        config = { label: 'Próximamente', color: 'warning', icon: <AccessTime fontSize="small" />, bgColor: alpha(theme.palette.warning.main, 0.1) };
-        break;
-      case 'finalizada':
-        config = { label: 'Finalizada', color: 'error', icon: <EmojiEvents fontSize="small" />, bgColor: alpha(theme.palette.error.main, 0.1) };
-        break;
-    }
-
-    return { precioDisplay, soyGanador, hayOfertas: ofertaActual > 0, statusConfig: config };
-  }, [lote, isAuthenticated, user, theme]);
-
-  const imagenes = useMemo(() => {
-    return lote?.imagenes?.filter(img => (img as any).activo !== false) || [];
-  }, [lote]);
-
-  const mainImageUrl = useMemo(() => {
-    if (imagenes.length === 0) return '';
-    return ImagenService.resolveImageUrl(imagenes[selectedImageIndex]?.url);
-  }, [imagenes, selectedImageIndex]);
-
-  const formatCurrency = (val: number) =>
-    new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(val);
-
-  const handleBotonAccion = () => {
-    if (!isAuthenticated) return navigate('/login', { state: { from: location.pathname } });
-    if (!estaSuscripto) return navigate(`/cliente/proyectos/${lote.id_proyecto}`);
-    pujarModal.open();
+  const formatAuctionDate = (dateString?: string) => {
+    if (!dateString) return '--/--';
+    return new Intl.DateTimeFormat('es-AR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(dateString));
   };
 
   if (isLoading) return <Box p={4}><Skeleton variant="rectangular" height={500} sx={{ borderRadius: 4 }} /></Box>;
-  if (error || !lote) return <Box p={4}><Alert severity="error">No se encontró el lote.</Alert></Box>;
+  if (!lote) return <Alert severity="error">Lote no disponible</Alert>;
 
   return (
     <Box sx={{ maxWidth: 1400, mx: 'auto', p: { xs: 2, md: 4 }, pb: 12 }}>
+      {isFetching > 0 && <Portal><Box sx={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9999 }}><LinearProgress color="primary" sx={{ height: 4 }} /></Box></Portal>}
 
-      {/* HEADER */}
-      <Stack direction="row" alignItems="center" justifyContent="space-between" mb={3}>
-        <Stack direction="row" alignItems="center" spacing={2}>
-          <IconButton onClick={() => navigate(-1)} sx={{ bgcolor: 'background.paper', border: `1px solid ${theme.palette.divider}` }}>
-            <ArrowBack />
-          </IconButton>
-          <Box>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>PROYECTO: {lote.proyecto?.nombre_proyecto || 'GENERAL'}</Typography>
-            <Typography variant="h5" fontWeight="800">{lote.nombre_lote}</Typography>
-          </Box>
-        </Stack>
-        <Stack direction="row" spacing={1}>
-          <IconButton sx={{ border: `1px solid ${theme.palette.divider}` }}><Share fontSize="small" /></IconButton>
-          <FavoritoButton loteId={lote.id} size="large" />
-        </Stack>
+      {/* 🏆 CARTEL DE GANADOR (Prominente) */}
+      {miEstadoPuja?.esPrimero && subastaFinalizada && miEstadoPuja.estado !== 'ganadora_pagada' && (
+        <Fade in timeout={800}>
+          <Paper elevation={6} sx={{ 
+            mb: 4, p: 4, borderRadius: 4, 
+            background: `linear-gradient(135deg, ${theme.palette.success.main} 0%, ${theme.palette.success.dark} 100%)`, 
+            color: 'white', position: 'relative', overflow: 'hidden'
+          }}>
+            <Stack direction={{ xs: 'column', md: 'row' }} spacing={3} alignItems="center" justifyContent="space-between">
+              <Stack direction="row" spacing={3} alignItems="center">
+                <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.2)', width: 80, height: 80, border: '4px solid rgba(255,255,255,0.3)' }}>
+                  <EmojiEvents sx={{ fontSize: 48 }} />
+                </Avatar>
+                <Box>
+                  <Typography variant="h4" fontWeight={900}>¡FELICITACIONES!</Typography>
+                  <Typography variant="h6" sx={{ opacity: 0.9 }}>Has ganado la subasta por este lote.</Typography>
+                  <Typography variant="body2" sx={{ mt: 1, fontWeight: 700, bgcolor: 'rgba(0,0,0,0.1)', px: 1, borderRadius: 1, display: 'inline-block' }}>
+                    Monto final: {formatCurrency(miEstadoPuja.monto)}
+                  </Typography>
+                </Box>
+              </Stack>
+              <Button 
+                variant="contained" color="inherit" size="large"
+                sx={{ color: 'success.main', fontWeight: 900, px: 6, py: 2, fontSize: '1.1rem', borderRadius: 2, boxShadow: 3 }}
+                onClick={() => mutationPago.mutate(miEstadoPuja.id)}
+                disabled={mutationPago.isPending}
+                startIcon={mutationPago.isPending ? <CircularProgress size={24} color="inherit" /> : <Payment />}
+              >
+                PROCEDER AL PAGO
+              </Button>
+            </Stack>
+          </Paper>
+        </Fade>
+      )}
+
+      {/* CABECERA */}
+      <Stack direction="row" alignItems="center" spacing={2} mb={4}>
+        <IconButton onClick={() => navigate(-1)} sx={{ border: '1px solid', borderColor: 'divider' }}><ArrowBack /></IconButton>
+        <Box flex={1}>
+          <Typography variant="h4" fontWeight={900}>{lote.nombre_lote}</Typography>
+          <Chip label={subastaFinalizada ? "SUBASTA CERRADA" : "EN VIVO"} color={subastaFinalizada ? "default" : "error"} size="small" sx={{ fontWeight: 800 }} />
+        </Box>
+        <FavoritoButton loteId={lote.id} size="large" />
       </Stack>
 
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '2fr 1fr' }, gap: 4 }}>
-
-        {/* IZQUIERDA: IMAGEN Y DETALLES */}
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1.8fr 1.2fr' }, gap: 4 }}>
         <Box>
-          <Paper elevation={0} sx={{ position: 'relative', overflow: 'hidden', borderRadius: 4, mb: 2, border: `1px solid ${theme.palette.divider}`, bgcolor: 'grey.100', height: { xs: 300, sm: 500 }, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            {mainImageUrl && !imageLoader.error ? (
-              <Box component="img" src={mainImageUrl} alt={lote.nombre_lote} onLoad={imageLoader.handleLoad} onError={imageLoader.handleError} sx={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'opacity 0.5s ease', opacity: imageLoader.loaded ? 1 : 0 }} />
-            ) : (
-              <Stack alignItems="center" spacing={1} color="text.disabled"><BrokenImage sx={{ fontSize: 64 }} /><Typography variant="caption">Imagen no disponible</Typography></Stack>
-            )}
-            {!imageLoader.loaded && !imageLoader.error && mainImageUrl && <Skeleton variant="rectangular" width="100%" height="100%" sx={{ position: 'absolute' }} />}
-            <Box sx={{ position: 'absolute', top: 20, left: 20 }}>
-              <Chip label={statusConfig.label} color={statusConfig.color} icon={statusConfig.icon} sx={{ fontWeight: 800, boxShadow: 3, ...(lote.estado_subasta === 'activa' && { animation: `${pulse} 2s infinite` }) }} />
-            </Box>
+          <Paper elevation={0} sx={{ position: 'relative', borderRadius: 4, bgcolor: 'secondary.main', height: { xs: 350, md: 550 }, overflow: 'hidden', border: '1px solid', borderColor: 'divider' }}>
+            <Box component="img" src={ImagenService.resolveImageUrl(lote.imagenes?.[0]?.url)} sx={{ width: '100%', height: '100%', objectFit: 'contain' }} />
           </Paper>
-
-          {imagenes.length > 1 && (
-            <Stack direction="row" spacing={2} sx={{ overflowX: 'auto', pb: 2 }}>
-              {imagenes.map((img, idx) => (
-                <Box key={img.id} component="img" src={ImagenService.resolveImageUrl(img.url)} onClick={() => { setSelectedImageIndex(idx); imageLoader.reset(); }} sx={{ width: 80, height: 60, objectFit: 'cover', borderRadius: 2, cursor: 'pointer', border: selectedImageIndex === idx ? `2px solid ${theme.palette.primary.main}` : `1px solid transparent` }} />
-              ))}
-            </Stack>
-          )}
-
-          <Card elevation={0} variant="outlined" sx={{ borderRadius: 3, mb: 3 }}>
-            <CardContent sx={{ p: 4 }}>
-              <Typography variant="h6" fontWeight="bold" gutterBottom display="flex" alignItems="center" gap={1}><InfoOutlined color="primary" /> Detalles del Lote</Typography>
-              <Typography variant="body1" color="text.secondary" paragraph sx={{ whiteSpace: 'pre-line' }}>{lote.proyecto?.descripcion || 'No hay descripción disponible.'}</Typography>
-            </CardContent>
-          </Card>
         </Box>
 
-        {/* DERECHA: SIDEBAR DE PUJAS */}
         <Box>
-          <Card elevation={4} sx={{ borderRadius: 3, position: { lg: 'sticky' }, top: { lg: 100 }, border: `1px solid ${soyGanador ? theme.palette.success.main : theme.palette.divider}` }}>
-            {soyGanador && lote.estado_subasta === 'activa' && (
-              <Box sx={{ bgcolor: 'success.main', color: 'white', p: 1.5, textAlign: 'center' }}><Typography variant="subtitle2" fontWeight="bold" display="flex" justifyContent="center" alignItems="center" gap={1}><EmojiEmotions /> ¡VAS GANANDO!</Typography></Box>
-            )}
-            <CardContent sx={{ p: 3 }}>
-              <Typography variant="caption" color="text.secondary" fontWeight="bold">{(hayOfertas || soyGanador) ? 'OFERTA ACTUAL' : 'PRECIO BASE'}</Typography>
-              <Typography variant="h3" fontWeight="900" color={soyGanador ? 'success.main' : 'text.primary'} sx={{ my: 1 }}>{formatCurrency(precioDisplay)}</Typography>
+          <Card elevation={0} sx={{ borderRadius: 4, border: '1px solid', borderColor: 'divider', position: 'sticky', top: 100, overflow: 'hidden' }}>
+            
+            <Box sx={{ p: 3, bgcolor: alpha(subastaFinalizada ? theme.palette.action.disabled : theme.palette.error.main, 0.05), borderBottom: '1px solid', borderColor: 'divider', textAlign: 'center' }}>
+               {!subastaFinalizada ? (
+                 <Stack direction="row" justifyContent="center" alignItems="center" spacing={1} sx={{ color: 'error.main' }}>
+                   <Timer /><CountdownTimer endDate={lote.fecha_fin} />
+                 </Stack>
+               ) : (
+                 <Typography variant="h6" fontWeight={900} color="text.secondary">SUBASTA FINALIZADA</Typography>
+               )}
+            </Box>
 
-              <Divider sx={{ my: 3 }} />
+            <CardContent sx={{ p: 4 }}>
+              <Stack spacing={3} mb={4}>
+                <Box display="flex" justifyContent="space-between">
+                  <Typography variant="body2" color="text.secondary" fontWeight={700}>PRECIO BASE</Typography>
+                  <Typography variant="body1" fontWeight={800}>{formatCurrency(lote.precio_base)}</Typography>
+                </Box>
 
-              <Stack spacing={2} mb={3}>
-                <Box display="flex" gap={2}>
-                  <Avatar variant="rounded" sx={{ bgcolor: 'action.hover', color: 'text.primary' }}><AccessTime /></Avatar>
-                  <Box>
-                    <Typography variant="caption" color="text.secondary">CIERRE PREVISTO</Typography>
-                    <Typography variant="body1" fontWeight="600">{lote.fecha_fin ? new Date(lote.fecha_fin).toLocaleDateString() : '--'}</Typography>
-                  </Box>
+                {miEstadoPuja && (
+                  <Paper variant="outlined" sx={{ 
+                    p: 2, borderRadius: 2, 
+                    bgcolor: miEstadoPuja.esPrimero ? alpha(theme.palette.success.main, 0.05) : alpha(theme.palette.warning.main, 0.05),
+                    borderColor: miEstadoPuja.esPrimero ? 'success.main' : 'warning.main',
+                  }}>
+                    <Stack direction="row" justifyContent="space-between" alignItems="center">
+                      <Box>
+                        <Typography variant="caption" fontWeight={900} color={miEstadoPuja.esPrimero ? "success.dark" : "warning.dark"}>MI OFERTA</Typography>
+                        <Typography variant="h5" fontWeight={900}>{formatCurrency(miEstadoPuja.monto)}</Typography>
+                      </Box>
+                      <Chip label={miEstadoPuja.esPrimero ? "LÍDER" : "SUPERADA"} color={miEstadoPuja.esPrimero ? "success" : "warning"} size="small" sx={{ fontWeight: 900 }} />
+                    </Stack>
+                  </Paper>
+                )}
+
+                <Box sx={{ p: 2, borderRadius: 2, textAlign: 'center', bgcolor: alpha(theme.palette.primary.main, 0.05), border: '1px dashed', borderColor: 'primary.main' }}>
+                  <Typography variant="overline" color="primary.main" fontWeight={900}>{subastaFinalizada ? 'PRECIO FINAL ADJUDICADO' : 'OFERTA GANADORA ACTUAL'}</Typography>
+                  <Typography variant="h3" fontWeight={900} color="primary.main">{formatCurrency(lote.ultima_puja?.monto || lote.precio_base)}</Typography>
                 </Box>
               </Stack>
 
-              {lote.estado_subasta === 'activa' ? (
-                <Stack spacing={2}>
-                  {!estaSuscripto && isAuthenticated && (
-                    <Alert severity="warning" icon={<Lock fontSize="inherit" />}>Requiere suscripción al proyecto.</Alert>
-                  )}
-                  {estaSuscripto && !tieneTokens && !soyGanador && (
-                    <Alert severity="info">Ya estás participando en otro lote.</Alert>
-                  )}
-                  <Button
-                    variant="contained" fullWidth size="large" onClick={handleBotonAccion}
-                    disabled={loadingSub || (estaSuscripto && !tieneTokens && !soyGanador)}
-                    color={soyGanador ? "success" : "primary"}
-                    sx={{ py: 2, fontWeight: 'bold' }}
-                    startIcon={soyGanador ? <EmojiEmotions /> : <Gavel />}
-                  >
-                    {loadingSub ? "Cargando..." : !estaSuscripto ? "Suscribirse" : soyGanador ? "Mejorar Oferta" : "Ofertar Ahora"}
-                  </Button>
-                  {estaSuscripto && (
-                    <Chip
-                      label={`${tokensDisponibles || 0} token(s) disponibles`}
-                      variant="outlined"
-                      sx={{ alignSelf: 'center' }} // <--- Movido a sx
-                    />
-                  )}
-                </Stack>
-              ) : (
-                <Alert severity="info">Subasta {lote.estado_subasta}.</Alert>
-              )}
+             <Stack spacing={2}>
+                {!subastaFinalizada ? (
+                  <>
+                    {/* 🚀 USO DE LAS VARIABLES PARA EVITAR EL ERROR Y VALIDAR */}
+                    {!estaSuscripto && (
+                        <Alert severity="warning" sx={{ mb: 1, borderRadius: 2 }}>
+                            Requiere suscripción activa para participar.
+                        </Alert>
+                    )}
+
+                    {estaSuscripto && tokensDisponibles === 0 && !miEstadoPuja && (
+                        <Alert severity="error" sx={{ mb: 1, borderRadius: 2 }}>
+                            No tienes tokens disponibles para este proyecto.
+                        </Alert>
+                    )}
+
+                    <Button 
+                      variant="contained" fullWidth size="large" onClick={() => pujarModal.open()}
+                      sx={{ py: 2, fontWeight: 900, bgcolor: miEstadoPuja?.esPrimero ? 'success.main' : 'primary.main' }}
+                      startIcon={<Gavel />}
+                      // ✅ Aquí se usan para deshabilitar el botón si es necesario
+                      disabled={!estaSuscripto || (tokensDisponibles === 0 && !miEstadoPuja)}
+                    >
+                      {miEstadoPuja?.esPrimero ? 'MEJORAR MI LIDERAZGO' : 'PUJAR AHORA'}
+                    </Button>
+                  </>
+                ) : (
+                  miEstadoPuja?.esPrimero && miEstadoPuja.estado === 'ganadora_pendiente' ? (
+                    <Button 
+                      variant="contained" color="success" fullWidth size="large"
+                      onClick={() => mutationPago.mutate(miEstadoPuja.id)}
+                      sx={{ py: 2.5, fontWeight: 900, boxShadow: 4 }} startIcon={<Payment />}
+                    >
+                      PAGAR Y ADJUDICAR MI LOTE
+                    </Button>
+                  ) : (
+                    miEstadoPuja?.estado === 'ganadora_pagada' ? (
+                      <Alert severity="success" variant="filled" sx={{ borderRadius: 2, fontWeight: 700 }}>LOTE ADJUDICADO Y PAGADO</Alert>
+                    ) : (
+                      <Alert severity="info" icon={<InfoOutlined />}>La subasta ha concluido.</Alert>
+                    )
+                  )
+                )}
+              </Stack>
             </CardContent>
           </Card>
         </Box>
       </Box>
 
-      <PujarModal {...pujarModal.modalProps} lote={lote} soyGanador={!!soyGanador} onSuccess={() => queryClient.invalidateQueries({ queryKey: ['lote', id] })} />
+      <TwoFactorAuthModal 
+        open={twoFaModal.isOpen} 
+        onClose={() => { twoFaModal.close(); setTwoFAError(null); }} 
+        onSubmit={(code) => confirmar2FA.mutate(code)} 
+        isLoading={confirmar2FA.isPending} 
+        error={twoFAError} 
+      />
+      
+      <PujarModal 
+        {...pujarModal.modalProps} lote={lote} yaParticipa={!!miEstadoPuja} soyGanador={miEstadoPuja?.esPrimero} 
+        onSuccess={() => queryClient.invalidateQueries({ queryKey: ['lote', id] })} 
+      />
     </Box>
   );
 };
