@@ -1,4 +1,5 @@
 import type { BaseDTO } from "./base.dto";
+import type { SuscripcionDto } from "./suscripcion.dto";
 
 // ==========================================
 // 📤 REQUEST DTOs (Lo que envías)
@@ -36,15 +37,16 @@ export interface UpdatePaymentAmountDto {
 
 export interface PagoDto extends BaseDTO {
   id_suscripcion: number;
-  id_usuario?: number; // ✅ Coincide con tu modelo actualizado
-  id_proyecto?: number; // ✅ Coincide con tu modelo actualizado
+  id_usuario: number; // ✅ Coincide con tu modelo actualizado
+  id_proyecto: number; // ✅ Coincide con tu modelo actualizado
 
   monto: number; // Sequelize lo devuelve como number gracias al getter
   mes: number;
   fecha_vencimiento: string; // ISO Date Only (YYYY-MM-DD)
   fecha_pago?: string;       // ISO Date Only
 
-  estado_pago: 'pendiente' | 'pagado' | 'vencido' | 'cancelado' | 'cubierto_por_puja';
+estado_pago: 'pendiente' | 'pagado' | 'vencido' | 'cancelado' | 'cubierto_por_puja';
+suscripcion?: SuscripcionDto;
 }
 
 /**

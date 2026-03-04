@@ -1,3 +1,6 @@
+// src/shared/components/domain/modals/BaseModal/BaseModal.tsx
+
+import React, { useMemo } from 'react';
 import { Close as CloseIcon } from '@mui/icons-material';
 import {
   alpha,
@@ -19,28 +22,19 @@ import {
   type DialogProps
 } from '@mui/material';
 import type { TransitionProps } from '@mui/material/transitions';
-import React from 'react';
 
 // ============================================================================
-// TRANSICIÓN
+// TYPES & INTERFACES
 // ============================================================================
-const Transition = React.forwardRef(function Transition(
-  props: TransitionProps & { children: React.ReactElement<any, any> },
-  ref: React.Ref<unknown>,
-) {
-  return <Slide direction="up" ref={ref} {...props} />;
-});
+type ThemeColor = 'primary' | 'secondary' | 'error' | 'warning' | 'info' | 'success';
 
-// ============================================================================
-// INTERFAZ DE PROPS
-// ============================================================================
 export interface BaseModalProps extends Omit<DialogProps, 'onClose'> {
   open: boolean;
   onClose: () => void;
   title: string;
   subtitle?: string;
   icon?: React.ReactNode;
-  headerColor?: 'primary' | 'secondary' | 'error' | 'warning' | 'info' | 'success';
+  headerColor?: ThemeColor;
   children: React.ReactNode;
   cancelText?: string;
   confirmText?: string;
@@ -49,18 +43,26 @@ export interface BaseModalProps extends Omit<DialogProps, 'onClose'> {
   disableConfirm?: boolean;
   hideCancelButton?: boolean;
   hideConfirmButton?: boolean;
-  confirmButtonColor?: 'primary' | 'secondary' | 'error' | 'warning' | 'info' | 'success';
+  confirmButtonColor?: ThemeColor;
   confirmButtonVariant?: 'contained' | 'outlined' | 'text';
   confirmButtonIcon?: React.ReactNode;
-  maxWidth?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
-  scroll?: 'paper' | 'body';
-  customActions?: React.ReactNode;
   headerExtra?: React.ReactNode;
+  customActions?: React.ReactNode;
   disableClose?: boolean;
 }
 
 // ============================================================================
-// COMPONENTE BASE MODAL
+// SUB-COMPONENTS
+// ============================================================================
+const Transition = React.forwardRef((
+  props: TransitionProps & { children: React.ReactElement },
+  ref: React.Ref<unknown>
+) => <Slide direction="up" ref={ref} {...props} />);
+
+Transition.displayName = 'BaseModalTransition';
+
+// ============================================================================
+// MAIN COMPONENT
 // ============================================================================
 export const BaseModal: React.FC<BaseModalProps> = ({
   open,
@@ -70,7 +72,7 @@ export const BaseModal: React.FC<BaseModalProps> = ({
   icon,
   headerColor = 'primary',
   children,
-  cancelText = 'Cancelar',
+  cancelText,
   confirmText = 'Confirmar',
   onConfirm,
   isLoading = false,
@@ -89,20 +91,70 @@ export const BaseModal: React.FC<BaseModalProps> = ({
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const headerColorValue = theme.palette[headerColor].main;
 
-  const handleClose = () => {
-    if (!isLoading && !disableClose) onClose();
+  // --- Memos & Logic ---
+  const headerColorValue = theme.palette[headerColor].main;
+  const finalCancelText = useMemo(() => 
+    cancelText || (onConfirm ? 'Cancelar' : 'Cerrar'), 
+  [cancelText, onConfirm]);
+
+  const canClose = !isLoading && !disableClose;
+
+  const handleCloseRequest = () => {
+    if (canClose) onClose();
+  };
+
+  // --- Styles Objects ---
+  const styles = {
+    dialogPaper: {
+      borderRadius: isMobile ? 0 : 3,
+      border: '1px solid',
+      borderColor: alpha(theme.palette.divider, 0.1),
+      transform: 'translateZ(0)', // Hardware Acceleration
+      willChange: 'transform',
+      boxShadow: '0 20px 40px -10px rgba(0,0,0,0.12)',
+      overflow: 'hidden',
+    },
+    header: {
+      m: 0,
+      p: 3,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      bgcolor: alpha(headerColorValue, 0.04),
+    },
+    avatar: {
+      bgcolor: alpha(headerColorValue, 0.1),
+      color: headerColorValue,
+      width: 44,
+      height: 44,
+      borderRadius: 2,
+      boxShadow: `0 4px 12px ${alpha(headerColorValue, 0.2)}`,
+    },
+    closeButton: {
+      color: theme.palette.text.disabled,
+      transition: 'all 0.2s',
+      '&:hover': {
+        bgcolor: alpha(theme.palette.error.main, 0.08),
+        color: theme.palette.error.main,
+        transform: 'rotate(90deg)',
+      }
+    },
+    actions: {
+      p: 3,
+      bgcolor: alpha(theme.palette.secondary.light, 0.05),
+      gap: 1.5
+    }
   };
 
   return (
     <Dialog
       open={open}
       TransitionComponent={Transition}
-      // ✅ CORRECCIÓN: Eliminado el parámetro 'event' no utilizado
+      transitionDuration={{ enter: 225, exit: 195 }}
       onClose={(_, reason) => {
-        if ((isLoading || disableClose) && (reason === 'backdropClick' || reason === 'escapeKeyDown')) return;
-        handleClose();
+        if (!canClose && (reason === 'backdropClick' || reason === 'escapeKeyDown')) return;
+        handleCloseRequest();
       }}
       maxWidth={maxWidth}
       fullWidth
@@ -111,47 +163,21 @@ export const BaseModal: React.FC<BaseModalProps> = ({
       slotProps={{
         backdrop: {
           sx: {
-            backdropFilter: 'blur(8px)',
-            backgroundColor: alpha(theme.palette.common.black, 0.4),
+            // ✅ Eliminado backdropFilter (difuminado)
+            // ✅ Fondo negro con 20% de opacidad para una "sombra" nítida y suave
+            backgroundColor: 'rgba(0, 0, 0, 0.2)', 
+            WebkitBackfaceVisibility: 'hidden',
           }
         }
       }}
-      PaperProps={{
-        elevation: 0,
-        sx: {
-          borderRadius: isMobile ? 0 : 3,
-          border: '1px solid',
-          borderColor: alpha(theme.palette.divider, 0.1),
-          boxShadow: '0 24px 48px -12px rgba(0,0,0,0.18)',
-          overflow: 'hidden',
-          ...dialogProps.PaperProps?.sx
-        },
-      }}
+      PaperProps={{ sx: { ...styles.dialogPaper, ...dialogProps.PaperProps?.sx } }}
       {...dialogProps}
     >
-      <DialogTitle
-        sx={{
-          m: 0,
-          p: 3,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          bgcolor: alpha(headerColorValue, 0.04),
-        }}
-      >
+      {/* HEADER */}
+      <DialogTitle sx={styles.header}>
         <Stack direction="row" spacing={2} alignItems="center" sx={{ minWidth: 0 }}>
           {icon && (
-            <Avatar
-              variant="rounded"
-              sx={{
-                bgcolor: alpha(headerColorValue, 0.1),
-                color: headerColorValue,
-                width: 44,
-                height: 44,
-                borderRadius: 2,
-                boxShadow: `0 4px 12px ${alpha(headerColorValue, 0.2)}`,
-              }}
-            >
+            <Avatar variant="rounded" sx={styles.avatar}>
               {icon}
             </Avatar>
           )}
@@ -169,19 +195,7 @@ export const BaseModal: React.FC<BaseModalProps> = ({
 
         <Stack direction="row" spacing={1} alignItems="center">
           {headerExtra}
-          <IconButton
-            onClick={handleClose}
-            disabled={isLoading || disableClose}
-            sx={{
-              color: theme.palette.text.disabled,
-              transition: 'all 0.2s',
-              '&:hover': {
-                bgcolor: alpha(theme.palette.error.main, 0.08),
-                color: theme.palette.error.main,
-                transform: 'rotate(90deg)',
-              }
-            }}
-          >
+          <IconButton onClick={handleCloseRequest} disabled={!canClose} sx={styles.closeButton}>
             <CloseIcon fontSize="small" />
           </IconButton>
         </Stack>
@@ -189,31 +203,26 @@ export const BaseModal: React.FC<BaseModalProps> = ({
 
       <Divider sx={{ opacity: 0.6 }} />
 
+      {/* CONTENT */}
       <DialogContent sx={{ p: { xs: 3, md: 4 }, bgcolor: 'background.default' }}>
         {children}
       </DialogContent>
 
       <Divider sx={{ opacity: 0.6 }} />
 
-      <DialogActions sx={{ p: 3, bgcolor: alpha(theme.palette.secondary.light, 0.1), gap: 1.5 }}>
-        {customActions ? (
-          customActions
-        ) : (
+      {/* ACTIONS */}
+      <DialogActions sx={styles.actions}>
+        {customActions || (
           <>
             {!hideCancelButton && (
               <Button
-                onClick={handleClose}
+                onClick={handleCloseRequest}
                 variant="text"
                 color="inherit"
-                disabled={isLoading || disableClose}
-                sx={{
-                  fontWeight: 700,
-                  px: 3,
-                  color: 'text.secondary',
-                  '&:hover': { bgcolor: alpha(theme.palette.action.active, 0.05) }
-                }}
+                disabled={!canClose}
+                sx={{ fontWeight: 700, px: 3, color: 'text.secondary' }}
               >
-                {cancelText}
+                {finalCancelText}
               </Button>
             )}
 

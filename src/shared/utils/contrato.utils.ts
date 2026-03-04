@@ -28,7 +28,7 @@ export const formatContratoDate = (dateString?: string): string => {
  */
 export const generateDownloadFileName = (contrato: ContratoFirmadoDto): string => {
   // Intentamos usar la fecha de firma, si no la de creación, o la actual
-  const fechaBase = contrato.fecha_firma || contrato.fecha_creacion || new Date().toISOString();
+  const fechaBase = contrato.fecha_firma || contrato.createdAt || new Date().toISOString();
   const fechaStr = new Date(fechaBase).toISOString().split('T')[0];
 
   return `contrato_${contrato.id}_${fechaStr}.pdf`;

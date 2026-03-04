@@ -5,7 +5,7 @@ import { Box, Paper, alpha, useTheme, Typography, Stack, LinearProgress, IconBut
 import { Business, Percent, Warning, MonetizationOn, Visibility, CheckCircle } from '@mui/icons-material';
 
 // Components
-import { DetalleCuotaModal } from './components/DetalleCuotaModal';
+import { DetalleCuotaModal } from './modal/DetalleCuotaModal';
 import { PageContainer } from '../../../../shared/components/layout/containers/PageContainer/PageContainer';
 import { PageHeader } from '../../../../shared/components/layout/headers/PageHeader';
 import { QueryHandler } from '../../../../shared/components/data-grid/QueryHandler/QueryHandler';

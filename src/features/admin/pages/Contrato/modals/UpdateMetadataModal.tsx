@@ -1,6 +1,4 @@
-// src/pages/Admin/Plantillas/components/modals/UpdateMetadataModal.tsx
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   TextField,
   MenuItem,
@@ -9,7 +7,7 @@ import {
   Chip,
   InputAdornment,
   useTheme,
-  alpha // ✅ Necesario para el estilo del scroll
+  alpha
 } from '@mui/material';
 import {
   EditNote as EditIcon,
@@ -18,9 +16,12 @@ import {
   Numbers as VersionIcon,
   Business as ProjectIcon,
 } from '@mui/icons-material';
-import type { ContratoPlantillaDto } from '../../../../../../core/types/dto/contrato-plantilla.dto';
-import BaseModal from '../../../../../../shared/components/domain/modals/BaseModal/BaseModal';
+import type { ContratoPlantillaDto } from '@/core/types/dto';
+import { BaseModal } from '@/shared/components/domain/modals';
 
+// ============================================================================
+// INTERFACES
+// ============================================================================
 interface ProjectOption {
   id: number;
   nombre_proyecto: string;
@@ -35,6 +36,9 @@ interface Props {
   proyectos: ProjectOption[];
 }
 
+// ============================================================================
+// COMPONENTE
+// ============================================================================
 const UpdateMetadataModal: React.FC<Props> = ({
   open,
   onClose,
@@ -43,14 +47,14 @@ const UpdateMetadataModal: React.FC<Props> = ({
   isLoading,
   proyectos,
 }) => {
-  const theme = useTheme(); // ✅ Hook para colores del scroll
+  const theme = useTheme();
 
-  // Estados locales
+  // --- Estados locales ---
   const [nombre, setNombre] = useState('');
   const [version, setVersion] = useState<number | string>(1);
   const [idProyecto, setIdProyecto] = useState<number | ''>('');
 
-  // Cargar datos
+  // --- Efecto: Sincronización de datos ---
   useEffect(() => {
     if (plantilla) {
       setNombre(plantilla.nombre_archivo);
@@ -59,7 +63,10 @@ const UpdateMetadataModal: React.FC<Props> = ({
     }
   }, [plantilla]);
 
+  // --- Manejadores ---
   const handleConfirm = async () => {
+    if (!plantilla) return;
+    
     await onSubmit({
       nombre_archivo: nombre,
       version: Number(version),
@@ -67,18 +74,45 @@ const UpdateMetadataModal: React.FC<Props> = ({
     });
   };
 
-  if (!plantilla) return null;
+  // --- Estilos Memorizados ---
+  const styles = useMemo(() => ({
+    input: { '& .MuiOutlinedInput-root': { borderRadius: 2 } },
+    idChip: { 
+      fontWeight: 800, 
+      borderRadius: 1.5, 
+      bgcolor: alpha(theme.palette.info.main, 0.05) 
+    },
+    alert: { 
+      borderRadius: 2,
+      bgcolor: alpha(theme.palette.info.main, 0.05),
+      border: `1px solid ${alpha(theme.palette.info.main, 0.1)}`,
+      '& .MuiAlert-icon': { color: 'info.main' }
+    },
+    selectMenu: {
+      PaperProps: {
+        sx: {
+          maxHeight: 250,
+          '&::-webkit-scrollbar': { width: '6px' },
+          '&::-webkit-scrollbar-thumb': {
+            backgroundColor: alpha(theme.palette.divider, 0.2),
+            borderRadius: '10px',
+          },
+        }
+      }
+    }
+  }), [theme]);
 
-  const commonInputSx = { '& .MuiOutlinedInput-root': { borderRadius: 2 } };
+  // Guardrail para evitar renderizado si no hay plantilla cargada
+  if (!plantilla) return null;
 
   return (
     <BaseModal
       open={open}
       onClose={onClose}
-      title="Editar Datos"
-      subtitle="Modificar metadatos de la plantilla"
+      title="Editar Metadatos"
+      subtitle="Actualizar información de la plantilla"
       icon={<EditIcon />}
-      headerColor="primary"
+      headerColor="info"
       confirmText="Guardar Cambios"
       onConfirm={handleConfirm}
       isLoading={isLoading}
@@ -90,12 +124,13 @@ const UpdateMetadataModal: React.FC<Props> = ({
           label={`ID: ${plantilla.id}`}
           size="small"
           variant="outlined"
-          sx={{ fontWeight: 700, borderRadius: 1.5, borderColor: 'divider' }}
+          color="info"
+          sx={styles.idChip}
         />
       }
     >
       <Stack spacing={3}>
-        {/* Nombre del Archivo */}
+        {/* Campo: Nombre del Archivo */}
         <TextField
           label="Nombre del Archivo"
           fullWidth
@@ -103,35 +138,36 @@ const UpdateMetadataModal: React.FC<Props> = ({
           value={nombre}
           onChange={(e) => setNombre(e.target.value)}
           disabled={isLoading}
-          sx={commonInputSx}
+          sx={styles.input}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <NameIcon color="action" />
+                <NameIcon color="action" fontSize="small" />
               </InputAdornment>
             ),
           }}
         />
 
         {/* Fila: Versión y Proyecto */}
-        <Stack direction="row" spacing={2}>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
           <TextField
             label="Versión"
             type="number"
             required
-            sx={{ width: '140px', ...commonInputSx }}
+            sx={{ width: { xs: '100%', sm: '140px' }, ...styles.input }}
             value={version}
             onChange={(e) => setVersion(e.target.value)}
             disabled={isLoading}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <VersionIcon color="action" />
+                  <VersionIcon color="action" fontSize="small" />
                 </InputAdornment>
               ),
               inputProps: { min: 1, step: 0.1 },
             }}
           />
+
           <TextField
             select
             label="Proyecto Asignado"
@@ -139,31 +175,14 @@ const UpdateMetadataModal: React.FC<Props> = ({
             value={idProyecto}
             onChange={(e) => setIdProyecto(e.target.value === '' ? '' : Number(e.target.value))}
             disabled={isLoading}
-            sx={commonInputSx}
+            sx={styles.input}
+            SelectProps={{ MenuProps: styles.selectMenu }}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <ProjectIcon color="action" />
+                  <ProjectIcon color="action" fontSize="small" />
                 </InputAdornment>
               ),
-            }}
-            // ✅ APLICAMOS EL ESTILO DE SCROLL DE UI ESTANDARIZADA
-            SelectProps={{
-              MenuProps: {
-                PaperProps: {
-                  sx: {
-                    maxHeight: 300,
-                    '&::-webkit-scrollbar': { width: '8px' },
-                    '&::-webkit-scrollbar-thumb': {
-                      backgroundColor: alpha(theme.palette.primary.main, 0.2),
-                      borderRadius: '4px',
-                    },
-                    '&::-webkit-scrollbar-track': {
-                      backgroundColor: 'transparent',
-                    }
-                  }
-                }
-              }
             }}
           >
             <MenuItem value="">
@@ -177,9 +196,9 @@ const UpdateMetadataModal: React.FC<Props> = ({
           </TextField>
         </Stack>
 
-        {/* Aviso Informativo */}
-        <Alert severity="info" variant="outlined" sx={{ borderRadius: 2 }}>
-          Esta acción solo actualiza la información en la base de datos, no modifica el archivo PDF físico.
+        {/* Alerta de contexto */}
+        <Alert severity="info" variant="standard" sx={styles.alert}>
+          Esta edición <strong>no afecta el contenido del PDF</strong>, únicamente actualiza su identificación y clasificación en el sistema.
         </Alert>
       </Stack>
     </BaseModal>

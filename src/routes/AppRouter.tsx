@@ -5,7 +5,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 
 // Guards
 import { ROUTES } from '.';
-import ProtectedRoute from './ProtectedRoute/ProtectedRoute';
+import ProtectedRoute from './ProtectedRoute';
 
 // ============ LAZY LOADING ============
 
@@ -59,7 +59,7 @@ const AdminLotePagos = lazy(() => import('@/features/admin/pages/Lotes/AdminLote
 const AdminPujas = lazy(() => import('@/features/admin/pages/Pujas/AdminPujas'));
 const AdminPlantillas = lazy(() => import('@/features/admin/pages/Contrato/AdminPlantillas'));
 const AdminContratosFirmados = lazy(() => import('@/features/admin/pages/Contrato/AdminContratosFirmados'));
-const AdminPagos = lazy(() => import('@/features/admin/pages/Finanzas/Pagos/AdminPagos'));
+
 const AdminTransacciones = lazy(() => import('@/features/admin/pages/Finanzas/Transacciones/AdminTransacciones'));
 const AdminResumenesCuenta = lazy(() => import('@/features/admin/pages/Finanzas/ResumenesCuenta/AdminResumenesCuenta'));
 
@@ -141,7 +141,7 @@ const AppRouter = () => {
           <Route path="pujas" element={<AdminPujas />} />
           <Route path="plantillas" element={<AdminPlantillas />} />
           <Route path="firmados" element={<AdminContratosFirmados />} />
-          <Route path="pagos" element={<AdminPagos />} />
+
           <Route path="transacciones" element={<AdminTransacciones />} />
           <Route path="resumenes" element={<AdminResumenesCuenta />} />
         </Route>

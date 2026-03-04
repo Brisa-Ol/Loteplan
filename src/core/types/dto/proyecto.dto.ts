@@ -91,7 +91,7 @@ export interface ProyectoDto extends BaseDTO {
   fecha_inicio: string;
   fecha_cierre: string;
   fecha_inicio_proceso?: string; // ✅ DATEONLY en Back
-  meses_restantes?: number;      // ✅ Integer en Back
+  meses_restantes: number;      // ✅ Integer en Back
   
   // Configuración
   pack_de_lotes: boolean; // 👈 Tu campo crítico del modelo

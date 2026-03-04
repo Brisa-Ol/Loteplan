@@ -1,5 +1,43 @@
-import { Alert, Box, CircularProgress, Skeleton, Stack, Typography } from '@mui/material';
+import { Alert, Box, CircularProgress, Skeleton, Stack, Typography, Paper, TableContainer, Table, TableHead, TableRow, TableCell, TableBody } from '@mui/material';
 import React from 'react';
+
+// ✅ SKELETON PARA TABLAS (Admin)
+export const TableSkeleton: React.FC<{ rows?: number }> = ({ rows = 5 }) => (
+  <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+    <Table>
+      <TableHead sx={{ bgcolor: 'action.hover' }}>
+        <TableRow>
+          {[...Array(5)].map((_, i) => (
+            <TableCell key={i}><Skeleton variant="text" width="80%" height={25} /></TableCell>
+          ))}
+        </TableRow>
+      </TableHead>
+      <TableBody>
+        {[...Array(rows)].map((_, i) => (
+          <TableRow key={i}>
+            {[...Array(5)].map((_, j) => (
+              <TableCell key={j}><Skeleton variant="text" width="60%" /></TableCell>
+            ))}
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  </TableContainer>
+);
+
+// ✅ tu ProjectCardSkeleton (Inversores)
+export const ProjectCardSkeleton: React.FC = () => (
+  <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
+    <Skeleton variant="rectangular" height={180} sx={{ borderRadius: 2, mb: 2 }} animation="wave" />
+    <Skeleton variant="text" height={30} width="80%" sx={{ mb: 1 }} animation="wave" />
+    <Skeleton variant="text" height={20} width="100%" animation="wave" />
+    <Skeleton variant="text" height={20} width="60%" sx={{ mb: 2 }} animation="wave" />
+    <Stack direction="row" justifyContent="space-between">
+      <Skeleton variant="circular" width={30} height={30} />
+      <Skeleton variant="rectangular" width={100} height={30} sx={{ borderRadius: 1 }} />
+    </Stack>
+  </Box>
+);
 
 interface QueryHandlerProps {
   isLoading: boolean;
@@ -9,160 +47,64 @@ interface QueryHandlerProps {
   errorMessage?: string;
   noLoader?: boolean;
   fullHeight?: boolean;
-  // ✅ MEJORA 1: Opción para usar skeleton en lugar de spinner
   useSkeleton?: boolean;
   skeletonCount?: number;
+  // ✅ NUEVA MEJORA: Variante del skeleton
+  skeletonVariant?: 'card' | 'table';
 }
-
-// ✅ MEJORA 2: Componente Skeleton reutilizable para ProjectCard
-export const ProjectCardSkeleton: React.FC = () => (
-  <Box>
-    {/* Imagen */}
-    <Skeleton
-      variant="rectangular"
-      height={200}
-      sx={{ borderRadius: 2, mb: 2 }}
-      animation="wave"
-    />
-
-    {/* Título */}
-    <Skeleton
-      variant="text"
-      height={32}
-      width="90%"
-      sx={{ mb: 1 }}
-      animation="wave"
-    />
-
-    {/* Descripción (2 líneas) */}
-    <Skeleton
-      variant="text"
-      height={20}
-      width="100%"
-      animation="wave"
-    />
-    <Skeleton
-      variant="text"
-      height={20}
-      width="75%"
-      sx={{ mb: 2 }}
-      animation="wave"
-    />
-
-    {/* Barra de progreso o chips */}
-    <Skeleton
-      variant="rectangular"
-      height={40}
-      sx={{ borderRadius: 2, mb: 2 }}
-      animation="wave"
-    />
-
-    {/* Precio y botón */}
-    <Stack direction="row" justifyContent="space-between" alignItems="center">
-      <Skeleton variant="text" width={100} height={32} animation="wave" />
-      <Skeleton variant="text" width={80} height={32} animation="wave" />
-    </Stack>
-
-    {/* Botón CTA */}
-    <Skeleton
-      variant="rectangular"
-      height={42}
-      sx={{ borderRadius: 25, mt: 2 }}
-      animation="wave"
-    />
-  </Box>
-);
 
 export const QueryHandler: React.FC<QueryHandlerProps> = ({
   isLoading,
   error,
   children,
-  loadingMessage = "Cargando...",
+  loadingMessage = "Cargando datos...",
   errorMessage,
   noLoader = false,
   fullHeight = false,
   useSkeleton = false,
   skeletonCount = 6,
+  skeletonVariant = 'card'
 }) => {
 
-  // --- 1. Estado de Carga ---
   if (isLoading) {
     if (noLoader) return null;
 
-    // ✅ MEJORA 3: Skeleton loading para mejor UX
     if (useSkeleton) {
+      if (skeletonVariant === 'table') return <TableSkeleton rows={skeletonCount} />;
+      
       return (
-        <Box
-          sx={{
-            display: "grid",
-            gridTemplateColumns: {
-              xs: "1fr",
-              sm: "repeat(2, 1fr)",
-              md: "repeat(3, 1fr)"
-            },
-            gap: 4,
-            width: "100%",
-            px: { xs: 2, md: 0 }
-          }}
-        >
-          {[...Array(skeletonCount)].map((_, index) => (
-            <ProjectCardSkeleton key={index} />
-          ))}
+        <Box sx={{
+          display: "grid",
+          gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", md: "repeat(3, 1fr)" },
+          gap: 3, width: "100%"
+        }}>
+          {[...Array(skeletonCount)].map((_, index) => <ProjectCardSkeleton key={index} />)}
         </Box>
       );
     }
 
-    // Spinner clásico (fallback)
     return (
-      <Box
-        sx={{
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          alignItems: "center",
-          minHeight: fullHeight
-            ? "100vh"
-            : { xs: "40vh", sm: "50vh", md: "60vh" },
-          px: { xs: 2, sm: 3 },
-        }}
-      >
-        <CircularProgress size={48} />
-        <Typography
-          variant="body2"
-          sx={{
-            mt: 3,
-            color: "text.secondary",
-            fontSize: { xs: "0.875rem", sm: "1rem" }
-          }}
-        >
+      <Box sx={{
+        display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center",
+        minHeight: fullHeight ? "100vh" : "40vh",
+      }}>
+        <CircularProgress size={40} thickness={4} />
+        <Typography variant="body2" sx={{ mt: 2, color: "text.secondary", fontWeight: 500 }}>
           {loadingMessage}
         </Typography>
       </Box>
     );
   }
 
-  // --- 2. Estado de Error ---
   if (error) {
     return (
-      <Box sx={{
-        textAlign: "center",
-        mt: { xs: 2, sm: 4 },
-        px: { xs: 2, sm: 0 },
-        maxWidth: "600px",
-        mx: "auto"
-      }}>
-        <Alert
-          severity="error"
-          sx={{
-            fontSize: { xs: "0.875rem", sm: "1rem" }
-          }}
-        >
-          {errorMessage || error.message || "Ocurrió un error al cargar los datos."}
+      <Box sx={{ py: 4, px: 2, maxWidth: 600, mx: "auto" }}>
+        <Alert severity="error" variant="filled" sx={{ borderRadius: 2 }}>
+          {errorMessage || error.message || "No se pudieron cargar los datos."}
         </Alert>
       </Box>
     );
   }
 
-  // --- 3. Éxito ---
   return <>{children}</>;
 };

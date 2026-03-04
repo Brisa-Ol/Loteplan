@@ -1,27 +1,12 @@
+import UsuarioService from '@/core/api/services/usuario.service';
 import { useAuth } from '@/core/context';
-import type { CreateUsuarioDto, UpdateUserAdminDto, UsuarioDto } from '@/core/types/dto';
 import { useConfirmDialog, useModal, useSnackbar } from '@/shared/hooks';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useSortedData } from '../useSortedData';
-import UsuarioService from '@/core/api/services/usuario.service';
 
+import type { CreateUsuarioDto, UpdateUserAdminDto, UsuarioDto } from '@/core/types/dto/usuario.dto';
 
-// ============================================================================
-// HOOK DE DEBOUNCE OPTIMIZADO
-// ============================================================================
-function useDebouncedValue<T>(value: T, delay: number = 300): T {
-  const [debouncedValue, setDebouncedValue] = useState<T>(value);
-  useEffect(() => {
-    const handler = setTimeout(() => setDebouncedValue(value), delay);
-    return () => clearTimeout(handler);
-  }, [value, delay]);
-  return debouncedValue;
-}
-
-// ============================================================================
-// HOOK PRINCIPAL
-// ============================================================================
 export const useAdminUsuarios = () => {
   const queryClient = useQueryClient();
   const { user: currentUser } = useAuth();
@@ -30,37 +15,25 @@ export const useAdminUsuarios = () => {
   // --- ESTADOS ---
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [editingUser, setEditingUser] = useState<UsuarioDto | null>(null);
-  const debouncedSearchTerm = useDebouncedValue(searchTerm, 300);
 
-  // --- MODALES ---
+  // CONTROLADORES DE MODALES
   const createModal = useModal();
   const editModal = useModal();
+  const detailModal = useModal(); // ✅ NUEVO: Controlador para el detalle
   const confirmDialog = useConfirmDialog();
 
-  // --- QUERY ---
+  // --- DATA FETCHING ---
   const { data: usuariosRaw = [], isLoading, error } = useQuery({
     queryKey: ['adminUsuarios'],
     queryFn: async () => (await UsuarioService.findAll()).data,
-    staleTime: 30000,
-    gcTime: 300000,
   });
 
   const { sortedData: usuariosOrdenados, highlightedId, triggerHighlight } = useSortedData(usuariosRaw);
 
-  // --- HELPERS PARA MUTACIONES ---
-  const setupOptimistic = async () => {
-    await queryClient.cancelQueries({ queryKey: ['adminUsuarios'] });
-    return queryClient.getQueryData<UsuarioDto[]>(['adminUsuarios']);
-  };
-
-  const rollbackOptimistic = (context: any) => {
-    if (context?.previousUsuarios) {
-      queryClient.setQueryData(['adminUsuarios'], context.previousUsuarios);
-    }
-  };
-
-  // --- MUTACIONES ---
+  // --- MUTACIONES (IGUALES) ---
   const createMutation = useMutation({
     mutationFn: (data: CreateUsuarioDto) => UsuarioService.create(data),
     onSuccess: (res) => {
@@ -69,113 +42,74 @@ export const useAdminUsuarios = () => {
       showSuccess('Usuario creado exitosamente');
       if (res.data?.id) triggerHighlight(res.data.id);
     },
-    onError: (err: any) => showError(err.response?.data?.message || 'Error al crear usuario')
+    onError: (err: any) => showError(err.response?.data?.message || 'Error al crear')
   });
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: number, data: UpdateUserAdminDto }) => UsuarioService.update(id, data),
-    onMutate: setupOptimistic,
-    onError: (err: any, _, ctx) => {
-      rollbackOptimistic(ctx);
-      showError(err.response?.data?.message || 'Error al actualizar usuario');
-    },
-    onSuccess: (_, vars) => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['adminUsuarios'] });
       editModal.close();
       setEditingUser(null);
-      showSuccess('Usuario actualizado correctamente');
-      triggerHighlight(vars.id);
-    }
+      showSuccess('Usuario actualizado');
+      triggerHighlight(variables.id);
+    },
+    onError: (err: any) => showError(err.response?.data?.message || 'Error al actualizar')
   });
 
   const toggleStatusMutation = useMutation({
     mutationFn: async (user: UsuarioDto) =>
-      user.activo
-        ? UsuarioService.update(user.id, { activo: false })
-        : UsuarioService.reactivateAccount(user.id),
-    onMutate: setupOptimistic,
-    onError: (err: any, _, ctx) => {
-      rollbackOptimistic(ctx);
-      confirmDialog.close();
-      showError(err.response?.data?.message || 'Error al cambiar estado');
-    },
+      user.activo ? UsuarioService.update(user.id, { activo: false }) : UsuarioService.reactivateAccount(user.id),
     onSuccess: (_, user) => {
       queryClient.invalidateQueries({ queryKey: ['adminUsuarios'] });
       confirmDialog.close();
-      showSuccess(`Usuario ${user.activo ? 'bloqueado' : 'reactivado'} correctamente`);
-      triggerHighlight(user.id);
+      showSuccess(`Cuenta ${user.activo ? 'desactivada' : 'activada'}`);
     }
   });
 
-  // --- FILTRADO Y KPIS ---
+  // --- FILTRADO (IGUAL) ---
   const filteredUsers = useMemo(() => {
-    const term = debouncedSearchTerm.toLowerCase();
+    const term = searchTerm.toLowerCase().trim();
     return usuariosOrdenados.filter(u => {
-      const matchesSearch = !term ||
-        [u.nombre_usuario, u.email, u.nombre, u.apellido]
-          .some(field => field?.toLowerCase().includes(term));
-      const matchesStatus =
-        filterStatus === 'all' ||
-        (filterStatus === 'active' ? u.activo : !u.activo);
-      return matchesSearch && matchesStatus;
+      const matchesSearch = !term || [u.nombre, u.apellido, u.email, u.nombre_usuario, u.dni].some(f => f?.toLowerCase().includes(term));
+      const matchesStatus = filterStatus === 'all' || (filterStatus === 'active' ? u.activo : !u.activo);
+      const userDate = (u.fecha_registro || u.createdAt || '').split('T')[0];
+      let matchesRange = true;
+      if (startDate && endDate) matchesRange = userDate >= startDate && userDate <= endDate;
+      else if (startDate) matchesRange = userDate >= startDate;
+      else if (endDate) matchesRange = userDate <= endDate;
+      return matchesSearch && matchesStatus && matchesRange;
     });
-  }, [usuariosOrdenados, debouncedSearchTerm, filterStatus]);
+  }, [usuariosOrdenados, searchTerm, filterStatus, startDate, endDate]);
 
-  const stats = useMemo(() => ({
-    total: usuariosRaw.length,
-    activos: usuariosRaw.filter(u => u.activo).length,
-    confirmados: usuariosRaw.filter(u => u.confirmado_email).length,
-    con2FA: usuariosRaw.filter(u => u.is_2fa_enabled).length
-  }), [usuariosRaw]);
-
-  // --- HANDLERS ---
-  const handleEditUser = useCallback((user: UsuarioDto) => {
-    setEditingUser(user);
-    editModal.open();
-  }, [editModal]);
-
-  const handleToggleStatusClick = useCallback((user: UsuarioDto) => {
-    if (user.id === currentUser?.id) {
-      return showError('No puedes bloquear tu propia cuenta.');
-    }
-    if (user.activo && user.rol === 'admin') {
-      return showError('No se puede bloquear a un administrador.');
-    }
-    confirmDialog.confirm('toggle_user_status', user);
-  }, [confirmDialog, currentUser, showError]);
-
-  // --- RETURN OPTIMIZADO ---
   return {
-    // Data & State
     users: filteredUsers,
-    stats,
-    isLoading,
-    error,
-    highlightedUserId: highlightedId,
-    currentUser, // ✅ AGREGADO
-
-    // Filters
-    searchTerm,
-    setSearchTerm,
-    filterStatus,
-    setFilterStatus,
-
-    // Edit State
-    editingUser,
-    setEditingUser,
-
-    // Modals
-    createModal, // ✅ AGREGADO
-    editModal, // ✅ AGREGADO
-    confirmDialog, // ✅ AGREGADO
-
-    // Mutations
-    createMutation,
-    updateMutation,
-    toggleStatusMutation, // ✅ AGREGADO
-
-    // Handlers
-    handleEditUser,
-    handleToggleStatusClick,
+    stats: {
+      total: usuariosRaw.length,
+      activos: usuariosRaw.filter(u => u.activo).length,
+      confirmados: usuariosRaw.filter(u => u.confirmado_email).length,
+      con2FA: usuariosRaw.filter(u => u.is_2fa_enabled).length
+    },
+    isLoading, error, highlightedUserId: highlightedId,
+    currentUser, searchTerm, setSearchTerm, filterStatus, setFilterStatus,
+    startDate, setStartDate, endDate, setEndDate,
+    editingUser, setEditingUser,
+    createModal, editModal, detailModal, confirmDialog, // ✅ detailModal exportado
+    createMutation, updateMutation, toggleStatusMutation,
+    
+    // HANDLERS
+    handleEditUser: (user: UsuarioDto) => {
+      setEditingUser(user);
+      editModal.open();
+    },
+    handleViewUser: (user: UsuarioDto) => { // ✅ NUEVO: Handler para ver detalle
+      setEditingUser(user);
+      detailModal.open();
+    },
+    handleToggleStatusClick: (user: UsuarioDto) => {
+      if (user.id === currentUser?.id) return showError('No puedes desactivar tu cuenta.');
+      confirmDialog.confirm('toggle_user_status', user);
+    },
+    clearFilters: () => { setSearchTerm(''); setFilterStatus('all'); setStartDate(''); setEndDate(''); }
   };
 };

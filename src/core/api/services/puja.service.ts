@@ -27,10 +27,6 @@ const PujaService = {
 
   /**
    * Obtiene el historial de pujas del usuario.
-   * 🔍 ASOCIACIONES BACKEND:
-   * - `puja.lote` (incluye `lote.proyectoLote`)
-   * - `puja.proyectoAsociado` (Alias definido en associations.js)
-   * - `puja.suscripcion`
    */
   getMyPujas: async (): Promise<AxiosResponse<PujaDto[]>> => {
     return await httpService.get(`${BASE_ENDPOINT}/mis_pujas`);
@@ -38,14 +34,27 @@ const PujaService = {
 
   /**
    * Obtiene una puja específica del usuario.
-   * Incluye relaciones completas: lote (con proyectoLote), proyectoAsociado y usuario.
    */
   getMyPujaById: async (id: number): Promise<AxiosResponse<PujaDto>> => {
     return await httpService.get(`${BASE_ENDPOINT}/mis_pujas/${id}`);
   },
 
-  cancelMyPuja: async (id: number): Promise<AxiosResponse<GenericResponseDto>> => {
-    return await httpService.delete(`${BASE_ENDPOINT}/mis_pujas/${id}`);
+  /**
+   * Retira (cancela) la puja activa del usuario y devuelve el token inmediatamente.
+   *
+   * ✅ RUTA ACTUALIZADA: DELETE /mis_pujas/:id/retirar
+   * (La ruta antigua DELETE /mis_pujas/:id fue reemplazada por esta nueva implementación
+   * que además devuelve el token al instante y recalcula la puja más alta del lote.)
+   *
+   * REGLAS DE NEGOCIO (backend):
+   * - La puja DEBE estar en estado 'activa'
+   * - La subasta del lote DEBE estar en estado 'activa'
+   * - El token se devuelve en el acto a la suscripción del usuario
+   *
+   * Respuesta: { success, message, data: { pujaId, loteId, tokenDevuelto } }
+   */
+  cancelMyPuja: async (id: number): Promise<AxiosResponse<{ success: boolean; message: string; data: { pujaId: number; loteId: number; tokenDevuelto: boolean } }>> => {
+    return await httpService.delete(`${BASE_ENDPOINT}/mis_pujas/${id}/retirar`);
   },
 
   getAllActive: async (): Promise<AxiosResponse<PujaDto[]>> => {
@@ -55,7 +64,6 @@ const PujaService = {
   /**
    * Verifica si el usuario tiene alguna puja ganadora y pagada en un proyecto específico.
    * ⚠️ IMPORTANTE: Necesario para validar si el usuario puede cancelar su suscripción.
-   * Backend: hasWonAndPaidBid
    */
   checkWonAndPaid: async (projectId: number): Promise<AxiosResponse<boolean>> => {
     return await httpService.get(`${BASE_ENDPOINT}/check_won_paid/proyecto/${projectId}`);
@@ -77,10 +85,6 @@ const PujaService = {
   // 👮 GESTIÓN ADMINISTRATIVA (ADMIN)
   // =================================================
 
-  /**
-   * Busca la puja más alta de un lote.
-   * 🔍 ASOCIACIÓN: Incluye `lote` y dentro `lote.proyectoLote` (no proyectoAsociado).
-   */
   getHighestBid: async (loteId: number): Promise<AxiosResponse<PujaDto>> => {
     return await httpService.get(`${BASE_ENDPOINT}/lote/${loteId}/highest`);
   },
@@ -89,10 +93,6 @@ const PujaService = {
     return await httpService.get(BASE_ENDPOINT);
   },
 
-  /**
-   * Ejecuta el cierre de subasta.
-   * El backend se encarga de liberar tokens (excepto Top 3).
-   */
   manageAuctionEnd: async (idLote: number, idGanador: number | null): Promise<AxiosResponse<GenericResponseDto>> => {
     return await httpService.post(`${BASE_ENDPOINT}/gestionar_finalizacion`, { 
       id_lote: idLote,
@@ -100,29 +100,16 @@ const PujaService = {
     });
   },
 
-  /**
-   * Cancela una puja ganadora manualmente.
-   * ✅ Ejecuta lógica de impago, devuelve token y procesa reasignación del lote.
-   */
   cancelarGanadoraAnticipada: async (id: number, motivo: string): Promise<AxiosResponse<GenericResponseDto>> => {
     return await httpService.post(`${BASE_ENDPOINT}/cancelar_puja_ganadora/${id}`, { 
         motivo_cancelacion: motivo 
     });
   },
 
-  /**
-   * Revierte el estado de 'ganadora_pagada' a 'ganadora_pendiente'.
-   * ⚠️ Útil para revertir transacciones o corregir errores administrativos.
-   * Backend: revertirPagoPujaGanadora
-   */
   revertWinnerPayment: async (id: number): Promise<AxiosResponse<GenericResponseDto>> => {
     return await httpService.post(`${BASE_ENDPOINT}/revertir_pago_ganadora/${id}`);
   },
 
-  /**
-   * Obtiene puja por ID con todas sus relaciones para el Admin.
-   * Incluye `proyectoAsociado` y `lote.proyectoLote`.
-   */
   getByIdAdmin: async (id: number): Promise<AxiosResponse<PujaDto>> => {
     return await httpService.get(`${BASE_ENDPOINT}/${id}`);
   },

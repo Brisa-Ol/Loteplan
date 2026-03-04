@@ -32,7 +32,7 @@ import { PageContainer } from '../../../../shared/components/layout/containers/P
 
 // Hooks y Componentes
 import { useConfirmDialog } from '../../../../shared/hooks/useConfirmDialog';
-import DeleteAccountModal from './components/DeleteAccountModal';
+import DeleteAccountModal from './modal/DeleteAccountModal';
 import SecuritySettings from './SecuritySettings';
 import type { UpdateUserMeDto } from '@/core/types/dto/usuario.dto';
 import useSnackbar from '@/shared/hooks/useSnackbar';

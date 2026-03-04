@@ -10,12 +10,13 @@ import {
   Avatar, Box, Chip, IconButton,
   MenuItem,
   Paper,
-  Stack, Tooltip, Typography, alpha, useTheme
+  Stack,
+  Typography, alpha, useTheme
 } from '@mui/material';
 import React, { useMemo } from 'react';
 
 // Componentes Shared
-import AdminPageHeader from '@/shared/components/admin/Adminpageheader';
+import { AdminPageHeader } from '@/shared/components/admin/Adminpageheader'; // ✅ Componente aplicado
 import AlertBanner from '@/shared/components/admin/Alertbanner';
 import MetricsGrid from '@/shared/components/admin/Metricsgrid';
 import { DataTable, type DataTableColumn } from '@/shared/components/data-grid/DataTable/DataTable';
@@ -29,12 +30,11 @@ import { FilterBar, FilterSearch, FilterSelect } from '@/shared/components/forms
 
 // Importaciones de Sub-componentes
 import CancelacionesTab from './components/CancelacionesTab';
-import DetalleSuscripcionModal from './components/DetalleSuscripcionModal';
+import DetalleSuscripcionModal from './modals/DetalleSuscripcionModal';
 
 // Hooks y tipos
 import type { SuscripcionDto } from '@/core/types/dto/suscripcion.dto';
 import { useAdminSuscripciones } from '../../hooks/finanzas/useAdminSuscripciones';
-
 
 // ============================================================================
 // SUB-COMPONENTE: UserCell
@@ -74,22 +74,23 @@ const UserCell = React.memo<{ suscripcion: SuscripcionDto; theme: any }>(
 const AdminSuscripciones: React.FC = () => {
   const logic = useAdminSuscripciones();
   const theme = useTheme();
+
   const proyectoMenuProps = {
     anchorOrigin: { vertical: 'bottom' as const, horizontal: 'left' as const },
     transformOrigin: { vertical: 'top' as const, horizontal: 'left' as const },
     disableScrollLock: true,
     PaperProps: {
       sx: {
-        mt: 1.4, // 🚀 Baja el menú para no tapar el label
+        mt: 1.4, 
         maxHeight: 300,
         borderRadius: '12px',
         minWidth: 280,
         boxShadow: '0px 4px 20px rgba(0,0,0,0.1)',
-        '& .MuiMenuItem-root': { fontSize: '0.85rem', py: 1 }, // 🚀 Letra más chica
+        '& .MuiMenuItem-root': { fontSize: '0.85rem', py: 1 },
       }
     }
-
   };
+
   const criticalAlerts = useMemo(() => {
     const alerts = [];
     if (logic.stats.tasaMorosidad > 15) {
@@ -97,7 +98,7 @@ const AdminSuscripciones: React.FC = () => {
         severity: 'error' as const,
         title: 'Morosidad Crítica',
         message: `La tasa de morosidad es del ${logic.stats.tasaMorosidad}% ($${Number(logic.stats.totalEnRiesgo).toLocaleString()} en riesgo).`,
-        action: { label: 'Ver Morosos', onClick: () => logic.setFilterStatus('inactivas') }, // Ajustar filtro si existe uno de morosos
+        action: { label: 'Ver Morosos', onClick: () => logic.setFilterStatus('inactivas') },
       });
     }
     return alerts;
@@ -113,60 +114,94 @@ const AdminSuscripciones: React.FC = () => {
       },
       {
         id: 'usuario',
-        label: 'Usuario / Inversor',
-        minWidth: 220,
+        label: 'Titular',
+        minWidth: 200,
         render: (s) => <UserCell suscripcion={s} theme={theme} />,
       },
       {
         id: 'proyecto',
-        label: 'Proyecto Asociado',
-        minWidth: 200,
+        label: 'Proyecto & Estado',
+        minWidth: 220,
         render: (s) => (
           <Box>
             <Typography variant="body2" fontWeight={700} color="primary.main" noWrap>
-              {s.proyectoAsociado?.nombre_proyecto || 'Cargando...'}
+              {s.proyectoAsociado?.nombre_proyecto || 'S/D'}
             </Typography>
-            <Typography variant="caption" color="text.secondary">ID: #{s.id_proyecto}</Typography>
+            <Stack direction="row" spacing={1} mt={0.5}>
+              <Chip
+                label={s.proyectoAsociado?.estado_proyecto?.toUpperCase()}
+                size="small"
+                variant="outlined"
+                color={s.proyectoAsociado?.estado_proyecto === 'En proceso' ? 'success' : 'default'}
+                sx={{ fontSize: '0.6rem', height: 18, fontWeight: 800 }}
+              />
+              <Typography variant="caption" color="text.disabled">
+                {s.proyectoAsociado?.suscripciones_actuales}/{s.proyectoAsociado?.obj_suscripciones} cupos
+              </Typography>
+            </Stack>
           </Box>
         ),
       },
-      // 🆕 NUEVA COLUMNA: Progreso y Tokens
       {
         id: 'progreso',
-        label: 'Estado del Plan',
+        label: 'Plan y Tokens',
+        minWidth: 160,
         align: 'center',
         render: (s) => (
-          <Stack alignItems="center">
-            <Chip
-              size="small"
-              icon={<Token sx={{ fontSize: '14px !important' }} />}
-              label={`${s.tokens_disponibles} Tokens`}
-              color="warning"
-              variant="outlined"
-              sx={{ fontWeight: 700, mb: 0.5, height: 20, fontSize: '0.65rem' }}
-            />
-            <Typography variant="caption" color="text.secondary" fontWeight={600}>
-              {s.meses_a_pagar} cuotas rest.
+          <Stack alignItems="center" spacing={0.5}>
+            <Stack direction="row" spacing={1}>
+              <Chip
+                size="small"
+                icon={<Token sx={{ fontSize: '14px !important' }} />}
+                label={`${s.tokens_disponibles} Tkn`} 
+                color={s.tokens_disponibles > 0 ? "warning" : "default"}
+                variant="filled"
+                sx={{ fontWeight: 800, height: 20, fontSize: '0.65rem' }}
+              />
+              <Chip
+                label={`${s.meses_a_pagar} cuotas`} 
+                size="small"
+                variant="outlined"
+                sx={{ fontWeight: 700, height: 20, fontSize: '0.65rem' }}
+              />
+            </Stack>
+            <Typography variant="caption" color="text.secondary">
+              Plazo total: {s.proyectoAsociado?.plazo_inversion} meses
             </Typography>
           </Stack>
         )
       },
-      // 🆕 COLUMNA ACTUALIZADA: Finanzas
       {
         id: 'finanzas',
-        label: 'Finanzas',
+        label: 'Saldos',
+        minWidth: 160,
         render: (s) => (
           <Box>
             <Typography variant="body2" fontWeight={800} sx={{ fontFamily: 'monospace' }}>
-              ${Number(s.monto_total_pagado || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+              Pagado: ${Number(s.monto_total_pagado).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
             </Typography>
             {Number(s.saldo_a_favor) > 0 && (
-              <Typography variant="caption" color="success.main" fontWeight={800} sx={{ display: 'block' }}>
-                + ${Number(s.saldo_a_favor).toLocaleString('es-AR')} a favor
+              <Typography variant="caption" color="success.main" fontWeight={800} display="block">
+                A favor: +${Number(s.saldo_a_favor).toLocaleString('es-AR')}
               </Typography>
             )}
           </Box>
         ),
+      },
+      {
+        id: 'auditoria',
+        label: 'Registro',
+        minWidth: 150,
+        render: (s) => (
+          <Box>
+            <Typography variant="caption" display="block" fontWeight={600} color="text.primary">
+              Alta: {new Date(s.createdAt).toLocaleDateString('es-AR')}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Hora: {new Date(s.updatedAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+            </Typography>
+          </Box>
+        )
       },
       {
         id: 'acciones',
@@ -174,17 +209,13 @@ const AdminSuscripciones: React.FC = () => {
         align: 'right',
         render: (s) => (
           <Stack direction="row" spacing={0.5} justifyContent="flex-end">
-            <Tooltip title="Ver Detalles y Cronograma">
-              <IconButton onClick={() => logic.handleVerDetalle(s)} size="small" sx={{ color: 'primary.main', bgcolor: alpha(theme.palette.primary.main, 0.05) }}>
-                <Visibility fontSize="small" />
-              </IconButton>
-            </Tooltip>
+            <IconButton onClick={() => logic.handleVerDetalle(s)} size="small" sx={{ color: 'primary.main', bgcolor: alpha(theme.palette.primary.main, 0.05) }}>
+              <Visibility fontSize="small" />
+            </IconButton>
             {s.activo && (
-              <Tooltip title="Dar de Baja / Cancelar">
-                <IconButton onClick={() => logic.handleCancelarClick(s)} disabled={logic.isCancelling} size="small" sx={{ color: 'error.main', bgcolor: alpha(theme.palette.error.main, 0.05) }}>
-                  <Cancel fontSize="small" />
-                </IconButton>
-              </Tooltip>
+              <IconButton onClick={() => logic.handleCancelarClick(s)} size="small" sx={{ color: 'error.main', bgcolor: alpha(theme.palette.error.main, 0.05) }}>
+                <Cancel fontSize="small" />
+              </IconButton>
             )}
           </Stack>
         ),
@@ -195,6 +226,7 @@ const AdminSuscripciones: React.FC = () => {
 
   return (
     <PageContainer maxWidth="xl" sx={{ py: 3 }}>
+      {/* ✅ HEADER ESTANDARIZADO APLICADO */}
       <AdminPageHeader
         title="Gestión de Planes de Ahorro"
         subtitle="Monitoreo de recaudación, morosidad y estados de planes"
@@ -224,7 +256,6 @@ const AdminSuscripciones: React.FC = () => {
 
       {logic.tabIndex === 0 ? (
         <Box>
-          {/* 🆕 SE AGREGÓ EL KPI DE MOROSIDAD (Cambiado a 4 columnas) */}
           <MetricsGrid columns={{ xs: 1, sm: 2, lg: 4 }}>
             <StatCard title="Total Registros" value={logic.stats.totalSuscripciones} icon={<Groups />} color="primary" loading={logic.isLoadingStats} />
             <StatCard title="Activas" value={logic.stats.totalActivas} icon={<CheckCircle />} color="success" loading={logic.isLoadingStats} />
@@ -244,7 +275,7 @@ const AdminSuscripciones: React.FC = () => {
               value={logic.filterProject}
               onChange={(e: any) => logic.setFilterProject(e.target.value)}
               SelectProps={{
-                MenuProps: proyectoMenuProps // 👈 Usamos la config con apertura inferior y letra chica
+                MenuProps: proyectoMenuProps 
               }}
             >
               <MenuItem value="all">Todos los proyectos</MenuItem>
@@ -259,8 +290,6 @@ const AdminSuscripciones: React.FC = () => {
                 ))
               }
             </FilterSelect>
-
-
           </FilterBar>
 
           <QueryHandler isLoading={logic.isLoading} error={logic.error as Error | null}>

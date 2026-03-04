@@ -31,13 +31,12 @@ import React, { useEffect, useRef, useState } from 'react';
 import ContratoFirmadoService from '@/core/api/services/contrato-firmado.service';
 import ContratoPlantillaService from '@/core/api/services/contrato-plantilla.service';
 import ImagenService from '@/core/api/services/imagen.service';
-import BaseModal from '@/shared/components/domain/modals/BaseModal/BaseModal';
-import PDFViewerMejorado from './PDFViewerMejorado';
+import { BaseModal } from '@/shared/components/domain/modals/BaseModal/BaseModal'; // ✅ Ajustado a exportación nombrada
+import PDFViewerMejorado from '../components/PDFViewerMejorado';
 
 // ✅ UTILS Y API CORE
 import httpService from '@/core/api/httpService';
 import { calculateFileHash } from '@/shared/utils';
-
 
 interface ModalFirmaContratoProps {
   open: boolean;

@@ -14,8 +14,7 @@ import imagenService from '@/core/api/services/imagen.service';
 import type { LoteDto } from '@/core/types/dto/lote.dto';
 import type { PujaDto } from '@/core/types/dto/puja.dto';
 
-
-import { AdminPageHeader } from '@/shared/components/admin/Adminpageheader';
+import { AdminPageHeader } from '@/shared/components/admin/Adminpageheader'; // ✅ Aplicado
 import AlertBanner from '@/shared/components/admin/Alertbanner';
 import MetricsGrid from '@/shared/components/admin/Metricsgrid';
 import { ViewModeToggle, type ViewMode } from '@/shared/components/admin/Viewmodetoggle';
@@ -27,7 +26,7 @@ import { FilterBar, FilterSearch } from '@/shared/components/forms/filters/Filte
 import { PageContainer } from '@/shared/components/layout/containers/PageContainer/PageContainer';
 
 import { useAdminPujas } from '../../hooks/lotes/useAdminPujas';
-import DetallePujaModal from './components/DetallePujaModal';
+import DetallePujaModal from './modal/DetallePujaModal';
 
 // ============================================================================
 // SUB-COMPONENTES (Podio y Card en Vivo)
@@ -102,7 +101,11 @@ const AdminPujas: React.FC = () => {
 
   return (
     <PageContainer maxWidth="xl" sx={{ py: 3 }}>
-      <AdminPageHeader title="Sala de Subastas (En Vivo)" subtitle="Monitoreo en tiempo real y adjudicación de lotes." />
+      {/* ✅ HEADER ESTANDARIZADO */}
+      <AdminPageHeader
+        title="Sala de Subastas"
+        subtitle="Monitoreo en tiempo real y adjudicación de lotes activos."
+      />
 
       {/* METRICS (Solo relevantes para la subasta en vivo) */}
       <MetricsGrid columns={{ xs: 1, sm: 2, lg: 3 }}>
@@ -152,7 +155,7 @@ const AdminPujas: React.FC = () => {
               },
               { id: 'precio', label: 'Oferta Actual', render: (l) => <Typography fontWeight={700} color="primary">${Number(logic.pujasPorLote[l.id]?.[0]?.monto_puja || l.precio_base).toLocaleString()}</Typography> },
               { id: 'pujas', label: 'Pujas', align: 'center', render: (l) => logic.pujasPorLote[l.id]?.length || 0 },
-              { id: 'acciones', label: '', align: 'right', render: (l) => <Button size="small" variant="contained" color="error" onClick={() => logic.handleFinalizarSubasta(l)}>Finalizar</Button> }
+              { id: 'acciones', label: '', align: 'right', render: (l) => <Button size="small" variant="contained" color="error" onClick={() => logic.handleFinalizarSubasta(l)} sx={{ fontWeight: 700 }}>Finalizar</Button> }
             ]}
             getRowKey={r => r.id}
             showInactiveToggle={false}

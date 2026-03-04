@@ -1,17 +1,13 @@
-import { ROUTES } from '@/routes';
-import { Lock, VerifiedUser } from '@mui/icons-material';
-import {
-  Box,
-  Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  Typography,
-  alpha, useTheme
-} from '@mui/material';
+// src/components/domain/modals/SecurityRequirementModal/SecurityRequirementModal.tsx
+// (o la ruta donde lo tengas ubicado)
+
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Typography, Stack } from '@mui/material';
+import { Lock, VerifiedUser } from '@mui/icons-material';
+
+import { ROUTES } from '@/routes';
+import { BaseModal } from '@/shared/components/domain/modals/BaseModal/BaseModal'; // ✅ Importación nombrada
 
 export type SecurityRequirementType = '2FA_MISSING' | 'KYC_MISSING' | null;
 
@@ -24,7 +20,6 @@ interface SecurityRequirementModalProps {
 export const SecurityRequirementModal: React.FC<SecurityRequirementModalProps> = ({
   open, type, onClose
 }) => {
-  const theme = useTheme();
   const navigate = useNavigate();
 
   if (!type) return null;
@@ -32,17 +27,19 @@ export const SecurityRequirementModal: React.FC<SecurityRequirementModalProps> =
   const config = {
     '2FA_MISSING': {
       title: 'Seguridad Requerida (2FA)',
-      icon: <Lock sx={{ fontSize: 60, color: 'warning.main' }} />,
+      icon: <Lock />,
+      color: 'warning' as const,
       description: 'Para realizar esta operación, debes activar la Autenticación de Dos Factores (2FA) en tu cuenta.',
       buttonText: 'Activar 2FA Ahora',
-      path: ROUTES.CLIENT.CUENTA.SEGURIDAD // Ajusta a tu ruta real
+      path: ROUTES.CLIENT.CUENTA.SEGURIDAD
     },
     'KYC_MISSING': {
-      title: 'Verificación de Identidad Requerida',
-      icon: <VerifiedUser sx={{ fontSize: 60, color: 'info.main' }} />,
+      title: 'Verificación Requerida',
+      icon: <VerifiedUser />,
+      color: 'info' as const,
       description: 'Por regulaciones de seguridad, debes completar y aprobar tu verificación de identidad (KYC) antes de operar.',
       buttonText: 'Ir a Verificación',
-      path: ROUTES.CLIENT.CUENTA.KYC // Ajusta a tu ruta real
+      path: ROUTES.CLIENT.CUENTA.KYC
     }
   };
 
@@ -54,48 +51,23 @@ export const SecurityRequirementModal: React.FC<SecurityRequirementModalProps> =
   };
 
   return (
-    <Dialog
+    <BaseModal
       open={open}
       onClose={onClose}
+      title={current.title}
+      icon={current.icon}
+      headerColor={current.color}
       maxWidth="xs"
-      PaperProps={{ sx: { borderRadius: 3, p: 1 } }}
+      confirmText={current.buttonText}
+      confirmButtonColor={current.color}
+      onConfirm={handleAction}
+      cancelText="Cancelar"
     >
-      <Box textAlign="center" mt={2}>
-        <Box
-          sx={{
-            mx: 'auto', mb: 2, width: 80, height: 80,
-            borderRadius: '50%',
-            bgcolor: alpha(type === '2FA_MISSING' ? theme.palette.warning.main : theme.palette.info.main, 0.1),
-            display: 'flex', alignItems: 'center', justifyContent: 'center'
-          }}
-        >
-          {current.icon}
-        </Box>
-      </Box>
-
-      <DialogTitle sx={{ textAlign: 'center', fontWeight: 700 }}>
-        {current.title}
-      </DialogTitle>
-
-      <DialogContent>
-        <Typography variant="body2" color="text.secondary" textAlign="center">
+      <Stack spacing={2} textAlign="center" py={1}>
+        <Typography variant="body1" color="text.secondary" fontWeight={500} lineHeight={1.6}>
           {current.description}
         </Typography>
-      </DialogContent>
-
-      <DialogActions sx={{ justifyContent: 'center', pb: 3, px: 3, flexDirection: 'column', gap: 1 }}>
-        <Button
-          variant="contained"
-          fullWidth
-          onClick={handleAction}
-          sx={{ borderRadius: 2, fontWeight: 700 }}
-        >
-          {current.buttonText}
-        </Button>
-        <Button onClick={onClose} color="inherit">
-          Cancelar
-        </Button>
-      </DialogActions>
-    </Dialog>
+      </Stack>
+    </BaseModal>
   );
 };

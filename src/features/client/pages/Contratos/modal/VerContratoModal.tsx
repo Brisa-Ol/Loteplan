@@ -1,17 +1,15 @@
 // src/components/Admin/Proyectos/Components/modals/VerContratoModal.tsx
 
-import React, { useState } from 'react';
-import { Box, CircularProgress, Alert, Button } from '@mui/material';
 import { Description as DescriptionIcon, Download } from '@mui/icons-material';
+import { Alert, Box, Button, CircularProgress } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
+import React, { useState } from 'react';
 
 import ContratoPlantillaService from '@/core/api/services/contrato-plantilla.service';
 import ImagenService from '@/core/api/services/imagen.service';
-import BaseModal from '@/shared/components/domain/modals/BaseModal/BaseModal';
-import PDFViewerMejorado from './PDFViewerMejorado';
+import { BaseModal } from '@/shared/components/domain/modals/BaseModal/BaseModal'; // ✅ Exportación nombrada
 import { downloadSecureFile } from '@/shared/utils';
-
-
+import PDFViewerMejorado from '../components/PDFViewerMejorado';
 
 interface Props {
   open: boolean;
@@ -58,26 +56,32 @@ export const VerContratoModal: React.FC<Props> = ({
       icon={<DescriptionIcon />}
       headerColor="primary"
       maxWidth="lg"
-      // Configuración de botones
-      confirmText="Cerrar"
-      onConfirm={onClose}
-      hideCancelButton
-      // ✅ AÑADIDO: Botón de descarga en el modal
-      customActions={
-        plantilla ? (
-          <Button
-            startIcon={downloading ? <CircularProgress size={20} color="inherit" /> : <Download />}
-            onClick={handleDownload}
-            color="primary"
-            variant="outlined"
-            disabled={downloading}
-          >
-            Descargar Modelo
-          </Button>
-        ) : undefined
-      }
       // Layout específico para PDF
       PaperProps={{ sx: { height: '85vh' } }}
+      // ✅ AÑADIDO: Agrupamos Cerrar y Descargar en customActions para no perder el botón de cierre
+      customActions={
+        <>
+          <Button
+            onClick={onClose}
+            color="inherit"
+            sx={{ fontWeight: 700, px: 3, color: 'text.secondary' }}
+          >
+            Cerrar
+          </Button>
+          {plantilla && (
+            <Button
+              startIcon={downloading ? <CircularProgress size={20} color="inherit" /> : <Download />}
+              onClick={handleDownload}
+              color="primary"
+              variant="contained"
+              disabled={downloading}
+              sx={{ fontWeight: 800, px: 3, borderRadius: 2 }}
+            >
+              {downloading ? 'Descargando...' : 'Descargar Modelo'}
+            </Button>
+          )}
+        </>
+      }
     >
       <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
 

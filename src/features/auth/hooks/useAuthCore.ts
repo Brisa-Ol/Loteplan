@@ -5,7 +5,6 @@ import { secureStorage } from '@/shared/utils/secureStorage';
 import type { LoginRequestDto, LoginResponseDto, RegisterRequestDto, UserDto } from '@/core/types/dto/auth.dto';
 import type { ApiError } from '@/core/api/httpService';
 
-// Servicios
 import UsuarioService from '@/core/api/services/usuario.service';
 import AuthService from '@/core/api/services/auth.service';
 import kycService from '@/core/api/services/kyc.service';
@@ -36,43 +35,27 @@ export const useAuthCore = (): UseAuthCoreReturn => {
     return apiError.message || 'Error desconocido en la operación';
   };
 
-  // 🚀 CARGA DE USUARIO + KYC (Combinados)
+  // ✅ loadUser — cerrado correctamente
   const loadUser = useCallback(async () => {
     const token = secureStorage.getToken();
 
-    // Si no hay token, cortamos la inicialización
     if (!token) {
       setIsInitializing(false);
       return;
     }
 
     try {
-      // 1. Obtenemos datos base del usuario
       const { data: userData } = await UsuarioService.getMe();
 
-      // Creamos una copia para mutarla con el estado KYC
       let fullUser: UserDto = { ...userData };
 
-      // 2. Si es CLIENTE, buscamos su estado de KYC
       if (userData.rol === 'cliente') {
         try {
-          // ✅ CORRECTO: El servicio ya devuelve la data limpia, no desestructuramos
           const kycData = await kycService.getStatus();
-
-          // Agregamos el estado al objeto de usuario
-          fullUser = {
-            ...userData,
-            estado_kyc: kycData.estado_verificacion
-          };
+          fullUser = { ...userData, estado_kyc: kycData.estado_verificacion };
         } catch (kycError) {
-          // Si falla (ej: 404 porque nunca inició), asumimos NO_INICIADO
           console.warn("No se pudo obtener estado KYC, asumiendo NO_INICIADO", kycError);
-
-          // ✅ TypeScript ya no se queja porque actualizamos UserDto en auth.dto.ts
-          fullUser = {
-            ...userData,
-            estado_kyc: 'NO_INICIADO'
-          };
+          fullUser = { ...userData, estado_kyc: 'NO_INICIADO' };
         }
       }
 
@@ -80,26 +63,29 @@ export const useAuthCore = (): UseAuthCoreReturn => {
 
     } catch (err) {
       console.warn('Sesión inválida o expirada', err);
-      // Si falla obtener el usuario base, limpiamos todo
       secureStorage.clearToken();
       setUser(null);
       queryClient.clear();
+
+      // ✅ Corrección: avisar al usuario si el token expiró al arrancar
+      if (!window.location.pathname.includes('/login')) {
+        sessionStorage.setItem('session_expired', 'true');
+        window.location.href = '/login';
+      }
     } finally {
       setIsInitializing(false);
     }
-  }, [queryClient]);
+  }, [queryClient]); // ✅ loadUser cierra aquí
 
-  // LOGIN
+  // ✅ login — separado de loadUser
   const login = useCallback(async (credentials: LoginRequestDto): Promise<LoginResponseDto> => {
     setIsLoading(true);
     setError(null);
     try {
       const { data } = await AuthService.login(credentials);
 
-      // Si es login exitoso directo (sin 2FA), guardamos sesión y cargamos datos
       if ('token' in data && !('is2FARequired' in data)) {
         secureStorage.setToken(data.token);
-        // Llamamos a loadUser para que traiga Usuario + KYC
         await loadUser();
       }
 
@@ -113,7 +99,7 @@ export const useAuthCore = (): UseAuthCoreReturn => {
     }
   }, [loadUser]);
 
-  // REGISTRO
+  // ✅ register
   const register = useCallback(async (data: RegisterRequestDto) => {
     setIsLoading(true);
     setError(null);
@@ -128,14 +114,19 @@ export const useAuthCore = (): UseAuthCoreReturn => {
     }
   }, []);
 
-  // LOGOUT (Hard Reload)
+  // ✅ logout — una sola vez, fuera de loadUser
   const logout = useCallback(() => {
     AuthService.logout().catch(console.error);
 
     secureStorage.clearToken();
-    sessionStorage.clear();
-    queryClient.clear();
 
+    const sessionExpiredFlag = sessionStorage.getItem('session_expired');
+    sessionStorage.clear();
+    if (sessionExpiredFlag) {
+      sessionStorage.setItem('session_expired', sessionExpiredFlag);
+    }
+
+    queryClient.clear();
     setUser(null);
     setError(null);
 

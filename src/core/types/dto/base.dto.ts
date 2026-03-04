@@ -2,7 +2,7 @@ export interface BaseDTO {
   id: number;
   activo: boolean;
   
-  // Sequelize casi siempre añade esto, es bueno tenerlos:
-  fecha_creacion: string;     // createdAt
-  fecha_actualizacion: string; // updatedAt
+  // Sincronizado con el JSON real del backend
+  createdAt?: string; 
+  updatedAt?: string; 
 }

@@ -1,11 +1,13 @@
-import React, { useCallback, useMemo, useState } from 'react';
+// src/features/client/pages/Lotes/ListaLotesProyecto.tsx
+
 import {
-  AccessTime, Apps, Block, EmojiEvents, Gavel, Lock
+  AccessTime, Apps, Block, EmojiEvents, Gavel, Lock,
 } from '@mui/icons-material';
 import {
-  Alert, Box, Button, Fade, Skeleton, Stack, Tab, Tabs, Typography, alpha, useTheme
+  Alert, Box, Button, Fade, Skeleton, Stack, Tab, Tabs, Typography, alpha, useTheme,
 } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
+import React, { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import ProyectoService from '@/core/api/services/proyecto.service';
@@ -17,7 +19,6 @@ import { ConfirmDialog } from '@/shared/components/domain/modals/ConfirmDialog/C
 import { useLotesProyecto } from '../../hooks/useLotesProyecto';
 import LoteCard from './components/LoteCard';
 import { PujarModal } from './modals/PujarModal';
-
 
 interface Props {
   idProyecto: number;
@@ -32,21 +33,18 @@ const getPesoEstado = (estado: string) => {
   }
 };
 
-const MemoizedLoteCard = React.memo(LoteCard, (prevProps, nextProps) => {
-  return (
-    prevProps.lote.id === nextProps.lote.id &&
-    prevProps.lote.estado_subasta === nextProps.lote.estado_subasta &&
-    prevProps.lote.precio_base === nextProps.lote.precio_base &&
-    prevProps.lote.monto_ganador_lote === nextProps.lote.monto_ganador_lote &&
-    prevProps.isSubscribed === nextProps.isSubscribed &&
-    prevProps.hasTokens === nextProps.hasTokens &&
-    prevProps.tokensDisponibles === nextProps.tokensDisponibles &&
-    prevProps.isLoadingSub === nextProps.isLoadingSub &&
-    prevProps.isAuthenticated === nextProps.isAuthenticated &&
-    (prevProps.lote.pujas?.length || 0) === (nextProps.lote.pujas?.length || 0)
-  );
-});
-
+const MemoizedLoteCard = React.memo(LoteCard, (prev, next) =>
+  prev.lote.id === next.lote.id &&
+  prev.lote.estado_subasta === next.lote.estado_subasta &&
+  prev.lote.precio_base === next.lote.precio_base &&
+  prev.lote.monto_ganador_lote === next.lote.monto_ganador_lote &&
+  prev.isSubscribed === next.isSubscribed &&
+  prev.hasTokens === next.hasTokens &&
+  prev.tokensDisponibles === next.tokensDisponibles &&
+  prev.isLoadingSub === next.isLoadingSub &&
+  prev.isAuthenticated === next.isAuthenticated &&
+  (prev.lote.pujas?.length || 0) === (next.lote.pujas?.length || 0),
+);
 MemoizedLoteCard.displayName = 'MemoizedLoteCard';
 
 export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
@@ -56,7 +54,6 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
 
   const [tabValue, setTabValue] = useState('todos');
 
-  // Query de Proyecto
   const { data: proyecto, isLoading: loadingProyecto } = useQuery<ProyectoDto>({
     queryKey: ['proyecto', idProyecto],
     queryFn: async () => (await ProyectoService.getByIdActive(idProyecto)).data,
@@ -66,22 +63,23 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
 
   const logic = useLotesProyecto(idProyecto, isAuthenticated);
 
-  // Filtrado y Ordenamiento
   const { filteredLotes, counts } = useMemo(() => {
     if (!logic.lotes) return { filteredLotes: [], counts: { todos: 0, activa: 0, pendiente: 0, finalizada: 0 } };
 
-    const counts = logic.lotes.reduce((acc, lote) => {
-      acc.todos++;
-      const estado = lote.estado_subasta as keyof typeof acc;
-      if (acc[estado] !== undefined) acc[estado]++;
-      return acc;
-    }, { todos: 0, activa: 0, pendiente: 0, finalizada: 0 });
+    const counts = logic.lotes.reduce(
+      (acc, lote) => {
+        acc.todos++;
+        const estado = lote.estado_subasta as keyof typeof acc;
+        if (acc[estado] !== undefined) acc[estado]++;
+        return acc;
+      },
+      { todos: 0, activa: 0, pendiente: 0, finalizada: 0 },
+    );
 
     let result = logic.lotes;
     if (tabValue !== 'todos') {
-      result = result.filter(l => l.estado_subasta === tabValue);
+      result = result.filter((l) => l.estado_subasta === tabValue);
     }
-
     if (tabValue === 'todos') {
       result = [...result].sort((a, b) => getPesoEstado(b.estado_subasta) - getPesoEstado(a.estado_subasta));
     }
@@ -89,32 +87,26 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
     return { filteredLotes: result, counts };
   }, [logic.lotes, tabValue]);
 
-  // Handlers
   const handleNavigate = useCallback((id: number) => {
-    const ruta = ROUTES.CLIENT.LOTES.DETALLE.replace(':id', String(id));
-    navigate(ruta);
+    navigate(ROUTES.CLIENT.LOTES.DETALLE.replace(':id', String(id)));
   }, [navigate]);
 
   const handlePujar = useCallback((lote: LoteDto) => {
     if (!isAuthenticated) {
-      navigate(ROUTES.LOGIN, {
-        state: { from: window.location.pathname },
-        replace: false
-      });
+      navigate(ROUTES.LOGIN, { state: { from: window.location.pathname }, replace: false });
       return;
     }
     logic.handleOpenPujar(lote);
   }, [isAuthenticated, logic, navigate]);
 
-  // Grid Styles
   const gridStyles = {
     display: 'grid',
     gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' },
     gap: 3,
-    alignItems: 'stretch'
+    alignItems: 'stretch',
   };
 
-  // --- RENDERS CONDICIONALES ---
+  // ── Renders condicionales ──────────────────────
 
   if (loadingProyecto) {
     return (
@@ -138,10 +130,16 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
   if (proyecto?.tipo_inversion === 'directo') {
     return (
       <Fade in timeout={500}>
-        <Box mt={{ xs: 2, md: 4 }} p={{ xs: 3, md: 5 }} textAlign="center" bgcolor="background.paper" borderRadius={4} border={`1px solid ${theme.palette.divider}`}>
+        <Box
+          mt={{ xs: 2, md: 4 }} p={{ xs: 3, md: 5 }} textAlign="center"
+          bgcolor="background.paper" borderRadius={4}
+          border={`1px solid ${theme.palette.divider}`}
+        >
           <Block sx={{ fontSize: 60, color: 'warning.main', mb: 2, opacity: 0.7 }} />
           <Typography variant="h6" fontWeight="bold" gutterBottom>Inventario No Disponible</Typography>
-          <Typography variant="body2" color="text.secondary" paragraph>Este es un proyecto de <strong>inversión directa</strong>. Los lotes forman parte del pack completo.</Typography>
+          <Typography variant="body2" color="text.secondary" paragraph>
+            Este es un proyecto de <strong>inversión directa</strong>. Los lotes forman parte del pack completo.
+          </Typography>
           <Button variant="outlined" onClick={() => navigate(ROUTES.PUBLIC.HOME)}>Volver a Proyectos</Button>
         </Box>
       </Fade>
@@ -156,11 +154,26 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
 
   return (
     <Box mt={{ xs: 3, md: 4 }}>
-      {/* Alertas Auth */}
+
+      {/* ✅ APLICACIÓN DEL PAGE HEADER */}
+
+
+      {/* Alertas de autenticación / suscripción */}
       {!isAuthenticated && (
-        <Alert severity="info" variant="outlined" icon={<Lock />} sx={{ mb: 3, borderRadius: 2, bgcolor: alpha(theme.palette.info.main, 0.02) }}>
-          <Typography variant="body2">Estás viendo el <strong>inventario público</strong>. Inicia sesión para participar.</Typography>
-          <Button size="small" variant="text" onClick={() => navigate(ROUTES.LOGIN)} sx={{ mt: 1, fontWeight: 700, textTransform: 'none' }}>Iniciar Sesión ahora</Button>
+        <Alert
+          severity="info" variant="outlined" icon={<Lock />}
+          sx={{ mb: 3, borderRadius: 2, bgcolor: alpha(theme.palette.info.main, 0.02) }}
+        >
+          <Typography variant="body2">
+            Estás viendo el <strong>inventario público</strong>. Inicia sesión para participar.
+          </Typography>
+          <Button
+            size="small" variant="text"
+            onClick={() => navigate(ROUTES.LOGIN)}
+            sx={{ mt: 1, fontWeight: 700, textTransform: 'none' }}
+          >
+            Iniciar Sesión ahora
+          </Button>
         </Alert>
       )}
 
@@ -171,7 +184,7 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
         </Alert>
       )}
 
-      {/* Tabs */}
+      {/* Tabs de filtro */}
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
         <Tabs value={tabValue} onChange={(_, v) => setTabValue(v)} variant="scrollable" scrollButtons="auto">
           <Tab value="todos" label={`Todos (${counts.todos})`} icon={<Apps fontSize="small" />} iconPosition="start" />
@@ -191,7 +204,6 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
                 lote={lote}
                 onNavigate={handleNavigate}
                 onPujar={handlePujar}
-                // ✅ CORRECCIÓN: Se eliminó onRemoveFav porque el hijo ya no la espera
                 isSubscribed={logic.isSubscribed}
                 hasTokens={logic.hasTokens}
                 tokensDisponibles={logic.tokensDisponibles}
@@ -207,8 +219,19 @@ export const ListaLotesProyecto: React.FC<Props> = ({ idProyecto }) => {
         </Box>
       )}
 
-      {logic.selectedLote && <PujarModal open={logic.pujarModal.isOpen} lote={logic.selectedLote} onClose={logic.closePujarModal} />}
-      <ConfirmDialog controller={logic.confirmDialog} onConfirm={logic.executeUnfav} isLoading={logic.unfavPending} />
+      {logic.selectedLote && (
+        <PujarModal
+          open={logic.pujarModal.isOpen}
+          lote={logic.selectedLote}
+          onClose={logic.closePujarModal}
+        />
+      )}
+
+      <ConfirmDialog
+        controller={logic.confirmDialog}
+        onConfirm={logic.executeUnfav}
+        isLoading={logic.unfavPending}
+      />
     </Box>
   );
 };

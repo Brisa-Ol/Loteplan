@@ -1,3 +1,5 @@
+// src/features/admin/pages/Finanzas/AdminResumenesCuenta.tsx
+
 import {
   AccessTime, AccountBalanceWallet, Assignment as AssignmentIcon,
   AttachMoney, BarChart as BarChartIcon,
@@ -27,13 +29,13 @@ import { StatCard, StatusBadge } from '@/shared/components/domain/cards/StatCard
 import { FilterBar, FilterSearch, FilterSelect } from '@/shared/components/forms/filters/FilterBar';
 import { PageContainer } from '@/shared/components/layout/containers/PageContainer/PageContainer';
 
-import AdminPageHeader from '@/shared/components/admin/Adminpageheader';
+import { AdminPageHeader } from '@/shared/components/admin/Adminpageheader'; // ✅ Ajustado a exportación nombrada
 import AlertBanner from '@/shared/components/admin/Alertbanner';
 import MetricsGrid from '@/shared/components/admin/Metricsgrid';
 import { ViewModeToggle, type ViewMode } from '@/shared/components/admin/Viewmodetoggle';
 
-import DetalleResumenModal from './modals/DetalleResumenModal';
 import { useAdminResumenes } from '@/features/admin/hooks/finanzas/useAdminResumenes';
+import DetalleResumenModal from './modals/DetalleResumenModal';
 
 // ============================================================================
 // SUB-COMPONENTE: ANALYTICS (Memoizado)
@@ -116,36 +118,25 @@ const AdminResumenesCuenta: React.FC = () => {
   const columns = useMemo<DataTableColumn<ResumenCuentaDto>[]>(() => [
     {
       id: 'inversor',
-      label: 'Inversor / Suscripción',
-      minWidth: 240,
+      label: 'Inversor / Contacto',
+      minWidth: 280, // Un poco más ancho para el email
       render: (resumen) => {
-        // 🆕 Extraemos la info del inversor
         const usuario = resumen.suscripcion?.usuario;
-        const nombreCompleto = usuario ? `${usuario.nombre} ${usuario.apellido}`.trim() : 'Usuario Desconocido';
-        const iniciales = usuario ? `${usuario.nombre.charAt(0)}${usuario.apellido.charAt(0)}`.toUpperCase() : '';
-
         return (
           <Stack direction="row" spacing={1.5} alignItems="center">
-            <Avatar 
-              sx={{ 
-                width: 38, height: 38, 
-                bgcolor: alpha(theme.palette.primary.main, 0.1), 
-                color: 'primary.main',
-                fontWeight: 800, fontSize: '0.9rem'
-              }}
-            >
-              {iniciales || <AssignmentIcon sx={{ fontSize: 18 }} />}
+            <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main', fontWeight: 800 }}>
+              {usuario ? usuario.nombre.charAt(0) : '?'}
             </Avatar>
-            <Box minWidth={0}> {/* minWidth 0 ayuda a que el noWrap funcione */}
-              <Typography variant="body2" fontWeight={800} color="text.primary" noWrap title={nombreCompleto}>
-                {nombreCompleto}
+            <Box minWidth={0}>
+              <Typography variant="body2" fontWeight={800} noWrap>
+                {usuario ? `${usuario.nombre} ${usuario.apellido}` : 'Desconocido'}
               </Typography>
-              <Typography variant="caption" color="text.secondary" noWrap display="block">
-                Suscripción #{resumen.id_suscripcion}
+              <Typography variant="caption" color="text.secondary" display="block" noWrap>
+                {usuario?.email || 'Sin email'}
               </Typography>
             </Box>
           </Stack>
-        )
+        );
       }
     },
     {
@@ -155,7 +146,7 @@ const AdminResumenesCuenta: React.FC = () => {
       render: (resumen) => {
         // 🆕 Extraemos el nombre del proyecto desde la relación, fallback al nombre guardado
         const nombreProyecto = resumen.suscripcion?.proyectoAsociado?.nombre_proyecto || resumen.nombre_proyecto;
-        
+
         return (
           <Box minWidth={0}>
             <Typography variant="body2" fontWeight={700} color="text.primary" noWrap title={nombreProyecto}>
@@ -171,38 +162,29 @@ const AdminResumenesCuenta: React.FC = () => {
     },
     {
       id: 'cuotas',
-      label: 'Progreso de Pago',
-      minWidth: 180,
+      label: 'Progreso y Deuda', // Combinamos progreso con monto de deuda
+      minWidth: 220,
       render: (resumen) => {
-        const isCompleted = resumen.porcentaje_pagado >= 100;
         const hasOverdue = resumen.cuotas_vencidas > 0;
+        // 🆕 Cálculo del monto total de deuda
+        const montoDeuda = resumen.cuotas_vencidas * resumen.detalle_cuota.valor_mensual_final;
 
         return (
-          <Stack spacing={0.8} sx={{ pr: 2 }}>
-            <Stack direction="row" justifyContent="space-between" alignItems="center">
-              <Typography variant="caption" fontWeight={800} color={isCompleted ? 'success.main' : 'text.primary'}>
-                {resumen.cuotas_pagadas} DE {resumen.meses_proyecto} CUOTAS
+          <Stack spacing={0.5}>
+            <Stack direction="row" justifyContent="space-between">
+              <Typography variant="caption" fontWeight={800}>
+                {resumen.cuotas_pagadas}/{resumen.meses_proyecto} CUOTAS
               </Typography>
               {hasOverdue && (
-                <Typography variant="caption" fontWeight={900} color="error.main" sx={{ fontSize: '0.65rem' }}>
-                  {resumen.cuotas_vencidas} VENC.
+                <Typography variant="caption" fontWeight={900} color="error.main">
+                  DEBE: ${montoDeuda.toLocaleString('es-AR')}
                 </Typography>
               )}
             </Stack>
-
             <LinearProgress
               variant="determinate"
-              value={Math.min(resumen.porcentaje_pagado, 100)}
-              sx={{
-                height: 6,
-                borderRadius: 3,
-                bgcolor: alpha(theme.palette.grey[400], 0.2),
-                '& .MuiLinearProgress-bar': {
-                  bgcolor: isCompleted
-                    ? theme.palette.success.main
-                    : hasOverdue ? theme.palette.error.main : theme.palette.primary.main
-                }
-              }}
+              value={resumen.porcentaje_pagado}
+              sx={{ height: 6, borderRadius: 3, bgcolor: alpha(theme.palette.grey[400], 0.2) }}
             />
           </Stack>
         );
@@ -213,8 +195,12 @@ const AdminResumenesCuenta: React.FC = () => {
       label: '%',
       align: 'center',
       render: (resumen) => (
-        <Typography variant="body2" fontWeight={800} color={resumen.porcentaje_pagado >= 100 ? 'success.main' : 'text.secondary'}>
-          {resumen.porcentaje_pagado.toFixed(0)}%
+        <Typography
+          variant="body2"
+          fontWeight={800}
+          color={resumen.porcentaje_pagado >= 100 ? 'success.main' : 'text.secondary'}
+        >
+          {resumen.porcentaje_pagado.toLocaleString('es-AR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%
         </Typography>
       )
     },
@@ -247,7 +233,10 @@ const AdminResumenesCuenta: React.FC = () => {
         <Stack direction="row" alignItems="center" spacing={0.5}>
           <AccountBalanceWallet sx={{ fontSize: 14, color: 'text.disabled' }} />
           <Typography variant="body2" fontWeight={700} color="text.primary" sx={{ fontFamily: 'monospace' }}>
-            ${resumen.detalle_cuota.valor_mensual_final.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+            ${resumen.detalle_cuota.valor_mensual_final.toLocaleString('es-AR', {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2
+            })}
           </Typography>
         </Stack>
       )
@@ -303,7 +292,10 @@ const AdminResumenesCuenta: React.FC = () => {
         />
         <StatCard
           title="Deuda Estimada"
-          value={`$${stats.deudaEstimada.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`}
+          value={`$${stats.deudaEstimada.toLocaleString('es-AR', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+          })}`}
           subtitle="Acumulado vencido"
           icon={<AttachMoney />}
           color="error"

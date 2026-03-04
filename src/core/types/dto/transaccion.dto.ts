@@ -1,19 +1,19 @@
 import type { BaseDTO } from "./base.dto";
 
-export type TipoTransaccion = 
-  | 'directo' 
-  | 'Puja' 
-  | 'pago_suscripcion_inicial' 
+export type TipoTransaccion =
+  | 'directo'
+  | 'Puja'
+  | 'pago_suscripcion_inicial'
   | 'mensual';
 
-export type EstadoTransaccion = 
-  | 'pendiente' 
-  | 'pagado' 
-  | 'fallido' 
-  | 'reembolsado' 
-  | 'expirado' 
-  | 'rechazado_proyecto_cerrado' 
-  | 'rechazado_por_capacidad' 
+export type EstadoTransaccion =
+  | 'pendiente'
+  | 'pagado'
+  | 'fallido'
+  | 'reembolsado'
+  | 'expirado'
+  | 'rechazado_proyecto_cerrado'
+  | 'rechazado_por_capacidad'
   | 'en_proceso'
   | 'revertido';
 
@@ -74,17 +74,17 @@ export interface TransaccionDto extends BaseDTO {
   tipo_transaccion: TipoTransaccion;
   monto: number | string;
   fecha_transaccion: string;
-  
+
   id_usuario: number;
   id_proyecto?: number | null;
-  
+
   // IDs Relacionales
   id_pago_mensual?: number | null;
   id_pago_pasarela?: number | null;
   id_inversion?: number | null;
   id_puja?: number | null;
   id_suscripcion?: number | null;
-  
+
   estado_transaccion: EstadoTransaccion;
   error_detalle?: string | null;
 

@@ -1,7 +1,7 @@
 // src/components/common/PageHeader/PageHeader.tsx
 
-import React from "react";
 import { Box, Typography } from "@mui/material";
+import React from "react";
 import { SectionTitle } from "../containers/SectionTitle/SectionTitle";
 
 interface PageHeaderProps {

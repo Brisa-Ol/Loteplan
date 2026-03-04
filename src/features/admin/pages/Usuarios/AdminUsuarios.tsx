@@ -1,32 +1,14 @@
-import {
-  AdminPanelSettings,
-  Block as BlockIcon,
-  CheckCircle,
-  Edit as EditIcon,
-  Group as GroupIcon,
-  MarkEmailRead,
-  Person,
-  PersonAdd,
-  Security,
-  PhonelinkLock as TwoFaIcon,
-  VerifiedUser as VerifiedUserIcon
+// src/features/admin/pages/Usuarios/AdminUsuarios.tsx
+
+import React, { useMemo } from 'react';
+import { 
+  CheckCircle, Group as GroupIcon, MarkEmailRead, 
+  PersonAdd, RestartAlt, Security, Visibility, Edit as EditIcon 
 } from '@mui/icons-material';
-import {
-  alpha,
-  Avatar,
-  Box,
-  Button,
-  Chip,
-  CircularProgress,
-  IconButton,
-  MenuItem,
-  Stack,
-  Switch,
-  Tooltip,
-  Typography,
-  useTheme
+import { 
+  alpha, Avatar, Box, Button, Chip, IconButton, 
+  MenuItem, Stack, TextField, Tooltip, Typography, Switch 
 } from '@mui/material';
-import React, { memo, useMemo } from 'react';
 
 import { AdminPageHeader } from '@/shared/components/admin/Adminpageheader';
 import MetricsGrid from '@/shared/components/admin/Metricsgrid';
@@ -39,259 +21,183 @@ import { PageContainer } from '@/shared/components/layout/containers/PageContain
 
 import CreateUserModal from './modals/CreateUserModal';
 import EditUserModal from './modals/EditUserModal';
+import ModalDetalleUsuario from './modals/ModalDetalleUsuario';
 
 import type { UsuarioDto } from '@/core/types/dto/usuario.dto';
 import { useAdminUsuarios } from '../../hooks/usuario/useAdminUsuarios';
 
-// ============================================================================
-// 1. SUB-COMPONENTES OPTIMIZADOS (Pequeños y Memoizados)
-// ============================================================================
-
-const SecurityBadges = memo<{ emailConfirmed: boolean; twoFaEnabled: boolean; isCurrentUser: boolean }>(
-  ({ emailConfirmed, twoFaEnabled, isCurrentUser }) => (
-    <Stack direction="row" spacing={0.5} alignItems="center">
-      {isCurrentUser && (
-        <Chip label="TÚ" size="small" color="primary" sx={{ height: 18, fontSize: '0.6rem', fontWeight: 900 }} />
-      )}
-      {emailConfirmed && (
-        <Tooltip title="Email Verificado">
-          <VerifiedUserIcon color="success" sx={{ fontSize: 16 }} />
-        </Tooltip>
-      )}
-      {twoFaEnabled && (
-        <Tooltip title="2FA Activo">
-          <TwoFaIcon color="info" sx={{ fontSize: 16 }} />
-        </Tooltip>
-      )}
-    </Stack>
-  )
-);
-SecurityBadges.displayName = 'SecurityBadges';
-
-// ============================================================================
-// 2. HOOK DE DEFINICIÓN DE COLUMNAS (Separa la config de la vista)
-// ============================================================================
-
 const useUserColumns = (logic: ReturnType<typeof useAdminUsuarios>) => {
-  const theme = useTheme();
-
   return useMemo<DataTableColumn<UsuarioDto>[]>(() => [
     {
-      id: 'id',
-      label: 'ID',
-      minWidth: 50,
-      render: (u) => <Typography variant="caption" color="text.secondary">#{u.id}</Typography>,
-    },
-    {
-      id: 'usuario',
-      label: 'Usuario',
-      minWidth: 230,
-      render: (user) => (
+      id: 'identidad',
+      label: 'Usuario / Identidad',
+      minWidth: 240,
+      cardPrimary: true, // Destacado en vista móvil
+      sortable: true,
+      render: (u) => (
         <Stack direction="row" alignItems="center" spacing={1.5}>
-          <Avatar
-            sx={{
-              width: 36, height: 36,
-              bgcolor: user.activo ? alpha(theme.palette.primary.main, 0.1) : alpha(theme.palette.grey[500], 0.1),
-              color: user.activo ? 'primary.main' : 'text.disabled',
-            }}
-          >
-            {user.nombre_usuario.charAt(0).toUpperCase()}
+          <Avatar sx={{ 
+            width: 38, height: 38, fontWeight: 800,
+            bgcolor: u.activo ? alpha('#CC6333', 0.1) : alpha('#666', 0.1),
+            color: u.activo ? '#CC6333' : '#999',
+          }}>
+            {u.nombre_usuario.charAt(0).toUpperCase()}
           </Avatar>
-          <Box minWidth={0} flex={1}>
-            <Stack direction="row" alignItems="center" spacing={0.5} mb={0.2}>
-              <Typography variant="body2" noWrap>{user.nombre_usuario}</Typography>
-              <SecurityBadges
-                emailConfirmed={user.confirmado_email}
-                twoFaEnabled={user.is_2fa_enabled}
-                isCurrentUser={user.id === logic.currentUser?.id}
-              />
-            </Stack>
-            <Typography variant="caption" color="text.secondary" noWrap>
-              {user.nombre} {user.apellido}
-            </Typography>
+          <Box>
+            <Typography variant="body2" fontWeight={700} noWrap>{u.nombre} {u.apellido}</Typography>
+            <Typography variant="caption" color="primary.main" display="block" sx={{ fontWeight: 600 }}>@{u.nombre_usuario}</Typography>
+            <Typography variant="caption" color="text.secondary">DNI: {u.dni}</Typography>
           </Box>
         </Stack>
       ),
     },
     {
-      id: 'email',
-      label: 'Email',
-      minWidth: 180,
-      hideOnMobile: true,
-      render: (u) => <Typography variant="body2" noWrap>{u.email}</Typography>,
-    },
-    {
-      id: 'rol',
-      label: 'Rol',
-      render: (user) => {
-        const isAdmin = user.rol === 'admin';
-        const color = isAdmin ? theme.palette.error : theme.palette.info;
-        return (
-          <Chip
-            icon={isAdmin ? <AdminPanelSettings sx={{ fontSize: '14px !important' }} /> : <Person sx={{ fontSize: '14px !important' }} />}
-            label={user.rol.toUpperCase()}
-            size="small"
-            sx={{
-              fontSize: '0.65rem',
-              bgcolor: alpha(color.main, 0.1),
-              color: color.main,
-              border: '1px solid',
-              borderColor: alpha(color.main, 0.2),
-            }}
-          />
-        );
-      },
-    },
-    {
-      id: 'acceso',
-      label: 'Estado',
-      align: 'center',
-      render: (user) => {
-        const isSelf = user.id === logic.currentUser?.id;
-        const isAdminAndActive = user.rol === 'admin' && user.activo;
-        const isProcessing = logic.toggleStatusMutation.isPending && logic.confirmDialog.data?.id === user.id;
-        const isDisabled = logic.toggleStatusMutation.isPending || isAdminAndActive || isSelf;
-
-        return (
-          <Stack direction="row" alignItems="center" spacing={1} justifyContent="center">
-            {isProcessing ? (
-              <CircularProgress size={20} color="inherit" />
-            ) : (
-              <Switch
-                checked={user.activo}
-                onChange={(e) => { e.stopPropagation(); logic.handleToggleStatusClick(user); }}
-                size="small"
-                disabled={isDisabled}
-                color="success"
-              />
-            )}
-            {!isProcessing && (
-              <Chip
-                label={user.activo ? 'ACTIVO' : 'BLOQUEADO'}
-                size="small"
-                variant={user.activo ? 'filled' : 'outlined'}
-                icon={user.activo ? <CheckCircle sx={{ fontSize: '12px !important' }} /> : <BlockIcon sx={{ fontSize: '12px !important' }} />}
-                color={user.activo ? 'success' : 'default'}
-                sx={{ fontSize: '0.6rem', opacity: isSelf ? 0.5 : 1 }}
-              />
-            )}
-          </Stack>
-        );
-      },
-    },
-    {
-      id: 'acciones',
-      label: 'Acciones',
-      align: 'right',
-      render: (user) => (
-        <Tooltip title="Editar Usuario">
-          <IconButton
-            onClick={(e) => { e.stopPropagation(); logic.handleEditUser(user); }}
-            size="small"
-            disabled={logic.toggleStatusMutation.isPending}
-            sx={{
-              color: 'text.secondary',
-              '&:hover': { color: 'primary.main', bgcolor: alpha(theme.palette.primary.main, 0.15) },
-            }}
-          >
-            <EditIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
+      id: 'email', // Usamos el ID real para que el sort funcione
+      label: 'Contacto',
+      minWidth: 200,
+      cardSecondary: true,
+      sortable: true,
+      render: (u) => (
+        <Box>
+          <Typography variant="body2" noWrap sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            {u.email}
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            Tel: {u.numero_telefono}
+          </Typography>
+        </Box>
       ),
     },
-  ], [theme, logic]); // Dependencias controladas
+    {
+      id: 'fecha_registro',
+      label: 'Registro',
+      minWidth: 120,
+      sortable: true,
+      hideOnMobile: true, // Limpia la tabla en tablets
+      render: (u) => (
+        <Typography variant="body2">
+          {new Date(u.fecha_registro || u.createdAt || '').toLocaleDateString('es-AR')}
+        </Typography>
+      ),
+    },
+    {
+      id: 'activo',
+      label: 'Estado',
+      align: 'center',
+      minWidth: 120,
+      render: (u) => (
+        <Stack direction="row" alignItems="center" spacing={1} justifyContent="center">
+          <Switch
+            checked={u.activo}
+            onChange={() => logic.handleToggleStatusClick(u)}
+            size="small"
+            disabled={u.rol === 'admin' || u.id === logic.currentUser?.id}
+            color="success"
+          />
+          <Chip 
+            label={u.activo ? 'ACTIVO' : 'INACTIVO'} 
+            size="small" 
+            variant={u.activo ? 'filled' : 'outlined'}
+            color={u.activo ? 'success' : 'default'}
+            sx={{ fontSize: '0.6rem', fontWeight: 800, width: 75 }}
+          />
+        </Stack>
+      ),
+    },
+    {
+  id: 'acciones',
+  label: 'Acciones', // Dejar vacío ayuda a que la columna no se estire por el texto del header
+  align: 'right',
+  minWidth: 80, // Un ancho fijo pequeño para los dos botones
+  render: (u) => (
+    <Stack 
+      direction="row" 
+      spacing={0.5} 
+      justifyContent="flex-end"
+      sx={{ width: 'fit-content', ml: 'auto' }} // Fuerza a que el contenedor no se estire
+    >
+      <Tooltip title="Ver Detalle">
+        <IconButton onClick={(e) => { e.stopPropagation(); logic.handleViewUser(u); }} size="small" color="info">
+          <Visibility fontSize="small" />
+        </IconButton>
+      </Tooltip>
+      <Tooltip title="Editar">
+        <IconButton onClick={(e) => { e.stopPropagation(); logic.handleEditUser(u); }} size="small">
+          <EditIcon fontSize="small" />
+        </IconButton>
+      </Tooltip>
+    </Stack>
+  ),
+},
+  ], [logic]);
 };
-
-// ============================================================================
-// 3. COMPONENTE PRINCIPAL
-// ============================================================================
 
 const AdminUsuarios: React.FC = () => {
   const logic = useAdminUsuarios();
   const columns = useUserColumns(logic);
 
-  // Stats calculadas
-  const statsConfig = useMemo(() => {
-    const adminCount = logic.users.filter((u) => u.rol === 'admin').length;
-    return [
-      { title: "Total Usuarios", value: logic.stats.total, icon: <GroupIcon />, color: "primary", sub: "Base de datos" },
-      { title: "Activos", value: logic.stats.activos, icon: <CheckCircle />, color: "success", sub: "Con acceso" },
-      { title: "Verificados", value: logic.stats.confirmados, icon: <MarkEmailRead />, color: "info", sub: "Email validado" },
-      { title: "Seguridad 2FA", value: logic.stats.con2FA, icon: <Security />, color: "warning", sub: "Capa extra" },
-      { title: "Administradores", value: adminCount, icon: <AdminPanelSettings />, color: "error", sub: "Rol elevado" },
-    ] as const;
-  }, [logic.stats, logic.users]);
-
   return (
     <PageContainer maxWidth="xl" sx={{ py: 3 }}>
-      {/* HEADER */}
       <AdminPageHeader
         title="Gestión de Usuarios"
-        subtitle="Control de accesos, roles y seguridad perimetral"
+        subtitle="Control de accesos y perfiles de inversores."
         action={
           <Button
             variant="contained"
             startIcon={<PersonAdd />}
             onClick={logic.createModal.open}
-            sx={{ whiteSpace: 'nowrap', fontWeight: 700 }}
+            sx={{ fontWeight: 800, px: 3, py: 1.2, borderRadius: 2 }}
           >
             Nuevo Usuario
           </Button>
         }
       />
 
-      {/* MÉTRICAS (Renderizado dinámico) */}
-      <MetricsGrid columns={{ xs: 1, sm: 2, lg: 5 }}>
-        {statsConfig.map((stat, index) => (
-          <StatCard
-            key={index}
-            title={stat.title}
-            value={stat.value}
-            icon={stat.icon}
-            color={stat.color as any}
-            loading={logic.isLoading}
-            subtitle={stat.sub}
-          />
-        ))}
+      <MetricsGrid columns={{ xs: 1, sm: 2, lg: 4 }} sx={{ mb: 4 }}>
+        <StatCard title="Total" value={logic.stats.total} icon={<GroupIcon />} color="primary" />
+        <StatCard title="Activos" value={logic.stats.activos} icon={<CheckCircle />} color="success" />
+        <StatCard title="KYC" value={logic.stats.confirmados} icon={<MarkEmailRead />} color="info" />
+        <StatCard title="2FA" value={logic.stats.con2FA} icon={<Security />} color="warning" />
       </MetricsGrid>
 
-      {/* BARRA DE FILTROS */}
       <FilterBar sx={{ mb: 3 }}>
-        <FilterSearch
-          placeholder="Buscar por nombre, email o usuario..."
-          value={logic.searchTerm}
-          onSearch={logic.setSearchTerm}
-          sx={{ flexGrow: 1 }}
-        />
-        <FilterSelect
-          label="Filtrar por Estado"
-          value={logic.filterStatus}
-          onChange={(e) => logic.setFilterStatus(e.target.value)}
-          sx={{ minWidth: 160 }}
-        >
-          <MenuItem value="all">Todos los estados</MenuItem>
-          <MenuItem value="active">Solo Activos</MenuItem>
-          <MenuItem value="inactive">Solo Inactivos</MenuItem>
-        </FilterSelect>
+        <Stack spacing={2} width="100%">
+          <FilterSearch 
+            placeholder="Buscar por DNI, nombre..." 
+            value={logic.searchTerm} 
+            onSearch={logic.setSearchTerm} 
+          />
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: '1.5fr 1fr 1fr 0.5fr' }, gap: 2 }}>
+            <FilterSelect 
+              label="Estado" 
+              value={logic.filterStatus} 
+              onChange={(e) => logic.setFilterStatus(e.target.value)}
+            >
+              <MenuItem value="all">Todos</MenuItem>
+              <MenuItem value="active">Activos</MenuItem>
+              <MenuItem value="inactive">Inactivos</MenuItem>
+            </FilterSelect>
+            <TextField type="date" label="Desde" value={logic.startDate} onChange={(e) => logic.setStartDate(e.target.value)} InputLabelProps={{ shrink: true }} size="small" />
+            <TextField type="date" label="Hasta" value={logic.endDate} onChange={(e) => logic.setEndDate(e.target.value)} InputLabelProps={{ shrink: true }} size="small" />
+            <Button startIcon={<RestartAlt />} onClick={logic.clearFilters}>Limpiar</Button>
+          </Box>
+        </Stack>
       </FilterBar>
 
-      {/* TABLA DE DATOS */}
       <QueryHandler isLoading={logic.isLoading} error={logic.error as Error}>
-        <DataTable
-          columns={columns}
-          data={logic.users}
-          getRowKey={(user) => user.id}
-          isRowActive={(user) => user.activo}
-          showInactiveToggle={false}
-          highlightedRowId={logic.highlightedUserId}
-          emptyMessage="No se encontraron usuarios."
+        <DataTable 
+          columns={columns} 
+          data={logic.users} 
+          getRowKey={(u) => u.id} 
           pagination
-          defaultRowsPerPage={10}
+          loading={logic.isLoading} // Conecta con el skeleton interno
+          isRowActive={(u) => u.activo} // Opacidad automática para inactivos
+          onRowClick={(u) => logic.handleViewUser(u)} // Click en fila para ver detalle
+          emptyMessage="No se encontraron usuarios con los filtros aplicados"
         />
       </QueryHandler>
 
-      {/* --- ZONA DE MODALES --- */}
-
+      {/* --- MODALES --- */}
       <CreateUserModal
         open={logic.createModal.isOpen}
         onClose={logic.createModal.close}
@@ -299,20 +205,32 @@ const AdminUsuarios: React.FC = () => {
         isLoading={logic.createMutation.isPending}
       />
 
+      <ModalDetalleUsuario
+        open={logic.detailModal.isOpen}
+        datosSeleccionados={logic.editingUser}
+        onClose={() => {
+          logic.detailModal.close();
+          logic.setEditingUser(null);
+        }}
+      />
+
       {logic.editingUser && (
         <EditUserModal
           open={logic.editModal.isOpen}
-          onClose={() => { logic.editModal.close(); logic.setEditingUser(null); }}
           user={logic.editingUser}
+          onClose={() => {
+            logic.editModal.close();
+            logic.setEditingUser(null);
+          }}
           onSubmit={(id, data) => logic.updateMutation.mutateAsync({ id, data })}
           isLoading={logic.updateMutation.isPending}
         />
       )}
 
-      <ConfirmDialog
-        controller={logic.confirmDialog}
-        onConfirm={() => logic.confirmDialog.data && logic.toggleStatusMutation.mutate(logic.confirmDialog.data)}
-        isLoading={logic.toggleStatusMutation.isPending}
+      <ConfirmDialog 
+        controller={logic.confirmDialog} 
+        onConfirm={() => logic.confirmDialog.data && logic.toggleStatusMutation.mutate(logic.confirmDialog.data)} 
+        isLoading={logic.toggleStatusMutation.isPending} 
       />
     </PageContainer>
   );

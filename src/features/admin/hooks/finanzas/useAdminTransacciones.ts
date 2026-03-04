@@ -1,3 +1,5 @@
+// src/features/admin/hooks/useAdminTransacciones.ts
+
 import { useCallback, useMemo, useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTheme } from '@mui/material';
@@ -6,6 +8,11 @@ import TransaccionService from '@/core/api/services/transaccion.service';
 import type { TransaccionDto } from '@/core/types/dto/transaccion.dto';
 import { useConfirmDialog, useModal, useSnackbar } from '@/shared/hooks';
 import { useSortedData } from '../useSortedData';
+
+// Extendemos el tipo para incluir la auditoría visual en el admin
+export type AdminTransaction = TransaccionDto & {
+  tieneDiscrepancia?: boolean;
+};
 
 // ============================================================================
 // DEBOUNCE HELPER
@@ -24,7 +31,7 @@ export const useAdminTransacciones = () => {
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useSnackbar();
 
-  // --- MODALES (Nivel Superior) ---
+  // --- MODALES ---
   const detailModal = useModal();
   const confirmDialog = useConfirmDialog();
 
@@ -36,67 +43,70 @@ export const useAdminTransacciones = () => {
   // --- ESTADOS UI Y FILTROS ---
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
-  const [filterType, setFilterType] = useState('all'); // 🆕 Filtro por Tipo (Inversión, Suscripción, etc.)
-  const [dateFrom, setDateFrom] = useState('');        // 🆕 Filtro Fecha Desde
-  const [dateTo, setDateTo] = useState('');            // 🆕 Filtro Fecha Hasta
+  const [filterType, setFilterType] = useState('all'); 
+  const [dateFrom, setDateFrom] = useState('');        
+  const [dateTo, setDateTo] = useState('');            
   
-  const [selectedTransaccion, setSelectedTransaccion] = useState<TransaccionDto | null>(null);
+  const [selectedTransaccion, setSelectedTransaccion] = useState<AdminTransaction | null>(null);
 
-  // ✨ Debounce para búsqueda en grandes volúmenes de datos
   const debouncedSearchTerm = useDebouncedValue(searchTerm, 300);
 
   // --- QUERIES ---
   const { data: transaccionesRaw = [], isLoading, error } = useQuery<TransaccionDto[]>({
     queryKey: ['adminTransacciones'],
     queryFn: async () => (await TransaccionService.findAll()).data,
-    staleTime: 30000,      // 30 segundos fresh
-    gcTime: 5 * 60 * 1000, // 5 minutos en memoria
-    refetchOnWindowFocus: false,
+    staleTime: 30000,
   });
 
-  // ✨ 1. ORDENAMIENTO + HIGHLIGHT
+  // --- ORDENAMIENTO + HIGHLIGHT ---
   const { sortedData: transaccionesOrdenadas, highlightedId, triggerHighlight } = useSortedData(transaccionesRaw);
 
-  // --- FILTRADO (Optimizado con Debounce y Múltiples Criterios) ---
+  // --- FILTRADO Y AUDITORÍA (Integrado) ---
   const filteredData = useMemo(() => {
     const term = debouncedSearchTerm.toLowerCase();
 
-    return transaccionesOrdenadas.filter(t => {
-      // 1. Filtro rápido de Estado
-      if (filterStatus !== 'all' && t.estado_transaccion !== filterStatus) {
-        return false;
-      }
+    return (transaccionesOrdenadas as AdminTransaction[]).filter(t => {
+      // 1. Filtros de Estado y Tipo
+      if (filterStatus !== 'all' && t.estado_transaccion !== filterStatus) return false;
+      if (filterType !== 'all' && t.tipo_transaccion !== filterType) return false;
 
-      // 2. 🆕 Filtro de Tipo de Transacción
-      if (filterType !== 'all' && t.tipo_transaccion !== filterType) {
-        return false;
-      }
-
-      // 3. 🆕 Filtro de Rango de Fechas
+      // 2. Filtro de Rango de Fechas
       if (dateFrom || dateTo) {
         const txDate = new Date(t.fecha_transaccion);
-        // Ajustamos la hora para que cubra todo el día seleccionado
         if (dateFrom && txDate < new Date(`${dateFrom}T00:00:00`)) return false;
         if (dateTo && txDate > new Date(`${dateTo}T23:59:59`)) return false;
       }
 
-      // 4. Filtro de Texto (Más costoso, ejecutar al final)
+      // 3. LÓGICA DE AUDITORÍA: Detección de Discrepancia (Centavos)
+      // Comparamos el monto de la transacción vs el monto del pago original esperado
+      const montoTx = parseFloat(t.monto.toString());
+      const montoOriginal = t.pagoMensual 
+        ? parseFloat(t.pagoMensual.monto.toString()) 
+        : t.inversion 
+          ? parseFloat(t.inversion.monto.toString()) 
+          : montoTx;
+
+      t.tieneDiscrepancia = Math.abs(montoTx - montoOriginal) > 0.01;
+
+      // 4. Búsqueda Extendida (Texto)
       if (!term) return true;
 
-      const nombreUsuario = t.usuario ? `${t.usuario.nombre} ${t.usuario.apellido}`.toLowerCase() : '';
-      const emailUsuario = t.usuario?.email.toLowerCase() || '';
-      const nombreProyecto = t.proyectoTransaccion?.nombre_proyecto.toLowerCase() || '';
-
-      const refPasarela = t.pagoPasarela?.id_transaccion_pasarela?.toLowerCase() ||
-        t.id_pago_pasarela?.toString() ||
-        '';
+      const nombreCompleto = `${t.usuario?.nombre} ${t.usuario?.apellido}`.toLowerCase();
+      const dni = t.usuario?.dni?.toLowerCase() || '';
+      const email = t.usuario?.email.toLowerCase() || '';
+      const proyecto = t.proyectoTransaccion?.nombre_proyecto.toLowerCase() || '';
+      
+      // Búsqueda por referencia Mercado Pago e ID interno
+      const refMP = t.pagoPasarela?.id_transaccion_pasarela?.toLowerCase() || '';
+      const transaccionId = t.id.toString();
 
       return (
-        t.id.toString().includes(term) ||
-        nombreUsuario.includes(term) ||
-        emailUsuario.includes(term) ||
-        nombreProyecto.includes(term) ||
-        refPasarela.includes(term)
+        transaccionId.includes(term) ||
+        nombreCompleto.includes(term) ||
+        dni.includes(term) ||
+        email.includes(term) ||
+        proyecto.includes(term) ||
+        refMP.includes(term)
       );
     });
   }, [transaccionesOrdenadas, debouncedSearchTerm, filterStatus, filterType, dateFrom, dateTo]);
@@ -129,7 +139,7 @@ export const useAdminTransacciones = () => {
     }
   }, [modales.confirm, confirmMutation]);
 
-  const handleViewDetails = useCallback((row: TransaccionDto) => {
+  const handleViewDetails = useCallback((row: AdminTransaction) => {
     setSelectedTransaccion(row);
     modales.detail.open();
   }, [modales.detail]);
@@ -144,9 +154,9 @@ export const useAdminTransacciones = () => {
     // State
     searchTerm, setSearchTerm,
     filterStatus, setFilterStatus,
-    filterType, setFilterType, // 🆕
-    dateFrom, setDateFrom,     // 🆕
-    dateTo, setDateTo,         // 🆕
+    filterType, setFilterType,
+    dateFrom, setDateFrom,
+    dateTo, setDateTo,
 
     // UX Props
     highlightedId,

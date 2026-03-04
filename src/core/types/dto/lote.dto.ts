@@ -46,7 +46,7 @@ export interface LoteDto extends BaseDTO {
   // 5. Campos de Control (Críticos según tu modelo)
   intentos_fallidos_pago: number; 
   excedente_visualizacion: number; 
-
+excluir_estadisticas: boolean;
   // 6. Ubicación Geográfica
   latitud: number | null;  
   longitud: number | null; 
@@ -108,11 +108,14 @@ export interface ProyectoMinimalDto extends BaseDTO {
 }
 
 export interface UsuarioMinimalDto {
-  id: number;
+ id: number;
   nombre: string;
   apellido: string;
   email: string;
   nombre_usuario?: string;
+  // ✅ NUEVOS: Campos de contacto incluidos ahora en los services del back
+  dni?: string;
+  numero_telefono?: string;
 }
 
 // ==========================================

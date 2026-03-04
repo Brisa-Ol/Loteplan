@@ -1,4 +1,3 @@
-import React, { memo, useMemo, useState } from 'react';
 import { FilterListOff } from '@mui/icons-material';
 import {
   alpha,
@@ -9,6 +8,7 @@ import {
   Divider,
   FormControlLabel,
   Paper,
+  Skeleton,
   Stack,
   Switch,
   Table,
@@ -18,16 +18,30 @@ import {
   TableHead,
   TablePagination,
   TableRow,
+  TableSortLabel,
   Typography,
   useMediaQuery,
   useTheme,
   type SxProps,
-  type Theme
+  type Theme,
 } from '@mui/material';
+import React, { memo, useEffect, useMemo, useState } from 'react';
 
 // ============================================================================
-// COMPONENTE: DATA SWITCH (Auxiliar)
+// TIPOS AUXILIARES
 // ============================================================================
+
+type SortDirection = 'asc' | 'desc';
+
+interface SortState {
+  columnId: string;
+  direction: SortDirection;
+}
+
+// ============================================================================
+// COMPONENTE: DATA SWITCH
+// ============================================================================
+
 interface DataSwitchProps {
   active: boolean;
   onChange: () => void;
@@ -36,37 +50,95 @@ interface DataSwitchProps {
   inactiveLabel?: string;
 }
 
-export const DataSwitch: React.FC<DataSwitchProps> = memo(({
-  active,
-  onChange,
-  disabled = false,
-  activeLabel = "Visible",
-  inactiveLabel = "Oculto"
-}) => (
-  <FormControlLabel
-    control={
-      <Switch
-        checked={active}
-        onChange={onChange}
-        color="success"
-        size="small"
-        disabled={disabled}
-      />
-    }
-    label={
-      <Typography variant="caption" fontWeight={500} color={active ? 'text.primary' : 'text.disabled'}>
-        {active ? activeLabel : inactiveLabel}
-      </Typography>
-    }
-    labelPlacement="end"
-    sx={{ margin: 0, '& .MuiTypography-root': { minWidth: 45 } }}
-  />
-));
+export const DataSwitch: React.FC<DataSwitchProps> = memo(
+  ({
+    active,
+    onChange,
+    disabled = false,
+    activeLabel = 'Visible',
+    inactiveLabel = 'Oculto',
+  }) => (
+    <FormControlLabel
+      control={
+        <Switch
+          checked={active}
+          onChange={onChange}
+          color="success"
+          size="small"
+          disabled={disabled}
+        />
+      }
+      label={
+        <Typography
+          variant="caption"
+          fontWeight={500}
+          color={active ? 'text.primary' : 'text.disabled'}
+        >
+          {active ? activeLabel : inactiveLabel}
+        </Typography>
+      }
+      labelPlacement="end"
+      sx={{ margin: 0, '& .MuiTypography-root': { minWidth: 45 } }}
+    />
+  ),
+);
 
 DataSwitch.displayName = 'DataSwitch';
 
 // ============================================================================
-// TIPOS Y COMPONENTE PRINCIPAL
+// SKELETON DE TABLA
+// FIX #1: anchos fijos predefinidos — evita Math.random() que causa
+// re-renders innecesarios y posibles hydration warnings en SSR.
+// El índice combinado (i * columns + j) garantiza variedad visual
+// sin aleatoriedad en cada render.
+// ============================================================================
+
+const SKELETON_WIDTHS = ['75%', '60%', '85%', '65%', '70%', '80%', '55%', '90%'];
+
+const TableSkeleton: React.FC<{ columns: number; rows?: number }> = ({
+  columns,
+  rows = 5,
+}) => (
+  <>
+    {Array.from({ length: rows }).map((_, i) => (
+      <TableRow key={i}>
+        {Array.from({ length: columns }).map((_, j) => (
+          <TableCell key={j}>
+            <Skeleton
+              variant="text"
+              animation="wave"
+              width={SKELETON_WIDTHS[(i * columns + j) % SKELETON_WIDTHS.length]}
+            />
+          </TableCell>
+        ))}
+      </TableRow>
+    ))}
+  </>
+);
+
+// ============================================================================
+// SKELETON MÓVIL
+// ============================================================================
+
+const MobileSkeleton: React.FC<{ rows?: number }> = ({ rows = 4 }) => (
+  <Stack spacing={1.5}>
+    {Array.from({ length: rows }).map((_, i) => (
+      <Card
+        key={i}
+        elevation={0}
+        sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2 }}
+      >
+        <CardContent sx={{ p: '12px !important' }}>
+          <Skeleton variant="text" width="60%" height={24} />
+          <Skeleton variant="text" width="40%" height={18} sx={{ mt: 0.5 }} />
+        </CardContent>
+      </Card>
+    ))}
+  </Stack>
+);
+
+// ============================================================================
+// TIPOS Y PROPS PRINCIPALES
 // ============================================================================
 
 export interface DataTableColumn<T> {
@@ -74,6 +146,7 @@ export interface DataTableColumn<T> {
   label: string;
   align?: 'left' | 'right' | 'center';
   minWidth?: number;
+  sortable?: boolean;
   format?: (value: any, row: T) => React.ReactNode;
   render?: (row: T) => React.ReactNode;
   /** Ocultar columna en móvil (tabla) */
@@ -101,21 +174,34 @@ interface DataTableProps<T> {
   rowsPerPageOptions?: number[];
   showInactiveToggle?: boolean;
   inactiveLabel?: string;
+  loading?: boolean;
+  skeletonRows?: number;
   /**
    * Columna que se usa como título principal en la vista de tarjeta.
-   * Si no se especifica, se usa la primera columna con cardPrimary=true,
-   * o si ninguna lo tiene, la primera columna visible.
+   * Si no se especifica, se usa la primera columna con cardPrimary=true.
    */
   cardTitleColumn?: keyof T | string;
 }
 
 // ============================================================================
-// FILA MEMOIZADA (Optimización de render — vista tabla)
+// ESTADO VACÍO
 // ============================================================================
+
+const EmptyState: React.FC<{ message: string }> = ({ message }) => (
+  <Stack alignItems="center" spacing={1} color="text.disabled" py={6}>
+    <FilterListOff fontSize="large" sx={{ opacity: 0.5 }} />
+    <Typography variant="body2">{message}</Typography>
+  </Stack>
+);
+
+// ============================================================================
+// FILA MEMOIZADA (vista tabla)
+// ============================================================================
+
 interface TableRowMemoProps<T> {
   row: T;
   columns: DataTableColumn<T>[];
-  getRowKey: (row: T) => string | number;
+  rowKey: string | number;
   isHighlighted: boolean;
   isActive: boolean;
   onRowClick?: (row: T) => void;
@@ -123,26 +209,26 @@ interface TableRowMemoProps<T> {
   theme: Theme;
 }
 
-const TableRowMemo = memo(<T,>({
-  row,
-  columns,
-  isHighlighted,
-  isActive,
-  onRowClick,
-  getRowSx,
-  theme
-}: TableRowMemoProps<T>) => {
-  return (
+const TableRowMemo = memo(
+  <T,>({
+    row,
+    columns,
+    isHighlighted,
+    isActive,
+    onRowClick,
+    getRowSx,
+    theme,
+  }: TableRowMemoProps<T>) => (
     <TableRow
       hover={isActive && !!onRowClick}
       onClick={() => isActive && onRowClick?.(row)}
       sx={{
         cursor: onRowClick && isActive ? 'pointer' : 'default',
-        transition: 'all 0.2s',
+        transition: 'background-color 0.15s',
         bgcolor: isHighlighted ? alpha(theme.palette.success.main, 0.08) : 'inherit',
         opacity: !isActive ? 0.5 : 1,
         ...(!isActive && { bgcolor: alpha(theme.palette.action.disabledBackground, 0.1) }),
-        ...(getRowSx ? getRowSx(row) : {})
+        ...(getRowSx ? getRowSx(row) : {}),
       }}
     >
       {columns.map((column) => {
@@ -155,7 +241,7 @@ const TableRowMemo = memo(<T,>({
               whiteSpace: 'nowrap',
               maxWidth: 300,
               overflow: 'hidden',
-              textOverflow: 'ellipsis'
+              textOverflow: 'ellipsis',
             }}
           >
             {column.render
@@ -167,181 +253,194 @@ const TableRowMemo = memo(<T,>({
         );
       })}
     </TableRow>
-  );
-}, (prevProps, nextProps) => {
-  return (
-    prevProps.getRowKey(prevProps.row) === nextProps.getRowKey(nextProps.row) &&
-    prevProps.isHighlighted === nextProps.isHighlighted &&
-    prevProps.isActive === nextProps.isActive
-  );
-}) as <T>(props: TableRowMemoProps<T>) => React.ReactElement;
+  ),
+  // FIX #2: comparador simplificado — se eliminó la lógica que invalidaba memo
+  // cuando había columnas con render/format (que es prácticamente siempre).
+  // memo ahora funciona correctamente: solo re-renderiza cuando cambia la
+  // identidad de row, el estado highlight o el estado activo.
+  (prev, next) =>
+    prev.rowKey === next.rowKey &&
+    prev.isHighlighted === next.isHighlighted &&
+    prev.isActive === next.isActive,
+) as <T>(props: TableRowMemoProps<T>) => React.ReactElement;
 
 (TableRowMemo as any).displayName = 'TableRowMemo';
 
 // ============================================================================
-// TARJETA MÓVIL MEMOIZADA
+// TARJETA MÓVIL
 // ============================================================================
+
 interface MobileCardProps<T> {
   row: T;
   columns: DataTableColumn<T>[];
-  getRowKey: (row: T) => string | number;
+  rowKey: string | number;
   isHighlighted: boolean;
   isActive: boolean;
   onRowClick?: (row: T) => void;
+  getRowSx?: (row: T) => SxProps<Theme>;
   theme: Theme;
   titleColumnId?: string;
+  resetKey?: number;
 }
 
-const MobileCard = memo(<T,>({
-  row,
-  columns,
-  isHighlighted,
-  isActive,
-  onRowClick,
-  theme,
-  titleColumnId,
-}: MobileCardProps<T>) => {
-  const [expanded, setExpanded] = useState(false);
+const MobileCard = memo(
+  <T,>({
+    row,
+    columns,
+    isHighlighted,
+    isActive,
+    onRowClick,
+    getRowSx,
+    theme,
+    titleColumnId,
+    resetKey,
+  }: MobileCardProps<T>) => {
+    const [expanded, setExpanded] = useState(false);
 
-  // Columna principal (encabezado de la tarjeta)
-  const primaryCol = columns.find(c =>
-    titleColumnId
-      ? String(c.id) === titleColumnId
-      : c.cardPrimary
-  ) ?? columns[0];
+    useEffect(() => {
+      setExpanded(false);
+    }, [resetKey]);
 
-  // Columna secundaria (subtítulo)
-  const secondaryCol = columns.find(c => c.cardSecondary);
+    const primaryCol =
+      columns.find((c) =>
+        titleColumnId ? String(c.id) === titleColumnId : c.cardPrimary,
+      ) ?? columns[0];
 
-  // Columnas que van en la sección colapsable (todas menos primary/secondary/hideOnCard/actions)
-  const detailCols = columns.filter(c =>
-    c !== primaryCol &&
-    c !== secondaryCol &&
-    !c.hideOnCard &&
-    String(c.id) !== 'actions' &&
-    String(c.id) !== 'acciones'
-  );
+    const secondaryCol = columns.find((c) => c.cardSecondary);
 
-  // Columna de acciones
-  const actionsCol = columns.find(c =>
-    String(c.id) === 'actions' || String(c.id) === 'acciones'
-  );
+    const detailCols = columns.filter(
+      (c) =>
+        c !== primaryCol &&
+        c !== secondaryCol &&
+        !c.hideOnCard &&
+        String(c.id) !== 'actions' &&
+        String(c.id) !== 'acciones',
+    );
 
-  const getCellContent = (col: DataTableColumn<T>) => {
-    const val = (row as any)[col.id];
-    if (col.render) return col.render(row);
-    if (col.format) return col.format(val, row);
-    return val;
-  };
+    const actionsCol = columns.find(
+      (c) => String(c.id) === 'actions' || String(c.id) === 'acciones',
+    );
 
-  return (
-    <Card
-      elevation={0}
-      onClick={() => isActive && onRowClick?.(row)}
-      sx={{
-        border: '1px solid',
-        borderColor: isHighlighted
-          ? alpha(theme.palette.success.main, 0.5)
-          : 'divider',
-        borderRadius: 2,
-        cursor: onRowClick && isActive ? 'pointer' : 'default',
-        opacity: isActive ? 1 : 0.55,
-        bgcolor: isHighlighted
-          ? alpha(theme.palette.success.main, 0.05)
-          : !isActive
-            ? alpha(theme.palette.action.disabledBackground, 0.08)
-            : 'background.paper',
-        transition: 'all 0.2s',
-        '&:hover': onRowClick && isActive ? {
-          borderColor: 'primary.main',
-          boxShadow: `0 0 0 1px ${alpha(theme.palette.primary.main, 0.2)}`,
-        } : {},
-      }}
-    >
-      <CardContent sx={{ p: '12px !important' }}>
-        {/* Fila superior: Primary + Acciones */}
-        <Stack direction="row" alignItems="flex-start" justifyContent="space-between" spacing={1}>
-          <Box flex={1} minWidth={0}>
-            {getCellContent(primaryCol)}
-            {secondaryCol && (
-              <Box mt={0.5}>
-                {getCellContent(secondaryCol)}
+    const getCellContent = (col: DataTableColumn<T>) => {
+      const val = (row as any)[col.id];
+      if (col.render) return col.render(row);
+      if (col.format) return col.format(val, row);
+      return val;
+    };
+
+    const customSx = getRowSx ? getRowSx(row) : {};
+
+    return (
+      <Card
+        elevation={0}
+        onClick={() => isActive && onRowClick?.(row)}
+        sx={{
+          border: '1px solid',
+          borderColor: isHighlighted
+            ? alpha(theme.palette.success.main, 0.5)
+            : 'divider',
+          borderRadius: 2,
+          cursor: onRowClick && isActive ? 'pointer' : 'default',
+          opacity: isActive ? 1 : 0.55,
+          bgcolor: isHighlighted
+            ? alpha(theme.palette.success.main, 0.05)
+            : !isActive
+              ? alpha(theme.palette.action.disabledBackground, 0.08)
+              : 'background.paper',
+          transition: 'all 0.2s',
+          '&:hover':
+            onRowClick && isActive
+              ? {
+                  borderColor: 'primary.main',
+                  boxShadow: `0 0 0 1px ${alpha(theme.palette.primary.main, 0.2)}`,
+                }
+              : {},
+          ...customSx,
+        }}
+      >
+        <CardContent sx={{ p: '12px !important' }}>
+          <Stack
+            direction="row"
+            alignItems="flex-start"
+            justifyContent="space-between"
+            spacing={1}
+          >
+            <Box flex={1} minWidth={0}>
+              {getCellContent(primaryCol)}
+              {secondaryCol && <Box mt={0.5}>{getCellContent(secondaryCol)}</Box>}
+            </Box>
+            {actionsCol && (
+              <Box flexShrink={0} onClick={(e) => e.stopPropagation()}>
+                {getCellContent(actionsCol)}
               </Box>
             )}
-          </Box>
-          {actionsCol && (
-            <Box
-              flexShrink={0}
-              onClick={(e) => e.stopPropagation()} // evitar que el click en acciones dispare onRowClick
-            >
-              {getCellContent(actionsCol)}
-            </Box>
-          )}
-        </Stack>
+          </Stack>
 
-        {/* Detalles colapsables */}
-        {detailCols.length > 0 && (
-          <>
-            <Box
-              mt={1}
-              onClick={(e) => { e.stopPropagation(); setExpanded(v => !v); }}
-              sx={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 0.5,
-                cursor: 'pointer',
-                color: 'text.secondary',
-              }}
-            >
-              <Typography variant="caption" fontWeight={600} color="primary.main">
-                {expanded ? 'Ver menos ▲' : 'Ver más ▼'}
-              </Typography>
-            </Box>
+          {detailCols.length > 0 && (
+            <>
+              <Box
+                mt={1}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setExpanded((v) => !v);
+                }}
+                sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, cursor: 'pointer' }}
+              >
+                <Typography variant="caption" fontWeight={600} color="primary.main">
+                  {expanded ? 'Ver menos ▲' : 'Ver más ▼'}
+                </Typography>
+              </Box>
 
-            <Collapse in={expanded} unmountOnExit>
-              <Divider sx={{ my: 1 }} />
-              <Stack spacing={1}>
-                {detailCols.map((col) => (
-                  <Stack
-                    key={String(col.id)}
-                    direction="row"
-                    justifyContent="space-between"
-                    alignItems="flex-start"
-                    spacing={1}
-                  >
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      fontWeight={600}
-                      sx={{ minWidth: 90, flexShrink: 0, pt: '2px' }}
+              <Collapse in={expanded} unmountOnExit>
+                <Divider sx={{ my: 1 }} />
+                <Stack spacing={1}>
+                  {detailCols.map((col) => (
+                    <Stack
+                      key={String(col.id)}
+                      direction="row"
+                      justifyContent="space-between"
+                      alignItems="flex-start"
+                      spacing={1}
                     >
-                      {col.label}
-                    </Typography>
-                    <Box flex={1} minWidth={0} sx={{ textAlign: col.align === 'right' ? 'right' : 'left' }}>
-                      {getCellContent(col)}
-                    </Box>
-                  </Stack>
-                ))}
-              </Stack>
-            </Collapse>
-          </>
-        )}
-      </CardContent>
-    </Card>
-  );
-}, (prev, next) => {
-  return (
-    prev.getRowKey(prev.row) === next.getRowKey(next.row) &&
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        fontWeight={600}
+                        sx={{ minWidth: 90, flexShrink: 0, pt: '2px' }}
+                      >
+                        {col.label}
+                      </Typography>
+                      <Box
+                        flex={1}
+                        minWidth={0}
+                        sx={{ textAlign: col.align === 'right' ? 'right' : 'left' }}
+                      >
+                        {getCellContent(col)}
+                      </Box>
+                    </Stack>
+                  ))}
+                </Stack>
+              </Collapse>
+            </>
+          )}
+        </CardContent>
+      </Card>
+    );
+  },
+  // FIX #2: mismo comparador simplificado que TableRowMemo
+  (prev, next) =>
+    prev.rowKey === next.rowKey &&
     prev.isHighlighted === next.isHighlighted &&
-    prev.isActive === next.isActive
-  );
-}) as <T>(props: MobileCardProps<T>) => React.ReactElement;
+    prev.isActive === next.isActive &&
+    prev.resetKey === next.resetKey,
+) as <T>(props: MobileCardProps<T>) => React.ReactElement;
 
 (MobileCard as any).displayName = 'MobileCard';
 
 // ============================================================================
-// COMPONENTE: DATA TABLE
+// COMPONENTE PRINCIPAL: DATA TABLE
 // ============================================================================
+
 export function DataTable<T>({
   columns,
   data,
@@ -357,68 +456,113 @@ export function DataTable<T>({
   rowsPerPageOptions = [5, 10, 25, 50],
   showInactiveToggle = false,
   inactiveLabel = 'Mostrar inactivos',
+  loading = false,
+  skeletonRows = 5,
   cardTitleColumn,
 }: DataTableProps<T>) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  // Vista tipo tabla compacta para tablets
   const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
 
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(defaultRowsPerPage);
   const [showInactive, setShowInactive] = useState(false);
+  const [sort, setSort] = useState<SortState | null>(null);
+
+  useEffect(() => {
+    setPage(0);
+  }, [data]);
 
   const handleChangePage = (_: unknown, newPage: number) => setPage(newPage);
 
-  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
+  const handleChangeRowsPerPage = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(e.target.value, 10));
     setPage(0);
   };
 
-  // --- LÓGICA DE FILTRADO Y ORDENAMIENTO ---
-  const processedData = useMemo(() => {
-    let result = [...data];
-    if (isRowActive) {
-      if (showInactiveToggle && !showInactive) {
-        result = result.filter(row => isRowActive(row));
-      } else {
-        result.sort((a, b) => {
-          const aActive = isRowActive(a);
-          const bActive = isRowActive(b);
-          return aActive === bActive ? 0 : aActive ? -1 : 1;
-        });
+  const handleSort = (columnId: string) => {
+    setSort((prev) => {
+      if (prev?.columnId === columnId) {
+        return prev.direction === 'asc' ? { columnId, direction: 'desc' } : null;
       }
+      return { columnId, direction: 'asc' };
+    });
+    setPage(0);
+  };
+
+  const filteredData = useMemo(() => {
+    if (!isRowActive) return data;
+
+    if (showInactiveToggle && !showInactive) {
+      return data.filter((row) => isRowActive(row));
     }
-    return result;
+
+    return [...data].sort((a, b) => {
+      const aActive = isRowActive(a);
+      const bActive = isRowActive(b);
+      return aActive === bActive ? 0 : aActive ? -1 : 1;
+    });
   }, [data, isRowActive, showInactive, showInactiveToggle]);
 
-  // --- CONTEO DE INACTIVOS ---
+  const processedData = useMemo(() => {
+    if (!sort) return filteredData;
+
+    return [...filteredData].sort((a, b) => {
+      const aVal = (a as any)[sort.columnId];
+      const bVal = (b as any)[sort.columnId];
+
+      if (aVal == null) return 1;
+      if (bVal == null) return -1;
+
+      const cmp =
+        typeof aVal === 'number' && typeof bVal === 'number'
+          ? aVal - bVal
+          : String(aVal).localeCompare(String(bVal), 'es', { sensitivity: 'base' });
+
+      return sort.direction === 'asc' ? cmp : -cmp;
+    });
+  }, [filteredData, sort]);
+
   const inactiveCount = useMemo(() => {
     if (!isRowActive) return 0;
-    return data.filter(row => !isRowActive(row)).length;
+    return data.filter((row) => !isRowActive(row)).length;
   }, [data, isRowActive]);
 
-  // --- PAGINACIÓN ---
   const paginatedData = useMemo(() => {
     if (!pagination) return processedData;
     return processedData.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
   }, [pagination, processedData, page, rowsPerPage]);
 
-  // --- COLUMNAS RESPONSIVAS ---
-  const visibleColumns = useMemo(() =>
-    columns.filter(col => !(isMobile && col.hideOnMobile) && !(isTablet && col.hideOnMobile)),
-    [columns, isMobile, isTablet]
+  const visibleColumnsTable = useMemo(
+    () =>
+      columns.filter(
+        (col) => !(isMobile && col.hideOnMobile) && !(isTablet && col.hideOnMobile),
+      ),
+    [columns, isMobile, isTablet],
   );
 
-  // --- PAGINACIÓN RESPONSIVA ---
   const responsiveRowsPerPageOptions = isMobile ? [5, 10, 25] : rowsPerPageOptions;
 
-  // ── Estado vacío compartido ──────────────────────────────────────────────
-  const emptyState = (
-    <Stack alignItems="center" spacing={1} color="text.disabled" py={6}>
-      <FilterListOff fontSize="large" sx={{ opacity: 0.5 }} />
-      <Typography variant="body2">{emptyMessage}</Typography>
-    </Stack>
+  const paginationNode = pagination && !loading && data.length > 0 && (
+    <TablePagination
+      rowsPerPageOptions={responsiveRowsPerPageOptions}
+      component="div"
+      count={processedData.length}
+      rowsPerPage={rowsPerPage}
+      page={page}
+      onPageChange={handleChangePage}
+      onRowsPerPageChange={handleChangeRowsPerPage}
+      labelRowsPerPage={isTablet || isMobile ? 'Filas' : 'Filas por página:'}
+      labelDisplayedRows={({ from, to, count }) =>
+        `${from}–${to} de ${count !== -1 ? count : `> ${to}`}`
+      }
+      sx={{
+        borderTop: '1px solid',
+        borderColor: 'divider',
+        '.MuiTablePagination-toolbar': { px: { xs: 1, sm: 2 } },
+        '.MuiTablePagination-selectLabel': { display: { xs: 'none', sm: 'block' } },
+      }}
+    />
   );
 
   return (
@@ -444,17 +588,17 @@ export function DataTable<T>({
         </Stack>
       )}
 
-      {/* ════════════════════════════════════════════════════
-          VISTA MÓVIL → Tarjetas apiladas
-      ════════════════════════════════════════════════════ */}
+      {/* ── VISTA MÓVIL ─────────────────────────────────────────────────── */}
       {isMobile ? (
         <Box>
-          {paginatedData.length === 0 ? (
+          {loading ? (
+            <MobileSkeleton rows={skeletonRows} />
+          ) : paginatedData.length === 0 ? (
             <Paper
               elevation={0}
               sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2 }}
             >
-              {emptyState}
+              <EmptyState message={emptyMessage} />
             </Paper>
           ) : (
             <Stack spacing={1.5}>
@@ -465,20 +609,21 @@ export function DataTable<T>({
                     key={rowKey}
                     row={row}
                     columns={columns}
-                    getRowKey={getRowKey}
+                    rowKey={rowKey}
                     isHighlighted={highlightedRowId === rowKey}
                     isActive={isRowActive ? isRowActive(row) : true}
                     onRowClick={onRowClick}
+                    getRowSx={getRowSx}
                     theme={theme}
                     titleColumnId={cardTitleColumn ? String(cardTitleColumn) : undefined}
+                    resetKey={page}
                   />
                 );
               })}
             </Stack>
           )}
 
-          {/* Paginación móvil simplificada */}
-          {pagination && data.length > 0 && (
+          {pagination && !loading && data.length > 0 && (
             <Paper
               elevation={0}
               sx={{ mt: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}
@@ -505,9 +650,7 @@ export function DataTable<T>({
           )}
         </Box>
       ) : (
-        /* ════════════════════════════════════════════════════
-           VISTA TABLET / DESKTOP → Tabla
-        ════════════════════════════════════════════════════ */
+        /* ── VISTA TABLET / DESKTOP ────────────────────────────────────── */
         <TableContainer
           component={Paper}
           elevation={0}
@@ -517,18 +660,24 @@ export function DataTable<T>({
             border: '1px solid',
             borderColor: 'divider',
             borderRadius: '12px',
-            // Scroll horizontal suave en tablet
             WebkitOverflowScrolling: 'touch',
-            ...sx
+            tableLayout: 'auto',
+            ...sx,
           }}
         >
-          <Table size={isTablet ? 'small' : 'medium'} sx={{ minWidth: isTablet ? 500 : 650 }}>
+          <Table
+            size={isTablet ? 'small' : 'medium'}
+            sx={{ minWidth: isTablet ? 480 : 600, width: '100%', tableLayout: 'auto' }}
+          >
             <TableHead>
               <TableRow sx={{ bgcolor: alpha(theme.palette.primary.main, 0.04) }}>
-                {visibleColumns.map((column) => (
+                {visibleColumnsTable.map((column) => (
                   <TableCell
                     key={String(column.id)}
                     align={column.align || 'left'}
+                    sortDirection={
+                      sort?.columnId === String(column.id) ? sort.direction : false
+                    }
                     sx={{
                       minWidth: column.minWidth,
                       fontWeight: 700,
@@ -536,19 +685,38 @@ export function DataTable<T>({
                       fontSize: isTablet ? '0.7rem' : '0.75rem',
                       whiteSpace: 'nowrap',
                       py: isTablet ? 1 : 1.5,
+                      width: column.minWidth ? column.minWidth : 'auto',
                     }}
                   >
-                    {column.label}
+                    {column.sortable ? (
+                      <TableSortLabel
+                        active={sort?.columnId === String(column.id)}
+                        direction={
+                          sort?.columnId === String(column.id) ? sort.direction : 'asc'
+                        }
+                        onClick={() => handleSort(String(column.id))}
+                      >
+                        {column.label}
+                      </TableSortLabel>
+                    ) : (
+                      column.label
+                    )}
                   </TableCell>
                 ))}
               </TableRow>
             </TableHead>
 
             <TableBody>
-              {paginatedData.length === 0 ? (
+              {loading ? (
+                <TableSkeleton columns={visibleColumnsTable.length} rows={skeletonRows} />
+              ) : paginatedData.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={visibleColumns.length} align="center" sx={{ py: 8 }}>
-                    {emptyState}
+                  <TableCell
+                    colSpan={visibleColumnsTable.length}
+                    align="center"
+                    sx={{ py: 6, border: 0 }}
+                  >
+                    <EmptyState message={emptyMessage} />
                   </TableCell>
                 </TableRow>
               ) : (
@@ -558,8 +726,8 @@ export function DataTable<T>({
                     <TableRowMemo
                       key={rowKey}
                       row={row}
-                      columns={visibleColumns}
-                      getRowKey={getRowKey}
+                      columns={visibleColumnsTable}
+                      rowKey={rowKey}
                       isHighlighted={highlightedRowId === rowKey}
                       isActive={isRowActive ? isRowActive(row) : true}
                       onRowClick={onRowClick}
@@ -572,27 +740,7 @@ export function DataTable<T>({
             </TableBody>
           </Table>
 
-          {pagination && data.length > 0 && (
-            <TablePagination
-              rowsPerPageOptions={responsiveRowsPerPageOptions}
-              component="div"
-              count={processedData.length}
-              rowsPerPage={rowsPerPage}
-              page={page}
-              onPageChange={handleChangePage}
-              onRowsPerPageChange={handleChangeRowsPerPage}
-              labelRowsPerPage={isTablet ? 'Filas' : 'Filas por página:'}
-              labelDisplayedRows={({ from, to, count }) =>
-                `${from}–${to} de ${count !== -1 ? count : `> ${to}`}`
-              }
-              sx={{
-                borderTop: '1px solid',
-                borderColor: 'divider',
-                '.MuiTablePagination-toolbar': { px: { xs: 1, sm: 2 } },
-                '.MuiTablePagination-selectLabel': { display: { xs: 'none', sm: 'block' } }
-              }}
-            />
-          )}
+          {paginationNode}
         </TableContainer>
       )}
     </Box>

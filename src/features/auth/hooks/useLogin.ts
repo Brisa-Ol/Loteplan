@@ -23,13 +23,21 @@ export const useLogin = () => {
   const from = state?.from ? (typeof state.from === 'string' ? state.from : state.from.pathname) : null;
   const vieneDeProyecto = from?.includes('/proyectos/');
 
-  // 1. Detectar sesión expirada al montar
-  useEffect(() => {
-    if (state?.sessionExpired) {
-      setIsSessionExpired(true);
-      window.history.replaceState({}, document.title);
-    }
-  }, [state]);
+// 1. Detectar sesión expirada al montar
+useEffect(() => {
+  // Detectar via router state (reset password flow, etc.)
+  if (state?.sessionExpired) {
+    setIsSessionExpired(true);
+    window.history.replaceState({}, document.title);
+    return;
+  }
+  
+  // Detectar via sessionStorage (expiración de JWT durante navegación)
+  if (sessionStorage.getItem('session_expired') === 'true') {
+    setIsSessionExpired(true);
+    sessionStorage.removeItem('session_expired'); // 👈 Limpiar para que no persista
+  }
+}, [state]);
 
   // 2. Limpieza de errores al desmontar
   const clearErrorRef = useRef(clearError);

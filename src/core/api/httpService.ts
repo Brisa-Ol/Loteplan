@@ -13,7 +13,7 @@ export interface ApiError {
   code?: string;
   originalError?: unknown;
 }
-
+let isRedirectingToLogin = false;
 const httpService = axios.create({
   baseURL: env.apiBaseUrl,
   headers: { 'Content-Type': 'application/json' },
@@ -60,19 +60,22 @@ httpService.interceptors.response.use(
     const isLoginEndpoint = url.includes('/auth/login') || url.includes('/auth/2fa/verify');
     const msg = data.error || data.message || 'Error desconocido';
 
-    // B) 401: Credenciales o Sesión
-    if (status === 401) {
-      // Si es Login -> Devolver error al formulario (SIN REDIRECT, SIN TOAST)
-      if (isLoginEndpoint) {
-        return Promise.reject({ status: 401, message: msg, type: 'AUTH_ERROR', originalError: error } as ApiError);
-      }
-      // Si es Navegación -> Redirect al Login
-      if (!window.location.pathname.includes('/login')) {
-        secureStorage.clearToken();
-        setTimeout(() => window.location.href = '/login', 1000);
-      }
-      return Promise.reject({ status: 401, message: msg, type: 'AUTH_ERROR', originalError: error } as ApiError);
-    }
+// B) 401: Credenciales o Sesión
+if (status === 401) {
+  if (isLoginEndpoint) {
+    return Promise.reject({ status: 401, message: msg, type: 'AUTH_ERROR', originalError: error } as ApiError);
+  }
+  if (!window.location.pathname.includes('/login') && !isRedirectingToLogin) {
+    isRedirectingToLogin = true;
+    secureStorage.clearToken();
+    sessionStorage.setItem('session_expired', 'true');
+    setTimeout(() => {
+      isRedirectingToLogin = false;
+      window.location.href = '/login';
+    }, 1000);
+  }
+  return Promise.reject({ status: 401, message: msg, type: 'AUTH_ERROR', originalError: error } as ApiError);
+}
 
     // C) 403: Cuenta no activada (según tu backend)
     if (status === 403) {

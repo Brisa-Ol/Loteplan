@@ -1,13 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-// Servicios
 import CuotaMensualService from '@/core/api/services/cuotaMensual.service';
 import ImagenService from '@/core/api/services/imagen.service';
 import ProyectoService from '@/core/api/services/proyecto.service';
 import ContratoPlantillaService from '@/core/api/services/contrato-plantilla.service';
 
-// Hooks y Tipos
 import type { CreateProyectoDto, ProyectoDto, UpdateProyectoDto } from '@/core/types/dto/proyecto.dto';
 import { useConfirmDialog } from '@/shared/hooks/useConfirmDialog';
 import { useModal } from '@/shared/hooks/useModal';
@@ -29,15 +27,13 @@ export const useAdminProyectos = () => {
   const queryClient = useQueryClient();
   const { showSuccess, showError, showWarning } = useSnackbar();
 
-  // --- ESTADOS ---
   const [selectedProject, setSelectedProject] = useState<ProyectoDto | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterTipo, setFilterTipo] = useState<TipoInversionFilter>('all');
   const [filterEstado, setFilterEstado] = useState<string>('all');
-  const [filterRiesgo, setFilterRiesgo] = useState<boolean>(false); // 🆕 Filtro Bajo Mínimo
+  const [filterRiesgo, setFilterRiesgo] = useState<boolean>(false);
   const debouncedSearchTerm = useDebouncedValue(searchTerm, 300);
 
-  // --- MODALES ---
   const create = useModal();
   const cuotas = useModal();
   const lotes = useModal();
@@ -49,16 +45,68 @@ export const useAdminProyectos = () => {
     create, cuotas, lotes, edit, images, confirmDialog
   }), [create, cuotas, lotes, edit, images, confirmDialog]);
 
-  // --- QUERIES ---
-  const { data: proyectosRaw = [], isLoading, error } = useQuery({
+  // ── Query 1: proyectos ───────────────────────────────────────────────────
+  const { data: proyectosRaw = [], isLoading: isLoadingProyectos, error } = useQuery({
     queryKey: ['adminProyectos'],
     queryFn: async () => (await ProyectoService.getAllAdmin()).data,
     staleTime: 30000,
   });
 
-  const { sortedData: proyectosOrdenados, highlightedId, triggerHighlight } = useSortedData(proyectosRaw);
+  const mensualIds = useMemo(
+    () => proyectosRaw.filter(p => p.tipo_inversion === 'mensual').map(p => p.id),
+    [proyectosRaw]
+  );
 
-  // --- MUTACIONES ---
+  // ── Query 2: cuotas ──────────────────────────────────────────────────────
+  // enabled: solo arranca cuando proyectos YA terminó de cargar,
+  // así QueryHandler espera ambas queries antes de mostrar la tabla.
+  const { data: cuotaMap = {}, isLoading: isLoadingCuotas } = useQuery({
+    queryKey: ['adminCuotasMap', mensualIds],
+    enabled: !isLoadingProyectos && mensualIds.length > 0,
+    staleTime: 30000,
+    retry: false,
+    throwOnError: false,
+    queryFn: async () => {
+      const results = await Promise.allSettled(
+        mensualIds.map(id =>
+          // 404 = proyecto sin cuota configurada, estado válido, no es un error
+          CuotaMensualService.getLastByProjectId(id).catch((err) => {
+            if (err?.response?.status === 404) return null;
+            throw err;
+          })
+        )
+      );
+      const map: Record<number, number> = {};
+      results.forEach((result, index) => {
+        if (result.status === 'fulfilled' && result.value !== null) {
+          const cuota = (result.value as any)?.data?.cuota;
+          if (cuota?.valor_mensual_final != null) {
+            map[mensualIds[index]] = Number(cuota.valor_mensual_final);
+          }
+        }
+      });
+      return map;
+    },
+  });
+
+  // ── Merge: inyectamos valor_cuota_referencia en cada proyecto mensual ────
+  const proyectosConCuota = useMemo<ProyectoDto[]>(() =>
+    proyectosRaw.map(p =>
+      p.tipo_inversion === 'mensual' && cuotaMap[p.id] != null
+        ? { ...p, valor_cuota_referencia: cuotaMap[p.id] }
+        : p
+    ),
+    [proyectosRaw, cuotaMap]
+  );
+
+  const { sortedData: proyectosOrdenados, highlightedId, triggerHighlight } = useSortedData(proyectosConCuota);
+
+  // ── Mutaciones ───────────────────────────────────────────────────────────
+  const invalidateAll = () => {
+    queryClient.invalidateQueries({ queryKey: ['adminProyectos'] });
+    queryClient.invalidateQueries({ queryKey: ['adminCuotasMap'] });
+  };
+
   const handleMutationOptimistic = async () => {
     await queryClient.cancelQueries({ queryKey: ['adminProyectos'] });
     return queryClient.getQueryData<ProyectoDto[]>(['adminProyectos']);
@@ -72,7 +120,7 @@ export const useAdminProyectos = () => {
   };
 
   const handleMutationSuccess = (id: number, message: string) => {
-    queryClient.invalidateQueries({ queryKey: ['adminProyectos'] });
+    invalidateAll();
     triggerHighlight(id);
     showSuccess(message);
     confirmDialog.close();
@@ -86,31 +134,31 @@ export const useAdminProyectos = () => {
       handleMutationSuccess(vars.id, 'Proyecto actualizado correctamente');
       edit.close();
       setSelectedProject(null);
-    }
+    },
   });
 
   const toggleActiveMutation = useMutation({
     mutationFn: ({ id, activo }: { id: number; activo: boolean }) => ProyectoService.update(id, { activo }),
     onMutate: handleMutationOptimistic,
     onError: (_, __, ctx) => handleMutationError(ctx),
-    onSuccess: (_, vars) => handleMutationSuccess(vars.id, vars.activo ? 'Proyecto ahora es visible' : 'Proyecto ocultado')
+    onSuccess: (_, vars) => handleMutationSuccess(vars.id, vars.activo ? 'Proyecto ahora es visible' : 'Proyecto ocultado'),
   });
 
   const startMutation = useMutation({
     mutationFn: (id: number) => ProyectoService.startProcess(id),
     onMutate: handleMutationOptimistic,
     onError: (_, __, ctx) => handleMutationError(ctx),
-    onSuccess: (_, id) => handleMutationSuccess(id, 'Proceso de cobros iniciado')
+    onSuccess: (_, id) => handleMutationSuccess(id, 'Proceso de cobros iniciado'),
   });
 
   const revertMutation = useMutation({
     mutationFn: (id: number) => ProyectoService.revertProcess(id),
     onMutate: handleMutationOptimistic,
     onError: (_, __, ctx) => handleMutationError(ctx),
-    onSuccess: (_, id) => handleMutationSuccess(id, 'Proyecto revertido a "En Espera" correctamente')
+    onSuccess: (_, id) => handleMutationSuccess(id, 'Proyecto revertido a "En Espera" correctamente'),
   });
 
-  // --- HANDLERS ---
+  // ── Handlers ─────────────────────────────────────────────────────────────
   const handleCreateSubmit = useCallback(async (data: any, image: File | null, contrato: File | null, nombreContrato: string) => {
     try {
       const resProyecto = await ProyectoService.create(data as CreateProyectoDto);
@@ -125,7 +173,7 @@ export const useAdminProyectos = () => {
           valor_cemento: data.valor_cemento,
           porcentaje_plan: data.porcentaje_plan,
           porcentaje_administrativo: data.porcentaje_administrativo / 100,
-          porcentaje_iva: data.porcentaje_iva / 100
+          porcentaje_iva: data.porcentaje_iva / 100,
         });
       }
 
@@ -143,20 +191,21 @@ export const useAdminProyectos = () => {
             file: contrato,
             nombre_archivo: nombreContrato.trim() || `Contrato - ${data.nombre_proyecto}`,
             version: 1,
-            id_proyecto: nuevoId
+            id_proyecto: nuevoId,
           });
-        } catch (err) {
+        } catch {
           showWarning('Proyecto creado, pero la plantilla del contrato falló al subirse.');
         }
       }
 
-      queryClient.invalidateQueries({ queryKey: ['adminProyectos'] });
+      invalidateAll();
       create.close();
       triggerHighlight(nuevoId);
       showSuccess('Proyecto creado exitosamente.');
     } catch (err: any) {
       showError(err.response?.data?.message || 'Error al crear el proyecto');
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queryClient, create, triggerHighlight, showSuccess, showError, showWarning]);
 
   const handleUpdateSubmit = async (id: number, data: UpdateProyectoDto) => {
@@ -172,7 +221,6 @@ export const useAdminProyectos = () => {
   const handleConfirmAction = useCallback(() => {
     const project = confirmDialog.data as ProyectoDto;
     if (!project) return;
-
     if (confirmDialog.action === 'start_project_process') {
       startMutation.mutate(project.id);
     } else if (confirmDialog.action === 'toggle_project_visibility') {
@@ -182,18 +230,15 @@ export const useAdminProyectos = () => {
     }
   }, [confirmDialog, startMutation, toggleActiveMutation, revertMutation]);
 
-  // --- FILTRADO FINAL ---
+  // ── Filtrado ─────────────────────────────────────────────────────────────
   const filteredProyectos = useMemo(() => {
     const search = debouncedSearchTerm.toLowerCase();
     return proyectosOrdenados.filter(p => {
       const matchesSearch = !search || p.nombre_proyecto.toLowerCase().includes(search);
       const matchesType = filterTipo === 'all' || p.tipo_inversion === filterTipo;
       const matchesEstado = filterEstado === 'all' || p.estado_proyecto === filterEstado;
-      
-      // 🆕 Lógica de filtro por riesgo (Bajo Mínimo)
       const isBajoMinimo = p.suscripciones_actuales < (p.suscripciones_minimas || 0);
       const matchesRiesgo = !filterRiesgo || isBajoMinimo;
-
       return matchesSearch && matchesType && matchesEstado && matchesRiesgo;
     });
   }, [proyectosOrdenados, debouncedSearchTerm, filterTipo, filterEstado, filterRiesgo]);
@@ -202,11 +247,15 @@ export const useAdminProyectos = () => {
     searchTerm, setSearchTerm,
     filterTipo, setFilterTipo,
     filterEstado, setFilterEstado,
-    filterRiesgo, setFilterRiesgo, // 🆕
+    filterRiesgo, setFilterRiesgo,
     selectedProject,
     highlightedId,
     filteredProyectos,
-    isLoading, error,
+    cuotaMap,
+    // isLoading combina ambas queries: la tabla no renderiza hasta que
+    // proyectos Y cuotas estén listos, eliminando el flash de 404.
+    isLoading: isLoadingProyectos || (mensualIds.length > 0 && isLoadingCuotas),
+    error,
     modales,
     handleCreateSubmit,
     handleUpdateSubmit,
@@ -215,6 +264,6 @@ export const useAdminProyectos = () => {
     isUpdating: updateMutation.isPending,
     isToggling: toggleActiveMutation.isPending,
     isStarting: startMutation.isPending,
-    isReverting: revertMutation.isPending
+    isReverting: revertMutation.isPending,
   };
 };

@@ -1,27 +1,19 @@
 // src/components/domain/inversiones/MisInversiones.tsx
 
+import { useQuery } from '@tanstack/react-query';
 import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
 
 // Material UI Components
 import {
-    alpha, Box, Button, Chip, IconButton, Paper, Stack, Tooltip, Typography, useTheme
+    Box, Button, Chip, IconButton, Paper, Stack, Tooltip, Typography, useTheme
 } from '@mui/material';
 
 // Material UI Icons
 import {
-    AccountBalanceWallet,
-    CheckCircle,
-    ErrorOutline,
-    HelpOutline,
-    HourglassEmpty,
-    MonetizationOn,
-    Payment,
-    PieChart,
-    Refresh,
+    AccountBalanceWallet, CheckCircle, ErrorOutline, HelpOutline,
+    HourglassEmpty, MonetizationOn, Payment, PieChart,
     Schedule,
-    TrendingUp,
     Visibility
 } from '@mui/icons-material';
 
@@ -35,7 +27,6 @@ import { PageHeader } from '@/shared/components/layout/headers/PageHeader';
 
 // Servicios y Tipos
 import InversionService from '@/core/api/services/inversion.service';
-import { env } from '@/core/config/env';
 import type { InversionDto } from '@/core/types/dto/inversion.dto';
 
 // Utils & Hooks
@@ -43,37 +34,19 @@ import { useCurrencyFormatter } from '../../hooks/useCurrencyFormatter';
 import { useInversionPayment } from '../../hooks/useInversionPayment';
 
 // ============================================================================
-// HELPER INTERNO: Configuración de Estados (Colores e Iconos)
+// HELPER: Configuración de Estados
 // ============================================================================
 const getStatusConfig = (estado: string) => {
     const configs: Record<string, any> = {
-        // Estados de Éxito
         pagado: { label: 'Pagado', color: 'success', icon: <CheckCircle fontSize="small" /> },
-        cubierto_por_puja: { label: 'Cubierto (Puja)', color: 'success', icon: <AccountBalanceWallet fontSize="small" /> },
-
-        // Estados de Alerta / Pendientes
+        cubierto_por_puja: { label: 'Cubierto', color: 'success', icon: <AccountBalanceWallet fontSize="small" /> },
         pendiente: { label: 'Pendiente', color: 'info', icon: <Schedule fontSize="small" /> },
         en_proceso: { label: 'En Proceso', color: 'warning', icon: <HourglassEmpty fontSize="small" /> },
-
-        // Estados de Error / Peligro
-        vencido: { label: 'Vencido', color: 'error', icon: <ErrorOutline fontSize="small" /> },
         fallido: { label: 'Fallido', color: 'error', icon: <ErrorOutline fontSize="small" /> },
-        expirado: { label: 'Expirado', color: 'error', icon: <ErrorOutline fontSize="small" /> },
-
-        // Otros
-        reembolsado: { label: 'Reembolsado', color: 'info', icon: <Refresh fontSize="small" /> },
     };
-
-    return configs[estado] || {
-        label: estado,
-        color: 'default',
-        icon: <HelpOutline fontSize="small" />
-    };
+    return configs[estado] || { label: estado, color: 'default', icon: <HelpOutline fontSize="small" /> };
 };
 
-// ============================================================================
-// COMPONENTE PRINCIPAL
-// ============================================================================
 const MisInversiones: React.FC = () => {
     const navigate = useNavigate();
     const theme = useTheme();
@@ -90,67 +63,44 @@ const MisInversiones: React.FC = () => {
         queryKey: ['misInversiones'],
         queryFn: async () => {
             const response = await InversionService.getMisInversiones();
-            // Adaptación segura para el wrapper de datos { data: [...] } o array directo
+            // Mapeo seguro según la estructura de tu backend
             return (response.data as any).data ?? response.data ?? [];
-        },
-        retry: 1,
-        staleTime: 1000 * 60 * 5
+        }
     });
 
     // --- LÓGICA DE NEGOCIO (KPIs) ---
+    // ✅ CORRECCIÓN: Usamos Number(inv.monto) para evitar el cero
     const stats = useMemo(() => {
-        if (!inversiones.length) return { total: 0, pagadas: 0, monto: 0 };
-
         return inversiones.reduce((acc, inv) => {
             const montoNum = Number(inv.monto) || 0;
             const esValida = !['fallido', 'reembolsado'].includes(inv.estado);
 
             return {
                 total: acc.total + 1,
-                pagadas: inv.estado === 'pagado' ? acc.pagadas + 1 : acc.pagadas,
-                monto: esValida ? acc.monto + montoNum : acc.monto
+                exitosas: inv.estado === 'pagado' ? acc.exitosas + 1 : acc.exitosas,
+                montoTotal: esValida ? acc.montoTotal + montoNum : acc.montoTotal
             };
-        }, { total: 0, pagadas: 0, monto: 0 });
+        }, { total: 0, exitosas: 0, montoTotal: 0 });
     }, [inversiones]);
 
-    // --- COLUMNAS DE LA TABLA ---
+    // --- COLUMNAS (Sin IDs, solo nombres) ---
     const columns = useMemo<DataTableColumn<InversionDto>[]>(() => [
         {
             id: 'proyecto',
-            label: 'Proyecto / Referencia',
-            minWidth: 220,
-            render: (row) => {
-                const proyecto = row.proyectoInvertido || (row as any).proyecto;
-                return (
-                    <Box>
-                        <Typography variant="subtitle2" fontWeight={700} color="text.primary">
-                            {proyecto?.nombre_proyecto ?? 'Proyecto Directo'}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
-                            REF: #{row.id}
-                        </Typography>
-                    </Box>
-                );
-            }
-        },
-        {
-            id: 'fecha',
-            label: 'Fecha Solicitud',
-            minWidth: 120,
+            label: 'Proyecto',
+            minWidth: 280,
             render: (row) => (
-                <Typography variant="body2" color="text.secondary">
-                    {new Date(row.fecha_inversion).toLocaleDateString(env.defaultLocale, {
-                        day: '2-digit', month: 'short', year: 'numeric'
-                    })}
+                <Typography variant="subtitle2" fontWeight={800} color="primary.main">
+                    {row.proyectoInvertido?.nombre_proyecto ?? 'Inversión Directa'}
                 </Typography>
             )
         },
         {
             id: 'monto',
-            label: 'Capital',
+            label: 'Capital Invertido',
             minWidth: 150,
             render: (row) => (
-                <Typography variant="body2" fontWeight={700} color="success.main" fontSize="1rem">
+                <Typography variant="body2" fontWeight={700}>
                     {formatCurrency(row.monto)}
                 </Typography>
             )
@@ -160,119 +110,101 @@ const MisInversiones: React.FC = () => {
             label: 'Estado',
             minWidth: 140,
             render: (row) => {
-                // Usamos la función local definida arriba
                 const { label, color, icon } = getStatusConfig(row.estado);
                 return (
                     <Chip
                         label={label}
                         color={color}
-                        icon={icon as React.ReactElement}
+                        icon={icon}
                         size="small"
-                        variant={row.estado === 'pagado' ? 'filled' : 'outlined'}
-                        sx={{ fontWeight: 600, minWidth: 110, justifyContent: 'flex-start' }}
+                        sx={{ fontWeight: 700, borderRadius: 1.5 }}
                     />
                 );
             }
         },
         {
+            id: 'fecha',
+            label: 'Fecha',
+            minWidth: 120,
+            render: (row) => (
+                <Typography variant="body2" color="text.secondary">
+                    {new Date(row.fecha_inversion).toLocaleDateString()}
+                </Typography>
+            )
+        },
+        {
             id: 'acciones',
-            label: 'Acciones',
+            label: 'Gestión',
             align: 'right',
-            minWidth: 180,
             render: (row) => (
                 <Stack direction="row" spacing={1} justifyContent="flex-end">
                     <Tooltip title="Ver Detalles">
-                        <IconButton
-                            size="small"
-                            onClick={() => navigate(`/proyectos/${row.id_proyecto}`)}
-                            sx={{ border: `1px solid ${theme.palette.divider}`, '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.05) } }}
-                        >
+                        <IconButton size="small" onClick={() => navigate(`/proyectos/${row.id_proyecto}`)}>
                             <Visibility fontSize="small" />
                         </IconButton>
                     </Tooltip>
-
                     {row.estado === 'pendiente' && (
                         <Button
                             variant="contained"
                             size="small"
-                            color="primary"
-                            disabled={isIniciandoPago}
                             onClick={() => iniciarPago(row.id)}
-                            startIcon={isIniciandoPago && selectedInversionId === row.id ? null : <Payment />}
-                            sx={{ borderRadius: 2, fontWeight: 700, px: 2 }}
+                            disabled={isIniciandoPago}
+                            startIcon={<Payment />}
+                            sx={{ fontWeight: 700, borderRadius: 1.5 }}
                         >
-                            {isIniciandoPago && selectedInversionId === row.id ? 'Cargando...' : 'Pagar'}
+                            Pagar
                         </Button>
                     )}
                 </Stack>
             )
         }
-    ], [theme, isIniciandoPago, selectedInversionId, navigate, iniciarPago, formatCurrency]);
+    ], [navigate, formatCurrency, iniciarPago, isIniciandoPago]);
 
     return (
         <PageContainer maxWidth="lg">
             <PageHeader
                 title="Mis Inversiones"
-                subtitle="Monitorea el rendimiento de tu capital y diversifica tu cartera."
+                subtitle="Seguimiento de tu capital y rendimiento en proyectos directos."
             />
 
-            {/* KPI Cards Layout */}
-            <Box
-                sx={{
-                    display: 'grid',
-                    gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' },
-                    gap: 2,
-                    mb: 4
-                }}
-            >
+            {/* KPI SUMMARY */}
+            <Box sx={{
+                display: 'grid',
+                gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
+                gap: 2, mb: 4
+            }}>
                 <StatCard
-                    title="Capital Invertido"
-                    value={formatCurrency(stats.monto)}
+                    title="Capital en Cartera"
+                    value={formatCurrency(stats.montoTotal)}
                     icon={<MonetizationOn />}
                     color="primary"
                     loading={isLoading}
-                    subtitle="Total acumulado"
-                    compact
                 />
                 <StatCard
-                    title="Proyectos"
+                    title="Total Proyectos"
                     value={stats.total.toString()}
                     icon={<PieChart />}
                     color="warning"
                     loading={isLoading}
-                    subtitle="Inversiones registradas"
-                    compact
                 />
                 <StatCard
-                    title="Retornos Exitosos"
-                    value={stats.pagadas.toString()}
-                    icon={<TrendingUp />}
+                    title="Inversiones Pagadas"
+                    value={stats.exitosas.toString()}
+                    icon={<CheckCircle />}
                     color="success"
                     loading={isLoading}
-                    subtitle="Confirmadas por el sistema"
-                    compact
                 />
             </Box>
 
-            {/* Main Content Table */}
             <QueryHandler isLoading={isLoading} error={error as Error | null}>
-                <Paper
-                    elevation={0}
-                    sx={{
-                        border: `1px solid ${theme.palette.divider}`,
-                        borderRadius: 4,
-                        overflow: 'hidden'
-                    }}
-                >
+                <Paper elevation={0} sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 3, overflow: 'hidden' }}>
                     <DataTable
                         columns={columns}
                         data={inversiones}
                         getRowKey={(row) => row.id}
                         pagination
                         defaultRowsPerPage={10}
-                        highlightedRowId={selectedInversionId}
-                        isRowActive={(row) => !['fallido', 'reembolsado'].includes(row.estado)}
-                        emptyMessage="No tienes inversiones registradas actualmente."
+                        emptyMessage="No tienes inversiones registradas."
                     />
                 </Paper>
             </QueryHandler>
@@ -283,8 +215,7 @@ const MisInversiones: React.FC = () => {
                 onSubmit={confirmar2FA}
                 isLoading={isConfirmando2FA}
                 error={twoFAError}
-                title="Verificación de Inversión"
-                description="Ingresa el código de 6 dígitos de tu aplicación de autenticación para proceder con el pago."
+                title="Confirmar Pago de Inversión"
             />
         </PageContainer>
     );

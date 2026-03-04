@@ -1,29 +1,40 @@
 // src/pages/Admin/Suscripciones/components/CancelacionesTab.tsx
 
-import React, { useState, useMemo, useCallback } from 'react';
 import {
-    Box, Typography, Avatar, Stack, IconButton, useTheme, alpha,
-    Paper, TextField, Button
-} from '@mui/material';
-import {
-    Visibility, TrendingDown, MoneyOff, Cancel,
-    DateRange as DateIcon, Clear as ClearIcon
+    Cancel,
+    Clear as ClearIcon,
+    DateRange as DateIcon,
+    MoneyOff,
+    TrendingDown
 } from '@mui/icons-material';
+import {
+    alpha,
+    Avatar,
+    Box,
+    Button,
+    Chip,
+    Paper,
+    Stack,
+    TextField,
+    Typography,
+    useTheme
+} from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
+import React, { useCallback, useMemo, useState } from 'react';
 
 // Servicios y Tipos
 import SuscripcionService from '@/core/api/services/suscripcion.service';
 import type { SuscripcionCanceladaDto } from '@/core/types/dto/suscripcion.dto';
 
 // Componentes Shared e Hooks
-import { useModal } from '@/shared/hooks/useModal';
-import { QueryHandler } from '@/shared/components/data-grid/QueryHandler/QueryHandler';
 import { DataTable, type DataTableColumn } from '@/shared/components/data-grid/DataTable/DataTable';
+import { QueryHandler } from '@/shared/components/data-grid/QueryHandler/QueryHandler';
 import { StatCard } from '@/shared/components/domain/cards/StatCard/StatCard';
 import { FilterBar, FilterSearch } from '@/shared/components/forms/filters/FilterBar';
+import { useModal } from '@/shared/hooks/useModal';
 
 // Sub-componentes locales
-import DetalleCancelacionModal from './DetalleCancelacionModal';
+import DetalleCancelacionModal from '../modals/DetalleCancelacionModal';
 
 const CancelacionesTab: React.FC = () => {
     const theme = useTheme();
@@ -54,24 +65,24 @@ const CancelacionesTab: React.FC = () => {
     // 4. Cálculos (Aplicando los filtros de texto y fechas)
     const filteredCancelaciones = useMemo(() => {
         const term = searchTerm.toLowerCase().trim();
-        
+
         return cancelaciones.filter((item: SuscripcionCanceladaDto) => {
             // A. Filtro de Texto
             const user = item.usuarioCancelador;
             const userName = user ? `${user.nombre} ${user.apellido}`.toLowerCase() : '';
             const projName = (item.proyectoCancelado?.nombre_proyecto || '').toLowerCase();
-            const matchesSearch = !term || 
-                                  userName.includes(term) || 
-                                  projName.includes(term) || 
-                                  item.id.toString().includes(term) ||
-                                  (user?.email?.toLowerCase() || '').includes(term);
+            const matchesSearch = !term ||
+                userName.includes(term) ||
+                projName.includes(term) ||
+                item.id.toString().includes(term) ||
+                (user?.email?.toLowerCase() || '').includes(term);
 
             // B. Filtro de Rango de Fechas
             let matchesDate = true;
             if (item.fecha_cancelacion) {
                 // Extraemos solo la porción YYYY-MM-DD para comparar correctamente
                 const itemDateStr = new Date(item.fecha_cancelacion).toISOString().split('T')[0];
-                
+
                 if (startDate && itemDateStr < startDate) matchesDate = false;
                 if (endDate && itemDateStr > endDate) matchesDate = false;
             }
@@ -100,19 +111,18 @@ const CancelacionesTab: React.FC = () => {
         return "Total Liquidado (Histórico)";
     }, [startDate, endDate]);
 
-    // 6. Columnas
     const columns = useMemo<DataTableColumn<SuscripcionCanceladaDto>[]>(() => [
         {
             id: 'id',
-            label: 'ID / Fecha',
-            minWidth: 140,
-            render: (item: SuscripcionCanceladaDto) => (
+            label: 'ID / Fecha Baja',
+            minWidth: 160,
+            render: (item) => (
                 <Box>
                     <Typography variant="body2" fontWeight={800}>#{item.id}</Typography>
                     <Stack direction="row" alignItems="center" spacing={0.5}>
-                        <DateIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
-                        <Typography variant="caption" color="text.secondary" fontWeight={600}>
-                            {new Date(item.fecha_cancelacion).toLocaleDateString('es-AR')}
+                        <DateIcon sx={{ fontSize: 14, color: 'error.main' }} />
+                        <Typography variant="caption" color="error.main" fontWeight={800}>
+                            {new Date(item.fecha_cancelacion).toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })}
                         </Typography>
                     </Stack>
                 </Box>
@@ -121,23 +131,18 @@ const CancelacionesTab: React.FC = () => {
         {
             id: 'usuario',
             label: 'Ex-Titular',
-            minWidth: 220,
-            render: (item: SuscripcionCanceladaDto) => (
+            minWidth: 200,
+            render: (item) => (
                 <Stack direction="row" spacing={1.5} alignItems="center">
-                    <Avatar sx={{ 
-                        width: 32, height: 32, 
-                        bgcolor: alpha(theme.palette.error.main, 0.1), 
-                        color: 'error.main',
-                        fontSize: 12, fontWeight: 700
-                    }}>
-                        {item.usuarioCancelador?.nombre?.charAt(0) || 'U'}
+                    <Avatar sx={{ width: 32, height: 32, bgcolor: alpha(theme.palette.error.main, 0.1), color: 'error.main' }}>
+                        {item.usuarioCancelador?.nombre?.charAt(0)}
                     </Avatar>
                     <Box minWidth={0}>
                         <Typography variant="body2" fontWeight={700} noWrap>
-                            {item.usuarioCancelador ? `${item.usuarioCancelador.nombre} ${item.usuarioCancelador.apellido}` : 'Usuario Eliminado'}
+                            {item.usuarioCancelador?.nombre} {item.usuarioCancelador?.apellido}
                         </Typography>
-                        <Typography variant="caption" color="text.secondary" noWrap display="block">
-                            {item.usuarioCancelador?.email || `ID: ${item.id_usuario}`}
+                        <Typography variant="caption" color="text.secondary" display="block">
+                            @{item.usuarioCancelador?.nombre_usuario}
                         </Typography>
                     </Box>
                 </Stack>
@@ -145,34 +150,28 @@ const CancelacionesTab: React.FC = () => {
         },
         {
             id: 'proyecto',
-            label: 'Proyecto',
-            render: (item: SuscripcionCanceladaDto) => (
-                <Typography variant="body2" fontWeight={600} color="text.secondary">
-                    {item.proyectoCancelado?.nombre_proyecto || 'Desconocido'}
-                </Typography>
+            label: 'Permanencia',
+            minWidth: 180,
+            render: (item) => (
+                <Box>
+                    <Typography variant="body2" fontWeight={600} color="text.primary">
+                        {item.proyectoCancelado?.nombre_proyecto}
+                    </Typography>
+                    <Chip
+                        label={`${item.meses_pagados} meses pagados`} // Campo: meses_pagados
+                        size="small"
+                        sx={{ height: 18, fontSize: '0.6rem', bgcolor: alpha(theme.palette.info.main, 0.1), color: 'info.main', fontWeight: 800 }}
+                    />
+                </Box>
             )
         },
         {
             id: 'monto',
-            label: 'Liquidación',
-            render: (item: SuscripcionCanceladaDto) => (
+            label: 'Liquidación Final',
+            render: (item) => (
                 <Typography variant="body2" fontWeight={800} color="error.main" sx={{ fontFamily: 'monospace' }}>
-                    ${Number(item.monto_pagado_total).toLocaleString('es-AR')}
+                    ${Number(item.monto_pagado_total).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                 </Typography>
-            )
-        },
-        {
-            id: 'acciones',
-            label: '',
-            align: 'right',
-            render: (item: SuscripcionCanceladaDto) => (
-                <IconButton 
-                    size="small" 
-                    onClick={() => handleVerDetalle(item)}
-                    sx={{ bgcolor: alpha(theme.palette.primary.main, 0.05), '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.1) } }}
-                >
-                    <Visibility fontSize="small" color="primary" />
-                </IconButton>
             )
         }
     ], [theme, handleVerDetalle]);
@@ -185,38 +184,38 @@ const CancelacionesTab: React.FC = () => {
                 gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(3, 1fr)' },
                 gap: 2, mb: 4
             }}>
-                <StatCard 
-                    title="Bajas Filtradas" 
-                    value={(!startDate && !endDate && !searchTerm) ? (metrics?.total_canceladas || 0) : filteredCancelaciones.length} 
-                    color="error" 
-                    icon={<Cancel />} 
-                    loading={loadingMetrics} 
+                <StatCard
+                    title="Bajas Filtradas"
+                    value={(!startDate && !endDate && !searchTerm) ? (metrics?.total_canceladas || 0) : filteredCancelaciones.length}
+                    color="error"
+                    icon={<Cancel />}
+                    loading={loadingMetrics}
                 />
-                <StatCard 
-                    title="Tasa de Churn" 
-                    value={`${metrics?.tasa_cancelacion || 0}%`} 
-                    color="warning" 
-                    icon={<TrendingDown />} 
-                    loading={loadingMetrics} 
+                <StatCard
+                    title="Tasa de Churn"
+                    value={`${metrics?.tasa_cancelacion || 0}%`}
+                    color="warning"
+                    icon={<TrendingDown />}
+                    loading={loadingMetrics}
                 />
-                <StatCard 
-                    title={tituloMontoLiquidado} 
-                    value={`$${totalMontoLiquidado.toLocaleString('es-AR')}`} 
-                    color="info" 
-                    icon={<MoneyOff />} 
-                    loading={isLoading} 
+                <StatCard
+                    title={tituloMontoLiquidado}
+                    value={`$${totalMontoLiquidado.toLocaleString('es-AR')}`}
+                    color="info"
+                    icon={<MoneyOff />}
+                    loading={isLoading}
                 />
             </Box>
 
             {/* BARRA DE FILTROS ACTUALIZADA */}
             <FilterBar>
-                <FilterSearch 
+                <FilterSearch
                     placeholder="Buscar por ex-titular, proyecto o ID..."
                     value={searchTerm}
                     onSearch={setSearchTerm}
                     sx={{ minWidth: { xs: '100%', md: 300 } }}
                 />
-                
+
                 <Stack direction="row" spacing={2} alignItems="center" sx={{ flexWrap: 'wrap', gap: { xs: 2, md: 0 } }}>
                     <TextField
                         label="Desde"
@@ -238,9 +237,9 @@ const CancelacionesTab: React.FC = () => {
                         sx={{ bgcolor: 'background.paper', borderRadius: 1 }}
                     />
                     {(startDate || endDate) && (
-                        <Button 
-                            color="error" 
-                            size="small" 
+                        <Button
+                            color="error"
+                            size="small"
                             onClick={() => { setStartDate(''); setEndDate(''); }}
                             startIcon={<ClearIcon />}
                             sx={{ textTransform: 'none', fontWeight: 600 }}
@@ -254,21 +253,21 @@ const CancelacionesTab: React.FC = () => {
             {/* TABLA */}
             <QueryHandler isLoading={isLoading} error={error as Error | null}>
                 <Paper elevation={0} sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 3, overflow: 'hidden' }}>
-                    <DataTable 
-                        columns={columns} 
-                        data={filteredCancelaciones} 
-                        getRowKey={(row) => row.id} 
-                        pagination 
+                    <DataTable
+                        columns={columns}
+                        data={filteredCancelaciones}
+                        getRowKey={(row) => row.id}
+                        pagination
                         defaultRowsPerPage={10}
                         emptyMessage="No se encontraron registros de cancelaciones para los filtros seleccionados."
                     />
                 </Paper>
             </QueryHandler>
 
-            <DetalleCancelacionModal 
-                open={detailModal.isOpen} 
-                onClose={detailModal.close} 
-                cancelacion={selectedCancelacion} 
+            <DetalleCancelacionModal
+                open={detailModal.isOpen}
+                onClose={detailModal.close}
+                cancelacion={selectedCancelacion}
             />
         </Box>
     );

@@ -1,22 +1,19 @@
 // src/features/client/pages/Contratos/modals/VerContratoFirmadoModal.tsx
+
 import {
-  CheckCircle,
+  ContentCopy as CopyIcon,
   Download as DownloadIcon,
   Fingerprint,
-  Info,
+  Person as PersonIcon // Icono para el firmante
+  ,
+  Business as ProjectIcon,
+  HistoryEdu as SignatureIcon,
   VerifiedUser as VerifiedIcon
 } from '@mui/icons-material';
 import {
   Alert,
-  alpha,
-  Box,
-  Chip,
-  CircularProgress,
-  Divider,
-  Paper,
-  Stack,
-  Typography,
-  useTheme
+  Box, Chip, CircularProgress, Divider, IconButton,
+  Paper, Stack, Tooltip, Typography, useTheme
 } from '@mui/material';
 import React, { useMemo, useState } from 'react';
 
@@ -38,35 +35,29 @@ export const VerContratoFirmadoModal: React.FC<Props> = ({ open, onClose, contra
   const { showSuccess, showError } = useSnackbar();
   const [isDownloading, setIsDownloading] = useState(false);
 
-  // ===================================================
-  // URL DEL PDF FIRMADO
-  // ===================================================
   const pdfUrl = useMemo(() => {
     if (!contrato?.url_archivo) return '';
-
-    // ✅ CRÍTICO: Este PDF ya tiene la firma embebida
-    // El backend lo guardó con la firma del usuario cuando se registró
     return ImagenService.resolveImageUrl(contrato.url_archivo);
   }, [contrato?.url_archivo]);
 
+  const handleCopyHash = () => {
+    if (contrato?.hash_archivo_firmado) {
+      navigator.clipboard.writeText(contrato.hash_archivo_firmado);
+      showSuccess('Hash copiado al portapapeles');
+    }
+  };
+
   if (!contrato) return null;
 
-  // ===================================================
-  // HANDLER DE DESCARGA
-  // ===================================================
   const handleDownload = async () => {
     try {
       setIsDownloading(true);
-
-      // Descarga el PDF que ya tiene la firma embebida
       await ContratoService.downloadAndSave(
         contrato.id,
         contrato.nombre_archivo || `contrato_${contrato.id}.pdf`
       );
-
-      showSuccess('Documento descargado exitosamente');
+      showSuccess('Documento descargado con éxito');
     } catch (error) {
-      console.error('Error descargando contrato:', error);
       showError('Error al descargar el documento');
     } finally {
       setIsDownloading(false);
@@ -80,204 +71,126 @@ export const VerContratoFirmadoModal: React.FC<Props> = ({ open, onClose, contra
     <BaseModal
       open={open}
       onClose={onClose}
-      title={contrato.nombre_archivo}
-      subtitle="Documento firmado digitalmente y auditado"
+      title={contrato.proyectoAsociado?.nombre_proyecto || "Contrato Digital"}
+      subtitle={contrato.nombre_archivo}
       icon={<VerifiedIcon />}
       headerColor={esFirmado ? 'success' : 'warning'}
       maxWidth="lg"
-      confirmText="Descargar Original"
-      // ✅ Solo una vez, y pasamos el elemento visual
+      confirmText="Descargar PDF"
       confirmButtonIcon={isDownloading ? <CircularProgress size={20} /> : <DownloadIcon />}
       onConfirm={handleDownload}
-      // ✅ Usamos la prop correcta para deshabilitar el botón
       disableConfirm={isDownloading}
-      isLoading={isDownloading} // Si tu BaseModal lo soporta, esto pondrá el estado loading global del modal
       cancelText="Cerrar"
       PaperProps={{ sx: { height: '90vh' } }}
     >
-      <Stack
-        direction={{ xs: 'column', md: 'row' }}
-        spacing={3}
-        height="100%"
-        overflow="hidden"
-      >
-        {/* ===================================================
-            COLUMNA IZQUIERDA: VISOR PDF
-            =================================================== */}
-        <Box
-          flex={1}
-          bgcolor="background.default"
-          borderRadius={2}
-          border={`1px solid ${theme.palette.divider}`}
-          overflow="hidden"
-          position="relative"
-        >
-          {pdfUrl ? (
-            <>
-              {/* ✅ Banner informativo */}
-              <Box
-                position="absolute"
-                top={16}
-                left={16}
-                right={16}
-                zIndex={10}
-              >
-                <Alert
-                  severity={esFirmado ? 'success' : 'info'}
-                  icon={esFirmado ? <CheckCircle /> : <Info />}
-                  sx={{
-                    bgcolor: alpha(
-                      esFirmado ? theme.palette.success.main : theme.palette.info.main,
-                      0.95
-                    ),
-                    backdropFilter: 'blur(10px)',
-                    boxShadow: theme.shadows[4]
-                  }}
-                >
-                  <Typography variant="body2" fontWeight={600}>
-                    {esFirmado
-                      ? '✓ Este documento contiene la firma digital del usuario'
-                      : 'ℹ️ Documento en proceso de firma'}
-                  </Typography>
-                </Alert>
-              </Box>
+      <Stack direction={{ xs: 'column', md: 'row' }} spacing={3} height="100%" overflow="hidden">
 
-              {/* ✅ Visor del PDF (ya tiene la firma embebida) */}
-              <PDFViewerMejorado
-                pdfUrl={pdfUrl}
-                signatureDataUrl={null} // No necesitamos overlay porque la firma ya está en el PDF
-                onSignaturePositionSet={() => { }}
-                readOnlyMode={true}
-              />
-            </>
-          ) : (
-            <Box display="flex" alignItems="center" justifyContent="center" height="100%">
-              <Typography color="text.secondary">Documento no disponible</Typography>
-            </Box>
-          )}
+        {/* VISOR PDF */}
+        <Box flex={1} bgcolor="background.default" borderRadius={2} border={`1px solid ${theme.palette.divider}`} overflow="hidden" position="relative">
+          <PDFViewerMejorado pdfUrl={pdfUrl} signatureDataUrl={null} readOnlyMode={true} />
         </Box>
 
-        {/* ===================================================
-            COLUMNA DERECHA: AUDITORÍA
-            =================================================== */}
-        <Box
-          width={{ xs: '100%', md: 340 }}
-          component={Paper}
-          elevation={0}
-          variant="outlined"
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'auto',
-            bgcolor: 'background.paper'
-          }}
-        >
-          <Box p={2.5}>
-            <Typography
-              variant="overline"
-              color="text.secondary"
-              fontWeight={700}
-              letterSpacing={1.2}
-            >
-              TRAZABILIDAD
-            </Typography>
+        {/* PANEL DE AUDITORÍA */}
+        <Box width={{ xs: '100%', md: 340 }} component={Paper} elevation={0} variant="outlined" sx={{ overflow: 'auto', p: 2.5, bgcolor: 'background.paper' }}>
+          <Typography variant="overline" color="text.secondary" fontWeight={800} sx={{ display: 'block', mb: 2 }}>
+            DETALLES DE VALIDACIÓN
+          </Typography>
 
-            <Stack spacing={3} mt={2}>
-              {/* 1. Estado */}
-              <Box>
-                <Typography variant="caption" color="text.secondary" display="block" mb={0.5}>
-                  Estado del Documento
+          <Stack spacing={2.5}>
+
+            {/* ✅ SECCIÓN DEL FIRMANTE (Actualizado) */}
+            <Box>
+              <Stack direction="row" spacing={1} alignItems="center" mb={1}>
+                <PersonIcon sx={{ fontSize: 18, color: 'primary.main' }} />
+                <Typography variant="caption" fontWeight={700} color="text.secondary">TITULAR DE LA FIRMA</Typography>
+              </Stack>
+              <Typography variant="subtitle2" fontWeight={800}>
+                {`${contrato.usuarioFirmante?.nombre} ${contrato.usuarioFirmante?.apellido}`}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                {contrato.usuarioFirmante?.email}
+              </Typography>
+            </Box>
+
+            <Divider />
+
+            {/* Proyecto Asociado */}
+            <Box>
+              <Stack direction="row" spacing={1} alignItems="center" mb={1}>
+                <ProjectIcon sx={{ fontSize: 18, color: 'primary.main' }} />
+                <Typography variant="caption" fontWeight={700} color="text.secondary">PROYECTO</Typography>
+              </Stack>
+              <Typography variant="body2" fontWeight={700}>
+                {contrato.proyectoAsociado?.nombre_proyecto.toUpperCase()}
+              </Typography>
+            </Box>
+
+            <Divider />
+
+            {/* Validación 2FA */}
+            <Box>
+              <Typography variant="caption" color="text.secondary">CERTIFICACIÓN DIGITAL</Typography>
+              <Alert severity="success" icon={<SignatureIcon fontSize="small" />} sx={{ mt: 0.5, py: 0.5 }}>
+                <Typography variant="caption" fontWeight={600} sx={{ fontSize: '0.7rem' }}>
+                  {contrato.firma_digital}
                 </Typography>
+              </Alert>
+            </Box>
+
+            <Divider />
+
+            {/* Metadatos Técnicos */}
+            <Box>
+              <Typography variant="caption" color="text.secondary" display="block" mb={1}>TRAZABILIDAD DE AUDITORÍA</Typography>
+              <Stack spacing={1}>
+                <Box display="flex" justifyContent="space-between">
+                  <Typography variant="caption">Dirección IP:</Typography>
+                  <Typography variant="caption" fontWeight={700} sx={{ fontFamily: 'monospace' }}>{contrato.ip_firma}</Typography>
+                </Box>
+                <Box display="flex" justifyContent="space-between">
+                  <Typography variant="caption">Fecha y Hora:</Typography>
+                  <Typography variant="caption" fontWeight={700}>
+                    {fechaFirma.toLocaleDateString()} - {fechaFirma.toLocaleTimeString()}
+                  </Typography>
+                </Box>
+              </Stack>
+            </Box>
+
+            <Divider />
+
+            {/* Hash SHA-256 */}
+            <Box>
+              <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <Fingerprint sx={{ fontSize: 16, color: 'primary.main' }} />
+                  <Typography variant="caption" fontWeight={700} color="text.secondary">SHA-256 (HASH)</Typography>
+                </Stack>
+                <Tooltip title="Copiar Hash">
+                  <IconButton size="small" onClick={handleCopyHash}>
+                    <CopyIcon sx={{ fontSize: 14 }} />
+                  </IconButton>
+                </Tooltip>
+              </Stack>
+              <Box bgcolor="action.hover" p={1.5} borderRadius={1} border="1px dashed" borderColor="divider">
+                <Typography variant="caption" sx={{ fontFamily: 'monospace', wordBreak: 'break-all', fontSize: '0.65rem' }}>
+                  {contrato.hash_archivo_firmado}
+                </Typography>
+              </Box>
+            </Box>
+
+            {/* Geolocalización */}
+            {contrato.geolocalizacion_firma && (
+              <Box>
+                <Typography variant="caption" color="text.secondary" display="block" mb={0.5}>COORDENADAS DE ORIGEN</Typography>
                 <Chip
-                  label={contrato.estado_firma}
-                  color={esFirmado ? 'success' : 'warning'}
+                  label={contrato.geolocalizacion_firma}
                   size="small"
-                  icon={<VerifiedIcon />}
-                  sx={{ fontWeight: 700, borderRadius: 1 }}
+                  variant="outlined"
+                  sx={{ fontFamily: 'monospace', fontSize: '0.65rem', maxWidth: '100%' }}
                 />
               </Box>
-
-              <Divider />
-
-              {/* 2. Fecha */}
-              <Box>
-                <Typography variant="caption" color="text.secondary" display="block" mb={0.5}>
-                  Fecha de Firma
-                </Typography>
-                <Typography variant="body2" fontWeight={600} color="text.primary">
-                  {fechaFirma.toLocaleDateString(undefined, {
-                    weekday: 'long',
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                  })}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Hora: {fechaFirma.toLocaleTimeString()}
-                </Typography>
-              </Box>
-
-              <Divider />
-
-              {/* 3. Hash de Integridad */}
-              <Box>
-                <Stack direction="row" alignItems="center" gap={1} mb={1}>
-                  <Fingerprint fontSize="small" color="primary" />
-                  <Typography variant="caption" color="text.secondary" fontWeight={700}>
-                    HASH DE INTEGRIDAD (SHA-256)
-                  </Typography>
-                </Stack>
-
-                <Box
-                  bgcolor={alpha(theme.palette.primary.main, 0.04)}
-                  p={1.5}
-                  borderRadius={2}
-                  border={`1px dashed ${theme.palette.divider}`}
-                  sx={{
-                    fontFamily: 'monospace',
-                    fontSize: '0.7rem',
-                    color: 'text.primary',
-                    wordBreak: 'break-all',
-                    lineHeight: 1.4
-                  }}
-                >
-                  {contrato.hash_archivo_firmado || 'No disponible'}
-                </Box>
-                <Typography
-                  variant="caption"
-                  color="text.disabled"
-                  sx={{ mt: 1, display: 'block', fontSize: '0.65rem' }}
-                >
-                  * Esta huella digital garantiza que el contenido del contrato no ha sido
-                  alterado ni un solo bit desde el momento de la firma.
-                </Typography>
-              </Box>
-
-              <Divider />
-
-              {/* 4. Información adicional */}
-              {contrato.geolocalizacion_firma && (
-                <Box>
-                  <Typography variant="caption" color="text.secondary" display="block" mb={0.5}>
-                    Ubicación de Firma
-                  </Typography>
-                  <Typography
-                    variant="caption"
-                    sx={{
-                      fontFamily: 'monospace',
-                      color: 'text.secondary',
-                      bgcolor: alpha(theme.palette.action.focus, 0.5),
-                      p: 0.5,
-                      borderRadius: 1,
-                      display: 'inline-block'
-                    }}
-                  >
-                    {contrato.geolocalizacion_firma}
-                  </Typography>
-                </Box>
-              )}
-            </Stack>
-          </Box>
+            )}
+          </Stack>
         </Box>
       </Stack>
     </BaseModal>

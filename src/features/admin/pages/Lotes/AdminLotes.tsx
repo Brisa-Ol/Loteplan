@@ -3,13 +3,15 @@
 import React, { useMemo } from 'react';
 // Icons
 import {
-  Add, AssignmentLate, CheckCircle, Collections, Edit, Gavel,
+  Add as AddIcon,
+  AssignmentLate, CheckCircle, Collections, Edit, Gavel,
   GridView, Inventory, StopCircle, ViewList,
   Visibility
 } from '@mui/icons-material';
 // MUI Components
 import {
-  Avatar, Box, Button, Card, CardContent, Chip,
+  Avatar, Box, Button, // 🆕 Importamos Button para la acción del header
+  Card, CardContent, Chip,
   Divider, IconButton, MenuItem, Stack, Switch, ToggleButton,
   ToggleButtonGroup, Tooltip, Typography, alpha, useTheme
 } from '@mui/material';
@@ -26,12 +28,12 @@ import { PageContainer } from '@/shared/components/layout/containers/PageContain
 import { useAdminLotes } from '../../hooks/lotes/useAdminLotes';
 
 // Modals
+import { AdminPageHeader } from '@/shared/components/admin/Adminpageheader'; // ✅ Importación corregida
 import AuctionControlModal from './modals/AuctionControlModal';
 import CreateLoteModal from './modals/CreateLoteModal';
 import EditLoteModal from './modals/EditLoteModal';
 import LoteOverviewModal from './modals/LoteOverviewModal';
 import ManageLoteImagesModal from './modals/ManageLoteImagesModal';
-import theme from '@/core/theme';
 
 // ============================================================================
 // COMPONENTE: CARD DE LOTE
@@ -99,7 +101,11 @@ const LoteCard: React.FC<{
           </Box>
 
           <Typography variant="h5" color="primary.main" fontWeight={900}>
-            ${Number(lote.precio_base).toLocaleString('es-AR')}
+            {/* ✅ Forzamos 2 decimales para montos financieros */}
+            ${Number(lote.precio_base).toLocaleString('es-AR', {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2
+            })}
           </Typography>
 
           <Chip
@@ -164,7 +170,7 @@ const AdminLotes: React.FC = () => {
     PaperProps: {
       sx: {
         mt: 1.4, // 🚀 Baja el menú para no tapar el label
-        maxHeight: 300, 
+        maxHeight: 300,
         borderRadius: '12px',
         minWidth: 280,
         boxShadow: '0px 4px 20px rgba(0,0,0,0.1)',
@@ -230,7 +236,11 @@ const AdminLotes: React.FC = () => {
       label: 'Precio Base',
       render: (l) => (
         <Typography variant="body2" color="primary.main" fontWeight={700}>
-          ${Number(l.precio_base).toLocaleString('es-AR')}
+          {/* ✅ Consistencia con el JSON del backend */}
+          ${Number(l.precio_base).toLocaleString('es-AR', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+          })}
         </Typography>
       ),
     },
@@ -278,13 +288,23 @@ const AdminLotes: React.FC = () => {
 
   return (
     <PageContainer maxWidth="xl" sx={{ py: 3 }}>
-      <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'stretch', sm: 'center' }} mb={4} spacing={2}>
-        <Box>
-          <Typography variant="h1" gutterBottom>Gestión de Lotes</Typography>
-          <Typography variant="subtitle1" color="text.secondary">Inventario y control administrativo de subastas</Typography>
-        </Box>
-        <Button variant="contained" startIcon={<Add />} onClick={logic.handleOpenCreate} >Nuevo Lote</Button>
-      </Stack>
+
+      {/* ✅ APLICACIÓN DEL HEADER ESTANDARIZADO */}
+      <AdminPageHeader
+        title="Gestión de Lotes"
+        subtitle="Inventario y control administrativo de activos subastables e inversiones directas."
+        action={
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={logic.modales.create.open}
+            fullWidth // Responsive para móviles
+            sx={{ fontWeight: 800, px: 3, py: 1.2, borderRadius: 2 }}
+          >
+            Nuevo Lote
+          </Button>
+        }
+      />
 
       {/* KPI GRID */}
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' }, gap: 2, mb: 4 }}>
@@ -303,44 +323,44 @@ const AdminLotes: React.FC = () => {
             onChange={(e) => logic.setSearchTerm(e.target.value)}
             sx={{ flex: 2 }}
           />
-          
-          {/* 🚀 FILTRO DE PROYECTO ACTUALIZADO */}
-<FilterSelect 
-  label="Proyecto" 
-  value={logic.filterProject} 
-  onChange={(e: any) => logic.setFilterProject(e.target.value)}
-  SelectProps={{
-    MenuProps: proyectoMenuProps 
-  }}
->
-  <MenuItem value="all">Todos los Lotes</MenuItem>
-  {logic.proyectos.map((p) => (
-    <MenuItem key={p.id} value={p.id} sx={{ py: 1.5 }}>
-      <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between" width="100%">
-        <Typography variant="body2">{p.nombre_proyecto}</Typography>
-        
-        {/* Etiqueta de Tipo */}
-        <Chip 
-          label={p.tipo_inversion === 'directo' ? 'DIRECTO' : 'MENSUAL'} 
-          size="small"
-          sx={{ 
-            fontSize: '0.55rem', 
-            height: 18, 
-            fontWeight: 800,
-            bgcolor: p.tipo_inversion === 'directo' ? alpha(theme.palette.info.main, 0.1) : alpha(theme.palette.warning.main, 0.1),
-            color: p.tipo_inversion === 'directo' ? 'info.main' : 'warning.main',
-            border: '1px solid',
-            borderColor: 'transparent'
-          }} 
-        />
-      </Stack>
-    </MenuItem>
-  ))}
-</FilterSelect>
 
-          <FilterSelect 
-            label="Estado" 
-            value={logic.filterEstadoSubasta} 
+          {/* 🚀 FILTRO DE PROYECTO ACTUALIZADO */}
+          <FilterSelect
+            label="Proyecto"
+            value={logic.filterProject}
+            onChange={(e: any) => logic.setFilterProject(e.target.value)}
+            SelectProps={{
+              MenuProps: proyectoMenuProps
+            }}
+          >
+            <MenuItem value="all">Todos los Lotes</MenuItem>
+            {logic.proyectos.map((p) => (
+              <MenuItem key={p.id} value={p.id} sx={{ py: 1.5 }}>
+                <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between" width="100%">
+                  <Typography variant="body2">{p.nombre_proyecto}</Typography>
+
+                  {/* Etiqueta de Tipo */}
+                  <Chip
+                    label={p.tipo_inversion === 'directo' ? 'DIRECTO' : 'MENSUAL'}
+                    size="small"
+                    sx={{
+                      fontSize: '0.55rem',
+                      height: 18,
+                      fontWeight: 800,
+                      bgcolor: p.tipo_inversion === 'directo' ? alpha(logic.theme.palette.info.main, 0.1) : alpha(logic.theme.palette.warning.main, 0.1),
+                      color: p.tipo_inversion === 'directo' ? 'info.main' : 'warning.main',
+                      border: '1px solid',
+                      borderColor: 'transparent'
+                    }}
+                  />
+                </Stack>
+              </MenuItem>
+            ))}
+          </FilterSelect>
+
+          <FilterSelect
+            label="Estado"
+            value={logic.filterEstadoSubasta}
             onChange={(e: any) => logic.setFilterEstadoSubasta(e.target.value)}
             SelectProps={{
               MenuProps: estadoMenuProps
@@ -381,21 +401,21 @@ const AdminLotes: React.FC = () => {
         )}
       </QueryHandler>
 
-      <CreateLoteModal 
-        {...logic.modales.create.modalProps} 
-        onSubmit={async (data: CreateLoteDto, file: File | null) => { 
-          await logic.saveLote({ dto: data, file }); 
-        }} 
-        isLoading={logic.isSaving} 
+      <CreateLoteModal
+        {...logic.modales.create.modalProps}
+        onSubmit={async (data: CreateLoteDto, file: File | null) => {
+          await logic.saveLote({ dto: data, file });
+        }}
+        isLoading={logic.isSaving}
       />
 
-      <EditLoteModal 
-        {...logic.modales.edit.modalProps} 
-        lote={logic.selectedLote} 
-        onSubmit={async (id: number, data: UpdateLoteDto) => { 
-          await logic.saveLote({ dto: data, id }); 
-        }} 
-        isLoading={logic.isSaving} 
+      <EditLoteModal
+        {...logic.modales.edit.modalProps}
+        lote={logic.selectedLote}
+        onSubmit={async (id: number, data: UpdateLoteDto) => {
+          await logic.saveLote({ dto: data, id });
+        }}
+        isLoading={logic.isSaving}
       />
 
       {logic.selectedLote && (
@@ -404,19 +424,19 @@ const AdminLotes: React.FC = () => {
             {...logic.modales.images.modalProps}
             lote={logic.selectedLote}
           />
-          <LoteOverviewModal 
-            open={logic.modales.overview.isOpen} 
-            onClose={logic.modales.overview.close} 
-            lote={logic.selectedLote} 
-            proyecto={logic.proyectos.find(p => p.id === logic.selectedLote?.id_proyecto)} 
+          <LoteOverviewModal
+            open={logic.modales.overview.isOpen}
+            onClose={logic.modales.overview.close}
+            lote={logic.selectedLote}
+            proyecto={logic.proyectos.find(p => p.id === logic.selectedLote?.id_proyecto)}
           />
-          <AuctionControlModal 
-            open={logic.modales.auction.isOpen} 
-            onClose={logic.modales.auction.close} 
-            lote={logic.selectedLote} 
-            isLoading={logic.isAuctionLoading} 
-            onStart={(id) => logic.startAuctionFn(id)} 
-            onEnd={(id) => logic.endAuctionFn(id)} 
+          <AuctionControlModal
+            open={logic.modales.auction.isOpen}
+            onClose={logic.modales.auction.close}
+            lote={logic.selectedLote}
+            isLoading={logic.isAuctionLoading}
+            onStart={(id) => logic.startAuctionFn(id)}
+            onEnd={(id) => logic.endAuctionFn(id)}
           />
         </>
       )}

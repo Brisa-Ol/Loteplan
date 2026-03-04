@@ -1,15 +1,15 @@
 import React, {
   createContext,
-  useEffect,
-  useContext,
   useCallback,
-  useState,
-  useMemo, // ✅ Importante para performance
+  useContext,
+  useEffect,
+  useMemo,
+  useState, // ✅ Importante para performance
   type ReactNode,
 } from 'react';
 
 // DTOs
-import type { LoginRequestDto, RegisterRequestDto, UserDto, LoginResponseDto, LoginSuccessResponse } from '@/core/types/dto/auth.dto';
+import type { LoginRequestDto, LoginResponseDto, LoginSuccessResponse, RegisterRequestDto, UserDto } from '@/core/types/dto/auth.dto';
 import type { Generate2faSecretResponseDto } from '@/core/types/dto/auth2fa.dto';
 
 // Hooks Modulares
@@ -17,11 +17,11 @@ import { use2FAManagement } from '@/features/auth/hooks/use2FAManagement';
 import { useAccountActions } from '@/features/auth/hooks/useAccountActions';
 import { useAuthCore } from '@/features/auth/hooks/useAuthCore';
 
-export type AuthErrorType = 
-  | 'invalid_credentials' 
-  | 'session_expired' 
-  | 'account_not_activated' 
-  | 'generic' 
+export type AuthErrorType =
+  | 'invalid_credentials'
+  | 'session_expired'
+  | 'account_not_activated'
+  | 'generic'
   | null;
 
 interface AuthContextType {
@@ -54,15 +54,15 @@ const classifyError = (errorMsg: string | null): AuthErrorType => {
   if (!errorMsg) return null;
   const errorLower = errorMsg.toLowerCase();
 
-  if (errorLower.includes('cuenta no activada') || 
-      errorLower.includes('no confirmado') ||
-      errorLower.includes('email no verificado')) {
+  if (errorLower.includes('cuenta no activada') ||
+    errorLower.includes('no confirmado') ||
+    errorLower.includes('email no verificado')) {
     return 'account_not_activated';
   }
 
   if (errorLower.includes('credenciales incorrectas') ||
-      errorLower.includes('usuario o contraseña') ||
-      errorLower.includes('invalid credentials')) {
+    errorLower.includes('usuario o contraseña') ||
+    errorLower.includes('invalid credentials')) {
     return 'invalid_credentials';
   }
 
@@ -78,7 +78,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const twoFA = use2FAManagement();
   // Pasamos logout a accountActions para limpiar sesión al borrar cuenta
   const accountActions = useAccountActions(authCore.logout);
-  
+
   const [authErrorType, setAuthErrorType] = useState<AuthErrorType>(null);
   const { loadUser } = authCore;
 
@@ -95,9 +95,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [combinedError]);
 
   const login = useCallback(async (credentials: LoginRequestDto): Promise<LoginResponseDto> => {
-    authCore.clearError(); 
+    authCore.clearError();
     setAuthErrorType(null);
-    
+
     const response = await authCore.login(credentials);
     if ('is2FARequired' in response && response.is2FARequired) {
       twoFA.setRequires2FA(true);

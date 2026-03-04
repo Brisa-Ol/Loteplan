@@ -35,7 +35,7 @@ interface SignatureStamp {
 interface PDFViewerMejoradoProps {
   pdfUrl: string;
   signatureDataUrl: string | null;
-  onSignaturePositionSet: (pos: SignatureStamp) => void;
+  onSignaturePositionSet?: (pos: SignatureStamp) => void;
   readOnlyMode?: boolean;
 }
 
@@ -66,20 +66,22 @@ const PDFViewerMejorado: React.FC<PDFViewerMejoradoProps> = ({
     return () => observer.disconnect();
   }, []);
 
-  const handlePageClick = (e: React.MouseEvent<HTMLDivElement>, pageNum: number) => {
-    if (readOnlyMode || !signatureDataUrl) return;
+const handlePageClick = (e: React.MouseEvent<HTMLDivElement>, pageNum: number) => {
+  // 1. Verificamos que NO sea modo lectura y que tengamos una imagen de firma
+  if (readOnlyMode || !signatureDataUrl) return;
 
-    const rect = e.currentTarget.getBoundingClientRect();
+  const rect = e.currentTarget.getBoundingClientRect();
 
-    // ✅ CAMBIO CRÍTICO: Calculamos el % exacto (de 0.0 a 1.0) 
-    // dividiendo la posición del clic por el tamaño total del contenedor en pantalla.
-    const x = (e.clientX - rect.left) / rect.width;
-    const y = (e.clientY - rect.top) / rect.height;
+  const x = (e.clientX - rect.left) / rect.width;
+  const y = (e.clientY - rect.top) / rect.height;
 
-    const newSignature = { x, y, page: pageNum };
-    setSignature(newSignature);
-    onSignaturePositionSet(newSignature);
-  };
+  const newSignature = { x, y, page: pageNum };
+  setSignature(newSignature);
+
+  // ✅ SOLUCIÓN: Usamos un check de existencia o el operador de encadenamiento opcional
+  // Esto le dice a TS: "Si existe, ejecútala; si no, no hagas nada".
+  onSignaturePositionSet?.(newSignature); 
+};
 
   return (
     <Box ref={containerRef} sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>

@@ -1,7 +1,7 @@
 // src/features/client/pages/Proyectos/ProyectosUnificados.tsx
 
 import { useQuery } from '@tanstack/react-query';
-import React, { useMemo, useState } from "react";
+import React, { memo, useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 // Material UI
@@ -22,17 +22,24 @@ import { ROUTES } from '@/routes';
 import { QueryHandler } from "../../../../shared/components/data-grid/QueryHandler/QueryHandler";
 import { ProjectCard } from "./components/ProjectCard";
 
-// --- Highlights Section ---
-const HighlightsSection: React.FC<{ perfil: string }> = ({ perfil }) => {
+// ===================================================
+// 🚀 COMPONENTES MEMOIZADOS (Evitan re-renders innecesarios)
+// ===================================================
+
+const MemoizedProjectCard = memo(ProjectCard);
+
+const HighlightsSection = memo(({ perfil }: { perfil: string }) => {
   const theme = useTheme();
+  const isAhorrista = perfil === 'ahorrista';
 
   return (
     <Paper
       elevation={0}
       sx={{
-        p: 4, mb: 5, borderRadius: 2,
+        p: 4, mb: 5, borderRadius: 3,
         bgcolor: 'background.paper',
-        border: `1px solid ${theme.palette.divider}`
+        border: `1px solid ${theme.palette.divider}`,
+        width: '100%'
       }}
     >
       <Stack
@@ -42,53 +49,32 @@ const HighlightsSection: React.FC<{ perfil: string }> = ({ perfil }) => {
         alignItems={{ xs: 'flex-start', md: 'center' }}
         divider={<Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', md: 'block' } }} />}
       >
-        {perfil === 'ahorrista' ? (
-          <>
-            <Box display="flex" alignItems="center" gap={2}>
-              <Avatar sx={{ bgcolor: 'success.light', color: 'success.main', width: 48, height: 48 }}>
-                <Savings />
-              </Avatar>
-              <Box>
-                <Typography variant="subtitle1" fontWeight={700} color="text.primary">Cuotas Fijas</Typography>
-                <Typography variant="body2" color="text.secondary">En pesos sin interés</Typography>
-              </Box>
-            </Box>
-            <Box display="flex" alignItems="center" gap={2}>
-              <Avatar sx={{ bgcolor: 'warning.light', color: 'warning.main', width: 48, height: 48 }}>
-                <HomeIcon />
-              </Avatar>
-              <Box>
-                <Typography variant="subtitle1" fontWeight={700} color="text.primary">Tu Casa Propia</Typography>
-                <Typography variant="body2" color="text.secondary">Adjudicación pactada</Typography>
-              </Box>
-            </Box>
-          </>
-        ) : (
-          <>
-            <Box display="flex" alignItems="center" gap={2}>
-              <Avatar sx={{ bgcolor: 'info.light', color: 'info.main', width: 48, height: 48 }}>
-                <TrendingUp />
-              </Avatar>
-              <Box>
-                <Typography variant="subtitle1" fontWeight={700} color="text.primary">Alta Rentabilidad</Typography>
-                <Typography variant="body2" color="text.secondary">Retornos en USD</Typography>
-              </Box>
-            </Box>
-            <Box display="flex" alignItems="center" gap={2}>
-              <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main', width: 48, height: 48 }}>
-                <Business />
-              </Avatar>
-              <Box>
-                <Typography variant="subtitle1" fontWeight={700} color="text.primary">Respaldo Real</Typography>
-                <Typography variant="body2" color="text.secondary">Activos tangibles</Typography>
-              </Box>
-            </Box>
-          </>
-        )}
+        <Box display="flex" alignItems="center" gap={2}>
+          <Avatar sx={{ bgcolor: isAhorrista ? 'success.light' : 'info.light', color: isAhorrista ? 'success.main' : 'info.main', width: 48, height: 48 }}>
+            {isAhorrista ? <Savings /> : <TrendingUp />}
+          </Avatar>
+          <Box>
+            <Typography variant="subtitle1" fontWeight={700}>{isAhorrista ? 'Cuotas Fijas' : 'Alta Rentabilidad'}</Typography>
+            <Typography variant="body2" color="text.secondary">{isAhorrista ? 'En pesos sin interés' : 'Retornos en USD'}</Typography>
+          </Box>
+        </Box>
+        <Box display="flex" alignItems="center" gap={2}>
+          <Avatar sx={{ bgcolor: isAhorrista ? 'warning.light' : alpha(theme.palette.primary.main, 0.1), color: isAhorrista ? 'warning.main' : 'primary.main', width: 48, height: 48 }}>
+            {isAhorrista ? <HomeIcon /> : <Business />}
+          </Avatar>
+          <Box>
+            <Typography variant="subtitle1" fontWeight={700}>{isAhorrista ? 'Tu Casa Propia' : 'Respaldo Real'}</Typography>
+            <Typography variant="body2" color="text.secondary">{isAhorrista ? 'Adjudicación pactada' : 'Activos tangibles'}</Typography>
+          </Box>
+        </Box>
       </Stack>
     </Paper>
   );
-};
+});
+
+// ===================================================
+// COMPONENTE PRINCIPAL
+// ===================================================
 
 const ProyectosUnificados: React.FC = () => {
   const navigate = useNavigate();
@@ -97,180 +83,130 @@ const ProyectosUnificados: React.FC = () => {
   // Estados
   const [perfilSeleccionado, setPerfilSeleccionado] = useState<'ahorrista' | 'inversionista'>('ahorrista');
   const [itemsVisibles, setItemsVisibles] = useState(9);
-  const [filtros, setFiltros] = useState({ search: '', status: 'todos' });
+  const [filtros] = useState({ search: '', status: 'todos' });
 
-  // Queries
+  // 1. Queries con staleTime alto para evitar peticiones repetitivas
   const { data: proyectosInv, isLoading: loadingInv } = useQuery({
     queryKey: ['proyectosInversionista'],
     queryFn: async () => (await proyectoService.getInversionistasActive()).data,
-    staleTime: 600000, // 10 minutos
+    staleTime: 1000 * 60 * 30, // 30 minutos de caché
   });
 
   const { data: proyectosAho, isLoading: loadingAho } = useQuery({
     queryKey: ['proyectosAhorrista'],
     queryFn: async () => (await proyectoService.getAhorristasActive()).data,
-    staleTime: 600000, // 10 minutos
+    staleTime: 1000 * 60 * 30,
   });
 
   const isLoading = loadingInv || loadingAho;
 
-  // Lógica de Filtrado Memoizada
+  // 2. Filtrado eficiente
   const proyectosFiltrados = useMemo(() => {
-    const baseProyectos = perfilSeleccionado === 'inversionista' ? (proyectosInv || []) : (proyectosAho || []);
-    const searchTerm = filtros.search.toLowerCase().trim();
+    const base = perfilSeleccionado === 'inversionista' ? (proyectosInv || []) : (proyectosAho || []);
+    if (filtros.status === 'todos' && !filtros.search) return base;
 
-    return baseProyectos.filter(p => {
-      const matchSearch = !searchTerm || (p.nombre_proyecto || '').toLowerCase().includes(searchTerm);
+    const search = filtros.search.toLowerCase();
+    return base.filter(p => {
+      const matchSearch = !search || p.nombre_proyecto.toLowerCase().includes(search);
       const matchStatus = filtros.status === 'todos' || p.estado_proyecto === filtros.status;
-
-      // ✅ MEJORA: Filtro de seguridad adicional para asegurar que el perfil 
-      // coincida con el tipo_inversion real que viene del back
-      const matchTipo = perfilSeleccionado === 'inversionista'
-        ? p.tipo_inversion === 'directo'
-        : p.tipo_inversion === 'mensual';
-
-      return matchSearch && matchStatus && matchTipo;
+      return matchSearch && matchStatus;
     });
   }, [proyectosInv, proyectosAho, perfilSeleccionado, filtros]);
 
-  const proyectosVisibles = useMemo(() => proyectosFiltrados.slice(0, itemsVisibles), [proyectosFiltrados, itemsVisibles]);
-  const hayMasProyectos = proyectosFiltrados.length > itemsVisibles;
+  // 3. Slicing memoizado
+  const proyectosVisibles = useMemo(() =>
+    proyectosFiltrados.slice(0, itemsVisibles),
+    [proyectosFiltrados, itemsVisibles]);
 
-  // Handlers
-  const handleProjectClick = (projectId: number | string) => {
-    navigate(ROUTES.PROYECTOS.DETALLE.replace(':id', String(projectId)));
-  };
+  // 4. Handlers memorizados
+  const handleProjectClick = useCallback((id: number | string) => {
+    navigate(ROUTES.PROYECTOS.DETALLE.replace(':id', String(id)));
+  }, [navigate]);
 
-  const handleCambioPerfil = (nuevoPerfil: 'ahorrista' | 'inversionista') => {
-    setPerfilSeleccionado(nuevoPerfil);
+  const handleCambioPerfil = useCallback((nuevo: 'ahorrista' | 'inversionista') => {
+    setPerfilSeleccionado(nuevo);
     setItemsVisibles(9);
-    setFiltros({ search: '', status: 'todos' });
-  };
-
-  // Styles Helpers
-  const getButtonStyle = (isActive: boolean) => ({
-    borderRadius: 8,
-    py: 1.5,
-    textTransform: 'none' as const,
-    fontSize: '1rem',
-    fontWeight: 700,
-    transition: 'all 0.3s ease',
-    ...(isActive ? {
-      bgcolor: 'primary.main',
-      color: 'white',
-      boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.3)}`,
-      border: `1px solid ${theme.palette.primary.dark}`,
-      '&:hover': { bgcolor: 'primary.dark' }
-    } : {
-      color: 'text.primary',
-      '&:hover': { bgcolor: alpha(theme.palette.common.black, 0.04) }
-    })
-  });
+  }, []);
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
+    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', pb: 10 }}>
 
-      {/* 1. HERO HEADER */}
+      {/* HERO SECTION */}
       <Box sx={{
         background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
-        color: 'primary.contrastText',
-        py: { xs: 10, md: 12 },
-        textAlign: 'center',
-        borderBottomLeftRadius: { xs: 24, md: 48 },
-        borderBottomRightRadius: { xs: 24, md: 48 },
-        boxShadow: `0 10px 30px ${alpha(theme.palette.primary.dark, 0.3)}`,
-        mb: 0
+        color: 'white', py: { xs: 8, md: 10 }, textAlign: 'center',
+        borderBottomLeftRadius: { xs: 32, md: 64 }, borderBottomRightRadius: { xs: 32, md: 64 },
+        boxShadow: theme.shadows[4]
       }}>
-        <Container maxWidth="lg">
-          <Typography variant="h1" gutterBottom sx={{ color: 'white' }}>
-            Explora Oportunidades
-          </Typography>
-          <Typography variant="h6" sx={{ maxWidth: 'md', mx: 'auto', opacity: 0.9, fontWeight: 400, lineHeight: 1.7 }}>
-            Encuentra el proyecto ideal para hacer crecer tu capital o asegurar tu futuro lote.
+        <Container maxWidth="md">
+          <Typography variant="h2" fontWeight={900} gutterBottom>Explora Oportunidades</Typography>
+          <Typography variant="h6" sx={{ opacity: 0.8, fontWeight: 400 }}>
+            Invierte en activos reales y asegura tu futuro financiero con Loteplan.
           </Typography>
         </Container>
       </Box>
 
-      {/* 2. SELECTOR DE PERFIL */}
-      <Container maxWidth="md" sx={{ mt: -5, mb: 8, position: 'relative', zIndex: 10 }}>
-        <Paper elevation={0} sx={{
-          p: 0.6, borderRadius: 10, display: 'flex',
-          bgcolor: '#F2F2F2', border: `1px solid ${theme.palette.divider}`,
-          boxShadow: theme.shadows[3]
-        }}>
+      {/* SELECTOR DE PERFIL */}
+      <Container maxWidth="sm" sx={{ mt: -4, mb: 6 }}>
+        <Paper elevation={4} sx={{ p: 0.5, borderRadius: 10, display: 'flex', bgcolor: 'background.paper' }}>
           <Button
-            onClick={() => handleCambioPerfil('ahorrista')}
-            fullWidth
-            startIcon={<HomeIcon fontSize="medium" />}
-            sx={getButtonStyle(perfilSeleccionado === 'ahorrista')}
+            fullWidth onClick={() => handleCambioPerfil('ahorrista')}
+            variant={perfilSeleccionado === 'ahorrista' ? 'contained' : 'text'}
+            sx={{ borderRadius: 10, py: 1.5, fontWeight: 700 }}
+            startIcon={<HomeIcon />}
           >
             Modo Ahorrista
           </Button>
           <Button
-            onClick={() => handleCambioPerfil('inversionista')}
-            fullWidth
-            startIcon={<TrendingUp fontSize="medium" />}
-            sx={getButtonStyle(perfilSeleccionado === 'inversionista')}
+            fullWidth onClick={() => handleCambioPerfil('inversionista')}
+            variant={perfilSeleccionado === 'inversionista' ? 'contained' : 'text'}
+            sx={{ borderRadius: 10, py: 1.5, fontWeight: 700 }}
+            startIcon={<TrendingUp />}
           >
             Modo Inversionista
           </Button>
         </Paper>
       </Container>
 
-      <Container maxWidth="xl" sx={{ pb: 14 }}>
-        <Stack spacing={2} mb={7} alignItems="center">
-          <HighlightsSection perfil={perfilSeleccionado} />
-        </Stack>
+      <Container maxWidth="xl">
+        <HighlightsSection perfil={perfilSeleccionado} />
 
-        {/* 3. FILTROS */}
-
-
-
-        {/* 4. GRID DE RESULTADOS */}
-        <QueryHandler
-          isLoading={isLoading}
-          error={null}
-          loadingMessage="Buscando las mejores oportunidades..."
-          fullHeight
-          useSkeleton
-          skeletonCount={9}
-        >
-          <>
-            {proyectosFiltrados.length === 0 ? (
-              <Box textAlign="center" py={10} bgcolor="secondary.light" borderRadius={2} border={`1px dashed ${theme.palette.divider}`}>
-                <FilterListOff sx={{ fontSize: 60, color: 'text.disabled', mb: 3 }} />
-                <Typography variant="h5" color="text.secondary" fontWeight={500}>
-                  No se encontraron proyectos con estos filtros.
-                </Typography>
-                <Button variant="text" color="primary" onClick={() => setFiltros({ search: '', status: 'todos' })} sx={{ mt: 3, fontWeight: 600 }}>
-                  Limpiar filtros
-                </Button>
-              </Box>
-            ) : (
-              <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", md: "repeat(3, 1fr)" }, gap: 4, width: "100%" }}>
-                {proyectosVisibles.map((project, index) => (
-                  <Fade in key={project.id} timeout={500} style={{ transitionDelay: `${index * 50}ms` }}>
+        <QueryHandler isLoading={isLoading} error={null} useSkeleton skeletonCount={6}>
+          {proyectosFiltrados.length === 0 ? (
+            <Box textAlign="center" py={10}>
+              <FilterListOff sx={{ fontSize: 64, color: 'text.disabled', mb: 2 }} />
+              <Typography variant="h5" color="text.secondary">No hay proyectos disponibles en esta categoría.</Typography>
+            </Box>
+          ) : (
+            <>
+              {/* GRID OPTIMIZADO: Usamos display grid nativo para mejor performance */}
+              <Box sx={{
+                display: "grid",
+                gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", md: "repeat(3, 1fr)" },
+                gap: 4
+              }}>
+                {proyectosVisibles.map((project) => (
+                  <Fade in key={project.id} timeout={400}>
                     <Box>
-                      <ProjectCard project={project} onClick={() => handleProjectClick(project.id)} />
+                      <MemoizedProjectCard project={project} onClick={() => handleProjectClick(project.id)} />
                     </Box>
                   </Fade>
                 ))}
               </Box>
-            )}
 
-            {hayMasProyectos && (
-              <Box textAlign="center" py={8}>
-                <Button
-                  variant="outlined"
-                  size="large"
-                  onClick={() => setItemsVisibles(prev => prev + 9)}
-                  sx={{ px: 6, borderRadius: 2, borderWidth: 2, fontWeight: 700, '&:hover': { borderWidth: 2 } }}
-                >
-                  Cargar más proyectos
-                </Button>
-              </Box>
-            )}
-          </>
+              {proyectosFiltrados.length > itemsVisibles && (
+                <Box textAlign="center" mt={8}>
+                  <Button
+                    variant="outlined" size="large"
+                    onClick={() => setItemsVisibles(v => v + 9)}
+                    sx={{ px: 8, py: 1.5, borderRadius: 3, borderWidth: 2, fontWeight: 800 }}
+                  >
+                    Ver más proyectos
+                  </Button>
+                </Box>
+              )}
+            </>
+          )}
         </QueryHandler>
       </Container>
     </Box>

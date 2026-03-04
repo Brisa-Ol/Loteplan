@@ -1,87 +1,91 @@
+// src/features/admin/pages/Lotes/modals/EditLoteModal.tsx
+
+import React, { useEffect, useMemo } from 'react';
 import {
   CalendarMonth as CalendarIcon,
   Edit as EditIcon,
   LocationOn,
-  MonetizationOn as MonetizationIcon, Business as ProjectIcon
+  MonetizationOn as MonetizationIcon,
+  Business as ProjectIcon
 } from '@mui/icons-material';
 import {
-  Alert, alpha, Box,
+  Alert,
+  alpha,
+  Box,
   Chip,
-  Divider, InputAdornment, MenuItem,
-  Stack, TextField, Typography, useTheme
+  Divider,
+  InputAdornment,
+  MenuItem,
+  Stack,
+  TextField,
+  Typography,
+  useTheme
 } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { FormikProvider, useFormik } from 'formik';
-import React, { useEffect, useMemo } from 'react';
 import * as Yup from 'yup';
 
-import ProyectoService from '../../../../../core/api/services/proyecto.service';
-import type { LoteDto, UpdateLoteDto } from '../../../../../core/types/dto/lote.dto';
-import type { ProyectoDto } from '../../../../../core/types/dto/proyecto.dto';
-import BaseModal from '../../../../../shared/components/domain/modals/BaseModal/BaseModal';
+import ProyectoService from '@/core/api/services/proyecto.service';
+import type { LoteDto, UpdateLoteDto } from '@/core/types/dto/lote.dto';
+import type { ProyectoDto } from '@/core/types/dto/proyecto.dto';
+import { BaseModal } from '@/shared/components/domain/modals';
 
 // ============================================================================
-// INTERFACE
+// CONSTANTES Y ESTILOS (Memoizados)
 // ============================================================================
-interface EditLoteModalProps {
-  open: boolean;
-  onClose: () => void;
-  onSubmit: (id: number, data: UpdateLoteDto) => Promise<void>;
-  lote: LoteDto | null;
-  isLoading?: boolean;
-}
+const SECTION_TITLE_SX = { 
+  fontWeight: 800, 
+  color: 'text.secondary', 
+  textTransform: 'uppercase', 
+  mb: 1.5, 
+  display: 'flex', 
+  alignItems: 'center', 
+  gap: 1, 
+  fontSize: '0.65rem',
+  letterSpacing: 1
+};
 
 // ============================================================================
-// COMPONENTES INTERNOS MEMOIZADOS (Fluidez Total)
+// COMPONENTES INTERNOS
 // ============================================================================
 
-const ProjectSection = React.memo(({ value, proyectos, isLoading, onChange, onBlur, disabled, theme }: any) => (
-  <Box>
-    <Typography sx={SECTION_TITLE_SX}><ProjectIcon fontSize="inherit" /> Proyecto Asociado</Typography>
-    <TextField
-      select fullWidth size="small" label="Elegir Proyecto"
-      name="id_proyecto" value={value ?? ''} onChange={onChange} onBlur={onBlur}
-      disabled={isLoading || disabled}
-      SelectProps={{
-        MenuProps: {
-          PaperProps: { sx: { maxHeight: 300, mt: 0.5, borderRadius: 2, boxShadow: theme.shadows[5] } },
-          anchorOrigin: { vertical: 'bottom', horizontal: 'left' },
-          transformOrigin: { vertical: 'top', horizontal: 'left' },
-        }
-      }}
-    >
-      <MenuItem value=""><em>Ninguno (Lote Huérfano)</em></MenuItem>
-      {proyectos.map((p: ProyectoDto) => (
-        <MenuItem key={p.id} value={p.id} sx={MENU_ITEM_SX}>
-          <Stack direction="row" justifyContent="space-between" width="100%" alignItems="center">
-            <Typography variant="inherit" fontWeight={600}>{p.nombre_proyecto}</Typography>
-            <Chip
-              label={p.tipo_inversion === 'directo' ? 'DIRECTO' : 'MENSUAL'}
-              size="small"
-              sx={{
-                height: 20, fontSize: '0.6rem', fontWeight: 900,
-                bgcolor: p.tipo_inversion === 'directo' ? alpha(theme.palette.info.main, 0.1) : alpha(theme.palette.warning.main, 0.1),
-                color: p.tipo_inversion === 'directo' ? 'info.dark' : 'warning.dark'
-              }}
-            />
-          </Stack>
-        </MenuItem>
-      ))}
-    </TextField>
-  </Box>
-));
-
-const InfoSection = React.memo(({ nombre, touched, error, onChange, onBlur }: any) => (
-  <Box>
-    <Typography sx={SECTION_TITLE_SX}>Nombre del Lote</Typography>
-    <TextField
-      fullWidth label="Nombre" name="nombre_lote" value={nombre}
-      onChange={onChange} onBlur={onBlur}
-      error={touched && Boolean(error)}
-      helperText={touched && (error as string)}
-    />
-  </Box>
-));
+const ProjectSection = React.memo(({ value, proyectos, isLoading, onChange, onBlur, disabled }: any) => {
+  const theme = useTheme();
+  return (
+    <Box>
+      <Typography sx={SECTION_TITLE_SX}><ProjectIcon fontSize="inherit" /> Proyecto Asociado</Typography>
+      <TextField
+        select fullWidth size="small" label="Cambiar Proyecto"
+        name="id_proyecto" value={value ?? ''} onChange={onChange} onBlur={onBlur}
+        disabled={isLoading || disabled}
+        sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+        SelectProps={{
+          MenuProps: {
+            PaperProps: { sx: { maxHeight: 300, mt: 0.5, borderRadius: 2, boxShadow: theme.shadows[5] } },
+          }
+        }}
+      >
+        <MenuItem value=""><em>Ninguno (Lote Huérfano)</em></MenuItem>
+        {proyectos.map((p: ProyectoDto) => (
+          <MenuItem key={p.id} value={p.id} sx={{ fontSize: '0.85rem', py: 1 }}>
+            <Stack direction="row" justifyContent="space-between" width="100%" alignItems="center">
+              <Typography variant="inherit" fontWeight={600}>{p.nombre_proyecto}</Typography>
+              <Chip
+                label={p.tipo_inversion === 'directo' ? 'DIRECTO' : 'MENSUAL'}
+                size="small"
+                sx={{
+                  height: 18, fontSize: '0.6rem', fontWeight: 900,
+                  bgcolor: p.tipo_inversion === 'directo' ? alpha(theme.palette.info.main, 0.1) : alpha(theme.palette.warning.main, 0.1),
+                  color: p.tipo_inversion === 'directo' ? 'info.dark' : 'warning.dark'
+                }}
+              />
+            </Stack>
+          </MenuItem>
+        ))}
+      </TextField>
+    </Box>
+  );
+});
 
 const FinanceSection = React.memo(({ precio, lat, lng, touched, error, onChange, onBlur, disabled }: any) => (
   <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
@@ -91,16 +95,16 @@ const FinanceSection = React.memo(({ precio, lat, lng, touched, error, onChange,
         fullWidth type="number" name="precio_base" value={precio}
         onChange={onChange} onBlur={onBlur} disabled={disabled}
         onKeyDown={(e) => (e.key === '-' || e.key === 'e' || e.key === '+') && e.preventDefault()}
-        inputProps={{ min: 1 }}
-        error={touched && Boolean(error)} helperText={touched && error}
+        error={touched && Boolean(error)} helperText={touched && (error as string)}
+        sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
         InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }}
       />
     </Box>
     <Box flex={1}>
-      <Typography sx={SECTION_TITLE_SX}><LocationOn fontSize="inherit" /> Ubicación (GPS)</Typography>
+      <Typography sx={SECTION_TITLE_SX}><LocationOn fontSize="inherit" /> Georreferencia</Typography>
       <Stack direction="row" spacing={1}>
-        <TextField fullWidth label="Lat" size="small" name="latitud" value={lat} onChange={onChange} onBlur={onBlur} InputLabelProps={{ shrink: true }} />
-        <TextField fullWidth label="Lng" size="small" name="longitud" value={lng} onChange={onChange} onBlur={onBlur} InputLabelProps={{ shrink: true }} />
+        <TextField fullWidth label="Lat" size="small" name="latitud" value={lat} onChange={onChange} onBlur={onBlur} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
+        <TextField fullWidth label="Lng" size="small" name="longitud" value={lng} onChange={onChange} onBlur={onBlur} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
       </Stack>
     </Box>
   </Stack>
@@ -114,7 +118,7 @@ const ScheduleSection = React.memo(({ inicio, fin, touchedInicio, errorInicio, t
   };
 
   return (
-    <Box sx={{ bgcolor: alpha('#CC6333', 0.03), p: 2, borderRadius: 2, border: '1px solid rgba(204, 99, 51, 0.1)' }}>
+    <Box sx={{ bgcolor: alpha('#CC6333', 0.04), p: 2.5, borderRadius: 3, border: '1px dashed', borderColor: alpha('#CC6333', 0.2) }}>
       <Typography sx={SECTION_TITLE_SX}><CalendarIcon sx={{ color: '#CC6333' }} fontSize="inherit" /> Cronograma de Subasta</Typography>
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
         <TextField
@@ -123,6 +127,7 @@ const ScheduleSection = React.memo(({ inicio, fin, touchedInicio, errorInicio, t
           onMouseDown={handlePicker} disabled={disabled}
           inputProps={{ min: minDate }}
           error={touchedInicio && Boolean(errorInicio)} helperText={touchedInicio && errorInicio}
+          sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: 'background.paper' } }}
           InputProps={{ startAdornment: <InputAdornment position="start"><CalendarIcon sx={{ color: '#CC6333', fontSize: '1.1rem' }} /></InputAdornment> }}
         />
         <TextField
@@ -131,6 +136,7 @@ const ScheduleSection = React.memo(({ inicio, fin, touchedInicio, errorInicio, t
           onMouseDown={handlePicker} disabled={disabled}
           inputProps={{ min: inicio || minDate }}
           error={touchedFin && Boolean(errorFin)} helperText={touchedFin && errorFin}
+          sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: 'background.paper' } }}
           InputProps={{ startAdornment: <InputAdornment position="start"><CalendarIcon sx={{ color: '#CC6333', fontSize: '1.1rem' }} /></InputAdornment> }}
         />
       </Stack>
@@ -139,14 +145,16 @@ const ScheduleSection = React.memo(({ inicio, fin, touchedInicio, errorInicio, t
 });
 
 // ============================================================================
-// CONSTANTES Y ESTILOS
-// ============================================================================
-const SECTION_TITLE_SX = { fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', mb: 1.5, display: 'flex', alignItems: 'center', gap: 1, fontSize: '0.7rem' };
-const MENU_ITEM_SX = { fontSize: '0.85rem', py: 1, px: 2 };
-
-// ============================================================================
 // COMPONENTE PRINCIPAL
 // ============================================================================
+
+interface EditLoteModalProps {
+  open: boolean;
+  onClose: () => void;
+  onSubmit: (id: number, data: UpdateLoteDto) => Promise<void>;
+  lote: LoteDto | null;
+  isLoading?: boolean;
+}
 
 const EditLoteModal: React.FC<EditLoteModalProps> = ({ open, onClose, onSubmit, lote, isLoading = false }) => {
   const theme = useTheme();
@@ -158,7 +166,6 @@ const EditLoteModal: React.FC<EditLoteModalProps> = ({ open, onClose, onSubmit, 
     fecha_fin: Yup.date().transform((v, o) => o === '' ? null : v).nullable().when('fecha_inicio', {
       is: (val: any) => val instanceof Date && !isNaN(val.getTime()),
       then: (schema) => schema.min(Yup.ref('fecha_inicio'), 'Posterior al inicio'),
-      otherwise: (schema) => schema
     }),
   }), []);
 
@@ -169,11 +176,8 @@ const EditLoteModal: React.FC<EditLoteModalProps> = ({ open, onClose, onSubmit, 
     },
     validationSchema,
     enableReinitialize: true,
-    validateOnChange: false,
-    validateOnBlur: true,
     onSubmit: async (values) => {
       if (!lote) return;
-
       const payload: UpdateLoteDto = {
         nombre_lote: values.nombre_lote,
         precio_base: String(values.precio_base),
@@ -181,7 +185,6 @@ const EditLoteModal: React.FC<EditLoteModalProps> = ({ open, onClose, onSubmit, 
         latitud: values.latitud !== '' ? Number(values.latitud) : null,
         longitud: values.longitud !== '' ? Number(values.longitud) : null,
       };
-
       if (values.fecha_inicio) payload.fecha_inicio = values.fecha_inicio;
       if (values.fecha_fin) payload.fecha_fin = values.fecha_fin;
 
@@ -219,36 +222,47 @@ const EditLoteModal: React.FC<EditLoteModalProps> = ({ open, onClose, onSubmit, 
 
   return (
     <BaseModal
-      open={open} onClose={onClose} onConfirm={formik.submitForm}
-      title={`Editar Lote #${lote.id}`} icon={<EditIcon />}
-      isLoading={isLoading} confirmText="Guardar Cambios" maxWidth="md"
+      open={open}
+      onClose={onClose}
+      onConfirm={formik.submitForm}
+      title={`Editar Lote #${lote.id}`}
+      subtitle="Modifique los parámetros técnicos del activo"
+      icon={<EditIcon />}
+      headerColor="primary"
+      isLoading={isLoading}
+      confirmText="Guardar Cambios"
+      maxWidth="md"
     >
       <FormikProvider value={formik}>
-        <Stack spacing={3}>
-
+        <Stack spacing={3.5}>
           {isSubastaActiva && (
-            <Alert severity="info" variant="outlined">
-              <b>Subasta activa:</b> El precio, las fechas y el proyecto están protegidos.
+            <Alert 
+              severity="info" 
+              variant="outlined" 
+              sx={{ borderRadius: 2, borderLeft: '4px solid', bgcolor: alpha(theme.palette.info.main, 0.02) }}
+            >
+              <strong>Subasta en curso:</strong> Ciertos parámetros económicos y de tiempo están bloqueados para proteger la integridad de las pujas actuales.
             </Alert>
           )}
 
           <ProjectSection
             value={formik.values.id_proyecto} proyectos={proyectos}
             isLoading={isLoadingProyectos} onChange={formik.handleChange}
-            onBlur={formik.handleBlur} disabled={isSubastaActiva} theme={theme}
+            onBlur={formik.handleBlur} disabled={isSubastaActiva}
           />
 
-          <Divider />
+          <Divider sx={{ borderStyle: 'dashed' }} />
 
-          <InfoSection
-            nombre={formik.values.nombre_lote}
-            touched={formik.touched.nombre_lote}
-            error={formik.errors.nombre_lote}
-            onChange={formik.handleChange}
-            onBlur={formik.handleBlur}
-          />
-
-          <Divider />
+          <Box>
+            <Typography sx={SECTION_TITLE_SX}>Identificación</Typography>
+            <TextField
+              fullWidth label="Nombre del Lote" name="nombre_lote" 
+              value={formik.values.nombre_lote} onChange={formik.handleChange}
+              onBlur={formik.handleBlur} error={formik.touched.nombre_lote && !!formik.errors.nombre_lote}
+              helperText={formik.touched.nombre_lote && (formik.errors.nombre_lote as string)}
+              sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+            />
+          </Box>
 
           <FinanceSection
             precio={formik.values.precio_base} lat={formik.values.latitud} lng={formik.values.longitud}

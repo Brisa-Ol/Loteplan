@@ -1,17 +1,16 @@
 import { ROUTES } from '@/routes';
 import {
-  AttachMoney,
   BarChart,
   Business,
-  CheckCircle,
-  EmojiEvents,
+  CheckCircle, // Nuevo icono para trazabilidad
+  EventAvailable // Nuevo icono para cuotas planificadas
+  ,
   Gavel,
-  Group,
-  Handshake,
   Home,
-  Security as Shield,
-  TrendingUp,
   Home as HomeIcon,
+  Security as Shield,
+  Timeline,
+  TrendingUp
 } from '@mui/icons-material';
 import {
   alpha,
@@ -41,26 +40,26 @@ const AhorristaContent: React.FC = () => {
   const steps = [
     {
       title: 'Te suscribís para comprar tu lote',
-      description: 'Nuestra plataforma te ofrece más de cien cupos disponibles en nuestros proyectos inmobiliarios asociados.',
+      description: 'Nuestra plataforma te ofrece cupos disponibles en proyectos inmobiliarios con respaldo fiduciario.',
       image: '/Comofunciona/Ahorrista/CómofuncionaAhorrista_1a.jpg',
     },
     {
-      title: 'Comenzás tu plan en cuotas sin interés',
-      description: 'Ya desde la cuota 12 podés participar de la subasta de entrega anticipada y planificar el inicio de la construcción.',
+      title: 'Pagás en cuotas planificadas',
+      description: 'Abonás tu terreno dentro de un sistema estructurado, transparente y sin interés bancario.',
       image: '/Comofunciona/Ahorrista/CómofuncionaAhorrista_2b.jpg',
     },
     {
-      title: 'Elegís el lote que te gusta y adjudicás',
-      description: 'Nos aseguramos de que tengas la entrega inmediata de tu terreno con escritura para que puedas construir.',
+      title: 'Adjudicás y obtenés tu terreno',
+      description: 'Nos aseguramos de la entrega de tu lote 100% escriturable para que inicies tu proyecto de vida.',
       image: '/Comofunciona/Ahorrista/CómofuncionaAhorrista_3a.jpg',
     },
   ];
 
   const benefits = [
-    { icon: AttachMoney, title: 'Sin interés', description: 'Cuotas fijas mensuales sin cargos adicionales' },
-    { icon: Shield, title: '100% seguro', description: 'Protegido por fideicomiso privado' },
-    { icon: Home, title: 'Digital y fácil', description: 'Todo el proceso online desde tu casa' },
-    { icon: Group, title: 'Colaborativo', description: 'Comunidad de ahorristas que se apoyan' },
+    { icon: EventAvailable, title: 'Cuotas Planificadas', description: 'Sistema estructurado y previsible frente al crédito bancario limitado.' },
+    { icon: Shield, title: 'Administración Fiduciaria', description: 'Tu inversión protegida legalmente con separación patrimonial.' },
+    { icon: CheckCircle, title: 'Proceso Transparente', description: 'Reglas claras desde el primer día y seguimiento en tiempo real.' },
+    { icon: Home, title: 'Terrenos Reales', description: 'Posibilidad de articular con programas públicos de construcción vigentes.' },
   ];
 
   return (
@@ -75,15 +74,15 @@ const AhorristaContent: React.FC = () => {
           borderRadius: 3
         }}
       >
-        <Typography variant="h3" gutterBottom fontWeight={700} color="text.primary">
-          Comprá tu terreno con facilidades de pago
+        <Typography variant="h3" gutterBottom fontWeight={800} color="text.primary">
+          El primer paso hacia tu casa
         </Typography>
         <Typography variant="h6" color="text.secondary" sx={{ maxWidth: 800, mx: 'auto', fontWeight: 400, lineHeight: 1.6 }}>
-          El crowdfunding para ahorristas te permite agruparse con otras personas que buscan comprar su terreno para la{' '}
+          Cuando el crédito no alcanza, el{' '}
           <Box component="span" sx={{ color: 'primary.main', fontWeight: 700 }}>
-            casa propia o segunda vivienda
+            ahorro organizado sí
           </Box>
-          , con cuotas mensuales sin interés.
+          . Pagá tu lote en cuotas mensuales dentro de un sistema estructurado y con respaldo fiduciario.
         </Typography>
       </Paper>
 
@@ -97,24 +96,24 @@ const AhorristaContent: React.FC = () => {
         }}
       >
         <Typography variant="h4" gutterBottom textAlign="center" fontWeight={700} color="text.primary">
-          ¿Cómo ser ahorrista?
+          ¿Cómo funciona nuestra plataforma?
         </Typography>
         <Box sx={{ maxWidth: 'md', mx: 'auto', display: 'flex', flexDirection: 'column', gap: 3, mt: 4 }}>
           <Typography variant="body1" fontSize="1.1rem" color="text.primary" sx={{ lineHeight: 1.8 }}>
-            <Box component="span" fontWeight={700} color="primary.main">Es muy fácil:</Box> Te registrás o iniciás sesión en nuestra plataforma, buscás el proyecto que más te guste de entre nuestros desarrollos disponibles y <strong>te suscribís</strong>.
+            <Box component="span" fontWeight={700} color="primary.main">Paso inicial:</Box> Te registrás en nuestra plataforma, analizás los proyectos activos que cumplan con tus necesidades, y <strong>te suscribís</strong> al fideicomiso.
           </Typography>
           <Typography variant="body1" fontSize="1.1rem" color="text.primary" sx={{ lineHeight: 1.8 }}>
-            También ofrecemos un <Box component="span" fontWeight={700} color="primary.main">sistema de subastas</Box>: ¿Te gustó mucho un lote en particular? ¡Pelealo para ganarlo! Desde la cuota 12 podés participar en subastas y adjudicar tu terreno de manera anticipada.
+            <Box component="span" fontWeight={700} color="primary.main">Subasta de adjudicación:</Box> ¿Querés el terreno antes de terminar de pagarlo? Desde la cuota 12 podés participar en pujas transparentes para obtener la entrega anticipada de tu lote.
           </Typography>
           <Typography variant="body1" fontSize="1.1rem" color="text.primary" sx={{ lineHeight: 1.8 }}>
-            Si ganás la subasta con una oferta mayor al precio base, el <Box component="span" fontWeight={700} color="primary.main">excedente se aplica automáticamente</Box> para cubrir tus cuotas futuras.
+            <Box component="span" fontWeight={700} color="primary.main">Capitalización inteligente:</Box> Si ganás la subasta con una oferta mayor al precio base, todo el excedente ofertado se aplica automáticamente para cancelar tus cuotas futuras.
           </Typography>
         </Box>
       </Card>
 
       <Box>
         <Typography variant="h4" textAlign="center" fontWeight={700} gutterBottom sx={{ mb: 7 }} color="text.primary">
-          ¿Cómo funciona paso a paso?
+          El proceso paso a paso
         </Typography>
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 4 }}>
           {steps.map((step, index) => (
@@ -138,7 +137,7 @@ const AhorristaContent: React.FC = () => {
 
       <Box>
         <Typography variant="h4" textAlign="center" fontWeight={700} gutterBottom sx={{ mb: 7 }} color="text.primary">
-          Ventajas del Modo Ahorrista
+          Ventajas del Modelo Ahorrista
         </Typography>
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)' }, gap: 3 }}>
           {benefits.map((benefit, index) => (
@@ -147,33 +146,13 @@ const AhorristaContent: React.FC = () => {
                 <Box sx={{ width: 64, height: 64, background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.light})`, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', mx: 'auto', mb: 2, color: 'white' }}>
                   <benefit.icon fontSize="large" />
                 </Box>
-                <Typography variant="h6" fontWeight={700} gutterBottom color="text.primary">{benefit.title}</Typography>
+                <Typography variant="subtitle1" fontWeight={800} gutterBottom color="text.primary">{benefit.title}</Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>{benefit.description}</Typography>
               </Paper>
             </Box>
           ))}
         </Box>
       </Box>
-
-      <Card sx={{ background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`, color: 'primary.contrastText', p: { xs: 5, md: 7 }, borderRadius: 3, boxShadow: theme.shadows[4] }}>
-        <Typography variant="h4" fontWeight={700} textAlign="center" sx={{ mb: 5 }}>🏆 Sistema de Subastas</Typography>
-        <Stack spacing={3} sx={{ maxWidth: 'md', mx: 'auto' }}>
-          <Box sx={{ display: 'flex', gap: 3, bgcolor: alpha('#fff', 0.1), p: 3, borderRadius: 2 }}>
-            <Gavel sx={{ fontSize: 40 }} />
-            <Box>
-              <Typography variant="h6" fontWeight={700}>Entrega anticipada desde cuota 12</Typography>
-              <Typography variant="body2" sx={{ opacity: 0.9, mt: 1, lineHeight: 1.6 }}>Podés participar en subastas y adjudicar tu lote antes de completar el plan completo de pagos.</Typography>
-            </Box>
-          </Box>
-          <Box sx={{ display: 'flex', gap: 3, bgcolor: alpha('#fff', 0.1), p: 3, borderRadius: 2 }}>
-            <AttachMoney sx={{ fontSize: 40 }} />
-            <Box>
-              <Typography variant="h6" fontWeight={700}>El excedente trabaja para vos</Typography>
-              <Typography variant="body2" sx={{ opacity: 0.9, mt: 1, lineHeight: 1.6 }}>Si pujás más que el precio base, la diferencia se aplica automáticamente para pagar tus cuotas futuras.</Typography>
-            </Box>
-          </Box>
-        </Stack>
-      </Card>
     </Stack>
   );
 };
@@ -186,38 +165,43 @@ const InversionistaContent: React.FC = () => {
 
   const steps = [
     {
-      title: 'Elegís el proyecto y el dinero a invertir',
-      description: 'Seleccionás el proyecto que te interesa y determinás cuánto vas a invertir junto con otros inversionistas.',
+      title: 'Evaluación y selección de activos',
+      description: 'Analizás las operaciones estructuradas de adquisición de activos inmobiliarios disponibles.',
       image: '/Comofunciona/inversionista/CómofuncionaInversionista_1.jpg',
     },
     {
-      title: 'Tu inversión es asegurada en un Fideicomiso',
-      description: 'Los fondos se depositan en un Fideicomiso, garantizando seguridad jurídica y separación de los bienes.',
+      title: 'Fideicomiso de administración',
+      description: 'El capital se organiza bajo reglas claras, garantizando la seguridad jurídica y separación patrimonial.',
       image: '/Comofunciona/inversionista/CómofuncionaInversionista_2.jpg',
     },
     {
-      title: 'Generás retornos con la venta al ahorrista',
-      description: 'Una vez urbanizado el terreno, se venden fracciones a ahorristas y se generan retornos transparentes.',
+      title: 'Rentabilidad y salida planificada',
+      description: 'Obtenés un retorno vinculado a la comercialización del suelo, con trazabilidad digital en cada etapa.',
       image: '/Comofunciona/inversionista/CómofuncionaInversionista_3.jpg',
     },
   ];
 
   const methodology = [
     {
-      icon: BarChart,
-      title: 'Análisis Geográfico',
-      description: 'Realizamos estudio de mercado y demanda para garantizar el rendimiento.',
-    },
-    {
       icon: Business,
-      title: 'Marco Jurídico',
-      description: 'Los terrenos se transfieren a un Fideicomiso, conformando un patrimonio separado.',
+      title: 'Activos Reales',
+      description: 'Participación directa en tierra física urbanizada, alejándote de la volatilidad del mercado financiero.',
     },
     {
-      icon: Handshake,
-      title: 'Gestión de Grupos',
-      description: 'Conformamos Grupos de Ahorro, reduciendo riesgos y aumentando la seguridad.',
+      icon: Timeline,
+      title: 'Entrada y Salida Planificada',
+      description: 'Esquemas estructurados con tiempos definidos para maximizar la eficiencia de tu capital.',
     },
+    {
+      icon: BarChart,
+      title: 'Rentabilidad Estimada',
+      description: 'Retornos sólidos y verificables vinculados directamente a la comercialización del activo.',
+    },
+    {
+      icon: Gavel,
+      title: 'Trazabilidad Digital',
+      description: 'Auditoría en tiempo real de cada etapa del proceso administrativo y legal del fideicomiso.',
+    }
   ];
 
   return (
@@ -232,15 +216,15 @@ const InversionistaContent: React.FC = () => {
           borderRadius: 3
         }}
       >
-        <Typography variant="h3" gutterBottom fontWeight={700} color="text.primary">
-          Invertí en terrenos con alto potencial
+        <Typography variant="h3" gutterBottom fontWeight={800} color="text.primary">
+          Invertí en tierra con rentabilidad proyectada
         </Typography>
         <Typography variant="h6" color="text.secondary" sx={{ maxWidth: 800, mx: 'auto', fontWeight: 400, lineHeight: 1.6 }}>
-          El crowdfunding para inversores te permite reunir capital para obtener terrenos urbanizados.{' '}
+          Participá en operaciones estructuradas de adquisición de activos inmobiliarios.{' '}
           <Box component="span" sx={{ color: 'primary.main', fontWeight: 700 }}>
-            Sos dueño de una parte de la tierra
+            Sos dueño de una fracción real
           </Box>
-          , no realizás un préstamo de dinero.
+          , protegido bajo un esquema fiduciario de administración.
         </Typography>
       </Paper>
 
@@ -254,29 +238,24 @@ const InversionistaContent: React.FC = () => {
         }}
       >
         <Typography variant="h4" gutterBottom textAlign="center" fontWeight={700} color="text.primary">
-          ¿Cómo ser inversionista?
+          La mecánica de inversión
         </Typography>
         <Box sx={{ maxWidth: 'md', mx: 'auto', display: 'flex', flexDirection: 'column', gap: 3, mt: 4 }}>
           <Typography variant="body1" fontSize="1.1rem" color="text.primary" sx={{ lineHeight: 1.8 }}>
-            <Box component="span" fontWeight={700} color="primary.main">Muy simple:</Box> Te registrás, explorás los proyectos disponibles con toda su información detallada y elegís en cuál invertir.
+            <Box component="span" fontWeight={700} color="primary.main">1. Agrupamiento de Capital:</Box> Los inversionistas fondean el proyecto mediante un contrato claro y estandarizado, reuniendo el capital necesario para la adquisición del suelo.
           </Typography>
           <Typography variant="body1" fontSize="1.1rem" color="text.primary" sx={{ lineHeight: 1.8 }}>
-            Una vez alcanzado el objetivo de financiación, <Box component="span" fontWeight={700} color="primary.main">se formaliza legalmente</Box> la operación ante escribano público y los terrenos se transfieren a un Fideicomiso.
+            <Box component="span" fontWeight={700} color="primary.main">2. Respaldo Fiduciario:</Box> Una vez completado el fondo, los terrenos se transfieren formalmente a un Fideicomiso, conformando un patrimonio autónomo y separado.
           </Typography>
           <Typography variant="body1" fontSize="1.1rem" color="text.primary" sx={{ lineHeight: 1.8 }}>
-            Cuando los ahorristas compran los terrenos, <Box component="span" fontWeight={700} color="primary.main">obtenés tu retorno</Box> en función del porcentaje de m² que te corresponde.
+            <Box component="span" fontWeight={700} color="primary.main">3. Liquidación Transparente:</Box> A medida que los lotes son comercializados y adquiridos por el grupo ahorrista, se distribuyen los retornos proyectados con total trazabilidad digital.
           </Typography>
         </Box>
       </Card>
 
-      <Card sx={{ background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`, color: 'primary.contrastText', p: { xs: 5, md: 7 }, textAlign: 'center', borderRadius: 3, boxShadow: theme.shadows[4] }}>
-        <Typography variant="h4" fontWeight={700} sx={{ mb: 2 }}>Invertís en tierra, no en promesas</Typography>
-        <Typography variant="body1" sx={{ maxWidth: 800, mx: 'auto', opacity: 0.9, fontSize: '1.1rem', lineHeight: 1.8 }}>Cada inversor es propietario de una fracción de terreno urbanizado. Cuando se comercializa, obtenés tu ganancia por la revalorización del capital.</Typography>
-      </Card>
-
       <Box>
         <Typography variant="h4" textAlign="center" fontWeight={700} gutterBottom sx={{ mb: 7 }} color="text.primary">
-          ¿Cómo funciona paso a paso?
+          El proceso paso a paso
         </Typography>
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 4 }}>
           {steps.map((step, index) => (
@@ -300,16 +279,16 @@ const InversionistaContent: React.FC = () => {
 
       <Box>
         <Typography variant="h4" textAlign="center" fontWeight={700} gutterBottom sx={{ mb: 7 }} color="text.primary">
-          Nuestra metodología
+          Metodología y Ventajas Clave
         </Typography>
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 4 }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)' }, gap: 3 }}>
           {methodology.map((item, index) => (
             <Box key={index}>
-              <Paper elevation={0} sx={{ p: 4, height: '100%', textAlign: 'center', transition: 'all 0.3s ease', border: `1px solid ${theme.palette.divider}`, borderRadius: 3, '&:hover': { transform: 'translateY(-4px)', boxShadow: theme.shadows[4], borderColor: alpha(theme.palette.primary.main, 0.3) } }}>
-                <Box sx={{ width: 80, height: 80, background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.light})`, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', mx: 'auto', mb: 3, color: 'white' }}>
+              <Paper elevation={0} sx={{ p: 3, height: '100%', textAlign: 'center', transition: 'all 0.3s ease', border: `1px solid ${theme.palette.divider}`, borderRadius: 3, '&:hover': { transform: 'translateY(-4px)', boxShadow: theme.shadows[4], borderColor: alpha(theme.palette.primary.main, 0.3) } }}>
+                <Box sx={{ width: 64, height: 64, background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.light})`, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', mx: 'auto', mb: 2, color: 'white' }}>
                   <item.icon fontSize="large" />
                 </Box>
-                <Typography variant="h6" fontWeight={700} gutterBottom color="text.primary">{item.title}</Typography>
+                <Typography variant="subtitle1" fontWeight={800} gutterBottom color="text.primary">{item.title}</Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>{item.description}</Typography>
               </Paper>
             </Box>
@@ -317,29 +296,6 @@ const InversionistaContent: React.FC = () => {
         </Box>
       </Box>
 
-      <Card sx={{ p: { xs: 5, md: 7 }, bgcolor: 'background.paper', borderRadius: 3 }}>
-        <Typography variant="h4" textAlign="center" fontWeight={700} gutterBottom sx={{ mb: 7 }} color="text.primary">
-          ¿Por qué es seguro invertir en Nectárea?
-        </Typography>
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' }, gap: 3 }}>
-          {[
-            { icon: Shield, title: 'Fideicomiso', text: 'Los terrenos están separados legalmente de los bienes de la empresa' },
-            { icon: CheckCircle, title: 'Escritura pública', text: 'Todas las operaciones se formalizan ante escribano' },
-            { icon: Group, title: 'Transparencia', text: 'Acceso completo a documentación y avance del proyecto' },
-            { icon: EmojiEvents, title: 'Análisis de mercado', text: 'Estudios geográficos y de demanda previos' },
-          ].map((item, index) => (
-            <Box key={index}>
-              <Paper elevation={0} sx={{ p: 3, display: 'flex', gap: 2, bgcolor: alpha(theme.palette.primary.main, 0.05), height: '100%', borderRadius: 2, border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}` }}>
-                <item.icon color="primary" fontSize="large" />
-                <Box>
-                  <Typography variant="h6" fontWeight={700} gutterBottom color="text.primary">{item.title}</Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>{item.text}</Typography>
-                </Box>
-              </Paper>
-            </Box>
-          ))}
-        </Box>
-      </Card>
     </Stack>
   );
 };
@@ -369,13 +325,16 @@ const ComoFunciona: React.FC = () => {
         boxShadow: "0 10px 30px " + alpha(theme.palette.primary.dark, 0.3)
       }}>
         <Container maxWidth="lg">
-          <Typography variant="h2" component="h1" fontWeight={800} gutterBottom>Loteplan</Typography>
-          <Typography variant="h4" sx={{ mb: 2, color: alpha('#fff', 0.9), fontWeight: 500 }}>Plataforma de Crowdfunding Inmobiliario</Typography>
-          <Typography variant="h6" sx={{ maxWidth: 'md', mx: 'auto', opacity: 0.85, fontWeight: 400, lineHeight: 1.6 }}>Invertí y comprá terrenos urbanizados de manera sencilla, segura y colaborativa</Typography>
+          <Typography variant="h3" component="h1" fontWeight={800} gutterBottom>
+            Accedé a tu lote urbanizado <br /> sin depender del crédito bancario
+          </Typography>
+          <Typography variant="h6" sx={{ maxWidth: 'md', mx: 'auto', opacity: 0.85, fontWeight: 400, lineHeight: 1.6, mt: 2 }}>
+            Conocé cómo la infraestructura financiera de Loteplan organiza el ahorro y la inversión para hacer posibles tus objetivos.
+          </Typography>
         </Container>
       </Box>
 
-      {/* Tabs Navigation (ESTILO UNIFICADO) */}
+      {/* Tabs Navigation */}
       <Container maxWidth="md" sx={{ mt: -5, mb: 8, position: 'relative', zIndex: 10 }}>
         <Paper elevation={0} sx={{ p: 0.6, borderRadius: 10, display: 'flex', bgcolor: '#F2F2F2', border: `1px solid ${theme.palette.divider}`, boxShadow: theme.shadows[3] }}>
           <Button onClick={() => setActiveTab(0)} fullWidth startIcon={<Home fontSize="medium" />} sx={{ borderRadius: 8, py: 1.5, textTransform: 'none', fontSize: '1rem', fontWeight: 700, transition: 'all 0.3s ease', ...(activeTab === 0 ? { bgcolor: 'primary.main', color: 'white', boxShadow: '0 4px 12px ' + alpha(theme.palette.primary.main, 0.3), border: `1px solid ${theme.palette.primary.dark}`, '&:hover': { bgcolor: 'primary.dark' } } : { color: 'text.primary', '&:hover': { bgcolor: alpha(theme.palette.common.black, 0.04) } }) }}>Modo Ahorrista</Button>
@@ -388,15 +347,13 @@ const ComoFunciona: React.FC = () => {
         {activeTab === 0 ? <AhorristaContent /> : <InversionistaContent />}
       </Container>
 
-      {/* ✅ FOOTER CONDICIONAL 
-          Solo se muestra si el usuario NO está autenticado.
-      */}
+      {/* FOOTER CONDICIONAL */}
       {!isAuthenticated && (
         <Box
           sx={{
             background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
             color: 'white',
-            py: 7, // Sección más pequeña
+            py: 7,
             textAlign: 'center',
           }}
         >
@@ -405,13 +362,13 @@ const ComoFunciona: React.FC = () => {
               ¿Listo para empezar?
             </Typography>
             <Typography variant="body1" sx={{ mb: 4, opacity: 0.9 }}>
-              Únete a nuestra comunidad y da el primer paso hacia tu objetivo
+              Únete a nuestra plataforma y da el primer paso hacia tu objetivo
             </Typography>
             <Button
               variant="contained"
               size="large"
               startIcon={<HomeIcon />}
-              onClick={() => navigate(ROUTES.REGISTER)} // Redirige a registro
+              onClick={() => navigate(ROUTES.REGISTER)}
               sx={{
                 bgcolor: 'common.white',
                 color: 'primary.main',
@@ -424,7 +381,7 @@ const ComoFunciona: React.FC = () => {
                 transition: 'all 0.2s ease'
               }}
             >
-              Registrate ahora
+              Crear mi cuenta
             </Button>
           </Container>
         </Box>

@@ -1,8 +1,8 @@
 // src/features/client/hooks/useAccountDeactivation.ts
 
-import { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import UsuarioService from '@/core/api/services/usuario.service';
+import { useQuery } from '@tanstack/react-query';
+import { useMemo } from 'react';
 
 interface DeactivationValidation {
   canDeactivate: boolean;

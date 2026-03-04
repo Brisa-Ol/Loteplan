@@ -33,6 +33,7 @@ import {
 import { QueryHandler } from '@/shared/components/data-grid/QueryHandler/QueryHandler';
 import { StatCard } from '@/shared/components/domain/cards/StatCard/StatCard';
 import { PageContainer } from '@/shared/components/layout/containers/PageContainer/PageContainer';
+import { AdminPageHeader } from '@/shared/components/admin/Adminpageheader';
 import { useAdminDashboard } from '../../hooks/useAdminDashboard';
 
 // ===========================================================================
@@ -124,14 +125,14 @@ const AdminDashboard: React.FC = () => {
   return (
     <PageContainer maxWidth="xl" sx={{ py: 3 }}>
 
-      {/* 1. CABECERA */}
-      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={4} flexWrap="wrap" gap={2}>
-        <Box>
-          <Typography variant="h1">Panel de Administración</Typography>
-          <Typography variant="subtitle1" color="text.secondary">Monitoreo de activos y cumplimiento operativo.</Typography>
-        </Box>
-        <Chip icon={<Speed />} label="Sincronización en Tiempo Real" color="success" variant="outlined" />
-      </Stack>
+      {/* 1. CABECERA USANDO ADMIN PAGE HEADER */}
+      <AdminPageHeader
+        title="Panel de Administración"
+        subtitle="Monitoreo de activos y cumplimiento operativo."
+        action={
+          <Chip icon={<Speed />} label="Sincronización en Tiempo Real" color="success" variant="outlined" />
+        }
+      />
 
       <QueryHandler isLoading={logic.isLoading} error={null} fullHeight>
         <Stack spacing={4}>

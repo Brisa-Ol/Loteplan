@@ -1,3 +1,5 @@
+// src/features/admin/pages/Contrato/AdminContratosFirmados.tsx
+
 import {
   BarChart as BarChartIcon,
   Business,
@@ -28,7 +30,6 @@ import React, { useMemo, useState } from 'react';
 
 // Utils
 import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
 import {
   Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart,
   Tooltip as RechartsTooltip,
@@ -40,19 +41,19 @@ import {
 import type { ContratoFirmadoDto } from '@/core/types/dto/contrato-firmado.dto';
 
 // Componentes Compartidos
-import { AdminPageHeader } from '@/shared/components/admin/Adminpageheader';
+import { AdminPageHeader } from '@/shared/components/admin/Adminpageheader'; // ✅ Aplicado
 import AlertBanner from '@/shared/components/admin/Alertbanner';
 import MetricsGrid from '@/shared/components/admin/Metricsgrid';
 import { ViewModeToggle, type ViewMode } from '@/shared/components/admin/Viewmodetoggle';
-import { StatCard, StatusBadge } from '@/shared/components/domain/cards/StatCard/StatCard';
 import { DataTable, type DataTableColumn } from '@/shared/components/data-grid/DataTable/DataTable';
 import { QueryHandler } from '@/shared/components/data-grid/QueryHandler/QueryHandler';
+import { StatCard, StatusBadge } from '@/shared/components/domain/cards/StatCard/StatCard';
 import { FilterBar, FilterSearch, FilterSelect } from '@/shared/components/forms/filters/FilterBar';
 import { PageContainer } from '@/shared/components/layout/containers/PageContainer/PageContainer';
 import { useAdminContratosFirmados } from '../../hooks/contrato/useAdminContratosFirmados';
 
 // ============================================================================
-// SUB-COMPONENTE: ANALYTICS (Memoizado para performance)
+// SUB-COMPONENTE: ANALYTICS
 // ============================================================================
 const ContratosAnalytics = React.memo<{ data: ContratoFirmadoDto[] }>(({ data }) => {
   const theme = useTheme();
@@ -88,17 +89,8 @@ const ContratosAnalytics = React.memo<{ data: ContratoFirmadoDto[] }>(({ data })
         <Typography variant="h6" fontWeight={800} mb={3}>Tipología Legal</Typography>
         <ResponsiveContainer width="100%" height={300}>
           <PieChart>
-            <Pie
-              data={typeData}
-              cx="50%" cy="50%"
-              innerRadius={60}
-              outerRadius={80}
-              paddingAngle={5}
-              dataKey="value"
-            >
-              {typeData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry.color} />
-              ))}
+            <Pie data={typeData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
+              {typeData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
             </Pie>
             <RechartsTooltip contentStyle={{ borderRadius: 8, border: 'none', boxShadow: theme.shadows[3] }} />
             <Legend verticalAlign="bottom" height={36} />
@@ -130,21 +122,17 @@ ContratosAnalytics.displayName = 'ContratosAnalytics';
 const AdminContratosFirmados: React.FC = () => {
   const theme = useTheme();
   const logic = useAdminContratosFirmados();
-
   const [viewMode, setViewMode] = useState<ViewMode>('table');
 
-  // KPIS
   const stats = useMemo(() => {
     const data = logic.filteredContratos;
     const total = data.length;
     const inv = data.filter(c => c.id_inversion_asociada).length;
     const subs = data.filter(c => c.id_suscripcion_asociada).length;
     const verified = data.filter(c => c.hash_archivo_firmado).length;
-
     return { total, inv, subs, verified };
   }, [logic.filteredContratos]);
 
-  // COLUMNAS DEFINITIVAS
   const columns = useMemo<DataTableColumn<ContratoFirmadoDto>[]>(() => [
     {
       id: 'id',
@@ -157,17 +145,11 @@ const AdminContratosFirmados: React.FC = () => {
           </Avatar>
           <Box minWidth={0}>
             <Tooltip title={row.nombre_archivo}>
-              <Typography 
-                variant="body2" 
-                fontWeight={700} 
-                sx={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-              >
+              <Typography variant="body2" fontWeight={800} sx={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {row.nombre_archivo}
               </Typography>
             </Tooltip>
-            <Typography variant="caption" color="text.secondary">
-              ID Interno: #{row.id}
-            </Typography>
+            <Typography variant="caption" color="text.secondary">ID Interno: #{row.id}</Typography>
           </Box>
         </Stack>
       )
@@ -176,89 +158,48 @@ const AdminContratosFirmados: React.FC = () => {
       id: 'usuario',
       label: 'Firmante',
       minWidth: 220,
-      render: (row) => {
-        const user = row.usuarioFirmante;
-        const nombreCompleto = user ? `${user.nombre} ${user.apellido}`.trim() : `Usuario #${row.id_usuario_firmante}`;
-        const inicial = user ? user.nombre.charAt(0).toUpperCase() : '';
-
-        return (
-          <Stack direction="row" alignItems="center" spacing={1.5}>
-            <Avatar sx={{
-              width: 36, height: 36,
-              bgcolor: alpha(theme.palette.secondary.main, 0.1),
-              color: theme.palette.secondary.main,
-              fontSize: 15, fontWeight: 800
-            }}>
-              {inicial || <Person fontSize="small" />}
-            </Avatar>
-            <Box minWidth={0}>
-              <Typography variant="body2" fontWeight={800} noWrap title={nombreCompleto}>
-                {nombreCompleto}
-              </Typography>
-              <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>
-                {user ? user.email : 'Sin datos extendidos'}
-              </Typography>
-            </Box>
-          </Stack>
-        );
-      }
+      render: (row) => (
+        <Stack direction="row" alignItems="center" spacing={1.5}>
+          <Avatar sx={{ width: 36, height: 36, bgcolor: alpha(theme.palette.secondary.main, 0.1), color: theme.palette.secondary.dark, fontSize: 15, fontWeight: 800 }}>
+            {row.usuarioFirmante?.nombre.charAt(0).toUpperCase() || <Person fontSize="small" />}
+          </Avatar>
+          <Box minWidth={0}>
+            <Typography variant="body2" fontWeight={800} noWrap>{row.usuarioFirmante ? `${row.usuarioFirmante.nombre} ${row.usuarioFirmante.apellido}` : `ID: ${row.id_usuario_firmante}`}</Typography>
+            <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>{row.usuarioFirmante?.email}</Typography>
+          </Box>
+        </Stack>
+      )
     },
     {
       id: 'proyecto',
       label: 'Proyecto Asociado',
       minWidth: 200,
-      render: (row) => {
-        const proj = row.proyectoAsociado;
-
-        return (
-          <Stack direction="row" alignItems="center" spacing={1.5}>
-            <Business fontSize="small" color="action" />
-            <Box minWidth={0}>
-              <Typography variant="body2" fontWeight={700} color="text.primary" noWrap title={proj?.nombre_proyecto || `Proyecto #${row.id_proyecto}`}>
-                {proj?.nombre_proyecto || `Proyecto #${row.id_proyecto}`}
-              </Typography>
-              {proj && (
-                <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'capitalize', display: 'block' }} noWrap>
-                  {proj.estado_proyecto} • {proj.tipo_inversion}
-                </Typography>
-              )}
-            </Box>
-          </Stack>
-        );
-      }
+      render: (row) => (
+        <Stack direction="row" alignItems="center" spacing={1.5}>
+          <Business fontSize="small" color="action" />
+          <Box minWidth={0}>
+            <Typography variant="body2" fontWeight={700} noWrap>{row.proyectoAsociado?.nombre_proyecto || `ID: ${row.id_proyecto}`}</Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'capitalize' }}>{row.proyectoAsociado?.tipo_inversion || '---'}</Typography>
+          </Box>
+        </Stack>
+      )
     },
     {
       id: 'tipo',
       label: 'Clasificación',
       align: 'center',
-      minWidth: 140,
       render: (row) => {
-        let statusType: any = 'default';
-        let label = 'GENERAL';
-
-        if (row.id_inversion_asociada) {
-          statusType = 'active'; // Verde
-          label = 'INVERSIÓN';
-        } else if (row.id_suscripcion_asociada) {
-          statusType = 'in_progress'; // Azul/Info
-          label = 'SUSCRIPCIÓN';
-        }
-
-        return <StatusBadge status={statusType} customLabel={label} />;
+        const label = row.id_inversion_asociada ? 'INVERSIÓN' : row.id_suscripcion_asociada ? 'SUSCRIPCIÓN' : 'GENERAL';
+        return <StatusBadge status={row.id_inversion_asociada ? 'active' : 'in_progress'} customLabel={label} />;
       }
     },
     {
       id: 'fecha',
       label: 'Fecha de Firma',
-      minWidth: 120,
       render: (row) => (
         <Box>
-          <Typography variant="body2" fontWeight={600}>
-            {row.fecha_firma ? format(new Date(row.fecha_firma), 'dd/MM/yyyy', { locale: es }) : '-'}
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            {row.fecha_firma ? format(new Date(row.fecha_firma), 'HH:mm', { locale: es }) + ' hs' : ''}
-          </Typography>
+          <Typography variant="body2" fontWeight={600}>{row.fecha_firma ? format(new Date(row.fecha_firma), 'dd/MM/yyyy') : '-'}</Typography>
+          <Typography variant="caption" color="text.secondary">{row.fecha_firma ? format(new Date(row.fecha_firma), 'HH:mm') + ' hs' : ''}</Typography>
         </Box>
       )
     },
@@ -266,21 +207,11 @@ const AdminContratosFirmados: React.FC = () => {
       id: 'hash',
       label: 'Integridad',
       align: 'center',
-      minWidth: 120,
       render: (row) => (
-        <Tooltip title={row.hash_archivo_firmado ? `SHA-256: ${row.hash_archivo_firmado}` : 'Sin Hash Criptográfico'}>
-          <Stack direction="row" alignItems="center" justifyContent="center" spacing={1} sx={{ cursor: 'help' }}>
+        <Tooltip title={row.hash_archivo_firmado ? `SHA-256: ${row.hash_archivo_firmado}` : 'Sin Hash'}>
+          <Stack direction="row" alignItems="center" justifyContent="center" spacing={1}>
             <Fingerprint color={row.hash_archivo_firmado ? "success" : "disabled"} fontSize="small" />
-            <Typography
-              variant="caption"
-              sx={{
-                fontFamily: 'monospace',
-                color: row.hash_archivo_firmado ? 'success.main' : 'text.disabled',
-                bgcolor: row.hash_archivo_firmado ? alpha(theme.palette.success.main, 0.05) : alpha(theme.palette.action.disabled, 0.05),
-                px: 0.8, py: 0.2, borderRadius: 1,
-                fontWeight: 700
-              }}
-            >
+            <Typography variant="caption" sx={{ fontFamily: 'monospace', color: row.hash_archivo_firmado ? 'success.main' : 'text.disabled', bgcolor: alpha(theme.palette.success.main, 0.05), px: 0.8, borderRadius: 1, fontWeight: 700 }}>
               {row.hash_archivo_firmado ? row.hash_archivo_firmado.substring(0, 8).toUpperCase() : 'N/A'}
             </Typography>
           </Stack>
@@ -291,61 +222,38 @@ const AdminContratosFirmados: React.FC = () => {
       id: 'acciones',
       label: 'Acciones',
       align: 'right',
-      minWidth: 100,
       render: (row) => (
-        <Tooltip title="Descargar Copia Legal">
-          <span>
-            <IconButton
-              color="primary"
-              onClick={() => logic.handleDownload(row)}
-              disabled={logic.downloadingId === row.id}
-              size="small"
-              sx={{
-                bgcolor: alpha(theme.palette.primary.main, 0.05),
-                '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.15) }
-              }}
-            >
-              {logic.downloadingId === row.id
-                ? <CircularProgress size={18} color="inherit" />
-                : <DownloadIcon fontSize="small" />
-              }
-            </IconButton>
-          </span>
-        </Tooltip>
+        <IconButton color="primary" onClick={() => logic.handleDownload(row)} disabled={logic.downloadingId === row.id} size="small" sx={{ bgcolor: alpha(theme.palette.primary.main, 0.05) }}>
+          {logic.downloadingId === row.id ? <CircularProgress size={18} color="inherit" /> : <DownloadIcon fontSize="small" />}
+        </IconButton>
       )
     }
   ], [theme, logic]);
 
   return (
     <PageContainer maxWidth="xl" sx={{ py: 3 }}>
+      {/* ✅ APLICACIÓN DEL HEADER ESTANDARIZADO */}
       <AdminPageHeader
         title="Auditoría de Contratos"
-        subtitle="Registro histórico de acuerdos legales y contratos digitalizados."
+        subtitle="Registro histórico de acuerdos legales y contratos digitalizados con respaldo criptográfico."
       />
 
       {logic.error && (
-        <AlertBanner
-          severity="error"
-          title="Error de Conexión"
-          message={(logic.error as Error).message || "No se pudieron cargar los contratos."}
-        />
+        <AlertBanner severity="error" title="Error de Conexión" message={(logic.error as Error).message} />
       )}
 
       <MetricsGrid columns={{ xs: 1, sm: 2, lg: 4 }}>
-        <StatCard title="Total Firmados" value={stats.total} subtitle="Acuerdos registrados" icon={<Gavel />} color="primary" loading={logic.isLoading} />
-        <StatCard title="Inversiones" value={stats.inv} subtitle="Contratos de capital" icon={<PieChartIcon />} color="success" loading={logic.isLoading} />
-        <StatCard title="Suscripciones" value={stats.subs} subtitle="Planes mensuales" icon={<HistoryEdu />} color="secondary" loading={logic.isLoading} />
-        <StatCard title="Verificados" value={stats.verified} subtitle="Con Hash criptográfico" icon={<Fingerprint />} color="info" loading={logic.isLoading} />
+        <StatCard title="Total Firmados" value={stats.total} icon={<Gavel />} color="primary" loading={logic.isLoading} />
+        <StatCard title="Inversiones" value={stats.inv} icon={<PieChartIcon />} color="success" loading={logic.isLoading} />
+        <StatCard title="Suscripciones" value={stats.subs} icon={<HistoryEdu />} color="secondary" loading={logic.isLoading} />
+        <StatCard title="Verificados" value={stats.verified} icon={<Fingerprint />} color="info" loading={logic.isLoading} />
       </MetricsGrid>
 
-      {/* ✨ CONTENEDOR PRINCIPAL DE CONTROLES (Toggle arriba, Filtros abajo) */}
       <Stack direction="column" spacing={2} mb={3}>
-        
-        {/* Toggle de Vistas (Alineado a la derecha en escritorio, estirado en móvil) */}
         <Stack direction="row" justifyContent={{ xs: 'center', sm: 'flex-end' }}>
           <ViewModeToggle
             value={viewMode}
-            onChange={(newMode) => setViewMode(newMode)}
+            onChange={setViewMode}
             options={[
               { value: 'table', label: 'Tabla', icon: <ViewList fontSize="small" /> },
               { value: 'analytics', label: 'Analítica', icon: <BarChartIcon fontSize="small" /> }
@@ -353,75 +261,18 @@ const AdminContratosFirmados: React.FC = () => {
           />
         </Stack>
 
-        {/* Barra de Filtros (Completamente Responsive) */}
-        <FilterBar 
-          sx={{ 
-            width: '100%', 
-            flexWrap: 'wrap', 
-            gap: 2, 
-            display: 'flex', 
-            alignItems: 'center' 
-          }}
-        >
-          <FilterSearch
-            placeholder="Buscar por inversor, email, proyecto o Hash..."
-            value={logic.searchTerm}
-            onSearch={logic.setSearchTerm}
-            sx={{ flexGrow: 1, minWidth: { xs: '100%', md: 390 } }}
-          />
-          
-          <FilterSelect 
-            label="Clasificación" 
-            value={logic.filterTipo} 
-            onChange={(e) => logic.setFilterTipo(e.target.value as string)} 
-            sx={{ minWidth: { xs: '100%', sm: 170 }, flex: { xs: 1, sm: 'none' } }}
-          >
+        <FilterBar sx={{ width: '100%', flexWrap: 'wrap', gap: 2 }}>
+          <FilterSearch placeholder="Inversor, email, proyecto o Hash..." value={logic.searchTerm} onSearch={logic.setSearchTerm} sx={{ flexGrow: 1, minWidth: { xs: '100%', md: 400 } }} />
+          <FilterSelect label="Clasificación" value={logic.filterTipo} onChange={(e) => logic.setFilterTipo(e.target.value as string)} sx={{ minWidth: { xs: '100%', sm: 180 } }}>
             <MenuItem value="all">Todas</MenuItem>
             <Divider />
             <MenuItem value="inversion">Inversiones</MenuItem>
             <MenuItem value="suscripcion">Suscripciones</MenuItem>
-         
           </FilterSelect>
-
-          <FilterSelect 
-            label="Estado" 
-            value={logic.filterEstado} 
-            onChange={(e) => logic.setFilterEstado(e.target.value as string)} 
-            sx={{ minWidth: { xs: '100%', sm: 170 }, flex: { xs: 1, sm: 'none' } }}
-          >
-            <MenuItem value="all">Todos</MenuItem>
-            <Divider />
-            <MenuItem value="FIRMADO">Firmados</MenuItem>
-            <MenuItem value="REVOCADO">Revocados</MenuItem>
-            <MenuItem value="INVALIDO">Inválidos</MenuItem>
-          </FilterSelect>
-
-          {/* Grupo de Fechas Responsive */}
-          <Stack 
-            direction={{ xs: 'column', sm: 'row' }} 
-            spacing={2} 
-            sx={{ width: { xs: '100%', md: 'auto' } }}
-          >
-            <TextField
-              label="Desde"
-              type="date"
-              size="small"
-              value={logic.startDate}
-              onChange={(e) => logic.setStartDate(e.target.value)}
-              InputLabelProps={{ shrink: true }}
-              sx={{ width: { xs: '100%', sm: 140 }, bgcolor: 'background.paper', borderRadius: 1 }}
-            />
-            <TextField
-              label="Hasta"
-              type="date"
-              size="small"
-              value={logic.endDate}
-              onChange={(e) => logic.setEndDate(e.target.value)}
-              InputLabelProps={{ shrink: true }}
-              sx={{ width: { xs: '100%', sm: 140 }, bgcolor: 'background.paper', borderRadius: 1 }}
-            />
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ width: { xs: '100%', md: 'auto' } }}>
+            <TextField label="Desde" type="date" size="small" value={logic.startDate} onChange={(e) => logic.setStartDate(e.target.value)} InputLabelProps={{ shrink: true }} sx={{ width: { xs: '100%', sm: 150 }, bgcolor: 'background.paper', borderRadius: 1 }} />
+            <TextField label="Hasta" type="date" size="small" value={logic.endDate} onChange={(e) => logic.setEndDate(e.target.value)} InputLabelProps={{ shrink: true }} sx={{ width: { xs: '100%', sm: 150 }, bgcolor: 'background.paper', borderRadius: 1 }} />
           </Stack>
-
         </FilterBar>
       </Stack>
 
@@ -429,17 +280,7 @@ const AdminContratosFirmados: React.FC = () => {
         <ContratosAnalytics data={logic.filteredContratos} />
       ) : (
         <QueryHandler isLoading={logic.isLoading} error={logic.error as Error | null}>
-          <DataTable
-            columns={columns}
-            data={logic.filteredContratos}
-            getRowKey={(row) => row.id}
-            isRowActive={(row) => !!row.hash_archivo_firmado}
-            highlightedRowId={logic.highlightedId}
-            showInactiveToggle={false}
-            emptyMessage="No se han encontrado registros que coincidan con los filtros."
-            pagination={true}
-            defaultRowsPerPage={10}
-          />
+          <DataTable columns={columns} data={logic.filteredContratos} getRowKey={(row) => row.id} isRowActive={(row) => !!row.hash_archivo_firmado} pagination />
         </QueryHandler>
       )}
     </PageContainer>

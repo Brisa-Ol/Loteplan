@@ -8,7 +8,7 @@ class EnvConfig {
   readonly authTokenKey = import.meta.env.VITE_AUTH_TOKEN_KEY || 'auth_token';
 
   // App
-  readonly appName = import.meta.env.VITE_APP_NAME || 'Sistema de Gestión';
+  readonly appName = import.meta.env.VITE_APP_NAME || 'LotePlan';
   readonly appVersion = import.meta.env.VITE_APP_VERSION || '1.0.0';
   readonly appEnv = import.meta.env.VITE_APP_ENV || 'development';
 

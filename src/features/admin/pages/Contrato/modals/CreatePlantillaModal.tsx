@@ -11,6 +11,7 @@ import {
   Divider,
   InputAdornment,
   alpha,
+  Avatar,
 } from '@mui/material';
 import {
   CloudUpload,
@@ -19,14 +20,14 @@ import {
   Numbers as VersionIcon,
   Business as ProjectIcon,
 } from '@mui/icons-material';
-import type { CreatePlantillaDto } from '../../../../../../core/types/dto/contrato-plantilla.dto';
-import useSnackbar from '../../../../../../shared/hooks/useSnackbar';
-import { env } from '../../../../../../core/config/env';
-import { BaseModal } from '../../../../../../shared/components/domain/modals/BaseModal/BaseModal';
+import { useSnackbar } from '@/shared/hooks/useSnackbar';
+import type { CreatePlantillaDto } from '@/core/types/dto';
+import { env } from '@/core/config/env';
+import { BaseModal } from '@/shared/components/domain/modals';
 
-
-
-// Definimos una interfaz básica para el proyecto
+// ============================================================================
+// INTERFACES
+// ============================================================================
 interface ProyectoSimple {
   id: number;
   nombre_proyecto: string;
@@ -40,6 +41,9 @@ interface Props {
   proyectos: ProyectoSimple[];
 }
 
+// ============================================================================
+// COMPONENTE
+// ============================================================================
 const CreatePlantillaModal: React.FC<Props> = ({
   open,
   onClose,
@@ -48,20 +52,19 @@ const CreatePlantillaModal: React.FC<Props> = ({
   proyectos,
 }) => {
   const theme = useTheme();
-  // ✅ Hook para notificaciones de error
   const { showError } = useSnackbar();
 
-  // Estados del formulario
+  // --- Estados del formulario ---
   const [nombre, setNombre] = useState('');
   const [version, setVersion] = useState<number | string>(1);
   const [idProyecto, setIdProyecto] = useState<number | ''>('');
   const [file, setFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
 
-  // Helper para convertir bytes a MB para visualización
+  // Helper de configuración
   const maxMb = Math.floor(env.maxFileSize / 1024 / 1024);
 
-  // Reset del formulario
+  // --- Manejadores ---
   const handleReset = useCallback(() => {
     setNombre('');
     setVersion(1);
@@ -71,7 +74,6 @@ const CreatePlantillaModal: React.FC<Props> = ({
     onClose();
   }, [onClose]);
 
-  // Manejo del envío
   const handleConfirm = async () => {
     if (!file || !nombre || !version) return;
 
@@ -87,50 +89,35 @@ const CreatePlantillaModal: React.FC<Props> = ({
 
   // ✅ VALIDACIÓN CENTRALIZADA
   const validateAndSetFile = (selectedFile: File) => {
-    // 1. Validación de Tipo (Regla de negocio: Solo PDF para plantillas)
     if (selectedFile.type !== 'application/pdf') {
       showError('Solo se permiten archivos PDF para las plantillas.');
       return;
     }
 
-    // 2. Validación de Tamaño (Regla de infraestructura: env.maxFileSize)
     if (selectedFile.size > env.maxFileSize) {
       showError(`El archivo excede el tamaño máximo permitido de ${maxMb}MB.`);
       return;
     }
 
     setFile(selectedFile);
-
-    // Autocompletar nombre
-    if (!nombre) {
-      setNombre(selectedFile.name.replace('.pdf', ''));
-    }
+    if (!nombre) setNombre(selectedFile.name.replace('.pdf', ''));
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      validateAndSetFile(e.target.files[0]);
-    }
+    if (e.target.files?.[0]) validateAndSetFile(e.target.files[0]);
   };
 
-  // Manejadores para Drag & Drop visual
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true);
-    } else if (e.type === "dragleave") {
-      setDragActive(false);
-    }
+    setDragActive(e.type === "dragenter" || e.type === "dragover");
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      validateAndSetFile(e.dataTransfer.files[0]);
-    }
+    if (e.dataTransfer.files?.[0]) validateAndSetFile(e.dataTransfer.files[0]);
   };
 
   const commonInputSx = { '& .MuiOutlinedInput-root': { borderRadius: 2 } };
@@ -146,15 +133,18 @@ const CreatePlantillaModal: React.FC<Props> = ({
       confirmText="Crear Plantilla"
       onConfirm={handleConfirm}
       isLoading={isLoading}
+      // Se deshabilita si falta info o está cargando
       disableConfirm={!file || !nombre || !version || isLoading}
       confirmButtonIcon={<CloudUpload />}
       maxWidth="sm"
     >
       <Stack spacing={3}>
+        {/* Campo: Nombre */}
         <TextField
           label="Nombre descriptivo"
           fullWidth
           required
+          placeholder="Ej: Contrato de Arrendamiento 2024"
           value={nombre}
           onChange={(e) => setNombre(e.target.value)}
           disabled={isLoading}
@@ -162,30 +152,33 @@ const CreatePlantillaModal: React.FC<Props> = ({
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <NameIcon color="action" />
+                <NameIcon color="action" fontSize="small" />
               </InputAdornment>
             ),
           }}
         />
 
-        <Stack direction="row" spacing={2}>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+          {/* Campo: Versión */}
           <TextField
             label="Versión"
             type="number"
             required
-            sx={{ width: '140px', ...commonInputSx }}
+            sx={{ width: { xs: '100%', sm: '140px' }, ...commonInputSx }}
             value={version}
             onChange={(e) => setVersion(e.target.value)}
             disabled={isLoading}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <VersionIcon color="action" />
+                  <VersionIcon color="action" fontSize="small" />
                 </InputAdornment>
               ),
               inputProps: { min: 1, step: 0.1 },
             }}
           />
+
+          {/* Campo: Proyecto */}
           <TextField
             select
             label="Proyecto Asignado"
@@ -197,7 +190,7 @@ const CreatePlantillaModal: React.FC<Props> = ({
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <ProjectIcon color="action" />
+                  <ProjectIcon color="action" fontSize="small" />
                 </InputAdornment>
               ),
             }}
@@ -215,6 +208,7 @@ const CreatePlantillaModal: React.FC<Props> = ({
 
         <Divider sx={{ borderStyle: 'dashed' }} />
 
+        {/* Zona de Carga de Archivo */}
         <Box
           component="label"
           onDragEnter={handleDrag}
@@ -222,30 +216,26 @@ const CreatePlantillaModal: React.FC<Props> = ({
           onDragOver={handleDrag}
           onDrop={handleDrop}
           sx={{
-            display: 'block',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
             border: '2px dashed',
             borderColor: dragActive
               ? 'primary.main'
-              : file
-                ? 'success.main'
-                : 'grey.400',
-            borderRadius: 2,
+              : file ? 'success.main' : 'grey.300',
+            borderRadius: 3,
             p: 4,
             textAlign: 'center',
             bgcolor: dragActive
-              ? alpha(theme.palette.primary.main, 0.1)
-              : file
-                ? alpha(theme.palette.success.main, 0.05)
-                : alpha(theme.palette.background.default, 0.5),
+              ? alpha(theme.palette.primary.main, 0.05)
+              : file ? alpha(theme.palette.success.main, 0.02) : 'transparent',
             cursor: isLoading ? 'not-allowed' : 'pointer',
-            transition: 'all 0.3s ease',
-            '&:hover': !isLoading
-              ? {
-                borderColor: 'primary.main',
-                bgcolor: alpha(theme.palette.primary.main, 0.05),
-                transform: 'translateY(-2px)'
-              }
-              : {},
+            transition: 'all 0.2s ease-in-out',
+            '&:hover': !isLoading ? {
+              borderColor: 'primary.main',
+              bgcolor: alpha(theme.palette.primary.main, 0.04),
+            } : {},
           }}
         >
           <input
@@ -256,29 +246,29 @@ const CreatePlantillaModal: React.FC<Props> = ({
             disabled={isLoading}
           />
 
-          <CloudUpload
+          <Avatar
             sx={{
-              fontSize: 48,
-              color: file ? 'success.main' : (dragActive ? 'primary.main' : 'text.disabled'),
-              mb: 1,
-              transition: 'color 0.3s ease'
+              width: 56,
+              height: 56,
+              mb: 2,
+              bgcolor: file ? 'success.main' : (dragActive ? 'primary.main' : alpha(theme.palette.text.disabled, 0.1)),
+              color: file || dragActive ? 'common.white' : 'text.disabled',
+              transition: 'all 0.3s ease'
             }}
-          />
-
-          <Typography
-            variant="body1"
-            fontWeight={600}
-            color={file ? 'success.main' : 'textPrimary'}
           >
-            {file ? file.name : (dragActive ? "¡Suelta el archivo aquí!" : "Haz clic o arrastra el PDF")}
+            <CloudUpload fontSize="medium" />
+          </Avatar>
+
+          <Typography variant="subtitle1" fontWeight={700} color={file ? 'success.main' : 'text.primary'}>
+            {file ? file.name : (dragActive ? "Suelte para cargar" : "Seleccione archivo PDF")}
           </Typography>
 
-          {/* ✅ 3. Texto dinámico basado en configuración */}
-          {!file && (
-            <Typography variant="caption" color="text.secondary">
-              Soporta solo archivos .PDF (Máx {maxMb}MB)
-            </Typography>
-          )}
+          <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
+            {file 
+              ? `${(file.size / 1024 / 1024).toFixed(2)} MB` 
+              : `Arrastra el archivo o haz clic aquí (Máx ${maxMb}MB)`
+            }
+          </Typography>
         </Box>
       </Stack>
     </BaseModal>

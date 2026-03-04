@@ -1,35 +1,41 @@
 // src/features/admin/pages/Lotes/modals/AuctionControlModal.tsx
 
+import React, { useEffect, useState, useMemo } from 'react';
 import { AccessTime, Gavel, PlayCircleFilled, StopCircle } from '@mui/icons-material';
-import { Alert, Box, Chip, Stack, TextField, Typography } from '@mui/material';
-import React, { useEffect, useState } from 'react';
+import { Alert, Box, Chip, Stack, TextField, Typography, useTheme, alpha } from '@mui/material';
 
-// ✅ Uso de Alias para imports más limpios
 import type { LoteDto } from '@/core/types/dto/lote.dto';
-import BaseModal from '@/shared/components/domain/modals/BaseModal/BaseModal';
+import { BaseModal } from '@/shared/components/domain/modals';
 
+// ============================================================================
+// INTERFACES
+// ============================================================================
 interface Props {
   open: boolean;
   onClose: () => void;
   lote: LoteDto | null;
-  // El modal envía las fechas, asegúrate de que tu Hook (useAdminLotes) las reciba si el backend las necesita
   onStart: (id: number, dates: { fecha_inicio: string; fecha_fin: string }) => void;
   onEnd: (id: number) => void;
   isLoading: boolean;
 }
 
+// ============================================================================
+// COMPONENTE PRINCIPAL
+// ============================================================================
 const AuctionControlModal: React.FC<Props> = ({ open, onClose, lote, onStart, onEnd, isLoading }) => {
+  const theme = useTheme();
   const [formData, setFormData] = useState({ fecha_inicio: '', fecha_fin: '' });
   const [dateError, setDateError] = useState<string | null>(null);
 
+  // --- Efecto: Reset de formulario ---
   useEffect(() => {
     if (open) {
       setFormData({ fecha_inicio: '', fecha_fin: '' });
       setDateError(null);
     }
-  }, [open, lote]);
+  }, [open]);
 
-  // Validación en tiempo real: Fin > Inicio
+  // --- Validación en tiempo real ---
   useEffect(() => {
     if (formData.fecha_inicio && formData.fecha_fin) {
       if (new Date(formData.fecha_fin) <= new Date(formData.fecha_inicio)) {
@@ -40,20 +46,17 @@ const AuctionControlModal: React.FC<Props> = ({ open, onClose, lote, onStart, on
     }
   }, [formData.fecha_inicio, formData.fecha_fin]);
 
-  if (!lote) return null;
-
-  const isPending = lote.estado_subasta === 'pendiente';
-  const isActive = lote.estado_subasta === 'activa';
-  const isFinished = lote.estado_subasta === 'finalizada';
+  // --- Helpers de Lógica ---
+  const isPending = lote?.estado_subasta === 'pendiente';
+  const isActive = lote?.estado_subasta === 'activa';
+  const isFinished = lote?.estado_subasta === 'finalizada';
   const isFormValid = formData.fecha_inicio !== '' && formData.fecha_fin !== '' && !dateError;
 
-  // ✨ UX FEATURE: Helper para configurar fechas rápidas ajustadas a zona horaria local
   const setQuickDuration = (days: number) => {
     const now = new Date();
     const end = new Date();
     end.setDate(now.getDate() + days);
 
-    // Truco para ajustar UTC a Local ISO string compatible con input datetime-local
     const toLocalISO = (d: Date) => {
       const offset = d.getTimezoneOffset() * 60000;
       return new Date(d.getTime() - offset).toISOString().slice(0, 16);
@@ -66,75 +69,163 @@ const AuctionControlModal: React.FC<Props> = ({ open, onClose, lote, onStart, on
   };
 
   const handleConfirm = () => {
+    if (!lote) return;
     if (isPending) {
       onStart(lote.id, { fecha_inicio: formData.fecha_inicio, fecha_fin: formData.fecha_fin });
     } else if (isActive) {
-      // ✅ Al ejecutar esto, el padre llamará a PujaService.manageAuctionEnd(id, null)
-      // tal como lo configuraste en el Hook useAdminLotes.
       onEnd(lote.id);
     }
   };
 
-  const getModalConfig = () => {
+  // --- Configuración Dinámica ---
+  const config = useMemo(() => {
+    if (!lote) return null;
     if (isPending) return {
       title: `Iniciar Subasta: ${lote.nombre_lote}`,
-      icon: <PlayCircleFilled />, color: 'success', btnText: 'Confirmar Inicio',
+      icon: <PlayCircleFilled />, color: 'success' as const, btnText: 'Confirmar Inicio',
       desc: 'Defina el periodo. Una vez iniciada, los usuarios habilitados podrán ofertar.'
     };
     if (isActive) return {
       title: `Finalizar Subasta: ${lote.nombre_lote}`,
-      icon: <StopCircle />, color: 'error', btnText: 'Finalizar Ahora',
+      icon: <StopCircle />, color: 'error' as const, btnText: 'Finalizar Ahora',
       desc: 'Se cerrará la subasta inmediatamente y se adjudicará al ganador actual (si existe).'
     };
-    return { title: 'Subasta Finalizada', icon: <Gavel />, color: 'primary', btnText: 'Cerrar', desc: 'Esta subasta ya terminó.' };
-  };
+    return { 
+      title: 'Subasta Finalizada', icon: <Gavel />, color: 'info' as const, 
+      btnText: 'Cerrar', desc: 'Esta subasta ya terminó.' 
+    };
+  }, [lote, isPending, isActive]);
 
-  const config = getModalConfig();
+  // --- Estilos Memorizados ---
+  const styles = useMemo(() => ({
+    priceBox: {
+      bgcolor: alpha(theme.palette.background.default, 0.5),
+      p: 2,
+      borderRadius: 2,
+      border: '1px solid',
+      borderColor: theme.palette.divider,
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center'
+    },
+    labelCaption: {
+      fontWeight: 800,
+      fontSize: '0.65rem',
+      color: 'text.secondary',
+      textTransform: 'uppercase',
+      letterSpacing: 1,
+      mb: 0.5
+    }
+  }), [theme]);
+
+  if (!lote || !config) return null;
 
   return (
     <BaseModal
-      open={open} onClose={onClose}
-      title={config.title} subtitle={`ID: ${lote.id}`} icon={config.icon}
-      headerColor={config.color as any} confirmText={config.btnText} confirmButtonColor={config.color as any}
-      onConfirm={isFinished ? undefined : handleConfirm} isLoading={isLoading}
-      maxWidth="sm" hideConfirmButton={isFinished} disableConfirm={isPending && !isFormValid}
+      open={open}
+      onClose={onClose}
+      title={config.title}
+      subtitle={`Referencia: #LT-${lote.id}`}
+      icon={config.icon}
+      headerColor={config.color}
+      confirmText={config.btnText}
+      confirmButtonColor={config.color}
+      onConfirm={isFinished ? undefined : handleConfirm}
+      isLoading={isLoading}
+      maxWidth="sm"
+      hideConfirmButton={isFinished}
+      disableConfirm={isPending && !isFormValid}
       cancelText="Cerrar"
     >
-      <Stack spacing={2}>
-        <Alert severity={config.color as any} variant="filled" icon={config.icon}>{config.desc}</Alert>
+      <Stack spacing={3}>
+        {/* Alerta Informativa */}
+        <Alert 
+          severity={config.color} 
+          variant="outlined" 
+          icon={config.icon} 
+          sx={{ borderRadius: 2, fontWeight: 600 }}
+        >
+          {config.desc}
+        </Alert>
 
-        <Box bgcolor="background.paper" p={2} borderRadius={2} border="1px solid #eee">
-          <Typography variant="caption" color="text.secondary" fontWeight={700}>PRECIO BASE</Typography>
-          <Typography variant="h4" fontWeight={700}>${Number(lote.precio_base).toLocaleString()}</Typography>
+        {/* Resumen de Precio */}
+        <Box sx={styles.priceBox}>
+          <Typography sx={styles.labelCaption}>PRECIO BASE DE SALIDA</Typography>
+          <Typography variant="h3" fontWeight={900} color="text.primary">
+            ${Number(lote.precio_base).toLocaleString('es-AR')}
+          </Typography>
         </Box>
 
+        {/* Configuración de Fechas (Solo si está pendiente) */}
         {isPending && (
           <Box>
-            <Typography variant="caption" fontWeight={700} color="text.secondary" mb={1} display="block">
-              CONFIGURACIÓN RÁPIDA
+            <Typography sx={styles.labelCaption} mb={1}>
+              DURACIÓN ESTIMADA (AUTO-CONFIG)
             </Typography>
-            <Stack direction="row" spacing={1} mb={2}>
-              <Chip icon={<AccessTime />} label="24 Horas" onClick={() => setQuickDuration(1)} clickable color="primary" variant="outlined" />
-              <Chip icon={<AccessTime />} label="3 Días" onClick={() => setQuickDuration(3)} clickable color="primary" variant="outlined" />
-              <Chip icon={<AccessTime />} label="1 Semana" onClick={() => setQuickDuration(7)} clickable color="primary" variant="outlined" />
+            <Stack direction="row" spacing={1} mb={3}>
+              <Chip 
+                icon={<AccessTime sx={{ fontSize: '1rem !important' }} />} 
+                label="24 Horas" 
+                onClick={() => setQuickDuration(1)} 
+                clickable 
+                sx={{ fontWeight: 700 }}
+                color="primary" 
+                variant="outlined" 
+              />
+              <Chip 
+                icon={<AccessTime sx={{ fontSize: '1rem !important' }} />} 
+                label="3 Días" 
+                onClick={() => setQuickDuration(3)} 
+                clickable 
+                sx={{ fontWeight: 700 }}
+                color="primary" 
+                variant="outlined" 
+              />
+              <Chip 
+                icon={<AccessTime sx={{ fontSize: '1rem !important' }} />} 
+                label="1 Semana" 
+                onClick={() => setQuickDuration(7)} 
+                clickable 
+                sx={{ fontWeight: 700 }}
+                color="primary" 
+                variant="outlined" 
+              />
             </Stack>
 
-            <Stack direction="row" spacing={2}>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
               <TextField
-                label="Inicio" type="datetime-local" fullWidth required
+                label="Inicio de Subasta"
+                type="datetime-local"
+                fullWidth
+                required
                 value={formData.fecha_inicio}
                 onChange={(e) => setFormData({ ...formData, fecha_inicio: e.target.value })}
                 InputLabelProps={{ shrink: true }}
                 error={formData.fecha_inicio === ''}
+                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
               />
               <TextField
-                label="Fin" type="datetime-local" fullWidth required
+                label="Fin de Subasta"
+                type="datetime-local"
+                fullWidth
+                required
                 value={formData.fecha_fin}
                 onChange={(e) => setFormData({ ...formData, fecha_fin: e.target.value })}
                 InputLabelProps={{ shrink: true }}
-                error={!!dateError} helperText={dateError}
+                error={!!dateError}
+                helperText={dateError}
+                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
               />
             </Stack>
+          </Box>
+        )}
+
+        {/* Estado actual para Subastas Activas */}
+        {isActive && (
+          <Box sx={{ p: 2, bgcolor: alpha(theme.palette.error.main, 0.05), borderRadius: 2, textAlign: 'center', border: '1px dashed', borderColor: theme.palette.error.main }}>
+            <Typography variant="body2" color="error.main" fontWeight={700}>
+              ATENCIÓN: Al finalizar manualmente, se detendrá la recepción de pujas inmediatamente.
+            </Typography>
           </Box>
         )}
       </Stack>

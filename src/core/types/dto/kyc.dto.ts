@@ -53,10 +53,7 @@ export interface KycDTO extends BaseDTO {
   longitud_verificacion?: number;
   ip_verificacion?: string;
 
-  // --- TIMESTAMP REAL DE SEQUELIZE ---
-  // Sequelize no tiene alias configurado en base.js, así que toJSON() manda createdAt.
-  // Se declara aquí para que el componente pueda accederlo sin error de tipos.
-  createdAt?: string;
+
 
   // --- RELACIONES (Includes) ---
   /** Datos del usuario que envió la solicitud. Presente en endpoints admin (pending/approved/rejected/all). */

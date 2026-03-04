@@ -1,48 +1,14 @@
 // src/core/types/dto/suscripcion.dto.ts
 
 import type { BaseDTO } from "./base.dto";
-import type { ProyectoDto } from "./proyecto.dto";
 
-// ==========================================
-// 📤 REQUEST DTOs
-// ==========================================
-
-export interface IniciarSuscripcionDto {
-  id_proyecto: number;
-}
-
-export interface ConfirmarSuscripcion2faDto {
-  transaccionId: number;
-  codigo_2fa: string;
-}
-
-// ==========================================
-// 📥 RESPONSE DTOs
-// ==========================================
-
-/**
- * Coincide con el modelo Sequelize: SuscripcionProyecto
- */
 export interface SuscripcionDto extends BaseDTO {
   id_usuario: number;
   id_proyecto: number;
-
-  // Coincide con `tokens_disponibles` (defaultValue: 1)
   tokens_disponibles: number;
-
-  // Coincide con `meses_a_pagar`
   meses_a_pagar: number;
-
-  // Coincide con `saldo_a_favor` (DECIMAL)
-  saldo_a_favor: number;
-
-  // ⚠️ ATENCIÓN: En tu modelo SuscripcionProyecto se llama así:
-  monto_total_pagado: number;
-
-  // Asumo que 'activo' viene de tus baseAttributes o es un campo virtual
-  activo: boolean;
-
-  // Relaciones (Includes)
+  saldo_a_favor: string;      // DECIMAL llega como string
+  monto_total_pagado: string; // DECIMAL llega como string
   usuario?: {
     id: number;
     nombre: string;
@@ -50,61 +16,40 @@ export interface SuscripcionDto extends BaseDTO {
     email: string;
     nombre_usuario: string;
   };
-
-  proyectoAsociado?: ProyectoDto;
+  proyectoAsociado?: {
+    id: number;
+    nombre_proyecto: string;
+    estado_proyecto: string;
+    plazo_inversion: number;
+    obj_suscripciones: number;
+    suscripciones_actuales: number;
+  };
 }
 
-export interface SuscripcionInitResponse {
-  message: string;
-  redirectUrl?: string;
-  transaccionId?: number;
-  is2FARequired?: boolean;
-}
-
-// ==========================================
-// 📊 MÉTRICAS
-// ==========================================
-
-export interface MorosidadDTO {
-  total_pagos_generados: string;
-  total_en_riesgo: string;
-  tasa_morosidad: string;
-}
-
-export interface CancelacionDTO {
-  total_suscripciones: number;
-  total_canceladas: number;
-  tasa_cancelacion: string;
-}
-
-// ==========================================
-// 🛑 HISTORIAL DE CANCELADAS
-// ==========================================
-
-/**
- * Coincide con el modelo Sequelize: SuscripcionCancelada
- */
 export interface SuscripcionCanceladaDto extends BaseDTO {
   id_suscripcion_original: number;
   id_usuario: number;
   id_proyecto: number;
   meses_pagados: number;
-  monto_pagado_total: number;
+  monto_pagado_total: string; // DECIMAL llega como string
   fecha_cancelacion: string;
-
-  // ✅ CORRECCIÓN: Alias exactos de las asociaciones del Backend
+  
   usuarioCancelador?: {
     nombre: string;
     apellido: string;
     email: string;
+    nombre_usuario: string;
   };
 
   proyectoCancelado?: {
     nombre_proyecto: string;
   };
 
+  // ⬇️ ESTO ES LO QUE FALTA PARA SOLUCIONAR EL ERROR ⬇️
+  // Debe ser un objeto, no un número (el ID ya está arriba)
   suscripcionOriginal?: {
     id: number;
-    monto_total_pagado: number;
+    monto_total_pagado: string; // Aquí está la propiedad que buscabas
+    activo: boolean;
   };
 }

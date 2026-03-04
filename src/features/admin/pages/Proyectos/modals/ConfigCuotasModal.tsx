@@ -1,57 +1,43 @@
 // src/components/Admin/Proyectos/Components/modals/ConfigCuotasModal.tsx
 
+import React, { useEffect, useMemo, useState } from 'react';
 import {
-    Calculate as CalculateIcon,
     CreditCard as CuotaIcon,
-    CalendarMonth as DateIcon,
-    Description as DescriptionIcon,
     Edit as EditIcon,
     History as HistoryIcon,
     ListAlt as ListIcon,
-    Save as SaveIcon,
-    Warning as WarningIcon
+    Save as SaveIcon
 } from '@mui/icons-material';
 import {
-    Alert,
-    alpha,
-    Box,
-    Button,
-    CircularProgress,
-    InputAdornment,
-    Paper,
-    Skeleton,
-    Stack,
-    Tab, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-    Tabs,
-    TextField,
-    Typography,
-    useTheme
+    Box, Button, Paper, Skeleton, Stack, Tab, Table, TableBody, 
+    TableCell, TableContainer, TableHead, TableRow, Tabs, 
+    TextField, Typography, useTheme, alpha
 } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { addMonths } from 'date-fns';
 import { useFormik } from 'formik';
-import React, { useEffect, useMemo, useState } from 'react';
 import * as Yup from 'yup';
 
 import CuotaMensualService from '@/core/api/services/cuotaMensual.service';
 import type { CreateCuotaMensualDto } from '@/core/types/dto/cuotaMensual.dto';
 import type { ProyectoDto } from '@/core/types/dto/proyecto.dto';
-import BaseModal from '@/shared/components/domain/modals/BaseModal/BaseModal';
+import { BaseModal } from '@/shared/components/domain/modals';
 import useSnackbar from '@/shared/hooks/useSnackbar';
 import ProyectoPriceHistory from '../components/ProyectoPriceHistory';
 
-// --- FUNCIONES AUXILIARES ---
-const blockInvalidChar = (e: React.KeyboardEvent) =>
-    ['e', 'E', '-', '+'].includes(e.key) && e.preventDefault();
-
+// ============================================================================
+// INTERFACES Y VALIDACIÓN
+// ============================================================================
 interface ConfigCuotasModalProps {
     open: boolean;
     onClose: () => void;
     proyecto: ProyectoDto | null;
 }
 
+const blockInvalidChar = (e: React.KeyboardEvent) =>
+    ['e', 'E', '-', '+'].includes(e.key) && e.preventDefault();
+
 const validationSchema = Yup.object({
-    nombre_cemento_cemento: Yup.string().nullable(),
     valor_cemento_unidades: Yup.number().positive('Mínimo 1 unidad').required('Requerido'),
     valor_cemento: Yup.number().positive('Debe ser mayor a 0').required('Requerido'),
     porcentaje_plan: Yup.number().min(0, 'Mínimo 0%').max(100, 'Máximo 100%').required('Requerido'),
@@ -59,6 +45,9 @@ const validationSchema = Yup.object({
     porcentaje_iva: Yup.number().min(0, 'Mínimo 0%').max(100, 'Máximo 100%').required('Requerido'),
 });
 
+// ============================================================================
+// COMPONENTE PRINCIPAL
+// ============================================================================
 const ConfigCuotasModal: React.FC<ConfigCuotasModalProps> = ({ open, onClose, proyecto }) => {
     const theme = useTheme();
     const queryClient = useQueryClient();
@@ -67,158 +56,135 @@ const ConfigCuotasModal: React.FC<ConfigCuotasModalProps> = ({ open, onClose, pr
     const [activeTab, setActiveTab] = useState(0);
     const [showHistory, setShowHistory] = useState(false);
 
+    // --- Queries ---
     const { data: responseBackend, isLoading: isLoadingData } = useQuery({
         queryKey: ['cuotaActive', proyecto?.id],
         queryFn: async () => {
             if (!proyecto) return null;
-            try {
-                const res = await CuotaMensualService.getLastByProjectId(proyecto.id);
-                return res.data;
-            } catch (error) {
-                return null;
-            }
+            const res = await CuotaMensualService.getLastByProjectId(proyecto.id);
+            return res.data;
         },
         enabled: open && !!proyecto && proyecto.tipo_inversion === 'mensual',
         retry: false
     });
 
+    // --- Mutations ---
     const createMutation = useMutation({
         mutationFn: async (data: CreateCuotaMensualDto) => (await CuotaMensualService.create(data)).data,
         onSuccess: (response) => {
             if (proyecto) {
                 queryClient.invalidateQueries({ queryKey: ['cuotaActive', proyecto.id] });
-                queryClient.invalidateQueries({ queryKey: ['cuotasList', proyecto.id] });
-                queryClient.invalidateQueries({ queryKey: ['proyecto', String(proyecto.id)] });
+                queryClient.invalidateQueries({ queryKey: ['adminCuotasMap'] });
             }
-            queryClient.invalidateQueries({ queryKey: ['adminProyectos'] });
-
-            const msg = response?.sincronizacion?.mensaje || 'Valores actualizados correctamente.';
-            showSuccess(msg);
+            showSuccess(response?.sincronizacion?.mensaje || 'Configuración actualizada');
             setShowHistory(true);
         },
-        onError: (err: any) => {
-            console.error(err);
-            showError((err.response?.data?.error) || 'Error al guardar la configuración');
-        }
+        onError: (err: any) => showError(err.response?.data?.error || 'Error al guardar')
     });
 
+    // --- Formulario ---
     const formik = useFormik<CreateCuotaMensualDto>({
         initialValues: {
             id_proyecto: proyecto?.id || 0,
-            nombre_proyecto: proyecto?.nombre_proyecto || '',
-            total_cuotas_proyecto: proyecto?.plazo_inversion || 0,
-            nombre_cemento_cemento: '',
             valor_cemento_unidades: 1,
             valor_cemento: 0,
-            porcentaje_plan: 85,
-            porcentaje_administrativo: 19,
+            porcentaje_plan: 70,
+            porcentaje_administrativo: 16,
             porcentaje_iva: 21,
+            nombre_cemento_cemento: 'Bolsa de Cemento'
         },
-        validationSchema: validationSchema,
+        validationSchema,
         enableReinitialize: true,
-        onSubmit: async (values) => {
+        onSubmit: (values) => {
             if (!proyecto) return;
-            try {
-                await createMutation.mutateAsync({
-                    ...values,
-                    id_proyecto: proyecto.id,
-                    nombre_proyecto: proyecto.nombre_proyecto,
-                    total_cuotas_proyecto: proyecto.plazo_inversion || 12,
-                    porcentaje_administrativo: values.porcentaje_administrativo / 100,
-                    porcentaje_iva: values.porcentaje_iva / 100,
-                    porcentaje_plan: values.porcentaje_plan / 100
-                });
-            } catch (error) {
-                console.error('Error al enviar:', error);
-            }
+            createMutation.mutate({
+                ...values,
+                id_proyecto: proyecto.id,
+                porcentaje_plan: values.porcentaje_plan / 100,
+                porcentaje_administrativo: values.porcentaje_administrativo / 100,
+                porcentaje_iva: values.porcentaje_iva / 100
+            });
         },
     });
 
     useEffect(() => {
-        const cuotaData = responseBackend?.cuota;
-        if (cuotaData) {
-            const pPlan = Number(cuotaData.porcentaje_plan);
-            const pAdmin = Number(cuotaData.porcentaje_administrativo);
-            const pIva = Number(cuotaData.porcentaje_iva);
+        const cuota = responseBackend?.cuota;
+        if (cuota) {
+            const normalizePct = (val: any) => {
+                const n = Number(val);
+                return n <= 1 ? n * 100 : n;
+            };
 
             formik.setValues({
                 id_proyecto: proyecto?.id || 0,
-                nombre_proyecto: proyecto?.nombre_proyecto || '',
-                total_cuotas_proyecto: proyecto?.plazo_inversion || 0,
-                nombre_cemento_cemento: cuotaData.nombre_cemento_cemento || '',
-                valor_cemento_unidades: Number(cuotaData.valor_cemento_unidades) || 0,
-                valor_cemento: Number(cuotaData.valor_cemento) || 0,
-                porcentaje_plan: pPlan <= 1 ? pPlan * 100 : pPlan,
-                porcentaje_administrativo: pAdmin <= 1 ? pAdmin * 100 : pAdmin,
-                porcentaje_iva: pIva <= 1 ? pIva * 100 : pIva,
+                nombre_cemento_cemento: cuota.nombre_cemento_cemento || '',
+                valor_cemento_unidades: Number(cuota.valor_cemento_unidades),
+                valor_cemento: Number(cuota.valor_cemento),
+                porcentaje_plan: normalizePct(cuota.porcentaje_plan),
+                porcentaje_administrativo: normalizePct(cuota.porcentaje_administrativo),
+                porcentaje_iva: normalizePct(cuota.porcentaje_iva),
             });
         }
     }, [responseBackend, proyecto]);
 
-    const plazo = proyecto?.plazo_inversion || 1;
-    const unidades = Number(formik.values.valor_cemento_unidades) || 0;
-    const precioUnitario = Number(formik.values.valor_cemento) || 0;
+    // --- Cálculos Proyectados ---
+    const calculos = useMemo(() => {
+        const plazo = proyecto?.plazo_inversion || 1;
+        const unidades = Number(formik.values.valor_cemento_unidades) || 0;
+        const precio = Number(formik.values.valor_cemento) || 0;
 
-    const pctPlanDecimal = Number(formik.values.porcentaje_plan) / 100;
-    const pctAdminDecimal = Number(formik.values.porcentaje_administrativo) / 100;
-    const pctIvaDecimal = Number(formik.values.porcentaje_iva) / 100;
+        const valorMovil = unidades * precio;
+        const totalDelPlan = valorMovil * (Number(formik.values.porcentaje_plan) / 100);
+        const valorMensual = totalDelPlan / plazo;
 
-    const valorMovil = unidades * precioUnitario;
-    const valorMensualFull = valorMovil / plazo;
-    const totalDelPlan = valorMovil * pctPlanDecimal;
-    const valorMensualPlan = totalDelPlan / plazo;
-    const cargaAdministrativa = valorMensualFull * pctAdminDecimal;
-    const ivaCarga = cargaAdministrativa * pctIvaDecimal;
-    const valorMensualFinal = valorMensualPlan + cargaAdministrativa + ivaCarga;
+        const cargaAdmin = valorMovil * (Number(formik.values.porcentaje_administrativo) / 100);
+        const ivaCarga = cargaAdmin * (Number(formik.values.porcentaje_iva) / 100);
+        const valorFinal = valorMensual + cargaAdmin + ivaCarga;
 
-    const cronogramaProyectado = useMemo(() => {
-        if (!proyecto || !proyecto.fecha_inicio) return [];
+        return { valorMensual, cargaAdmin, ivaCarga, valorFinal };
+    }, [formik.values, proyecto]);
 
-        const cuotas = [];
-        const fechaInicio = new Date(proyecto.fecha_inicio);
+    const cronograma = useMemo(() => {
+        if (!proyecto?.fecha_inicio) return [];
+        return Array.from({ length: proyecto.plazo_inversion || 0 }).map((_, i) => ({
+            nro: i + 1,
+            fecha: addMonths(new Date(proyecto.fecha_inicio), i + 1),
+            ...calculos
+        }));
+    }, [proyecto, calculos]);
 
-        for (let i = 1; i <= plazo; i++) {
-            const fechaCuota = addMonths(fechaInicio, i);
-            cuotas.push({
-                nro: i,
-                fecha: fechaCuota,
-                valor: valorMensualFinal,
-                capital: valorMensualPlan,
-                gastos: cargaAdministrativa + ivaCarga
-            });
-        }
-        return cuotas;
-    }, [plazo, proyecto?.fecha_inicio, valorMensualFinal, valorMensualPlan, cargaAdministrativa, ivaCarga]);
-
-    const handleClose = () => {
-        formik.resetForm();
-        setShowHistory(false);
-        setActiveTab(0);
-        onClose();
-    };
-
-    const sectionTitleSx = { fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', mb: 2, display: 'flex', alignItems: 'center', gap: 1, fontSize: '0.75rem' };
+    // --- Estilos Memorizados ---
+    const styles = useMemo(() => ({
+        input: { '& .MuiOutlinedInput-root': { borderRadius: 2 } },
+        calcPaper: {
+            p: 3, 
+            borderRadius: 3, 
+            bgcolor: "#D4D4D4",
+            color: "text.primary", 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+        },
+        tableHeader: { fontWeight: 800, bgcolor: alpha(theme.palette.background.default, 0.8) }
+    }), [theme]);
 
     if (!proyecto) return null;
-
-    if (proyecto.tipo_inversion !== 'mensual') {
-        return (
-            <BaseModal open={open} onClose={handleClose} title="No Disponible" icon={<WarningIcon />} hideConfirmButton cancelText="Cerrar">
-                <Typography>Solo para proyectos mensuales.</Typography>
-            </BaseModal>
-        );
-    }
 
     return (
         <BaseModal
             open={open}
-            onClose={handleClose}
-            title="Gestión de Cuotas"
-            subtitle="Actualice el valor del metro/cemento para impactar en las próximas cuotas"
+            onClose={onClose}
+            title="Configuración de Cuotas"
+            subtitle={proyecto.nombre_proyecto}
             icon={<CuotaIcon />}
-            headerColor="primary"
             maxWidth="md"
             isLoading={createMutation.isPending}
+            headerExtra={
+                <Tabs value={activeTab} onChange={(_, v) => setActiveTab(v)} >
+                    <Tab label="Variables" sx={{ fontWeight: 800 }} />
+                    <Tab label="Proyección" sx={{ fontWeight: 800 }} />
+                </Tabs>
+            }
             customActions={
                 <>
                     {activeTab === 0 && (
@@ -226,135 +192,61 @@ const ConfigCuotasModal: React.FC<ConfigCuotasModalProps> = ({ open, onClose, pr
                             onClick={() => setShowHistory(!showHistory)}
                             startIcon={<HistoryIcon />}
                             color="inherit"
-                            disabled={createMutation.isPending}
-                            sx={{ mr: 'auto', borderRadius: 2 }}
+                            sx={{ mr: 'auto', borderRadius: 2, fontWeight: 700 }}
                         >
                             {showHistory ? 'Ocultar' : 'Ver'} Historial
                         </Button>
                     )}
-
-                    <Button onClick={handleClose} color="inherit" disabled={createMutation.isPending} sx={{ borderRadius: 2, ml: activeTab === 1 ? 'auto' : 0 }}>
-                        Cerrar
-                    </Button>
-
+                    <Button onClick={onClose} color="inherit" sx={{ fontWeight: 700 }}>Cerrar</Button>
                     {activeTab === 0 && (
                         <Button
                             onClick={formik.submitForm}
                             variant="contained"
                             disabled={createMutation.isPending || !formik.isValid}
-                            startIcon={createMutation.isPending ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
-                            sx={{ px: 3, borderRadius: 2, fontWeight: 700 }}
+                            startIcon={<SaveIcon />}
+                            sx={{ px: 4, fontWeight: 800, borderRadius: 2 }}
                         >
-                            {createMutation.isPending ? 'Guardando...' : 'Actualizar Valor'}
+                            Actualizar Valor
                         </Button>
                     )}
                 </>
             }
         >
             <Stack spacing={3}>
-                <Paper elevation={0} sx={{ p: 2, borderRadius: 2, bgcolor: alpha(theme.palette.primary.main, 0.08), border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}` }}>
-                    <Stack direction="row" justifyContent="space-between" alignItems="center">
-                        <Box>
-                            <Typography variant="caption" color="primary.main" fontWeight={700} textTransform="uppercase">PROYECTO ACTIVO</Typography>
-                            <Typography variant="h6" fontWeight={800} color="text.primary">{proyecto.nombre_proyecto}</Typography>
-                        </Box>
-                        <Box textAlign="right">
-                            <Typography variant="caption" color="text.secondary">Plazo Total</Typography>
-                            <Typography variant="h6" fontWeight={700}>{proyecto.plazo_inversion} Meses</Typography>
-                        </Box>
-                    </Stack>
-                </Paper>
-
-                <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-                    <Tabs value={activeTab} onChange={(_, v) => setActiveTab(v)} variant="fullWidth">
-                        <Tab icon={<EditIcon fontSize="small" />} iconPosition="start" label="Configuración de Precios" />
-                        <Tab icon={<ListIcon fontSize="small" />} iconPosition="start" label="Proyección de Pagos" />
-                    </Tabs>
-                </Box>
-
-                {activeTab === 0 && (
-                    <Box sx={{ pt: 1 }}>
+                {activeTab === 0 ? (
+                    <Box>
                         {isLoadingData ? (
-                            <Stack spacing={2}><Skeleton height={60} /><Skeleton height={60} /></Stack>
+                            <Skeleton variant="rectangular" height={260} sx={{ borderRadius: 3 }} />
                         ) : (
                             <Stack spacing={3}>
-                                <Alert severity="warning" sx={{ mb: 1, borderRadius: 2 }} icon={<WarningIcon />}>
-                                    Esta acción actualizará el valor de la cuota para <strong>todos los suscriptores</strong> activos a partir del próximo vencimiento.
-                                </Alert>
-
-                                <Box>
-                                    <Typography variant="subtitle2" sx={sectionTitleSx}><DescriptionIcon fontSize="inherit" /> Referencia de Valor</Typography>
-                                    <Stack spacing={2}>
-                                        <TextField fullWidth label="Referencia (Ej: Bolsa Cemento)" {...formik.getFieldProps('nombre_cemento_cemento')} disabled={createMutation.isPending} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
-                                        <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-                                            <TextField
-                                                fullWidth label="Unidades" type="number"
-                                                onKeyDown={blockInvalidChar} inputProps={{ min: 1 }}
-                                                {...formik.getFieldProps('valor_cemento_unidades')}
-                                                onChange={(e) => { if (Number(e.target.value) < 0) return; formik.handleChange(e); }}
-                                                error={Boolean(formik.touched.valor_cemento_unidades && formik.errors.valor_cemento_unidades)}
-                                                disabled={createMutation.isPending} sx={{ flex: 1, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-                                            />
-                                            <TextField
-                                                fullWidth label="Precio Unitario" type="number"
-                                                onKeyDown={blockInvalidChar} inputProps={{ min: 0 }}
-                                                InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }}
-                                                {...formik.getFieldProps('valor_cemento')}
-                                                onChange={(e) => { if (Number(e.target.value) < 0) return; formik.handleChange(e); }}
-                                                error={Boolean(formik.touched.valor_cemento && formik.errors.valor_cemento)}
-                                                disabled={createMutation.isPending} sx={{ flex: 1, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-                                            />
-                                        </Stack>
-                                    </Stack>
+                                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '2fr 1fr 1fr' }, gap: 2 }}>
+                                    <TextField fullWidth label="Insumo de Referencia" sx={styles.input} {...formik.getFieldProps('nombre_cemento_cemento')} />
+                                    <TextField fullWidth label="Unidades" type="number" sx={styles.input} {...formik.getFieldProps('valor_cemento_unidades')} onKeyDown={blockInvalidChar} />
+                                    <TextField fullWidth label="Precio Unitario" type="number" sx={styles.input} {...formik.getFieldProps('valor_cemento')} InputProps={{ startAdornment: '$' }} onKeyDown={blockInvalidChar} />
                                 </Box>
 
-                                <Box>
-                                    <Typography variant="subtitle2" sx={sectionTitleSx}><CalculateIcon fontSize="inherit" /> Distribución Porcentual</Typography>
-                                    <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-                                        <TextField
-                                            fullWidth label="% Plan (Capital)" type="number"
-                                            onKeyDown={blockInvalidChar} inputProps={{ min: 0, max: 100 }}
-                                            InputProps={{ endAdornment: <InputAdornment position="end">%</InputAdornment> }}
-                                            {...formik.getFieldProps('porcentaje_plan')}
-                                            onChange={(e) => { if (Number(e.target.value) < 0) return; formik.handleChange(e); }}
-                                            disabled={createMutation.isPending}
-                                        />
-                                        <TextField
-                                            fullWidth label="% Admin" type="number"
-                                            onKeyDown={blockInvalidChar} inputProps={{ min: 0, max: 100 }}
-                                            InputProps={{ endAdornment: <InputAdornment position="end">%</InputAdornment> }}
-                                            {...formik.getFieldProps('porcentaje_administrativo')}
-                                            onChange={(e) => { if (Number(e.target.value) < 0) return; formik.handleChange(e); }}
-                                            disabled={createMutation.isPending}
-                                        />
-                                        <TextField
-                                            fullWidth label="% IVA" type="number"
-                                            onKeyDown={blockInvalidChar} inputProps={{ min: 0, max: 100 }}
-                                            InputProps={{ endAdornment: <InputAdornment position="end">%</InputAdornment> }}
-                                            {...formik.getFieldProps('porcentaje_iva')}
-                                            onChange={(e) => { if (Number(e.target.value) < 0) return; formik.handleChange(e); }}
-                                            disabled={createMutation.isPending}
-                                        />
-                                    </Stack>
+                                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 2 }}>
+                                    <TextField label="% Capital" type="number" sx={styles.input} {...formik.getFieldProps('porcentaje_plan')} InputProps={{ endAdornment: '%' }} />
+                                    <TextField label="% Admin" type="number" sx={styles.input} {...formik.getFieldProps('porcentaje_administrativo')} InputProps={{ endAdornment: '%' }} />
+                                    <TextField label="% IVA Admin" type="number" sx={styles.input} {...formik.getFieldProps('porcentaje_iva')} InputProps={{ endAdornment: '%' }} />
                                 </Box>
 
-                                <Alert severity="info" sx={{ borderRadius: 2, '& .MuiAlert-message': { width: '100%' }, border: '1px solid', borderColor: 'info.main' }}>
-                                    <Stack direction="row" justifyContent="space-between" alignItems="center">
-                                        <Box>
-                                            <Typography variant="body2" fontWeight={700} color="info.main">NUEVA CUOTA FINAL</Typography>
-                                            <Typography variant="caption" display="block">Cuota Pura: ${valorMensualPlan.toLocaleString(undefined, { maximumFractionDigits: 2 })}</Typography>
-                                            <Typography variant="caption" display="block">Gastos: ${(cargaAdministrativa + ivaCarga).toLocaleString(undefined, { maximumFractionDigits: 2 })}</Typography>
-                                        </Box>
-                                        <Typography variant="h4" fontWeight={800} color="primary.main">
-                                            ${valorMensualFinal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                <Paper elevation={0} sx={styles.calcPaper}>
+                                    <Box>
+                                        <Typography variant="subtitle2" sx={{ fontWeight: 800, opacity: 0.9, letterSpacing: 0.5 }}>CUOTA MENSUAL ESTIMADA</Typography>
+                                        <Typography variant="caption" sx={{ opacity: 0.8, fontWeight: 600 }}>
+                                            Pura: ${calculos.valorMensual.toFixed(2)} + Gastos: ${(calculos.cargaAdmin + calculos.ivaCarga).toFixed(2)}
                                         </Typography>
-                                    </Stack>
-                                </Alert>
+                                    </Box>
+                                    <Typography variant="h3" fontWeight={900}>
+                                        ${calculos.valorFinal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                                    </Typography>
+                                </Paper>
 
                                 {showHistory && (
-                                    <Box sx={{ mt: 2, pt: 2, borderTop: `1px dashed ${theme.palette.divider}` }}>
-                                        <Typography variant="subtitle2" color="text.secondary" fontWeight={700} gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                            <HistoryIcon fontSize="small" /> HISTORIAL DE CAMBIOS
+                                    <Box sx={{ mt: 1 }}>
+                                        <Typography variant="caption" fontWeight={800} color="text.secondary" sx={{ mb: 1, display: 'block', textTransform: 'uppercase' }}>
+                                            Historial de Actualizaciones
                                         </Typography>
                                         <ProyectoPriceHistory proyectoId={proyecto.id} />
                                     </Box>
@@ -362,45 +254,33 @@ const ConfigCuotasModal: React.FC<ConfigCuotasModalProps> = ({ open, onClose, pr
                             </Stack>
                         )}
                     </Box>
-                )}
-
-                {activeTab === 1 && (
-                    <Box sx={{ pt: 1 }}>
-                        <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 400 }}>
-                            <Table stickyHeader size="small">
-                                <TableHead>
-                                    <TableRow>
-                                        <TableCell>#</TableCell>
-                                        <TableCell>Vencimiento</TableCell>
-                                        <TableCell align="right">Capital</TableCell>
-                                        <TableCell align="right">Gastos</TableCell>
-                                        <TableCell align="right">Total</TableCell>
+                ) : (
+                    <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 3, maxHeight: 450 }}>
+                        <Table stickyHeader size="small">
+                            <TableHead>
+                                <TableRow>
+                                    <TableCell sx={styles.tableHeader}>Nº</TableCell>
+                                    <TableCell sx={styles.tableHeader}>Vencimiento</TableCell>
+                                    <TableCell align="right" sx={styles.tableHeader}>Cuota Pura</TableCell>
+                                    <TableCell align="right" sx={styles.tableHeader}>Admin + IVA</TableCell>
+                                    <TableCell align="right" sx={styles.tableHeader}>Total Final</TableCell>
+                                </TableRow>
+                            </TableHead>
+                            <TableBody>
+                                {cronograma.map((row) => (
+                                    <TableRow key={row.nro} hover>
+                                        <TableCell sx={{ fontWeight: 700 }}>{row.nro}</TableCell>
+                                        <TableCell sx={{ fontWeight: 500 }}>{row.fecha.toLocaleDateString('es-AR', { month: 'short', year: 'numeric' }).toUpperCase()}</TableCell>
+                                        <TableCell align="right">${row.valorMensual.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</TableCell>
+                                        <TableCell align="right" sx={{ color: 'text.secondary' }}>${(row.cargaAdmin + row.ivaCarga).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</TableCell>
+                                        <TableCell align="right" sx={{ fontWeight: 900, color: 'primary.main' }}>
+                                            ${row.valorFinal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                                        </TableCell>
                                     </TableRow>
-                                </TableHead>
-                                <TableBody>
-                                    {cronogramaProyectado.map((row) => (
-                                        <TableRow key={row.nro} hover>
-                                            <TableCell sx={{ fontWeight: 700 }}>{row.nro}</TableCell>
-                                            <TableCell>
-                                                <Stack direction="row" alignItems="center" gap={1}>
-                                                    <DateIcon fontSize="inherit" color="action" />
-                                                    {row.fecha.toLocaleDateString()}
-                                                </Stack>
-                                            </TableCell>
-                                            <TableCell align="right">${row.capital.toLocaleString(undefined, { maximumFractionDigits: 0 })}</TableCell>
-                                            <TableCell align="right" sx={{ color: 'text.secondary' }}>${row.gastos.toLocaleString(undefined, { maximumFractionDigits: 0 })}</TableCell>
-                                            <TableCell align="right" sx={{ fontWeight: 600, color: 'primary.main' }}>
-                                                ${row.valor.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </TableContainer>
-                        <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: 'block', textAlign: 'center', fontStyle: 'italic' }}>
-                            * Proyección basada en valores actuales.
-                        </Typography>
-                    </Box>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </TableContainer>
                 )}
             </Stack>
         </BaseModal>

@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { 
     Box, Tabs, Tab, Paper, useTheme, Typography, 
-    Stack, Chip, alpha, IconButton, Tooltip 
+    Stack, IconButton, Tooltip 
 } from '@mui/material';
 import {
     CheckCircle,
@@ -13,7 +13,8 @@ import {
     PlayCircleFilled,
     Token as TokenIcon,
     Visibility,
-    Cancel
+    Cancel,
+    CalendarMonth
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 
@@ -50,21 +51,18 @@ const MisSuscripciones: React.FC = () => {
 
     const [tabValue, setTabValue] = useState(0);
 
-    // ✅ CORRECCIÓN: Cálculo de Capital Total Unificado
-    // Sumamos lo activo (monto_total_pagado) + lo cancelado (monto_pagado_total)
+    // ✅ CAPITAL UNIFICADO: Suma total histórica (Activo + Cancelado)
     const capitalHistoricoTotal = useMemo(() => {
         const activo = suscripciones.reduce((acc, curr) => acc + Number(curr.monto_total_pagado || 0), 0);
         const historico = canceladas.reduce((acc, curr) => acc + Number(curr.monto_pagado_total || 0), 0);
         return activo + historico;
     }, [suscripciones, canceladas]);
 
-    // --- CÁLCULOS ---
     const totalTokens = useMemo(() =>
         suscripciones.reduce((acc, curr) => acc + (curr.tokens_disponibles || 0), 0),
         [suscripciones]
     );
 
-    // --- HANDLERS ---
     const handleConfirmCancel = useCallback(async () => {
         if (confirmDialog.data) {
             await cancelarSuscripcion(confirmDialog.data.id);
@@ -72,42 +70,30 @@ const MisSuscripciones: React.FC = () => {
         }
     }, [confirmDialog.data, cancelarSuscripcion, confirmDialog]);
 
-    // --- COLUMNAS PARA SUSCRIPCIONES ACTIVAS ---
+    // ── COLUMNAS: PLANES ACTIVOS (Nombres de proyectos resaltados) ──
     const activeCols = useMemo<DataTableColumn<SuscripcionDto>[]>(() => [
         {
             id: 'proyecto',
-            label: 'Proyecto / Referencia',
-            minWidth: 240,
+            label: 'Proyecto',
+            minWidth: 320,
             render: (row) => (
-                <Box>
-                    <Typography variant="subtitle2" fontWeight={700} color="text.primary">
-                        {row.proyectoAsociado?.nombre_proyecto ?? 'Cargando Proyecto...'}
-                    </Typography>
-                    <Stack direction="row" spacing={1} mt={0.5} alignItems="center">
-                        <Chip 
-                            label={`REF: #${row.id}`} 
-                            size="small" 
-                            sx={{ height: 18, fontSize: '0.62rem', fontWeight: 700, fontFamily: 'monospace', bgcolor: alpha(theme.palette.primary.main, 0.08) }} 
-                        />
-                        <Typography variant="caption" color="text.secondary">
-                            ID Proj: {row.id_proyecto}
-                        </Typography>
-                    </Stack>
-                </Box>
+                <Typography variant="subtitle2" fontWeight={800} color="primary.main">
+                    {row.proyectoAsociado?.nombre_proyecto || 'Cargando nombre...'}
+                </Typography>
             )
         },
-       {
+{
     id: 'monto',
     label: 'Capital Ahorrado',
     render: (row: SuscripcionDto) => {
-        // Forzamos la conversión a número y manejamos nulos
+        // Convertimos el string "0.00" a número de forma segura
         const monto = Number(row.monto_total_pagado || 0);
         
         return (
             <Typography 
                 variant="body2" 
                 fontWeight={700} 
-                color={monto > 0 ? "primary.main" : "text.disabled"}
+                color={monto > 0 ? "primary.main" : "text.secondary"}
             >
                 {formatCurrency(monto)}
             </Typography>
@@ -116,17 +102,15 @@ const MisSuscripciones: React.FC = () => {
 },
         {
             id: 'tokens',
-            label: 'Tokens',
+            label: 'Tokens Disponibles',
             align: 'center',
             render: (row) => (
-                <Chip 
-                    icon={<TokenIcon sx={{ fontSize: '14px !important' }} />}
-                    label={row.tokens_disponibles || 0}
-                    size="small"
-                    variant="outlined"
-                    color="warning"
-                    sx={{ fontWeight: 800 }}
-                />
+                <Stack direction="row" spacing={1} justifyContent="center" alignItems="center">
+                    <TokenIcon sx={{ fontSize: 16, color: 'warning.main' }} />
+                    <Typography variant="body2" fontWeight={900}>
+                        {row.tokens_disponibles || 0}
+                    </Typography>
+                </Stack>
             )
         },
         {
@@ -135,17 +119,16 @@ const MisSuscripciones: React.FC = () => {
             align: 'right',
             render: (row) => (
                 <Stack direction="row" spacing={1} justifyContent="flex-end">
-                    <Tooltip title="Ver Proyecto">
+                    <Tooltip title="Ver detalles del proyecto">
                         <IconButton size="small" onClick={() => navigate(`/proyectos/${row.id_proyecto}`)}>
                             <Visibility fontSize="small" />
                         </IconButton>
                     </Tooltip>
-                    <Tooltip title="Baja de Plan">
+                    <Tooltip title="Solicitar baja del plan">
                         <IconButton 
                             size="small" 
                             color="error" 
                             onClick={() => confirmDialog.confirm('cancel_subscription', row)}
-                            sx={{ '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.08) } }}
                         >
                             <Cancel fontSize="small" />
                         </IconButton>
@@ -153,41 +136,39 @@ const MisSuscripciones: React.FC = () => {
                 </Stack>
             )
         }
-    ], [navigate, formatCurrency, confirmDialog, theme]);
+    ], [navigate, formatCurrency, confirmDialog]);
 
-    // --- COLUMNAS PARA HISTORIAL (CANCELADAS) ---
+    // ── COLUMNAS: HISTORIAL DE BAJAS (Sin IDs, solo nombres) ──
     const canceledCols = useMemo<DataTableColumn<SuscripcionCanceladaDto>[]>(() => [
         {
             id: 'proyecto',
             label: 'Proyecto',
-            minWidth: 240,
+            minWidth: 320,
             render: (row) => (
-                <Box>
-                    <Typography variant="subtitle2" fontWeight={600} color="text.secondary">
-                        {row.proyectoCancelado?.nombre_proyecto || 'Desarrollo Finalizado'}
-                    </Typography>
-                    <Typography variant="caption" color="text.disabled">
-                        Original REF: #{row.id_suscripcion_original}
-                    </Typography>
-                </Box>
+                <Typography variant="subtitle2" fontWeight={700} color="text.secondary">
+                    {row.proyectoCancelado?.nombre_proyecto || 'Proyecto Finalizado'}
+                </Typography>
             )
         },
         {
             id: 'monto',
-            label: 'Monto Liquidado',
+            label: 'Monto en Liquidación',
             render: (row) => (
-                <Typography variant="body2" fontWeight={700} color="error.main">
-                    {formatCurrency(row.monto_pagado_total)}
+                <Typography variant="body2" fontWeight={700} color="text.disabled">
+                    {formatCurrency(Number(row.monto_pagado_total || 0))}
                 </Typography>
             )
         },
         {
             id: 'fecha',
-            label: 'Fecha Baja',
+            label: 'Fecha de Egreso',
             render: (row) => (
-                <Typography variant="body2" color="text.secondary">
-                    {new Date(row.fecha_cancelacion).toLocaleDateString()}
-                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <CalendarMonth sx={{ fontSize: 16, color: 'text.disabled' }} />
+                    <Typography variant="body2" color="text.secondary">
+                        {new Date(row.fecha_cancelacion).toLocaleDateString()}
+                    </Typography>
+                </Box>
             )
         }
     ], [formatCurrency]);
@@ -196,10 +177,10 @@ const MisSuscripciones: React.FC = () => {
         <PageContainer maxWidth="lg">
             <PageHeader
                 title="Mis Planes de Ahorro"
-                subtitle="Seguimiento de tus suscripciones y capital acumulado."
+                subtitle="Administra tu capital acumulado y tus tokens de participación."
             />
 
-            {/* KPI SUMMARY CARDS */}
+            {/* RESUMEN DE ESTADÍSTICAS */}
             <Box sx={{ 
                 display: 'grid', 
                 gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }, 
@@ -209,28 +190,27 @@ const MisSuscripciones: React.FC = () => {
                 <StatCard title="Planes Activos" value={stats.activas.toString()} icon={<PlayCircleFilled />} color="success" loading={isLoading} />
                 <StatCard title="Poder de Oferta" value={`${totalTokens} Tokens`} icon={<TokenIcon />} color="warning" loading={isLoading} />
                 
-                {/* ✅ KPI CORREGIDO: Muestra la suma histórico-total */}
                 <StatCard 
-                    title="Capital Ahorrado" 
+                    title="Capital Total" 
                     value={formatCurrency(capitalHistoricoTotal)} 
                     icon={<MonetizationOn />} 
                     color="primary" 
                     loading={isLoading} 
-                    subtitle="Total histórico"
+                    subtitle="Acumulado histórico"
                 />
 
-                <StatCard title="Bajas Históricas" value={stats.canceladas.toString()} icon={<EventBusy />} color="error" loading={isLoading} />
+                <StatCard title="Bajas Realizadas" value={stats.canceladas.toString()} icon={<EventBusy />} color="error" loading={isLoading} />
             </Box>
 
-            {/* TABS SELECTOR */}
+            {/* SELECTOR DE PESTAÑAS */}
             <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
                 <Tabs value={tabValue} onChange={(_, v) => setTabValue(v)} indicatorColor="primary" textColor="primary">
-                    <Tab label="Planes Activos" icon={<CheckCircle />} iconPosition="start" sx={{ fontWeight: 700 }} />
-                    <Tab label="Historial de Bajas" icon={<HistoryIcon />} iconPosition="start" sx={{ fontWeight: 700 }} />
+                    <Tab label="Planes Vigentes" icon={<CheckCircle />} iconPosition="start" sx={{ fontWeight: 700 }} />
+                    <Tab label="Historial de Salidas" icon={<HistoryIcon />} iconPosition="start" sx={{ fontWeight: 700 }} />
                 </Tabs>
             </Box>
 
-            {/* MAIN TABLE SECTION */}
+            {/* TABLA PRINCIPAL */}
             <QueryHandler isLoading={isLoading} error={error as Error | null}>
                 <Paper elevation={0} sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 3, overflow: 'hidden' }}>
                     {tabValue === 0 ? (
@@ -241,7 +221,7 @@ const MisSuscripciones: React.FC = () => {
                             pagination
                             defaultRowsPerPage={10}
                             highlightedRowId={highlightedId}
-                            emptyMessage="No tienes planes de ahorro activos."
+                            emptyMessage="No tienes planes vigentes en este momento."
                         />
                     ) : (
                         <DataTable
@@ -251,19 +231,18 @@ const MisSuscripciones: React.FC = () => {
                             pagination
                             defaultRowsPerPage={10}
                             emptyMessage="No hay registros en el historial de bajas."
-                            isRowActive={() => false}
                         />
                     )}
                 </Paper>
             </QueryHandler>
 
-            {/* CONFIRMATION MODAL */}
+            {/* MODAL DE CONFIRMACIÓN */}
             <ConfirmDialog
                 controller={confirmDialog}
                 onConfirm={handleConfirmCancel}
                 isLoading={isCancelling}
-                title="¿Detener plan de ahorro?"
-                description="Al cancelar este plan, dejarás de acumular tokens para pujas. El capital ahorrado quedará registrado para su liquidación según los términos del contrato."
+                title="¿Confirmas la baja del plan?"
+                description="Al cancelar tu participación en este proyecto, tu capital acumulado pasará a proceso de liquidación."
             />
         </PageContainer>
     );

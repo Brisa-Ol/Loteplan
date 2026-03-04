@@ -49,7 +49,7 @@ export interface ContratoFirmadoDto extends BaseDTO {
   nombre_archivo: string;
   url_archivo: string;
   hash_archivo_firmado: string;
-  
+  firma_digital: string;
   // Datos de firma
   fecha_firma: string;
   estado_firma: 'FIRMADO' | 'REVOCADO' | 'INVALIDO';

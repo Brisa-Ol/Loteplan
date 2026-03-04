@@ -1,3 +1,5 @@
+// src/features/admin/pages/Finanzas/AdminTransacciones.tsx
+
 import {
   BarChart as BarChartIcon,
   Bolt, CheckCircle, ErrorOutline,
@@ -29,7 +31,7 @@ import { ConfirmDialog } from '@/shared/components/domain/modals/ConfirmDialog/C
 import { FilterBar, FilterSearch, FilterSelect } from '@/shared/components/forms/filters/FilterBar';
 import { PageContainer } from '@/shared/components/layout/containers/PageContainer/PageContainer';
 
-import { AdminPageHeader } from '@/shared/components/admin/Adminpageheader';
+import { AdminPageHeader } from '@/shared/components/admin/Adminpageheader'; // ✅ Header estandarizado
 import AlertBanner from '@/shared/components/admin/Alertbanner';
 import MetricsGrid from '@/shared/components/admin/Metricsgrid';
 import { ViewModeToggle, type ViewMode } from '@/shared/components/admin/Viewmodetoggle';
@@ -250,7 +252,7 @@ const AdminTransacciones: React.FC = () => {
 
   return (
     <PageContainer maxWidth="xl" sx={{ py: 3 }}>
-      {/* 1. HEADER */}
+      {/* 1. HEADER ESTANDARIZADO */}
       <AdminPageHeader
         title="Auditoría Financiera"
         subtitle="Monitoreo de transacciones, pasarelas de pago y conciliación."
@@ -301,10 +303,10 @@ const AdminTransacciones: React.FC = () => {
         />
       </MetricsGrid>
 
-      {/* 4. CONTROLES Y FILTROS (🚨 REORGANIZADOS PARA RESPONSIVE) */}
+      {/* 4. CONTROLES Y FILTROS */}
       <Stack spacing={2} mb={3}>
         
-        {/* Toggle de Vista (Arriba a la derecha) */}
+        {/* Toggle de Vista */}
         <Stack direction="row" justifyContent="flex-end">
           <ViewModeToggle
             value={viewMode}
@@ -316,8 +318,7 @@ const AdminTransacciones: React.FC = () => {
           />
         </Stack>
 
-        {/* Contenedor de Filtros (Responsive) */}
-{/* Contenedor de Filtros (Responsive) */}
+        {/* Contenedor de Filtros */}
         <FilterBar 
           sx={{ 
             display: 'flex', 
@@ -326,7 +327,7 @@ const AdminTransacciones: React.FC = () => {
             alignItems: 'center'
           }}
         >
-          {/* Búsqueda de texto (Ocupa más espacio de forma flexible) */}
+          {/* Búsqueda de texto */}
           <FilterSearch
             placeholder="Buscar por cliente o proyecto..."
             value={logic.searchTerm}
@@ -397,7 +398,7 @@ const AdminTransacciones: React.FC = () => {
             data={logic.filteredData}
             getRowKey={(row) => row.id}
             isRowActive={(row) => !['fallido', 'rechazado_por_capacidad', 'rechazado_proyecto_cerrado', 'expirado'].includes(row.estado_transaccion)}
-            showInactiveToggle={false} // Mostrar todo lo filtrado por el usuario
+            showInactiveToggle={false}
             inactiveLabel="Mostrar Fallidas"
             highlightedRowId={logic.highlightedId}
             emptyMessage="No se encontraron transacciones con los filtros actuales."

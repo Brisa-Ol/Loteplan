@@ -24,7 +24,7 @@ export type ConfirmAction =
   | 'delete_bulk_images'
   | 'delete_single_image'
   | 'close_with_unsaved_changes'
-  // 🆕 NUEVOS TIPOS AGREGADOS PARA ADMIN PUJAS
+  | 'pay_quota' // 🆕 Agregar este
   | 'force_finish'
   | 'revert_payment'
   | 'revert_project_process'
@@ -83,7 +83,12 @@ const BASE_CONFIGS: Record<string, Partial<ConfirmConfig>> = {
     severity: 'warning',
     description: 'El proyecto volverá a estado "En Espera". Se detendrá el conteo de meses y se podrá volver a iniciar cuando se alcance el objetivo de suscriptores.'
   },
-};
+pay_quota: { 
+  title: '¿Confirmar Pago de Cuota?', 
+  confirmText: 'Sí, proceder al pago', 
+  severity: 'info' 
+},
+};  
 
 
 // 3. El Hook Optimizado
@@ -158,7 +163,9 @@ export const useConfirmDialog = () => {
       case 'cancel_ganadora_anticipada':
         description = `Se anulará la adjudicación del Lote ID ${data.id}. El token se devolverá al usuario y el lote se liberará. Se requiere un motivo.`;
         break;
-
+case 'pay_quota':
+  description = `Estás por pagar la cuota del proyecto "${data.nombreProyecto}". Tras confirmar, deberás validar tu identidad con el código 2FA.`;
+  break;
       // Toggles Genéricos (Visibilidad/Estado)
       case 'toggle_project_visibility':
       case 'toggle_lote_visibility':
