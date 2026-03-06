@@ -29,7 +29,8 @@ import { useFormik } from 'formik';
 import React, { useEffect } from 'react';
 import * as Yup from 'yup';
 import type { ProyectoDto, UpdateProyectoDto } from '../../../../../core/types/dto/proyecto.dto';
-import BaseModal from '../../../../../shared/components/domain/modals/BaseModal/BaseModal';
+import { BaseModal } from '@/shared';
+
 
 // --- FUNCIONES Y VARIABLES AUXILIARES ---
 
@@ -109,7 +110,7 @@ const EditProyectoModal: React.FC<EditProyectoModalProps> = ({
             const cleanData = Object.fromEntries(
                 Object.entries(values).map(([key, val]) => {
                     if (val === '') return [key, null];
-                    
+
                     // Lógica de negocio para inversión directa
                     if (proyecto.tipo_inversion === 'directo' && (key === 'obj_suscripciones' || key === 'suscripciones_minimas')) {
                         return [key, 1];
@@ -175,20 +176,20 @@ const EditProyectoModal: React.FC<EditProyectoModalProps> = ({
             disableConfirm={!formik.isValid || isLoading}
             maxWidth="md"
             // Permite que componentes como selectores de fecha funcionen correctamente
-            disableEnforceFocus 
+            disableEnforceFocus
             headerExtra={
                 <Stack direction="row" spacing={1}>
-                    <Chip 
-                        label={proyecto.tipo_inversion?.toUpperCase()} 
-                        size="small" 
-                        color="secondary" 
-                        sx={{ fontWeight: 700, borderRadius: 1.5 }} 
+                    <Chip
+                        label={proyecto.tipo_inversion?.toUpperCase()}
+                        size="small"
+                        color="secondary"
+                        sx={{ fontWeight: 700, borderRadius: 1.5 }}
                     />
-                    <Chip 
-                        label={`ID: ${proyecto.id}`} 
-                        size="small" 
-                        variant="outlined" 
-                        sx={{ fontWeight: 700, borderRadius: 1.5 }} 
+                    <Chip
+                        label={`ID: ${proyecto.id}`}
+                        size="small"
+                        variant="outlined"
+                        sx={{ fontWeight: 700, borderRadius: 1.5 }}
                     />
                 </Stack>
             }
@@ -283,11 +284,11 @@ const EditProyectoModal: React.FC<EditProyectoModalProps> = ({
                     ) : (
                         <Paper
                             elevation={0}
-                            sx={{ 
-                                p: 2.5, 
-                                border: `1px dashed ${theme.palette.primary.main}`, 
-                                borderRadius: 2, 
-                                bgcolor: alpha(theme.palette.primary.main, 0.02) 
+                            sx={{
+                                p: 2.5,
+                                border: `1px dashed ${theme.palette.primary.main}`,
+                                borderRadius: 2,
+                                bgcolor: alpha(theme.palette.primary.main, 0.02)
                             }}
                         >
                             <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
@@ -364,10 +365,10 @@ const EditProyectoModal: React.FC<EditProyectoModalProps> = ({
                             </Typography>
                             <FormControlLabel
                                 control={
-                                    <Switch 
-                                        checked={!!formik.values.activo} 
-                                        onChange={(e) => formik.setFieldValue('activo', e.target.checked)} 
-                                        color="success" 
+                                    <Switch
+                                        checked={!!formik.values.activo}
+                                        onChange={(e) => formik.setFieldValue('activo', e.target.checked)}
+                                        color="success"
                                     />
                                 }
                                 label={<Typography variant="body2" fontWeight={700}>{formik.values.activo ? "ACTIVO" : "OCULTO"}</Typography>}

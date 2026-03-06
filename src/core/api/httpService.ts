@@ -1,5 +1,5 @@
 import axios, { type AxiosResponse, type InternalAxiosRequestConfig } from 'axios';
-import { secureStorage } from '../../shared/utils/secureStorage';
+import { secureStorage } from '../auth/storage/secureStorage';
 import { notifyError } from '../../shared/utils/snackbarUtils';
 import { env } from '../config/env';
 

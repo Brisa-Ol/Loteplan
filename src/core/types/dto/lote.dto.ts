@@ -92,14 +92,12 @@ export interface UpdateLoteDto extends Partial<CreateLoteDto> {
 export interface ProyectoMinimalDto extends BaseDTO {
   nombre_proyecto: string;
   descripcion?: string;
-  tipo_inversion: TipoInversion; // 👈 'directo' | 'mensual'
   plazo_inversion?: number;
   monto_inversion: string | number;
   moneda: string;                // "USD" | "ARS"
   suscripciones_actuales: number;
   suscripciones_minimas: number;
   obj_suscripciones: number;
-  estado_proyecto: EstadoProyecto;
   pack_de_lotes: boolean;        // 👈 Tu campo crítico
   fecha_inicio: string;
   fecha_cierre: string;

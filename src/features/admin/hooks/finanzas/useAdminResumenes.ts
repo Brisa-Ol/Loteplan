@@ -1,3 +1,5 @@
+// src/features/admin/hooks/finanzas/useAdminResumenes.ts
+
 import { useCallback, useMemo, useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { ResumenCuentaDto } from '@/core/types/dto/resumenCuenta.dto';
@@ -26,7 +28,8 @@ export const useAdminResumenes = () => {
 
   // --- ESTADOS DE FILTRO ---
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterState, setFilterState] = useState<'all' | 'active' | 'completed' | 'overdue'>('all');
+  // 🆕 Añadido 'pending' como opción de filtro
+  const [filterState, setFilterState] = useState<'all' | 'active' | 'completed' | 'overdue' | 'pending'>('all');
   const [selectedResumen, setSelectedResumen] = useState<ResumenCuentaDto | null>(null);
 
   // ✨ Debounce
@@ -36,8 +39,8 @@ export const useAdminResumenes = () => {
   const { data: resumenesRaw = [], isLoading, error } = useQuery({
     queryKey: ['adminResumenes'],
     queryFn: async () => (await ResumenCuentaService.findAll()).data,
-    staleTime: 30000,      // 30 segundos de frescura
-    gcTime: 5 * 60 * 1000, // 5 minutos en caché
+    staleTime: 30000,
+    gcTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
 
@@ -49,22 +52,26 @@ export const useAdminResumenes = () => {
     const term = debouncedSearchTerm.toLowerCase();
 
     return resumenesOrdenados.filter(resumen => {
-      // 1. Filtro de Estado (Rápido)
+      // 1. Filtro de Estado
       let matchesState = true;
+
       if (filterState === 'active') {
         matchesState = resumen.porcentaje_pagado < 100 && resumen.cuotas_vencidas === 0;
       } else if (filterState === 'completed') {
         matchesState = resumen.porcentaje_pagado >= 100;
       } else if (filterState === 'overdue') {
         matchesState = resumen.cuotas_vencidas > 0;
+      } else if (filterState === 'pending') {
+        // 🆕 Filtro: cuotas generadas adelantadas pendientes de cobro
+        const cuotasPendientes = resumen.meses_proyecto - resumen.cuotas_pagadas - resumen.cuotas_vencidas;
+        matchesState = cuotasPendientes > 0 && resumen.porcentaje_pagado < 100 && resumen.cuotas_vencidas === 0;
       }
 
       if (!matchesState) return false;
 
-      // 2. Filtro de Texto (🚨 AHORA BUSCA POR USUARIO)
+      // 2. Filtro de Texto
       if (!term) return true;
 
-      // Extracción segura de datos para la búsqueda
       const nombreProyecto = (resumen.suscripcion?.proyectoAsociado?.nombre_proyecto || resumen.nombre_proyecto).toLowerCase();
       const nombreUsuario = resumen.suscripcion?.usuario?.nombre?.toLowerCase() || '';
       const apellidoUsuario = resumen.suscripcion?.usuario?.apellido?.toLowerCase() || '';
@@ -98,7 +105,7 @@ export const useAdminResumenes = () => {
     filterState, setFilterState,
     selectedResumen,
 
-    // ✨ UX
+    // UX
     highlightedId,
 
     // Data

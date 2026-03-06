@@ -1,19 +1,24 @@
 // src/components/Admin/Proyectos/Components/ProyectoBasicInfo.tsx
-import React from 'react';
 import {
-    Box, Paper, Typography, Button, Stack, Chip, Divider,
-    alpha, useTheme
-} from '@mui/material';
-import {
-    Edit as EditIcon,
-    Image as ImageIcon,
-    LocationOn as LocationIcon,
     CalendarMonth as CalendarMonthIcon,
     Description as DescriptionIcon,
+    Edit as EditIcon,
+    Image as ImageIcon,
+    Info as InfoIcon,
     Gavel as LawIcon,
-    AttachMoney as MoneyIcon,
-    Info as InfoIcon
+    LocationOn as LocationIcon,
+    AttachMoney as MoneyIcon
 } from '@mui/icons-material';
+import {
+    Box,
+    Button,
+    Chip, Divider,
+    Paper,
+    Stack,
+    Typography,
+    alpha, useTheme
+} from '@mui/material';
+import React from 'react';
 import type { ProyectoDto } from '../../../../../core/types/dto/proyecto.dto';
 
 

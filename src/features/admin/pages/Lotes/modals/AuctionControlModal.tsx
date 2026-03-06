@@ -5,7 +5,9 @@ import { AccessTime, Gavel, PlayCircleFilled, StopCircle } from '@mui/icons-mate
 import { Alert, Box, Chip, Stack, TextField, Typography, useTheme, alpha } from '@mui/material';
 
 import type { LoteDto } from '@/core/types/dto/lote.dto';
-import { BaseModal } from '@/shared/components/domain/modals';
+import { BaseModal } from '@/shared';
+
+
 
 // ============================================================================
 // INTERFACES

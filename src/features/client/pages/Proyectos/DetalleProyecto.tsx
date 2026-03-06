@@ -16,15 +16,15 @@ import { useIsFetching } from '@tanstack/react-query';
 import React, { Suspense, lazy, useCallback, useMemo } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
+import { useSecurityGuard } from '@/core/auth/hooks/useSecurityGuard';
 import { useAuth } from '@/core/context/AuthContext';
 import { ROUTES } from '@/routes';
-import { SecurityRequirementModal } from '@/shared/components/domain/modals/SecurityRequirementModal/SecurityRequirementModal';
-import { PageContainer } from '@/shared/components/layout/containers/PageContainer/PageContainer';
-import { useSecurityGuard } from '@/shared/hooks/useSecurityGuard';
 import { useDetalleProyecto } from '../../hooks/useDetalleProyecto';
 import { useVerificarSuscripcion } from '../../hooks/useVerificarSuscripcion';
 
 // Componentes críticos cargados de forma inmediata pero memoizados
+import { SecurityRequirementModal } from '@/core/auth/guards/SecurityRequirementModal';
+import { PageContainer } from '@/shared';
 import { ListaLotesProyecto } from '../Lotes/ListaLotesProyecto';
 import { ProjectHero } from './components/ProjectHero';
 import { ProjectSidebar } from './components/ProjectSidebar';

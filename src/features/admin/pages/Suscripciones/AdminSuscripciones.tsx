@@ -14,27 +14,13 @@ import {
   Typography, alpha, useTheme
 } from '@mui/material';
 import React, { useMemo } from 'react';
-
-// Componentes Shared
-import { AdminPageHeader } from '@/shared/components/admin/Adminpageheader'; // ✅ Componente aplicado
-import AlertBanner from '@/shared/components/admin/Alertbanner';
-import MetricsGrid from '@/shared/components/admin/Metricsgrid';
-import { DataTable, type DataTableColumn } from '@/shared/components/data-grid/DataTable/DataTable';
-import { QueryHandler } from '@/shared/components/data-grid/QueryHandler/QueryHandler';
-import { StatCard } from '@/shared/components/domain/cards/StatCard/StatCard';
-import { ConfirmDialog } from '@/shared/components/domain/modals/ConfirmDialog/ConfirmDialog';
-import { PageContainer } from '@/shared/components/layout/containers/PageContainer/PageContainer';
-
-// Componentes de Filtrado Premium
-import { FilterBar, FilterSearch, FilterSelect } from '@/shared/components/forms/filters/FilterBar';
-
 // Importaciones de Sub-componentes
 import CancelacionesTab from './components/CancelacionesTab';
 import DetalleSuscripcionModal from './modals/DetalleSuscripcionModal';
-
 // Hooks y tipos
 import type { SuscripcionDto } from '@/core/types/dto/suscripcion.dto';
 import { useAdminSuscripciones } from '../../hooks/finanzas/useAdminSuscripciones';
+import { AdminPageHeader, AlertBanner, ConfirmDialog, DataTable, FilterBar, FilterSearch, FilterSelect, MetricsGrid, PageContainer, QueryHandler, StatCard, type DataTableColumn } from '@/shared';
 
 // ============================================================================
 // SUB-COMPONENTE: UserCell
@@ -81,7 +67,7 @@ const AdminSuscripciones: React.FC = () => {
     disableScrollLock: true,
     PaperProps: {
       sx: {
-        mt: 1.4, 
+        mt: 1.4,
         maxHeight: 300,
         borderRadius: '12px',
         minWidth: 280,
@@ -153,13 +139,13 @@ const AdminSuscripciones: React.FC = () => {
               <Chip
                 size="small"
                 icon={<Token sx={{ fontSize: '14px !important' }} />}
-                label={`${s.tokens_disponibles} Tkn`} 
+                label={`${s.tokens_disponibles} Tkn`}
                 color={s.tokens_disponibles > 0 ? "warning" : "default"}
                 variant="filled"
                 sx={{ fontWeight: 800, height: 20, fontSize: '0.65rem' }}
               />
               <Chip
-                label={`${s.meses_a_pagar} cuotas`} 
+                label={`${s.meses_a_pagar} cuotas`}
                 size="small"
                 variant="outlined"
                 sx={{ fontWeight: 700, height: 20, fontSize: '0.65rem' }}
@@ -275,7 +261,7 @@ const AdminSuscripciones: React.FC = () => {
               value={logic.filterProject}
               onChange={(e: any) => logic.setFilterProject(e.target.value)}
               SelectProps={{
-                MenuProps: proyectoMenuProps 
+                MenuProps: proyectoMenuProps
               }}
             >
               <MenuItem value="all">Todos los proyectos</MenuItem>

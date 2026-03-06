@@ -1,4 +1,3 @@
-// src/features/admin/pages/Proyectos/AdminProyectos.tsx
 
 import {
   Add,
@@ -36,36 +35,34 @@ import {
 } from '@mui/material';
 import React, { memo, useMemo, useState } from 'react';
 
-import { AdminPageHeader } from '@/shared/components/admin/Adminpageheader';
-import MetricsGrid from '@/shared/components/admin/Metricsgrid';
-import { ViewModeToggle, type ViewMode } from '@/shared/components/admin/Viewmodetoggle';
-import { DataTable, type DataTableColumn } from '@/shared/components/data-grid/DataTable/DataTable';
-import { QueryHandler } from '@/shared/components/data-grid/QueryHandler/QueryHandler';
-import { StatCard } from '@/shared/components/domain/cards/StatCard/StatCard';
-import { ConfirmDialog } from '@/shared/components/domain/modals/ConfirmDialog/ConfirmDialog';
-import { FilterBar, FilterSearch, FilterSelect } from '@/shared/components/forms/filters/FilterBar';
-import { PageContainer } from '@/shared/components/layout/containers/PageContainer/PageContainer';
 
 import type { ProyectoDto } from '@/core/types/dto/proyecto.dto';
 import { useAdminProyectos } from '../../hooks/proyecto/useAdminProyectos';
 
-import ConfigCuotasModal from './modals/ConfigCuotasModal';
+import {
+  AdminPageHeader, ConfirmDialog, DataTable, FilterBar,
+  FilterSearch, FilterSelect, MetricsGrid, PageContainer, QueryHandler,
+  StatCard, ViewModeToggle, type DataTableColumn, type ViewMode
+} from '@/shared';
 import CreateProyectoModal from './modals/CreateProyectoModal';
-import ProjectLotesModal from './modals/DetalleProyectoModal';
+import ConfigCuotasModal from './modals/ConfigCuotasModal';
 import EditProyectoModal from './modals/EditProyectoModal';
+import DetalleProyectoModal from './modals/DetalleProyectoModal';
 import ManageImagesModal from './modals/ManageImagesModal';
 
+
+
+
 // ============================================================================
-// COMPONENTE: VISTA DE CARDS (Grid) - Sin cambios estructurales, solo visuales
+// COMPONENTE: VISTA DE CARDS (Grid)
 // ============================================================================
 const ProjectCard = memo<{
   proyecto: ProyectoDto;
-  valorCuotaReal?: number;
   onAction: (proyecto: ProyectoDto, action: any, e?: React.MouseEvent) => void;
   onRevert: (proyecto: ProyectoDto) => void;
   onToggle: (proyecto: ProyectoDto) => void;
   isToggling: boolean;
-}>(({ proyecto, valorCuotaReal, onAction, onToggle, onRevert, isToggling }) => {
+}>(({ proyecto, onAction, onToggle, onRevert, isToggling }) => {
   const theme = useTheme();
   const isMensual = proyecto.tipo_inversion === 'mensual';
   const isBajoMinimo = proyecto.suscripciones_actuales < (proyecto.suscripciones_minimas || 0);
@@ -74,7 +71,8 @@ const ProjectCard = memo<{
   const hasLotes = proyecto.lotes && proyecto.lotes.length > 0;
   const isReadyToStart = canStart && (!proyecto.pack_de_lotes || hasLotes);
   const canRevert = isMensual && proyecto.estado_proyecto === 'En proceso' && !isObjetivoAlcanzado;
-  const cuotaAMostrar = valorCuotaReal ?? proyecto.valor_cuota_referencia;
+  // Usa directamente el campo que ya viene en el proyecto
+  const cuotaAMostrar = proyecto.valor_cuota_referencia;
 
   return (
     <Card
@@ -206,7 +204,7 @@ ProjectCard.displayName = 'ProjectCard';
 // ============================================================================
 const AdminProyectos: React.FC = () => {
   const theme = useTheme();
-  const { cuotaMap, ...logic } = useAdminProyectos();
+  const logic = useAdminProyectos();
   const [viewMode, setViewMode] = useState<ViewMode>('table');
 
   const stats = useMemo(() => {
@@ -260,17 +258,16 @@ const AdminProyectos: React.FC = () => {
         label: 'Inversión',
         sortable: true,
         render: (p) => {
-          const cuotaReal = cuotaMap[p.id] || p.valor_cuota_referencia;
+          // Usa p.valor_cuota_referencia directamente — sin cuotaMap externo
+          const cuota = p.valor_cuota_referencia;
           return (
             <Stack spacing={0.2}>
               <Typography variant="body2" fontWeight={600}>
                 {p.moneda} {Number(p.monto_inversion).toLocaleString('es-AR')}
               </Typography>
-              {p.tipo_inversion === 'mensual' && (
-                <Typography variant="caption" color={cuotaReal ? "success.main" : "text.disabled"} fontWeight={700}>
-                  {cuotaReal
-                    ? `Cuota: ${p.moneda} ${Number(cuotaReal).toLocaleString('es-AR', { minimumFractionDigits: 2 })}`
-                    : 'Cuota no definida'}
+              {p.tipo_inversion === 'mensual' && cuota && (
+                <Typography variant="caption" color="success.main" fontWeight={700}>
+                  {`Cuota: ${p.moneda} ${Number(cuota).toLocaleString('es-AR', { minimumFractionDigits: 2 })}`}
                 </Typography>
               )}
             </Stack>
@@ -332,7 +329,7 @@ const AdminProyectos: React.FC = () => {
       },
       {
         id: 'acciones',
-        label: '', // Espacio comprimido
+        label: '',
         align: 'right',
         render: (p) => {
           const isMensual = p.tipo_inversion === 'mensual';
@@ -391,7 +388,7 @@ const AdminProyectos: React.FC = () => {
         },
       },
     ];
-  }, [logic, theme, cuotaMap]);
+  }, [logic, theme]);
 
   return (
     <PageContainer maxWidth="xl" sx={{ py: { xs: 2, md: 3 } }}>
@@ -399,10 +396,10 @@ const AdminProyectos: React.FC = () => {
         title="Gestión de Proyectos"
         subtitle="Catálogo de activos y estado de suscripciones."
         action={
-          <Button 
-            variant="contained" 
-            startIcon={<Add />} 
-            onClick={logic.modales.create.open} 
+          <Button
+            variant="contained"
+            startIcon={<Add />}
+            onClick={logic.modales.create.open}
             sx={{ fontWeight: 800, px: 3, py: 1.2, borderRadius: 2 }}
           >
             Nuevo Proyecto
@@ -446,7 +443,6 @@ const AdminProyectos: React.FC = () => {
               <ProjectCard
                 key={p.id}
                 proyecto={p}
-                valorCuotaReal={cuotaMap[p.id]}
                 onAction={logic.handleAction}
                 onRevert={(p) => logic.modales.confirmDialog.confirm('revert_project_process', p)}
                 onToggle={(p) => logic.modales.confirmDialog.confirm('toggle_project_visibility', p)}
@@ -468,13 +464,12 @@ const AdminProyectos: React.FC = () => {
         )}
       </QueryHandler>
 
-      {/* Modales - Se mantienen igual */}
       <CreateProyectoModal {...logic.modales.create.modalProps} onSubmit={logic.handleCreateSubmit} />
       {logic.selectedProject && (
         <>
           <ConfigCuotasModal open={logic.modales.cuotas.isOpen} onClose={logic.modales.cuotas.close} proyecto={logic.selectedProject} />
           <EditProyectoModal open={logic.modales.edit.isOpen} onClose={logic.modales.edit.close} proyecto={logic.selectedProject} onSubmit={logic.handleUpdateSubmit} isLoading={logic.isUpdating} />
-          <ProjectLotesModal open={logic.modales.lotes.isOpen} onClose={logic.modales.lotes.close} proyecto={logic.selectedProject} />
+          <DetalleProyectoModal open={logic.modales.lotes.isOpen} onClose={logic.modales.lotes.close} proyecto={logic.selectedProject} />
           <ManageImagesModal open={logic.modales.images.isOpen} onClose={logic.modales.images.close} proyecto={logic.selectedProject} />
         </>
       )}

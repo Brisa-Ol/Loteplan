@@ -25,15 +25,8 @@ import React, { useCallback, useMemo, useState } from 'react';
 // Servicios y Tipos
 import SuscripcionService from '@/core/api/services/suscripcion.service';
 import type { SuscripcionCanceladaDto } from '@/core/types/dto/suscripcion.dto';
-
-// Componentes Shared e Hooks
-import { DataTable, type DataTableColumn } from '@/shared/components/data-grid/DataTable/DataTable';
-import { QueryHandler } from '@/shared/components/data-grid/QueryHandler/QueryHandler';
-import { StatCard } from '@/shared/components/domain/cards/StatCard/StatCard';
-import { FilterBar, FilterSearch } from '@/shared/components/forms/filters/FilterBar';
-import { useModal } from '@/shared/hooks/useModal';
-
 // Sub-componentes locales
+import { DataTable, FilterBar, FilterSearch, QueryHandler, StatCard, useModal, type DataTableColumn } from '@/shared';
 import DetalleCancelacionModal from '../modals/DetalleCancelacionModal';
 
 const CancelacionesTab: React.FC = () => {

@@ -1,13 +1,21 @@
-import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import {
-  Box, CircularProgress, Alert, Button, Typography, Fade, Avatar, useTheme, alpha
-} from '@mui/material';
 import { ErrorOutline, VerifiedUser } from '@mui/icons-material';
+import {
+  Alert,
+  alpha,
+  Avatar,
+  Box,
+  Button,
+  CircularProgress,
+  Fade,
+  Typography,
+  useTheme
+} from '@mui/material';
+import React, { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 
-import AuthFormContainer from './components/AuthFormContainer';
-import AuthService from '@/core/api/services/auth.service';
 import type { ApiError } from '@/core/api/httpService';
+import AuthService from '@/core/api/services/auth.service';
+import AuthFormContainer from './components/AuthFormContainer';
 
 const ConfirmEmailPage: React.FC = () => {
   const { token } = useParams<{ token: string }>();

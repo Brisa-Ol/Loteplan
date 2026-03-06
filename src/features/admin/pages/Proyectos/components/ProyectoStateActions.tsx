@@ -1,20 +1,28 @@
 // src/components/Admin/Proyectos/Components/ProyectoStateActions.tsx
 
-import React from 'react';
 import {
-  Box, Paper, Typography, Button, Stack, Alert, Divider, Chip,
-  useTheme, alpha, Avatar
-} from '@mui/material';
-import {
-  PlayArrow as PlayIcon,
   CheckCircle as CheckIcon,
-  Pause as PauseIcon,
+  Event as EventIcon,
   Info as InfoIcon,
-  Timer as TimerIcon,
-  TrendingUp as TrendingUpIcon,
   AttachMoney as MoneyIcon,
-  Event as EventIcon
+  Pause as PauseIcon,
+  PlayArrow as PlayIcon,
+  Timer as TimerIcon,
+  TrendingUp as TrendingUpIcon
 } from '@mui/icons-material';
+import {
+  Alert,
+  alpha, Avatar,
+  Box,
+  Button,
+  Chip,
+  Divider,
+  Paper,
+  Stack,
+  Typography,
+  useTheme
+} from '@mui/material';
+import React from 'react';
 import type { ProyectoDto } from '../../../../../core/types/dto/proyecto.dto';
 
 

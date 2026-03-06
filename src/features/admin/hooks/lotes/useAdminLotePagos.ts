@@ -1,51 +1,42 @@
+// src/features/admin/hooks/lotes/useAdminLotePagos.ts
+
 import { useTheme } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 
 import LoteService from '@/core/api/services/lote.service';
 import type { LoteDto } from '@/core/types/dto/lote.dto';
-import { useModal } from '@/shared/hooks/useModal';
-
-import { useSnackbar } from '@/shared/hooks/useSnackbar'; 
+import { useConfirmDialog } from '@/shared/hooks/useConfirmDialog';
+import { useSnackbar } from '@/shared/hooks/useSnackbar';
 import { useSortedData } from '../useSortedData';
 
+// ============================================================================
+// HELPERS
+// ============================================================================
 
-// Helper de fechas
 const calcularDiasRestantes = (fechaFin: string | null): number => {
   if (!fechaFin) return 90;
-  const fechaLimite = new Date(new Date(fechaFin).getTime() + 90 * 24 * 60 * 60 * 1000); 
+  const fechaLimite = new Date(new Date(fechaFin).getTime() + 90 * 24 * 60 * 60 * 1000);
   const diff = fechaLimite.getTime() - new Date().getTime();
   return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
 };
 
-// Interfaz para la configuración dinámica del diálogo
-interface ConfirmConfig {
-  title: string;
-  message: string;
-  confirmText: string;
-  confirmColor: 'primary' | 'error' | 'warning' | 'info';
-}
+// ============================================================================
+// HOOK PRINCIPAL
+// ============================================================================
 
 export const useAdminLotePagos = () => {
   const theme = useTheme();
   const queryClient = useQueryClient();
-  
-  // 👇 2. USAMOS TU HOOK AQUÍ
-  const { showSuccess, showError } = useSnackbar(); 
-  
-  const confirmModal = useModal();
+  const { showSuccess, showError } = useSnackbar();
+
+  // ✅ Fix: useConfirmDialog reemplaza useModal + confirmConfig manual
+  const confirmDialog = useConfirmDialog();
 
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('cards');
   const [selectedLote, setSelectedLote] = useState<LoteDto | null>(null);
-  
-  const [confirmConfig, setConfirmConfig] = useState<ConfirmConfig>({
-    title: 'Confirmar Acción',
-    message: '¿Estás seguro?',
-    confirmText: 'Confirmar',
-    confirmColor: 'primary'
-  });
 
-  // 1. DATA FETCHING
+  // --- DATA FETCHING ---
   const { data: lotesRaw = [], isLoading, error } = useQuery({
     queryKey: ['adminLotesPagos'],
     queryFn: async () => (await LoteService.findAllAdmin()).data,
@@ -53,7 +44,7 @@ export const useAdminLotePagos = () => {
     staleTime: 10000,
   });
 
-  // 2. FILTROS
+  // --- FILTROS ---
   const lotesPendientesTotal = useMemo(() => {
     return lotesRaw.filter((l) => l.estado_subasta === 'finalizada' && l.id_ganador);
   }, [lotesRaw]);
@@ -64,10 +55,12 @@ export const useAdminLotePagos = () => {
 
   const { sortedData: lotes, highlightedId } = useSortedData(lotesRiesgo);
 
-  // 3. ANALYTICS
+  // --- ANALYTICS ---
   const analytics = useMemo(() => {
     const riesgoCriticoItems = lotesPendientesTotal.filter((l) => (l.intentos_fallidos_pago || 0) >= 2);
-    const capitalEnRiesgo = lotesPendientesTotal.reduce((acc, l) => acc + Number(l.monto_ganador_lote || l.precio_base), 0);
+    const capitalEnRiesgo = lotesPendientesTotal.reduce(
+      (acc, l) => acc + Number(l.monto_ganador_lote || l.precio_base), 0
+    );
 
     const chartData = [
       { name: 'Normal (0)', value: lotesPendientesTotal.filter(l => !l.intentos_fallidos_pago).length, color: theme.palette.success.light },
@@ -76,24 +69,24 @@ export const useAdminLotePagos = () => {
       { name: 'Crítico (3+)', value: lotesPendientesTotal.filter(l => (l.intentos_fallidos_pago || 0) >= 3).length, color: theme.palette.error.dark },
     ];
 
-    return { totalPendientes: lotesPendientesTotal.length, cantidadCritica: riesgoCriticoItems.length, capitalEnRiesgo, chartData };
+    return {
+      totalPendientes: lotesPendientesTotal.length,
+      cantidadCritica: riesgoCriticoItems.length,
+      capitalEnRiesgo,
+      chartData
+    };
   }, [lotesPendientesTotal, theme]);
 
-  // 4. ACCIONES (MUTATION)
+  // --- MUTACIÓN ---
   const sancionarMutation = useMutation({
     mutationFn: async (loteId: number) => await LoteService.cancelarAdjudicacion(loteId),
     onSuccess: (res) => {
-      const msg = res.data?.message || 'Adjudicación procesada correctamente.';
-      
-      // 👇 3. REEMPLAZAMOS toast.success POR showSuccess
-      showSuccess(msg); 
-      
+      showSuccess(res.data?.message || 'Adjudicación procesada correctamente.');
       queryClient.invalidateQueries({ queryKey: ['adminLotesPagos'] });
-      confirmModal.close();
+      confirmDialog.close();
     },
     onError: (err: any) => {
       if (err.response?.status === 404) {
-        // 👇 4. REEMPLAZAMOS toast.error POR showError
         showError('Error: Falta la ruta POST /lotes/:id/impago en el Backend.');
       } else {
         showError('Error al procesar la sanción.');
@@ -101,15 +94,11 @@ export const useAdminLotePagos = () => {
     }
   });
 
+  // --- ACCIONES ---
   const handleForceFinish = (lote: LoteDto) => {
     setSelectedLote(lote);
-    setConfirmConfig({
-      title: 'Procesar Impago / Anular',
-      message: `Vas a ejecutar el proceso de impago para "${lote.nombre_lote}". Se registrará un intento fallido (+1) y si llega a 3, el lote se reasignará o limpiará. ¿Continuar?`,
-      confirmText: 'Procesar Impago',
-      confirmColor: 'error'
-    });
-    confirmModal.open(); 
+    // ✅ Usamos el sistema de confirmación unificado — 'force_finish' ya tiene config en useConfirmDialog
+    confirmDialog.confirm('force_finish', { idLote: lote.id });
   };
 
   const handleConfirmAction = () => {
@@ -119,12 +108,21 @@ export const useAdminLotePagos = () => {
   };
 
   return {
-    theme, viewMode, setViewMode,
-    lotes, lotesPendientesTotal, analytics,
-    isLoading, error, highlightedId,
+    theme,
+    viewMode,
+    setViewMode,
+    lotes,
+    lotesPendientesTotal,
+    analytics,
+    isLoading,
+    error,
+    highlightedId,
     isMutating: sancionarMutation.isPending,
-    handleForceFinish, handleConfirmAction, calcularDiasRestantes,
-    confirmConfig,
-    modales: { confirm: confirmModal }
+    handleForceFinish,
+    handleConfirmAction,
+    calcularDiasRestantes,
+    modales: {
+      confirm: confirmDialog // ✅ Tipo correcto para ConfirmDialog
+    }
   };
 };

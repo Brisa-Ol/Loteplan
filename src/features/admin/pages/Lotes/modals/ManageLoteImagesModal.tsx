@@ -18,12 +18,8 @@ import React, { useCallback, useMemo, useState } from 'react';
 import imagenService from '@/core/api/services/imagen.service';
 import type { CreateImagenDto, ImagenDto } from '@/core/types/dto/imagen.dto';
 import type { LoteDto } from '@/core/types/dto/lote.dto';
-import { QueryHandler } from '@/shared/components/data-grid/QueryHandler/QueryHandler';
-import { BaseModal } from '@/shared/components/domain/modals';
-import { ConfirmDialog } from '@/shared/components/domain/modals/ConfirmDialog/ConfirmDialog';
-import ImageUploadZone from '@/shared/components/forms/upload/ImageUploadZone';
-import { useConfirmDialog } from '@/shared/hooks/useConfirmDialog';
-import useSnackbar from '@/shared/hooks/useSnackbar';
+import { BaseModal, ConfirmDialog, ImageUploadZone, QueryHandler, useConfirmDialog, useSnackbar } from '@/shared';
+
 
 interface ManageLoteImagesModalProps {
   open: boolean;

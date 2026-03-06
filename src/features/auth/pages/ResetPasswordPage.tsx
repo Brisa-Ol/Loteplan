@@ -14,7 +14,7 @@ import {
   useTheme
 } from '@mui/material';
 import React from 'react';
-import FormTextField from '../../../shared/components/forms/inputs/FormTextField';
+import FormTextField from '../../../shared/components/forms/FormTextField';
 import { useResetPassword } from '../hooks/useResetPassword';
 import AuthFormContainer from './components/AuthFormContainer';
 
@@ -23,9 +23,9 @@ import AuthFormContainer from './components/AuthFormContainer';
 const SuccessView = ({ onNavigate, theme }: any) => (
   <Fade in={true}>
     <Box textAlign="center">
-      <Avatar sx={{ 
-        width: 72, height: 72, margin: '0 auto', mb: 3, 
-        bgcolor: alpha(theme.palette.success.main, 0.1), color: theme.palette.success.main 
+      <Avatar sx={{
+        width: 72, height: 72, margin: '0 auto', mb: 3,
+        bgcolor: alpha(theme.palette.success.main, 0.1), color: theme.palette.success.main
       }}>
         <CheckCircleOutline fontSize="large" />
       </Avatar>
@@ -35,10 +35,10 @@ const SuccessView = ({ onNavigate, theme }: any) => (
       <Typography variant="body1" color="text.secondary" paragraph sx={{ mb: 4 }}>
         Serás redirigido al inicio de sesión en unos segundos...
       </Typography>
-      <Button 
-        variant="contained" 
-        onClick={onNavigate} 
-        fullWidth size="large" 
+      <Button
+        variant="contained"
+        onClick={onNavigate}
+        fullWidth size="large"
         sx={{ borderRadius: 2, fontWeight: 700, py: 1.5 }}
       >
         Ir al Login ahora
@@ -71,10 +71,10 @@ const ResetPasswordPage: React.FC = () => {
         <Box>
           {/* Header Icon */}
           <Box textAlign="center" mb={4}>
-            <Box sx={{ 
+            <Box sx={{
               width: 56, height: 56, borderRadius: '50%', mx: 'auto', mb: 2,
-              bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main', 
-              display: 'flex', alignItems: 'center', justifyContent: 'center' 
+              bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main',
+              display: 'flex', alignItems: 'center', justifyContent: 'center'
             }}>
               <VpnKey fontSize="large" />
             </Box>
@@ -109,7 +109,7 @@ const ResetPasswordPage: React.FC = () => {
                   ),
                 }}
               />
-              
+
               <FormTextField
                 name="confirmPassword"
                 label="Confirmar Nueva Contraseña"
@@ -127,13 +127,13 @@ const ResetPasswordPage: React.FC = () => {
                 }}
               />
 
-              <Button 
-                fullWidth 
-                variant="contained" 
-                type="submit" 
-                size="large" 
-                disabled={status.isLoading} 
-                endIcon={!status.isLoading && <LockReset />} 
+              <Button
+                fullWidth
+                variant="contained"
+                type="submit"
+                size="large"
+                disabled={status.isLoading}
+                endIcon={!status.isLoading && <LockReset />}
                 sx={{ py: 1.5, fontWeight: 700, borderRadius: 2 }}
               >
                 {status.isLoading ? <CircularProgress size={24} color="inherit" /> : 'Cambiar Contraseña'}

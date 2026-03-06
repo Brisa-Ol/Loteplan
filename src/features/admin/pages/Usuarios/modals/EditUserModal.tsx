@@ -31,8 +31,7 @@ import * as Yup from 'yup';
 import UsuarioService from '@/core/api/services/usuario.service';
 import { useAuth } from '@/core/context/AuthContext';
 import type { UpdateUserAdminDto, UsuarioDto } from '@/core/types/dto/usuario.dto';
-import BaseModal from '@/shared/components/domain/modals/BaseModal/BaseModal';
-import useSnackbar from '@/shared/hooks/useSnackbar';
+import { BaseModal, useSnackbar } from '@/shared';
 
 // ════════════════════════════════════════════════════════════
 // SUB-COMPONENTE: DIÁLOGO 2FA (Definido UNA SOLA vez)

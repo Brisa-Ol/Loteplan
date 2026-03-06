@@ -17,7 +17,8 @@ import {
   Business as ProjectIcon,
 } from '@mui/icons-material';
 import type { ContratoPlantillaDto } from '@/core/types/dto';
-import { BaseModal } from '@/shared/components/domain/modals';
+import { BaseModal } from '@/shared/components/domain';
+
 
 // ============================================================================
 // INTERFACES

@@ -13,18 +13,7 @@ import React, { useMemo, useState } from 'react';
 import imagenService from '@/core/api/services/imagen.service';
 import type { LoteDto } from '@/core/types/dto/lote.dto';
 import type { PujaDto } from '@/core/types/dto/puja.dto';
-
-import { AdminPageHeader } from '@/shared/components/admin/Adminpageheader'; // ✅ Aplicado
-import AlertBanner from '@/shared/components/admin/Alertbanner';
-import MetricsGrid from '@/shared/components/admin/Metricsgrid';
-import { ViewModeToggle, type ViewMode } from '@/shared/components/admin/Viewmodetoggle';
-import { DataTable } from '@/shared/components/data-grid/DataTable/DataTable';
-import { QueryHandler } from '@/shared/components/data-grid/QueryHandler/QueryHandler';
-import { StatCard } from '@/shared/components/domain/cards/StatCard/StatCard';
-import { ConfirmDialog } from '@/shared/components/domain/modals/ConfirmDialog/ConfirmDialog';
-import { FilterBar, FilterSearch } from '@/shared/components/forms/filters/FilterBar';
-import { PageContainer } from '@/shared/components/layout/containers/PageContainer/PageContainer';
-
+import { AdminPageHeader, AlertBanner, ConfirmDialog, DataTable, FilterBar, FilterSearch, MetricsGrid, PageContainer, QueryHandler, StatCard, ViewModeToggle, type ViewMode } from '@/shared';
 import { useAdminPujas } from '../../hooks/lotes/useAdminPujas';
 import DetallePujaModal from './modal/DetallePujaModal';
 

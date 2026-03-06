@@ -13,9 +13,9 @@ import {
   useTheme
 } from "@mui/material";
 import React from "react";
-import FormTextField from "../../../shared/components/forms/inputs/FormTextField";
-import AuthFormContainer from "./components/AuthFormContainer";
+import FormTextField from "../../../shared/components/forms/FormTextField";
 import { useForgotPassword } from "../hooks/useForgotPassword";
+import AuthFormContainer from "./components/AuthFormContainer";
 
 
 // --- Subcomponente: Vista de Carga ---

@@ -24,14 +24,15 @@ import {
 } from 'recharts';
 
 import { AdminPageHeader } from '@/shared/components/admin/Adminpageheader'; // ✅ Componente Header estandarizado
-import { DataTable, type DataTableColumn } from '@/shared/components/data-grid/DataTable/DataTable';
-import { QueryHandler } from '@/shared/components/data-grid/QueryHandler/QueryHandler';
-import { StatCard, StatusBadge } from '@/shared/components/domain/cards/StatCard/StatCard';
-import { ConfirmDialog } from '@/shared/components/domain/modals/ConfirmDialog/ConfirmDialog';
-import { PageContainer } from '@/shared/components/layout/containers/PageContainer/PageContainer';
+import { DataTable, type DataTableColumn } from '@/shared/components/data-grid/DataTable';
+import { QueryHandler } from '@/shared/components/data-grid/QueryHandler';
+import { StatCard, StatusBadge } from '@/shared/components/domain/cards/StatCard';
+
+import { PageContainer } from '@/shared/components/layout/PageContainer';
 
 import imagenService from '@/core/api/services/imagen.service';
 import type { LoteDto } from '@/core/types/dto/lote.dto';
+import { ConfirmDialog } from '@/shared/components/domain/modals/ConfirmDialog';
 import { useAdminLotePagos } from '../../hooks/lotes/useAdminLotePagos';
 
 // ============================================================================
@@ -251,7 +252,7 @@ const AdminLotePagos: React.FC = () => {
     <PageContainer maxWidth="xl" sx={{ py: 4, bgcolor: 'background.default' }}>
       {/* 1. HEADER ESTANDARIZADO */}
       <AdminPageHeader
-        title="Monitor de Cobranza"
+        title="Pagos y seguimiento de subastas"
         subtitle="Seguimiento de adjudicaciones, riesgo de cartera y plazos de pago."
       />
 
@@ -301,7 +302,7 @@ const AdminLotePagos: React.FC = () => {
       </QueryHandler>
 
       {/* 5. MODALES */}
-      <ConfirmDialog controller={logic.modales?.confirm} onConfirm={logic.handleConfirmAction} isLoading={logic.isMutating} {...logic.confirmConfig} />
+      <ConfirmDialog controller={logic.modales.confirm} onConfirm={logic.handleConfirmAction} isLoading={logic.isMutating} />
     </PageContainer>
   );
 };

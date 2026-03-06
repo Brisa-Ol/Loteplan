@@ -6,6 +6,7 @@ import {
   Fingerprint,
   Person as PersonIcon // Icono para el firmante
   ,
+
   Business as ProjectIcon,
   HistoryEdu as SignatureIcon,
   VerifiedUser as VerifiedIcon
@@ -20,9 +21,8 @@ import React, { useMemo, useState } from 'react';
 import ContratoService from '@/core/api/services/contrato.service';
 import ImagenService from '@/core/api/services/imagen.service';
 import type { ContratoFirmadoDto } from '@/core/types/dto/contrato-firmado.dto';
-import BaseModal from '@/shared/components/domain/modals/BaseModal/BaseModal';
-import useSnackbar from '@/shared/hooks/useSnackbar';
 import PDFViewerMejorado from '../../Contratos/components/PDFViewerMejorado';
+import { BaseModal, useSnackbar } from '@/shared';
 
 interface Props {
   open: boolean;

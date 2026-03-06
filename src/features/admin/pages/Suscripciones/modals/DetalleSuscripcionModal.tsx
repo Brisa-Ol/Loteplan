@@ -1,5 +1,6 @@
 // src/pages/Admin/Suscripciones/modals/DetalleSuscripcionModal.tsx
 
+import React, { useState } from 'react';
 import {
     AccountBalance,
     AddCircleOutline,
@@ -32,13 +33,12 @@ import {
     Typography,
     useTheme
 } from '@mui/material';
-import React, { useState } from 'react';
 
 import PagoService from '@/core/api/services/pago.service';
 import type { PagoDto } from '@/core/types/dto/pago.dto';
 import type { SuscripcionDto } from '@/core/types/dto/suscripcion.dto';
-import BaseModal from '@/shared/components/domain/modals/BaseModal/BaseModal';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { BaseModal } from '@/shared';
 
 interface DetalleSuscripcionModalProps {
     open: boolean;
@@ -64,7 +64,9 @@ const DetalleSuscripcionModal: React.FC<DetalleSuscripcionModalProps> = ({ open,
         queryFn: async () => {
             if (!suscripcion) return [];
             const res = await PagoService.getPendingBySubscription(suscripcion.id);
-            return Array.isArray(res.data) ? res.data : (res.data as any).pagos || (res.data as any).data || [];
+            // Manejo flexible de la respuesta del backend
+            const data = res.data as any;
+            return Array.isArray(data) ? data : data?.pagos || data?.data || [];
         },
         enabled: open && !!suscripcion && showPendingPayments,
     });
@@ -75,11 +77,11 @@ const DetalleSuscripcionModal: React.FC<DetalleSuscripcionModalProps> = ({ open,
             if (!suscripcion) throw new Error('No hay suscripción seleccionada');
             return await PagoService.generateAdvancePayments({
                 id_suscripcion: suscripcion.id,
-                cantidad: Math.max(1, cantidadMeses)
+                cantidad_meses: Math.max(1, cantidadMeses)
             });
         },
         onSuccess: () => {
-            setFeedback({ type: 'success', message: `✅ Pagos adelantados generados con éxito.` });
+            setFeedback({ type: 'success', message: '✅ Pagos adelantados generados con éxito.' });
             setShowAdvanceForm(false);
             queryClient.invalidateQueries({ queryKey: ['adminSuscripciones'] });
             refetchPagos();
@@ -113,7 +115,7 @@ const DetalleSuscripcionModal: React.FC<DetalleSuscripcionModalProps> = ({ open,
 
     if (!suscripcion) return null;
 
-    const fullName = `${suscripcion.usuario?.nombre} ${suscripcion.usuario?.apellido}`;
+    const fullName = `${suscripcion.usuario?.nombre || ''} ${suscripcion.usuario?.apellido || ''}`;
 
     return (
         <BaseModal
@@ -124,7 +126,7 @@ const DetalleSuscripcionModal: React.FC<DetalleSuscripcionModalProps> = ({ open,
             icon={<AccountBalance />}
             headerColor="primary"
             maxWidth="md"
-            hideConfirmButton // Usamos botones personalizados dentro del cuerpo
+            hideConfirmButton
             cancelText="Cerrar"
             headerExtra={
                 <Chip
@@ -141,7 +143,7 @@ const DetalleSuscripcionModal: React.FC<DetalleSuscripcionModalProps> = ({ open,
                     </Alert>
                 )}
 
-                {/* 1. SECCIÓN: IDENTIDAD (USUARIO Y PROYECTO) */}
+                {/* 1. SECCIÓN: IDENTIDAD */}
                 <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
                     <Paper variant="outlined" sx={{ flex: 1, p: 2, borderRadius: 3, bgcolor: alpha(theme.palette.primary.main, 0.02) }}>
                         <Stack direction="row" spacing={1} alignItems="center" mb={1.5}>
@@ -303,7 +305,7 @@ const DetalleSuscripcionModal: React.FC<DetalleSuscripcionModalProps> = ({ open,
                     </Paper>
                 )}
 
-                {/* 5. SECCIÓN: AUDITORÍA */}
+                {/* 5. SECCIÓN: AUDITORÍA (FIXED TYPESCRIPT ERROR) */}
                 <Stack 
                     direction={{ xs: 'column', sm: 'row' }} 
                     spacing={3} 
@@ -315,7 +317,9 @@ const DetalleSuscripcionModal: React.FC<DetalleSuscripcionModalProps> = ({ open,
                         <Box>
                             <Typography variant="caption" color="text.disabled" fontWeight={800} sx={{ display: 'block', lineHeight: 1 }}>REGISTRO DE ALTA</Typography>
                             <Typography variant="caption" fontWeight={600} color="text.secondary">
-                                {new Date(suscripcion.createdAt).toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                                {suscripcion.createdAt 
+                                    ? new Date(suscripcion.createdAt).toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })
+                                    : 'N/A'}
                             </Typography>
                         </Box>
                     </Stack>
@@ -325,7 +329,9 @@ const DetalleSuscripcionModal: React.FC<DetalleSuscripcionModalProps> = ({ open,
                         <Box>
                             <Typography variant="caption" color="text.disabled" fontWeight={800} sx={{ display: 'block', lineHeight: 1 }}>ÚLTIMA MODIFICACIÓN</Typography>
                             <Typography variant="caption" fontWeight={600} color="text.secondary">
-                                {new Date(suscripcion.updatedAt).toLocaleDateString('es-AR')} a las {new Date(suscripcion.updatedAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+                                {suscripcion.updatedAt 
+                                    ? `${new Date(suscripcion.updatedAt).toLocaleDateString('es-AR')} ${new Date(suscripcion.updatedAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}`
+                                    : 'Sin modificaciones'}
                             </Typography>
                         </Box>
                     </Stack>

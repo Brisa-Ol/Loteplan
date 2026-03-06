@@ -23,7 +23,8 @@ import {
 import React, { useMemo } from 'react';
 
 import type { UsuarioDto } from '@/core/types/dto/usuario.dto';
-import { BaseModal } from '@/shared/components/domain/modals';
+import { BaseModal } from '@/shared';
+
 
 // ============================================================================
 // INTERFACES

@@ -27,7 +27,7 @@ import {
 import imagenService from '@/core/api/services/imagen.service';
 import type { LoteDto } from '@/core/types/dto/lote.dto';
 import type { ProyectoDto } from '@/core/types/dto/proyecto.dto';
-import { BaseModal } from '@/shared/components/domain/modals';
+import { BaseModal } from '@/shared';
 
 // ============================================================================
 // INTERFACES

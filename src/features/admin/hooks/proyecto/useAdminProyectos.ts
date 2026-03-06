@@ -1,10 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import ContratoPlantillaService from '@/core/api/services/contrato-plantilla.service';
 import CuotaMensualService from '@/core/api/services/cuotaMensual.service';
 import ImagenService from '@/core/api/services/imagen.service';
 import ProyectoService from '@/core/api/services/proyecto.service';
-import ContratoPlantillaService from '@/core/api/services/contrato-plantilla.service';
 
 import type { CreateProyectoDto, ProyectoDto, UpdateProyectoDto } from '@/core/types/dto/proyecto.dto';
 import { useConfirmDialog } from '@/shared/hooks/useConfirmDialog';
@@ -45,66 +45,21 @@ export const useAdminProyectos = () => {
     create, cuotas, lotes, edit, images, confirmDialog
   }), [create, cuotas, lotes, edit, images, confirmDialog]);
 
-  // ── Query 1: proyectos ───────────────────────────────────────────────────
-  const { data: proyectosRaw = [], isLoading: isLoadingProyectos, error } = useQuery({
+  // ── Query única: proyectos ───────────────────────────────────────────────
+  // Se eliminó la Query 2 de cuotas (N requests en paralelo).
+  // El valor de cuota se lee desde p.valor_cuota_referencia que ya viene
+  // incluido en el payload de getAllAdmin().
+  const { data: proyectosRaw = [], isLoading, error } = useQuery({
     queryKey: ['adminProyectos'],
     queryFn: async () => (await ProyectoService.getAllAdmin()).data,
-    staleTime: 30000,
+    staleTime: 30_000,
   });
 
-  const mensualIds = useMemo(
-    () => proyectosRaw.filter(p => p.tipo_inversion === 'mensual').map(p => p.id),
-    [proyectosRaw]
-  );
-
-  // ── Query 2: cuotas ──────────────────────────────────────────────────────
-  // enabled: solo arranca cuando proyectos YA terminó de cargar,
-  // así QueryHandler espera ambas queries antes de mostrar la tabla.
-  const { data: cuotaMap = {}, isLoading: isLoadingCuotas } = useQuery({
-    queryKey: ['adminCuotasMap', mensualIds],
-    enabled: !isLoadingProyectos && mensualIds.length > 0,
-    staleTime: 30000,
-    retry: false,
-    throwOnError: false,
-    queryFn: async () => {
-      const results = await Promise.allSettled(
-        mensualIds.map(id =>
-          // 404 = proyecto sin cuota configurada, estado válido, no es un error
-          CuotaMensualService.getLastByProjectId(id).catch((err) => {
-            if (err?.response?.status === 404) return null;
-            throw err;
-          })
-        )
-      );
-      const map: Record<number, number> = {};
-      results.forEach((result, index) => {
-        if (result.status === 'fulfilled' && result.value !== null) {
-          const cuota = (result.value as any)?.data?.cuota;
-          if (cuota?.valor_mensual_final != null) {
-            map[mensualIds[index]] = Number(cuota.valor_mensual_final);
-          }
-        }
-      });
-      return map;
-    },
-  });
-
-  // ── Merge: inyectamos valor_cuota_referencia en cada proyecto mensual ────
-  const proyectosConCuota = useMemo<ProyectoDto[]>(() =>
-    proyectosRaw.map(p =>
-      p.tipo_inversion === 'mensual' && cuotaMap[p.id] != null
-        ? { ...p, valor_cuota_referencia: cuotaMap[p.id] }
-        : p
-    ),
-    [proyectosRaw, cuotaMap]
-  );
-
-  const { sortedData: proyectosOrdenados, highlightedId, triggerHighlight } = useSortedData(proyectosConCuota);
+  const { sortedData: proyectosOrdenados, highlightedId, triggerHighlight } = useSortedData(proyectosRaw);
 
   // ── Mutaciones ───────────────────────────────────────────────────────────
   const invalidateAll = () => {
     queryClient.invalidateQueries({ queryKey: ['adminProyectos'] });
-    queryClient.invalidateQueries({ queryKey: ['adminCuotasMap'] });
   };
 
   const handleMutationOptimistic = async () => {
@@ -205,7 +160,7 @@ export const useAdminProyectos = () => {
     } catch (err: any) {
       showError(err.response?.data?.message || 'Error al crear el proyecto');
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queryClient, create, triggerHighlight, showSuccess, showError, showWarning]);
 
   const handleUpdateSubmit = async (id: number, data: UpdateProyectoDto) => {
@@ -251,10 +206,7 @@ export const useAdminProyectos = () => {
     selectedProject,
     highlightedId,
     filteredProyectos,
-    cuotaMap,
-    // isLoading combina ambas queries: la tabla no renderiza hasta que
-    // proyectos Y cuotas estén listos, eliminando el flash de 404.
-    isLoading: isLoadingProyectos || (mensualIds.length > 0 && isLoadingCuotas),
+    isLoading,
     error,
     modales,
     handleCreateSubmit,

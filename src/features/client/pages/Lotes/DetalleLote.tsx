@@ -1,9 +1,11 @@
 // src/features/client/pages/Lotes/DetalleLote.tsx
 
 import {
-  ArrowBack, CalendarMonth, EmojiEvents, Gavel,
+  AccountBalanceWallet,
+  ArrowBack, CalendarMonth,
+  Cancel,
+  EmojiEvents, Gavel,
   InfoOutlined, Payment, ReceiptLong, Timer,
-  AccountBalanceWallet, Cancel,
 } from '@mui/icons-material';
 import {
   Alert, alpha, Avatar, Box, Button, Card, CardContent, Chip,
@@ -13,22 +15,17 @@ import {
 import { useIsFetching, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-
 import ImagenService from '@/core/api/services/imagen.service';
 import LoteService from '@/core/api/services/lote.service';
 import PujaService from '@/core/api/services/puja.service';
 import { useAuth } from '@/core/context/AuthContext';
-import { useModal } from '@/shared/hooks/useModal';
-import useSnackbar from '@/shared/hooks/useSnackbar';
 import { useCurrencyFormatter } from '../../hooks/useCurrencyFormatter';
 import { useVerificarSuscripcion } from '../../hooks/useVerificarSuscripcion';
-import { useConfirmDialog } from '@/shared/hooks/useConfirmDialog';
-
-import TwoFactorAuthModal from '@/shared/components/domain/modals/TwoFactorAuthModal/TwoFactorAuthModal';
-import { FavoritoButton } from '@/shared/components/ui/buttons/BotonFavorito';
+import { FavoritoButton } from './components/BotonFavorito';
 import { PujarModal } from './modals/PujarModal';
-import { ConfirmDialog } from '@/shared/components/domain/modals/ConfirmDialog/ConfirmDialog';
-import { PageHeader } from '@/shared/components/layout/headers/PageHeader';
+import { ConfirmDialog, PageHeader, useConfirmDialog, useModal, useSnackbar } from '@/shared';
+import TwoFactorAuthModal from '@/shared/components/domain/modals/TwoFactorAuthModal';
+
 
 
 // ─────────────────────────────────────────────
@@ -54,11 +51,11 @@ const CountdownTimer = ({ endDate }: { endDate: string }) => {
   useEffect(() => {
     const tick = () => {
       const diff = new Date(endDate).getTime() - Date.now();
-      
-      if (diff <= 0) { 
-        setTimeLeft('CERRADA'); 
-        if (timerRef.current) clearInterval(timerRef.current); 
-        return; 
+
+      if (diff <= 0) {
+        setTimeLeft('CERRADA');
+        if (timerRef.current) clearInterval(timerRef.current);
+        return;
       }
 
       const h = Math.floor((diff % 86_400_000) / 3_600_000);
@@ -69,7 +66,7 @@ const CountdownTimer = ({ endDate }: { endDate: string }) => {
 
     // Ejecuta tick inmediatamente para evitar el retraso de 1s
     tick();
-    
+
     // Inicia el intervalo y guarda el ID en la referencia
     timerRef.current = setInterval(tick, 1000);
 
@@ -154,7 +151,7 @@ const DetalleLote: React.FC = () => {
     };
   }, [lote, user?.id]);
 
-  const yaPago     = winInfo.status === 'ganadora_pagada';
+  const yaPago = winInfo.status === 'ganadora_pagada';
   const debesPagar = winInfo.isWinner && subastaFinalizada && !yaPago;
   const puedePujar = !subastaFinalizada && estaSuscripto && (tokensDisponibles > 0 || winInfo.isWinner);
   const puedeCancelar = !subastaFinalizada && !!winInfo.miPujaId && !winInfo.isWinner;
@@ -239,8 +236,8 @@ const DetalleLote: React.FC = () => {
       <Box sx={{ position: 'relative' }}>
         {/* Botón de volver flotante a la izquierda para Desktop */}
         <Box sx={{ display: { xs: 'none', md: 'block' }, position: 'absolute', left: 0, top: 10, zIndex: 10 }}>
-          <Button 
-            startIcon={<ArrowBack />} 
+          <Button
+            startIcon={<ArrowBack />}
             onClick={() => navigate(-1)}
             color="inherit"
             sx={{ fontWeight: 700 }}

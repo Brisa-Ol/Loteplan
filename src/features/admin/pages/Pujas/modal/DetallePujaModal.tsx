@@ -1,7 +1,7 @@
 // src/pages/Admin/Pujas/modals/DetallePujaModal.tsx
 
 import type { PujaDto } from '@/core/types/dto/puja.dto';
-import { BaseModal } from '@/shared/components/domain/modals';
+import { BaseModal } from '@/shared';
 import {
   CalendarToday,
   EmojiEvents,

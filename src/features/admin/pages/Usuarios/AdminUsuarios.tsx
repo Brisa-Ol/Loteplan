@@ -1,30 +1,28 @@
 // src/features/admin/pages/Usuarios/AdminUsuarios.tsx
 
-import React, { useMemo } from 'react';
-import { 
-  CheckCircle, Group as GroupIcon, MarkEmailRead, 
-  PersonAdd, RestartAlt, Security, Visibility, Edit as EditIcon 
+import type { UsuarioDto } from '@/core/types/dto/usuario.dto';
+import {
+  AdminPageHeader, ConfirmDialog, DataTable, FilterBar, FilterSearch,
+  FilterSelect, MetricsGrid, PageContainer,
+  QueryHandler, StatCard, type DataTableColumn
+} from '@/shared';
+import {
+  CheckCircle,
+  Edit as EditIcon,
+  Group as GroupIcon, MarkEmailRead,
+  PersonAdd, RestartAlt, Security, Visibility
 } from '@mui/icons-material';
-import { 
-  alpha, Avatar, Box, Button, Chip, IconButton, 
-  MenuItem, Stack, TextField, Tooltip, Typography, Switch 
+import {
+  alpha, Avatar, Box, Button, Chip, IconButton,
+  MenuItem, Stack,
+  Switch,
+  TextField, Tooltip, Typography
 } from '@mui/material';
-
-import { AdminPageHeader } from '@/shared/components/admin/Adminpageheader';
-import MetricsGrid from '@/shared/components/admin/Metricsgrid';
-import { DataTable, type DataTableColumn } from '@/shared/components/data-grid/DataTable/DataTable';
-import { QueryHandler } from '@/shared/components/data-grid/QueryHandler/QueryHandler';
-import { StatCard } from '@/shared/components/domain/cards/StatCard/StatCard';
-import { ConfirmDialog } from '@/shared/components/domain/modals/ConfirmDialog/ConfirmDialog';
-import { FilterBar, FilterSearch, FilterSelect } from '@/shared/components/forms/filters/FilterBar';
-import { PageContainer } from '@/shared/components/layout/containers/PageContainer/PageContainer';
-
+import React, { useMemo } from 'react';
+import { useAdminUsuarios } from '../../hooks/usuario/useAdminUsuarios';
 import CreateUserModal from './modals/CreateUserModal';
 import EditUserModal from './modals/EditUserModal';
 import ModalDetalleUsuario from './modals/ModalDetalleUsuario';
-
-import type { UsuarioDto } from '@/core/types/dto/usuario.dto';
-import { useAdminUsuarios } from '../../hooks/usuario/useAdminUsuarios';
 
 const useUserColumns = (logic: ReturnType<typeof useAdminUsuarios>) => {
   return useMemo<DataTableColumn<UsuarioDto>[]>(() => [
@@ -36,7 +34,7 @@ const useUserColumns = (logic: ReturnType<typeof useAdminUsuarios>) => {
       sortable: true,
       render: (u) => (
         <Stack direction="row" alignItems="center" spacing={1.5}>
-          <Avatar sx={{ 
+          <Avatar sx={{
             width: 38, height: 38, fontWeight: 800,
             bgcolor: u.activo ? alpha('#CC6333', 0.1) : alpha('#666', 0.1),
             color: u.activo ? '#CC6333' : '#999',
@@ -94,9 +92,9 @@ const useUserColumns = (logic: ReturnType<typeof useAdminUsuarios>) => {
             disabled={u.rol === 'admin' || u.id === logic.currentUser?.id}
             color="success"
           />
-          <Chip 
-            label={u.activo ? 'ACTIVO' : 'INACTIVO'} 
-            size="small" 
+          <Chip
+            label={u.activo ? 'ACTIVO' : 'INACTIVO'}
+            size="small"
             variant={u.activo ? 'filled' : 'outlined'}
             color={u.activo ? 'success' : 'default'}
             sx={{ fontSize: '0.6rem', fontWeight: 800, width: 75 }}
@@ -105,30 +103,30 @@ const useUserColumns = (logic: ReturnType<typeof useAdminUsuarios>) => {
       ),
     },
     {
-  id: 'acciones',
-  label: 'Acciones', // Dejar vacío ayuda a que la columna no se estire por el texto del header
-  align: 'right',
-  minWidth: 80, // Un ancho fijo pequeño para los dos botones
-  render: (u) => (
-    <Stack 
-      direction="row" 
-      spacing={0.5} 
-      justifyContent="flex-end"
-      sx={{ width: 'fit-content', ml: 'auto' }} // Fuerza a que el contenedor no se estire
-    >
-      <Tooltip title="Ver Detalle">
-        <IconButton onClick={(e) => { e.stopPropagation(); logic.handleViewUser(u); }} size="small" color="info">
-          <Visibility fontSize="small" />
-        </IconButton>
-      </Tooltip>
-      <Tooltip title="Editar">
-        <IconButton onClick={(e) => { e.stopPropagation(); logic.handleEditUser(u); }} size="small">
-          <EditIcon fontSize="small" />
-        </IconButton>
-      </Tooltip>
-    </Stack>
-  ),
-},
+      id: 'acciones',
+      label: 'Acciones', // Dejar vacío ayuda a que la columna no se estire por el texto del header
+      align: 'right',
+      minWidth: 80, // Un ancho fijo pequeño para los dos botones
+      render: (u) => (
+        <Stack
+          direction="row"
+          spacing={0.5}
+          justifyContent="flex-end"
+          sx={{ width: 'fit-content', ml: 'auto' }} // Fuerza a que el contenedor no se estire
+        >
+          <Tooltip title="Ver Detalle">
+            <IconButton onClick={(e) => { e.stopPropagation(); logic.handleViewUser(u); }} size="small" color="info">
+              <Visibility fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Editar">
+            <IconButton onClick={(e) => { e.stopPropagation(); logic.handleEditUser(u); }} size="small">
+              <EditIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        </Stack>
+      ),
+    },
   ], [logic]);
 };
 
@@ -162,15 +160,15 @@ const AdminUsuarios: React.FC = () => {
 
       <FilterBar sx={{ mb: 3 }}>
         <Stack spacing={2} width="100%">
-          <FilterSearch 
-            placeholder="Buscar por DNI, nombre..." 
-            value={logic.searchTerm} 
-            onSearch={logic.setSearchTerm} 
+          <FilterSearch
+            placeholder="Buscar por DNI, nombre..."
+            value={logic.searchTerm}
+            onSearch={logic.setSearchTerm}
           />
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: '1.5fr 1fr 1fr 0.5fr' }, gap: 2 }}>
-            <FilterSelect 
-              label="Estado" 
-              value={logic.filterStatus} 
+            <FilterSelect
+              label="Estado"
+              value={logic.filterStatus}
               onChange={(e) => logic.setFilterStatus(e.target.value)}
             >
               <MenuItem value="all">Todos</MenuItem>
@@ -185,10 +183,10 @@ const AdminUsuarios: React.FC = () => {
       </FilterBar>
 
       <QueryHandler isLoading={logic.isLoading} error={logic.error as Error}>
-        <DataTable 
-          columns={columns} 
-          data={logic.users} 
-          getRowKey={(u) => u.id} 
+        <DataTable
+          columns={columns}
+          data={logic.users}
+          getRowKey={(u) => u.id}
           pagination
           loading={logic.isLoading} // Conecta con el skeleton interno
           isRowActive={(u) => u.activo} // Opacidad automática para inactivos
@@ -227,10 +225,10 @@ const AdminUsuarios: React.FC = () => {
         />
       )}
 
-      <ConfirmDialog 
-        controller={logic.confirmDialog} 
-        onConfirm={() => logic.confirmDialog.data && logic.toggleStatusMutation.mutate(logic.confirmDialog.data)} 
-        isLoading={logic.toggleStatusMutation.isPending} 
+      <ConfirmDialog
+        controller={logic.confirmDialog}
+        onConfirm={() => logic.confirmDialog.data && logic.toggleStatusMutation.mutate(logic.confirmDialog.data)}
+        isLoading={logic.toggleStatusMutation.isPending}
       />
     </PageContainer>
   );

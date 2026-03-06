@@ -19,16 +19,17 @@ import {
 // Shared & Core
 import imagenService from '@/core/api/services/imagen.service';
 import type { CreateLoteDto, LoteDto, UpdateLoteDto } from '@/core/types/dto/lote.dto';
-import { DataTable, type DataTableColumn } from '@/shared/components/data-grid/DataTable/DataTable';
-import { QueryHandler } from '@/shared/components/data-grid/QueryHandler/QueryHandler';
-import { StatCard } from '@/shared/components/domain/cards/StatCard/StatCard';
-import { ConfirmDialog } from '@/shared/components/domain/modals/ConfirmDialog/ConfirmDialog';
-import { FilterBar, FilterSearch, FilterSelect } from '@/shared/components/forms/filters/FilterBar';
-import { PageContainer } from '@/shared/components/layout/containers/PageContainer/PageContainer';
+import { DataTable, type DataTableColumn } from '@/shared/components/data-grid/DataTable';
+import { QueryHandler } from '@/shared/components/data-grid/QueryHandler';
+import { StatCard } from '@/shared/components/domain/cards/StatCard';
+
+import { FilterBar, FilterSearch, FilterSelect } from '@/shared/components/forms/FilterBar';
+import { PageContainer } from '@/shared/components/layout/PageContainer';
 import { useAdminLotes } from '../../hooks/lotes/useAdminLotes';
 
 // Modals
 import { AdminPageHeader } from '@/shared/components/admin/Adminpageheader'; // ✅ Importación corregida
+import { ConfirmDialog } from '@/shared/components/domain/modals/ConfirmDialog';
 import AuctionControlModal from './modals/AuctionControlModal';
 import CreateLoteModal from './modals/CreateLoteModal';
 import EditLoteModal from './modals/EditLoteModal';

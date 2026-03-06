@@ -8,7 +8,9 @@ import {
   Visibility
 } from '@mui/icons-material';
 import {
-  Avatar, Box, IconButton, MenuItem, Stack, Tooltip, Typography, alpha, useTheme, TextField
+  Avatar, Box, IconButton, MenuItem, Stack,
+  TextField,
+  Tooltip, Typography, alpha, useTheme
 } from '@mui/material';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -24,19 +26,20 @@ import {
 import type { TransaccionDto } from '@/core/types/dto/transaccion.dto';
 
 // Componentes Compartidos
-import { DataTable, type DataTableColumn } from '@/shared/components/data-grid/DataTable/DataTable';
-import { QueryHandler } from '@/shared/components/data-grid/QueryHandler/QueryHandler';
-import { StatCard, StatusBadge } from '@/shared/components/domain/cards/StatCard/StatCard';
-import { ConfirmDialog } from '@/shared/components/domain/modals/ConfirmDialog/ConfirmDialog';
-import { FilterBar, FilterSearch, FilterSelect } from '@/shared/components/forms/filters/FilterBar';
-import { PageContainer } from '@/shared/components/layout/containers/PageContainer/PageContainer';
+import { DataTable, type DataTableColumn } from '@/shared/components/data-grid/DataTable';
+import { QueryHandler } from '@/shared/components/data-grid/QueryHandler';
+import { StatCard, StatusBadge } from '@/shared/components/domain/cards/StatCard';
 
+import { FilterBar, FilterSearch, FilterSelect } from '@/shared/components/forms/FilterBar';
+import { PageContainer } from '@/shared/components/layout/PageContainer';
+
+import { useAdminTransacciones } from '@/features/admin/hooks/finanzas/useAdminTransacciones';
 import { AdminPageHeader } from '@/shared/components/admin/Adminpageheader'; // ✅ Header estandarizado
-import AlertBanner from '@/shared/components/admin/Alertbanner';
 import MetricsGrid from '@/shared/components/admin/Metricsgrid';
 import { ViewModeToggle, type ViewMode } from '@/shared/components/admin/Viewmodetoggle';
+import { ConfirmDialog } from '@/shared/components/domain/modals/ConfirmDialog';
+import AlertBanner from '@/shared/components/ui/Alertbanner';
 import ModalDetalleTransaccion from './modal/ModalDetalleTransaccion';
-import { useAdminTransacciones } from '@/features/admin/hooks/finanzas/useAdminTransacciones';
 
 // ============================================================================
 // SUB-COMPONENTE: ANALYTICS (Memoizado para performance)
@@ -254,7 +257,7 @@ const AdminTransacciones: React.FC = () => {
     <PageContainer maxWidth="xl" sx={{ py: 3 }}>
       {/* 1. HEADER ESTANDARIZADO */}
       <AdminPageHeader
-        title="Auditoría Financiera"
+        title="Transacciones y Conciliación"
         subtitle="Monitoreo de transacciones, pasarelas de pago y conciliación."
       />
 
@@ -305,7 +308,7 @@ const AdminTransacciones: React.FC = () => {
 
       {/* 4. CONTROLES Y FILTROS */}
       <Stack spacing={2} mb={3}>
-        
+
         {/* Toggle de Vista */}
         <Stack direction="row" justifyContent="flex-end">
           <ViewModeToggle
@@ -319,10 +322,10 @@ const AdminTransacciones: React.FC = () => {
         </Stack>
 
         {/* Contenedor de Filtros */}
-        <FilterBar 
-          sx={{ 
-            display: 'flex', 
-            flexWrap: 'wrap', 
+        <FilterBar
+          sx={{
+            display: 'flex',
+            flexWrap: 'wrap',
             gap: 2,
             alignItems: 'center'
           }}
@@ -332,7 +335,7 @@ const AdminTransacciones: React.FC = () => {
             placeholder="Buscar por cliente o proyecto..."
             value={logic.searchTerm}
             onSearch={logic.setSearchTerm}
-            sx={{ flex: 1, minWidth: { xs: '100%', sm: '390px' } }} 
+            sx={{ flex: 1, minWidth: { xs: '100%', sm: '390px' } }}
           />
 
           {/* Filtro por Rango de Fechas */}

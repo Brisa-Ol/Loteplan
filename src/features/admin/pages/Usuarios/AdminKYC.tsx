@@ -1,5 +1,7 @@
 // src/features/admin/pages/Usuarios/AdminKYC.tsx
 
+import type { KycDTO } from '@/core/types/dto/kyc.dto';
+import { AdminPageHeader, BaseModal, ConfirmDialog, DataTable, MetricsGrid, PageContainer, QueryHandler, StatCard, type DataTableColumn } from '@/shared';
 import {
   CheckCircleOutline as ApprovedIcon,
   CheckCircle as CheckCircleIcon,
@@ -21,23 +23,12 @@ import {
   Stack,
   Tab,
   Tabs,
+  TextField,
   Tooltip,
   Typography,
-  useTheme,
-  TextField
+  useTheme
 } from '@mui/material';
 import React, { memo, useMemo } from 'react';
-
-import { AdminPageHeader } from '@/shared/components/admin/Adminpageheader';
-import MetricsGrid from '@/shared/components/admin/Metricsgrid';
-import { DataTable, type DataTableColumn } from '@/shared/components/data-grid/DataTable/DataTable';
-import { QueryHandler } from '@/shared/components/data-grid/QueryHandler/QueryHandler';
-import { StatCard } from '@/shared/components/domain/cards/StatCard/StatCard';
-import { BaseModal } from '@/shared/components/domain/modals';
-import { ConfirmDialog } from '@/shared/components/domain/modals/ConfirmDialog/ConfirmDialog';
-import { PageContainer } from '@/shared/components/layout/containers/PageContainer/PageContainer';
-
-import type { KycDTO } from '@/core/types/dto/kyc.dto';
 import { useAdminKYC } from '../../hooks/usuario/useAdminKYC';
 import KycDetailModal from './modals/KycDetailModal';
 
@@ -97,7 +88,7 @@ const AdminKYC: React.FC = () => {
   const logic = useAdminKYC();
 
   const metrics = useMemo(() => ({
-    pending: logic.currentTab === 'pendiente' ? logic.kycList.length : 0, 
+    pending: logic.currentTab === 'pendiente' ? logic.kycList.length : 0,
     approved: logic.currentTab === 'aprobada' ? logic.kycList.length : 0,
     rejected: logic.currentTab === 'rechazada' ? logic.kycList.length : 0,
     total: logic.currentTab === 'todas' ? logic.kycList.length : 0,
@@ -174,10 +165,10 @@ const AdminKYC: React.FC = () => {
                 e.stopPropagation(); // Evita el click de la fila si existiera
                 logic.handleOpenDetails(kyc);
               }}
-              sx={{ 
-                bgcolor: alpha(theme.palette.info.main, 0.08), 
-                color: 'info.main', 
-                '&:hover': { bgcolor: alpha(theme.palette.info.main, 0.2) } 
+              sx={{
+                bgcolor: alpha(theme.palette.info.main, 0.08),
+                color: 'info.main',
+                '&:hover': { bgcolor: alpha(theme.palette.info.main, 0.2) }
               }}
             >
               <VisibilityIcon fontSize="small" />

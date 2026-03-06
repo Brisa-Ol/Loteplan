@@ -24,7 +24,7 @@ import {
 } from '@mui/material';
 
 import type { SuscripcionCanceladaDto } from '@/core/types/dto/suscripcion.dto';
-import BaseModal from '@/shared/components/domain/modals/BaseModal/BaseModal';
+import BaseModal from '@/shared/components/domain/modals/BaseModal';
 
 interface Props {
   open: boolean;
@@ -37,7 +37,10 @@ const DetalleCancelacionModal: React.FC<Props> = ({ open, onClose, cancelacion }
 
   if (!cancelacion) return null;
 
-  const fullName = `${cancelacion.usuarioCancelador?.nombre} ${cancelacion.usuarioCancelador?.apellido}`;
+  // Evitamos "undefined undefined" con valores por defecto
+  const fullName = cancelacion.usuarioCancelador 
+    ? `${cancelacion.usuarioCancelador.nombre} ${cancelacion.usuarioCancelador.apellido}`
+    : 'Usuario no identificado';
 
   return (
     <BaseModal 
@@ -75,7 +78,7 @@ const DetalleCancelacionModal: React.FC<Props> = ({ open, onClose, cancelacion }
                     MONTO TOTAL LIQUIDADO
                 </Typography>
                 <Typography variant="h3" fontWeight={900} color="error.main" sx={{ fontFamily: 'monospace', my: 1 }}>
-                    ${Number(cancelacion.monto_pagado_total).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                    ${Number(cancelacion.monto_pagado_total || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                 </Typography>
                 <Typography variant="caption" color="text.disabled" fontWeight={700}>
                     CÁLCULO FINAL BASADO EN APORTES REALIZADOS
@@ -92,7 +95,7 @@ const DetalleCancelacionModal: React.FC<Props> = ({ open, onClose, cancelacion }
                 >
                     <ReceiptLong sx={{ color: 'text.disabled', fontSize: 28, mb: 1 }} />
                     <Typography variant="h6" fontWeight={800} sx={{ fontFamily: 'monospace' }}>
-                        ${Number(cancelacion.suscripcionOriginal.monto_total_pagado).toLocaleString('es-AR')}
+                        ${Number(cancelacion.suscripcionOriginal.monto_total_pagado || 0).toLocaleString('es-AR')}
                     </Typography>
                     <Typography variant="caption" fontWeight={800} color="text.secondary">
                         TOTAL PAGADO <br/> ANTES DE LA BAJA
@@ -101,7 +104,7 @@ const DetalleCancelacionModal: React.FC<Props> = ({ open, onClose, cancelacion }
             )}
         </Stack>
 
-        {/* BLOQUE 2: ACTORES ASOCIADOS (SIN IDs) */}
+        {/* BLOQUE 2: ACTORES ASOCIADOS */}
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
           <Paper variant="outlined" sx={{ flex: 1, p: 2.5, borderRadius: 3 }}>
             <Stack direction="row" spacing={1.5} alignItems="center" mb={2}>
@@ -119,7 +122,7 @@ const DetalleCancelacionModal: React.FC<Props> = ({ open, onClose, cancelacion }
                 </Typography>
             </Stack>
             <Typography variant="caption" color="text.secondary" display="block" mt={1}>
-                {cancelacion.usuarioCancelador?.email}
+                {cancelacion.usuarioCancelador?.email || 'Email no disponible'}
             </Typography>
           </Paper>
 
@@ -131,7 +134,7 @@ const DetalleCancelacionModal: React.FC<Props> = ({ open, onClose, cancelacion }
               <Typography variant="subtitle2" fontWeight={900}>PROYECTO DESVINCULADO</Typography>
             </Stack>
 
-            <Typography variant="body1" fontWeight={800}>{cancelacion.proyectoCancelado?.nombre_proyecto}</Typography>
+            <Typography variant="body1" fontWeight={800}>{cancelacion.proyectoCancelado?.nombre_proyecto || 'Proyecto no disponible'}</Typography>
             <Stack direction="row" spacing={1} mt={1}>
                 <Chip 
                     label="MENSUAL" 
@@ -148,7 +151,7 @@ const DetalleCancelacionModal: React.FC<Props> = ({ open, onClose, cancelacion }
           </Paper>
         </Stack>
 
-        {/* BLOQUE 3: TRAZABILIDAD DE LA BAJA */}
+        {/* BLOQUE 3: TRAZABILIDAD DE LA BAJA (FECHAS PROTEGIDAS) */}
         <Paper 
             variant="outlined" 
             sx={{ 
@@ -166,7 +169,9 @@ const DetalleCancelacionModal: React.FC<Props> = ({ open, onClose, cancelacion }
                 <Box>
                     <Typography variant="caption" color="text.disabled" display="block" fontWeight={800}>FECHA DE RESCISIÓN</Typography>
                     <Typography variant="body2" fontWeight={800}>
-                        {new Date(cancelacion.fecha_cancelacion).toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric' })}
+                        {cancelacion.fecha_cancelacion 
+                            ? new Date(cancelacion.fecha_cancelacion).toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric' })
+                            : 'Fecha no registrada'}
                     </Typography>
                 </Box>
             </Stack>
@@ -175,7 +180,7 @@ const DetalleCancelacionModal: React.FC<Props> = ({ open, onClose, cancelacion }
                 <HistoryIcon color="action" />
                 <Box>
                     <Typography variant="caption" color="text.disabled" display="block" fontWeight={800}>PERMANENCIA TOTAL</Typography>
-                    <Typography variant="body2" fontWeight={800}>{cancelacion.meses_pagados} Meses Aportados</Typography>
+                    <Typography variant="body2" fontWeight={800}>{cancelacion.meses_pagados || 0} Meses Aportados</Typography>
                 </Box>
             </Stack>
           </Stack>
@@ -186,7 +191,9 @@ const DetalleCancelacionModal: React.FC<Props> = ({ open, onClose, cancelacion }
             <Stack direction="row" spacing={1} alignItems="center">
                 <UpdateIcon sx={{ fontSize: 14, color: 'text.disabled' }} />
                 <Typography variant="caption" color="text.disabled" fontWeight={700}>
-                    REGISTRO CREADO: {new Date(cancelacion.createdAt).toLocaleDateString('es-AR')}
+                    REGISTRO CREADO: {cancelacion.createdAt 
+                        ? new Date(cancelacion.createdAt).toLocaleDateString('es-AR') 
+                        : 'N/A'}
                 </Typography>
             </Stack>
         </Stack>

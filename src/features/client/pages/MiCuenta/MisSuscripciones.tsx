@@ -17,20 +17,11 @@ import {
     CalendarMonth
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-
-// Componentes Compartidos
-import { useConfirmDialog } from '../../../../shared/hooks/useConfirmDialog';
-import { PageContainer } from '../../../../shared/components/layout/containers/PageContainer/PageContainer';
-import { PageHeader } from '../../../../shared/components/layout/headers/PageHeader';
-import { QueryHandler } from '../../../../shared/components/data-grid/QueryHandler/QueryHandler';
-import { DataTable, type DataTableColumn } from '../../../../shared/components/data-grid/DataTable/DataTable';
-import { StatCard } from '../../../../shared/components/domain/cards/StatCard/StatCard';
-import { ConfirmDialog } from '@/shared/components/domain/modals/ConfirmDialog/ConfirmDialog';
-
 // Hooks y tipos
 import type { SuscripcionDto, SuscripcionCanceladaDto } from '@/core/types/dto/suscripcion.dto';
 import { useSuscripciones } from '../../hooks/useSuscripciones';
 import { useCurrencyFormatter } from '../../hooks/useCurrencyFormatter';
+import { ConfirmDialog, DataTable, PageContainer, PageHeader, QueryHandler, StatCard, useConfirmDialog, type DataTableColumn } from '@/shared';
 
 const MisSuscripciones: React.FC = () => {
     const navigate = useNavigate();

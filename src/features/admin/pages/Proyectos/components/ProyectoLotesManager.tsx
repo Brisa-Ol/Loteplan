@@ -1,6 +1,5 @@
 // src/pages/Admin/Proyectos/components/ProyectoLotesManager.tsx
 
-import React from 'react';
 import {
   PlayCircleOutline as ActiveIcon,
   Add as AddIcon,
@@ -25,8 +24,9 @@ import {
   Typography,
   useTheme
 } from '@mui/material';
-import type { ProyectoDto } from '../../../../../core/types/dto/proyecto.dto';
+import React from 'react';
 import type { EstadoSubasta, LoteDto } from '../../../../../core/types/dto/lote.dto';
+import type { ProyectoDto } from '../../../../../core/types/dto/proyecto.dto';
 
 
 interface ProyectoLotesManagerProps {

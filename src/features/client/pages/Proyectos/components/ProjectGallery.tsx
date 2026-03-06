@@ -1,8 +1,8 @@
 // src/features/client/pages/Proyectos/components/ProjectGallery.optimized.tsx
 
-import React, { useMemo, useCallback } from 'react';
-import { Box, Card, CardMedia, Alert, useTheme, alpha, Fade, Skeleton } from '@mui/material';
 import { useProyectoHelpers } from '@/features/client/hooks/useProyectoHelpers';
+import { Alert, alpha, Box, Card, CardMedia, Fade, Skeleton, useTheme } from '@mui/material';
+import React, { useCallback, useMemo } from 'react';
 
 import type { ProyectoDto } from '@/core/types/dto/proyecto.dto';
 import { useImageLoader } from '@/features/client/hooks/useImageLoader';

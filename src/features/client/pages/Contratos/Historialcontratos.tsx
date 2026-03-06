@@ -25,18 +25,10 @@ import {
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import React, { useMemo } from 'react';
-
-// --- COMPONENTE COMPARTIDOS ---
-import { DataTable, type DataTableColumn } from '../../../../shared/components/data-grid/DataTable/DataTable';
-import { QueryHandler } from '../../../../shared/components/data-grid/QueryHandler/QueryHandler';
-import { StatCard } from '../../../../shared/components/domain/cards/StatCard/StatCard';
-import { PageContainer } from '../../../../shared/components/layout/containers/PageContainer/PageContainer';
-import { PageHeader } from '../../../../shared/components/layout/headers/PageHeader';
 import { VerContratoFirmadoModal } from '../Proyectos/modals/VerContratoFirmadoModal';
-
-// --- HOOK Y DTO ---
 import type { ContratoFirmadoDto } from '@/core/types/dto/contrato-firmado.dto';
 import { useHistorialContratos } from '../../hooks/useHistorialContratos';
+import { DataTable, PageContainer, PageHeader, QueryHandler, StatCard, type DataTableColumn } from '@/shared';
 
 const HistorialContratos: React.FC = () => {
   const theme = useTheme();

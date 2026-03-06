@@ -27,7 +27,8 @@ import {
 } from '@mui/material';
 
 import type { InversionDto } from '../../../../../core/types/dto/inversion.dto';
-import { BaseModal } from '../../../../../shared/components/domain/modals';
+import { BaseModal } from '@/shared/components/domain/modals';
+
 
 interface DetalleInversionModalProps {
   open: boolean;

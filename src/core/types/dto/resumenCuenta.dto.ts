@@ -61,7 +61,7 @@ export interface ResumenCuentaDto extends BaseDTO {
   suscripcion?: {
     id: number;
     id_usuario: number;
-    // Datos del Usuario que invirtió
+    meses_a_pagar?: number; // 🆕
     usuario?: {
       id: number;
       nombre: string;

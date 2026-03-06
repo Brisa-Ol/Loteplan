@@ -7,9 +7,8 @@ import React, { useState } from 'react';
 
 import ContratoPlantillaService from '@/core/api/services/contrato-plantilla.service';
 import ImagenService from '@/core/api/services/imagen.service';
-import { BaseModal } from '@/shared/components/domain/modals/BaseModal/BaseModal'; // ✅ Exportación nombrada
-import { downloadSecureFile } from '@/shared/utils';
 import PDFViewerMejorado from '../components/PDFViewerMejorado';
+import { BaseModal, downloadSecureFile } from '@/shared';
 
 interface Props {
   open: boolean;

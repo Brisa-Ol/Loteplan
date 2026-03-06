@@ -48,7 +48,7 @@ import ImagenService from '@/core/api/services/imagen.service';
 import MercadoPagoService from '@/core/api/services/pagoMercado.service';
 
 // Components
-import BaseModal from '@/shared/components/domain/modals/BaseModal/BaseModal';
+import BaseModal from '@/shared/components/domain/modals/BaseModal';
 import PDFViewerMejorado from '../../Contratos/components/PDFViewerMejorado';
 
 // Hooks
@@ -363,13 +363,13 @@ const StepConfirmacion = React.memo<{
               </Stack>
 
               {/* BLOQUE 3: COMPOSICIÓN DE LA CUOTA */}
-             {/* BLOQUE 3: COMPOSICIÓN DE LA CUOTA */}
+              {/* BLOQUE 3: COMPOSICIÓN DE LA CUOTA */}
               <Typography variant="overline" color="primary.main" fontWeight={800} sx={{ display: 'block', mb: 1, lineHeight: 1 }}>
                 3. Composición de tu Cuota
               </Typography>
-              
+
               <Stack spacing={1} sx={{ p: 1.5, bgcolor: 'background.paper', borderRadius: 1, border: `1px solid ${theme.palette.divider}` }}>
-                
+
                 <Stack direction="row" justifyContent="space-between" alignItems="center">
                   <Box>
                     <Typography variant="body2" fontWeight={600}>Cuota Pura Mínima</Typography>

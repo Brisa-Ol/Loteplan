@@ -24,7 +24,8 @@ import { useQuery } from '@tanstack/react-query';
 import ContratoPlantillaService from '@/core/api/services/contrato-plantilla.service';
 import httpService from '@/core/api/httpService';
 import { env } from '@/core/config/env';
-import { BaseModal } from '@/shared/components/domain/modals';
+import { BaseModal } from '@/shared/components/domain';
+
 
 // ============================================================================
 // INTERFACES

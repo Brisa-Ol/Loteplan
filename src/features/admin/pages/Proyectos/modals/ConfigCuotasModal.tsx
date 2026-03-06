@@ -1,27 +1,27 @@
 // src/components/Admin/Proyectos/Components/modals/ConfigCuotasModal.tsx
 
-import React, { useEffect, useMemo, useState } from 'react';
 import {
     CreditCard as CuotaIcon,
-    Edit as EditIcon,
     History as HistoryIcon,
-    ListAlt as ListIcon,
     Save as SaveIcon
 } from '@mui/icons-material';
 import {
-    Box, Button, Paper, Skeleton, Stack, Tab, Table, TableBody, 
-    TableCell, TableContainer, TableHead, TableRow, Tabs, 
-    TextField, Typography, useTheme, alpha
+    alpha,
+    Box, Button, Paper, Skeleton, Stack, Tab, Table, TableBody,
+    TableCell, TableContainer, TableHead, TableRow, Tabs,
+    TextField, Typography, useTheme
 } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { addMonths } from 'date-fns';
 import { useFormik } from 'formik';
+import React, { useEffect, useMemo, useState } from 'react';
 import * as Yup from 'yup';
 
 import CuotaMensualService from '@/core/api/services/cuotaMensual.service';
 import type { CreateCuotaMensualDto } from '@/core/types/dto/cuotaMensual.dto';
 import type { ProyectoDto } from '@/core/types/dto/proyecto.dto';
-import { BaseModal } from '@/shared/components/domain/modals';
+
+import BaseModal from '@/shared/components/domain/modals/BaseModal';
 import useSnackbar from '@/shared/hooks/useSnackbar';
 import ProyectoPriceHistory from '../components/ProyectoPriceHistory';
 
@@ -157,12 +157,12 @@ const ConfigCuotasModal: React.FC<ConfigCuotasModalProps> = ({ open, onClose, pr
     const styles = useMemo(() => ({
         input: { '& .MuiOutlinedInput-root': { borderRadius: 2 } },
         calcPaper: {
-            p: 3, 
-            borderRadius: 3, 
+            p: 3,
+            borderRadius: 3,
             bgcolor: "#D4D4D4",
-            color: "text.primary", 
-            display: 'flex', 
-            justifyContent: 'space-between', 
+            color: "text.primary",
+            display: 'flex',
+            justifyContent: 'space-between',
             alignItems: 'center',
         },
         tableHeader: { fontWeight: 800, bgcolor: alpha(theme.palette.background.default, 0.8) }

@@ -1,17 +1,23 @@
-import React from 'react';
 import {
-  Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  Paper, Alert, CircularProgress, useTheme, alpha, Typography
-} from '@mui/material';
-import {
-  History as HistoryIcon,
   CalendarToday as DateIcon,
+  History as HistoryIcon,
   AttachMoney as MoneyIcon,
   Percent as PercentIcon
 } from '@mui/icons-material';
+import {
+  Alert,
+  alpha,
+  Box,
+  CircularProgress,
+  Paper,
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
+  Typography,
+  useTheme
+} from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
-import type { CuotaMensualDto } from '../../../../../core/types/dto/cuotaMensual.dto';
+import React from 'react';
 import CuotaMensualService from '../../../../../core/api/services/cuotaMensual.service';
+import type { CuotaMensualDto } from '../../../../../core/types/dto/cuotaMensual.dto';
 
 
 

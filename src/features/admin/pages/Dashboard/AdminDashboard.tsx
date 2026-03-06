@@ -30,9 +30,9 @@ import {
   Tooltip as RechartsTooltip, ResponsiveContainer, XAxis, YAxis
 } from 'recharts';
 
-import { QueryHandler } from '@/shared/components/data-grid/QueryHandler/QueryHandler';
-import { StatCard } from '@/shared/components/domain/cards/StatCard/StatCard';
-import { PageContainer } from '@/shared/components/layout/containers/PageContainer/PageContainer';
+import { QueryHandler } from '@/shared/components/data-grid/QueryHandler';
+import { StatCard } from '@/shared/components/domain/cards/StatCard';
+import { PageContainer } from '@/shared/components/layout/PageContainer';
 import { AdminPageHeader } from '@/shared/components/admin/Adminpageheader';
 import { useAdminDashboard } from '../../hooks/useAdminDashboard';
 
@@ -156,7 +156,7 @@ const AdminDashboard: React.FC = () => {
               Atención Requerida
             </Typography>
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 3 }}>
-              
+
               <AlertaPrioritaria
                 title="Identidades por Validar"
                 value={logic.stats.pendingKYC}
@@ -166,7 +166,7 @@ const AdminDashboard: React.FC = () => {
                 actionLabel="Ir a Verificaciones"
                 onAction={() => logic.navigate('/admin/kyc')}
               />
-              
+
               <AlertaPrioritaria
                 title="Cobros de Subasta"
                 value={logic.stats.cobrosPendientes}
@@ -186,7 +186,7 @@ const AdminDashboard: React.FC = () => {
                     ? "Han alcanzado su meta de suscriptores y esperan tu autorización para emitir cuotas."
                     : "No hay proyectos pendientes de iniciarse."
                 }
-                icon={<RocketLaunch />} 
+                icon={<RocketLaunch />}
                 severity={logic.stats.proyectosListosParaIniciar > 0 ? 'info' : 'success'}
                 actionLabel="Ir a Gestión de Proyectos"
                 onAction={() => logic.navigate('/admin/proyectos')}

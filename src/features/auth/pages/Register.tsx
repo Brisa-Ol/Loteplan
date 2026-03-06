@@ -18,9 +18,9 @@ import {
   useTheme
 } from "@mui/material";
 import React from "react";
-import FormTextField from "../../../shared/components/forms/inputs/FormTextField";
-import AuthFormContainer from "./components/AuthFormContainer";
+import FormTextField from "../../../shared/components/forms/FormTextField";
 import { useRegister } from "../hooks/useRegister";
+import AuthFormContainer from "./components/AuthFormContainer";
 
 
 // --- Subcomponente: Modal de Éxito ---
@@ -44,10 +44,10 @@ const SuccessDialog = ({ open, email, onClose, onResend, resendStatus }: any) =>
       <Button onClick={onClose} variant="contained" fullWidth size="large" sx={{ fontWeight: 700, borderRadius: 2 }}>
         Ir al Login
       </Button>
-      <Button 
-        onClick={onResend} 
-        disabled={resendStatus.loading} 
-        size="small" 
+      <Button
+        onClick={onResend}
+        disabled={resendStatus.loading}
+        size="small"
         sx={{ textTransform: 'none' }}
       >
         {resendStatus.loading ? "Enviando..." : "No recibí el email, reenviar"}
@@ -77,10 +77,10 @@ const Register: React.FC = () => {
         maxWidth="sm"
       >
         <Box textAlign="center" mb={4}>
-          <Box sx={{ 
+          <Box sx={{
             width: 56, height: 56, borderRadius: '50%', mx: 'auto', mb: 2,
-            bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main', 
-            display: 'flex', alignItems: 'center', justifyContent: 'center' 
+            bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main',
+            display: 'flex', alignItems: 'center', justifyContent: 'center'
           }}>
             <PersonAdd fontSize="large" />
           </Box>
@@ -130,13 +130,13 @@ const Register: React.FC = () => {
                 ),
               }}
             />
-            
+
             {/* Fila 6: Confirmar Password */}
             <FormTextField name="confirmPassword" label="Confirmar Contraseña" type="password" formik={formik} disabled={status.isLoading} />
 
-            <Button 
-              fullWidth variant="contained" type="submit" size="large" 
-              disabled={status.isLoading} 
+            <Button
+              fullWidth variant="contained" type="submit" size="large"
+              disabled={status.isLoading}
               sx={{ py: 1.5, fontWeight: 700, mt: 2, borderRadius: 2 }}
             >
               {status.isLoading ? <CircularProgress size={24} color="inherit" /> : "REGISTRARSE"}
@@ -147,9 +147,9 @@ const Register: React.FC = () => {
         <Box textAlign="center" mt={4}>
           <Typography variant="body2" color="text.secondary">
             ¿Ya tienes cuenta?{' '}
-            <Link 
+            <Link
               component="button" variant="body2" fontWeight={700} color="primary" underline="hover"
-              onClick={actions.navigateToLogin} 
+              onClick={actions.navigateToLogin}
             >
               Inicia sesión aquí
             </Link>
@@ -157,8 +157,8 @@ const Register: React.FC = () => {
         </Box>
       </AuthFormContainer>
 
-      <SuccessDialog 
-        open={status.modalOpen} 
+      <SuccessDialog
+        open={status.modalOpen}
         email={status.registeredEmail}
         onClose={actions.closeModal}
         onResend={actions.handleResend}

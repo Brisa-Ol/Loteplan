@@ -26,8 +26,8 @@ import * as Yup from 'yup';
 
 import ProyectoService from '@/core/api/services/proyecto.service';
 import type { CreateLoteDto } from '@/core/types/dto/lote.dto';
-import { BaseModal } from '@/shared/components/domain/modals';
-import ImageUploadZone from '@/shared/components/forms/upload/ImageUploadZone';
+import { BaseModal, ImageUploadZone } from '@/shared';
+
 
 // ============================================================================
 // COMPONENTES INTERNOS MEMOIZADOS (CLEAN CODE)

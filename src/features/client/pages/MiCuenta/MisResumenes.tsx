@@ -1,20 +1,16 @@
 // src/pages/User/ResumenesCuenta/MisResumenes.optimized.tsx
 
+import { Business, CheckCircle, MonetizationOn, Percent, Visibility, Warning } from '@mui/icons-material';
+import { Box, Chip, IconButton, LinearProgress, Paper, Stack, Tooltip, Typography, alpha, useTheme } from '@mui/material';
 import React, { useMemo } from 'react';
-import { Box, Paper, alpha, useTheme, Typography, Stack, LinearProgress, IconButton, Tooltip, Chip } from '@mui/material';
-import { Business, Percent, Warning, MonetizationOn, Visibility, CheckCircle } from '@mui/icons-material';
 
 // Components
-import { DetalleCuotaModal } from './modal/DetalleCuotaModal';
-import { PageContainer } from '../../../../shared/components/layout/containers/PageContainer/PageContainer';
-import { PageHeader } from '../../../../shared/components/layout/headers/PageHeader';
-import { QueryHandler } from '../../../../shared/components/data-grid/QueryHandler/QueryHandler';
-import { DataTable, type DataTableColumn } from '../../../../shared/components/data-grid/DataTable/DataTable';
-import { StatCard } from '../../../../shared/components/domain/cards/StatCard/StatCard';
+import { DetalleCuotaModal } from './perfil/modal/DetalleCuotaModal';
 
 // Hooks y DTOs
-import { useResumenesCuenta } from '../../hooks/useResumenesCuenta';
 import type { ResumenCuentaDto } from '@/core/types/dto/resumenCuenta.dto';
+import { DataTable, PageContainer, PageHeader, QueryHandler, StatCard, type DataTableColumn } from '@/shared';
+import { useResumenesCuenta } from '../../hooks/useResumenesCuenta';
 
 const MisResumenes: React.FC = () => {
     const theme = useTheme();
@@ -62,9 +58,9 @@ const MisResumenes: React.FC = () => {
                                 {row.porcentaje_pagado.toFixed(1)}%
                             </Typography>
                         </Stack>
-                        <LinearProgress 
-                            variant="determinate" 
-                            value={Math.min(row.porcentaje_pagado, 100)} 
+                        <LinearProgress
+                            variant="determinate"
+                            value={Math.min(row.porcentaje_pagado, 100)}
                             color={isComplete ? "success" : "primary"}
                             sx={{ height: 6, borderRadius: 3 }}
                         />
@@ -78,7 +74,7 @@ const MisResumenes: React.FC = () => {
             align: 'center',
             render: (row) => (
                 row.cuotas_vencidas > 0 ? (
-                    <Chip 
+                    <Chip
                         icon={<Warning sx={{ fontSize: '14px !important' }} />}
                         label={`${row.cuotas_vencidas} Vencidas`}
                         color="error"
@@ -86,7 +82,7 @@ const MisResumenes: React.FC = () => {
                         sx={{ fontWeight: 700 }}
                     />
                 ) : (
-                    <Chip 
+                    <Chip
                         icon={<CheckCircle sx={{ fontSize: '14px !important' }} />}
                         label="Al día"
                         color="success"
@@ -103,8 +99,8 @@ const MisResumenes: React.FC = () => {
             align: 'right',
             render: (row) => (
                 <Tooltip title="Ver desglose de cuota">
-                    <IconButton 
-                        size="small" 
+                    <IconButton
+                        size="small"
                         onClick={() => openModal(row)}
                         sx={{ bgcolor: alpha(theme.palette.primary.main, 0.05) }}
                     >
@@ -119,8 +115,8 @@ const MisResumenes: React.FC = () => {
     const getRowSx = (row: ResumenCuentaDto) => ({
         bgcolor: row.cuotas_vencidas > 0 ? alpha(theme.palette.error.main, 0.02) : 'inherit',
         '&:hover': {
-            bgcolor: row.cuotas_vencidas > 0 
-                ? alpha(theme.palette.error.main, 0.05) 
+            bgcolor: row.cuotas_vencidas > 0
+                ? alpha(theme.palette.error.main, 0.05)
                 : alpha(theme.palette.primary.main, 0.02)
         }
     });
@@ -134,20 +130,20 @@ const MisResumenes: React.FC = () => {
 
             {/* KPI SECTION */}
             <Box sx={{ mb: 4, display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' }, gap: 3 }}>
-                <StatCard 
-                    title="Total Planes" value={stats.totalPlanes.toString()} 
-                    icon={<Business />} color="primary" loading={isLoading} 
+                <StatCard
+                    title="Total Planes" value={stats.totalPlanes.toString()}
+                    icon={<Business />} color="primary" loading={isLoading}
                 />
-                <StatCard 
-                    title="Avance Promedio" value={`${stats.promedioAvance.toFixed(0)}%`} 
-                    icon={<Percent />} color="info" loading={isLoading} 
+                <StatCard
+                    title="Avance Promedio" value={`${stats.promedioAvance.toFixed(0)}%`}
+                    icon={<Percent />} color="info" loading={isLoading}
                 />
-                <StatCard 
-                    title={stats.cuotasVencidasTotal > 0 ? "Cuotas Vencidas" : "Estado Global"} 
-                    value={stats.cuotasVencidasTotal.toString()} 
-                    icon={stats.cuotasVencidasTotal > 0 ? <Warning /> : <MonetizationOn />} 
-                    color={stats.cuotasVencidasTotal > 0 ? "error" : "success"} 
-                    loading={isLoading} 
+                <StatCard
+                    title={stats.cuotasVencidasTotal > 0 ? "Cuotas Vencidas" : "Estado Global"}
+                    value={stats.cuotasVencidasTotal.toString()}
+                    icon={stats.cuotasVencidasTotal > 0 ? <Warning /> : <MonetizationOn />}
+                    color={stats.cuotasVencidasTotal > 0 ? "error" : "success"}
+                    loading={isLoading}
                     subtitle={stats.cuotasVencidasTotal > 0 ? "Atención requerida" : "Sin deuda pendiente"}
                 />
             </Box>

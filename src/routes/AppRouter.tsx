@@ -3,15 +3,15 @@ import { Box, CircularProgress } from '@mui/material';
 import { Suspense, lazy } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 
-// Guards
+
 import { ROUTES } from '.';
-import ProtectedRoute from './ProtectedRoute';
+import ProtectedRoute from '../core/auth/guards/ProtectedRoute';
 
 // ============ LAZY LOADING ============
 
 // Layouts
-const AdminLayout = lazy(() => import('@/shared/layouts/AdminLayout'));
-const ClientLayout = lazy(() => import('@/shared/layouts/ClientLayout'));
+const AdminLayout = lazy(() => import('@/layouts/admin/AdminLayout'));
+const ClientLayout = lazy(() => import('@/layouts/client/ClientLayout'));
 
 // Auth Pages
 const LoginPage = lazy(() => import('@/features/auth/pages/LoginPage'));
@@ -39,8 +39,8 @@ const MisPujas = lazy(() => import('@/features/client/pages/MiCuenta/MisPujas'))
 const MisTransacciones = lazy(() => import('@/features/client/pages/MiCuenta/Pagos/MisTransacciones'));
 const MisResumenes = lazy(() => import('@/features/client/pages/MiCuenta/MisResumenes'));
 const PagoResult = lazy(() => import('@/features/client/pages/MiCuenta/Pagos/PagoResult'));
-const Perfil = lazy(() => import('@/features/client/pages/MiCuenta/Perfil'));
-const VerificacionKYC = lazy(() => import('@/features/client/pages/MiCuenta/VerificacionKYC'));
+const Perfil = lazy(() => import('@/features/client/pages/MiCuenta/perfil/Perfil'));
+const VerificacionKYC = lazy(() => import('@/features/client/pages/MiCuenta/kyc/VerificacionKYC'));
 const MensajesPage = lazy(() => import('@/features/client/pages/MiCuenta/MensajesPage'));
 const SecuritySettings = lazy(() => import('@/features/client/pages/MiCuenta/SecuritySettings'));
 const MisFavoritos = lazy(() => import('@/features/client/pages/MiCuenta/MisFavoritos'));

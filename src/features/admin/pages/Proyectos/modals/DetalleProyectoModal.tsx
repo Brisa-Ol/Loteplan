@@ -1,7 +1,5 @@
 // src/components/Admin/Proyectos/Components/modals/DetalleProyectoModal.tsx
 
-import React, { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   AccountBalance, AttachMoney,
   Description as ContractIcon,
@@ -27,13 +25,15 @@ import {
   Paper, Stack, Typography, alpha, useTheme
 } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
+import React, { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 import PdfPreviewModal from '@/features/admin/pages/Contrato/modals/PdfPreviewModal';
-import { BaseModal } from '@/shared/components/domain/modals';
 import ContratoPlantillaService from '../../../../../core/api/services/contrato-plantilla.service';
 import ImagenService from '../../../../../core/api/services/imagen.service';
 import type { LoteDto } from '../../../../../core/types/dto/lote.dto';
 import type { ProyectoDto } from '../../../../../core/types/dto/proyecto.dto';
+import { BaseModal } from '@/shared/components/domain';
 
 interface DetalleProyectoModalProps {
   open: boolean;

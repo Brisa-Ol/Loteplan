@@ -14,7 +14,7 @@ import PujaService from '@/core/api/services/puja.service';
 import type { LoteDto } from '@/core/types/dto/lote.dto';
 import { useCurrencyFormatter } from '@/features/client/hooks/useCurrencyFormatter';
 import { useVerificarSuscripcion } from '@/features/client/hooks/useVerificarSuscripcion';
-import { BaseModal } from '@/shared/components/domain/modals/BaseModal/BaseModal'; // ✅ Exportación nombrada ajustada
+import { BaseModal } from '@/shared/components/domain/modals/BaseModal'; // ✅ Exportación nombrada ajustada
 import useSnackbar from '@/shared/hooks/useSnackbar';
 
 const INCREMENTO_PASO = 10_000;

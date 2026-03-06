@@ -15,10 +15,10 @@ import { useAuth } from '@/core/context/AuthContext';
 import type { LoteDto } from '@/core/types/dto/lote.dto';
 import type { ProyectoDto } from '@/core/types/dto/proyecto.dto';
 import { ROUTES } from '@/routes';
-import { ConfirmDialog } from '@/shared/components/domain/modals/ConfirmDialog/ConfirmDialog';
 import { useLotesProyecto } from '../../hooks/useLotesProyecto';
 import LoteCard from './components/LoteCard';
 import { PujarModal } from './modals/PujarModal';
+import { ConfirmDialog } from '@/shared';
 
 interface Props {
   idProyecto: number;

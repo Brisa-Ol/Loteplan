@@ -1,10 +1,19 @@
 // src/pages/client/MiCuenta/SecuritySettings.tsx
 
-import React, { useEffect, useState } from 'react';
-import QRCode from 'qrcode';
+import type { ApiError } from '@/core/api/httpService';
+import { useAuth } from '@/core/context/AuthContext';
+import { PageContainer, PageHeader } from '@/shared';
 import {
-  Close, ContentCopy, GppGood, GppMaybe, Lock, QrCode2, Security, Info,
-  Smartphone, Timer, Payment, SupportAgent, VisibilityOff, Visibility
+  Close, ContentCopy, GppGood, GppMaybe,
+  Info,
+  Lock,
+  Payment,
+  QrCode2, Security,
+  Smartphone,
+  SupportAgent,
+  Timer,
+  Visibility,
+  VisibilityOff
 } from '@mui/icons-material';
 import {
   Alert, Avatar, Box, Button, Card, CardContent, Chip, CircularProgress,
@@ -12,12 +21,8 @@ import {
   InputAdornment, List, ListItem, ListItemIcon, ListItemText, Stack, Step,
   StepLabel, Stepper, TextField, Tooltip, Typography, alpha, useTheme
 } from '@mui/material';
-
-// Componentes Propios
-import { PageContainer } from '../../../../shared/components/layout/containers/PageContainer/PageContainer';
-import { PageHeader } from '../../../../shared/components/layout/headers/PageHeader'; // ✅ Importado
-import { useAuth } from '@/core/context/AuthContext';
-import type { ApiError } from '@/core/api/httpService';
+import QRCode from 'qrcode';
+import React, { useEffect, useState } from 'react';
 
 const SecuritySettings: React.FC = () => {
   const { user, disable2FA, generate2FASecret, enable2FA, isLoading: authLoading } = useAuth();

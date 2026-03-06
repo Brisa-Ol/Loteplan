@@ -24,7 +24,7 @@ export const ROUTES = {
   // --- Área Cliente (Protegida) ---
   CLIENT: {
     DASHBOARD: '/client/dashboard',
-    
+
     // Sub-sección Finanzas
     FINANZAS: {
       PAGOS: '/client/finanzas/pagos',
@@ -55,31 +55,31 @@ export const ROUTES = {
   // --- Área Admin (Protegida) ---
   ADMIN: {
     DASHBOARD: '/admin/dashboard',
-    
+
     USUARIOS: {
       LISTA: '/admin/usuarios',
       KYC: '/admin/kyc',
       PERFIL: '/admin/perfil',
       CONFIGURACION: '/admin/configuracion',
     },
-    
+
     PROYECTOS: {
       LISTA: '/admin/proyectos',
       PLANES_AHORRO: '/admin/suscripciones',
       INVERSIONES: '/admin/inversiones',
     },
-    
+
     LOTES: {
       LISTA: '/admin/lotes',
       PAGOS: '/admin/lote-pagos',
       PUJAS: '/admin/pujas',
     },
-    
+
     CONTRATOS: {
       PLANTILLAS: '/admin/plantillas',
       FIRMADOS: '/admin/firmados',
     },
-    
+
     FINANZAS: {
       PAGOS: '/admin/pagos',
       TRANSACCIONES: '/admin/transacciones',

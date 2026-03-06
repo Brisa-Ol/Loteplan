@@ -28,12 +28,8 @@ import imagenService from '@/core/api/services/imagen.service';
 import { env } from '@/core/config/env';
 import type { CreateImagenDto, ImagenDto } from '@/core/types/dto/imagen.dto';
 import type { ProyectoDto } from '@/core/types/dto/proyecto.dto';
-import { QueryHandler } from '@/shared/components/data-grid/QueryHandler/QueryHandler';
-import { BaseModal } from '@/shared/components/domain/modals';
-import { ConfirmDialog } from '@/shared/components/domain/modals/ConfirmDialog/ConfirmDialog';
-import ImageUpload from '@/shared/components/forms/upload/ImageUploadZone';
-import { useConfirmDialog } from '@/shared/hooks/useConfirmDialog';
-import useSnackbar from '@/shared/hooks/useSnackbar';
+import { BaseModal, ConfirmDialog, ImageUploadZone, QueryHandler, useConfirmDialog, useSnackbar } from '@/shared';
+
 
 const MAX_TOTAL_IMAGES = 10;
 
@@ -211,7 +207,7 @@ const ManageImagesModal: React.FC<ManageImagesModalProps> = ({ open, onClose, pr
           {/* 1. ZONA DE UPLOAD */}
           <Box sx={{ p: 3 }}>
             {!isLimitReached ? (
-              <ImageUpload
+              <ImageUploadZone
                 multiple
                 onChange={handleFilesSelected}
                 maxFiles={remainingSlots}

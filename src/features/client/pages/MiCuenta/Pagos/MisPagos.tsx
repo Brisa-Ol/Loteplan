@@ -1,5 +1,10 @@
 // src/features/client/pages/Pagos/MisPagos.tsx
 
+import PagoService from '@/core/api/services/pago.service';
+import type { PagoDto } from '@/core/types/dto/pago.dto';
+import { useCurrencyFormatter } from '@/features/client/hooks/useCurrencyFormatter';
+import { ConfirmDialog, DataTable, PageContainer, PageHeader, QueryHandler, StatCard, useConfirmDialog, useModal, type DataTableColumn } from '@/shared';
+import TwoFactorAuthModal from '@/shared/components/domain/modals/TwoFactorAuthModal';
 import {
   CheckCircle, Lock, PriorityHigh, ReceiptLong, RocketLaunch,
   Schedule, Stars, Warning
@@ -10,22 +15,7 @@ import {
 } from '@mui/material';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import React, { useCallback, useMemo, useState } from 'react';
-
-import { ConfirmDialog } from '@/shared/components/domain/modals/ConfirmDialog/ConfirmDialog';
-import { useConfirmDialog } from '@/shared/hooks/useConfirmDialog';
-import { DataTable, type DataTableColumn } from '../../../../../shared/components/data-grid/DataTable/DataTable';
-import { QueryHandler } from '../../../../../shared/components/data-grid/QueryHandler/QueryHandler';
-import { StatCard } from '../../../../../shared/components/domain/cards/StatCard/StatCard';
-import TwoFactorAuthModal from '../../../../../shared/components/domain/modals/TwoFactorAuthModal/TwoFactorAuthModal';
-import { PageContainer } from '../../../../../shared/components/layout/containers/PageContainer/PageContainer';
-import { useModal } from '../../../../../shared/hooks/useModal';
 import { HistorialPagosAgrupado } from './HistorialAgrupado';
-
-import PagoService from '@/core/api/services/pago.service';
-
-import type { PagoDto } from '@/core/types/dto/pago.dto';
-import { useCurrencyFormatter } from '@/features/client/hooks/useCurrencyFormatter';
-import { PageHeader } from '@/shared/components/layout/headers/PageHeader';
 
 const getStatusConfig = (status: string) => {
   switch (status) {

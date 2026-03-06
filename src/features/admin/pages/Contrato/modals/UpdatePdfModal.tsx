@@ -1,6 +1,7 @@
 import { env } from '@/core/config/env';
 import type { ContratoPlantillaDto, UpdatePlantillaPdfDto } from '@/core/types/dto';
-import { BaseModal } from '@/shared/components/domain/modals';
+import { BaseModal } from '@/shared/components/domain';
+
 import { useSnackbar } from '@/shared/hooks';
 import {
   CloudUpload,

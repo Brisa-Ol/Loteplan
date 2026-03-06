@@ -1,6 +1,5 @@
 // src/features/admin/pages/Lotes/modals/EditLoteModal.tsx
 
-import React, { useEffect, useMemo } from 'react';
 import {
   CalendarMonth as CalendarIcon,
   Edit as EditIcon,
@@ -23,24 +22,27 @@ import {
 } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { FormikProvider, useFormik } from 'formik';
+import React, { useEffect, useMemo } from 'react';
 import * as Yup from 'yup';
 
 import ProyectoService from '@/core/api/services/proyecto.service';
 import type { LoteDto, UpdateLoteDto } from '@/core/types/dto/lote.dto';
 import type { ProyectoDto } from '@/core/types/dto/proyecto.dto';
-import { BaseModal } from '@/shared/components/domain/modals';
+import { BaseModal } from '@/shared';
+;
+
 
 // ============================================================================
 // CONSTANTES Y ESTILOS (Memoizados)
 // ============================================================================
-const SECTION_TITLE_SX = { 
-  fontWeight: 800, 
-  color: 'text.secondary', 
-  textTransform: 'uppercase', 
-  mb: 1.5, 
-  display: 'flex', 
-  alignItems: 'center', 
-  gap: 1, 
+const SECTION_TITLE_SX = {
+  fontWeight: 800,
+  color: 'text.secondary',
+  textTransform: 'uppercase',
+  mb: 1.5,
+  display: 'flex',
+  alignItems: 'center',
+  gap: 1,
   fontSize: '0.65rem',
   letterSpacing: 1
 };
@@ -236,9 +238,9 @@ const EditLoteModal: React.FC<EditLoteModalProps> = ({ open, onClose, onSubmit, 
       <FormikProvider value={formik}>
         <Stack spacing={3.5}>
           {isSubastaActiva && (
-            <Alert 
-              severity="info" 
-              variant="outlined" 
+            <Alert
+              severity="info"
+              variant="outlined"
               sx={{ borderRadius: 2, borderLeft: '4px solid', bgcolor: alpha(theme.palette.info.main, 0.02) }}
             >
               <strong>Subasta en curso:</strong> Ciertos parámetros económicos y de tiempo están bloqueados para proteger la integridad de las pujas actuales.
@@ -256,7 +258,7 @@ const EditLoteModal: React.FC<EditLoteModalProps> = ({ open, onClose, onSubmit, 
           <Box>
             <Typography sx={SECTION_TITLE_SX}>Identificación</Typography>
             <TextField
-              fullWidth label="Nombre del Lote" name="nombre_lote" 
+              fullWidth label="Nombre del Lote" name="nombre_lote"
               value={formik.values.nombre_lote} onChange={formik.handleChange}
               onBlur={formik.handleBlur} error={formik.touched.nombre_lote && !!formik.errors.nombre_lote}
               helperText={formik.touched.nombre_lote && (formik.errors.nombre_lote as string)}

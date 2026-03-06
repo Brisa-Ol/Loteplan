@@ -1,28 +1,28 @@
 // src/pages/Client/Mensajes/MensajesPage.tsx
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
 import {
+  ChatBubbleOutline,
   Person as PersonIcon,
   DoneAll as ReadIcon,
   Send as SendIcon,
-  SupportAgent as SupportIcon,
-  ChatBubbleOutline
+  SupportAgent as SupportIcon
 } from '@mui/icons-material';
 import {
   alpha, Avatar, Badge, Box, Button, CircularProgress, Divider,
   IconButton, List, ListItemAvatar, ListItemButton, Paper,
   Stack, TextField, Typography, useTheme
 } from '@mui/material';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 // Servicios y Contexto
-import { PageContainer } from '../../../../shared/components/layout/containers/PageContainer/PageContainer';
-import { PageHeader } from '../../../../shared/components/layout/headers/PageHeader';
-import { useAuth } from '@/core/context/AuthContext';
 import MensajeService from '@/core/api/services/mensaje.service';
+import { useAuth } from '@/core/context/AuthContext';
 import type { MensajeDto } from '@/core/types/dto/mensaje';
+import { PageContainer, PageHeader } from '@/shared';
+
 
 // Config
 const SYSTEM_USER_ID = 2;

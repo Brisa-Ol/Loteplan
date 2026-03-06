@@ -14,20 +14,12 @@ import {
 import { useMutation, useQuery } from '@tanstack/react-query';
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-
-// Componentes Comunes
-import { DataTable, type DataTableColumn } from '../../../../shared/components/data-grid/DataTable/DataTable';
-import { QueryHandler } from '../../../../shared/components/data-grid/QueryHandler/QueryHandler';
-import { StatCard } from '../../../../shared/components/domain/cards/StatCard/StatCard';
-import TwoFactorAuthModal from '../../../../shared/components/domain/modals/TwoFactorAuthModal/TwoFactorAuthModal';
-import { PageContainer } from '../../../../shared/components/layout/containers/PageContainer/PageContainer';
-import { PageHeader } from '../../../../shared/components/layout/headers/PageHeader';
-import { useModal } from '../../../../shared/hooks/useModal';
-
 // Servicios y Tipos
 import PujaService from '@/core/api/services/puja.service';
 import type { PujaDto } from '@/core/types/dto/puja.dto';
 import { ROUTES } from '@/routes';
+import { DataTable, PageContainer, PageHeader, QueryHandler, StatCard, useModal, type DataTableColumn } from '@/shared';
+import TwoFactorAuthModal from '@/shared/components/domain/modals/TwoFactorAuthModal';
 import useSnackbar from '../../../../shared/hooks/useSnackbar';
 import { useCurrencyFormatter } from '../../hooks/useCurrencyFormatter';
 

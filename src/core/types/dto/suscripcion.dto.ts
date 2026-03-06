@@ -24,6 +24,8 @@ export interface SuscripcionDto extends BaseDTO {
     obj_suscripciones: number;
     suscripciones_actuales: number;
   };
+   createdAt: string;  // Override optional → required
+  updatedAt: string;
 }
 
 export interface SuscripcionCanceladaDto extends BaseDTO {

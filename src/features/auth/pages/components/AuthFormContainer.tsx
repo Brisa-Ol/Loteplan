@@ -1,14 +1,14 @@
 // src/pages/Auth/components/AuthFormContainer/AuthFormContainer.tsx
 
-import React from "react";
 import {
+  alpha,
   Box,
   Container,
   Paper,
   Typography,
-  useTheme,
-  alpha
+  useTheme
 } from "@mui/material";
+import React from "react";
 
 interface AuthFormContainerProps {
   title: string;

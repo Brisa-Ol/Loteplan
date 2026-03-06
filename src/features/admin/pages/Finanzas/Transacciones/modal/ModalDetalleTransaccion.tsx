@@ -1,7 +1,7 @@
 // src/pages/Admin/Transacciones/modal/ModalDetalleTransaccion.tsx
 
 import type { TransaccionDto } from '@/core/types/dto/transaccion.dto';
-import { BaseModal } from '@/shared/components/domain/modals';
+import { BaseModal } from '@/shared/components/domain';
 import {
   AttachMoney,
   Bolt,

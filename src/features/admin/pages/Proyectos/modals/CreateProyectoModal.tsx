@@ -1,14 +1,15 @@
 // src/features/admin/pages/Proyectos/modals/CreateProyectoModal.tsx
 
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import { BaseModal } from '@/shared/components/domain';
+import ImageUploadZone from '@/shared/components/forms/ImageUploadZone';
 import {
   Add as AddIcon,
   ArrowBack,
   ArrowForward,
   CheckCircle as CheckCircleIcon,
   PictureAsPdf as PdfIcon,
-  CloudUpload as UploadIcon,
-  Business as ProjectIcon
+  Business as ProjectIcon,
+  CloudUpload as UploadIcon
 } from '@mui/icons-material';
 import {
   alpha,
@@ -29,10 +30,10 @@ import {
   useTheme
 } from '@mui/material';
 import { useFormik } from 'formik';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import * as Yup from 'yup';
 
-import { BaseModal } from '@/shared/components/domain/modals';
-import ImageUpload from '@/shared/components/forms/upload/ImageUploadZone';
+
 
 // --- FUNCIONES AUXILIARES ---
 const blockInvalidChar = (e: React.KeyboardEvent) =>
@@ -109,10 +110,10 @@ const SimulationDisplay = React.memo(({ plazo, unidades, precio, pctPlan, pctAdm
   }, [plazo, unidades, precio, pctPlan, pctAdmin, pctIva]);
 
   return (
-    <Paper elevation={0} sx={{ 
+    <Paper elevation={0} sx={{
       p: 3, textAlign: 'center', borderRadius: 3,
-      bgcolor: alpha(theme.palette.success.main, 0.04), 
-      border: '1px dashed', borderColor: theme.palette.success.main 
+      bgcolor: alpha(theme.palette.success.main, 0.04),
+      border: '1px dashed', borderColor: theme.palette.success.main
     }}>
       <Typography variant="caption" fontWeight={800} color="success.main" sx={{ letterSpacing: 1 }}>
         CUOTA MENSUAL ESTIMADA (MES 1)
@@ -304,7 +305,7 @@ const CreateProyectoModal: React.FC<any> = ({ open, onClose, onSubmit, isLoading
         {currentStepLabel === 'Multimedia' && (
           <Box sx={{ p: 1 }}>
             <Typography sx={styles.sectionTitle} mb={2}>Visuales del Proyecto</Typography>
-            <ImageUpload multiple={false} image={image} onChange={(f) => setImage(f as File)} label="Foto de Portada" />
+            <ImageUploadZone multiple={false} image={image} onChange={(f) => setImage(f as File)} label="Foto de Portada" />
           </Box>
         )}
 

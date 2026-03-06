@@ -78,6 +78,12 @@ const PagoService = {
 
   updatePaymentAmount: async (idPago: number, data: UpdatePaymentAmountDto): Promise<AxiosResponse<PagoDto>> => {
     return await httpService.patch(`${BASE_ENDPOINT}/${idPago}/monto`, data);
+  },
+confirmarManual: async (idPago: number): Promise<AxiosResponse<PagoDto>> => {
+    return await httpService.patch(`${BASE_ENDPOINT}/${idPago}/estado`, { 
+      estado_pago: 'pagado',
+      motivo: 'Cobro manual administrativo (Efectivo/Oficina)' 
+    });
   }
 };
 

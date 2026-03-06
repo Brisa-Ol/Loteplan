@@ -23,7 +23,7 @@ import {
 import { useSnackbar } from '@/shared/hooks/useSnackbar';
 import type { CreatePlantillaDto } from '@/core/types/dto';
 import { env } from '@/core/config/env';
-import { BaseModal } from '@/shared/components/domain/modals';
+import { BaseModal } from '@/shared/components/domain';
 
 // ============================================================================
 // INTERFACES

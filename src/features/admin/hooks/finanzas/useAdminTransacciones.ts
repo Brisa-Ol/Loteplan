@@ -6,8 +6,9 @@ import { useTheme } from '@mui/material';
 
 import TransaccionService from '@/core/api/services/transaccion.service';
 import type { TransaccionDto } from '@/core/types/dto/transaccion.dto';
-import { useConfirmDialog, useModal, useSnackbar } from '@/shared/hooks';
+
 import { useSortedData } from '../useSortedData';
+import { useConfirmDialog, useModal, useSnackbar } from '@/shared/hooks';
 
 // Extendemos el tipo para incluir la auditoría visual en el admin
 export type AdminTransaction = TransaccionDto & {

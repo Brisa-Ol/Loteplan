@@ -10,26 +10,18 @@ import {
 } from '@mui/material';
 
 // Material UI Icons
+import InversionService from '@/core/api/services/inversion.service';
+import type { InversionDto } from '@/core/types/dto/inversion.dto';
+import { PageContainer, PageHeader, StatCard } from '@/shared';
+import { DataTable, type DataTableColumn } from '@/shared/components/data-grid/DataTable';
+import { QueryHandler } from '@/shared/components/data-grid/QueryHandler';
+import TwoFactorAuthModal from '@/shared/components/domain/modals/TwoFactorAuthModal';
 import {
     AccountBalanceWallet, CheckCircle, ErrorOutline, HelpOutline,
     HourglassEmpty, MonetizationOn, Payment, PieChart,
     Schedule,
     Visibility
 } from '@mui/icons-material';
-
-// Componentes Compartidos
-import { DataTable, type DataTableColumn } from '@/shared/components/data-grid/DataTable/DataTable';
-import { QueryHandler } from '@/shared/components/data-grid/QueryHandler/QueryHandler';
-import { StatCard } from '@/shared/components/domain/cards/StatCard/StatCard';
-import TwoFactorAuthModal from '@/shared/components/domain/modals/TwoFactorAuthModal/TwoFactorAuthModal';
-import { PageContainer } from '@/shared/components/layout/containers/PageContainer/PageContainer';
-import { PageHeader } from '@/shared/components/layout/headers/PageHeader';
-
-// Servicios y Tipos
-import InversionService from '@/core/api/services/inversion.service';
-import type { InversionDto } from '@/core/types/dto/inversion.dto';
-
-// Utils & Hooks
 import { useCurrencyFormatter } from '../../hooks/useCurrencyFormatter';
 import { useInversionPayment } from '../../hooks/useInversionPayment';
 

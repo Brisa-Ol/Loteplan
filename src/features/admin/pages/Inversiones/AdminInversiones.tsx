@@ -25,11 +25,11 @@ import {
 
 import { AdminPageHeader } from '@/shared/components/admin/Adminpageheader'; // ✅ Componente estandarizado
 import MetricsGrid from '@/shared/components/admin/Metricsgrid';
-import { DataTable, type DataTableColumn } from '@/shared/components/data-grid/DataTable/DataTable';
-import { QueryHandler } from '@/shared/components/data-grid/QueryHandler/QueryHandler';
-import { StatCard, StatusBadge } from '@/shared/components/domain/cards/StatCard/StatCard';
-import { FilterBar, FilterSearch, FilterSelect } from '@/shared/components/forms/filters/FilterBar';
-import { PageContainer } from '@/shared/components/layout/containers/PageContainer/PageContainer';
+import { DataTable, type DataTableColumn } from '@/shared/components/data-grid/DataTable';
+import { QueryHandler } from '@/shared/components/data-grid/QueryHandler';
+import { StatCard, StatusBadge } from '@/shared/components/domain/cards/StatCard';
+import { FilterBar, FilterSearch, FilterSelect } from '@/shared/components/forms/FilterBar';
+import { PageContainer } from '@/shared/components/layout/PageContainer';
 
 import type { InversionDto } from '@/core/types/dto/inversion.dto';
 import { useAdminInversiones } from '../../hooks/finanzas/useAdminInversiones';

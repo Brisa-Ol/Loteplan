@@ -33,7 +33,9 @@ import {
 
 import type { KycDTO } from '@/core/types/dto/kyc.dto';
 import { env } from '@/core/config/env';
-import { BaseModal } from '@/shared/components/domain/modals';
+import { BaseModal } from '@/shared';
+
+
 
 // =============================================================================
 // 🔧 HELPERS
@@ -172,7 +174,7 @@ const KycDetailModal: React.FC<KycDetailModalProps> = ({
               <Paper elevation={0} sx={styles.sideCard}>
                 <Stack spacing={2}>
                   <Stack direction="row" spacing={2} alignItems="center">
-                    <Avatar sx={{ 
+                    <Avatar sx={{
                       bgcolor: 'primary.main', width: 44, height: 44,
                       fontWeight: 900, fontSize: '1rem',
                       boxShadow: `0 4px 10px ${alpha(theme.palette.primary.main, 0.3)}`
@@ -184,9 +186,9 @@ const KycDetailModal: React.FC<KycDetailModalProps> = ({
                       <Typography variant="caption" color="text.secondary">ID Usuario: #{kyc.id_usuario}</Typography>
                     </Box>
                   </Stack>
-                  
+
                   <Divider sx={{ borderStyle: 'dotted' }} />
-                  
+
                   <Stack spacing={1}>
                     <Box sx={styles.metaRow}>
                       <Typography variant="caption" color="text.secondary">Email:</Typography>
@@ -223,10 +225,10 @@ const KycDetailModal: React.FC<KycDetailModalProps> = ({
               <Typography variant="caption" sx={styles.labelCaption}>
                 <ShieldIcon fontSize="inherit" /> Seguridad Técnica
               </Typography>
-              <Box sx={{ 
-                p: 2, borderRadius: 2, 
-                bgcolor: alpha(theme.palette.info.main, 0.03), 
-                border: '1px solid', borderColor: alpha(theme.palette.info.main, 0.1) 
+              <Box sx={{
+                p: 2, borderRadius: 2,
+                bgcolor: alpha(theme.palette.info.main, 0.03),
+                border: '1px solid', borderColor: alpha(theme.palette.info.main, 0.1)
               }}>
                 <Stack spacing={1}>
                   <Box sx={styles.metaRow}>
@@ -243,9 +245,9 @@ const KycDetailModal: React.FC<KycDetailModalProps> = ({
                       <Typography variant="caption" fontWeight={600}>Ubicación:</Typography>
                     </Stack>
                     {googleMapsUrl ? (
-                      <Button 
-                        size="small" 
-                        variant="text" 
+                      <Button
+                        size="small"
+                        variant="text"
                         onClick={() => window.open(googleMapsUrl, '_blank')}
                         sx={{ fontSize: '0.65rem', minWidth: 0, p: 0, textTransform: 'none', fontWeight: 800 }}
                       >
@@ -384,10 +386,10 @@ const EvidenceImage: React.FC<{ title: string; src: string | null }> = ({ title,
             transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
           }}
         />
-        <Box sx={{ 
-          position: 'absolute', inset: 0, 
+        <Box sx={{
+          position: 'absolute', inset: 0,
           bgcolor: 'rgba(0,0,0,0)', transition: '0.3s',
-          '&:hover': { bgcolor: 'rgba(0,0,0,0.05)' } 
+          '&:hover': { bgcolor: 'rgba(0,0,0,0.05)' }
         }} />
       </Box>
     </Box>

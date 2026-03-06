@@ -5,17 +5,16 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
+import ImagenService from '@/core/api/services/imagen.service'; // 👈 Asegurar este import
 import LoteService from '@/core/api/services/lote.service';
 import ProyectoService from '@/core/api/services/proyecto.service';
 import PujaService from '@/core/api/services/puja.service';
-import ImagenService from '@/core/api/services/imagen.service'; // 👈 Asegurar este import
 
 import type { CreateLoteDto, LoteDto, UpdateLoteDto } from '@/core/types/dto/lote.dto';
-
-import { useConfirmDialog } from '@/shared/hooks/useConfirmDialog';
-import { useModal } from '@/shared/hooks/useModal';
-import useSnackbar from '@/shared/hooks/useSnackbar';
+import { useConfirmDialog, useModal, useSnackbar } from '@/shared';
 import { useSortedData } from '../useSortedData';
+
+
 
 function useDebouncedValue<T>(value: T, delay: number = 300): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
@@ -37,7 +36,7 @@ export const useAdminLotes = () => {
   const editModal = useModal();
   const imagesModal = useModal();
   const auctionModal = useModal();
-  const overviewModal = useModal(); 
+  const overviewModal = useModal();
   const confirmDialog = useConfirmDialog();
 
   const modales = useMemo(() => ({
@@ -90,9 +89,9 @@ export const useAdminLotes = () => {
       let matchesProject = true;
       if (filterProject === 'huerfano') matchesProject = !lote.id_proyecto;
       else if (filterProject !== 'all') matchesProject = lote.id_proyecto === Number(filterProject);
-      
+
       const matchesEstado = filterEstadoSubasta === 'all' || lote.estado_subasta === filterEstadoSubasta;
-      
+
       let matchesTipo = true;
       if (filterTipoInversion !== 'all') {
         const p = proyectos.find(proj => proj.id === lote.id_proyecto);
@@ -113,8 +112,8 @@ export const useAdminLotes = () => {
   const checkIsSubastable = useCallback((lote: LoteDto) => {
     if (!lote.id_proyecto) return { allowed: false, reason: 'Sin proyecto asignado' };
     const proyecto = proyectos.find((p) => p.id === lote.id_proyecto);
-    return proyecto?.tipo_inversion === 'directo' 
-      ? { allowed: false, reason: 'Inversión Directa (No Subastable)' } 
+    return proyecto?.tipo_inversion === 'directo'
+      ? { allowed: false, reason: 'Inversión Directa (No Subastable)' }
       : { allowed: true, reason: '' };
   }, [proyectos]);
 
@@ -122,14 +121,14 @@ export const useAdminLotes = () => {
   const saveMutation = useMutation({
     mutationFn: async (payload: { dto: CreateLoteDto | UpdateLoteDto; id?: number; file?: File | null }) => {
       let response;
-      
+
       if (payload.id) {
         // ACTUALIZACIÓN
         response = await LoteService.update(payload.id, payload.dto as UpdateLoteDto);
       } else {
         // CREACIÓN: Primero el Lote para obtener el ID
         response = await LoteService.create(payload.dto as CreateLoteDto);
-        
+
         const newLote = response.data;
 
         // 📸 SUBIDA DE IMAGEN: Solo si el lote se creó y hay un archivo físico
@@ -146,13 +145,13 @@ export const useAdminLotes = () => {
     onSuccess: (response, variables) => {
       // Forzamos el refresco de las listas para mostrar la nueva foto/datos
       queryClient.invalidateQueries({ queryKey: ['adminLotes'] });
-      queryClient.invalidateQueries({ queryKey: ['loteImages'] }); 
-      
+      queryClient.invalidateQueries({ queryKey: ['loteImages'] });
+
       handleCloseAllModals();
-      
+
       const targetId = variables.id || response.data.id;
       if (targetId) triggerHighlight(targetId);
-      
+
       showSuccess(variables.id ? 'Cambios guardados correctamente' : 'Lote creado con su imagen');
     },
     onError: (err: any) => showError(err.response?.data?.error || 'Error al procesar el lote'),

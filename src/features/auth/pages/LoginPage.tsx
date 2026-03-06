@@ -1,3 +1,12 @@
+import { ROUTES } from "@/routes";
+import {
+  ErrorOutline,
+  InfoOutlined,
+  LockClock,
+  LockOpen,
+  Visibility,
+  VisibilityOff
+} from "@mui/icons-material";
 import {
   Alert,
   Box,
@@ -11,21 +20,12 @@ import {
   alpha,
   useTheme
 } from "@mui/material";
-import {
-  ErrorOutline,
-  InfoOutlined,
-  LockClock,
-  LockOpen,
-  Visibility,
-  VisibilityOff
-} from "@mui/icons-material";
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import AuthFormContainer from "./components/AuthFormContainer";
-import TwoFactorAuthModal from "../../../shared/components/domain/modals/TwoFactorAuthModal/TwoFactorAuthModal";
-import FormTextField from "../../../shared/components/forms/inputs/FormTextField";
-import { ROUTES } from "@/routes";
+import TwoFactorAuthModal from "../../../shared/components/domain/modals/TwoFactorAuthModal";
+import FormTextField from "../../../shared/components/forms/FormTextField";
 import { useLogin } from "../hooks/useLogin";
+import AuthFormContainer from "./components/AuthFormContainer";
 
 // --- Subcomponente de Alertas (Memoizado implícitamente al estar fuera) ---
 const LoginAlerts = ({ status, actions, navigate }: any) => {
@@ -56,7 +56,7 @@ const LoginAlerts = ({ status, actions, navigate }: any) => {
 
   if (status.localError) {
     const { type, msg } = status.localError;
-    
+
     if (type === 'invalid_credentials') {
       return (
         <Alert severity="error" icon={<ErrorOutline />} onClose={actions.clearErrors} sx={{ mb: 3 }}>
@@ -102,13 +102,13 @@ const LoginPage: React.FC = () => {
   return (
     <>
       <AuthFormContainer title="¡Hola de nuevo!" subtitle="Ingresá a tu cuenta para gestionar tus inversiones.">
-        
+
         {/* Header Visual */}
         <Box textAlign="center" mb={4}>
-          <Box sx={{ 
-            width: 56, height: 56, borderRadius: '50%', mx: 'auto', mb: 2, 
+          <Box sx={{
+            width: 56, height: 56, borderRadius: '50%', mx: 'auto', mb: 2,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' 
+            bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main'
           }}>
             <LockOpen fontSize="large" />
           </Box>

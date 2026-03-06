@@ -31,7 +31,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import ContratoFirmadoService from '@/core/api/services/contrato-firmado.service';
 import ContratoPlantillaService from '@/core/api/services/contrato-plantilla.service';
 import ImagenService from '@/core/api/services/imagen.service';
-import { BaseModal } from '@/shared/components/domain/modals/BaseModal/BaseModal'; // ✅ Ajustado a exportación nombrada
+import { BaseModal } from '@/shared/components/domain/modals/BaseModal'; // ✅ Ajustado a exportación nombrada
 import PDFViewerMejorado from '../components/PDFViewerMejorado';
 
 // ✅ UTILS Y API CORE

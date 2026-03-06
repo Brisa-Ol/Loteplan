@@ -43,17 +43,17 @@ import {
 import type { ContratoPlantillaDto } from '@/core/types/dto/contrato-plantilla.dto';
 
 // Componentes Compartidos
-import { DataTable, type DataTableColumn } from '@/shared/components/data-grid/DataTable/DataTable';
-import { QueryHandler } from '@/shared/components/data-grid/QueryHandler/QueryHandler';
-import { StatCard } from '@/shared/components/domain/cards/StatCard/StatCard';
-import { ConfirmDialog } from '@/shared/components/domain/modals/ConfirmDialog/ConfirmDialog';
-import { FilterBar, FilterSearch, FilterSelect } from '@/shared/components/forms/filters/FilterBar';
-import { PageContainer } from '@/shared/components/layout/containers/PageContainer/PageContainer';
+import { DataTable, type DataTableColumn } from '@/shared/components/data-grid/DataTable';
+import { QueryHandler } from '@/shared/components/data-grid/QueryHandler';
+import { StatCard } from '@/shared/components/domain/cards/StatCard';
+
+import { FilterBar, FilterSearch, FilterSelect } from '@/shared/components/forms/FilterBar';
+import { PageContainer } from '@/shared/components/layout/PageContainer';
 import { notifyError } from '@/shared/utils/snackbarUtils';
 
 // Componentes Admin
 import { AdminPageHeader } from '@/shared/components/admin/Adminpageheader';
-import AlertBanner from '@/shared/components/admin/Alertbanner';
+import AlertBanner from '@/shared/components/ui/Alertbanner';
 import MetricsGrid from '@/shared/components/admin/Metricsgrid';
 import PdfPreviewModal from '@/features/admin/pages/Contrato/modals/PdfPreviewModal';
 import { ViewModeToggle, type ViewMode } from '@/shared/components/admin/Viewmodetoggle';
@@ -61,6 +61,7 @@ import { useAdminPlantillas } from '../../hooks/contrato/useAdminPlantillas';
 import CreatePlantillaModal from './modals/CreatePlantillaModal';
 import UpdateMetadataModal from './modals/UpdateMetadataModal';
 import UpdatePdfModal from './modals/UpdatePdfModal';
+import { ConfirmDialog } from '@/shared/components/domain';
 
 // ============================================================================
 // SUB-COMPONENTE: ANALYTICS

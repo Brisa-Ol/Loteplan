@@ -1,5 +1,5 @@
-import AuthService from '@/core/api/services/auth.service';
 import type { ApiError } from '@/core/api/httpService';
+import AuthService from '@/core/api/services/auth.service';
 import { useFormik } from 'formik';
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';

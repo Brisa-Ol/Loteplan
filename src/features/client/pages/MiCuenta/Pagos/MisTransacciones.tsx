@@ -1,9 +1,11 @@
 // src/features/client/pages/Transacciones/MisTransacciones.tsx
 
 import {
-  CheckCircle, ErrorOutline, HelpOutline, HourglassEmpty, 
-  MonetizationOn, Refresh, Schedule, Search, Warning,
-  TimerOff, Block
+  Block,
+  CheckCircle, ErrorOutline, HelpOutline, HourglassEmpty,
+  MonetizationOn, Refresh, Schedule, Search,
+  TimerOff,
+  Warning
 } from '@mui/icons-material';
 import {
   Badge, Box, Chip, InputAdornment, Paper,
@@ -11,21 +13,12 @@ import {
 } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import React, { useMemo, useState, type JSX } from 'react';
-
-// Componentes
-import { DataTable, type DataTableColumn } from '@/shared/components/data-grid/DataTable/DataTable';
-import { QueryHandler } from '@/shared/components/data-grid/QueryHandler/QueryHandler';
-import { StatCard } from '@/shared/components/domain/cards/StatCard/StatCard';
-import { PageContainer } from '@/shared/components/layout/containers/PageContainer/PageContainer';
-import { PageHeader } from '@/shared/components/layout/headers/PageHeader';
-
 // Hooks y Servicios
 import TransaccionService from '@/core/api/services/transaccion.service';
-import { useCurrencyFormatter } from '@/features/client/hooks/useCurrencyFormatter';
 import { env } from '@/core/config/env';
-
-// Tipos
 import type { TransaccionDto } from '@/core/types/dto/transaccion.dto';
+import { useCurrencyFormatter } from '@/features/client/hooks/useCurrencyFormatter';
+import { DataTable, PageContainer, PageHeader, QueryHandler, StatCard, type DataTableColumn } from '@/shared';
 
 // =====================================================
 // CONFIGURACIÓN DE ESTADOS
@@ -84,11 +77,11 @@ const MisTransacciones: React.FC = () => {
       const isExito = t.estado_transaccion === 'pagado';
       const isProblema = ['fallido', 'expirado', 'rechazado_proyecto_cerrado', 'rechazado_por_capacidad'].includes(t.estado_transaccion);
 
-      if (isExito) { 
-        counts.exitosas++; 
-        totalOperado += Number(t.monto); 
-      } else if (isProblema || t.estado_transaccion === 'pendiente' || t.estado_transaccion === 'en_proceso') { 
-        counts.problemas++; 
+      if (isExito) {
+        counts.exitosas++;
+        totalOperado += Number(t.monto);
+      } else if (isProblema || t.estado_transaccion === 'pendiente' || t.estado_transaccion === 'en_proceso') {
+        counts.problemas++;
       }
 
       if (currentTab === 1 && !isExito) return false;
@@ -134,11 +127,11 @@ const MisTransacciones: React.FC = () => {
               {getTipoLabel(row.tipo_transaccion)}
             </Typography>
             {row.pagoMensual && (
-              <Chip 
-                label={`Mes ${row.pagoMensual.mes}`} 
-                size="small" 
+              <Chip
+                label={`Mes ${row.pagoMensual.mes}`}
+                size="small"
                 variant="outlined"
-                sx={{ height: 16, fontSize: '0.6rem', fontWeight: 800 }} 
+                sx={{ height: 16, fontSize: '0.6rem', fontWeight: 800 }}
               />
             )}
           </Stack>
@@ -148,9 +141,9 @@ const MisTransacciones: React.FC = () => {
     {
       id: 'monto', label: 'Importe', align: 'right', minWidth: 120,
       render: (row) => (
-        <Typography 
-          variant="subtitle2" 
-          fontWeight={800} 
+        <Typography
+          variant="subtitle2"
+          fontWeight={800}
           color={row.estado_transaccion === 'pagado' ? 'success.main' : 'text.primary'}
         >
           {formatCurrency(row.monto)}
@@ -163,12 +156,12 @@ const MisTransacciones: React.FC = () => {
         const { label, color, icon } = getStatusConfig(row.estado_transaccion);
         return (
           <Tooltip title={row.error_detalle || ''} arrow>
-            <Chip 
-              label={label} 
-              color={color} 
-              size="small" 
-              icon={icon} 
-              sx={{ fontWeight: 700, minWidth: 110 }} 
+            <Chip
+              label={label}
+              color={color}
+              size="small"
+              icon={icon}
+              sx={{ fontWeight: 700, minWidth: 110 }}
             />
           </Tooltip>
         );
@@ -204,11 +197,11 @@ const MisTransacciones: React.FC = () => {
 
       <QueryHandler isLoading={isLoading} error={error as Error | null}>
         <Paper elevation={0} sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 3, overflow: 'hidden' }}>
-          <DataTable 
-            columns={columns} 
-            data={filteredData} 
-            getRowKey={(row) => row.id} 
-            pagination 
+          <DataTable
+            columns={columns}
+            data={filteredData}
+            getRowKey={(row) => row.id}
+            pagination
             emptyMessage="No se registraron movimientos en este periodo."
           />
         </Paper>

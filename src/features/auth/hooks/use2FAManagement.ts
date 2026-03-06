@@ -1,10 +1,10 @@
-import { useState, useCallback } from 'react';
-import { secureStorage } from '@/shared/utils/secureStorage';
+import type { ApiError } from '@/core/api/httpService';
+import AuthService from '@/core/api/services/auth.service';
+import Auth2faService from '@/core/api/services/auth2fa.service';
+import { secureStorage } from '@/core/auth/storage/secureStorage';
 import type { LoginSuccessResponse } from '@/core/types/dto/auth.dto';
 import type { Generate2faSecretResponseDto } from '@/core/types/dto/auth2fa.dto';
-import Auth2faService from '@/core/api/services/auth2fa.service';
-import AuthService from '@/core/api/services/auth.service';
-import type { ApiError } from '@/core/api/httpService';
+import { useCallback, useState } from 'react';
 
 export interface Use2FAManagementReturn {
   requires2FA: boolean;

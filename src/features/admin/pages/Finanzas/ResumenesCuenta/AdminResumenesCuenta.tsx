@@ -1,302 +1,173 @@
 // src/features/admin/pages/Finanzas/AdminResumenesCuenta.tsx
-
 import {
-  AccessTime, AccountBalanceWallet, Assignment as AssignmentIcon,
-  AttachMoney, BarChart as BarChartIcon,
-  PieChart as PieChartIcon,
+  Assignment as AssignmentIcon,
+  AttachMoney,
+  Schedule,
   ViewList,
   Visibility,
-  Warning
+  Warning,
 } from '@mui/icons-material';
 import {
-  alpha, Avatar, Box, IconButton, LinearProgress, MenuItem,
-  Stack, Tooltip, Typography, useTheme
+  alpha,
+  Avatar,
+  Box,
+  IconButton,
+  LinearProgress,
+  MenuItem,
+  Stack,
+  Tooltip,
+  Typography,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import React, { useMemo, useState } from 'react';
-import {
-  Bar, BarChart, CartesianGrid, Cell,
-  Tooltip as RechartsTooltip,
-  ResponsiveContainer,
-  XAxis, YAxis
-} from 'recharts';
 
 import type { ResumenCuentaDto } from '@/core/types/dto/resumenCuenta.dto';
-
-// Componentes Compartidos
-import { DataTable, type DataTableColumn } from '@/shared/components/data-grid/DataTable/DataTable';
-import { QueryHandler } from '@/shared/components/data-grid/QueryHandler/QueryHandler';
-import { StatCard, StatusBadge } from '@/shared/components/domain/cards/StatCard/StatCard';
-import { FilterBar, FilterSearch, FilterSelect } from '@/shared/components/forms/filters/FilterBar';
-import { PageContainer } from '@/shared/components/layout/containers/PageContainer/PageContainer';
-
-import { AdminPageHeader } from '@/shared/components/admin/Adminpageheader'; // ✅ Ajustado a exportación nombrada
-import AlertBanner from '@/shared/components/admin/Alertbanner';
+import { useAdminResumenes } from '@/features/admin/hooks/finanzas/useAdminResumenes';
+import { AdminPageHeader } from '@/shared/components/admin/Adminpageheader';
 import MetricsGrid from '@/shared/components/admin/Metricsgrid';
 import { ViewModeToggle, type ViewMode } from '@/shared/components/admin/Viewmodetoggle';
-
-import { useAdminResumenes } from '@/features/admin/hooks/finanzas/useAdminResumenes';
+import { DataTable, type DataTableColumn } from '@/shared/components/data-grid/DataTable';
+import { QueryHandler } from '@/shared/components/data-grid/QueryHandler';
+import { StatCard, StatusBadge } from '@/shared/components/domain/cards/StatCard';
+import { FilterBar, FilterSearch, FilterSelect } from '@/shared/components/forms/FilterBar';
+import { PageContainer } from '@/shared/components/layout/PageContainer';
 import DetalleResumenModal from './modals/DetalleResumenModal';
 
-// ============================================================================
-// SUB-COMPONENTE: ANALYTICS (Memoizado)
-// ============================================================================
-const ResumenAnalytics = React.memo<{ data: ResumenCuentaDto[] }>(({ data }) => {
-  const theme = useTheme();
+// Derived stats from filtered data
+const useResumenStats = (data: ResumenCuentaDto[]) =>
+  useMemo(() => ({
+    totalCuentas: data.length,
+    cuentasVencidas: data.filter(
+      (r) => r.cuotas_vencidas > 0 && r.porcentaje_pagado < 100
+    ).length,
+    deudaEstimada: data.reduce(
+      (acc, r) => acc + r.cuotas_vencidas * r.detalle_cuota.valor_mensual_final,
+      0
+    ),
+    cuentasConAdelantos: data.filter(
+      (r) =>
+        r.meses_proyecto - r.cuotas_pagadas - r.cuotas_vencidas > 0 &&
+        r.porcentaje_pagado < 100
+    ).length,
+  }), [data]);
 
-  const chartData = useMemo(() => {
-    let active = 0, overdue = 0, completed = 0;
-
-    data.forEach(r => {
-      if (r.porcentaje_pagado >= 100) completed++;
-      else if (r.cuotas_vencidas > 0) overdue++;
-      else active++;
-    });
-
-    return [
-      { name: 'Al Día', value: active, color: theme.palette.info.main },
-      { name: 'Con Deuda', value: overdue, color: theme.palette.error.main },
-      { name: 'Completados', value: completed, color: theme.palette.success.main },
-    ];
-  }, [data, theme]);
-
-  return (
-    <Box sx={{ bgcolor: alpha(theme.palette.background.paper, 0.5), p: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
-      <Typography variant="h6" fontWeight={800} mb={3}>Estado de Cartera</Typography>
-      <ResponsiveContainer width="100%" height={350}>
-        <BarChart data={chartData} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={theme.palette.divider} />
-          <XAxis type="number" hide />
-          <YAxis dataKey="name" type="category" tick={{ fill: theme.palette.text.secondary, fontWeight: 600 }} width={100} axisLine={false} />
-          <RechartsTooltip
-            cursor={{ fill: alpha(theme.palette.primary.main, 0.1) }}
-            contentStyle={{ borderRadius: 8, border: 'none', boxShadow: theme.shadows[3] }}
-          />
-          <Bar dataKey="value" name="Cantidad" radius={[0, 4, 4, 0]} barSize={40}>
-            {chartData.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={entry.color} />
-            ))}
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
-    </Box>
-  );
-});
-
-ResumenAnalytics.displayName = 'ResumenAnalytics';
-
-// ============================================================================
-// COMPONENTE PRINCIPAL
-// ============================================================================
 const AdminResumenesCuenta: React.FC = () => {
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const logic = useAdminResumenes();
-
   const [viewMode, setViewMode] = useState<ViewMode>('table');
+  const stats = useResumenStats(logic.filteredResumenes);
 
-  // --------------------------------------------------------------------------
-  // CÁLCULO DE KPIS (Memoizado)
-  // --------------------------------------------------------------------------
-  const stats = useMemo(() => {
-    const data = logic.filteredResumenes;
-    const totalCuentas = data.length;
-    const cuentasVencidas = data.filter(r => r.cuotas_vencidas > 0 && r.porcentaje_pagado < 100).length;
-    const totalCompletados = data.filter(r => r.porcentaje_pagado >= 100).length;
-    const deudaEstimada = data.reduce((acc, curr) => acc + (curr.cuotas_vencidas * curr.detalle_cuota.valor_mensual_final), 0);
-
-    return {
-      totalCuentas,
-      cuentasVencidas,
-      tasaCumplimiento: totalCuentas ? (((totalCuentas - cuentasVencidas) / totalCuentas) * 100).toFixed(1) : 0,
-      deudaEstimada,
-      totalCompletados
-    };
-  }, [logic.filteredResumenes]);
-
-  // --------------------------------------------------------------------------
-  // COLUMNAS (🚨 MEJORADAS)
-  // --------------------------------------------------------------------------
   const columns = useMemo<DataTableColumn<ResumenCuentaDto>[]>(() => [
     {
       id: 'inversor',
-      label: 'Inversor / Contacto',
-      minWidth: 280, // Un poco más ancho para el email
-      render: (resumen) => {
-        const usuario = resumen.suscripcion?.usuario;
-        return (
-          <Stack direction="row" spacing={1.5} alignItems="center">
-            <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main', fontWeight: 800 }}>
-              {usuario ? usuario.nombre.charAt(0) : '?'}
-            </Avatar>
-            <Box minWidth={0}>
-              <Typography variant="body2" fontWeight={800} noWrap>
-                {usuario ? `${usuario.nombre} ${usuario.apellido}` : 'Desconocido'}
-              </Typography>
-              <Typography variant="caption" color="text.secondary" display="block" noWrap>
-                {usuario?.email || 'Sin email'}
-              </Typography>
-            </Box>
-          </Stack>
-        );
-      }
-    },
-    {
-      id: 'proyecto',
-      label: 'Proyecto / Plan',
-      minWidth: 200,
-      render: (resumen) => {
-        // 🆕 Extraemos el nombre del proyecto desde la relación, fallback al nombre guardado
-        const nombreProyecto = resumen.suscripcion?.proyectoAsociado?.nombre_proyecto || resumen.nombre_proyecto;
-
-        return (
-          <Box minWidth={0}>
-            <Typography variant="body2" fontWeight={700} color="text.primary" noWrap title={nombreProyecto}>
-              {nombreProyecto}
+      label: 'Inversor',
+      minWidth: isMobile ? 160 : 250,
+      render: (resumen) => (
+        <Stack direction="row" spacing={1.5} alignItems="center">
+          <Avatar
+            sx={{
+              width: isMobile ? 28 : 36,
+              height: isMobile ? 28 : 36,
+              bgcolor: alpha(theme.palette.primary.main, 0.1),
+              color: 'primary.main',
+              fontWeight: 800,
+              fontSize: isMobile ? '0.75rem' : '1rem',
+            }}
+          >
+            {resumen.suscripcion?.usuario?.nombre.charAt(0) ?? '?'}
+          </Avatar>
+          <Box>
+            <Typography variant="body2" fontWeight={800} noWrap>
+              {resumen.suscripcion?.usuario?.nombre} {resumen.suscripcion?.usuario?.apellido}
             </Typography>
-            <Stack direction="row" alignItems="center" spacing={0.5} sx={{ color: 'text.secondary', mt: 0.2 }}>
-              <AccessTime sx={{ fontSize: 12 }} />
-              <Typography variant="caption" fontWeight={600}>Plan {resumen.meses_proyecto} meses</Typography>
-            </Stack>
-          </Box>
-        );
-      }
-    },
-    {
-      id: 'cuotas',
-      label: 'Progreso y Deuda', // Combinamos progreso con monto de deuda
-      minWidth: 220,
-      render: (resumen) => {
-        const hasOverdue = resumen.cuotas_vencidas > 0;
-        // 🆕 Cálculo del monto total de deuda
-        const montoDeuda = resumen.cuotas_vencidas * resumen.detalle_cuota.valor_mensual_final;
-
-        return (
-          <Stack spacing={0.5}>
-            <Stack direction="row" justifyContent="space-between">
-              <Typography variant="caption" fontWeight={800}>
-                {resumen.cuotas_pagadas}/{resumen.meses_proyecto} CUOTAS
+            {!isMobile && (
+              <Typography variant="caption" color="text.secondary" noWrap>
+                {resumen.suscripcion?.usuario?.email}
               </Typography>
-              {hasOverdue && (
-                <Typography variant="caption" fontWeight={900} color="error.main">
-                  DEBE: ${montoDeuda.toLocaleString('es-AR')}
-                </Typography>
-              )}
-            </Stack>
-            <LinearProgress
-              variant="determinate"
-              value={resumen.porcentaje_pagado}
-              sx={{ height: 6, borderRadius: 3, bgcolor: alpha(theme.palette.grey[400], 0.2) }}
-            />
-          </Stack>
-        );
-      }
+            )}
+          </Box>
+        </Stack>
+      ),
     },
+    // Hidden on mobile — info collapses into the detail modal
+    ...(!isMobile ? [{
+      id: 'proyecto',
+      label: 'Proyecto',
+      render: (resumen: ResumenCuentaDto) => (
+        <Box>
+          <Typography variant="body2" fontWeight={700} noWrap>{resumen.nombre_proyecto}</Typography>
+          <Typography variant="caption" color="text.secondary">
+            Plan {resumen.meses_proyecto} meses
+          </Typography>
+        </Box>
+      ),
+    }] : []),
     {
       id: 'porcentaje',
-      label: '%',
+      label: '% Pagado',
       align: 'center',
       render: (resumen) => (
-        <Typography
-          variant="body2"
-          fontWeight={800}
-          color={resumen.porcentaje_pagado >= 100 ? 'success.main' : 'text.secondary'}
-        >
-          {resumen.porcentaje_pagado.toLocaleString('es-AR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%
-        </Typography>
-      )
+        <Stack spacing={0.5} alignItems="center">
+          <Typography variant="body2" fontWeight={800} color="primary.main">
+            {resumen.porcentaje_pagado.toFixed(1)}%
+          </Typography>
+          <LinearProgress
+            variant="determinate"
+            value={Math.min(resumen.porcentaje_pagado, 100)}
+            sx={{ width: isMobile ? 40 : 60, height: 4, borderRadius: 2 }}
+          />
+        </Stack>
+      ),
     },
     {
       id: 'estado',
       label: 'Estado',
-      align: 'center',
       render: (resumen) => {
-        const isCompleted = resumen.porcentaje_pagado >= 100;
-        const hasOverdue = resumen.cuotas_vencidas > 0;
-
-        let statusType: any = 'in_progress';
-        let label = 'AL DÍA';
-
-        if (isCompleted) {
-          statusType = 'completed';
-          label = 'COMPLETADO';
-        } else if (hasOverdue) {
-          statusType = 'failed';
-          label = 'CON DEUDA';
-        }
-
-        return <StatusBadge status={statusType} customLabel={label} />;
-      }
-    },
-    {
-      id: 'cuota_mensual',
-      label: 'Valor Cuota',
-      render: (resumen) => (
-        <Stack direction="row" alignItems="center" spacing={0.5}>
-          <AccountBalanceWallet sx={{ fontSize: 14, color: 'text.disabled' }} />
-          <Typography variant="body2" fontWeight={700} color="text.primary" sx={{ fontFamily: 'monospace' }}>
-            ${resumen.detalle_cuota.valor_mensual_final.toLocaleString('es-AR', {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2
-            })}
-          </Typography>
-        </Stack>
-      )
+        if (resumen.porcentaje_pagado >= 100)
+          return <StatusBadge status="completed" customLabel="FINALIZADO" />;
+        if (resumen.cuotas_vencidas > 0)
+          return <StatusBadge status="failed" customLabel="CON DEUDA" />;
+        return <StatusBadge status="in_progress" customLabel="EN CURSO" />;
+      },
     },
     {
       id: 'acciones',
-      label: 'Acciones',
+      label: '',
       align: 'right',
       render: (resumen) => (
         <Tooltip title="Ver Detalle">
           <IconButton
             size="small"
             onClick={() => logic.handleVerDetalle(resumen)}
-            sx={{
-              color: 'primary.main',
-              bgcolor: alpha(theme.palette.primary.main, 0.05),
-              '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.15) }
-            }}
+            sx={{ color: 'primary.main', bgcolor: alpha(theme.palette.primary.main, 0.05) }}
           >
             <Visibility fontSize="small" />
           </IconButton>
         </Tooltip>
-      )
-    }
-  ], [theme, logic]);
+      ),
+    },
+  ], [theme, isMobile, logic]);
 
   return (
-    <PageContainer maxWidth="xl" sx={{ py: 3 }}>
-      {/* 1. HEADER */}
+    <PageContainer maxWidth="xl" sx={{ py: { xs: 2, sm: 3 } }}>
       <AdminPageHeader
         title="Resúmenes de Cuenta"
-        subtitle="Control de progreso de cobranza y estado financiero de suscripciones."
+        subtitle="Control de progreso de cobranza y estado financiero."
       />
 
-      {/* 2. ERRORES */}
-      {logic.error && (
-        <AlertBanner
-          severity="error"
-          title="Error de Carga"
-          message={(logic.error as Error).message || "No se pudo obtener la información."}
-        />
-      )}
-
-      {/* 3. KPIS GRID */}
-      <MetricsGrid columns={{ xs: 1, sm: 2, lg: 4 }}>
+      <MetricsGrid columns={{ xs: 2, sm: 2, lg: 4 }}>
         <StatCard
           title="Total Cuentas"
           value={stats.totalCuentas}
-          subtitle="Planes activos e históricos"
           icon={<AssignmentIcon />}
           color="primary"
           loading={logic.isLoading}
         />
         <StatCard
           title="Deuda Estimada"
-          value={`$${stats.deudaEstimada.toLocaleString('es-AR', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-          })}`}
-          subtitle="Acumulado vencido"
+          value={`$${stats.deudaEstimada.toLocaleString('es-AR')}`}
           icon={<AttachMoney />}
           color="error"
           loading={logic.isLoading}
@@ -304,81 +175,60 @@ const AdminResumenesCuenta: React.FC = () => {
         <StatCard
           title="Cuentas Vencidas"
           value={stats.cuentasVencidas}
-          subtitle="Requieren gestión"
           icon={<Warning />}
           color="warning"
           loading={logic.isLoading}
         />
         <StatCard
-          title="Cumplimiento"
-          value={`${stats.tasaCumplimiento}%`}
-          subtitle="Cartera al día"
-          icon={<PieChartIcon />}
-          color="success"
+          title="Con Adelantos"
+          value={stats.cuentasConAdelantos}
+          icon={<Schedule />}
+          color="info"
           loading={logic.isLoading}
         />
       </MetricsGrid>
 
-      {/* 4. CONTROLES Y FILTROS */}
       <Stack
         direction={{ xs: 'column', sm: 'row' }}
         justifyContent="space-between"
         alignItems={{ xs: 'stretch', sm: 'center' }}
-        mb={3}
         spacing={2}
+        sx={{ mt: 3, mb: 3 }}
       >
         <ViewModeToggle
           value={viewMode}
-          onChange={(newMode) => setViewMode(newMode)}
-          options={[
-            { value: 'table', label: 'Tabla', icon: <ViewList fontSize="small" /> },
-            { value: 'analytics', label: 'Analítica', icon: <BarChartIcon fontSize="small" /> }
-          ]}
+          onChange={setViewMode}
+          options={[{ value: 'table', label: 'Tabla', icon: <ViewList fontSize="small" /> }]}
         />
-
-        <FilterBar sx={{ flex: 1, maxWidth: { sm: 700 } }}>
+        <FilterBar sx={{ flex: 1 }}>
           <FilterSearch
-            placeholder="Buscar por inversor, proyecto o ID..."
+            placeholder="Buscar..."
             value={logic.searchTerm}
             onSearch={logic.setSearchTerm}
-            sx={{ flexGrow: 1 }}
           />
-
           <FilterSelect
             label="Estado"
             value={logic.filterState}
             onChange={(e) => logic.setFilterState(e.target.value as any)}
-            sx={{ minWidth: 200 }}
           >
             <MenuItem value="all">Todos</MenuItem>
-            <MenuItem value="active">Activos (Al día)</MenuItem>
+            <MenuItem value="active">Activos</MenuItem>
             <MenuItem value="overdue">Con Deuda</MenuItem>
             <MenuItem value="completed">Completados</MenuItem>
+            <MenuItem value="pending">Con Adelantos</MenuItem>
           </FilterSelect>
         </FilterBar>
       </Stack>
 
-      {/* 5. CONTENIDO CONDICIONAL */}
-      {viewMode === 'analytics' ? (
-        <ResumenAnalytics data={logic.filteredResumenes} />
-      ) : (
-        <QueryHandler isLoading={logic.isLoading} error={logic.error as Error}>
-          <DataTable
-            columns={columns}
-            data={logic.filteredResumenes}
-            getRowKey={(row) => row.id}
-            isRowActive={(row) => row.porcentaje_pagado < 100}
-            showInactiveToggle={false}
-            inactiveLabel="Ver Completados"
-            highlightedRowId={logic.highlightedId}
-            emptyMessage="No se encontraron resúmenes de cuenta registrados."
-            pagination={true}
-            defaultRowsPerPage={10}
-          />
-        </QueryHandler>
-      )}
+      <QueryHandler isLoading={logic.isLoading} error={logic.error as Error}>
+        <DataTable
+          columns={columns}
+          data={logic.filteredResumenes}
+          getRowKey={(row) => row.id}
+          pagination
+        />
+      </QueryHandler>
 
-      {/* 6. MODALES */}
       {logic.selectedResumen && (
         <DetalleResumenModal
           open={logic.detalleModal.isOpen}

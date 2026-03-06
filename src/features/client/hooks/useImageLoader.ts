@@ -1,5 +1,5 @@
 
-import { useState, useCallback } from 'react';
+import { useCallback, useState } from 'react';
 
 interface UseImageLoaderReturn {
   loaded: boolean;
@@ -33,7 +33,7 @@ export const useImageLoader = (): UseImageLoaderReturn => {
 
   const handleError = useCallback(() => {
     setError(true);
-    setLoaded(false);
+    setLoaded(true); // 👈 Mostrar el placeholder aunque haya error
   }, []);
 
   const reset = useCallback(() => {

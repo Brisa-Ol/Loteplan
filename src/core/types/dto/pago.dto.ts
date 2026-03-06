@@ -20,7 +20,7 @@ export interface ConfirmarPago2faDto {
  */
 export interface GenerateAdvancePaymentsDto {
   id_suscripcion: number;
-  cantidad: number;
+  cantidad_meses: number;
 }
 
 /**

@@ -36,7 +36,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { useAuth } from '@/core/context/AuthContext';
-import { QueryHandler } from '../../../../shared/components/data-grid/QueryHandler/QueryHandler';
+import { QueryHandler } from '../../../../shared/components/data-grid/QueryHandler';
 import { useDashboardStats } from '../../hooks/useDashboardStats';
 
 // Servicios

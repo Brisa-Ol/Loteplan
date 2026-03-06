@@ -19,7 +19,7 @@ import proyectoService from "@/core/api/services/proyecto.service";
 
 // Componentes
 import { ROUTES } from '@/routes';
-import { QueryHandler } from "../../../../shared/components/data-grid/QueryHandler/QueryHandler";
+import { QueryHandler } from "../../../../shared/components/data-grid/QueryHandler";
 import { ProjectCard } from "./components/ProjectCard";
 
 // ===================================================
