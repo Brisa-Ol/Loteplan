@@ -85,18 +85,19 @@ const ImagenService = {
   // ✍️ ESCRITURA
   // ==========================================
 
-  create: async (data: CreateImagenDto): Promise<AxiosResponse<ImagenDto>> => {
-    const formData = new FormData();
-    formData.append('image', data.file);
+create: async (data: CreateImagenDto): Promise<AxiosResponse<ImagenDto>> => {
+  const formData = new FormData();
+  
+  // EL NOMBRE DEBE SER 'image' (coincidiendo con imageUpload.single("image"))
+  formData.append('image', data.file); 
 
-    if (data.descripcion) formData.append('descripcion', data.descripcion);
-    if (data.id_lote) formData.append('id_lote', String(data.id_lote));
-    if (data.id_proyecto) formData.append('id_proyecto', String(data.id_proyecto));
-
-    return await httpService.post(BASE_ENDPOINT, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
-  },
+  if (data.descripcion) formData.append('descripcion', data.descripcion);
+  if (data.id_lote) formData.append('id_lote', String(data.id_lote));
+  
+  return await httpService.post(BASE_ENDPOINT, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+},
 
   update: async (id: number, data: UpdateImagenDto): Promise<AxiosResponse<ImagenDto>> => {
     return await httpService.put(`${BASE_ENDPOINT}/${id}`, data);

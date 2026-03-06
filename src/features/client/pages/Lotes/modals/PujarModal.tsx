@@ -1,20 +1,25 @@
 // src/features/client/pages/Lotes/components/modals/PujarModal.tsx
 
 import {
+  BookmarkBorder // 👈 Agregado para el estado vacío
+  ,
   Timer
 } from '@mui/icons-material';
 import {
   Alert, alpha, Box, Button, Divider, InputAdornment,
-  Stack, TextField, Typography, useTheme,
+  Skeleton,
+  Stack, TextField, Typography, useTheme
 } from '@mui/material';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import React, { useEffect, useMemo, useState } from 'react';
 
+import ImagenService from '@/core/api/services/imagen.service';
 import PujaService from '@/core/api/services/puja.service';
 import type { LoteDto } from '@/core/types/dto/lote.dto';
+import { useImageLoader } from '@/features/client/hooks';
 import { useCurrencyFormatter } from '@/features/client/hooks/useCurrencyFormatter';
 import { useVerificarSuscripcion } from '@/features/client/hooks/useVerificarSuscripcion';
-import { BaseModal } from '@/shared/components/domain/modals/BaseModal'; // ✅ Exportación nombrada ajustada
+import { BaseModal } from '@/shared/components/domain/modals/BaseModal';
 import useSnackbar from '@/shared/hooks/useSnackbar';
 
 const INCREMENTO_PASO = 10_000;
@@ -40,12 +45,25 @@ export const PujarModal: React.FC<Props> = ({
   const [monto, setMonto] = useState('');
   const [errorLocal, setErrorLocal] = useState<string | null>(null);
 
+  // Hook de carga de imagen para el mini-header
+  const { isLoading: imgLoading, hasError: imgError, handleLoad, handleError } = useImageLoader();
+
   const { tieneTokens } = useVerificarSuscripcion(lote?.id_proyecto ?? undefined);
+
+  // ─────────────────────────────────────────────
+  // LÓGICA DE IMAGEN PREVENTIVA
+  // ─────────────────────────────────────────────
+  const rawUrl = lote?.imagenes?.[0]?.url;
+  const hasNoImageRecord = !rawUrl || rawUrl.trim() === '';
+
+  const imagenUrl = useMemo(() => {
+    if (hasNoImageRecord) return null;
+    return ImagenService.resolveImageUrl(rawUrl);
+  }, [rawUrl, hasNoImageRecord]);
 
   const { precioMinimoRequerido, precioActual } = useMemo(() => {
     if (!lote) return { precioMinimoRequerido: 0, precioActual: 0 };
     const actual = Number(lote.ultima_puja?.monto || lote.precio_base);
-    // Si ya hay pujas, el mínimo es actual + incremento; si no, el mínimo es el precio base.
     const minimo = lote.ultima_puja ? actual + INCREMENTO_PASO : actual;
     return { precioMinimoRequerido: minimo, precioActual: actual };
   }, [lote]);
@@ -90,6 +108,43 @@ export const PujarModal: React.FC<Props> = ({
       disableConfirm={!esMontoValido || mutation.isPending || (!soyGanador && !yaParticipa && !tieneTokens)}
     >
       <Stack spacing={3}>
+
+        {/* ── MINI HEADER VISUAL DEL LOTE ── */}
+        <Box
+          sx={{
+            height: 120, borderRadius: 2, overflow: 'hidden', position: 'relative',
+            border: '1px solid', borderColor: 'divider', bgcolor: 'grey.100',
+            display: 'flex', alignItems: 'center', justifyContent: 'center'
+          }}
+        >
+          {hasNoImageRecord ? (
+            <Stack direction="row" alignItems="center" spacing={2} sx={{ color: 'text.disabled' }}>
+              <BookmarkBorder opacity={0.5} />
+              <Typography variant="caption" fontWeight={700}>LOTE SIN IMAGEN</Typography>
+            </Stack>
+          ) : (
+            <>
+              {imgLoading && <Skeleton variant="rectangular" width="100%" height="100%" sx={{ position: 'absolute' }} />}
+              <Box
+                component="img"
+                src={imgError ? '/assets/placeholder-lote.jpg' : imagenUrl!}
+                onLoad={handleLoad}
+                onError={handleError}
+                sx={{
+                  width: '100%', height: '100%', objectFit: 'cover',
+                  opacity: imgLoading ? 0 : 1, transition: 'opacity 0.3s'
+                }}
+              />
+              {/* Overlay con nombre del lote */}
+              <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, p: 1, background: 'linear-gradient(transparent, rgba(0,0,0,0.7))', color: 'white' }}>
+                <Typography variant="caption" fontWeight={800} noWrap display="block">
+                  {lote.nombre_lote}
+                </Typography>
+              </Box>
+            </>
+          )}
+        </Box>
+
         {/* Indicador de urgencia */}
         <Box
           sx={{
@@ -103,7 +158,7 @@ export const PujarModal: React.FC<Props> = ({
         </Box>
 
         <Box sx={{ textAlign: 'center' }}>
-          <Typography variant="h6" fontWeight={800} color={soyGanador ? 'success.main' : 'warning.main'}>
+          <Typography variant="subtitle1" fontWeight={800} color={soyGanador ? 'success.main' : 'warning.main'}>
             {soyGanador ? '¡Vas ganando, no te relajes!' : '¡Oferta ahora y asegura el lote!'}
           </Typography>
         </Box>

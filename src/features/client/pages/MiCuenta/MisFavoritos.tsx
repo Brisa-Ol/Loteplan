@@ -27,10 +27,12 @@ import {
   useTheme
 } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuctionStatus } from '../../hooks/useAuctionStatus';
 import { useCurrencyFormatter } from '../../hooks/useCurrencyFormatter';
+
+
 
 // Servicios y Tipos
 import FavoritoService from '@/core/api/services/favorito.service';
@@ -38,9 +40,10 @@ import ImagenService from '@/core/api/services/imagen.service';
 import type { LoteDto } from '@/core/types/dto/lote.dto';
 import { ROUTES } from '@/routes';
 import { ConfirmDialog, PageContainer, PageHeader, useConfirmDialog, useSnackbar } from '@/shared';
+import { useImageLoader } from '../../hooks';
 
 // =====================================================
-// ERROR BOUNDARY: evita que un error en una card rompa toda la lista
+// ERROR BOUNDARY
 // =====================================================
 class CardErrorBoundary extends React.Component<
   { children: React.ReactNode; fallback?: React.ReactNode },
@@ -61,22 +64,7 @@ class CardErrorBoundary extends React.Component<
 }
 
 // =====================================================
-// HOOK: imagen con carga inline
-// =====================================================
-function useSafeImage(url: string | undefined) {
-  const [loaded, setLoaded] = useState(false);
-  const [errored, setErrored] = useState(false);
-  const handleLoad = useCallback(() => setLoaded(true), []);
-  const handleError = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
-    setErrored(true);
-    setLoaded(true);
-    (e.target as HTMLImageElement).src = '/assets/placeholder-lote.jpg';
-  }, []);
-  return { loaded, errored, handleLoad, handleError };
-}
-
-// =====================================================
-// COMPONENTE: LOTE CARD
+// COMPONENTE: LOTE CARD (Optimizado)
 // =====================================================
 const LoteFavoritoCard = React.memo<{
   lote: LoteDto;
@@ -87,11 +75,18 @@ const LoteFavoritoCard = React.memo<{
   const theme = useTheme();
   const formatCurrency = useCurrencyFormatter();
   const statusConfig = useAuctionStatus(lote.estado_subasta);
+  
+  // Hook de estado de imagen
+  const { isLoading, hasError, handleLoad, handleError } = useImageLoader();
+
+  // 1. DETERMINAR SI EXISTE REGISTRO DE IMAGEN PREVENTIVAMENTE
+  const rawUrl = lote.imagenes?.[0]?.url;
+  const hasNoImageRecord = !rawUrl || rawUrl.trim() === '';
 
   const imagenUrl = useMemo(() => {
-    const imagenPrincipal = lote.imagenes?.[0];
-    return ImagenService.resolveImageUrl(imagenPrincipal?.url) || '/assets/placeholder-lote.jpg';
-  }, [lote.imagenes]);
+    if (hasNoImageRecord) return null;
+    return ImagenService.resolveImageUrl(rawUrl);
+  }, [rawUrl, hasNoImageRecord]);
 
   const formattedPrice = useMemo(() => formatCurrency(Number(lote.precio_base)), [formatCurrency, lote.precio_base]);
 
@@ -102,13 +97,45 @@ const LoteFavoritoCard = React.memo<{
     return `${Number(lat).toFixed(4)}, ${Number(lng).toFixed(4)}`;
   }, [lote.latitud, lote.longitud]);
 
-  const { loaded, handleLoad, handleError } = useSafeImage(imagenUrl);
-
   return (
     <Card elevation={0} sx={{ height: '100%', display: 'flex', flexDirection: 'column', borderRadius: 4, border: `1px solid ${theme.palette.divider}`, transition: 'transform 0.3s ease, box-shadow 0.3s ease', overflow: 'hidden', '&:hover': { transform: 'translateY(-6px)', boxShadow: theme.shadows[6] } }}>
       <Box sx={{ position: 'relative', height: 220, overflow: 'hidden', bgcolor: 'grey.100', flexShrink: 0 }}>
-        {!loaded && <Skeleton variant="rectangular" width="100%" height="100%" sx={{ position: 'absolute', top: 0, left: 0, zIndex: 1 }} />}
-        <CardMedia component="img" height="220" image={imagenUrl} alt={lote.nombre_lote} sx={{ objectFit: 'cover', opacity: loaded ? 1 : 0, transition: 'opacity 0.3s ease', width: '100%' }} onLoad={handleLoad} onError={handleError} />
+        
+        {/* 2. LÓGICA DE RENDERIZADO DE IMAGEN / PLACEHOLDER */}
+        {hasNoImageRecord ? (
+          <Stack alignItems="center" justifyContent="center" height="100%" spacing={1} sx={{ color: 'text.disabled', bgcolor: 'grey.200' }}>
+            <BookmarkBorder sx={{ fontSize: 40, opacity: 0.4 }} />
+            <Typography variant="caption" fontWeight={700} sx={{ letterSpacing: 1 }}>SIN IMAGEN</Typography>
+          </Stack>
+        ) : (
+          <>
+            {isLoading && (
+              <Skeleton 
+                variant="rectangular" 
+                width="100%" 
+                height="100%" 
+                sx={{ position: 'absolute', top: 0, left: 0, zIndex: 1 }} 
+              />
+            )}
+            <CardMedia 
+              component="img" 
+              height="220" 
+              // Si falla la carga (404 real), usamos el asset local
+              image={hasError ? '/assets/placeholder-lote.jpg' : imagenUrl!} 
+              alt={lote.nombre_lote} 
+              sx={{ 
+                objectFit: 'cover', 
+                opacity: isLoading ? 0 : 1, 
+                transition: 'opacity 0.3s ease', 
+                width: '100%' 
+              }} 
+              onLoad={handleLoad} 
+              onError={handleError} 
+            />
+          </>
+        )}
+
+        {/* Badges y botones sobre la imagen */}
         <Chip label={statusConfig.label} color={statusConfig.color} size="small" sx={{ position: 'absolute', top: 12, right: 12, fontWeight: 700, boxShadow: 2, color: 'white', zIndex: 2 }} />
         <Tooltip title="Dejar de seguir">
           <span style={{ position: 'absolute', top: 12, left: 12, zIndex: 2 }}>
@@ -118,6 +145,7 @@ const LoteFavoritoCard = React.memo<{
           </span>
         </Tooltip>
       </Box>
+
       <CardContent sx={{ flexGrow: 1, p: 2.5 }}>
         <Typography variant="h6" fontWeight={800} noWrap sx={{ mb: 0.5 }}>{lote.nombre_lote}</Typography>
         <Stack direction="row" spacing={0.5} alignItems="center" mb={2} color="text.secondary">
@@ -128,6 +156,7 @@ const LoteFavoritoCard = React.memo<{
         <Typography variant="caption" color="text.secondary" fontWeight={700} display="block">PRECIO BASE</Typography>
         <Typography variant="h6" color="primary.main" fontWeight={800}>{formattedPrice}</Typography>
       </CardContent>
+
       <CardActions sx={{ p: 2.5, pt: 0 }}>
         <Button fullWidth variant="contained" startIcon={<VisibilityIcon />} onClick={() => onVerDetalle(lote.id)} sx={{ borderRadius: 2, fontWeight: 700, textTransform: 'none', bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main', '&:hover': { bgcolor: 'primary.main', color: 'white' } }}>Ver Oportunidad</Button>
       </CardActions>
@@ -135,9 +164,8 @@ const LoteFavoritoCard = React.memo<{
   );
 });
 
-// =====================================================
-// COMPONENTE: ESTADO VACÍO
-// =====================================================
+// ... (Resto de los componentes EmptyState y FavoritosSkeletonGrid se mantienen igual)
+
 const EmptyState: React.FC<{ onExplorar: () => void }> = ({ onExplorar }) => {
   const theme = useTheme();
   return (
@@ -157,7 +185,7 @@ const FavoritosSkeletonGrid: React.FC = () => (
 );
 
 // =====================================================
-// COMPONENTE PRINCIPAL
+// COMPONENTE PRINCIPAL (MisFavoritos)
 // =====================================================
 const MisFavoritos: React.FC = () => {
   const navigate = useNavigate();
@@ -165,7 +193,6 @@ const MisFavoritos: React.FC = () => {
   const confirmDialog = useConfirmDialog();
   const { showSuccess } = useSnackbar();
 
-  // ✅ INTEGRADO: Lógica de validación de estructura de backend
   const { data: favoritos = [], isLoading, error } = useQuery<LoteDto[]>({
     queryKey: ['misFavoritos'],
     queryFn: async () => {

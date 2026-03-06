@@ -25,10 +25,11 @@ import { useVerificarSuscripcion } from '../../hooks/useVerificarSuscripcion';
 // Componentes críticos cargados de forma inmediata pero memoizados
 import { SecurityRequirementModal } from '@/core/auth/guards/SecurityRequirementModal';
 import { PageContainer } from '@/shared';
-import { ListaLotesProyecto } from '../Lotes/ListaLotesProyecto';
 import { ProjectHero } from './components/ProjectHero';
 import { ProjectSidebar } from './components/ProjectSidebar';
 import { CheckoutWizardModal } from './modals/CheckoutWizardModal';
+import ListaLotesProyecto from '../Lotes/ListaLotesProyecto';
+
 
 // 🚀 LAZY LOADING: Componentes no esenciales para el FCP (First Contentful Paint)
 const ProjectGallery = lazy(() => import('./components/ProjectGallery').then(m => ({ default: m.ProjectGallery })));

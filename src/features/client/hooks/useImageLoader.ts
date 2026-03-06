@@ -1,49 +1,31 @@
-
 import { useCallback, useState } from 'react';
 
 interface UseImageLoaderReturn {
-  loaded: boolean;
-  error: boolean;
+  isLoading: boolean; // 👈 Más descriptivo que !loaded
+  hasError: boolean;
   handleLoad: () => void;
   handleError: () => void;
   reset: () => void;
 }
 
-/**
- * Hook para manejar el estado de carga de imágenes
- * 
- * @example
- * const { loaded, error, handleLoad, handleError } = useImageLoader();
- * 
- * <img 
- *   src={url} 
- *   onLoad={handleLoad} 
- *   onError={handleError}
- *   style={{ opacity: loaded ? 1 : 0 }}
- * />
- */
 export const useImageLoader = (): UseImageLoaderReturn => {
-  const [loaded, setLoaded] = useState(false);
-  const [error, setError] = useState(false);
+  const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
 
   const handleLoad = useCallback(() => {
-    setLoaded(true);
-    setError(false);
+    setStatus('success');
   }, []);
 
   const handleError = useCallback(() => {
-    setError(true);
-    setLoaded(true); // 👈 Mostrar el placeholder aunque haya error
+    setStatus('error');
   }, []);
 
   const reset = useCallback(() => {
-    setLoaded(false);
-    setError(false);
+    setStatus('loading');
   }, []);
 
   return {
-    loaded,
-    error,
+    isLoading: status === 'loading',
+    hasError: status === 'error',
     handleLoad,
     handleError,
     reset,

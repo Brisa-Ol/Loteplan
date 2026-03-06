@@ -1,24 +1,25 @@
 // src/features/client/pages/Lotes/components/LoteCard.tsx
 
 import {
-  ArrowForward, BrokenImage, EmojiEmotions,
-  Favorite, FavoriteBorder // 🚀 Nuevos iconos
-  ,
-
-
-
-  Gavel, Lock,
-  NavigateBefore, NavigateNext
+  ArrowForward, 
+  BookmarkBorder, // 👈 Cambiado BrokenImage por BookmarkBorder para consistencia
+  EmojiEmotions,
+  Favorite, 
+  FavoriteBorder,
+  Gavel, 
+  Lock,
+  NavigateBefore, 
+  NavigateNext
 } from '@mui/icons-material';
 import {
   Box, Button, Card, CardContent, CardMedia, Chip, Fade,
   IconButton, keyframes, Skeleton,
   Tooltip,
-  Typography, useTheme
+  Typography, useTheme, Stack
 } from '@mui/material';
 import React, { memo, useEffect, useMemo, useState } from 'react';
 
-import FavoritoService from '@/core/api/services/favorito.service'; // 🚀 Importamos el servicio
+import FavoritoService from '@/core/api/services/favorito.service';
 import ImagenService from '@/core/api/services/imagen.service';
 import { useAuth } from '@/core/context/AuthContext';
 import type { LoteDto } from '@/core/types/dto/lote.dto';
@@ -52,13 +53,13 @@ const LoteCard: React.FC<LoteCardProps> = ({
   const { user } = useAuth();
 
   const [currentIdx, setCurrentIdx] = useState(0);
-  const { loaded, error, handleLoad, handleError } = useImageLoader();
+  
+  // ✅ Hook actualizado con nombres descriptivos
+  const { isLoading, hasError, handleLoad, handleError } = useImageLoader();
 
-  // ❤️ ESTADO DE FAVORITO
   const [esFavorito, setEsFavorito] = useState(false);
   const [isTogglingFavorito, setIsTogglingFavorito] = useState(false);
 
-  // 1. Verificar si es favorito al cargar
   useEffect(() => {
     if (isAuthenticated && lote.id) {
       FavoritoService.checkEsFavorito(lote.id).then(res => {
@@ -67,10 +68,8 @@ const LoteCard: React.FC<LoteCardProps> = ({
     }
   }, [lote.id, isAuthenticated]);
 
-  // 2. Lógica para alternar favorito
   const handleToggleFavorito = async (e: React.MouseEvent) => {
-    e.stopPropagation(); // Evita navegar al detalle
-
+    e.stopPropagation();
     if (!isAuthenticated) return notifyError("Debes iniciar sesión.");
     if (!isSubscribed) return notifyError("Debes estar suscripto al proyecto para marcar favoritos.");
 
@@ -90,10 +89,16 @@ const LoteCard: React.FC<LoteCardProps> = ({
     return lote.imagenes?.filter(img => (img as any).activo !== false) || [];
   }, [lote.imagenes]);
 
+  // ─────────────────────────────────────────────
+  // LÓGICA DE IMAGEN PREVENTIVA
+  // ─────────────────────────────────────────────
+  const hasNoImageRecord = imagenes.length === 0;
+
   const imgUrl = useMemo(() => {
+    if (hasNoImageRecord) return null;
     const imagenActual = imagenes[currentIdx];
     return imagenActual?.url ? ImagenService.resolveImageUrl(imagenActual.url) : null;
-  }, [imagenes, currentIdx]);
+  }, [imagenes, currentIdx, hasNoImageRecord]);
 
   const handleNext = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -165,29 +170,35 @@ const LoteCard: React.FC<LoteCardProps> = ({
             </Tooltip>
           </Box>
 
-          {!loaded && !error && imgUrl && (
-            <Skeleton variant="rectangular" animation="wave" sx={{ position: 'absolute', inset: 0, bgcolor: 'grey.900', zIndex: 1 }} />
-          )}
-
-          {imgUrl ? (
-            <CardMedia
-              component="img"
-              image={imgUrl}
-              onLoad={handleLoad}
-              onError={handleError}
-              sx={{
-                position: 'absolute', inset: 0, objectFit: 'contain',
-                transition: 'opacity 0.3s ease', opacity: error ? 0 : 1, zIndex: 2
-              }}
-            />
+          {/* ── MANEJO DE IMAGEN / PLACEHOLDER ── */}
+          {hasNoImageRecord ? (
+            <Stack 
+              sx={{ position: 'absolute', inset: 0, bgcolor: 'grey.200', color: 'text.disabled' }}
+              alignItems="center" justifyContent="center" spacing={1}
+            >
+              <BookmarkBorder sx={{ fontSize: 40, opacity: 0.4 }} />
+              <Typography variant="caption" fontWeight={700}>SIN IMAGEN</Typography>
+            </Stack>
           ) : (
-            <Box sx={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'grey.700', gap: 1 }}>
-              <BrokenImage sx={{ fontSize: 40 }} />
-              <Typography variant="caption">Imagen no disponible</Typography>
-            </Box>
+            <>
+              {isLoading && (
+                <Skeleton variant="rectangular" animation="wave" sx={{ position: 'absolute', inset: 0, bgcolor: 'grey.300', zIndex: 1 }} />
+              )}
+              <CardMedia
+                component="img"
+                image={hasError ? '/assets/placeholder-lote.jpg' : imgUrl!}
+                onLoad={handleLoad}
+                onError={handleError}
+                sx={{
+                  position: 'absolute', inset: 0, objectFit: 'contain',
+                  transition: 'opacity 0.3s ease', opacity: isLoading ? 0 : 1, zIndex: 2
+                }}
+              />
+            </>
           )}
 
-          {imagenes.length > 1 && (
+          {/* Flechas Navegación (Solo si hay imágenes) */}
+          {!hasNoImageRecord && imagenes.length > 1 && (
             <>
               <IconButton className="nav-arrow" onClick={handlePrev}
                 sx={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', bgcolor: 'rgba(0,0,0,0.4)', color: 'white', opacity: 0, zIndex: 10 }}>
