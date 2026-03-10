@@ -1,6 +1,5 @@
 // src/features/admin/pages/Inversiones/AdminInversiones.tsx
 
-import React, { useMemo, useState } from 'react';
 import {
   AccountBalance,
   AttachMoney,
@@ -22,6 +21,7 @@ import {
   Typography,
   useTheme
 } from '@mui/material';
+import React, { useMemo, useState } from 'react';
 
 import { AdminPageHeader } from '@/shared/components/admin/Adminpageheader'; // ✅ Componente estandarizado
 import MetricsGrid from '@/shared/components/admin/Metricsgrid';
@@ -192,7 +192,7 @@ const AdminInversiones: React.FC = () => {
     <PageContainer maxWidth="xl" sx={{ py: 3 }}>
       {/* 1. HEADER ESTANDARIZADO */}
       <AdminPageHeader
-        title="Auditoría de Inversiones"
+        title="Gestión de Inversiones"
         subtitle="Registro histórico de ingresos y capital directo."
       />
 

@@ -1,4 +1,5 @@
-import type { UserDto } from "@/core/types/dto";
+import type { UserDto } from "@/core/types/dto/auth.dto";
+
 
 
 

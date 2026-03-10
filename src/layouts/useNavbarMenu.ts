@@ -127,42 +127,42 @@ export const useNavbarMenu = () => {
             label: "Usuarios",
             icon: PersonIcon,
             submenu: [
-              { label: "Gestión de Usuarios", path: ROUTES.ADMIN.USUARIOS.LISTA, icon: PersonIcon },
-              { label: "Gestión KYC", path: ROUTES.ADMIN.USUARIOS.KYC, icon: VerifiedUserIcon, badge: 0 },
+              { label: "Usuarios", path: ROUTES.ADMIN.USUARIOS.LISTA, icon: PersonIcon },
+              { label: "Verificaciones ", path: ROUTES.ADMIN.USUARIOS.KYC, icon: VerifiedUserIcon, badge: 0 },
             ]
           },
           {
             label: "Proyectos",
             icon: ConstructionIcon,
             submenu: [
-              { label: "Gestión Proyectos", path: ROUTES.ADMIN.PROYECTOS.LISTA, icon: ConstructionIcon },
-              { label: "Gestión Planes de Ahorro", path: ROUTES.ADMIN.PROYECTOS.PLANES_AHORRO, icon: SupervisedUserIcon },
-              { label: "Gestión Inversiones", path: ROUTES.ADMIN.PROYECTOS.INVERSIONES, icon: AttachMoneyIcon },
+              { label: "Proyectos", path: ROUTES.ADMIN.PROYECTOS.LISTA, icon: ConstructionIcon },
+              { label: "Planes de Ahorro", path: ROUTES.ADMIN.PROYECTOS.PLANES_AHORRO, icon: SupervisedUserIcon },
+              { label: "Inversiones", path: ROUTES.ADMIN.PROYECTOS.INVERSIONES, icon: AttachMoneyIcon },
             ]
           },
           {
             label: "Lotes",
             icon: TerrainIcon,
             submenu: [
-              { label: "Gestión Lotes", path: ROUTES.ADMIN.LOTES.LISTA, icon: TerrainIcon },
-              { label: "Gestión Pagos", path: ROUTES.ADMIN.LOTES.PAGOS, icon: AttachMoneyIcon },
-              { label: "Sala Pujas", path: ROUTES.ADMIN.LOTES.PUJAS, icon: GavelIcon },
+              { label: "Lotes", path: ROUTES.ADMIN.LOTES.LISTA, icon: TerrainIcon },
+              { label: "Pagos Subasta", path: ROUTES.ADMIN.LOTES.PAGOS, icon: AttachMoneyIcon },
+              { label: "Sala Subastas", path: ROUTES.ADMIN.LOTES.PUJAS, icon: GavelIcon },
             ]
           },
           {
             label: "Finanzas",
             icon: AccountBalanceIcon,
             submenu: [
-              { label: "Movimientos", path: ROUTES.ADMIN.FINANZAS.TRANSACCIONES, icon: ReceiptIcon },
-              { label: "Resúmenes", path: ROUTES.ADMIN.FINANZAS.RESUMENES, icon: DescriptionIcon },
+              { label: "Transacciones", path: ROUTES.ADMIN.FINANZAS.TRANSACCIONES, icon: ReceiptIcon },
+              { label: "Resúmenes de Cuenta", path: ROUTES.ADMIN.FINANZAS.RESUMENES, icon: DescriptionIcon },
             ]
           },
           {
             label: "Contratos",
             icon: DescriptionIcon,
             submenu: [
-              { label: "Gestión Plantillas", path: ROUTES.ADMIN.CONTRATOS.PLANTILLAS, icon: DescriptionIcon },
-              { label: "Gestión Firmados", path: ROUTES.ADMIN.CONTRATOS.FIRMADOS, icon: AssignmentIcon },
+              { label: "Plantillas", path: ROUTES.ADMIN.CONTRATOS.PLANTILLAS, icon: DescriptionIcon },
+              { label: "Firmados", path: ROUTES.ADMIN.CONTRATOS.FIRMADOS, icon: AssignmentIcon },
             ]
           }
         ],

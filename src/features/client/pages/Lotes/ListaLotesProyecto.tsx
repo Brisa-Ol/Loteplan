@@ -1,139 +1,187 @@
-// src/features/client/pages/Lotes/components/LoteCard.tsx
+// src/features/client/pages/Lotes/ListaLotesProyecto.tsx
 
-import { BookmarkBorder, Gavel, LocationOn } from '@mui/icons-material';
+import { FilterListOff, Gavel } from '@mui/icons-material';
 import {
+  Alert,
   Box,
-  Button,
-  Card, CardContent, CardMedia,
-  Chip, Skeleton,
+  CircularProgress,
+  Skeleton,
   Stack,
   Typography,
-  useTheme
 } from '@mui/material';
-import React, { useMemo } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import React, { useCallback, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
-
-import ImagenService from '@/core/api/services/imagen.service';
+import LoteService from '@/core/api/services/lote.service';
+import { useAuth } from '@/core/context/AuthContext';
 import type { LoteDto } from '@/core/types/dto/lote.dto';
-import { useAuctionStatus } from '@/features/client/hooks/useAuctionStatus';
-import { useCurrencyFormatter } from '@/features/client/hooks/useCurrencyFormatter';
-import { useImageLoader } from '../../hooks';
+import { ROUTES } from '@/routes';
+import { useModal } from '@/shared/hooks/useModal';
+import { useVerificarSuscripcion } from '../../hooks/useVerificarSuscripcion';
+import LoteCard from './components/LoteCard';
+import { PujarModal } from './modals/PujarModal';
 
-interface LoteCardProps {
-  lote: LoteDto;
-  onNavigate: (id: number) => void;
-  onPujar: (lote: LoteDto) => void;
-  isSubscribed: boolean;
-  hasTokens: boolean;
-  tokensDisponibles: number;
-  isLoadingSub: boolean;
-  isAuthenticated: boolean;
+// ===================================================
+// PROPS
+// ===================================================
+
+interface ListaLotesProyectoProps {
+  idProyecto: number;
 }
 
-const LoteCard: React.FC<LoteCardProps> = ({
-  lote, onNavigate, onPujar, isSubscribed, isAuthenticated
-}) => {
-  const theme = useTheme();
-  const formatCurrency = useCurrencyFormatter();
-  const statusConfig = useAuctionStatus(lote.estado_subasta);
-  const { isLoading, hasError, handleLoad, handleError } = useImageLoader();
+// ===================================================
+// SKELETON LOADER
+// ===================================================
 
-  // ─────────────────────────────────────────────
-  // LÓGICA DE IMAGEN PREVENTIVA (Evita 404 en consola)
-  // ─────────────────────────────────────────────
-  const rawUrl = lote.imagenes?.[0]?.url;
-  const hasNoImageRecord = !rawUrl || rawUrl.trim() === '';
+const LoteCardSkeleton = () => (
+  <Box sx={{ borderRadius: 4, overflow: 'hidden', border: '1px solid', borderColor: 'divider' }}>
+    <Skeleton variant="rectangular" height={200} />
+    <Box sx={{ p: 2.5 }}>
+      <Skeleton variant="text" width="70%" height={28} />
+      <Skeleton variant="text" width="50%" height={20} sx={{ mt: 1 }} />
+      <Skeleton variant="text" width="40%" height={32} sx={{ mt: 1 }} />
+      <Skeleton variant="rectangular" height={36} sx={{ mt: 2, borderRadius: 2 }} />
+    </Box>
+  </Box>
+);
 
-  const imagenUrl = useMemo(() => {
-    if (hasNoImageRecord) return null;
-    return ImagenService.resolveImageUrl(rawUrl);
-  }, [rawUrl, hasNoImageRecord]);
+// ===================================================
+// COMPONENTE PRINCIPAL
+// ===================================================
+
+const ListaLotesProyecto: React.FC<ListaLotesProyectoProps> = ({ idProyecto }) => {
+  const navigate = useNavigate();
+  const { isAuthenticated, user } = useAuth();
+  const queryClient = useQueryClient();
+
+  const pujarModal = useModal();
+  const [loteSeleccionado, setLoteSeleccionado] = useState<LoteDto | null>(null);
+
+  // Suscripción del usuario a este proyecto
+  const {
+    estaSuscripto,
+    tokensDisponibles,
+    isLoading: isLoadingSub,
+  } = useVerificarSuscripcion(idProyecto);
+
+  // Lotes del proyecto — usa el endpoint de cliente /lotes/activos filtrado por proyecto
+  const { data: lotes, isLoading, isError } = useQuery({
+    queryKey: ['lotes', 'proyecto', idProyecto],
+    queryFn: async () => {
+      const todos = (await LoteService.getAllActive()).data;
+      return todos.filter((l) => Number(l.id_proyecto) === Number(idProyecto));
+    },
+    staleTime: 30 * 1000,
+    enabled: !!idProyecto,
+  });
+
+  // ── Handlers ──
+
+  const handleNavigate = useCallback(
+    (id: number) => navigate(ROUTES.CLIENT.LOTES.DETALLE.replace(':id', String(id))),
+    [navigate]
+  );
+
+  const handlePujar = useCallback(
+    (lote: LoteDto) => {
+      setLoteSeleccionado(lote);
+      pujarModal.open();
+    },
+    [pujarModal]
+  );
+
+  // ── Estados de carga / error ──
+
+  if (isLoading) {
+    return (
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', xl: 'repeat(3, 1fr)' },
+          gap: 3,
+        }}
+      >
+        {Array.from({ length: 3 }).map((_, i) => (
+          <LoteCardSkeleton key={i} />
+        ))}
+      </Box>
+    );
+  }
+
+  if (isError) {
+    return (
+      <Alert severity="error" sx={{ borderRadius: 3 }}>
+        No se pudieron cargar los lotes. Intentá nuevamente más tarde.
+      </Alert>
+    );
+  }
+
+  if (!lotes || lotes.length === 0) {
+    return (
+      <Stack alignItems="center" justifyContent="center" spacing={2} py={8}>
+        <FilterListOff sx={{ fontSize: 56, color: 'text.disabled' }} />
+        <Typography variant="h6" color="text.secondary" fontWeight={700}>
+          Sin lotes disponibles
+        </Typography>
+        <Typography variant="body2" color="text.disabled" textAlign="center">
+          Este proyecto aún no tiene lotes publicados para subasta.
+        </Typography>
+      </Stack>
+    );
+  }
 
   return (
-    <Card
-      elevation={0}
-      onClick={() => onNavigate(lote.id)}
-      sx={{
-        height: '100%', display: 'flex', flexDirection: 'column', borderRadius: 4,
-        border: `1px solid ${theme.palette.divider}`, cursor: 'pointer',
-        transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-        '&:hover': { transform: 'translateY(-4px)', boxShadow: theme.shadows[4] }
-      }}
-    >
-      {/* Contenedor de Imagen / Placeholder */}
-      <Box sx={{ position: 'relative', height: 200, bgcolor: 'grey.100', overflow: 'hidden' }}>
+    <>
+      {/* Contador */}
+      <Stack direction="row" alignItems="center" spacing={1} mb={3}>
+        <Gavel sx={{ color: 'text.secondary', fontSize: 20 }} />
+        <Typography variant="body2" color="text.secondary" fontWeight={700}>
+          {lotes.length} lote{lotes.length !== 1 ? 's' : ''} en subasta
+        </Typography>
+        {isLoadingSub && <CircularProgress size={14} />}
+      </Stack>
 
-        {hasNoImageRecord ? (
-          // ESTADO: SIN IMAGEN (Sin tag <img> para no ensuciar la consola)
-          <Stack alignItems="center" justifyContent="center" height="100%" spacing={1} sx={{ color: 'text.disabled', bgcolor: 'grey.200' }}>
-            <BookmarkBorder sx={{ fontSize: 40, opacity: 0.4 }} />
-            <Typography variant="caption" fontWeight={700}>SIN IMAGEN</Typography>
-          </Stack>
-        ) : (
-          <>
-            {isLoading && (
-              <Skeleton
-                variant="rectangular" width="100%" height="100%"
-                sx={{ position: 'absolute', top: 0, left: 0, zIndex: 1 }}
-              />
-            )}
-            <CardMedia
-              component="img"
-              height="200"
-              image={hasError ? '/assets/placeholder-lote.jpg' : imagenUrl!}
-              alt={lote.nombre_lote}
-              onLoad={handleLoad}
-              onError={handleError}
-              sx={{
-                objectFit: 'cover', opacity: isLoading ? 0 : 1,
-                transition: 'opacity 0.3s ease'
-              }}
-            />
-          </>
-        )}
-
-        <Chip
-          label={statusConfig.label}
-          color={statusConfig.color}
-          size="small"
-          sx={{ position: 'absolute', top: 12, right: 12, fontWeight: 700, color: 'white' }}
-        />
+      {/* Grid de lotes */}
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', xl: 'repeat(3, 1fr)' },
+          gap: 3,
+        }}
+      >
+        {lotes.map((lote) => (
+          <LoteCard
+            key={lote.id}
+            lote={lote}
+            onNavigate={handleNavigate}
+            onPujar={handlePujar}
+            isSubscribed={estaSuscripto}
+            hasTokens={tokensDisponibles > 0}
+            isLoadingSub={isLoadingSub}
+            isAuthenticated={isAuthenticated}
+          />
+        ))}
       </Box>
 
-      <CardContent sx={{ flexGrow: 1, p: 2.5 }}>
-        <Typography variant="h6" fontWeight={800} noWrap>{lote.nombre_lote}</Typography>
-
-        <Stack direction="row" spacing={0.5} alignItems="center" color="text.secondary" mb={2}>
-          <LocationOn sx={{ fontSize: 16 }} />
-          <Typography variant="body2" noWrap sx={{ fontSize: '0.8rem' }}>
-            {lote.latitud ? `${lote.latitud}, ${lote.longitud}` : 'Ubicación pendiente'}
-          </Typography>
-        </Stack>
-
-        <Typography variant="caption" color="text.secondary" fontWeight={700} display="block">PRECIO BASE</Typography>
-        <Typography variant="h6" color="primary.main" fontWeight={900}>
-          {formatCurrency(Number(lote.precio_base))}
-        </Typography>
-
-        {/* Botón de acción rápida dentro de la card */}
-        <Stack mt={2}>
-          <Button
-            variant="contained"
-            size="small"
-            startIcon={<Gavel />}
-            disabled={!isAuthenticated || !isSubscribed || lote.estado_subasta !== 'activa'}
-            onClick={(e) => {
-              e.stopPropagation();
-              onPujar(lote);
-            }}
-            sx={{ borderRadius: 2, fontWeight: 700, textTransform: 'none' }}
-          >
-            Pujar ahora
-          </Button>
-        </Stack>
-      </CardContent>
-    </Card>
+      {/* Modal de puja — montado una sola vez fuera del grid */}
+      {loteSeleccionado && (
+        <PujarModal
+          {...pujarModal.modalProps}
+          lote={loteSeleccionado}
+          yaParticipa={
+            !!user &&
+            Array.isArray(loteSeleccionado.pujas) &&
+            loteSeleccionado.pujas.some(
+              (p) => Number(p.id_usuario) === Number(user.id) && p.estado_puja === 'activa'
+            )
+          }
+          soyGanador={!!user && Number(loteSeleccionado.id_ganador) === Number(user.id)}
+          onSuccess={() => queryClient.invalidateQueries({ queryKey: ['lotes', 'proyecto', idProyecto] })}
+        />
+      )}
+    </>
   );
 };
 
-export default LoteCard;
+export default ListaLotesProyecto;

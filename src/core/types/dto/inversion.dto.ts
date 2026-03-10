@@ -31,6 +31,9 @@ export interface InversionDto extends BaseDTO {
   fecha_inversion: string; // ISO Date
   estado: 'pendiente' | 'pagado' | 'fallido' | 'reembolsado';
   
+    createdAt: string;
+  updatedAt: string;
+  
   id_usuario: number;
   id_proyecto: number;
   

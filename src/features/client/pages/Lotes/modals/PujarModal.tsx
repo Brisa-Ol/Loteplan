@@ -1,8 +1,5 @@
-// src/features/client/pages/Lotes/components/modals/PujarModal.tsx
-
 import {
-  BookmarkBorder // 👈 Agregado para el estado vacío
-  ,
+  BookmarkBorder,
   Timer
 } from '@mui/icons-material';
 import {

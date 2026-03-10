@@ -1,7 +1,7 @@
 // src/features/client/hooks/useDetalleProyecto.ts
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useMemo, useState, type SyntheticEvent } from 'react';
+import { useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 
 import { useAuth } from '@/core/context/AuthContext';
@@ -47,7 +47,6 @@ export const useDetalleProyecto = () => {
   const { showSuccess, showError } = useSnackbar();
 
   // --- ESTADOS ---
-  const [tabValue, setTabValue] = useState(0);
   const [error2FA, setError2FA] = useState<string | null>(null);
   const [contratoFirmadoSeleccionado, setContratoFirmadoSeleccionado] = useState<ContratoFirmadoDto | null>(null);
 
@@ -57,13 +56,11 @@ export const useDetalleProyecto = () => {
     return savedState?.transactionId || null;
   });
 
-  // --- MODALES (CORREGIDO: Hooks en nivel superior) ---
-  // 1. Instanciamos los hooks
+  // --- MODALES ---
   const checkoutWizardModal = useModal();
   const firmadoModal = useModal();
   const contratoModal = useModal();
 
-  // 2. Agrupamos en un objeto (sin useMemo para evitar problemas de dependencias con hooks)
   const modales = {
     checkoutWizard: checkoutWizardModal,
     firmado: firmadoModal,
@@ -108,10 +105,8 @@ export const useDetalleProyecto = () => {
   const puedeFirmar = useMemo(() => {
     if (!proyecto || !isAuthenticated) return false;
 
-    // Tiene estado recuperable del checkout
     if (CheckoutStateManager.hasRecoverableState(proyecto.id)) return true;
 
-    // Verificar según tipo de inversión
     if (proyecto.tipo_inversion === 'directo') {
       return misInversiones?.some(
         i => i.id_proyecto === proyecto.id && i.estado === 'pagado'
@@ -139,9 +134,9 @@ export const useDetalleProyecto = () => {
     return (proyecto.suscripciones_actuales / proyecto.obj_suscripciones) * 100;
   }, [proyecto]);
 
+  // ✅ CORREGIDO: Los lotes pertenecen a proyectos de tipo 'mensual', no 'directo'
   const mostrarTabLotes = useMemo(() => {
-    return proyecto?.tipo_inversion === 'directo' ||
-      (proyecto?.lotes && proyecto.lotes.length > 0);
+    return proyecto?.tipo_inversion === 'mensual';
   }, [proyecto]);
 
   const is2FAMissing = !!(user && !user.is_2fa_enabled);
@@ -281,9 +276,6 @@ export const useDetalleProyecto = () => {
     modales.checkoutWizard.open();
   };
 
-  /**
-   * ✅ ACCIÓN CORREGIDA: Descarga + Visualización
-   */
   const handleVerContratoFirmado = async () => {
     if (!misContratos || !proyecto) {
       showError("No hay contratos disponibles");
@@ -299,18 +291,15 @@ export const useDetalleProyecto = () => {
       return;
     }
 
-    // 1. Abrir Modal Visual
     setContratoFirmadoSeleccionado(contrato);
     modales.firmado.open();
 
-    // 2. Disparar Descarga Física
     try {
       const nombreArchivo = contrato.nombre_archivo || `contrato_proyecto_${proyecto.id}.pdf`;
       await ContratoService.downloadAndSave(contrato.id, nombreArchivo);
       showSuccess("Descarga iniciada");
     } catch (error) {
       console.error("Error descargando contrato:", error);
-      // No mostramos error bloqueante porque el modal visual se abrió
     }
   };
 
@@ -321,10 +310,7 @@ export const useDetalleProyecto = () => {
     loadingProyecto,
     coverImage,
     porcentaje,
-    mostrarTabLotes,
-    tabValue,
-    setTabValue,
-    handleTabChange: (_: SyntheticEvent, newValue: number) => setTabValue(newValue),
+    mostrarTabLotes,   // ✅ Lógica corregida: true solo para tipo 'mensual'
     yaFirmo,
     puedeFirmar,
     is2FAMissing,
@@ -332,10 +318,10 @@ export const useDetalleProyecto = () => {
     setError2FA,
     contratoFirmadoSeleccionado,
     setContratoFirmadoSeleccionado,
-    modales, // ✅ Objeto de modales seguro
+    modales,
     handleMainAction,
     handleClickFirmar: handleMainAction,
-    handleVerContratoFirmado, // ✅ Función optimizada
+    handleVerContratoFirmado,
     inversionId: proyecto?.tipo_inversion === 'directo' ? pendingTransactionId ?? undefined : undefined,
     pagoId: proyecto?.tipo_inversion === 'mensual' ? pendingTransactionId ?? undefined : undefined,
     wizardCallbacks: {

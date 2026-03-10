@@ -1,6 +1,6 @@
 import { useAuth } from '@/core/context/AuthContext';
 import { useCallback, useState } from 'react';
-import type { SecurityRequirementType } from '../../../shared/components/domain/modals/BaseModal/SecurityRequirementModal';
+import type { SecurityRequirementType } from '../guards/SecurityRequirementModal';
 
 
 

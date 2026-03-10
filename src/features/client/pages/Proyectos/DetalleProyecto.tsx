@@ -22,7 +22,6 @@ import { ROUTES } from '@/routes';
 import { useDetalleProyecto } from '../../hooks/useDetalleProyecto';
 import { useVerificarSuscripcion } from '../../hooks/useVerificarSuscripcion';
 
-// Componentes críticos cargados de forma inmediata pero memoizados
 import { SecurityRequirementModal } from '@/core/auth/guards/SecurityRequirementModal';
 import { PageContainer } from '@/shared';
 import { ProjectHero } from './components/ProjectHero';
@@ -30,12 +29,11 @@ import { ProjectSidebar } from './components/ProjectSidebar';
 import { CheckoutWizardModal } from './modals/CheckoutWizardModal';
 import ListaLotesProyecto from '../Lotes/ListaLotesProyecto';
 
-
-// 🚀 LAZY LOADING: Componentes no esenciales para el FCP (First Contentful Paint)
+// 🚀 LAZY LOADING
 const ProjectGallery = lazy(() => import('./components/ProjectGallery').then(m => ({ default: m.ProjectGallery })));
 
 // ===================================================
-// SUB-COMPONENTES MEMOIZADOS (Evitan re-renders)
+// SUB-COMPONENTES MEMOIZADOS
 // ===================================================
 
 const MemoizedHero = React.memo(ProjectHero);
@@ -102,7 +100,6 @@ const DetalleProyecto: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const theme = useTheme();
 
-  // Cargamos lógica del proyecto
   const logic = useDetalleProyecto();
   const isFetching = useIsFetching();
 
@@ -116,6 +113,7 @@ const DetalleProyecto: React.FC = () => {
     setSearchParams(tab ? { tab } : {}, { replace: true });
   }, [setSearchParams]);
 
+  // ✅ esMensual se mantiene solo para pasar a TabOverview y CheckoutWizardModal (display logic)
   const esMensual = logic.proyecto?.tipo_inversion === 'mensual';
 
   const googleMapsUrl = useMemo(() => {
@@ -131,7 +129,6 @@ const DetalleProyecto: React.FC = () => {
     withSecurityCheck(() => logic.modales.checkoutWizard.open());
   }, [isAuthenticated, navigate, location.pathname, withSecurityCheck, logic.modales.checkoutWizard]);
 
-  // UI Segura memoizada
   const secureLogic = useMemo(() => ({
     ...logic,
     handleMainAction: handleOpenCheckoutSecurely,
@@ -154,7 +151,8 @@ const DetalleProyecto: React.FC = () => {
           <Tabs value={currentTab} onChange={handleTabChange} sx={{ mb: 4, borderBottom: 1, borderColor: 'divider', '& .MuiTab-root': { fontWeight: 800 } }}>
             <Tab icon={<Info fontSize="small" />} iconPosition="start" label="Info" />
             <Tab icon={<InsertPhoto fontSize="small" />} iconPosition="start" label="Galería" />
-            {esMensual && <Tab icon={<ViewList fontSize="small" />} iconPosition="start" label="Lotes" />}
+            {/* ✅ CORREGIDO: usa logic.mostrarTabLotes en lugar de esMensual */}
+            {logic.mostrarTabLotes && <Tab icon={<ViewList fontSize="small" />} iconPosition="start" label="Lotes" />}
           </Tabs>
 
           <Box sx={{ minHeight: 400 }}>
@@ -166,7 +164,8 @@ const DetalleProyecto: React.FC = () => {
               </Suspense>
             )}
 
-            {currentTab === 2 && esMensual && (
+            {/* ✅ CORREGIDO: usa logic.mostrarTabLotes en lugar de esMensual */}
+            {currentTab === 2 && logic.mostrarTabLotes && (
               <Box>
                 <Paper variant="outlined" sx={{ mb: 4, p: 3, borderRadius: 3, bgcolor: alpha(theme.palette.warning.main, 0.05), borderStyle: 'dashed' }}>
                   <Stack direction="row" spacing={3} alignItems="center">

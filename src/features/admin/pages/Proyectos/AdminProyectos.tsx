@@ -44,10 +44,10 @@ import {
   FilterSearch, FilterSelect, MetricsGrid, PageContainer, QueryHandler,
   StatCard, ViewModeToggle, type DataTableColumn, type ViewMode
 } from '@/shared';
-import CreateProyectoModal from './modals/CreateProyectoModal';
 import ConfigCuotasModal from './modals/ConfigCuotasModal';
-import EditProyectoModal from './modals/EditProyectoModal';
+import CreateProyectoModal from './modals/CreateProyectoModal';
 import DetalleProyectoModal from './modals/DetalleProyectoModal';
+import EditProyectoModal from './modals/EditProyectoModal';
 import ManageImagesModal from './modals/ManageImagesModal';
 
 
@@ -249,7 +249,7 @@ const AdminProyectos: React.FC = () => {
             size="small"
             color={p.tipo_inversion === 'mensual' ? 'primary' : 'secondary'}
             variant="outlined"
-            sx={{ fontWeight: 700, fontSize: '0.65rem' }}
+            sx={{ fontWeight: 700, fontSize: '0.65rem', ...(p.tipo_inversion !== 'mensual' && { borderColor: 'text.secondary', color: 'text.secondary' }) }}
           />
         ),
       },

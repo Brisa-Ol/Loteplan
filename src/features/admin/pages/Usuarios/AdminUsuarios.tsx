@@ -152,10 +152,10 @@ const AdminUsuarios: React.FC = () => {
       />
 
       <MetricsGrid columns={{ xs: 1, sm: 2, lg: 4 }} sx={{ mb: 4 }}>
-        <StatCard title="Total" value={logic.stats.total} icon={<GroupIcon />} color="primary" />
-        <StatCard title="Activos" value={logic.stats.activos} icon={<CheckCircle />} color="success" />
-        <StatCard title="KYC" value={logic.stats.confirmados} icon={<MarkEmailRead />} color="info" />
-        <StatCard title="2FA" value={logic.stats.con2FA} icon={<Security />} color="warning" />
+        <StatCard title="Total de usuarios" value={logic.stats.total} icon={<GroupIcon />} color="primary" />
+        <StatCard title="Usuarios activos" value={logic.stats.activos} icon={<CheckCircle />} color="success" />
+        <StatCard title="Usuarios Validados" value={logic.stats.confirmados} icon={<MarkEmailRead />} color="info" />
+        <StatCard title="Usuario con 2fa activo" value={logic.stats.con2FA} icon={<Security />} color="warning" />
       </MetricsGrid>
 
       <FilterBar sx={{ mb: 3 }}>
