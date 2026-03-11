@@ -40,7 +40,18 @@ export interface UpdateUserAdminDto {
   /** Permite activar/desactivar (banear) al usuario. */
   activo?: boolean;
 }
-
+/**
+ * Datos para cambiar la contraseña del usuario autenticado.
+ * Endpoint: PATCH /usuarios/me/change-password
+ */
+export interface ChangePasswordDto {
+  /** Contraseña actual del usuario. */
+  currentPassword: string;
+  /** Nueva contraseña (mínimo 8 caracteres). */
+  newPassword: string;
+  /** Código TOTP de 6 dígitos. Requerido solo si el usuario tiene 2FA activo. */
+  twofaCode?: string;
+}
 /**
  * Datos que un Usuario puede modificar de su propio perfil.
  * Endpoint: PUT /usuarios/me

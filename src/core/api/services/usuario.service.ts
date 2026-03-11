@@ -1,4 +1,4 @@
-import type { AdminDisable2FADto, CreateUsuarioDto, UpdateUserAdminDto, UpdateUserMeDto, UsuarioDto, ValidateDeactivationResponseDto } from "@/core/types/dto/usuario.dto";
+import type { AdminDisable2FADto, ChangePasswordDto, CreateUsuarioDto, UpdateUserAdminDto, UpdateUserMeDto, UsuarioDto, ValidateDeactivationResponseDto } from "@/core/types/dto/usuario.dto";
 import type { AxiosResponse } from "axios";
 import httpService from "../httpService";
 import type { GenericResponseDto } from "@/core/types/dto/auth.dto";
@@ -39,7 +39,14 @@ const UsuarioService = {
   findAllActivos: async (): Promise<AxiosResponse<UsuarioDto[]>> => {
     return await httpService.get(`${ENDPOINT}/activos`);
   },
-
+/**
+ * Cambia la contraseña del usuario autenticado.
+ * Si el usuario tiene 2FA activo, requiere el código TOTP en `twofaCode`.
+ * Backend: PATCH /usuarios/me/change-password
+ */
+changePassword: async (data: ChangePasswordDto): Promise<AxiosResponse<GenericResponseDto>> => {
+  return await httpService.patch(`${ENDPOINT}/me/change-password`, data);
+},
   /**
    * Obtiene el listado de administradores activos.
    * Backend: GET /usuarios/admins

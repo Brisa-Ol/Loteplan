@@ -1,24 +1,24 @@
 
 class EnvConfig {
   // API
-  readonly apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
-  readonly apiPublicUrl = import.meta.env.VITE_API_PUBLIC_URL || 'http://localhost:3000';
+  readonly apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+  readonly apiPublicUrl = import.meta.env.VITE_API_PUBLIC_URL;
 
   // Auth
-  readonly authTokenKey = import.meta.env.VITE_AUTH_TOKEN_KEY || 'auth_token';
+  readonly authTokenKey = import.meta.env.VITE_AUTH_TOKEN_KEY;
 
   // App
-  readonly appName = import.meta.env.VITE_APP_NAME || 'LotePlan';
-  readonly appVersion = import.meta.env.VITE_APP_VERSION || '1.0.0';
-  readonly appEnv = import.meta.env.VITE_APP_ENV || 'development';
+  readonly appName = import.meta.env.VITE_APP_NAME;
+  readonly appVersion = import.meta.env.VITE_APP_VERSION;
+  readonly appEnv = import.meta.env.VITE_APP_ENV;
 
   // Notificaciones
-  readonly snackbarDuration = Number(import.meta.env.VITE_SNACKBAR_DURATION) || 4000;
-  readonly enableDebugLogs = import.meta.env.VITE_ENABLE_DEBUG_LOGS === 'true';
+  readonly snackbarDuration = Number(import.meta.env.VITE_SNACKBAR_DURATION);
+  readonly enableDebugLogs = import.meta.env.VITE_ENABLE_DEBUG_LOGS ;
 
   // Queries
-  readonly queryRefetchInterval = Number(import.meta.env.VITE_QUERY_REFETCH_INTERVAL) || 30000;
-  readonly queryStaleTime = Number(import.meta.env.VITE_QUERY_STALE_TIME) || 60000;
+  readonly queryRefetchInterval = Number(import.meta.env.VITE_QUERY_REFETCH_INTERVAL) ;
+  readonly queryStaleTime = Number(import.meta.env.VITE_QUERY_STALE_TIME) ;
 
   // Archivos
   readonly maxFileSize = Number(import.meta.env.VITE_MAX_FILE_SIZE) || 5242880; // 5MB
@@ -32,15 +32,15 @@ class EnvConfig {
   readonly defaultCurrency = import.meta.env.VITE_DEFAULT_CURRENCY || 'ARS';
 
   // Feature Flags
-  readonly maintenanceMode = import.meta.env.VITE_MAINTENANCE_MODE === 'true';
-  readonly enableRegistration = import.meta.env.VITE_ENABLE_REGISTRATION !== 'false';
-  readonly enableSocialLogin = import.meta.env.VITE_ENABLE_SOCIAL_LOGIN === 'true';
-  readonly enableDarkMode = import.meta.env.VITE_ENABLE_DARK_MODE !== 'false';
+  readonly maintenanceMode = import.meta.env.VITE_MAINTENANCE_MODE ;
+  readonly enableRegistration = import.meta.env.VITE_ENABLE_REGISTRATION;
+  readonly enableSocialLogin = import.meta.env.VITE_ENABLE_SOCIAL_LOGIN ;
+  readonly enableDarkMode = import.meta.env.VITE_ENABLE_DARK_MODE ;
 
   // Performance
-  readonly enableLazyLoading = import.meta.env.VITE_ENABLE_LAZY_LOADING !== 'false';
-  readonly enableImageCompression = import.meta.env.VITE_ENABLE_IMAGE_COMPRESSION !== 'false';
-  readonly defaultPageSize = Number(import.meta.env.VITE_DEFAULT_PAGE_SIZE) || 10;
+  readonly enableLazyLoading = import.meta.env.VITE_ENABLE_LAZY_LOADING ;
+  readonly enableImageCompression = import.meta.env.VITE_ENABLE_IMAGE_COMPRESSION ;
+  readonly defaultPageSize = Number(import.meta.env.VITE_DEFAULT_PAGE_SIZE) ;
 
   // Helpers
   get isDevelopment() {
