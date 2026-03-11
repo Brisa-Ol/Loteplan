@@ -1,6 +1,5 @@
 // src/features/admin/pages/Contrato/AdminPlantillas.tsx
 
-import React, { useMemo, useState } from 'react';
 import {
   Add as AddIcon,
   BarChart as BarChartIcon,
@@ -9,7 +8,7 @@ import {
   Download as DownloadIcon,
   Edit as EditIcon,
   Description as FileIcon,
-  FolderShared, 
+  FolderShared,
   Public,
   Upload as UploadIcon,
   ViewList,
@@ -17,7 +16,7 @@ import {
   WarningAmber as WarningIcon
 } from '@mui/icons-material';
 import {
-  alpha, 
+  alpha,
   Avatar,
   Box,
   Button,
@@ -32,6 +31,7 @@ import {
   Typography,
   useTheme
 } from '@mui/material';
+import React, { useMemo, useState } from 'react';
 import {
   Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart,
   Tooltip as RechartsTooltip,
@@ -52,16 +52,16 @@ import { PageContainer } from '@/shared/components/layout/PageContainer';
 import { notifyError } from '@/shared/utils/snackbarUtils';
 
 // Componentes Admin
-import { AdminPageHeader } from '@/shared/components/admin/Adminpageheader';
-import AlertBanner from '@/shared/components/ui/Alertbanner';
-import MetricsGrid from '@/shared/components/admin/Metricsgrid';
 import PdfPreviewModal from '@/features/admin/pages/Contrato/modals/PdfPreviewModal';
+import { AdminPageHeader } from '@/shared/components/admin/Adminpageheader';
+import MetricsGrid from '@/shared/components/admin/Metricsgrid';
 import { ViewModeToggle, type ViewMode } from '@/shared/components/admin/Viewmodetoggle';
+import { ConfirmDialog } from '@/shared/components/domain';
+import AlertBanner from '@/shared/components/ui/Alertbanner';
 import { useAdminPlantillas } from '../../hooks/contrato/useAdminPlantillas';
 import CreatePlantillaModal from './modals/CreatePlantillaModal';
 import UpdateMetadataModal from './modals/UpdateMetadataModal';
 import UpdatePdfModal from './modals/UpdatePdfModal';
-import { ConfirmDialog } from '@/shared/components/domain';
 
 // ============================================================================
 // SUB-COMPONENTE: ANALYTICS
@@ -294,10 +294,10 @@ const AdminPlantillas: React.FC = () => {
         title="Gestión de Plantillas"
         subtitle="Administre las versiones de contratos y documentos legales vinculados a sus proyectos."
         action={
-          <Button 
-            variant="contained" 
-            startIcon={<AddIcon />} 
-            onClick={logic.modales.create.open} 
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={logic.modales.create.open}
             sx={{ fontWeight: 800, px: 3, borderRadius: 2 }}
           >
             Nueva Plantilla
@@ -308,17 +308,17 @@ const AdminPlantillas: React.FC = () => {
       {/* ALERTAS DE INTEGRIDAD Y SISTEMA */}
       <Stack spacing={2} mb={3}>
         {logic.error && (
-          <AlertBanner 
-            severity="error" 
-            title="Error de Conexión" 
-            message={(logic.error as Error).message} 
+          <AlertBanner
+            severity="error"
+            title="Error de Conexión"
+            message={(logic.error as Error).message}
           />
         )}
         {stats.compromised > 0 && (
-          <AlertBanner 
-            severity="error" 
-            title="Integridad de Archivos Comprometida" 
-            message={`Se han detectado ${stats.compromised} plantillas cuyo hash actual no coincide con el registro original de subida.`} 
+          <AlertBanner
+            severity="error"
+            title="Integridad de Archivos Comprometida"
+            message={`Se han detectado ${stats.compromised} plantillas cuyo hash actual no coincide con el registro original de subida.`}
             icon={<WarningIcon />}
           />
         )}
@@ -331,28 +331,28 @@ const AdminPlantillas: React.FC = () => {
         <StatCard title="Por Proyecto" value={stats.assigned} icon={<FolderShared />} color="primary" loading={logic.isLoading} />
       </MetricsGrid>
 
-      <Stack 
-        direction={{ xs: 'column', lg: 'row' }} 
-        justifyContent="space-between" 
-        alignItems={{ xs: 'stretch', lg: 'center' }} 
-        mb={3} 
+      <Stack
+        direction={{ xs: 'column', lg: 'row' }}
+        justifyContent="space-between"
+        alignItems={{ xs: 'stretch', lg: 'center' }}
+        mb={3}
         spacing={2}
       >
-        <ViewModeToggle 
-          value={viewMode} 
-          onChange={setViewMode} 
+        <ViewModeToggle
+          value={viewMode}
+          onChange={setViewMode}
           options={[
-            { value: 'table', label: 'Vista de Lista', icon: <ViewList fontSize="small" /> }, 
+            { value: 'table', label: 'Vista de Lista', icon: <ViewList fontSize="small" /> },
             { value: 'analytics', label: 'Estadísticas', icon: <BarChartIcon fontSize="small" /> }
-          ]} 
+          ]}
         />
 
         <FilterBar sx={{ flex: 1, maxWidth: { lg: 800 } }}>
-          <FilterSearch 
-            placeholder="Filtrar por nombre de archivo..." 
-            value={logic.searchTerm} 
-            onSearch={logic.setSearchTerm} 
-            sx={{ flexGrow: 1 }} 
+          <FilterSearch
+            placeholder="Filtrar por nombre de archivo..."
+            value={logic.searchTerm}
+            onSearch={logic.setSearchTerm}
+            sx={{ flexGrow: 1 }}
           />
 
           <FilterSelect
@@ -377,12 +377,12 @@ const AdminPlantillas: React.FC = () => {
                   <Chip
                     label={p.tipo_inversion === 'directo' ? 'DIRECTO' : 'MENSUAL'}
                     size="small"
-                    sx={{ 
-                      fontSize: '0.6rem', 
-                      height: 18, 
-                      fontWeight: 900, 
-                      bgcolor: p.tipo_inversion === 'directo' ? alpha(theme.palette.info.main, 0.1) : alpha(theme.palette.warning.main, 0.1), 
-                      color: p.tipo_inversion === 'directo' ? 'info.main' : 'warning.main' 
+                    sx={{
+                      fontSize: '0.6rem',
+                      height: 18,
+                      fontWeight: 900,
+                      bgcolor: p.tipo_inversion === 'directo' ? alpha(theme.palette.info.main, 0.1) : alpha(theme.palette.warning.main, 0.1),
+                      color: p.tipo_inversion === 'directo' ? 'info.main' : 'warning.main'
                     }}
                   />
                 </Stack>
@@ -396,56 +396,56 @@ const AdminPlantillas: React.FC = () => {
         <PlantillaAnalytics data={logic.filteredPlantillas} />
       ) : (
         <QueryHandler isLoading={logic.isLoading} error={logic.error as Error | null}>
-          <DataTable 
-            columns={columns} 
-            data={logic.filteredPlantillas} 
-            getRowKey={(row) => row.id} 
-            isRowActive={(row) => row.activo} 
-            pagination 
+          <DataTable
+            columns={columns}
+            data={logic.filteredPlantillas}
+            getRowKey={(row) => row.id}
+            isRowActive={(row) => row.activo}
+            pagination
           />
         </QueryHandler>
       )}
 
       {/* Modales */}
-      <CreatePlantillaModal 
-        open={logic.modales.create.isOpen} 
-        onClose={logic.modales.create.close} 
-        onSubmit={async (data) => { await logic.createMutation.mutateAsync(data); }} 
-        isLoading={logic.isCreating} 
-        proyectos={logic.proyectosDisponibles} 
+      <CreatePlantillaModal
+        open={logic.modales.create.isOpen}
+        onClose={logic.modales.create.close}
+        onSubmit={async (data) => { await logic.createMutation.mutateAsync(data); }}
+        isLoading={logic.isCreating}
+        proyectos={logic.proyectosDisponibles}
       />
 
       {logic.plantillaSelected && (
         <>
-          <UpdatePdfModal 
-            open={logic.modales.updatePdf.isOpen} 
-            onClose={() => { logic.modales.updatePdf.close(); logic.setPlantillaSelected(null); }} 
-            plantilla={logic.plantillaSelected} 
-            onSubmit={async (data) => { await logic.updatePdfMutation.mutateAsync(data); }} 
-            isLoading={logic.isUpdatingPdf} 
+          <UpdatePdfModal
+            open={logic.modales.updatePdf.isOpen}
+            onClose={() => { logic.modales.updatePdf.close(); logic.setPlantillaSelected(null); }}
+            plantilla={logic.plantillaSelected}
+            onSubmit={async (data) => { await logic.updatePdfMutation.mutateAsync(data); }}
+            isLoading={logic.isUpdatingPdf}
           />
-          <UpdateMetadataModal 
-            open={logic.modales.updateMeta.isOpen} 
-            onClose={() => { logic.modales.updateMeta.close(); logic.setPlantillaSelected(null); }} 
-            plantilla={logic.plantillaSelected} 
-            proyectos={logic.proyectos} 
-            onSubmit={async (values) => { await logic.updateMetaMutation.mutateAsync({ id: logic.plantillaSelected!.id, data: values }); }} 
-            isLoading={logic.isUpdatingMeta} 
+          <UpdateMetadataModal
+            open={logic.modales.updateMeta.isOpen}
+            onClose={() => { logic.modales.updateMeta.close(); logic.setPlantillaSelected(null); }}
+            plantilla={logic.plantillaSelected}
+            proyectos={logic.proyectos}
+            onSubmit={async (values) => { await logic.updateMetaMutation.mutateAsync({ id: logic.plantillaSelected!.id, data: values }); }}
+            isLoading={logic.isUpdatingMeta}
           />
         </>
       )}
 
-      <PdfPreviewModal 
-        open={!!previewPlantilla} 
-        onClose={() => setPreviewPlantilla(null)} 
-        urlDirecta={previewPlantilla?.url_archivo} 
-        nombreArchivo={previewPlantilla?.nombre_archivo ? `${previewPlantilla.nombre_archivo} (v${previewPlantilla.version})` : 'Documento'} 
+      <PdfPreviewModal
+        open={!!previewPlantilla}
+        onClose={() => setPreviewPlantilla(null)}
+        urlDirecta={previewPlantilla?.url_archivo}
+        nombreArchivo={previewPlantilla?.nombre_archivo ? `${previewPlantilla.nombre_archivo} (v${previewPlantilla.version})` : 'Documento'}
       />
-      
-      <ConfirmDialog 
-        controller={logic.modales.confirmDialog} 
-        onConfirm={logic.handleConfirmAction} 
-        isLoading={logic.isToggling || logic.isDeleting} 
+
+      <ConfirmDialog
+        controller={logic.modales.confirmDialog}
+        onConfirm={logic.handleConfirmAction}
+        isLoading={logic.isToggling || logic.isDeleting}
       />
     </PageContainer>
   );

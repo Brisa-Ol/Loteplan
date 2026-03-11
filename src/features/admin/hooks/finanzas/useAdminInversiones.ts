@@ -4,7 +4,7 @@ import { useModal } from '@/shared/hooks/useModal';
 import type { InversionDto } from '@/core/types/dto/inversion.dto';
 import InversionService from '@/core/api/services/inversion.service';
 import { useSortedData } from '../useSortedData';
-
+import { env } from '@/core/config/env'; // 👈 1. Importamos la configuración global
 
 // --- HELPERS ---
 function useDebouncedValue<T>(value: T, delay: number = 300): T {
@@ -29,39 +29,38 @@ export const useAdminInversiones = () => {
 
   // --- QUERIES ---
   
-  // 1. Listado de Inversiones (Retorno directo del array según controlador)
+  // 1. Listado de Inversiones
   const { data: inversionesRaw = [], isLoading: loadingInv, error } = useQuery({
     queryKey: ['adminInversiones'],
     queryFn: async () => {
       const response = await InversionService.findAll();
       return Array.isArray(response.data) ? response.data : [];
     },
-    staleTime: 30000,
+    staleTime: env.queryStaleTime || 30000, // 👈 2. Aplicamos staleTime
   });
 
-  // 2. Métricas de Liquidez (Wrapper .data.data)
+  // 2. Métricas de Liquidez
   const { data: liquidezData, isLoading: loadingLiq } = useQuery({
     queryKey: ['adminInversionesLiquidez'],
     queryFn: async () => (await InversionService.getLiquidityMetrics()).data.data,
-    staleTime: 60000,
+    staleTime: env.queryStaleTime || 60000, // 👈 3. Aplicamos staleTime
   });
 
-  // 3. Top Inversores Agregados (Wrapper .data.data)
+  // 3. Top Inversores Agregados
   const { data: topInvestors = [], isLoading: loadingTop } = useQuery({
     queryKey: ['adminTopInvestors'],
     queryFn: async () => (await InversionService.getAggregatedMetrics()).data.data,
-    staleTime: 60000,
+    staleTime: env.queryStaleTime || 60000, // 👈 4. Aplicamos staleTime
   });
 
   const isLoading = loadingInv || loadingLiq || loadingTop;
 
   // --- PROCESAMIENTO DE DERIVADOS ---
 
-  // Proyectos únicos para el filtro (derivado de las inversiones cargadas)
-const proyectosUnicos = useMemo(() => {
+  // Proyectos únicos para el filtro
+  const proyectosUnicos = useMemo(() => {
     const map = new Map();
     inversionesRaw.forEach(inv => {
-        // ✅ CORRECCIÓN: Usar el nombre exacto del DTO/Backend
         const proj = inv.proyectoInvertido; 
         if (proj) map.set(proj.id, proj);
     });
@@ -120,7 +119,8 @@ const proyectosUnicos = useMemo(() => {
       .sort((a, b) => a.date.getTime() - b.date.getTime())
       .forEach(inv => {
         acumulado += Number(inv.monto);
-        const label = inv.date.toLocaleDateString('es-AR', { day: '2-digit', month: 'short' });
+        // 👈 5. Reemplazamos 'es-AR' hardcodeado por env.defaultLocale
+        const label = inv.date.toLocaleDateString(env.defaultLocale, { day: '2-digit', month: 'short' });
         historyMap.set(label, acumulado);
       });
 

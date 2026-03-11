@@ -25,6 +25,8 @@ import {
   useTheme
 } from '@mui/material';
 import React from 'react';
+
+import { env } from '@/core/config/env';
 import type { EstadoSubasta, LoteDto } from '../../../../../core/types/dto/lote.dto';
 import type { ProyectoDto } from '../../../../../core/types/dto/proyecto.dto';
 
@@ -34,7 +36,22 @@ interface ProyectoLotesManagerProps {
   onAssignLotes: () => void;
 }
 
-// 1. HELPER DE CONFIGURACIÓN DE ESTADO (Color e Icono)
+// Formateador de fechas construido una vez con locale y timezone del env
+const dateTimeFormatter = new Intl.DateTimeFormat(env.defaultLocale, {
+  timeZone: env.timezone,
+  day: '2-digit',
+  month: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+});
+
+// Formateador de moneda para precio base
+const currencyFormatter = new Intl.NumberFormat(env.defaultLocale, {
+  style: 'currency',
+  currency: env.defaultCurrency,
+  maximumFractionDigits: 0,
+});
+
 const getStatusConfig = (estado: EstadoSubasta) => {
   switch (estado) {
     case 'activa':
@@ -48,11 +65,10 @@ const getStatusConfig = (estado: EstadoSubasta) => {
   }
 };
 
+// ✅ Usa env.defaultLocale y env.timezone en lugar de 'es-AR' hardcodeado
 const formatDate = (dateStr: string | null) => {
   if (!dateStr) return '-';
-  return new Date(dateStr).toLocaleDateString('es-AR', {
-    day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
-  });
+  return dateTimeFormatter.format(new Date(dateStr));
 };
 
 export const ProyectoLotesManager: React.FC<ProyectoLotesManagerProps> = ({
@@ -62,7 +78,6 @@ export const ProyectoLotesManager: React.FC<ProyectoLotesManagerProps> = ({
   const theme = useTheme();
   const lotes = (proyecto.lotes || []) as unknown as LoteDto[];
 
-  // Estilos de Cabecera
   const headerSx = {
     color: 'text.secondary',
     fontWeight: 700,
@@ -111,12 +126,7 @@ export const ProyectoLotesManager: React.FC<ProyectoLotesManagerProps> = ({
         <TableContainer
           component={Paper}
           elevation={0}
-          sx={{
-            borderRadius: 2,
-            border: '1px solid',
-            borderColor: 'divider',
-            maxHeight: 500
-          }}
+          sx={{ borderRadius: 2, border: '1px solid', borderColor: 'divider', maxHeight: 500 }}
         >
           <Table size="small" stickyHeader>
             <TableHead>
@@ -132,7 +142,6 @@ export const ProyectoLotesManager: React.FC<ProyectoLotesManagerProps> = ({
             <TableBody>
               {lotes.map((lote) => {
                 const config = getStatusConfig(lote.estado_subasta);
-                // Obtenemos el color real del tema de forma segura
                 const colorMain = config.color === 'default'
                   ? theme.palette.text.secondary
                   : theme.palette[config.color].main;
@@ -155,9 +164,10 @@ export const ProyectoLotesManager: React.FC<ProyectoLotesManagerProps> = ({
                       </Stack>
                     </TableCell>
 
+                    {/* ✅ currencyFormatter usa env.defaultLocale y env.defaultCurrency */}
                     <TableCell>
                       <Typography variant="body2" fontWeight={700} color="primary.main" sx={{ fontFamily: 'monospace' }}>
-                        ${Number(lote.precio_base).toLocaleString()}
+                        {currencyFormatter.format(Number(lote.precio_base))}
                       </Typography>
                     </TableCell>
 
@@ -233,21 +243,9 @@ export const ProyectoLotesManager: React.FC<ProyectoLotesManagerProps> = ({
           Estados de Subasta:
         </Typography>
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
-          <Box>
-            <Typography variant="caption" display="block">
-              🟠 <strong>Pendiente:</strong> Aún no inicia (Fecha futura).
-            </Typography>
-          </Box>
-          <Box>
-            <Typography variant="caption" display="block">
-              🟢 <strong>Activa:</strong> En curso (Recibe pujas).
-            </Typography>
-          </Box>
-          <Box>
-            <Typography variant="caption" display="block">
-              🔴 <strong>Finalizada:</strong> Cierre cumplido o forzado.
-            </Typography>
-          </Box>
+          <Box><Typography variant="caption" display="block">🟠 <strong>Pendiente:</strong> Aún no inicia (Fecha futura).</Typography></Box>
+          <Box><Typography variant="caption" display="block">🟢 <strong>Activa:</strong> En curso (Recibe pujas).</Typography></Box>
+          <Box><Typography variant="caption" display="block">🔴 <strong>Finalizada:</strong> Cierre cumplido o forzado.</Typography></Box>
         </Stack>
       </Alert>
     </Box>

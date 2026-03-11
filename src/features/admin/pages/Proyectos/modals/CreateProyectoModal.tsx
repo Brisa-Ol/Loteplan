@@ -33,32 +33,73 @@ import { useFormik } from 'formik';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import * as Yup from 'yup';
 
-
+import { env } from '@/core/config/env'; // 👈 1. Importamos la configuración
 
 // --- FUNCIONES AUXILIARES ---
+// Bloquea signos negativos, suma y la letra 'e' en campos numéricos
 const blockInvalidChar = (e: React.KeyboardEvent) =>
   ['e', 'E', '-', '+'].includes(e.key) && e.preventDefault();
 
+// Obtenemos la fecha de hoy en formato YYYY-MM-DD para limitar los calendarios
 const today = new Date().toISOString().split('T')[0];
 
 // --- ESQUEMAS DE VALIDACIÓN ---
 const projectSchema = Yup.object({
-  nombre_proyecto: Yup.string().min(5, 'Mínimo 5 caracteres').required('Obligatorio'),
-  descripcion: Yup.string().min(20, 'Describe mejor el proyecto').required('Obligatorio'),
+  nombre_proyecto: Yup.string()
+    .min(5, 'Faltan caracteres (Mín. 5)')
+    .required('El nombre es obligatorio'),
+  descripcion: Yup.string()
+    .min(20, 'Faltan caracteres (Mín. 20)')
+    .required('La descripción es obligatoria'),
+  forma_juridica: Yup.string().required('Requerido'),
   tipo_inversion: Yup.string().required('Requerido'),
-  monto_inversion: Yup.number().moreThan(0, 'Debe ser mayor a 0').required('Requerido'),
-  fecha_inicio: Yup.date().nullable().required('Requerido').min(today, 'No puede ser pasado'),
-  fecha_cierre: Yup.date().nullable().required('Requerido').min(Yup.ref('fecha_inicio'), 'Posterior al inicio'),
-  obj_suscripciones: Yup.number().integer().min(1).required('Requerido'),
-  suscripciones_minimas: Yup.number().integer().min(1).required('Requerido')
-    .test('min-max', 'No puede superar al cupo máximo', function (value) {
+  monto_inversion: Yup.number()
+    .moreThan(0, 'El monto debe ser mayor a 0')
+    .required('Requerido'),
+  plazo_inversion: Yup.number()
+    .min(1, 'Mínimo 1 mes')
+    .required('Requerido'),
+  fecha_inicio: Yup.date()
+    .nullable()
+    .required('Obligatorio')
+    .min(today, 'La apertura no puede ser en el pasado'),
+  fecha_cierre: Yup.date()
+    .nullable()
+    .required('Obligatorio')
+    .min(Yup.ref('fecha_inicio'), 'El cierre debe ser posterior a la apertura'),
+  obj_suscripciones: Yup.number()
+    .integer()
+    .min(1, 'Mínimo 1')
+    .required('Requerido'),
+  suscripciones_minimas: Yup.number()
+    .integer()
+    .min(1, 'Mínimo 1')
+    .required('Requerido')
+    .test('min-max', 'Supera el cupo máximo', function (value) {
       return value <= this.parent.obj_suscripciones;
     }),
 });
 
 const quotaSchema = Yup.object({
-  valor_cemento_unidades: Yup.number().positive('Mínimo 1').required('Requerido'),
-  valor_cemento: Yup.number().positive('Precio inválido').required('Requerido'),
+  nombre_cemento_cemento: Yup.string().required('El insumo es obligatorio'),
+  valor_cemento_unidades: Yup.number()
+    .positive('Debe ser mayor a 0')
+    .required('Requerido'),
+  valor_cemento: Yup.number()
+    .positive('Precio inválido')
+    .required('Requerido'),
+  porcentaje_plan: Yup.number()
+    .min(0, 'No puede ser negativo')
+    .max(100, 'Máximo 100%')
+    .required('Requerido'),
+  porcentaje_administrativo: Yup.number()
+    .min(0, 'No puede ser negativo')
+    .max(100, 'Máximo 100%')
+    .required('Requerido'),
+  porcentaje_iva: Yup.number()
+    .min(0, 'No puede ser negativo')
+    .max(100, 'Máximo 100%')
+    .required('Requerido'),
 });
 
 const INITIAL_VALUES = {
@@ -119,16 +160,17 @@ const SimulationDisplay = React.memo(({ plazo, unidades, precio, pctPlan, pctAdm
         CUOTA MENSUAL ESTIMADA (MES 1)
       </Typography>
       <Typography variant="h3" fontWeight={900} color="success.dark" sx={{ my: 1 }}>
-        ${calc.final.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+        {/* 👈 2. Aplicamos env.defaultLocale en las 3 líneas */}
+        ${calc.final.toLocaleString(env.defaultLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
       </Typography>
       <Stack direction="row" spacing={4} justifyContent="center">
         <Box>
           <Typography variant="caption" display="block" color="text.secondary" fontWeight={700}>CAPITAL</Typography>
-          <Typography variant="body2" fontWeight={800}>${calc.cuotaPura.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</Typography>
+          <Typography variant="body2" fontWeight={800}>${calc.cuotaPura.toLocaleString(env.defaultLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Typography>
         </Box>
         <Box>
           <Typography variant="caption" display="block" color="text.secondary" fontWeight={700}>GASTOS + IVA</Typography>
-          <Typography variant="body2" fontWeight={800}>${calc.gastos.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</Typography>
+          <Typography variant="body2" fontWeight={800}>${calc.gastos.toLocaleString(env.defaultLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Typography>
         </Box>
       </Stack>
     </Paper>
@@ -148,8 +190,9 @@ const CreateProyectoModal: React.FC<any> = ({ open, onClose, onSubmit, isLoading
 
   const formik = useFormik({
     initialValues: INITIAL_VALUES,
-    validateOnChange: false,
-    validateOnBlur: false,
+    // Activamos la validación en vivo para que el usuario vea el error enseguida
+    validateOnChange: true,
+    validateOnBlur: true,
     onSubmit: async (values) => {
       const cleanData = {
         ...values,
@@ -172,7 +215,11 @@ const CreateProyectoModal: React.FC<any> = ({ open, onClose, onSubmit, isLoading
     sectionTitle: { fontWeight: 800, color: 'text.secondary', textTransform: 'uppercase', fontSize: '0.65rem', letterSpacing: 1 }
   }), []);
 
-  const set = useCallback((field: string) => (value: string) => formik.setFieldValue(field, value), [formik]);
+  // Set field y marcarlo como "tocado" para que dispare el error inmediatamente al salir del campo
+  const set = useCallback((field: string) => (value: string) => {
+    formik.setFieldValue(field, value);
+    formik.setFieldTouched(field, true, false);
+  }, [formik]);
 
   const steps = useMemo(() => formik.values.tipo_inversion === 'mensual'
     ? ['Información', 'Cuotas', 'Multimedia', 'Contrato']
@@ -255,11 +302,32 @@ const CreateProyectoModal: React.FC<any> = ({ open, onClose, onSubmit, isLoading
         {currentStepLabel === 'Información' && (
           <Stack spacing={3}>
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '2fr 1fr' }, gap: 2 }}>
-              <FastTextField label="Nombre del Proyecto" formikValue={formik.values.nombre_proyecto} onCommit={set('nombre_proyecto')} error={formik.touched.nombre_proyecto && !!formik.errors.nombre_proyecto} helperText={formik.touched.nombre_proyecto && formik.errors.nombre_proyecto} />
-              <FastTextField label="Forma Jurídica" formikValue={formik.values.forma_juridica} onCommit={set('forma_juridica')} />
+              <FastTextField 
+                label="Nombre del Proyecto" 
+                formikValue={formik.values.nombre_proyecto} 
+                onCommit={set('nombre_proyecto')} 
+                error={formik.touched.nombre_proyecto && !!formik.errors.nombre_proyecto} 
+                helperText={formik.touched.nombre_proyecto && formik.errors.nombre_proyecto as string} 
+              />
+              <FastTextField 
+                label="Forma Jurídica" 
+                formikValue={formik.values.forma_juridica} 
+                onCommit={set('forma_juridica')} 
+                error={formik.touched.forma_juridica && !!formik.errors.forma_juridica} 
+                helperText={formik.touched.forma_juridica && formik.errors.forma_juridica as string}
+              />
             </Box>
 
-            <FastTextField fullWidth multiline rows={3} label="Descripción" formikValue={formik.values.descripcion} onCommit={set('descripcion')} error={formik.touched.descripcion && !!formik.errors.descripcion} helperText={formik.touched.descripcion && formik.errors.descripcion} />
+            <FastTextField 
+              fullWidth 
+              multiline 
+              rows={3} 
+              label="Descripción" 
+              formikValue={formik.values.descripcion} 
+              onCommit={set('descripcion')} 
+              error={formik.touched.descripcion && !!formik.errors.descripcion} 
+              helperText={formik.touched.descripcion && formik.errors.descripcion as string} 
+            />
 
             <Divider><Chip label="Finanzas y Cupos" size="small" sx={{ fontWeight: 800, fontSize: '0.6rem' }} /></Divider>
 
@@ -268,36 +336,171 @@ const CreateProyectoModal: React.FC<any> = ({ open, onClose, onSubmit, isLoading
                 <MenuItem value="mensual">Plan de Ahorro</MenuItem>
                 <MenuItem value="directo">Inversión Directa</MenuItem>
               </TextField>
-              <FastTextField type="number" label="Monto Objetivo" onKeyDown={blockInvalidChar} InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }} formikValue={formik.values.monto_inversion} onCommit={set('monto_inversion')} error={formik.touched.monto_inversion && !!formik.errors.monto_inversion} helperText={formik.touched.monto_inversion && formik.errors.monto_inversion} />
+              <FastTextField 
+                type="number" 
+                label="Monto Objetivo" 
+                onKeyDown={blockInvalidChar} 
+                inputProps={{ min: 1 }}
+                InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }} 
+                formikValue={formik.values.monto_inversion} 
+                onCommit={set('monto_inversion')} 
+                error={formik.touched.monto_inversion && !!formik.errors.monto_inversion} 
+                helperText={formik.touched.monto_inversion && formik.errors.monto_inversion as string} 
+              />
             </Box>
 
             {formik.values.tipo_inversion === 'mensual' && (
               <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 3, bgcolor: alpha(theme.palette.primary.main, 0.02) }}>
                 <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr 1fr' }, gap: 2 }}>
-                  <FastTextField type="number" label="Plazo (Meses)" formikValue={formik.values.plazo_inversion} onCommit={set('plazo_inversion')} />
-                  <FastTextField type="number" label="Mín. Suscriptores" formikValue={formik.values.suscripciones_minimas} onCommit={set('suscripciones_minimas')} error={!!formik.errors.suscripciones_minimas} helperText={formik.errors.suscripciones_minimas} />
-                  <FastTextField type="number" label="Cupo Máximo" formikValue={formik.values.obj_suscripciones} onCommit={set('obj_suscripciones')} error={!!formik.errors.obj_suscripciones} helperText={formik.errors.obj_suscripciones} />
+                  <FastTextField 
+                    type="number" 
+                    label="Plazo (Meses)" 
+                    onKeyDown={blockInvalidChar} 
+                    inputProps={{ min: 1 }}
+                    formikValue={formik.values.plazo_inversion} 
+                    onCommit={set('plazo_inversion')} 
+                    error={formik.touched.plazo_inversion && !!formik.errors.plazo_inversion} 
+                    helperText={formik.touched.plazo_inversion && formik.errors.plazo_inversion as string}
+                  />
+                  <FastTextField 
+                    type="number" 
+                    label="Mín. Suscriptores" 
+                    onKeyDown={blockInvalidChar} 
+                    inputProps={{ min: 1 }}
+                    formikValue={formik.values.suscripciones_minimas} 
+                    onCommit={set('suscripciones_minimas')} 
+                    error={formik.touched.suscripciones_minimas && !!formik.errors.suscripciones_minimas} 
+                    helperText={formik.touched.suscripciones_minimas && formik.errors.suscripciones_minimas as string} 
+                  />
+                  <FastTextField 
+                    type="number" 
+                    label="Cupo Máximo" 
+                    onKeyDown={blockInvalidChar} 
+                    inputProps={{ min: 1 }}
+                    formikValue={formik.values.obj_suscripciones} 
+                    onCommit={set('obj_suscripciones')} 
+                    error={formik.touched.obj_suscripciones && !!formik.errors.obj_suscripciones} 
+                    helperText={formik.touched.obj_suscripciones && formik.errors.obj_suscripciones as string} 
+                  />
                 </Box>
               </Paper>
             )}
 
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
-              <FastTextField type="date" label="Apertura" InputLabelProps={{ shrink: true }} formikValue={formik.values.fecha_inicio} onCommit={set('fecha_inicio')} error={formik.touched.fecha_inicio && !!formik.errors.fecha_inicio} helperText={formik.touched.fecha_inicio && formik.errors.fecha_inicio} sx={styles.dateField} />
-              <FastTextField type="date" label="Cierre" InputLabelProps={{ shrink: true }} formikValue={formik.values.fecha_cierre} onCommit={set('fecha_cierre')} error={formik.touched.fecha_cierre && !!formik.errors.fecha_cierre} helperText={formik.touched.fecha_cierre && formik.errors.fecha_cierre} sx={styles.dateField} />
+              <FastTextField 
+                type="date" 
+                label="Apertura" 
+                InputLabelProps={{ shrink: true }} 
+                inputProps={{ min: today }} // Bloqueo HTML fechas pasadas
+                formikValue={formik.values.fecha_inicio} 
+                onCommit={set('fecha_inicio')} 
+                error={formik.touched.fecha_inicio && !!formik.errors.fecha_inicio} 
+                helperText={formik.touched.fecha_inicio && formik.errors.fecha_inicio as string} 
+                sx={styles.dateField} 
+              />
+              <FastTextField 
+                type="date" 
+                label="Cierre" 
+                InputLabelProps={{ shrink: true }} 
+                inputProps={{ min: formik.values.fecha_inicio || today }} // Bloqueo HTML antes de apertura
+                formikValue={formik.values.fecha_cierre} 
+                onCommit={set('fecha_cierre')} 
+                error={formik.touched.fecha_cierre && !!formik.errors.fecha_cierre} 
+                helperText={formik.touched.fecha_cierre && formik.errors.fecha_cierre as string} 
+                sx={styles.dateField} 
+              />
             </Box>
           </Stack>
         )}
 
         {/* ── PASO 2: CUOTAS ── */}
         {currentStepLabel === 'Cuotas' && (
-          <Stack spacing={3}>
-            <Typography sx={styles.sectionTitle}>Variables de Costo</Typography>
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '2fr 1fr 1.5fr' }, gap: 2 }}>
-              <FastTextField label="Insumo Referencia" formikValue={formik.values.nombre_cemento_cemento} onCommit={set('nombre_cemento_cemento')} />
-              <FastTextField type="number" label="Unidades" formikValue={formik.values.valor_cemento_unidades} onCommit={set('valor_cemento_unidades')} error={formik.touched.valor_cemento_unidades && !!formik.errors.valor_cemento_unidades} />
-              <FastTextField type="number" label="Precio Unit." formikValue={formik.values.valor_cemento} onCommit={set('valor_cemento')} InputProps={{ startAdornment: '$' }} error={formik.touched.valor_cemento && !!formik.errors.valor_cemento} />
+          <Stack spacing={4}>
+            {/* Fila 1: Insumo, Unidades y Precio */}
+            <Box>
+              <Typography sx={styles.sectionTitle} mb={2}>Variables de Costo (Referencia)</Typography>
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '2fr 1fr 1.5fr' }, gap: 2 }}>
+                <FastTextField 
+                  label="Insumo Referencia" 
+                  formikValue={formik.values.nombre_cemento_cemento} 
+                  onCommit={set('nombre_cemento_cemento')} 
+                  error={formik.touched.nombre_cemento_cemento && !!formik.errors.nombre_cemento_cemento} 
+                  helperText={formik.touched.nombre_cemento_cemento && formik.errors.nombre_cemento_cemento as string} 
+                />
+                <FastTextField 
+                  type="number" 
+                  label="Unidades" 
+                  onKeyDown={blockInvalidChar} 
+                  inputProps={{ min: 1 }}
+                  formikValue={formik.values.valor_cemento_unidades} 
+                  onCommit={set('valor_cemento_unidades')} 
+                  error={formik.touched.valor_cemento_unidades && !!formik.errors.valor_cemento_unidades} 
+                  helperText={formik.touched.valor_cemento_unidades && formik.errors.valor_cemento_unidades as string} 
+                />
+                <FastTextField 
+                  type="number" 
+                  label="Precio Unit." 
+                  onKeyDown={blockInvalidChar} 
+                  inputProps={{ min: 0 }}
+                  formikValue={formik.values.valor_cemento} 
+                  onCommit={set('valor_cemento')} 
+                  InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }} 
+                  error={formik.touched.valor_cemento && !!formik.errors.valor_cemento} 
+                  helperText={formik.touched.valor_cemento && formik.errors.valor_cemento as string} 
+                />
+              </Box>
             </Box>
-            <SimulationDisplay plazo={formik.values.plazo_inversion} unidades={formik.values.valor_cemento_unidades} precio={formik.values.valor_cemento} pctPlan={formik.values.porcentaje_plan} pctAdmin={formik.values.porcentaje_administrativo} pctIva={formik.values.porcentaje_iva} />
+
+            <Divider />
+
+            {/* Fila 2: Porcentajes agregados */}
+            <Box>
+              <Typography sx={styles.sectionTitle} mb={2}>Distribución y Porcentajes (%)</Typography>
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1fr' }, gap: 2 }}>
+                <FastTextField 
+                  type="number" 
+                  label="% Capital (Plan)" 
+                  onKeyDown={blockInvalidChar} 
+                  inputProps={{ min: 0, max: 100 }}
+                  formikValue={formik.values.porcentaje_plan} 
+                  onCommit={set('porcentaje_plan')} 
+                  InputProps={{ endAdornment: <InputAdornment position="end">%</InputAdornment> }} 
+                  error={formik.touched.porcentaje_plan && !!formik.errors.porcentaje_plan} 
+                  helperText={formik.touched.porcentaje_plan && formik.errors.porcentaje_plan as string} 
+                />
+                <FastTextField 
+                  type="number" 
+                  label="% Carga Admin." 
+                  onKeyDown={blockInvalidChar} 
+                  inputProps={{ min: 0, max: 100 }}
+                  formikValue={formik.values.porcentaje_administrativo} 
+                  onCommit={set('porcentaje_administrativo')} 
+                  InputProps={{ endAdornment: <InputAdornment position="end">%</InputAdornment> }} 
+                  error={formik.touched.porcentaje_administrativo && !!formik.errors.porcentaje_administrativo} 
+                  helperText={formik.touched.porcentaje_administrativo && formik.errors.porcentaje_administrativo as string} 
+                />
+                <FastTextField 
+                  type="number" 
+                  label="% IVA (s/ Admin)" 
+                  onKeyDown={blockInvalidChar} 
+                  inputProps={{ min: 0, max: 100 }}
+                  formikValue={formik.values.porcentaje_iva} 
+                  onCommit={set('porcentaje_iva')} 
+                  InputProps={{ endAdornment: <InputAdornment position="end">%</InputAdornment> }} 
+                  error={formik.touched.porcentaje_iva && !!formik.errors.porcentaje_iva} 
+                  helperText={formik.touched.porcentaje_iva && formik.errors.porcentaje_iva as string} 
+                />
+              </Box>
+            </Box>
+
+            <SimulationDisplay 
+              plazo={formik.values.plazo_inversion} 
+              unidades={formik.values.valor_cemento_unidades} 
+              precio={formik.values.valor_cemento} 
+              pctPlan={formik.values.porcentaje_plan} 
+              pctAdmin={formik.values.porcentaje_administrativo} 
+              pctIva={formik.values.porcentaje_iva} 
+            />
           </Stack>
         )}
 
@@ -317,10 +520,28 @@ const CreateProyectoModal: React.FC<any> = ({ open, onClose, onSubmit, isLoading
             </Avatar>
             <Box textAlign="center">
               <Typography variant="subtitle1" fontWeight={800} gutterBottom>{contratoFile ? 'Documento Listo' : 'Subir Contrato Base'}</Typography>
-              <Typography variant="caption" color="text.secondary" display="block" mb={3}>Solo archivos PDF permitidos para la plantilla legal</Typography>
+              <Typography variant="caption" color="text.secondary" display="block" mb={3}>
+                Solo archivos PDF permitidos para la plantilla legal (Máximo {env.maxFileSize / (1024 * 1024)}MB)
+              </Typography>
               <Button variant="contained" component="label" startIcon={<UploadIcon />} sx={{ borderRadius: 2, fontWeight: 700 }}>
                 {contratoFile ? 'Reemplazar Archivo' : 'Seleccionar PDF'}
-                <input type="file" hidden accept="application/pdf" onChange={(e) => { const f = e.target.files?.[0] || null; setContratoFile(f); if (f) setNombreContrato(f.name.replace('.pdf', '')); }} />
+                {/* 👈 3. Agregamos validación del tamaño máximo del archivo para el PDF */}
+                <input 
+                  type="file" 
+                  hidden 
+                  accept="application/pdf" 
+                  onChange={(e) => { 
+                    const f = e.target.files?.[0] || null; 
+                    if (f && f.size > env.maxFileSize) {
+                      alert(`El archivo excede el tamaño máximo permitido de ${env.maxFileSize / (1024 * 1024)}MB.`);
+                      // Limpiamos el input para que pueda intentar subir otro de inmediato
+                      e.target.value = ''; 
+                      return;
+                    }
+                    setContratoFile(f); 
+                    if (f) setNombreContrato(f.name.replace('.pdf', '')); 
+                  }} 
+                />
               </Button>
             </Box>
             {contratoFile && (

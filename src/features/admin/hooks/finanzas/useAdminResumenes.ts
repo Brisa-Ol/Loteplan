@@ -6,6 +6,7 @@ import type { ResumenCuentaDto } from '@/core/types/dto/resumenCuenta.dto';
 import ResumenCuentaService from '@/core/api/services/resumenCuenta.service';
 import { useModal } from '@/shared/hooks/useModal';
 import { useSortedData } from '../useSortedData';
+import { env } from '@/core/config/env'; // 👈 1. Importamos env
 
 // ============================================================================
 // DEBOUNCE HELPER
@@ -39,7 +40,7 @@ export const useAdminResumenes = () => {
   const { data: resumenesRaw = [], isLoading, error } = useQuery({
     queryKey: ['adminResumenes'],
     queryFn: async () => (await ResumenCuentaService.findAll()).data,
-    staleTime: 30000,
+    staleTime: env.queryStaleTime || 30000, // 👈 2. Aplicamos la variable global
     gcTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
   });

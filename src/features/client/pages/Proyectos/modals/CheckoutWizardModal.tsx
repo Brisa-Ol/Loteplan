@@ -60,6 +60,7 @@ import { CheckoutStateManager, type CheckoutPersistedState } from './Checkout pe
 // Types
 import CuotaMensualService from '@/core/api/services/cuotaMensual.service';
 import type { ProyectoDto } from '@/core/types/dto/proyecto.dto';
+import { env } from '@/core/config/env';
 
 // ===================================================
 // CONSTANTS
@@ -559,14 +560,14 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
   const hasAttemptedRecovery = useRef(false);
 
   // PLANTILLA
-  const { data: plantillas, isLoading: loadingPlantilla } = useQuery({
+ const { data: plantillas, isLoading: loadingPlantilla } = useQuery({
     queryKey: ['plantillaContrato', proyecto.id],
     queryFn: async () => {
       const response = await ContratoPlantillaService.findByProject(proyecto.id);
       return response.data;
     },
     enabled: open,
-    staleTime: 5 * 60 * 1000,
+    staleTime: env.queryStaleTime,   // ✅ antes: 5 * 60 * 1000
   });
 
   const plantillaActual = useMemo(
@@ -578,10 +579,10 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
     queryKey: ['cuotaActiva', proyecto.id],
     queryFn: async () => {
       const response = await CuotaMensualService.getLastByProjectId(proyecto.id);
-      return response.data.cuota; // Importante el .cuota al final
+      return response.data.cuota;
     },
     enabled: open && tipo === 'suscripcion',
-    staleTime: 5 * 60 * 1000,
+    staleTime: env.queryStaleTime,   // ✅ antes: 5 * 60 * 1000
   });
 
   const montoAMostrar = useMemo(() => {

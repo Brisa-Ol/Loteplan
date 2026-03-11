@@ -4,9 +4,7 @@ import {
   ContentCopy as CopyIcon,
   Download as DownloadIcon,
   Fingerprint,
-  Person as PersonIcon // Icono para el firmante
-  ,
-
+  Person as PersonIcon,
   Business as ProjectIcon,
   HistoryEdu as SignatureIcon,
   VerifiedUser as VerifiedIcon
@@ -18,6 +16,7 @@ import {
 } from '@mui/material';
 import React, { useMemo, useState } from 'react';
 
+import { env } from '@/core/config/env';
 import ContratoService from '@/core/api/services/contrato.service';
 import ImagenService from '@/core/api/services/imagen.service';
 import type { ContratoFirmadoDto } from '@/core/types/dto/contrato-firmado.dto';
@@ -29,6 +28,21 @@ interface Props {
   onClose: () => void;
   contrato: ContratoFirmadoDto | null;
 }
+
+// Formateadores construidos una sola vez con locale y timezone del env
+const dateFormatter = new Intl.DateTimeFormat(env.defaultLocale, {
+  timeZone: env.timezone,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
+const timeFormatter = new Intl.DateTimeFormat(env.defaultLocale, {
+  timeZone: env.timezone,
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+});
 
 export const VerContratoFirmadoModal: React.FC<Props> = ({ open, onClose, contrato }) => {
   const theme = useTheme();
@@ -98,7 +112,7 @@ export const VerContratoFirmadoModal: React.FC<Props> = ({ open, onClose, contra
 
           <Stack spacing={2.5}>
 
-            {/* ✅ SECCIÓN DEL FIRMANTE (Actualizado) */}
+            {/* TITULAR DE LA FIRMA */}
             <Box>
               <Stack direction="row" spacing={1} alignItems="center" mb={1}>
                 <PersonIcon sx={{ fontSize: 18, color: 'primary.main' }} />
@@ -127,7 +141,7 @@ export const VerContratoFirmadoModal: React.FC<Props> = ({ open, onClose, contra
 
             <Divider />
 
-            {/* Validación 2FA */}
+            {/* Certificación digital */}
             <Box>
               <Typography variant="caption" color="text.secondary">CERTIFICACIÓN DIGITAL</Typography>
               <Alert severity="success" icon={<SignatureIcon fontSize="small" />} sx={{ mt: 0.5, py: 0.5 }}>
@@ -149,8 +163,9 @@ export const VerContratoFirmadoModal: React.FC<Props> = ({ open, onClose, contra
                 </Box>
                 <Box display="flex" justifyContent="space-between">
                   <Typography variant="caption">Fecha y Hora:</Typography>
+                  {/* ✅ Formateado con env.defaultLocale y env.timezone */}
                   <Typography variant="caption" fontWeight={700}>
-                    {fechaFirma.toLocaleDateString()} - {fechaFirma.toLocaleTimeString()}
+                    {dateFormatter.format(fechaFirma)} — {timeFormatter.format(fechaFirma)}
                   </Typography>
                 </Box>
               </Stack>

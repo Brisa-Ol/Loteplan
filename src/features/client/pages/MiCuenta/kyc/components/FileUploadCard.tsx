@@ -1,5 +1,6 @@
 import { Box, Paper, Typography } from '@mui/material';
 import React from 'react';
+import { env } from '@/core/config/env';
 import ImageUploadZone from '../../../../../../shared/components/forms/ImageUploadZone';
 
 
@@ -12,10 +13,13 @@ interface FileUploadCardProps {
     onRemove: () => void;
 }
 
+// Convertimos bytes → MB que espera ImageUploadZone
+const toMB = (bytes: number) => bytes / 1_048_576;
+
 export const FileUploadCard: React.FC<FileUploadCardProps> = ({
     title,
     description,
-    accept = "image/*",
+    accept = 'image/*',
     file,
     onFileSelect,
     onRemove
@@ -29,6 +33,11 @@ export const FileUploadCard: React.FC<FileUploadCardProps> = ({
         }
     };
 
+    // env.maxImageSize para imágenes, env.maxFileSize para video
+    const maxSizeMB = accept.includes('video')
+        ? toMB(env.maxFileSize)
+        : toMB(env.maxImageSize);
+
     return (
         <Paper
             variant="outlined"
@@ -41,11 +50,10 @@ export const FileUploadCard: React.FC<FileUploadCardProps> = ({
 
             <Box flexGrow={1}>
                 <ImageUploadZone
-                    // ✅ Corregido: Usamos la prop 'image' (singular) ya que no es múltiple
                     image={file}
                     multiple={false}
                     onChange={handleZoneChange}
-                    maxSizeMB={accept.includes('video') ? 50 : 10}
+                    maxSizeMB={maxSizeMB}
                     accept={accept}
                 />
             </Box>

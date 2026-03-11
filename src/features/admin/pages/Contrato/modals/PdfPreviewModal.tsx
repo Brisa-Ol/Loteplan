@@ -1,30 +1,29 @@
 // src/shared/components/domain/modals/PdfPreviewModal/PdfPreviewModal.tsx
 
-import React, { useEffect, useState, useMemo } from 'react';
-import {
-  Box,
-  CircularProgress,
-  Typography,
-  Alert,
-  Button,
-  Chip,
-  IconButton,
-  Tooltip,
-  useTheme,
-  alpha,
-  Stack,
-} from '@mui/material';
+import httpService from '@/core/api/httpService';
+import ContratoPlantillaService from '@/core/api/services/contrato-plantilla.service';
+import { env } from '@/core/config/env';
+import { BaseModal } from '@/shared/components/domain';
 import {
   Description as FileIcon,
   OpenInNew,
   WarningAmber as WarningIcon,
 } from '@mui/icons-material';
+import {
+  Alert,
+  alpha,
+  Box,
+  Button,
+  Chip,
+  CircularProgress,
+  IconButton,
+  Stack,
+  Tooltip,
+  Typography,
+  useTheme,
+} from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
-
-import ContratoPlantillaService from '@/core/api/services/contrato-plantilla.service';
-import httpService from '@/core/api/httpService';
-import { env } from '@/core/config/env';
-import { BaseModal } from '@/shared/components/domain';
+import React, { useEffect, useMemo, useState } from 'react';
 
 
 // ============================================================================
@@ -74,10 +73,10 @@ export const PdfPreviewModal: React.FC<PdfPreviewModalProps> = ({
   const fullPdfUrl = useMemo(() => {
     if (!pdfUrlRaw) return null;
     if (pdfUrlRaw.startsWith('http')) return pdfUrlRaw;
-    
-    const backendRoot = env.apiBaseUrl.replace(/\/api\/?$/, ''); 
+
+    const backendRoot = env.apiBaseUrl.replace(/\/api\/?$/, '');
     let cleanPath = pdfUrlRaw.startsWith('/') ? pdfUrlRaw : `/${pdfUrlRaw}`;
-    
+
     if (!cleanPath.startsWith('/uploads')) {
       cleanPath = `/uploads${cleanPath}`;
     }
@@ -95,7 +94,7 @@ export const PdfPreviewModal: React.FC<PdfPreviewModalProps> = ({
       try {
         const response = await httpService.get(fullPdfUrl, {
           responseType: 'blob',
-          baseURL: '' 
+          baseURL: ''
         });
 
         if (isMounted) {
@@ -105,7 +104,7 @@ export const PdfPreviewModal: React.FC<PdfPreviewModalProps> = ({
         }
       } catch (err) {
         console.error("Error al descargar PDF:", err);
-        if (isMounted) setBlobUrl(fullPdfUrl); 
+        if (isMounted) setBlobUrl(fullPdfUrl);
       } finally {
         if (isMounted) setLoadingBlob(false);
       }
@@ -158,20 +157,20 @@ export const PdfPreviewModal: React.FC<PdfPreviewModalProps> = ({
       headerExtra={
         <Stack direction="row" spacing={1} alignItems="center">
           {version !== undefined && (
-            <Chip 
-              label={`V${version}`} 
-              size="small" 
-              variant="outlined" 
-              sx={{ fontWeight: 800, fontSize: '0.65rem', height: 20 }} 
+            <Chip
+              label={`V${version}`}
+              size="small"
+              variant="outlined"
+              sx={{ fontWeight: 800, fontSize: '0.65rem', height: 20 }}
             />
           )}
           {blobUrl && (
             <Tooltip title="Abrir en nueva pestaña">
-              <IconButton 
-                size="small" 
-                component="a" 
-                href={blobUrl} 
-                target="_blank" 
+              <IconButton
+                size="small"
+                component="a"
+                href={blobUrl}
+                target="_blank"
                 sx={{ bgcolor: alpha(theme.palette.primary.main, 0.08) }}
               >
                 <OpenInNew fontSize="small" color="primary" />
@@ -184,9 +183,9 @@ export const PdfPreviewModal: React.FC<PdfPreviewModalProps> = ({
       <Box sx={styles.viewerContainer}>
         {/* Banner de Integridad Comprometida */}
         {integrityCompromised && !isCurrentlyLoading && (
-          <Alert 
-            severity="warning" 
-            icon={<WarningIcon />} 
+          <Alert
+            severity="warning"
+            icon={<WarningIcon />}
             sx={{ borderRadius: 0, border: 'none', borderBottom: '1px solid', borderColor: 'warning.light' }}
           >
             <strong>Hash de Seguridad no coincide:</strong> Este documento podría haber sido modificado externamente.
@@ -227,10 +226,10 @@ export const PdfPreviewModal: React.FC<PdfPreviewModalProps> = ({
               <Typography variant="body1" color="text.secondary" fontWeight={700}>
                 Visualización no soportada
               </Typography>
-              <Button 
-                variant="contained" 
-                startIcon={<OpenInNew />} 
-                href={blobUrl} 
+              <Button
+                variant="contained"
+                startIcon={<OpenInNew />}
+                href={blobUrl}
                 target="_blank"
                 sx={{ borderRadius: 2 }}
               >

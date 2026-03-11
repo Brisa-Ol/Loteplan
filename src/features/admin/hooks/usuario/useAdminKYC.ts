@@ -1,17 +1,17 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useMemo, useState, useCallback } from 'react';
 import kycService from '@/core/api/services/kyc.service';
+import { env } from '@/core/config/env'; // 👈 1. Importamos env
 import type { KycDTO } from '@/core/types/dto/kyc.dto';
 import { useConfirmDialog } from '@/shared/hooks/useConfirmDialog';
 import { useModal } from '@/shared/hooks/useModal';
 import useSnackbar from '@/shared/hooks/useSnackbar';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback, useMemo, useState } from 'react';
 import { useSortedData } from '../useSortedData';
-
 
 export type TabValue = 'pendiente' | 'aprobada' | 'rechazada' | 'todas';
 
 const QUERY_CONFIG = {
-  staleTime: 30000,
+  staleTime: env.queryStaleTime || 30000, // 👈 2. Aplicamos la variable global
   gcTime: 5 * 60 * 1000,
 };
 

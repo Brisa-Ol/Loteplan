@@ -1,7 +1,6 @@
-// ===================================================
-// SISTEMA DE PERSISTENCIA MEJORADO
-// ===================================================
+// src/features/client/pages/Proyectos/modals/Checkout persistence.tsx
 
+import { env } from '@/core/config/env';
 import React from "react";
 
 /**
@@ -12,6 +11,13 @@ import React from "react";
  * - Cierra accidentalmente la ventana
  * - Regresa después de pagar en Mercado Pago
  */
+
+// ✅ Helper centralizado: solo loguea si env.enableDebugLogs está activo
+const log = {
+  info:  (...args: unknown[]) => { if (env.enableDebugLogs) console.log(...args); },
+  warn:  (...args: unknown[]) => { if (env.enableDebugLogs) console.warn(...args); },
+  error: (...args: unknown[]) => { if (env.enableDebugLogs) console.error(...args); },
+};
 
 // ✅ CLAVES DE PERSISTENCIA
 export const STORAGE_KEYS = {
@@ -48,18 +54,10 @@ export class CheckoutStateManager {
    */
   static saveState(state: CheckoutPersistedState): void {
     try {
-      const stateWithTimestamp = {
-        ...state,
-        timestamp: Date.now()
-      };
+      const stateWithTimestamp = { ...state, timestamp: Date.now() };
 
-      // Guardar estado completo
-      localStorage.setItem(
-        STORAGE_KEYS.CHECKOUT_STATE,
-        JSON.stringify(stateWithTimestamp)
-      );
+      localStorage.setItem(STORAGE_KEYS.CHECKOUT_STATE, JSON.stringify(stateWithTimestamp));
 
-      // También guardar claves individuales para compatibilidad y recuperación rápida
       if (state.transactionId) {
         localStorage.setItem(STORAGE_KEYS.TRANSACTION_ID, String(state.transactionId));
         localStorage.setItem(STORAGE_KEYS.PROJECT_ID, String(state.projectId));
@@ -72,14 +70,13 @@ export class CheckoutStateManager {
       if (state.signatureDataUrl) {
         localStorage.setItem(STORAGE_KEYS.SIGNATURE_DATA, state.signatureDataUrl);
       }
-
       if (state.location) {
         localStorage.setItem(STORAGE_KEYS.LOCATION, JSON.stringify(state.location));
       }
 
-      console.log('✅ Estado del checkout guardado:', state);
+      log.info('✅ Estado del checkout guardado:', state);
     } catch (error) {
-      console.error('❌ Error guardando estado del checkout:', error);
+      log.error('❌ Error guardando estado del checkout:', error);
     }
   }
 
@@ -90,31 +87,28 @@ export class CheckoutStateManager {
     try {
       const savedState = localStorage.getItem(STORAGE_KEYS.CHECKOUT_STATE);
       if (!savedState) {
-        // Intentar recuperar de claves individuales (compatibilidad)
         return this.loadLegacyState(projectId);
       }
 
       const state: CheckoutPersistedState = JSON.parse(savedState);
 
-      // Verificar que sea el mismo proyecto
       if (state.projectId !== projectId) {
-        console.warn('⚠️ Estado guardado es de otro proyecto');
+        log.warn('⚠️ Estado guardado es de otro proyecto');
         this.clearState();
         return null;
       }
 
-      // Verificar expiración
       const age = Date.now() - state.timestamp;
       if (age > this.STATE_EXPIRATION_MS) {
-        console.warn('⚠️ Estado guardado expiró');
+        log.warn('⚠️ Estado guardado expiró');
         this.clearState();
         return null;
       }
 
-      console.log('✅ Estado recuperado:', state);
+      log.info('✅ Estado recuperado:', state);
       return state;
     } catch (error) {
-      console.error('❌ Error cargando estado del checkout:', error);
+      log.error('❌ Error cargando estado del checkout:', error);
       return null;
     }
   }
@@ -124,30 +118,28 @@ export class CheckoutStateManager {
    */
   private static loadLegacyState(projectId: number): CheckoutPersistedState | null {
     try {
-      const savedTxId = localStorage.getItem(STORAGE_KEYS.TRANSACTION_ID);
-      const savedProjId = localStorage.getItem(STORAGE_KEYS.PROJECT_ID);
-      const savedStep = localStorage.getItem(STORAGE_KEYS.ACTIVE_STEP);
-      const savedPaymentSuccess = localStorage.getItem(STORAGE_KEYS.PAYMENT_SUCCESS);
-      const savedSignature = localStorage.getItem(STORAGE_KEYS.SIGNATURE_DATA);
-      const savedLocation = localStorage.getItem(STORAGE_KEYS.LOCATION);
-      const savedTipo = localStorage.getItem(STORAGE_KEYS.TIPO);
+      const savedTxId    = localStorage.getItem(STORAGE_KEYS.TRANSACTION_ID);
+      const savedProjId  = localStorage.getItem(STORAGE_KEYS.PROJECT_ID);
+      const savedStep    = localStorage.getItem(STORAGE_KEYS.ACTIVE_STEP);
+      const savedSuccess = localStorage.getItem(STORAGE_KEYS.PAYMENT_SUCCESS);
+      const savedSig     = localStorage.getItem(STORAGE_KEYS.SIGNATURE_DATA);
+      const savedLoc     = localStorage.getItem(STORAGE_KEYS.LOCATION);
+      const savedTipo    = localStorage.getItem(STORAGE_KEYS.TIPO);
 
-      if (!savedTxId || savedProjId !== String(projectId)) {
-        return null;
-      }
+      if (!savedTxId || savedProjId !== String(projectId)) return null;
 
       return {
         projectId,
         tipo: (savedTipo as 'suscripcion' | 'inversion') || 'inversion',
         activeStep: savedStep ? Number(savedStep) : 0,
         transactionId: Number(savedTxId),
-        paymentSuccess: savedPaymentSuccess === 'true',
-        signatureDataUrl: savedSignature || null,
-        location: savedLocation ? JSON.parse(savedLocation) : null,
+        paymentSuccess: savedSuccess === 'true',
+        signatureDataUrl: savedSig || null,
+        location: savedLoc ? JSON.parse(savedLoc) : null,
         timestamp: Date.now()
       };
     } catch (error) {
-      console.error('❌ Error cargando estado legacy:', error);
+      log.error('❌ Error cargando estado legacy:', error);
       return null;
     }
   }
@@ -157,56 +149,31 @@ export class CheckoutStateManager {
    */
   static clearState(): void {
     try {
-      Object.values(STORAGE_KEYS).forEach(key => {
-        localStorage.removeItem(key);
-      });
-      console.log('🧹 Estado del checkout limpiado');
+      Object.values(STORAGE_KEYS).forEach(key => localStorage.removeItem(key));
+      log.info('🧹 Estado del checkout limpiado');
     } catch (error) {
-      console.error('❌ Error limpiando estado del checkout:', error);
+      log.error('❌ Error limpiando estado del checkout:', error);
     }
   }
 
-  /**
-   * Verifica si hay un estado recuperable para el proyecto
-   */
   static hasRecoverableState(projectId: number): boolean {
     const state = this.loadState(projectId);
     return state !== null && (state.paymentSuccess || state.activeStep >= 3);
   }
 
-  /**
-   * Actualiza solo el paso activo (útil para navegación)
-   */
   static updateStep(projectId: number, step: number): void {
     const state = this.loadState(projectId);
-    if (state) {
-      this.saveState({ ...state, activeStep: step });
-    }
+    if (state) this.saveState({ ...state, activeStep: step });
   }
 
-  /**
-   * Marca el pago como exitoso
-   */
   static markPaymentSuccess(projectId: number, transactionId: number): void {
     const state = this.loadState(projectId);
-    if (state) {
-      this.saveState({
-        ...state,
-        transactionId,
-        paymentSuccess: true,
-        activeStep: 4 // Ir directo a firma
-      });
-    }
+    if (state) this.saveState({ ...state, transactionId, paymentSuccess: true, activeStep: 4 });
   }
 
-  /**
-   * Guarda la firma
-   */
   static saveSignature(projectId: number, signatureDataUrl: string): void {
     const state = this.loadState(projectId);
-    if (state) {
-      this.saveState({ ...state, signatureDataUrl });
-    }
+    if (state) this.saveState({ ...state, signatureDataUrl });
   }
 }
 
@@ -227,7 +194,6 @@ export const useCheckoutRecovery = (
     if (!isOpen || hasAttemptedRecovery.current) return;
 
     const savedState = CheckoutStateManager.loadState(projectId);
-
     if (savedState && (savedState.paymentSuccess || savedState.activeStep >= 3)) {
       setRecoveredState(savedState);
       setShowRecoveryPrompt(true);
@@ -253,11 +219,5 @@ export const useCheckoutRecovery = (
     hasAttemptedRecovery.current = false;
   }, []);
 
-  return {
-    showRecoveryPrompt,
-    recoveredState,
-    handleRecover,
-    handleDiscard,
-    resetRecovery
-  };
+  return { showRecoveryPrompt, recoveredState, handleRecover, handleDiscard, resetRecovery };
 };

@@ -18,8 +18,7 @@ import { useQuery } from '@tanstack/react-query';
 import React from 'react';
 import CuotaMensualService from '../../../../../core/api/services/cuotaMensual.service';
 import type { CuotaMensualDto } from '../../../../../core/types/dto/cuotaMensual.dto';
-
-
+import { env } from '@/core/config/env'; // 👈 1. Importamos la configuración global
 
 interface Props {
   proyectoId: number;
@@ -33,12 +32,6 @@ const ProyectoPriceHistory: React.FC<Props> = ({ proyectoId }) => {
     queryFn: async () => {
       try {
         const res = await CuotaMensualService.getByProjectId(proyectoId);
-        // ✅ CORRECCIÓN: El array está dentro de res.data.cuotas (según tu backend controller)
-        // O si tu servicio ya devuelve response.data, entonces es response.cuotas
-        // Verifica si tu servicio retorna AxiosResponse completo o solo data.
-
-        // Asumiendo que CuotaMensualService retorna AxiosResponse:
-        // El controller devuelve: { success: true, cuotas: [...] }
         return res.data.cuotas || [];
       } catch (err: any) {
         if (err.response?.status === 404) {
@@ -48,6 +41,7 @@ const ProyectoPriceHistory: React.FC<Props> = ({ proyectoId }) => {
       }
     },
     retry: false,
+    staleTime: env.queryStaleTime || 30000, // 👈 2. Aplicamos la caché global
   });
 
   // Estilos de Cabecera (Consistente con ProyectoSuscripciones)
@@ -141,15 +135,18 @@ const ProyectoPriceHistory: React.FC<Props> = ({ proyectoId }) => {
                 sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
               >
                 <TableCell sx={{ color: 'text.secondary' }}>
-                  {new Date(cuota.createdAt).toLocaleDateString()}
+                  {/* 👈 3. Aplicamos Locale Global a la fecha */}
+                  {new Date(cuota.createdAt).toLocaleDateString(env.defaultLocale)}
                 </TableCell>
 
                 <TableCell sx={{ fontFamily: 'monospace' }}>
-                  ${Number(cuota.valor_cemento).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                  {/* 👈 4. Aplicamos Locale Global a la moneda */}
+                  ${Number(cuota.valor_cemento).toLocaleString(env.defaultLocale, { minimumFractionDigits: 2 })}
                 </TableCell>
 
                 <TableCell sx={{ fontWeight: 'bold', color: 'primary.main', fontFamily: 'monospace' }}>
-                  ${Number(cuota.valor_mensual_final).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                  {/* 👈 5. Aplicamos Locale Global a la moneda */}
+                  ${Number(cuota.valor_mensual_final).toLocaleString(env.defaultLocale, { minimumFractionDigits: 2 })}
                 </TableCell>
 
                 <TableCell align="right">

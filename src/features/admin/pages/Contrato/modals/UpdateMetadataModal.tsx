@@ -1,23 +1,23 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import {
-  TextField,
-  MenuItem,
-  Stack,
-  Alert,
-  Chip,
-  InputAdornment,
-  useTheme,
-  alpha
-} from '@mui/material';
+import type { ContratoPlantillaDto } from '@/core/types/dto/contrato-plantilla.dto';
+import { BaseModal } from '@/shared/components/domain';
 import {
   EditNote as EditIcon,
-  Save as SaveIcon,
   Label as NameIcon,
-  Numbers as VersionIcon,
   Business as ProjectIcon,
+  Save as SaveIcon,
+  Numbers as VersionIcon,
 } from '@mui/icons-material';
-import type { ContratoPlantillaDto } from '@/core/types/dto';
-import { BaseModal } from '@/shared/components/domain';
+import {
+  Alert,
+  alpha,
+  Chip,
+  InputAdornment,
+  MenuItem,
+  Stack,
+  TextField,
+  useTheme
+} from '@mui/material';
+import React, { useEffect, useMemo, useState } from 'react';
 
 
 // ============================================================================
@@ -67,7 +67,7 @@ const UpdateMetadataModal: React.FC<Props> = ({
   // --- Manejadores ---
   const handleConfirm = async () => {
     if (!plantilla) return;
-    
+
     await onSubmit({
       nombre_archivo: nombre,
       version: Number(version),
@@ -78,12 +78,12 @@ const UpdateMetadataModal: React.FC<Props> = ({
   // --- Estilos Memorizados ---
   const styles = useMemo(() => ({
     input: { '& .MuiOutlinedInput-root': { borderRadius: 2 } },
-    idChip: { 
-      fontWeight: 800, 
-      borderRadius: 1.5, 
-      bgcolor: alpha(theme.palette.info.main, 0.05) 
+    idChip: {
+      fontWeight: 800,
+      borderRadius: 1.5,
+      bgcolor: alpha(theme.palette.info.main, 0.05)
     },
-    alert: { 
+    alert: {
       borderRadius: 2,
       bgcolor: alpha(theme.palette.info.main, 0.05),
       border: `1px solid ${alpha(theme.palette.info.main, 0.1)}`,

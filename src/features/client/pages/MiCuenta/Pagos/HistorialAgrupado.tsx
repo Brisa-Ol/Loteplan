@@ -1,4 +1,3 @@
-// src/pages/User/Pagos/components/HistorialAgrupado.tsx
 
 import { env } from '@/core/config/env';
 import type { PagoDto } from '@/core/types/dto/pago.dto';

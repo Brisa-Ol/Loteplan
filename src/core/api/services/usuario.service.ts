@@ -54,7 +54,13 @@ changePassword: async (data: ChangePasswordDto): Promise<AxiosResponse<GenericRe
   findAllAdmins: async (): Promise<AxiosResponse<UsuarioDto[]>> => {
     return await httpService.get(`${ENDPOINT}/admins`);
   },
-
+/**
+ * Permite a un admin establecer una nueva contraseña para un usuario.
+ * Backend: PATCH /usuarios/:id/reset-password
+ */
+adminResetPassword: async (userId: number, newPassword: string): Promise<AxiosResponse<GenericResponseDto>> => {
+  return await httpService.patch(`${ENDPOINT}/${userId}/reset-password`, { newPassword });
+},
   /**
    * Busca usuarios por nombre de usuario o email (coincidencia parcial).
    * Backend: GET /usuarios/search?q=term

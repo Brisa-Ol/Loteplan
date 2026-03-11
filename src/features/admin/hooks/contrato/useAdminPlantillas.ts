@@ -10,6 +10,7 @@ import ContratoPlantillaService from '@/core/api/services/contrato-plantilla.ser
 import ProyectoService from '@/core/api/services/proyecto.service';
 import type { ContratoPlantillaDto } from '@/core/types/dto/contrato-plantilla.dto';
 
+import { env } from '@/core/config/env'; // 👈 1. Importamos la config
 import { downloadSecureFile } from '@/shared/utils/fileUtils';
 import { useSortedData } from '../useSortedData';
 
@@ -62,7 +63,7 @@ export const useAdminPlantillas = () => {
   const { data: plantillasRaw = [], isLoading: l1, error } = useQuery<ContratoPlantillaDto[]>({
     queryKey: ['adminPlantillas'],
     queryFn: async () => (await ContratoPlantillaService.findAll()).data,
-    staleTime: 30000,
+    staleTime: env.queryStaleTime || 30000, // 👈 2. Aplicamos la variable global
     gcTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
@@ -70,7 +71,7 @@ export const useAdminPlantillas = () => {
   const { data: proyectos = [], isLoading: l2 } = useQuery({
     queryKey: ['adminProyectosSelect'],
     queryFn: async () => (await ProyectoService.getAllAdmin()).data,
-    staleTime: 1000 * 60 * 10,
+    staleTime: 1000 * 60 * 10, // Se deja en 10 min por ser catálogo estático (Dropdown)
   });
 
   // ✨ ORDENAMIENTO + HIGHLIGHT
@@ -79,12 +80,12 @@ export const useAdminPlantillas = () => {
   const isLoading = l1 || l2;
 
   // --- FILTRADO DE PLANTILLAS (Memoizado + Debounce) ---
-const filteredPlantillas = useMemo(() => {
+  const filteredPlantillas = useMemo(() => {
     const term = debouncedSearchTerm.toLowerCase();
 
     return plantillasOrdenadas.filter(plantilla => {
       const matchesSearch = plantilla.nombre_archivo.toLowerCase().includes(term);
-      
+
       // ✨ Lógica de filtro de proyecto actualizada
       let matchesProject = true;
       if (filterProject !== 'all') {

@@ -42,7 +42,6 @@ import type { ContratoFirmadoDto } from '@/core/types/dto/contrato-firmado.dto';
 
 // Componentes Compartidos
 import { AdminPageHeader } from '@/shared/components/admin/Adminpageheader'; // ✅ Aplicado
-import AlertBanner from '@/shared/components/ui/Alertbanner';
 import MetricsGrid from '@/shared/components/admin/Metricsgrid';
 import { ViewModeToggle, type ViewMode } from '@/shared/components/admin/Viewmodetoggle';
 import { DataTable, type DataTableColumn } from '@/shared/components/data-grid/DataTable';
@@ -50,6 +49,7 @@ import { QueryHandler } from '@/shared/components/data-grid/QueryHandler';
 import { StatCard, StatusBadge } from '@/shared/components/domain/cards/StatCard';
 import { FilterBar, FilterSearch, FilterSelect } from '@/shared/components/forms/FilterBar';
 import { PageContainer } from '@/shared/components/layout/PageContainer';
+import AlertBanner from '@/shared/components/ui/Alertbanner';
 import { useAdminContratosFirmados } from '../../hooks/contrato/useAdminContratosFirmados';
 
 // ============================================================================

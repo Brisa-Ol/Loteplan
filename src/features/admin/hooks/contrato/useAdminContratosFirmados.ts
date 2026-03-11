@@ -1,9 +1,10 @@
-import { useState, useCallback, useMemo, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import useSnackbar from '@/shared/hooks/useSnackbar';
-import type { ContratoFirmadoDto } from '@/core/types/dto/contrato-firmado.dto';
 import ContratoService from '@/core/api/services/contrato.service';
+import type { ContratoFirmadoDto } from '@/core/types/dto/contrato-firmado.dto';
+import useSnackbar from '@/shared/hooks/useSnackbar';
+import { useQuery } from '@tanstack/react-query';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { env } from '@/core/config/env';
 import { downloadSecureFile } from '@/shared/utils';
 import { useSortedData } from '../useSortedData';
 
@@ -24,11 +25,11 @@ function useDebouncedValue<T>(value: T, delay: number = 300): T {
 // ============================================================================
 export const useAdminContratosFirmados = () => {
   const { showError } = useSnackbar();
-  
+
   // --- ESTADOS UI ---
   const [searchTerm, setSearchTerm] = useState('');
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
-const [filterTipo, setFilterTipo] = useState<string>('all');
+  const [filterTipo, setFilterTipo] = useState<string>('all');
   const [filterEstado, setFilterEstado] = useState<string>('all');
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
@@ -42,8 +43,9 @@ const [filterTipo, setFilterTipo] = useState<string>('all');
       const res = await ContratoService.findAllSigned();
       return res.data;
     },
-    staleTime: 30000,      // 30 segundos fresh
-    gcTime: 5 * 60 * 1000, // 5 minutos cache
+    // 👇 2. Usas la variable global con un fallback de seguridad
+    staleTime: env.queryStaleTime || 30000,
+    gcTime: 5 * 60 * 1000, // (Esto lo puedes dejar fijo si quieres, es el tiempo en RAM)
     refetchOnWindowFocus: false
   });
 
@@ -53,7 +55,7 @@ const [filterTipo, setFilterTipo] = useState<string>('all');
   // --- FILTRADO (Optimizado + Memoizado) ---
   const filteredContratos = useMemo(() => {
     const term = debouncedSearchTerm.toLowerCase();
-    
+
     return contratosOrdenados.filter(c => {
       // 1. Filtro por Búsqueda de Texto
       let matchesSearch = true;
@@ -87,7 +89,7 @@ const [filterTipo, setFilterTipo] = useState<string>('all');
         matchesEstado = c.estado_firma === filterEstado;
       }
 
-     // 4. ✨ Filtro por Rango de Fechas
+      // 4. ✨ Filtro por Rango de Fechas
       let matchesDate = true;
       if (startDate || endDate) {
         // Aseguramos que la fecha del contrato sea un objeto Date válido
@@ -114,13 +116,13 @@ const [filterTipo, setFilterTipo] = useState<string>('all');
   // --- HANDLERS ---
   const handleDownload = useCallback(async (contrato: ContratoFirmadoDto) => {
     if (!contrato.url_archivo) {
-        showError('El contrato no tiene una URL de archivo válida.');
-        return;
+      showError('El contrato no tiene una URL de archivo válida.');
+      return;
     }
 
     try {
       setDownloadingId(contrato.id);
-      
+
       // ✅ Usamos tu utilidad robusta en lugar del servicio
       await downloadSecureFile(contrato.url_archivo, contrato.nombre_archivo);
 
@@ -139,7 +141,7 @@ const [filterTipo, setFilterTipo] = useState<string>('all');
     // State
     searchTerm, setSearchTerm,
     downloadingId,
-    
+
     // ✨ UX
     highlightedId,
 
@@ -147,11 +149,11 @@ const [filterTipo, setFilterTipo] = useState<string>('all');
     filteredContratos,
     isLoading,
     error,
-startDate, setStartDate, // 👈 Exportamos
+    startDate, setStartDate, // 👈 Exportamos
     endDate, setEndDate,
     filterTipo, setFilterTipo,       // 👈 Exportamos
     filterEstado, setFilterEstado,   // 👈 Exportamos
- 
+
     // Handlers
     handleDownload
   };

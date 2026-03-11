@@ -1,5 +1,6 @@
 // src/components/Admin/Proyectos/Components/modals/EditProyectoModal.tsx
 
+import { BaseModal } from '@/shared';
 import {
     CalendarMonth as CalendarIcon,
     Description as DescriptionIcon,
@@ -29,7 +30,6 @@ import { useFormik } from 'formik';
 import React, { useEffect } from 'react';
 import * as Yup from 'yup';
 import type { ProyectoDto, UpdateProyectoDto } from '../../../../../core/types/dto/proyecto.dto';
-import { BaseModal } from '@/shared';
 
 
 // --- FUNCIONES Y VARIABLES AUXILIARES ---

@@ -331,12 +331,51 @@ const UserDashboard: React.FC = () => {
                 </Paper>
 
                 {/* SEGURIDAD Y 2FA (RESTAURADO) */}
-                <Card elevation={0} sx={{ bgcolor: alpha(theme.palette.primary.main, 0.03), border: `2px dashed ${theme.palette.primary.main}`, borderRadius: 2, p: 3, textAlign: 'center' }}>
+                <Card
+                  elevation={0}
+                  sx={{
+                    bgcolor: alpha(user?.is_2fa_enabled ? theme.palette.primary.main : theme.palette.warning.main, 0.03),
+                    border: `2px dashed ${user?.is_2fa_enabled ? theme.palette.primary.main : theme.palette.warning.main}`,
+                    borderRadius: 2,
+                    p: 3,
+                    textAlign: 'center'
+                  }}
+                >
                   <Stack spacing={1.5} alignItems="center">
-                    <Avatar sx={{ bgcolor: 'primary.main' }}><Security /></Avatar>
+                    <Avatar sx={{ bgcolor: user?.is_2fa_enabled ? 'primary.main' : 'warning.main' }}>
+                      <Security />
+                    </Avatar>
                     <Typography variant="subtitle2" fontWeight={800}>Seguridad de Cuenta</Typography>
-                    <Typography variant="caption" color="text.secondary">Tu cuenta está protegida con 2FA</Typography>
-                    <Button size="small" variant="text" onClick={() => navigate('/client/MiCuenta/SecuritySettings')} sx={{ fontWeight: 800 }}>Configurar 2FA</Button>
+
+                    {/* ── Estado Dinámico ── */}
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <Typography variant="body2" color="text.secondary">Estado:</Typography>
+                      <Chip
+                        label={user?.is_2fa_enabled ? 'ACTIVO' : 'INACTIVO'}
+                        color={user?.is_2fa_enabled ? 'success' : 'warning'}
+                        size="small"
+                        variant="filled"
+                        sx={{ fontWeight: 700 }}
+                      />
+                    </Stack>
+
+                    <Typography variant="caption" color="text.secondary">
+                      {user?.is_2fa_enabled
+                        ? 'Tu cuenta está protegida con 2FA.'
+                        : 'Recomendamos activar esta protección.'}
+                    </Typography>
+
+                    <Button
+                      size="small"
+                      variant="text"
+                      onClick={() => navigate('/client/seguridad')}
+                      sx={{
+                        fontWeight: 800,
+                        color: user?.is_2fa_enabled ? 'primary.main' : 'warning.dark'
+                      }}
+                    >
+                      {user?.is_2fa_enabled ? 'Administrar 2FA' : 'Configurar 2FA'}
+                    </Button>
                   </Stack>
                 </Card>
               </Stack>

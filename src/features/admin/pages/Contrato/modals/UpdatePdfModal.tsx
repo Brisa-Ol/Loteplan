@@ -1,7 +1,6 @@
 import { env } from '@/core/config/env';
-import type { ContratoPlantillaDto, UpdatePlantillaPdfDto } from '@/core/types/dto';
+import type { ContratoPlantillaDto, UpdatePlantillaPdfDto } from '@/core/types/dto/contrato-plantilla.dto';
 import { BaseModal } from '@/shared/components/domain';
-
 import { useSnackbar } from '@/shared/hooks';
 import {
   CloudUpload,
@@ -115,9 +114,9 @@ const UpdatePdfModal: React.FC<Props> = ({ open, onClose, plantilla, onSubmit, i
       '& .MuiAlert-icon': { color: 'warning.main' }
     },
     avatar: (isActive: boolean, hasFile: boolean) => ({
-      width: 56, 
-      height: 56, 
-      mx: 'auto', 
+      width: 56,
+      height: 56,
+      mx: 'auto',
       mb: 2,
       bgcolor: hasFile ? 'success.main' : (isActive ? 'primary.main' : alpha(theme.palette.action.disabled, 0.1)),
       color: hasFile || isActive ? 'common.white' : 'text.disabled',
@@ -149,7 +148,7 @@ const UpdatePdfModal: React.FC<Props> = ({ open, onClose, plantilla, onSubmit, i
             Acción Crítica de Seguridad
           </Typography>
           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-            Al reemplazar el archivo, el sistema generará un nuevo <strong>Hash de Integridad</strong>. 
+            Al reemplazar el archivo, el sistema generará un nuevo <strong>Hash de Integridad</strong>.
             Este cambio es irreversible y afectará a los nuevos contratos generados.
           </Typography>
         </Alert>

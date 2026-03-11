@@ -16,6 +16,7 @@ import { Business, FilterListOff, Home as HomeIcon, Savings, TrendingUp } from "
 
 // Servicios
 import proyectoService from "@/core/api/services/proyecto.service";
+import { env } from '@/core/config/env';
 
 // Componentes
 import { ROUTES } from '@/routes';
@@ -23,7 +24,7 @@ import { QueryHandler } from "../../../../shared/components/data-grid/QueryHandl
 import { ProjectCard } from "./components/ProjectCard";
 
 // ===================================================
-// 🚀 COMPONENTES MEMOIZADOS (Evitan re-renders innecesarios)
+// 🚀 COMPONENTES MEMOIZADOS
 // ===================================================
 
 const MemoizedProjectCard = memo(ProjectCard);
@@ -80,27 +81,26 @@ const ProyectosUnificados: React.FC = () => {
   const navigate = useNavigate();
   const theme = useTheme();
 
-  // Estados
+  // ✅ Estado inicial y paso de "ver más" desde env.defaultPageSize
   const [perfilSeleccionado, setPerfilSeleccionado] = useState<'ahorrista' | 'inversionista'>('ahorrista');
-  const [itemsVisibles, setItemsVisibles] = useState(9);
+  const [itemsVisibles, setItemsVisibles] = useState(env.defaultPageSize);
   const [filtros] = useState({ search: '', status: 'todos' });
 
-  // 1. Queries con staleTime alto para evitar peticiones repetitivas
+  // ✅ staleTime desde env.queryStaleTime en lugar de hardcoded 30min
   const { data: proyectosInv, isLoading: loadingInv } = useQuery({
     queryKey: ['proyectosInversionista'],
     queryFn: async () => (await proyectoService.getInversionistasActive()).data,
-    staleTime: 1000 * 60 * 30, // 30 minutos de caché
+    staleTime: env.queryStaleTime,
   });
 
   const { data: proyectosAho, isLoading: loadingAho } = useQuery({
     queryKey: ['proyectosAhorrista'],
     queryFn: async () => (await proyectoService.getAhorristasActive()).data,
-    staleTime: 1000 * 60 * 30,
+    staleTime: env.queryStaleTime,
   });
 
   const isLoading = loadingInv || loadingAho;
 
-  // 2. Filtrado eficiente
   const proyectosFiltrados = useMemo(() => {
     const base = perfilSeleccionado === 'inversionista' ? (proyectosInv || []) : (proyectosAho || []);
     if (filtros.status === 'todos' && !filtros.search) return base;
@@ -113,19 +113,18 @@ const ProyectosUnificados: React.FC = () => {
     });
   }, [proyectosInv, proyectosAho, perfilSeleccionado, filtros]);
 
-  // 3. Slicing memoizado
   const proyectosVisibles = useMemo(() =>
     proyectosFiltrados.slice(0, itemsVisibles),
     [proyectosFiltrados, itemsVisibles]);
 
-  // 4. Handlers memorizados
   const handleProjectClick = useCallback((id: number | string) => {
     navigate(ROUTES.PROYECTOS.DETALLE.replace(':id', String(id)));
   }, [navigate]);
 
+  // ✅ Al cambiar perfil, el reset también usa env.defaultPageSize
   const handleCambioPerfil = useCallback((nuevo: 'ahorrista' | 'inversionista') => {
     setPerfilSeleccionado(nuevo);
-    setItemsVisibles(9);
+    setItemsVisibles(env.defaultPageSize);
   }, []);
 
   return (
@@ -179,7 +178,6 @@ const ProyectosUnificados: React.FC = () => {
             </Box>
           ) : (
             <>
-              {/* GRID OPTIMIZADO: Usamos display grid nativo para mejor performance */}
               <Box sx={{
                 display: "grid",
                 gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", md: "repeat(3, 1fr)" },
@@ -198,7 +196,8 @@ const ProyectosUnificados: React.FC = () => {
                 <Box textAlign="center" mt={8}>
                   <Button
                     variant="outlined" size="large"
-                    onClick={() => setItemsVisibles(v => v + 9)}
+                    // ✅ Incrementa en env.defaultPageSize en lugar de 9 hardcodeado
+                    onClick={() => setItemsVisibles(v => v + env.defaultPageSize)}
                     sx={{ px: 8, py: 1.5, borderRadius: 3, borderWidth: 2, fontWeight: 800 }}
                   >
                     Ver más proyectos

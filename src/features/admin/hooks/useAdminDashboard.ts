@@ -12,25 +12,30 @@ import proyectoService from '@/core/api/services/proyecto.service';
 import pujaService from '@/core/api/services/puja.service';
 import suscripcionService from '@/core/api/services/suscripcion.service';
 
+import { env } from '@/core/config/env'; // 👈 1. Importamos la configuración
+
+// 👈 2. Definimos la constante para no repetir el código en cada línea
+const DEFAULT_STALE_TIME = env.queryStaleTime || 30000;
+
 export const useAdminDashboard = () => {
   const navigate = useNavigate();
   const theme = useTheme();
   const [activeTab, setActiveTab] = useState(0);
   const [selectedPopularidadProject, setSelectedPopularidadProject] = useState<number | null>(null);
 
+  // 👈 3. Aplicamos el staleTime a todas las queries del dashboard
   const results = useQueries({
     queries: [
-      { queryKey: ['pendingKYC'], queryFn: kycService.getPendingVerifications },
-      { queryKey: ['completionRate'], queryFn: proyectoService.getCompletionRate },
-      { queryKey: ['monthlyProgress'], queryFn: proyectoService.getMonthlyProgress },
-      { queryKey: ['liquidityRate'], queryFn: async () => (await inversionService.getLiquidityMetrics()).data.data },
-      { queryKey: ['inversionesPorUsuario'], queryFn: async () => (await inversionService.getAggregatedMetrics()).data.data },
-      { queryKey: ['morosidad'], queryFn: async () => (await suscripcionService.getMorosityMetrics()).data },
-      { queryKey: ['cancelacion'], queryFn: async () => (await suscripcionService.getCancellationMetrics()).data },
-      { queryKey: ['proyectosActivos'], queryFn: async () => (await proyectoService.getAllActive()).data },
-      { queryKey: ['adminAllPujas'], queryFn: async () => (await pujaService.getAllAdmin()).data },
-      // 🆕 Agregamos los proyectos completos para poder filtrarlos
-      { queryKey: ['allProyectosAdmin'], queryFn: async () => (await proyectoService.getAllAdmin()).data }
+      { queryKey: ['pendingKYC'], queryFn: kycService.getPendingVerifications, staleTime: DEFAULT_STALE_TIME },
+      { queryKey: ['completionRate'], queryFn: proyectoService.getCompletionRate, staleTime: DEFAULT_STALE_TIME },
+      { queryKey: ['monthlyProgress'], queryFn: proyectoService.getMonthlyProgress, staleTime: DEFAULT_STALE_TIME },
+      { queryKey: ['liquidityRate'], queryFn: async () => (await inversionService.getLiquidityMetrics()).data.data, staleTime: DEFAULT_STALE_TIME },
+      { queryKey: ['inversionesPorUsuario'], queryFn: async () => (await inversionService.getAggregatedMetrics()).data.data, staleTime: DEFAULT_STALE_TIME },
+      { queryKey: ['morosidad'], queryFn: async () => (await suscripcionService.getMorosityMetrics()).data, staleTime: DEFAULT_STALE_TIME },
+      { queryKey: ['cancelacion'], queryFn: async () => (await suscripcionService.getCancellationMetrics()).data, staleTime: DEFAULT_STALE_TIME },
+      { queryKey: ['proyectosActivos'], queryFn: async () => (await proyectoService.getAllActive()).data, staleTime: DEFAULT_STALE_TIME },
+      { queryKey: ['adminAllPujas'], queryFn: async () => (await pujaService.getAllAdmin()).data, staleTime: DEFAULT_STALE_TIME },
+      { queryKey: ['allProyectosAdmin'], queryFn: async () => (await proyectoService.getAllAdmin()).data, staleTime: DEFAULT_STALE_TIME }
     ]
   });
 
@@ -44,15 +49,17 @@ export const useAdminDashboard = () => {
     { data: cancelacion },
     { data: proyectosActivos = [] },
     { data: allPujas = [] },
-    { data: allProyectosAdmin = [] } // 🆕
+    { data: allProyectosAdmin = [] }
   ] = results;
 
   const isLoading = results.some(result => result.isLoading);
 
+  // 👈 4. Aplicamos el staleTime a la query individual también
   const { data: popularidadLotes = [], isLoading: loadingPopularidad } = useQuery({
     queryKey: ['popularidadLotes', selectedPopularidadProject],
     queryFn: () => favoritoService.getPopularidadLotes(selectedPopularidadProject!),
     enabled: selectedPopularidadProject !== null,
+    staleTime: DEFAULT_STALE_TIME,
   });
 
   useEffect(() => {
@@ -61,11 +68,10 @@ export const useAdminDashboard = () => {
     }
   }, [proyectosActivos, selectedPopularidadProject]);
 
-  // 🆕 Extraemos la lógica de proyectos llenos ANTES de stats
   const proyectosLlenosPendientes = useMemo(() => {
     if (!allProyectosAdmin) return 0;
-    return allProyectosAdmin.filter(p => 
-      p.estado_proyecto === 'En Espera' && 
+    return allProyectosAdmin.filter(p =>
+      p.estado_proyecto === 'En Espera' &&
       p.suscripciones_actuales >= (p.obj_suscripciones || 1)
     ).length;
   }, [allProyectosAdmin]);
@@ -80,23 +86,22 @@ export const useAdminDashboard = () => {
     totalFinalizados: completionRate?.total_finalizados ?? 0,
     subastasActivas: allPujas.filter((p: any) => p.estado_puja === 'activa').length,
     cobrosPendientes: allPujas.filter((p: any) => p.estado_puja === 'ganadora_pendiente').length,
-    // 🆕 Lo inyectamos aquí
-    proyectosListosParaIniciar: proyectosLlenosPendientes 
+    proyectosListosParaIniciar: proyectosLlenosPendientes
   }), [pendingKYC, liquidityRate, monthlyProgress, completionRate, allPujas, proyectosLlenosPendientes]);
 
-  const chartDataSuscripciones = useMemo(() => 
+  const chartDataSuscripciones = useMemo(() =>
     monthlyProgress.map((p: any) => ({
-      nombre: p.nombre, 
+      nombre: p.nombre,
       avance: parseFloat(String(p.porcentaje_avance || 0))
     })), [monthlyProgress]);
 
   const topLotes = useMemo(() =>
     popularidadLotes.map((l: any) => ({
       nombre_lote: l.nombre_lote,
-      total_favoritos: l.cantidad_favoritos, 
+      total_favoritos: l.cantidad_favoritos,
       porcentaje: l.porcentaje_popularidad,
     })),
-  [popularidadLotes]);
+    [popularidadLotes]);
 
   const estadosData = useMemo(() =>
     [

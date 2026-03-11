@@ -1,29 +1,28 @@
 // src/pages/Admin/Plantillas/components/modals/CreatePlantillaModal.tsx
-
-import React, { useState, useCallback } from 'react';
+import { env } from '@/core/config/env';
+import type { CreatePlantillaDto } from '@/core/types/dto/contrato-plantilla.dto';
+import { BaseModal } from '@/shared/components/domain';
+import { useSnackbar } from '@/shared/hooks/useSnackbar';
 import {
-  TextField,
-  Stack,
-  Typography,
-  Box,
-  MenuItem,
-  useTheme,
-  Divider,
-  InputAdornment,
+  NoteAdd as AddIcon,
+  CloudUpload,
+  Label as NameIcon,
+  Business as ProjectIcon,
+  Numbers as VersionIcon,
+} from '@mui/icons-material';
+import {
   alpha,
   Avatar,
+  Box,
+  Divider,
+  InputAdornment,
+  MenuItem,
+  Stack,
+  TextField,
+  Typography,
+  useTheme,
 } from '@mui/material';
-import {
-  CloudUpload,
-  NoteAdd as AddIcon,
-  Label as NameIcon,
-  Numbers as VersionIcon,
-  Business as ProjectIcon,
-} from '@mui/icons-material';
-import { useSnackbar } from '@/shared/hooks/useSnackbar';
-import type { CreatePlantillaDto } from '@/core/types/dto';
-import { env } from '@/core/config/env';
-import { BaseModal } from '@/shared/components/domain';
+import React, { useCallback, useState } from 'react';
 
 // ============================================================================
 // INTERFACES
@@ -264,8 +263,8 @@ const CreatePlantillaModal: React.FC<Props> = ({
           </Typography>
 
           <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
-            {file 
-              ? `${(file.size / 1024 / 1024).toFixed(2)} MB` 
+            {file
+              ? `${(file.size / 1024 / 1024).toFixed(2)} MB`
               : `Arrastra el archivo o haz clic aquí (Máx ${maxMb}MB)`
             }
           </Typography>

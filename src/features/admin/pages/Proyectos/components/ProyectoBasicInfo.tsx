@@ -20,7 +20,7 @@ import {
 } from '@mui/material';
 import React from 'react';
 import type { ProyectoDto } from '../../../../../core/types/dto/proyecto.dto';
-
+import { env } from '@/core/config/env'; // 👈 1. Importamos la configuración global
 
 interface ProyectoBasicInfoProps {
     proyecto: ProyectoDto;
@@ -34,7 +34,8 @@ const ProyectoBasicInfo: React.FC<ProyectoBasicInfoProps> = ({
     onManageImages
 }) => {
     const theme = useTheme();
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+    // 👈 2. Usamos env.apiBaseUrl en lugar de import.meta.env
+    const API_BASE_URL = env.apiBaseUrl || '';
 
     // Estilos reutilizables
     const labelStyle = {
@@ -161,7 +162,8 @@ const ProyectoBasicInfo: React.FC<ProyectoBasicInfoProps> = ({
                                         {proyecto.tipo_inversion === 'mensual' ? 'Valor Cuota Mensual' : 'Capital Requerido'}
                                     </Typography>
                                     <Typography variant="h4" color="text.primary" fontWeight={800} sx={{ fontFamily: 'monospace', letterSpacing: -1 }}>
-                                        ${Number(proyecto.monto_inversion).toLocaleString()} <Typography component="span" variant="h6" color="text.secondary">{proyecto.moneda}</Typography>
+                                        {/* 👈 3. Aplicamos env.defaultLocale a la moneda */}
+                                        ${Number(proyecto.monto_inversion).toLocaleString(env.defaultLocale)} <Typography component="span" variant="h6" color="text.secondary">{proyecto.moneda}</Typography>
                                     </Typography>
                                 </Box>
 
@@ -175,13 +177,15 @@ const ProyectoBasicInfo: React.FC<ProyectoBasicInfoProps> = ({
                                         <Box>
                                             <Typography variant="caption" color="text.secondary" fontWeight={600}>INICIO</Typography>
                                             <Typography variant="body1" fontWeight={600} sx={{ fontFamily: 'monospace' }}>
-                                                {new Date(proyecto.fecha_inicio).toLocaleDateString()}
+                                                {/* 👈 4. Aplicamos env.defaultLocale a las fechas */}
+                                                {new Date(proyecto.fecha_inicio).toLocaleDateString(env.defaultLocale)}
                                             </Typography>
                                         </Box>
                                         <Box>
                                             <Typography variant="caption" color="text.secondary" fontWeight={600}>CIERRE ESTIMADO</Typography>
                                             <Typography variant="body1" fontWeight={600} sx={{ fontFamily: 'monospace' }}>
-                                                {new Date(proyecto.fecha_cierre).toLocaleDateString()}
+                                                {/* 👈 5. Aplicamos env.defaultLocale a las fechas */}
+                                                {new Date(proyecto.fecha_cierre).toLocaleDateString(env.defaultLocale)}
                                             </Typography>
                                         </Box>
                                     </Stack>

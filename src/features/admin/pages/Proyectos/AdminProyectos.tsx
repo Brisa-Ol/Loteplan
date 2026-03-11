@@ -1,4 +1,3 @@
-
 import {
   Add,
   Apartment as ApartmentIcon,
@@ -35,9 +34,9 @@ import {
 } from '@mui/material';
 import React, { memo, useMemo, useState } from 'react';
 
-
 import type { ProyectoDto } from '@/core/types/dto/proyecto.dto';
 import { useAdminProyectos } from '../../hooks/proyecto/useAdminProyectos';
+import { env } from '@/core/config/env'; // 👈 1. Importamos la configuración global
 
 import {
   AdminPageHeader, ConfirmDialog, DataTable, FilterBar,
@@ -49,9 +48,6 @@ import CreateProyectoModal from './modals/CreateProyectoModal';
 import DetalleProyectoModal from './modals/DetalleProyectoModal';
 import EditProyectoModal from './modals/EditProyectoModal';
 import ManageImagesModal from './modals/ManageImagesModal';
-
-
-
 
 // ============================================================================
 // COMPONENTE: VISTA DE CARDS (Grid)
@@ -120,13 +116,15 @@ const ProjectCard = memo<{
         </Stack>
 
         <Stack direction="row" spacing={1} mb={2} flexWrap="wrap" useFlexGap>
-          <Chip label={`${proyecto.moneda} ${Number(proyecto.monto_inversion).toLocaleString('es-AR')}`} size="small" variant="outlined" sx={{ fontWeight: 600 }} />
+          {/* 👈 2. Aplicamos env.defaultLocale */}
+          <Chip label={`${proyecto.moneda} ${Number(proyecto.monto_inversion).toLocaleString(env.defaultLocale)}`} size="small" variant="outlined" sx={{ fontWeight: 600 }} />
           {isMensual && proyecto.plazo_inversion && (
             <Chip label={`${proyecto.plazo_inversion} meses`} size="small" variant="outlined" sx={{ fontWeight: 600 }} />
           )}
           {isMensual && cuotaAMostrar && (
             <Chip
-              label={`Cuota: ${proyecto.moneda} ${Number(cuotaAMostrar).toLocaleString('es-AR', { minimumFractionDigits: 2 })}`}
+           
+              label={`Cuota: ${proyecto.moneda} ${Number(cuotaAMostrar).toLocaleString(env.defaultLocale, { minimumFractionDigits: 2 })}`}
               size="small"
               color="success"
               variant="outlined"
@@ -258,16 +256,17 @@ const AdminProyectos: React.FC = () => {
         label: 'Inversión',
         sortable: true,
         render: (p) => {
-          // Usa p.valor_cuota_referencia directamente — sin cuotaMap externo
           const cuota = p.valor_cuota_referencia;
           return (
             <Stack spacing={0.2}>
               <Typography variant="body2" fontWeight={600}>
-                {p.moneda} {Number(p.monto_inversion).toLocaleString('es-AR')}
+                {/* 👈 4. Aplicamos env.defaultLocale */}
+                {p.moneda} {Number(p.monto_inversion).toLocaleString(env.defaultLocale)}
               </Typography>
               {p.tipo_inversion === 'mensual' && cuota && (
                 <Typography variant="caption" color="success.main" fontWeight={700}>
-                  {`Cuota: ${p.moneda} ${Number(cuota).toLocaleString('es-AR', { minimumFractionDigits: 2 })}`}
+                  {/* 👈 5. Aplicamos env.defaultLocale */}
+                  {`Cuota: ${p.moneda} ${Number(cuota).toLocaleString(env.defaultLocale, { minimumFractionDigits: 2 })}`}
                 </Typography>
               )}
             </Stack>
@@ -411,7 +410,8 @@ const AdminProyectos: React.FC = () => {
         <StatCard title="Proyectos" value={stats.total} icon={<Layers />} color="primary" loading={logic.isLoading} />
         <StatCard title="Visibles" value={stats.activos} icon={<CheckCircle />} color="success" loading={logic.isLoading} />
         <StatCard title="Ahorro" value={stats.mensuales} icon={<MonetizationOnIcon />} color="info" loading={logic.isLoading} />
-        <StatCard title="Volumen" value={`$${stats.volumen.toLocaleString('es-AR')}`} icon={<TrendingUp />} color="warning" loading={logic.isLoading} />
+        {/* 👈 6. Aplicamos env.defaultLocale */}
+        <StatCard title="Volumen" value={`$${stats.volumen.toLocaleString(env.defaultLocale)}`} icon={<TrendingUp />} color="warning" loading={logic.isLoading} />
       </MetricsGrid>
 
       <FilterBar sx={{ mb: 3 }}>
@@ -458,6 +458,7 @@ const AdminProyectos: React.FC = () => {
             isRowActive={(p) => p.activo}
             highlightedRowId={logic.highlightedId}
             pagination
+            defaultRowsPerPage={env.defaultPageSize} // 👈 7. Aplicamos defaultPageSize
             cardTitleColumn="proyecto"
             loading={logic.isLoading}
           />

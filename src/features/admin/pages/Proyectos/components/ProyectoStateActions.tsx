@@ -24,7 +24,7 @@ import {
 } from '@mui/material';
 import React from 'react';
 import type { ProyectoDto } from '../../../../../core/types/dto/proyecto.dto';
-
+import { env } from '@/core/config/env'; // 👈 1. Importamos la configuración global
 
 interface ProyectoStateActionsProps {
   proyecto: ProyectoDto;
@@ -191,7 +191,8 @@ export const ProyectoStateActions: React.FC<ProyectoStateActionsProps> = ({
               <Box flex={1}>
                 <Typography sx={labelStyle}><MoneyIcon fontSize="inherit" /> Cuota Base</Typography>
                 <Typography variant="body1" fontWeight={600}>
-                  ${Number(proyecto.monto_inversion).toLocaleString()}
+                  {/* 👈 2. Aplicamos env.defaultLocale */}
+                  ${Number(proyecto.monto_inversion).toLocaleString(env.defaultLocale)}
                 </Typography>
               </Box>
             </Stack>

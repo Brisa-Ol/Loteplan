@@ -24,6 +24,7 @@ import React, { useMemo } from 'react';
 
 import type { UsuarioDto } from '@/core/types/dto/usuario.dto';
 import { BaseModal } from '@/shared';
+import { env } from '@/core/config/env'; // 👈 1. Importamos la configuración global
 
 
 // ============================================================================
@@ -74,7 +75,8 @@ const ModalDetalleUsuario: React.FC<ModalDetalleUsuarioProps> = ({ open, onClose
   // --- Helpers de Formateo ---
   const formatearFecha = (str?: string) => {
     if (!str) return 'No registrado';
-    return new Date(str).toLocaleString('es-AR', {
+    // 👈 2. Aplicamos env.defaultLocale en lugar de 'es-AR'
+    return new Date(str).toLocaleString(env.defaultLocale, {
       day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
     });
   };

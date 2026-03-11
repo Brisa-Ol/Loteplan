@@ -3,10 +3,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-
 import LoteService from '@/core/api/services/lote.service';
 import PujaService from '@/core/api/services/puja.service';
 import UsuarioService from '@/core/api/services/usuario.service';
+import { env } from '@/core/config/env'; // 👈 1. Importamos la configuración
 
 import type { LoteDto } from '@/core/types/dto/lote.dto';
 import type { PujaDto } from '@/core/types/dto/puja.dto';
@@ -53,7 +53,7 @@ export const useAdminPujas = () => {
 
   // --- QUERIES INTELIGENTES ---
 
-  // 1. Usuarios (Cache agresivo)
+  // 1. Usuarios (Cache agresivo - Es un diccionario)
   const { data: usuarios = [] } = useQuery<UsuarioDto[]>({
     queryKey: ['adminUsuarios', 'simple'],
     queryFn: async () => (await UsuarioService.findAll()).data,
@@ -72,8 +72,10 @@ export const useAdminPujas = () => {
       if (tabValue === 0) return (await LoteService.getAllActive()).data;
       return (await LoteService.findAllAdmin()).data;
     },
+    // 👈 2. El polling del Tab 0 se mantiene en 10s, el resto no pollea.
     refetchInterval: tabValue === 0 ? 10000 : false,
-    staleTime: tabValue === 0 ? 5000 : 30000,
+    // 👈 3. Aplicamos env.queryStaleTime solo al Tab general (no en vivo)
+    staleTime: tabValue === 0 ? 5000 : (env.queryStaleTime || 30000),
   });
 
   // 3. Pujas (SOLO para TAB 0 - En Vivo)
@@ -85,6 +87,7 @@ export const useAdminPujas = () => {
     queryKey: ['adminPujas', 'active'],
     queryFn: async () => (await PujaService.getAllActive()).data,
     enabled: tabValue === 0,
+    // 👈 4. El polling de pujas se mantiene agresivo (5s) por ser "En Vivo"
     refetchInterval: 5000,
   });
 

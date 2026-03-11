@@ -7,7 +7,9 @@ import {
   PersonOutline as PersonIcon,
   Security as SecurityIcon,
   AdminPanelSettingsOutlined as SettingsIcon,
-  Warning as WarningIcon
+  Warning as WarningIcon,
+  Visibility,
+  VisibilityOff
 } from '@mui/icons-material';
 import {
   Alert,
@@ -16,8 +18,12 @@ import {
   Box,
   Button,
   Chip,
+  CircularProgress,
   Divider,
-  MenuItem, Stack,
+  IconButton,
+  InputAdornment,
+  MenuItem,
+  Stack,
   Switch,
   TextField,
   Tooltip,
@@ -33,8 +39,9 @@ import { useAuth } from '@/core/context/AuthContext';
 import type { UpdateUserAdminDto, UsuarioDto } from '@/core/types/dto/usuario.dto';
 import { BaseModal, useSnackbar } from '@/shared';
 
+
 // ════════════════════════════════════════════════════════════
-// SUB-COMPONENTE: DIÁLOGO 2FA (Definido UNA SOLA vez)
+// SUB-COMPONENTE: DIÁLOGO DESACTIVAR 2FA
 // ════════════════════════════════════════════════════════════
 
 const Disable2FADialog: React.FC<{
@@ -86,6 +93,98 @@ const Disable2FADialog: React.FC<{
   );
 };
 
+
+// ════════════════════════════════════════════════════════════
+// SUB-COMPONENTE: RESET DE CONTRASEÑA POR ADMIN
+// ════════════════════════════════════════════════════════════
+
+const AdminPasswordReset: React.FC<{ userId: number; userName: string }> = ({ userId, userName }) => {
+  const { showSuccess, showError } = useSnackbar();
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPass, setShowPass] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const isValid = newPassword.length >= 8 && newPassword === confirmPassword;
+
+  const handleReset = async () => {
+    if (!isValid) return;
+    setIsLoading(true);
+    setError(null);
+    try {
+      await UsuarioService.adminResetPassword(userId, newPassword);
+      showSuccess(`Contraseña de ${userName} actualizada correctamente.`);
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || err?.message || 'Error al restablecer la contraseña';
+      setError(msg);
+      showError(msg);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Stack spacing={1.5}>
+      {error && (
+        <Alert severity="error" onClose={() => setError(null)} sx={{ borderRadius: 2 }}>
+          {error}
+        </Alert>
+      )}
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+        <TextField
+          fullWidth
+          size="small"
+          label="Nueva contraseña"
+          type={showPass ? 'text' : 'password'}
+          value={newPassword}
+          onChange={(e) => setNewPassword(e.target.value)}
+          error={newPassword.length > 0 && newPassword.length < 8}
+          helperText={newPassword.length > 0 && newPassword.length < 8 ? 'Mínimo 8 caracteres' : ''}
+          disabled={isLoading}
+          InputProps={{
+            endAdornment: (
+              <InputAdornment position="end">
+                <IconButton size="small" onClick={() => setShowPass(!showPass)}>
+                  {showPass ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                </IconButton>
+              </InputAdornment>
+            ),
+          }}
+          sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+        />
+        <TextField
+          fullWidth
+          size="small"
+          label="Confirmar contraseña"
+          type={showPass ? 'text' : 'password'}
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          error={confirmPassword.length > 0 && confirmPassword !== newPassword}
+          helperText={confirmPassword.length > 0 && confirmPassword !== newPassword ? 'No coinciden' : ''}
+          disabled={isLoading}
+          sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+        />
+      </Stack>
+      <Button
+        variant="outlined"
+        color="warning"
+        size="small"
+        fullWidth
+        disabled={!isValid || isLoading}
+        startIcon={isLoading ? <CircularProgress size={16} color="inherit" /> : <KeyIcon />}
+        onClick={handleReset}
+        sx={{ borderRadius: 2, fontWeight: 700 }}
+      >
+        {isLoading ? 'Actualizando...' : 'Establecer Nueva Contraseña'}
+      </Button>
+    </Stack>
+  );
+};
+
+
 // ════════════════════════════════════════════════════════════
 // COMPONENTE PRINCIPAL: EDIT USER MODAL
 // ════════════════════════════════════════════════════════════
@@ -126,7 +225,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ open, onClose, user, onSu
       nombre: '', apellido: '', email: '', nombre_usuario: '',
       numero_telefono: '', rol: 'cliente', activo: true,
     },
-    validationSchema: validationSchema,
+    validationSchema,
     enableReinitialize: true,
     onSubmit: async (values) => {
       if (!user) return;
@@ -199,7 +298,8 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ open, onClose, user, onSu
   const commonInputSx = { '& .MuiOutlinedInput-root': { borderRadius: 2 } };
   const sectionTitleSx = {
     textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700,
-    color: 'text.secondary', fontSize: '0.75rem', mb: 1, display: 'flex', alignItems: 'center', gap: 1
+    color: 'text.secondary', fontSize: '0.75rem', mb: 1,
+    display: 'flex', alignItems: 'center', gap: 1
   };
 
   const isBusy = isLoading || preparingReactivation;
@@ -233,6 +333,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ open, onClose, user, onSu
         }
       >
         <Stack spacing={4}>
+
           {isInactiveUser && (
             <Alert severity="warning" sx={{ borderRadius: 2 }}>
               <strong>Cuenta desactivada.</strong> Modifica email o nombre de usuario si hay conflictos,
@@ -246,37 +347,67 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ open, onClose, user, onSu
             </Alert>
           )}
 
-          {/* DATOS PERSONALES */}
+          {/* ── DATOS PERSONALES ── */}
           <Box>
-            <Typography sx={sectionTitleSx}><PersonIcon fontSize="inherit" /> Información Personal</Typography>
+            <Typography sx={sectionTitleSx}>
+              <PersonIcon fontSize="inherit" /> Información Personal
+            </Typography>
             <Stack spacing={2}>
               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                <TextField fullWidth label="Nombre" {...formik.getFieldProps('nombre')} error={formik.touched.nombre && Boolean(formik.errors.nombre)} helperText={formik.touched.nombre && formik.errors.nombre} disabled={isLoading} sx={commonInputSx} />
-                <TextField fullWidth label="Apellido" {...formik.getFieldProps('apellido')} error={formik.touched.apellido && Boolean(formik.errors.apellido)} helperText={formik.touched.apellido && formik.errors.apellido} disabled={isLoading} sx={commonInputSx} />
+                <TextField
+                  fullWidth label="Nombre" {...formik.getFieldProps('nombre')}
+                  error={formik.touched.nombre && Boolean(formik.errors.nombre)}
+                  helperText={formik.touched.nombre && formik.errors.nombre}
+                  disabled={isLoading} sx={commonInputSx}
+                />
+                <TextField
+                  fullWidth label="Apellido" {...formik.getFieldProps('apellido')}
+                  error={formik.touched.apellido && Boolean(formik.errors.apellido)}
+                  helperText={formik.touched.apellido && formik.errors.apellido}
+                  disabled={isLoading} sx={commonInputSx}
+                />
               </Stack>
-              <TextField fullWidth label="Teléfono" {...formik.getFieldProps('numero_telefono')} error={formik.touched.numero_telefono && Boolean(formik.errors.numero_telefono)} helperText={formik.touched.numero_telefono && formik.errors.numero_telefono} disabled={isLoading} sx={commonInputSx} />
+              <TextField
+                fullWidth label="Teléfono" {...formik.getFieldProps('numero_telefono')}
+                error={formik.touched.numero_telefono && Boolean(formik.errors.numero_telefono)}
+                helperText={formik.touched.numero_telefono && formik.errors.numero_telefono}
+                disabled={isLoading} sx={commonInputSx}
+              />
             </Stack>
           </Box>
 
-          {/* CREDENCIALES */}
+          {/* ── CREDENCIALES ── */}
           <Box>
-            <Typography sx={sectionTitleSx}><KeyIcon fontSize="inherit" /> Credenciales</Typography>
+            <Typography sx={sectionTitleSx}>
+              <KeyIcon fontSize="inherit" /> Credenciales
+            </Typography>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-              <TextField fullWidth label="Email" {...formik.getFieldProps('email')} error={formik.touched.email && Boolean(formik.errors.email)} helperText={formik.touched.email && formik.errors.email} disabled={isLoading} sx={commonInputSx} />
-              <TextField fullWidth label="Usuario" {...formik.getFieldProps('nombre_usuario')} error={formik.touched.nombre_usuario && Boolean(formik.errors.nombre_usuario)} helperText={formik.touched.nombre_usuario && formik.errors.nombre_usuario} disabled={isLoading} sx={commonInputSx} />
+              <TextField
+                fullWidth label="Email" {...formik.getFieldProps('email')}
+                error={formik.touched.email && Boolean(formik.errors.email)}
+                helperText={formik.touched.email && formik.errors.email}
+                disabled={isLoading} sx={commonInputSx}
+              />
+              <TextField
+                fullWidth label="Usuario" {...formik.getFieldProps('nombre_usuario')}
+                error={formik.touched.nombre_usuario && Boolean(formik.errors.nombre_usuario)}
+                helperText={formik.touched.nombre_usuario && formik.errors.nombre_usuario}
+                disabled={isLoading} sx={commonInputSx}
+              />
             </Stack>
           </Box>
 
           <Divider />
 
-          {/* PERMISOS Y ESTADO */}
+          {/* ── PERMISOS Y ESTADO ── */}
           <Box>
-            <Typography sx={sectionTitleSx}><SettingsIcon fontSize="inherit" /> Permisos y Estado</Typography>
+            <Typography sx={sectionTitleSx}>
+              <SettingsIcon fontSize="inherit" /> Permisos y Estado
+            </Typography>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="stretch">
               <Tooltip title={isSelfEditing ? "No puedes cambiar tu propio rol" : ""}>
                 <TextField
-                  select
-                  label="Rol del Sistema"
+                  select label="Rol del Sistema"
                   {...formik.getFieldProps('rol')}
                   disabled={isLoading || isSelfEditing}
                   sx={{ ...commonInputSx, flex: 1 }}
@@ -291,12 +422,11 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ open, onClose, user, onSu
                   p: 1, px: 2,
                   border: '1px solid',
                   borderColor: formik.values.activo ? 'success.main' : 'error.main',
-                  bgcolor: formik.values.activo ? alpha(theme.palette.success.main, 0.05) : alpha(theme.palette.error.main, 0.05),
-                  borderRadius: 2,
-                  flex: 1.5,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
+                  bgcolor: formik.values.activo
+                    ? alpha(theme.palette.success.main, 0.05)
+                    : alpha(theme.palette.error.main, 0.05),
+                  borderRadius: 2, flex: 1.5,
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                   opacity: isSelfEditing ? 0.6 : 1,
                   cursor: isSelfEditing ? 'not-allowed' : 'default'
                 }}>
@@ -331,12 +461,16 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ open, onClose, user, onSu
             )}
           </Box>
 
-          {/* ZONA DE SEGURIDAD 2FA */}
+          {/* ── SEGURIDAD ── */}
           <Box sx={{ p: 2, borderRadius: 2, border: '1px dashed', borderColor: 'divider' }}>
-            <Typography variant="subtitle2" color="text.secondary" gutterBottom fontWeight="bold" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography
+              variant="subtitle2" color="text.secondary" gutterBottom fontWeight="bold"
+              sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+            >
               <SecurityIcon fontSize="small" /> Estado de Seguridad
             </Typography>
-            <Stack direction="row" spacing={1} mb={user.is_2fa_enabled ? 2 : 0} alignItems="center">
+
+            <Stack direction="row" spacing={1} mb={user.is_2fa_enabled ? 2 : 1} alignItems="center">
               <Chip
                 icon={user.confirmado_email ? <CheckCircleIcon /> : <CancelIcon />}
                 label={user.confirmado_email ? 'Email Confirmado' : 'Email Pendiente'}
@@ -350,6 +484,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ open, onClose, user, onSu
               />
             </Stack>
 
+            {/* Botón reset 2FA — solo si tiene 2FA activo */}
             {user.is_2fa_enabled && (
               <Tooltip title={isSelfEditing ? "Usa 'Mi Perfil' para gestionar tu seguridad" : ""}>
                 <span>
@@ -361,18 +496,30 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ open, onClose, user, onSu
                     fullWidth
                     size="small"
                     disabled={isSelfEditing}
-                    sx={{ mt: 1, borderColor: 'warning.light', color: 'warning.dark', borderRadius: 2 }}
+                    sx={{ borderColor: 'warning.light', color: 'warning.dark', borderRadius: 2 }}
                   >
                     Resetear Autenticación de Dos Pasos
                   </Button>
                 </span>
               </Tooltip>
             )}
+
+            {/* Reset de contraseña — siempre visible */}
+            <Divider sx={{ my: 2 }} />
+            <Typography
+              variant="subtitle2" color="text.secondary" fontWeight="bold"
+              sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}
+            >
+              <KeyIcon fontSize="small" /> Restablecer Contraseña
+            </Typography>
+            <AdminPasswordReset userId={user.id} userName={`${user.nombre} ${user.apellido}`} />
+
           </Box>
+
         </Stack>
       </BaseModal>
 
-      {/* SUB-MODAL DE CONFIRMACIÓN 2FA */}
+      {/* Sub-modal confirmación 2FA */}
       <Disable2FADialog
         open={showDisable2FADialog}
         onClose={() => setShowDisable2FADialog(false)}

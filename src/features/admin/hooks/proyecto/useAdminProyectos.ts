@@ -5,6 +5,7 @@ import ContratoPlantillaService from '@/core/api/services/contrato-plantilla.ser
 import CuotaMensualService from '@/core/api/services/cuotaMensual.service';
 import ImagenService from '@/core/api/services/imagen.service';
 import ProyectoService from '@/core/api/services/proyecto.service';
+import { env } from '@/core/config/env'; // 👈 1. Importamos env
 
 import type { CreateProyectoDto, ProyectoDto, UpdateProyectoDto } from '@/core/types/dto/proyecto.dto';
 import { useConfirmDialog } from '@/shared/hooks/useConfirmDialog';
@@ -46,13 +47,10 @@ export const useAdminProyectos = () => {
   }), [create, cuotas, lotes, edit, images, confirmDialog]);
 
   // ── Query única: proyectos ───────────────────────────────────────────────
-  // Se eliminó la Query 2 de cuotas (N requests en paralelo).
-  // El valor de cuota se lee desde p.valor_cuota_referencia que ya viene
-  // incluido en el payload de getAllAdmin().
   const { data: proyectosRaw = [], isLoading, error } = useQuery({
     queryKey: ['adminProyectos'],
     queryFn: async () => (await ProyectoService.getAllAdmin()).data,
-    staleTime: 30_000,
+    staleTime: env.queryStaleTime || 30_000, // 👈 2. Aplicamos env.queryStaleTime
   });
 
   const { sortedData: proyectosOrdenados, highlightedId, triggerHighlight } = useSortedData(proyectosRaw);

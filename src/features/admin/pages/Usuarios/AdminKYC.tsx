@@ -1,5 +1,6 @@
 // src/features/admin/pages/Usuarios/AdminKYC.tsx
 
+import { env } from '@/core/config/env'; // 👈 1. Importamos env
 import type { KycDTO } from '@/core/types/dto/kyc.dto';
 import { AdminPageHeader, BaseModal, ConfirmDialog, DataTable, MetricsGrid, PageContainer, QueryHandler, StatCard, type DataTableColumn } from '@/shared';
 import {
@@ -100,7 +101,7 @@ const AdminKYC: React.FC = () => {
       label: 'Solicitante',
       minWidth: 220,
       sortable: true,
-      cardPrimary: true, // Se destaca en vista móvil
+      cardPrimary: true,
       render: (kyc) => (
         <Stack direction="row" spacing={1.5} alignItems="center">
           <Avatar sx={{
@@ -123,7 +124,7 @@ const AdminKYC: React.FC = () => {
       id: 'numero_documento',
       label: 'ID / Documento',
       sortable: true,
-      cardSecondary: true, // Subtítulo en vista móvil
+      cardSecondary: true,
       render: (kyc) => (
         <Box>
           <Typography variant="caption" fontWeight={800} color="text.disabled" sx={{ display: 'block' }}>
@@ -154,7 +155,7 @@ const AdminKYC: React.FC = () => {
     },
     {
       id: 'acciones',
-      label: '', // Label vacío para comprimir el espacio
+      label: '',
       align: 'right',
       render: (kyc) => (
         <Stack direction="row" justifyContent="flex-end" spacing={1}>
@@ -162,7 +163,7 @@ const AdminKYC: React.FC = () => {
             <IconButton
               size="small"
               onClick={(e) => {
-                e.stopPropagation(); // Evita el click de la fila si existiera
+                e.stopPropagation();
                 logic.handleOpenDetails(kyc);
               }}
               sx={{
@@ -216,10 +217,11 @@ const AdminKYC: React.FC = () => {
           data={logic.kycList}
           getRowKey={(row) => row.id}
           pagination
-          loading={logic.isLoading} // Activa el Skeleton automático del DataTable
-          onRowClick={(row) => logic.handleOpenDetails(row)} // Fila clickeable
+          defaultRowsPerPage={env.defaultPageSize} // 👈 2. Inyectamos la variable global
+          loading={logic.isLoading}
+          onRowClick={(row) => logic.handleOpenDetails(row)}
           emptyMessage="No se encontraron solicitudes de verificación para este estado."
-          cardTitleColumn="usuario" // Define el título en vista móvil
+          cardTitleColumn="usuario"
         />
       </QueryHandler>
 

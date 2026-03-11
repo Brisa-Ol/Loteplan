@@ -9,7 +9,7 @@ import UsuarioService from '@/core/api/services/usuario.service';
 import PagoService from '@/core/api/services/pago.service';
 import ProyectoService from '@/core/api/services/proyecto.service';
 import { useSortedData } from '../useSortedData';
-
+import { env } from '@/core/config/env'; // 👈 1. Importamos la configuración
 
 export const useAdminPagos = () => {
   const theme = useTheme();
@@ -32,6 +32,7 @@ export const useAdminPagos = () => {
   const { data: pagosRaw = [], isLoading: l1, error: e1 } = useQuery({
     queryKey: ['adminPagos'],
     queryFn: async () => (await PagoService.findAll()).data,
+    staleTime: env.queryStaleTime || 30000, // 👈 2. Aplicamos variable global
   });
 
   // ✨ 2. ORDENAMIENTO + HIGHLIGHT
@@ -42,19 +43,20 @@ export const useAdminPagos = () => {
   const { data: metricsData, isLoading: l2, error: e2 } = useQuery({
     queryKey: ['adminPagosMetrics', today.getMonth() + 1, today.getFullYear()],
     queryFn: async () => (await PagoService.getMonthlyMetrics(today.getMonth() + 1, today.getFullYear())).data,
+    staleTime: env.queryStaleTime || 30000, // 👈 3. Aplicamos variable global
   });
   const metrics = metricsData?.data;
 
   const { data: usuarios = [] } = useQuery({
     queryKey: ['adminUsuariosMap'],
     queryFn: async () => (await UsuarioService.findAll()).data,
-    staleTime: 300000,
+    staleTime: 300000, // Lo dejamos en 5 minutos porque es un diccionario pesado
   });
 
   const { data: proyectos = [] } = useQuery({
     queryKey: ['adminProyectosMap'],
     queryFn: async () => (await ProyectoService.getAllAdmin()).data,
-    staleTime: 300000,
+    staleTime: 300000, // Lo dejamos en 5 minutos porque es un diccionario pesado
   });
 
   const isLoading = l1 || l2;

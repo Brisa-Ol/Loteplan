@@ -9,6 +9,7 @@ import type { LoteDto } from '@/core/types/dto/lote.dto';
 import { useConfirmDialog } from '@/shared/hooks/useConfirmDialog';
 import { useSnackbar } from '@/shared/hooks/useSnackbar';
 import { useSortedData } from '../useSortedData';
+import { env } from '@/core/config/env'; // 👈 1. Importamos env
 
 // ============================================================================
 // HELPERS
@@ -40,8 +41,9 @@ export const useAdminLotePagos = () => {
   const { data: lotesRaw = [], isLoading, error } = useQuery({
     queryKey: ['adminLotesPagos'],
     queryFn: async () => (await LoteService.findAllAdmin()).data,
-    refetchInterval: 30000,
-    staleTime: 10000,
+    // 👈 2. Aplicamos variables de entorno con fallbacks
+    refetchInterval: env.queryRefetchInterval || 30000, 
+    staleTime: env.queryStaleTime || 10000,
   });
 
   // --- FILTROS ---

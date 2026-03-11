@@ -26,20 +26,23 @@ import {
   Avatar,
   Box,
   Button,
-  Card, CardContent,
+  Card,
+  CardContent,
   Chip,
   CircularProgress,
   Collapse,
   Divider,
   IconButton,
   InputAdornment,
-  Stack, TextField,
+  Stack,
+  TextField,
   Typography,
-  alpha, useTheme
+  alpha,
+  useTheme
 } from '@mui/material';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useFormik } from 'formik';
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as Yup from 'yup';
 
@@ -49,11 +52,11 @@ import kycService from '@/core/api/services/kyc.service';
 import UsuarioService from '@/core/api/services/usuario.service';
 import { useAuth } from '@/core/context/AuthContext';
 import type { ChangePasswordDto, UpdateUserMeDto } from '@/core/types/dto/usuario.dto';
-import TwoFactorAuthModal from '@/shared/components/domain/modals/TwoFactorAuthModal';
 import useSnackbar from '@/shared/hooks/useSnackbar';
 import { useConfirmDialog } from '../../../../../shared/hooks/useConfirmDialog';
 import SecuritySettings from '../SecuritySettings';
 import DeleteAccountModal from './modal/DeleteAccountModal';
+import TwoFactorAuthModal from '@/shared/components/domain/modals/TwoFactorAuthModal';
 
 
 // ─────────────────────────────────────────────
@@ -122,7 +125,6 @@ const ProfileHeader = ({ user, theme }: { user: any; theme: any }) => (
 
 // ─────────────────────────────────────────────
 // SUB-COMPONENTE: PersonalDataForm
-// Incluye sección de cambio de contraseña integrada
 // ─────────────────────────────────────────────
 
 const PersonalDataForm = ({ user, isEditing, setIsEditing, onSubmit, isLoading, theme }: any) => {
@@ -197,7 +199,8 @@ const PersonalDataForm = ({ user, isEditing, setIsEditing, onSubmit, isLoading, 
       handleClosePasswordSection();
     },
     onError: (error: any) => {
-      setPasswordApiError(error?.response?.data?.error || error?.message || 'Error al cambiar la contraseña');
+      const msg = error?.response?.data?.error || error?.message || 'Error al cambiar la contraseña';
+      setPasswordApiError(msg);
     },
   });
 
@@ -213,7 +216,8 @@ const PersonalDataForm = ({ user, isEditing, setIsEditing, onSubmit, isLoading, 
       showSuccess('Contraseña actualizada correctamente');
       handleClosePasswordSection();
     } catch (error: any) {
-      setTwoFaError(error?.response?.data?.error || 'Código 2FA incorrecto');
+      const msg = error?.response?.data?.error || 'Código 2FA incorrecto';
+      setTwoFaError(msg);
     } finally {
       setTwoFaLoading(false);
     }
@@ -254,7 +258,7 @@ const PersonalDataForm = ({ user, isEditing, setIsEditing, onSubmit, isLoading, 
                   <Button variant="text" color="inherit" onClick={handleCancel} startIcon={<CloseIcon />}>Cancelar</Button>
                   <Button
                     type="submit" variant="contained"
-                    disabled={isLoading || !formik.isValid}
+                    disabled={isLoading || !formik.isValid || !formik.dirty}
                     startIcon={isLoading ? <CircularProgress size={20} /> : <SaveIcon />}
                   >
                     Guardar
@@ -458,8 +462,12 @@ const PersonalDataForm = ({ user, isEditing, setIsEditing, onSubmit, isLoading, 
 
       {/* — Modal 2FA para confirmar cambio de contraseña — */}
       <TwoFactorAuthModal
-        open={twoFaModalOpen}
-        onClose={() => { setTwoFaModalOpen(false); setTwoFaError(null); }}
+        open={twoFaModalOpen} 
+        onClose={() => {
+          setTwoFaModalOpen(false);
+          setTwoFaError(null);
+          setPendingPasswordPayload(null);
+        }}
         onSubmit={handleTwoFaSubmit}
         isLoading={twoFaLoading}
         error={twoFaError}
@@ -555,21 +563,15 @@ const Perfil: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [showSecuritySection, setShowSecuritySection] = useState(false);
   const [showDeactivationBlock, setShowDeactivationBlock] = useState(false);
+  const [deactivationBlockMessage, setDeactivationBlockMessage] = useState<string | null>(null);
+  const [checkingDeactivation, setCheckingDeactivation] = useState(false);
 
+  // ── KYC: getStatus() ya retorna KycStatusDTO directamente (no AxiosResponse) ──
   const { data: kycStatus } = useQuery({
     queryKey: ['kycStatus'],
-    queryFn: async () => await kycService.getStatus(),
+    queryFn: () => kycService.getStatus(),
     retry: false,
   });
-
-  const { data: deactivationValidation, isLoading: loadingDeudas } = useQuery({
-    queryKey: ['validateDeactivation'],
-    queryFn: async () => (await UsuarioService.validateDeactivation()).data,
-    retry: false,
-  });
-
-  const hasBlockers = useMemo(() => !deactivationValidation?.canDeactivate, [deactivationValidation]);
-  const deactivationWarnings = useMemo(() => deactivationValidation?.warnings || [], [deactivationValidation]);
 
   const mutation = useMutation({
     mutationFn: async (data: UpdateUserMeDto) => {
@@ -583,12 +585,33 @@ const Perfil: React.FC = () => {
     },
   });
 
-  const handleDeleteClick = () => {
+  // Validación lazy: solo llama al backend cuando el usuario clickea el botón
+  const handleDeleteClick = async () => {
     setShowDeactivationBlock(false);
-    if (hasBlockers) {
+    setDeactivationBlockMessage(null);
+    setCheckingDeactivation(true);
+    try {
+      const res = await UsuarioService.validateDeactivation();
+      const validation = res.data;
+      if (!validation.canDeactivate) {
+        const warnings = validation.warnings;
+        setDeactivationBlockMessage(
+          warnings?.length > 0
+            ? warnings.join(' ')
+            : 'No puedes desactivar tu cuenta en este momento.',
+        );
+        setShowDeactivationBlock(true);
+      } else {
+        confirmController.confirm('delete_account');
+      }
+    } catch (error: any) {
+      setDeactivationBlockMessage(
+        error?.response?.data?.error ||
+        'No puedes desactivar tu cuenta. Revisá tu situación financiera.',
+      );
       setShowDeactivationBlock(true);
-    } else {
-      confirmController.confirm('delete_account');
+    } finally {
+      setCheckingDeactivation(false);
     }
   };
 
@@ -674,7 +697,7 @@ const Perfil: React.FC = () => {
                 </Box>
               </Stack>
 
-              {/* Solo aparece si intentó desactivar y tiene bloqueantes */}
+              {/* Solo aparece si intentó desactivar y hay bloqueantes */}
               {showDeactivationBlock && (
                 <Alert
                   severity="warning"
@@ -683,17 +706,9 @@ const Perfil: React.FC = () => {
                   sx={{ border: `1px solid ${theme.palette.warning.main}`, bgcolor: 'background.paper', borderRadius: 2 }}
                 >
                   <AlertTitle fontWeight={700}>Acción Bloqueada</AlertTitle>
-                  {deactivationWarnings.length > 0 ? (
-                    <Box component="ul" sx={{ pl: 2, mb: 2 }}>
-                      {deactivationWarnings.map((warning: string, idx: number) => (
-                        <Typography component="li" variant="body2" key={idx}>{warning}</Typography>
-                      ))}
-                    </Box>
-                  ) : (
-                    <Typography variant="body2" paragraph>
-                      No puedes desactivar tu cuenta. Debes regularizar tu situación financiera primero.
-                    </Typography>
-                  )}
+                  <Typography variant="body2" paragraph>
+                    {deactivationBlockMessage}
+                  </Typography>
                   <Button
                     size="small" color="warning" variant="contained"
                     onClick={() => navigate('/client/finanzas/suscripciones')}
@@ -707,9 +722,9 @@ const Perfil: React.FC = () => {
               <Box display="flex" justifyContent="flex-end" pt={1}>
                 <Button
                   variant="contained" color="error"
-                  startIcon={<DeleteIcon />}
+                  startIcon={checkingDeactivation ? <CircularProgress size={18} color="inherit" /> : <DeleteIcon />}
                   onClick={handleDeleteClick}
-                  disabled={loadingDeudas}
+                  disabled={checkingDeactivation}
                   disableElevation
                   sx={{ borderRadius: 2, fontWeight: 700 }}
                 >

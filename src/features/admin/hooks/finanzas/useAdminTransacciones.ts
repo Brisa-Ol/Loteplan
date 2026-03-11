@@ -9,6 +9,7 @@ import type { TransaccionDto } from '@/core/types/dto/transaccion.dto';
 
 import { useSortedData } from '../useSortedData';
 import { useConfirmDialog, useModal, useSnackbar } from '@/shared/hooks';
+import { env } from '@/core/config/env'; // 👈 1. Importamos env
 
 // Extendemos el tipo para incluir la auditoría visual en el admin
 export type AdminTransaction = TransaccionDto & {
@@ -56,7 +57,7 @@ export const useAdminTransacciones = () => {
   const { data: transaccionesRaw = [], isLoading, error } = useQuery<TransaccionDto[]>({
     queryKey: ['adminTransacciones'],
     queryFn: async () => (await TransaccionService.findAll()).data,
-    staleTime: 30000,
+    staleTime: env.queryStaleTime || 30000, // 👈 2. Aplicamos la variable global
   });
 
   // --- ORDENAMIENTO + HIGHLIGHT ---

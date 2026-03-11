@@ -34,6 +34,7 @@ import ImagenService from '../../../../../core/api/services/imagen.service';
 import type { LoteDto } from '../../../../../core/types/dto/lote.dto';
 import type { ProyectoDto } from '../../../../../core/types/dto/proyecto.dto';
 import { BaseModal } from '@/shared/components/domain';
+import { env } from '@/core/config/env'; // 👈 1. Importamos la configuración global
 
 interface DetalleProyectoModalProps {
   open: boolean;
@@ -60,6 +61,7 @@ const DetalleProyectoModal: React.FC<DetalleProyectoModalProps> = ({ open, onClo
       return activas.reduce((prev, curr) => curr.version > prev.version ? curr : prev);
     },
     enabled: open && !!proyecto,
+    staleTime: env.queryStaleTime || 30000, // 👈 2. Aplicamos la variable global
   });
 
   // --- Memos de Lógica ---
@@ -188,7 +190,8 @@ const DetalleProyectoModal: React.FC<DetalleProyectoModalProps> = ({ open, onClo
                   <AttachMoney color="success" sx={{ fontSize: 18 }} />
                   <Typography variant="caption" fontWeight={900} color="text.secondary">INVERSIÓN TOTAL</Typography>
                 </Stack>
-                <Typography variant="h6" fontWeight={900}>{proyecto.moneda} {Number(proyecto.monto_inversion).toLocaleString('es-AR')}</Typography>
+                {/* 👈 3. Aplicamos el Locale Global */}
+                <Typography variant="h6" fontWeight={900}>{proyecto.moneda} {Number(proyecto.monto_inversion).toLocaleString(env.defaultLocale)}</Typography>
               </Paper>
 
               <Paper elevation={0} sx={styles.statCard}>
@@ -270,7 +273,8 @@ const DetalleProyectoModal: React.FC<DetalleProyectoModalProps> = ({ open, onClo
                         </ListItemAvatar>
                         <ListItemText
                           primary={<Typography variant="body2" fontWeight={800}>{lote.nombre_lote}</Typography>}
-                          secondary={<Typography variant="caption" fontWeight={600}>Base: ${Number(lote.precio_base).toLocaleString('es-AR')}</Typography>}
+                          
+                          secondary={<Typography variant="caption" fontWeight={600}>Base: ${Number(lote.precio_base).toLocaleString(env.defaultLocale)}</Typography>}
                         />
                         <Chip
                           label={lote.estado_subasta.toUpperCase()}

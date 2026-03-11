@@ -9,6 +9,7 @@ import type { SuscripcionDto } from '@/core/types/dto/suscripcion.dto';
 import SuscripcionService from '@/core/api/services/suscripcion.service';
 import ProyectoService from '@/core/api/services/proyecto.service';
 import { useSortedData } from '../useSortedData';
+import { env } from '@/core/config/env'; // 👈 1. Importamos env
 
 
 // ============================================================================
@@ -67,7 +68,7 @@ export const useAdminSuscripciones = () => {
             }
             return (await SuscripcionService.findAll()).data;
         },
-        staleTime: 30000,
+        staleTime: env.queryStaleTime || 30000, // 👈 2. Aplicamos variable global
         gcTime: 5 * 60 * 1000,
         refetchOnWindowFocus: false,
     });
@@ -79,7 +80,7 @@ export const useAdminSuscripciones = () => {
     const { data: proyectos = [] } = useQuery({
         queryKey: ['adminProyectosSelect'],
         queryFn: async () => (await ProyectoService.getAllAdmin()).data,
-        staleTime: 60000,
+        staleTime: 60000, // Lo dejamos fijo porque es un diccionario
         gcTime: 10 * 60 * 1000,
     });
 
@@ -87,13 +88,13 @@ export const useAdminSuscripciones = () => {
     const { data: morosidadStats, isLoading: l2 } = useQuery({
         queryKey: ['metricsMorosidad'],
         queryFn: async () => (await SuscripcionService.getMorosityMetrics()).data,
-        staleTime: 30000,
+        staleTime: env.queryStaleTime || 30000, // 👈 3. Aplicamos variable global
     });
 
     const { data: cancelacionStats, isLoading: l3 } = useQuery({
         queryKey: ['metricsCancelacionMetrics'],
         queryFn: async () => (await SuscripcionService.getCancellationMetrics()).data,
-        staleTime: 30000,
+        staleTime: env.queryStaleTime || 30000, // 👈 4. Aplicamos variable global
     });
 
     const isLoading = l1 || l2 || l3;

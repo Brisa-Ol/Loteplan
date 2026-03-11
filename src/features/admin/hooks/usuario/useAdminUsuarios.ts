@@ -1,4 +1,5 @@
 import UsuarioService from '@/core/api/services/usuario.service';
+import { env } from '@/core/config/env'; // 👈 1. Importamos env
 import { useAuth } from '@/core/context';
 import { useConfirmDialog, useModal, useSnackbar } from '@/shared/hooks';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -29,6 +30,7 @@ export const useAdminUsuarios = () => {
   const { data: usuariosRaw = [], isLoading, error } = useQuery({
     queryKey: ['adminUsuarios'],
     queryFn: async () => (await UsuarioService.findAll()).data,
+    staleTime: env.queryStaleTime || 30000, // 👈 2. Aplicamos la variable global
   });
 
   const { sortedData: usuariosOrdenados, highlightedId, triggerHighlight } = useSortedData(usuariosRaw);

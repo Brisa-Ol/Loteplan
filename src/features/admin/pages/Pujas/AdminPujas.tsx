@@ -11,6 +11,7 @@ import {
 import React, { useMemo, useState } from 'react';
 
 import imagenService from '@/core/api/services/imagen.service';
+import { env } from '@/core/config/env'; // 👈 Importamos la config
 import type { LoteDto } from '@/core/types/dto/lote.dto';
 import type { PujaDto } from '@/core/types/dto/puja.dto';
 import { AdminPageHeader, AlertBanner, ConfirmDialog, DataTable, FilterBar, FilterSearch, MetricsGrid, PageContainer, QueryHandler, StatCard, ViewModeToggle, type ViewMode } from '@/shared';
@@ -40,7 +41,8 @@ const Top3List = React.memo<{ pujas: PujaDto[]; getUserName: (id: number) => str
                 {isLeader ? <EmojiEvents sx={{ fontSize: 16, color: 'warning.main' }} /> : <Typography variant="caption" fontWeight={700} width={16} align="center" color="text.disabled">{index + 1}</Typography>}
                 <Typography variant="caption" fontWeight={isLeader ? 700 : 500} noWrap maxWidth={100}>{getUserName(puja.id_usuario)}</Typography>
               </Stack>
-              <Typography variant="caption" fontWeight={700} sx={{ fontFamily: 'monospace' }}>${Number(puja.monto_puja).toLocaleString()}</Typography>
+              {/* 👈 Aplicamos env.defaultLocale */}
+              <Typography variant="caption" fontWeight={700} sx={{ fontFamily: 'monospace' }}>${Number(puja.monto_puja).toLocaleString(env.defaultLocale)}</Typography>
             </Stack>
           );
         })}
@@ -67,7 +69,8 @@ const LiveAuctionCard = React.memo<{ lote: LoteDto, pujas: PujaDto[], getUserNam
         </Stack>
         <Box textAlign="center" py={2}>
           <Typography variant="caption" color="text.secondary" fontWeight={600}>OFERTA ACTUAL</Typography>
-          <Typography variant="h4" fontWeight={800} color="primary.main">${maxPuja.toLocaleString()}</Typography>
+          {/* 👈 Aplicamos env.defaultLocale */}
+          <Typography variant="h4" fontWeight={800} color="primary.main">${maxPuja.toLocaleString(env.defaultLocale)}</Typography>
         </Box>
         <Top3List pujas={pujas} getUserName={getUserName} />
       </CardContent>
@@ -96,10 +99,11 @@ const AdminPujas: React.FC = () => {
         subtitle="Monitoreo en tiempo real y adjudicación de lotes activos."
       />
 
-      {/* METRICS (Solo relevantes para la subasta en vivo) */}
+      {/* METRICS */}
       <MetricsGrid columns={{ xs: 1, sm: 2, lg: 3 }}>
         <StatCard title="Subastas Activas" value={logic.analytics.activos.length} icon={<Gavel />} color="success" loading={logic.loading} subtitle="Lotes recibiendo ofertas" />
-        <StatCard title="Volumen en Juego" value={`$${logic.analytics.dineroEnJuego.toLocaleString()}`} icon={<TrendingUp />} color="warning" loading={logic.loading} subtitle="Suma de pujas actuales" />
+        {/* 👈 Aplicamos env.defaultLocale */}
+        <StatCard title="Volumen en Juego" value={`$${logic.analytics.dineroEnJuego.toLocaleString(env.defaultLocale)}`} icon={<TrendingUp />} color="warning" loading={logic.loading} subtitle="Suma de pujas actuales" />
         <StatCard title="Total Ofertas Hoy" value={Object.values(logic.pujasPorLote).flat().length} icon={<Timer />} color="info" loading={logic.loading} subtitle="Interacción de usuarios" />
       </MetricsGrid>
 
@@ -142,14 +146,19 @@ const AdminPujas: React.FC = () => {
                   </Stack>
                 )
               },
-              { id: 'precio', label: 'Oferta Actual', render: (l) => <Typography fontWeight={700} color="primary">${Number(logic.pujasPorLote[l.id]?.[0]?.monto_puja || l.precio_base).toLocaleString()}</Typography> },
+              {
+                id: 'precio',
+                label: 'Oferta Actual',
+                // 👈 Aplicamos env.defaultLocale
+                render: (l) => <Typography fontWeight={700} color="primary">${Number(logic.pujasPorLote[l.id]?.[0]?.monto_puja || l.precio_base).toLocaleString(env.defaultLocale)}</Typography>
+              },
               { id: 'pujas', label: 'Pujas', align: 'center', render: (l) => logic.pujasPorLote[l.id]?.length || 0 },
               { id: 'acciones', label: '', align: 'right', render: (l) => <Button size="small" variant="contained" color="error" onClick={() => logic.handleFinalizarSubasta(l)} sx={{ fontWeight: 700 }}>Finalizar</Button> }
             ]}
             getRowKey={r => r.id}
             showInactiveToggle={false}
             pagination
-            defaultRowsPerPage={10}
+            defaultRowsPerPage={env.defaultPageSize} // 👈 Aplicamos env.defaultPageSize (reemplazando el 10)
           />
         )}
       </QueryHandler>

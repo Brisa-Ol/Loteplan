@@ -5,16 +5,15 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
-import ImagenService from '@/core/api/services/imagen.service'; // 👈 Asegurar este import
+import ImagenService from '@/core/api/services/imagen.service';
 import LoteService from '@/core/api/services/lote.service';
 import ProyectoService from '@/core/api/services/proyecto.service';
 import PujaService from '@/core/api/services/puja.service';
+import { env } from '@/core/config/env'; // 👈 1. Importamos la configuración global
 
 import type { CreateLoteDto, LoteDto, UpdateLoteDto } from '@/core/types/dto/lote.dto';
 import { useConfirmDialog, useModal, useSnackbar } from '@/shared';
 import { useSortedData } from '../useSortedData';
-
-
 
 function useDebouncedValue<T>(value: T, delay: number = 300): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
@@ -69,14 +68,14 @@ export const useAdminLotes = () => {
   const { data: lotesRaw = [], isLoading: loadingLotes, error } = useQuery({
     queryKey: ['adminLotes'],
     queryFn: async () => (await LoteService.findAllAdmin()).data,
-    staleTime: 30000,
+    staleTime: env.queryStaleTime || 30000, // 👈 2. Aplicamos la variable global
     refetchOnWindowFocus: false,
   });
 
   const { data: proyectos = [] } = useQuery({
     queryKey: ['adminProyectosSelect'],
     queryFn: async () => (await ProyectoService.getAllAdmin()).data,
-    staleTime: 60000,
+    staleTime: 60000, // Diccionario estático
   });
 
   const { sortedData: sortedLotes, highlightedId, triggerHighlight } = useSortedData(lotesRaw);

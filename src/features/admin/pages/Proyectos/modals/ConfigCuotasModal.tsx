@@ -21,6 +21,7 @@ import CuotaMensualService from '@/core/api/services/cuotaMensual.service';
 import type { CreateCuotaMensualDto } from '@/core/types/dto/cuotaMensual.dto';
 import type { ProyectoDto } from '@/core/types/dto/proyecto.dto';
 
+import { env } from '@/core/config/env'; // 👈 1. Importamos env
 import BaseModal from '@/shared/components/domain/modals/BaseModal';
 import useSnackbar from '@/shared/hooks/useSnackbar';
 import ProyectoPriceHistory from '../components/ProyectoPriceHistory';
@@ -65,7 +66,8 @@ const ConfigCuotasModal: React.FC<ConfigCuotasModalProps> = ({ open, onClose, pr
             return res.data;
         },
         enabled: open && !!proyecto && proyecto.tipo_inversion === 'mensual',
-        retry: false
+        retry: false,
+        staleTime: env.queryStaleTime || 30000 // 👈 2. Consistencia en caché
     });
 
     // --- Mutations ---
@@ -239,7 +241,8 @@ const ConfigCuotasModal: React.FC<ConfigCuotasModalProps> = ({ open, onClose, pr
                                         </Typography>
                                     </Box>
                                     <Typography variant="h3" fontWeight={900}>
-                                        ${calculos.valorFinal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                                        {/* 👈 3. Aplicamos env.defaultLocale */}
+                                        ${calculos.valorFinal.toLocaleString(env.defaultLocale, { minimumFractionDigits: 2 })}
                                     </Typography>
                                 </Paper>
 
@@ -270,11 +273,12 @@ const ConfigCuotasModal: React.FC<ConfigCuotasModalProps> = ({ open, onClose, pr
                                 {cronograma.map((row) => (
                                     <TableRow key={row.nro} hover>
                                         <TableCell sx={{ fontWeight: 700 }}>{row.nro}</TableCell>
-                                        <TableCell sx={{ fontWeight: 500 }}>{row.fecha.toLocaleDateString('es-AR', { month: 'short', year: 'numeric' }).toUpperCase()}</TableCell>
-                                        <TableCell align="right">${row.valorMensual.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</TableCell>
-                                        <TableCell align="right" sx={{ color: 'text.secondary' }}>${(row.cargaAdmin + row.ivaCarga).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</TableCell>
+                                        {/* 👈 4. Aplicamos env.defaultLocale en todas las celdas */}
+                                        <TableCell sx={{ fontWeight: 500 }}>{row.fecha.toLocaleDateString(env.defaultLocale, { month: 'short', year: 'numeric' }).toUpperCase()}</TableCell>
+                                        <TableCell align="right">${row.valorMensual.toLocaleString(env.defaultLocale, { minimumFractionDigits: 2 })}</TableCell>
+                                        <TableCell align="right" sx={{ color: 'text.secondary' }}>${(row.cargaAdmin + row.ivaCarga).toLocaleString(env.defaultLocale, { minimumFractionDigits: 2 })}</TableCell>
                                         <TableCell align="right" sx={{ fontWeight: 900, color: 'primary.main' }}>
-                                            ${row.valorFinal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                                            ${row.valorFinal.toLocaleString(env.defaultLocale, { minimumFractionDigits: 2 })}
                                         </TableCell>
                                     </TableRow>
                                 ))}

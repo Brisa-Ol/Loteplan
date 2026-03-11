@@ -23,6 +23,7 @@ import { useAdminUsuarios } from '../../hooks/usuario/useAdminUsuarios';
 import CreateUserModal from './modals/CreateUserModal';
 import EditUserModal from './modals/EditUserModal';
 import ModalDetalleUsuario from './modals/ModalDetalleUsuario';
+import { env } from '@/core/config/env'; // 👈 1. Importamos env
 
 const useUserColumns = (logic: ReturnType<typeof useAdminUsuarios>) => {
   return useMemo<DataTableColumn<UsuarioDto>[]>(() => [
@@ -30,7 +31,7 @@ const useUserColumns = (logic: ReturnType<typeof useAdminUsuarios>) => {
       id: 'identidad',
       label: 'Usuario / Identidad',
       minWidth: 240,
-      cardPrimary: true, // Destacado en vista móvil
+      cardPrimary: true, 
       sortable: true,
       render: (u) => (
         <Stack direction="row" alignItems="center" spacing={1.5}>
@@ -50,7 +51,7 @@ const useUserColumns = (logic: ReturnType<typeof useAdminUsuarios>) => {
       ),
     },
     {
-      id: 'email', // Usamos el ID real para que el sort funcione
+      id: 'email', 
       label: 'Contacto',
       minWidth: 200,
       cardSecondary: true,
@@ -71,10 +72,11 @@ const useUserColumns = (logic: ReturnType<typeof useAdminUsuarios>) => {
       label: 'Registro',
       minWidth: 120,
       sortable: true,
-      hideOnMobile: true, // Limpia la tabla en tablets
+      hideOnMobile: true, 
       render: (u) => (
         <Typography variant="body2">
-          {new Date(u.fecha_registro || u.createdAt || '').toLocaleDateString('es-AR')}
+          {/* 👈 2. Aplicamos env.defaultLocale */}
+          {new Date(u.fecha_registro || u.createdAt || '').toLocaleDateString(env.defaultLocale)}
         </Typography>
       ),
     },
@@ -104,15 +106,15 @@ const useUserColumns = (logic: ReturnType<typeof useAdminUsuarios>) => {
     },
     {
       id: 'acciones',
-      label: 'Acciones', // Dejar vacío ayuda a que la columna no se estire por el texto del header
+      label: 'Acciones', 
       align: 'right',
-      minWidth: 80, // Un ancho fijo pequeño para los dos botones
+      minWidth: 80, 
       render: (u) => (
         <Stack
           direction="row"
           spacing={0.5}
           justifyContent="flex-end"
-          sx={{ width: 'fit-content', ml: 'auto' }} // Fuerza a que el contenedor no se estire
+          sx={{ width: 'fit-content', ml: 'auto' }} 
         >
           <Tooltip title="Ver Detalle">
             <IconButton onClick={(e) => { e.stopPropagation(); logic.handleViewUser(u); }} size="small" color="info">
@@ -188,9 +190,10 @@ const AdminUsuarios: React.FC = () => {
           data={logic.users}
           getRowKey={(u) => u.id}
           pagination
-          loading={logic.isLoading} // Conecta con el skeleton interno
-          isRowActive={(u) => u.activo} // Opacidad automática para inactivos
-          onRowClick={(u) => logic.handleViewUser(u)} // Click en fila para ver detalle
+          defaultRowsPerPage={env.defaultPageSize} // 👈 3. Aplicamos defaultPageSize global
+          loading={logic.isLoading} 
+          isRowActive={(u) => u.activo} 
+          onRowClick={(u) => logic.handleViewUser(u)} 
           emptyMessage="No se encontraron usuarios con los filtros aplicados"
         />
       </QueryHandler>

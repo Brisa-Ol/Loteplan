@@ -30,7 +30,6 @@ import type { CreateImagenDto, ImagenDto } from '@/core/types/dto/imagen.dto';
 import type { ProyectoDto } from '@/core/types/dto/proyecto.dto';
 import { BaseModal, ConfirmDialog, ImageUploadZone, QueryHandler, useConfirmDialog, useSnackbar } from '@/shared';
 
-
 const MAX_TOTAL_IMAGES = 10;
 
 interface ManageImagesModalProps {
@@ -98,8 +97,15 @@ const ManageImagesModal: React.FC<ManageImagesModalProps> = ({ open, onClose, pr
     setUploadError(null);
 
     const validFiles = files.filter(file => {
-      if (file.size > env.maxFileSize) {
-        showWarning(`${file.name} excede el tamaño máximo.`);
+      // Validación de Tipo (Solo imágenes)
+      if (!file.type.startsWith('image/')) {
+        showWarning(`${file.name} no es un formato de imagen válido.`);
+        return false;
+      }
+
+      // ✅ Uso de env.maxImageSize en lugar de maxFileSize
+      if (file.size > env.maxImageSize) {
+        showWarning(`${file.name} excede el límite de ${env.maxImageSize / (1024 * 1024)}MB.`);
         return false;
       }
       return true;
@@ -212,7 +218,7 @@ const ManageImagesModal: React.FC<ManageImagesModalProps> = ({ open, onClose, pr
                 onChange={handleFilesSelected}
                 maxFiles={remainingSlots}
                 disabled={isWorking}
-                label="Arrastra imágenes aquí para ampliar la galería"
+                label={`Arrastra imágenes aquí (Max. ${env.maxImageSize / (1024 * 1024)}MB)`} // ✅ Mostramos el límite en la UI
               />
             ) : (
               <Alert severity="warning" variant="outlined" sx={{ borderRadius: 2 }}>

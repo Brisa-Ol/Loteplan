@@ -32,8 +32,8 @@ import {
 } from '@mui/material';
 
 import type { KycDTO } from '@/core/types/dto/kyc.dto';
-import { env } from '@/core/config/env';
 import { BaseModal } from '@/shared';
+import { env } from '@/core/config/env';
 
 
 
@@ -201,7 +201,8 @@ const KycDetailModal: React.FC<KycDetailModalProps> = ({
                       <Stack direction="row" spacing={0.5} alignItems="center">
                         <BirthdayIcon sx={{ fontSize: 12, color: 'text.disabled' }} />
                         <Typography variant="caption" fontWeight={700}>
-                          {kyc.fecha_nacimiento ? new Date(kyc.fecha_nacimiento).toLocaleDateString('es-AR') : 'No declarada'}
+                          {/* 👈 1. Aplicamos env.defaultLocale en fecha de nacimiento */}
+                          {kyc.fecha_nacimiento ? new Date(kyc.fecha_nacimiento).toLocaleDateString(env.defaultLocale) : 'No declarada'}
                         </Typography>
                       </Stack>
                     </Box>
@@ -296,7 +297,8 @@ const KycDetailModal: React.FC<KycDetailModalProps> = ({
                         <DateIcon fontSize="inherit" /> Fecha Resolución
                       </Typography>
                       <Typography variant="caption" fontWeight={700} color="text.primary">
-                        {new Date(kyc.fecha_verificacion).toLocaleDateString('es-AR')} a las {new Date(kyc.fecha_verificacion).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+                        {/* 👈 2. Aplicamos env.defaultLocale en fecha y hora de resolución */}
+                        {new Date(kyc.fecha_verificacion).toLocaleDateString(env.defaultLocale)} a las {new Date(kyc.fecha_verificacion).toLocaleTimeString(env.defaultLocale, { hour: '2-digit', minute: '2-digit' })}
                       </Typography>
                     </Box>
                   )}
