@@ -87,18 +87,24 @@ const ImagenService = {
   // ==========================================
 
 create: async (data: CreateImagenDto): Promise<AxiosResponse<ImagenDto>> => {
-  const formData = new FormData();
-  
+  try{
 
-  formData.append('image', data.file); 
-
-  if (data.descripcion) formData.append('descripcion', data.descripcion);
-  if (data.id_lote) formData.append('id_lote', String(data.id_lote));
-  if (data.id_proyecto) formData.append('id_proyecto', String(data.id_proyecto));
+    const formData = new FormData();
+    
   
-  return await httpService.post(BASE_ENDPOINT, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
+    formData.append('image', data.file); 
+  
+    if (data.descripcion) formData.append('descripcion', data.descripcion);
+    if (data.id_lote) formData.append('id_lote', String(data.id_lote));
+    //if (data.id_proyecto) formData.append('id_proyecto', String(data.id_proyecto));
+    
+    return await httpService.post(BASE_ENDPOINT, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  }catch (err){
+    console.log("Error al subir imagen", err)
+    throw err
+  }
 },
 
   update: async (id: number, data: UpdateImagenDto): Promise<AxiosResponse<ImagenDto>> => {

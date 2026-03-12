@@ -75,9 +75,12 @@ const ManageLoteImagesModal: React.FC<ManageLoteImagesModalProps> = ({
         id_proyecto: null,
         id_lote: lote.id,
       };
+      console.log(imagenData)
+      console.log(formData)
       return imagenService.create(imagenData);
     },
   });
+  
 
   // --- Handlers ---
   const handleCloseModal = useCallback(() => {

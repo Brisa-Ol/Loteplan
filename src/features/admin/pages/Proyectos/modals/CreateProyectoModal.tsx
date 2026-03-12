@@ -230,6 +230,7 @@ const CreateProyectoModal: React.FC<any> = ({ open, onClose, onSubmit, isLoading
   const currentStepLabel = steps[activeStep];
 
   const handleNext = useCallback(async () => {
+    console.log("ME hicieron click")
     if (currentStepLabel === 'Multimedia' || currentStepLabel === 'Contrato') {
       setActiveStep(prev => prev + 1);
       return;
@@ -238,7 +239,10 @@ const CreateProyectoModal: React.FC<any> = ({ open, onClose, onSubmit, isLoading
     const schema = currentStepLabel === 'Información' ? projectSchema : quotaSchema;
 
     try {
+      
       await schema.validate(formik.values, { abortEarly: false });
+
+      console.log("datos validados")
       formik.setErrors({});
       setActiveStep(prev => prev + 1);
     } catch (err: any) {

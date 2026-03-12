@@ -6,13 +6,13 @@ import InversionService from '@/core/api/services/inversion.service';
 import MercadoPagoService from '@/core/api/services/pagoMercado.service';
 import SuscripcionService from '@/core/api/services/suscripcion.service';
 import { useAuth } from '@/core/context';
-import type { ContratoPlantillaDto } from '@/core/types/dto';
 import type { ProyectoDto } from '@/core/types/dto/proyecto.dto';
 import useSnackbar from '@/shared/hooks/useSnackbar';
 import { calculateFileHash } from '@/shared/utils/fileUtils';
 import { PDFDocument } from 'pdf-lib';
 import { useCallback, useRef, useState } from 'react';
 import { CheckoutStateManager } from '../pages/Proyectos/modals/Checkout persistence';
+import type { ContratoPlantillaDto } from '@/core/types/dto/contrato-plantilla.dto';
 
 // ===================================================
 // TYPES
