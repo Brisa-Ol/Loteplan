@@ -1,3 +1,5 @@
+// src/features/admin/pages/Contrato/modals/ModalFirmaContrato.tsx
+
 import {
   Clear,
   CloudUpload,
@@ -31,12 +33,13 @@ import React, { useEffect, useRef, useState } from 'react';
 import ContratoFirmadoService from '@/core/api/services/contrato-firmado.service';
 import ContratoPlantillaService from '@/core/api/services/contrato-plantilla.service';
 import ImagenService from '@/core/api/services/imagen.service';
-import { BaseModal } from '@/shared/components/domain/modals/BaseModal'; // ✅ Ajustado a exportación nombrada
+import { BaseModal } from '@/shared/components/domain/modals/BaseModal';
 import PDFViewerMejorado from '../components/PDFViewerMejorado';
 
-// ✅ UTILS Y API CORE
+// ✅ UTILS, API CORE Y CONFIG
 import httpService from '@/core/api/httpService';
 import { calculateFileHash } from '@/shared/utils';
+import { env } from '@/core/config/env'; // 👈 1. Importación de env
 
 interface ModalFirmaContratoProps {
   open: boolean;
@@ -44,6 +47,7 @@ interface ModalFirmaContratoProps {
   idProyecto: number;
   idUsuario: number;
   onFirmaExitosa: () => void;
+  montoInversion?: number; // Prop opcional para mostrar información de contexto
 }
 
 // ════════════════════════════════════════════════════════════
@@ -154,7 +158,7 @@ const SignatureCanvas: React.FC<{ onSave: (data: string) => void; disabled?: boo
 const steps = ['Revisión', 'Dibujar Firma', 'Colocar Firma', 'Seguridad', 'Confirmar'];
 
 const ModalFirmaContrato: React.FC<ModalFirmaContratoProps> = ({
-  open, onClose, idProyecto, idUsuario, onFirmaExitosa
+  open, onClose, idProyecto, idUsuario, onFirmaExitosa, montoInversion = 0
 }) => {
   const theme = useTheme();
   const [activeStep, setActiveStep] = useState(0);
@@ -167,7 +171,8 @@ const ModalFirmaContrato: React.FC<ModalFirmaContratoProps> = ({
   const { data: plantillas, isLoading: loadingPlantilla } = useQuery({
     queryKey: ['plantillaContrato', idProyecto],
     queryFn: async () => (await ContratoPlantillaService.findByProject(idProyecto)).data,
-    enabled: open
+    enabled: open,
+    staleTime: env.queryStaleTime || 300000 // 👈 2. Uso de staleTime centralizado
   });
 
   const plantillaActual = plantillas && plantillas.length > 0 ? plantillas[0] : null;
@@ -182,14 +187,10 @@ const ModalFirmaContrato: React.FC<ModalFirmaContratoProps> = ({
     mutationFn: async () => {
       if (!plantillaActual || !signatureDataUrl || !signaturePosition) throw new Error("Datos incompletos");
 
-      // 1. Obtener URL y descargar PDF Base con Autenticación
       const pdfUrl = ImagenService.resolveImageUrl(plantillaActual.url_archivo);
-
-      // ✅ Usar httpService para enviar token si es necesario
       const response = await httpService.get(pdfUrl, { responseType: 'arraybuffer' });
       const pdfBytes = response.data;
 
-      // 2. Manipulación del PDF
       const pdfDoc = await PDFDocument.load(pdfBytes);
       const signatureImage = await pdfDoc.embedPng(signatureDataUrl);
 
@@ -197,6 +198,7 @@ const ModalFirmaContrato: React.FC<ModalFirmaContratoProps> = ({
       const page = pdfDoc.getPages()[pageIndex];
       const { height } = page.getSize();
 
+      // Estampa la firma (ajuste de coordenadas Y invertidas de PDF-Lib)
       page.drawImage(signatureImage, {
         x: signaturePosition.x,
         y: height - signaturePosition.y - 50,
@@ -204,20 +206,16 @@ const ModalFirmaContrato: React.FC<ModalFirmaContratoProps> = ({
         height: 50,
       });
 
-      // 3. Generar PDF firmado
       const signedPdfBytes = await pdfDoc.save();
 
-      // ✅ FIX: "as any" soluciona el error 'Uint8Array is not assignable to BlobPart'
       const signedFile = new File(
         [signedPdfBytes as any],
         `firmado_${plantillaActual.nombre_archivo}`,
         { type: 'application/pdf' }
       );
 
-      // ✅ Calcular Hash SHA-256 en el cliente
       const fileHash = await calculateFileHash(signedFile);
 
-      // 4. Enviar al backend
       return await ContratoFirmadoService.registrarFirma({
         file: signedFile,
         id_contrato_plantilla: plantillaActual.id,
@@ -300,18 +298,28 @@ const ModalFirmaContrato: React.FC<ModalFirmaContratoProps> = ({
       case 3: // Seguridad
         return (
           <Stack spacing={3} mt={2}>
-            <Paper variant="outlined" sx={{ p: 2, bgcolor: alpha(theme.palette.info.main, 0.05), borderColor: theme.palette.info.main }}>
-              <Stack direction="row" spacing={2} alignItems="center">
-                <LocationOn color="info" />
-                <Box>
-                  <Typography variant="subtitle2" fontWeight={700}>Geolocalización</Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {location ? "Ubicación detectada para auditoría de firma." : "Detectando ubicación..."}
-                  </Typography>
-                </Box>
-                {!location && <CircularProgress size={20} />}
-              </Stack>
-            </Paper>
+            <Stack direction="row" spacing={2}>
+                 <Paper variant="outlined" sx={{ p: 2, flex: 1, bgcolor: alpha(theme.palette.info.main, 0.05), borderColor: theme.palette.info.main }}>
+                    <Stack direction="row" spacing={2} alignItems="center">
+                        <LocationOn color="info" />
+                        <Box>
+                        <Typography variant="subtitle2" fontWeight={700}>Geolocalización</Typography>
+                        <Typography variant="caption" color="text.secondary">
+                            {location ? "Ubicación detectada." : "Detectando..."}
+                        </Typography>
+                        </Box>
+                        {!location && <CircularProgress size={16} />}
+                    </Stack>
+                </Paper>
+                
+                {/* 👈 3. Aplicamos env.defaultLocale para formato de moneda */}
+                <Paper variant="outlined" sx={{ p: 2, flex: 1, borderStyle: 'dashed' }}>
+                    <Typography variant="caption" color="text.secondary" fontWeight={700} display="block">INVERSIÓN DECLARADA</Typography>
+                    <Typography variant="h6" fontWeight={800} color="primary.main">
+                        ${Number(montoInversion).toLocaleString(env.defaultLocale)}
+                    </Typography>
+                </Paper>
+            </Stack>
 
             <TextField
               label="Código Authenticator (2FA)"
@@ -319,9 +327,10 @@ const ModalFirmaContrato: React.FC<ModalFirmaContratoProps> = ({
               onChange={(e) => setCodigo2FA(e.target.value)}
               placeholder="000 000"
               fullWidth
+              autoFocus
               InputProps={{
                 startAdornment: <VpnKey color="action" sx={{ mr: 1 }} />,
-                style: { fontSize: '1.2rem', letterSpacing: 2 }
+                style: { fontSize: '1.2rem', letterSpacing: 2, fontWeight: 700 }
               }}
             />
           </Stack>
@@ -331,8 +340,8 @@ const ModalFirmaContrato: React.FC<ModalFirmaContratoProps> = ({
           <Box textAlign="center" py={4}>
             <CloudUpload sx={{ fontSize: 80, color: 'primary.main', mb: 2 }} />
             <Typography variant="h5" fontWeight={700} gutterBottom>Todo Listo</Typography>
-            <Typography color="text.secondary" paragraph>
-              Se generará un documento PDF firmado digitalmente con un hash SHA-256 inmutable.
+            <Typography color="text.secondary" paragraph sx={{ maxWidth: 400, mx: 'auto' }}>
+              Se generará un documento PDF firmado digitalmente con un hash <b>SHA-256</b> inmutable para garantizar su validez legal.
             </Typography>
             {errorMsg && <Alert severity="error" sx={{ mt: 2, borderRadius: 2 }}>{errorMsg}</Alert>}
           </Box>
@@ -380,7 +389,7 @@ const ModalFirmaContrato: React.FC<ModalFirmaContratoProps> = ({
               startIcon={firmaMutation.isPending && <CircularProgress size={20} color="inherit" />}
               sx={{ px: 4, fontWeight: 700, borderRadius: 2 }}
             >
-              {firmaMutation.isPending ? 'Firmando...' : 'Finalizar Firma'}
+              {firmaMutation.isPending ? 'Procesando...' : 'Finalizar Firma'}
             </Button>
           )}
         </>
@@ -399,7 +408,7 @@ const ModalFirmaContrato: React.FC<ModalFirmaContratoProps> = ({
       </Box>
 
       {loadingPlantilla ? (
-        <Box display="flex" justifyContent="center" py={5}><CircularProgress /></Box>
+        <Box display="flex" justifyContent="center" py={10}><CircularProgress /></Box>
       ) : renderStep(activeStep)}
 
     </BaseModal>

@@ -21,14 +21,7 @@ import { useModal } from '@/shared/hooks/useModal';
 import { useVerificarSuscripcion } from '../../hooks/useVerificarSuscripcion';
 import LoteCard from './components/LoteCard';
 import { PujarModal } from './modals/PujarModal';
-
-// ===================================================
-// PROPS
-// ===================================================
-
-interface ListaLotesProyectoProps {
-  idProyecto: number;
-}
+import { env } from '@/core/config/env'; // 👈 1. Importación de env
 
 // ===================================================
 // SKELETON LOADER
@@ -50,6 +43,10 @@ const LoteCardSkeleton = () => (
 // COMPONENTE PRINCIPAL
 // ===================================================
 
+interface ListaLotesProyectoProps {
+  idProyecto: number;
+}
+
 const ListaLotesProyecto: React.FC<ListaLotesProyectoProps> = ({ idProyecto }) => {
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
@@ -65,14 +62,15 @@ const ListaLotesProyecto: React.FC<ListaLotesProyectoProps> = ({ idProyecto }) =
     isLoading: isLoadingSub,
   } = useVerificarSuscripcion(idProyecto);
 
-  // Lotes del proyecto — usa el endpoint de cliente /lotes/activos filtrado por proyecto
+  // Lotes del proyecto
   const { data: lotes, isLoading, isError } = useQuery({
     queryKey: ['lotes', 'proyecto', idProyecto],
     queryFn: async () => {
       const todos = (await LoteService.getAllActive()).data;
       return todos.filter((l) => Number(l.id_proyecto) === Number(idProyecto));
     },
-    staleTime: 30 * 1000,
+    // 👈 2. Aplicamos el tiempo de caché centralizado
+    staleTime: env.queryStaleTime || 300000, 
     enabled: !!idProyecto,
   });
 
@@ -133,7 +131,6 @@ const ListaLotesProyecto: React.FC<ListaLotesProyectoProps> = ({ idProyecto }) =
 
   return (
     <>
-      {/* Contador */}
       <Stack direction="row" alignItems="center" spacing={1} mb={3}>
         <Gavel sx={{ color: 'text.secondary', fontSize: 20 }} />
         <Typography variant="body2" color="text.secondary" fontWeight={700}>
@@ -142,7 +139,6 @@ const ListaLotesProyecto: React.FC<ListaLotesProyectoProps> = ({ idProyecto }) =
         {isLoadingSub && <CircularProgress size={14} />}
       </Stack>
 
-      {/* Grid de lotes */}
       <Box
         sx={{
           display: 'grid',
@@ -164,7 +160,6 @@ const ListaLotesProyecto: React.FC<ListaLotesProyectoProps> = ({ idProyecto }) =
         ))}
       </Box>
 
-      {/* Modal de puja — montado una sola vez fuera del grid */}
       {loteSeleccionado && (
         <PujarModal
           {...pujarModal.modalProps}

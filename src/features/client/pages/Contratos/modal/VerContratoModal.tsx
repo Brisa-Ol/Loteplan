@@ -7,8 +7,9 @@ import React, { useState } from 'react';
 
 import ContratoPlantillaService from '@/core/api/services/contrato-plantilla.service';
 import ImagenService from '@/core/api/services/imagen.service';
-import PDFViewerMejorado from '../components/PDFViewerMejorado';
+import { env } from '@/core/config/env'; // 👈 1. Importación de env
 import { BaseModal, downloadSecureFile } from '@/shared';
+import PDFViewerMejorado from '../components/PDFViewerMejorado';
 
 interface Props {
   open: boolean;
@@ -26,7 +27,8 @@ export const VerContratoModal: React.FC<Props> = ({
   const { data: plantillas, isLoading, error } = useQuery({
     queryKey: ['plantillaContrato', idProyecto],
     queryFn: async () => (await ContratoPlantillaService.findByProject(idProyecto)).data,
-    enabled: open
+    enabled: open,
+    staleTime: env.queryStaleTime || 300000 // 👈 2. Aplicamos tiempo de caché global
   });
 
   const plantilla = plantillas && plantillas.length > 0 ? plantillas[0] : null;
@@ -36,10 +38,10 @@ export const VerContratoModal: React.FC<Props> = ({
     if (plantilla) {
       try {
         setDownloading(true);
+        // La función downloadSecureFile internamente debería usar env.apiBaseUrl
         await downloadSecureFile(plantilla.url_archivo, plantilla.nombre_archivo);
       } catch (e) {
         console.error("Error descarga", e);
-        // Si tienes un hook de toast úsalo aquí, si no, el error se loguea en consola
       } finally {
         setDownloading(false);
       }
@@ -55,9 +57,7 @@ export const VerContratoModal: React.FC<Props> = ({
       icon={<DescriptionIcon />}
       headerColor="primary"
       maxWidth="lg"
-      // Layout específico para PDF
       PaperProps={{ sx: { height: '85vh' } }}
-      // ✅ AÑADIDO: Agrupamos Cerrar y Descargar en customActions para no perder el botón de cierre
       customActions={
         <>
           <Button
@@ -112,7 +112,6 @@ export const VerContratoModal: React.FC<Props> = ({
             />
           </Box>
         )}
-
       </Box>
     </BaseModal>
   );

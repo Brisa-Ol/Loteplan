@@ -22,19 +22,19 @@ import {
   Typography,
   alpha, useTheme
 } from '@mui/material';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
+// 👈 Eliminamos format y es (date-fns) para usar el estándar nativo con env
 import React, { useMemo } from 'react';
 import { VerContratoFirmadoModal } from '../Proyectos/modals/VerContratoFirmadoModal';
 import type { ContratoFirmadoDto } from '@/core/types/dto/contrato-firmado.dto';
 import { useHistorialContratos } from '../../hooks/useHistorialContratos';
 import { DataTable, PageContainer, PageHeader, QueryHandler, StatCard, type DataTableColumn } from '@/shared';
+import { env } from '@/core/config/env'; // 👈 1. Importamos env
 
 const HistorialContratos: React.FC = () => {
   const theme = useTheme();
   const logic = useHistorialContratos();
 
-  // ── COLUMNAS DE LA TABLA (Optimizadas para mostrar nombres) ──
+  // ── COLUMNAS DE LA TABLA ──
   const columns = useMemo<DataTableColumn<ContratoFirmadoDto>[]>(() => [
     {
       id: 'proyecto',
@@ -90,10 +90,15 @@ const HistorialContratos: React.FC = () => {
       render: (row) => (
         <Box>
           <Typography variant="body2" fontWeight={600}>
-            {row.fecha_firma ? format(new Date(row.fecha_firma), 'dd MMM, yyyy', { locale: es }) : '-'}
+            {/* 👈 2. Aplicamos env.defaultLocale para consistencia regional */}
+            {row.fecha_firma 
+              ? new Date(row.fecha_firma).toLocaleDateString(env.defaultLocale, { day: '2-digit', month: 'short', year: 'numeric' }) 
+              : '-'}
           </Typography>
           <Typography variant="caption" color="text.secondary">
-            {row.fecha_firma ? format(new Date(row.fecha_firma), 'HH:mm') + ' hs' : ''}
+            {row.fecha_firma 
+              ? new Date(row.fecha_firma).toLocaleTimeString(env.defaultLocale, { hour: '2-digit', minute: '2-digit' }) + ' hs' 
+              : ''}
           </Typography>
         </Box>
       )
@@ -148,7 +153,7 @@ const HistorialContratos: React.FC = () => {
     <PageContainer maxWidth="lg">
       <PageHeader
         title="Mis Contratos"
-        subtitle="Repositore seguro de tus acuerdos firmados digitalmente bajo tecnología 2FA."
+        subtitle="Repositorio seguro de tus acuerdos firmados digitalmente bajo tecnología 2FA."
       />
 
       {/* KPI RESUMEN */}
@@ -167,7 +172,7 @@ const HistorialContratos: React.FC = () => {
             getRowKey={(row) => row.id}
             emptyMessage="No posees contratos registrados en tu historial."
             pagination
-            defaultRowsPerPage={10}
+            defaultRowsPerPage={env.defaultPageSize} // 👈 3. Aplicamos defaultPageSize global
           />
         </Paper>
       </QueryHandler>

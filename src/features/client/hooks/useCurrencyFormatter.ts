@@ -12,8 +12,8 @@ interface CurrencyFormatterOptions {
 
 /**
  * Hook para formatear montos de moneda.
- * ✅ MEJORA: Remueve dinámicamente los decimales si el número es un entero exacto (ej: 5.00 -> $ 5),
- * pero conserva los decimales si tiene cifras significativas (ej: 15.99 -> $ 15,99).
+ * ✅ Aplica env.defaultLocale y env.defaultCurrency.
+ * ✅ Remueve decimales si es entero (ej: $ 5.000), los mantiene si es decimal (ej: $ 5.000,50).
  */
 export const useCurrencyFormatter = (options?: CurrencyFormatterOptions) => {
   const {
@@ -23,7 +23,7 @@ export const useCurrencyFormatter = (options?: CurrencyFormatterOptions) => {
     minimumFractionDigits = 2
   } = options || {};
 
-  // Formateador para números ENTEROS (Sin .00)
+  // Formateador para números ENTEROS (Limpia el .00 innecesario)
   const intFormatter = useMemo(() => {
     return new Intl.NumberFormat(locale, {
       style: 'currency',
@@ -33,7 +33,7 @@ export const useCurrencyFormatter = (options?: CurrencyFormatterOptions) => {
     });
   }, [currency, locale]);
 
-  // Formateador para números CON DECIMALES (Conserva los 2 decimales)
+  // Formateador para números CON DECIMALES
   const decFormatter = useMemo(() => {
     return new Intl.NumberFormat(locale, {
       style: 'currency',
@@ -43,24 +43,23 @@ export const useCurrencyFormatter = (options?: CurrencyFormatterOptions) => {
     });
   }, [currency, locale, maximumFractionDigits, minimumFractionDigits]);
 
-  const format = useCallback((amount: number | string): string => {
-    // 1. Convertir a número (parseFloat ignora los ceros a la derecha como '5.00' -> 5)
+  return useCallback((amount: number | string | null | undefined): string => {
+    if (amount === null || amount === undefined) return intFormatter.format(0);
+    
     const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
 
     if (isNaN(numAmount)) return intFormatter.format(0);
 
-    // 2. Si es un número entero exacto, usamos el formateador sin decimales.
-    // Si tiene fracciones (ej: 15.99), usamos el que tiene decimales.
+    // Si es entero exacto, usamos el formato sin decimales para mayor limpieza visual
     return Number.isInteger(numAmount)
       ? intFormatter.format(numAmount)
       : decFormatter.format(numAmount);
   }, [intFormatter, decFormatter]);
-
-  return format;
 };
 
 /**
- * Hook especializado para formato compacto (K, M, B)
+ * Hook para formato compacto (K para miles, M para millones)
+ * Ideal para Dashboards o Cards con poco espacio.
  */
 export const useCompactCurrencyFormatter = (options?: CurrencyFormatterOptions) => {
   const {
@@ -78,17 +77,15 @@ export const useCompactCurrencyFormatter = (options?: CurrencyFormatterOptions) 
     });
   }, [currency, locale]);
 
-  const format = useCallback((amount: number | string): string => {
+  return useCallback((amount: number | string | null | undefined): string => {
+    if (amount === null || amount === undefined) return formatter.format(0);
     const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
-    if (isNaN(numAmount)) return formatter.format(0);
-    return formatter.format(numAmount);
+    return isNaN(numAmount) ? formatter.format(0) : formatter.format(numAmount);
   }, [formatter]);
-
-  return format;
 };
 
 /**
- * Hook para formatear números puros (tokens, cantidades)
+ * Hook para formatear números puros (tokens, cantidades, stock)
  */
 export const useNumberFormatter = (options?: Intl.NumberFormatOptions) => {
   const locale = env.defaultLocale || 'es-AR';
@@ -100,8 +97,9 @@ export const useNumberFormatter = (options?: Intl.NumberFormatOptions) => {
     });
   }, [locale, options]);
 
-  return useCallback((amount: number | string) => {
-    const num = typeof amount === 'string' ? parseInt(amount, 10) : amount;
-    return formatter.format(num || 0);
+  return useCallback((amount: number | string | null | undefined) => {
+    if (amount === null || amount === undefined) return formatter.format(0);
+    const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+    return isNaN(num) ? formatter.format(0) : formatter.format(num);
   }, [formatter]);
 };

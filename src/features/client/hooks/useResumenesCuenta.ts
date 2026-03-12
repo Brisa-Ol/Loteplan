@@ -3,6 +3,7 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import ResumenCuentaService from '@/core/api/services/resumenCuenta.service';
 import type { ResumenCuentaDto } from '@/core/types/dto/resumenCuenta.dto';
+import { env } from '@/core/config/env'; // 👈 1. Importamos la configuración global
 
 export const useResumenesCuenta = () => {
     const [selectedResumen, setSelectedResumen] = useState<ResumenCuentaDto | null>(null);
@@ -11,15 +12,14 @@ export const useResumenesCuenta = () => {
         queryKey: ['misResumenes'],
         queryFn: async () => {
             const response = await ResumenCuentaService.getMyAccountSummaries();
-            // Validamos que sea un array para evitar errores en el reduce
             return Array.isArray(response.data) ? response.data : [];
         },
-        staleTime: 1000 * 60 * 5
+        // 👈 2. Aplicamos la variable global de staleTime (ej: 5 minutos o lo que defina el env)
+        staleTime: env.queryStaleTime || 300000 
     });
 
     const stats = useMemo(() => {
         const totalPlanes = resumenes.length;
-        // ✅ Tipado explícito de acc y curr para evitar errores de 'any'
         const promedioAvance = totalPlanes > 0
             ? resumenes.reduce((acc: number, curr: ResumenCuentaDto) => acc + curr.porcentaje_pagado, 0) / totalPlanes
             : 0;

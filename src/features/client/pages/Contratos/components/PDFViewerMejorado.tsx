@@ -1,3 +1,5 @@
+// src/shared/components/PDFViewerMejorado.tsx (o la ruta que corresponda)
+
 import {
   Delete,
   FitScreen,
@@ -18,12 +20,15 @@ import {
   Typography,
   useTheme
 } from '@mui/material';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
+import { env } from '@/core/config/env'; // 👈 1. Importamos la configuración global
+
 // Configuración del Worker para Vite
+// 👈 Opcional: Podrías centralizar esta URL en env.ts si prefieres no depender de unpkg en producción
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 interface SignatureStamp {
@@ -54,11 +59,21 @@ const PDFViewerMejorado: React.FC<PDFViewerMejoradoProps> = ({
 
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // 👈 2. Resolvemos la URL del PDF usando el prefijo de la API si es necesario
+  const resolvedPdfUrl = useMemo(() => {
+    if (!pdfUrl) return '';
+    if (pdfUrl.startsWith('http') || pdfUrl.startsWith('blob:') || pdfUrl.startsWith('data:')) {
+      return pdfUrl;
+    }
+    // Si es una ruta relativa, le pegamos la URL base de la API
+    return `${env.apiPublicUrl}${pdfUrl.startsWith('/') ? '' : '/'}${pdfUrl}`;
+  }, [pdfUrl]);
+
   // ResizeObserver para que el PDF sea responsive al ancho del contenedor
   useEffect(() => {
     const updateWidth = () => {
       if (containerRef.current) {
-        setPageWidth(containerRef.current.offsetWidth - 48); // Margen para el scrollbar
+        setPageWidth(containerRef.current.offsetWidth - 48);
       }
     };
     const observer = new ResizeObserver(updateWidth);
@@ -67,19 +82,14 @@ const PDFViewerMejorado: React.FC<PDFViewerMejoradoProps> = ({
   }, []);
 
   const handlePageClick = (e: React.MouseEvent<HTMLDivElement>, pageNum: number) => {
-    // 1. Verificamos que NO sea modo lectura y que tengamos una imagen de firma
     if (readOnlyMode || !signatureDataUrl) return;
 
     const rect = e.currentTarget.getBoundingClientRect();
-
     const x = (e.clientX - rect.left) / rect.width;
     const y = (e.clientY - rect.top) / rect.height;
 
     const newSignature = { x, y, page: pageNum };
     setSignature(newSignature);
-
-    // ✅ SOLUCIÓN: Usamos un check de existencia o el operador de encadenamiento opcional
-    // Esto le dice a TS: "Si existe, ejecútala; si no, no hagas nada".
     onSignaturePositionSet?.(newSignature);
   };
 
@@ -123,7 +133,7 @@ const PDFViewerMejorado: React.FC<PDFViewerMejoradoProps> = ({
         }}
       >
         <Document
-          file={pdfUrl}
+          file={resolvedPdfUrl} // 👈 3. Usamos la URL resuelta
           onLoadSuccess={({ numPages }) => setNumPages(numPages)}
           onLoadError={() => setLoadError("No se pudo cargar el PDF")}
           loading={<CircularProgress sx={{ mt: 10 }} />}
@@ -139,7 +149,7 @@ const PDFViewerMejorado: React.FC<PDFViewerMejoradoProps> = ({
                     position: 'relative',
                     boxShadow: theme.shadows[6],
                     cursor: (signatureDataUrl && !readOnlyMode) ? 'crosshair' : 'default',
-                    lineHeight: 0 // Elimina espacios fantasma bajo el canvas
+                    lineHeight: 0 
                   }}
                 >
                   <Page
@@ -164,7 +174,7 @@ const PDFViewerMejorado: React.FC<PDFViewerMejoradoProps> = ({
                         borderRadius: 1,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         zIndex: 10, pointerEvents: 'none',
-                        transform: 'translate(-50%, -50%)' // Centra la firma donde haces clic
+                        transform: 'translate(-50%, -50%)' 
                       }}
                     >
                       <Box component="img" src={signatureDataUrl!} sx={{ width: '80%', height: '80%', objectFit: 'contain' }} />

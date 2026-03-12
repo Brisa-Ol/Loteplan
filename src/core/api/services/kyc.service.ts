@@ -2,23 +2,27 @@
 
 import httpService from "../httpService";
 import type { KycDTO, KycStatusDTO, SubmitKycDto, RejectKycDTO } from "@/core/types/dto/kyc.dto";
+import { env } from "@/core/config/env"; // 👈 Importamos la configuración global
 
 const ENDPOINT = '/kyc';
 
+/**
+ * kycService: Gestiona la verificación de identidad.
+ * Integra configuraciones de entorno para optimizar subidas de archivos pesados.
+ */
 const kycService = {
   // ===================================================================
   // MÉTODOS DE USUARIO
   // ===================================================================
 
   /**
-   * Envía la solicitud de verificación KYC con documentos.
-   * POST /kyc/submit → 202 { success, mensaje, detalles, registro }
-   * Errores posibles: 409 (YA_VERIFICADO | SOLICITUD_PENDIENTE), 400 (ARCHIVOS_FALTANTES)
+   * Envía la solicitud de verificación KYC con documentos (Multipart).
+   * POST /kyc/submit → 202
    */
   async submit(submitData: SubmitKycDto): Promise<any> {
     const formData = new FormData();
 
-    // 1. Campos de texto (coinciden con req.body en el controlador)
+    // 1. Campos de texto
     formData.append('tipo_documento', submitData.tipo_documento);
     formData.append('numero_documento', submitData.numero_documento);
     formData.append('nombre_completo', submitData.nombre_completo);
@@ -30,7 +34,7 @@ const kycService = {
     if (submitData.longitud_verificacion)
       formData.append('longitud_verificacion', submitData.longitud_verificacion.toString());
 
-    // 2. Archivos (nombres coinciden con uploadKYCData .fields() del middleware)
+    // 2. Archivos (Multipart)
     formData.append('documento_frente', submitData.documento_frente);
     if (submitData.documento_dorso)
       formData.append('documento_dorso', submitData.documento_dorso);
@@ -40,19 +44,25 @@ const kycService = {
     if (submitData.video_verificacion)
       formData.append('video_verificacion', submitData.video_verificacion);
 
-    // Axios detecta FormData automáticamente → Content-Type: multipart/form-data
-    const { data } = await httpService.post(`${ENDPOINT}/submit`, formData);
+    // 🚀 MEJORA: Solo logueamos el contenido en desarrollo para evitar fugas de datos
+    if (env.enableDebugLogs && !env.isProduction) {
+      console.log('[KYC Service] Iniciando subida de documentos:', {
+        tipo: submitData.tipo_documento,
+        nombre: submitData.nombre_completo,
+        hasVideo: !!submitData.video_verificacion
+      });
+    }
+
+    // 🚀 MEJORA: Aplicamos un timeout extendido (env.uploadTimeout) para evitar cortes en subidas lentas
+    const { data } = await httpService.post(`${ENDPOINT}/submit`, formData, {
+      timeout: env.uploadTimeout || 60000, // 60s por defecto si no está definido
+    });
+    
     return data;
   },
 
   /**
    * Obtiene el estado actual de verificación del usuario autenticado.
-   * GET /kyc/status → 200
-   *
-   * Respuesta sin registro:  { success, estado_verificacion: 'NO_INICIADO', mensaje, puede_enviar: true }
-   * Respuesta con registro:  { success, ...registro.toJSON(), puede_enviar, mensaje_estado, verificador? }
-   *
-   * Nota: el backend ya excluye las URLs de archivos (url_foto_documento_*) y la IP via el servicio.
    */
   async getStatus(): Promise<KycStatusDTO> {
     const { data } = await httpService.get(`${ENDPOINT}/status`);
@@ -65,8 +75,6 @@ const kycService = {
 
   /**
    * Lista solicitudes PENDIENTES.
-   * GET /kyc/pending → 200 { success, estado, total, solicitudes: KycDTO[] }
-   * Retorna solo el array de solicitudes.
    */
   async getPendingVerifications(): Promise<KycDTO[]> {
     const { data } = await httpService.get(`${ENDPOINT}/pending`);
@@ -75,7 +83,6 @@ const kycService = {
 
   /**
    * Lista solicitudes APROBADAS.
-   * GET /kyc/approved → 200 { success, estado, total, solicitudes: KycDTO[] }
    */
   async getApprovedVerifications(): Promise<KycDTO[]> {
     const { data } = await httpService.get(`${ENDPOINT}/approved`);
@@ -84,7 +91,6 @@ const kycService = {
 
   /**
    * Lista solicitudes RECHAZADAS.
-   * GET /kyc/rejected → 200 { success, estado, total, solicitudes: KycDTO[] }
    */
   async getRejectedVerifications(): Promise<KycDTO[]> {
     const { data } = await httpService.get(`${ENDPOINT}/rejected`);
@@ -92,8 +98,7 @@ const kycService = {
   },
 
   /**
-   * Lista TODAS las verificaciones procesadas (APROBADAS + RECHAZADAS).
-   * GET /kyc/all → 200 { success, total, estadisticas, solicitudes: KycDTO[] }
+   * Lista TODAS las verificaciones procesadas.
    */
   async getAllProcessedVerifications(): Promise<KycDTO[]> {
     const { data } = await httpService.get(`${ENDPOINT}/all`);
@@ -106,9 +111,6 @@ const kycService = {
 
   /**
    * Aprueba la verificación de un usuario.
-   * POST /kyc/approve/:idUsuario → 200 { success, mensaje, registro }
-   *
-   * @param idUsuario - ID del usuario (NO el ID del registro KYC)
    */
   async approveVerification(idUsuario: number): Promise<any> {
     const { data } = await httpService.post(`${ENDPOINT}/approve/${idUsuario}`);
@@ -117,11 +119,6 @@ const kycService = {
 
   /**
    * Rechaza la verificación de un usuario.
-   * POST /kyc/reject/:idUsuario → 200 { success, mensaje, registro }
-   * Body requerido: { motivo_rechazo: string }
-   *
-   * @param idUsuario - ID del usuario (NO el ID del registro KYC)
-   * @param body      - Objeto con el motivo de rechazo
    */
   async rejectVerification(idUsuario: number, body: RejectKycDTO): Promise<any> {
     const { data } = await httpService.post(`${ENDPOINT}/reject/${idUsuario}`, body);

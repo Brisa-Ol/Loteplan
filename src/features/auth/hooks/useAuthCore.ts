@@ -35,7 +35,6 @@ export const useAuthCore = (): UseAuthCoreReturn => {
     return apiError.message || 'Error desconocido en la operación';
   };
 
-  // ✅ loadUser — cerrado correctamente
   const loadUser = useCallback(async () => {
     const token = secureStorage.getToken();
 
@@ -67,7 +66,8 @@ export const useAuthCore = (): UseAuthCoreReturn => {
       setUser(null);
       queryClient.clear();
 
-      // ✅ Corrección: avisar al usuario si el token expiró al arrancar
+      // 👈 2. Podrías centralizar el nombre de la key de sesión si estuviera en env.ts, 
+      // pero aquí lo más importante es mantener consistencia en la redirección.
       if (!window.location.pathname.includes('/login')) {
         sessionStorage.setItem('session_expired', 'true');
         window.location.href = '/login';
@@ -75,9 +75,8 @@ export const useAuthCore = (): UseAuthCoreReturn => {
     } finally {
       setIsInitializing(false);
     }
-  }, [queryClient]); // ✅ loadUser cierra aquí
+  }, [queryClient]);
 
-  // ✅ login — separado de loadUser
   const login = useCallback(async (credentials: LoginRequestDto): Promise<LoginResponseDto> => {
     setIsLoading(true);
     setError(null);
@@ -99,7 +98,6 @@ export const useAuthCore = (): UseAuthCoreReturn => {
     }
   }, [loadUser]);
 
-  // ✅ register
   const register = useCallback(async (data: RegisterRequestDto) => {
     setIsLoading(true);
     setError(null);
@@ -114,14 +112,16 @@ export const useAuthCore = (): UseAuthCoreReturn => {
     }
   }, []);
 
-  // ✅ logout — una sola vez, fuera de loadUser
   const logout = useCallback(() => {
+    // 👈 3. Intentamos un logout limpio. 
+    // Algunas apps usan env.apiBaseUrl aquí si necesitan hacer un beacon o similar.
     AuthService.logout().catch(console.error);
 
     secureStorage.clearToken();
 
     const sessionExpiredFlag = sessionStorage.getItem('session_expired');
     sessionStorage.clear();
+
     if (sessionExpiredFlag) {
       sessionStorage.setItem('session_expired', sessionExpiredFlag);
     }

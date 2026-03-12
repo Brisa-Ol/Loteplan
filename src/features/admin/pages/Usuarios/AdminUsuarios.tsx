@@ -1,136 +1,20 @@
 // src/features/admin/pages/Usuarios/AdminUsuarios.tsx
 
-import type { UsuarioDto } from '@/core/types/dto/usuario.dto';
+import { env } from '@/core/config/env';
 import {
-  AdminPageHeader, ConfirmDialog, DataTable, FilterBar, FilterSearch,
-  FilterSelect, MetricsGrid, PageContainer,
-  QueryHandler, StatCard, type DataTableColumn
+  AdminPageHeader, DataTable, MetricsGrid,
+  PageContainer, QueryHandler, StatCard,
 } from '@/shared';
 import {
-  CheckCircle,
-  Edit as EditIcon,
-  Group as GroupIcon, MarkEmailRead,
-  PersonAdd, RestartAlt, Security, Visibility
+  CheckCircle, Group as GroupIcon,
+  MarkEmailRead, PersonAdd, Security,
 } from '@mui/icons-material';
-import {
-  alpha, Avatar, Box, Button, Chip, IconButton,
-  MenuItem, Stack,
-  Switch,
-  TextField, Tooltip, Typography
-} from '@mui/material';
-import React, { useMemo } from 'react';
+import { Button } from '@mui/material';
+import React from 'react';
 import { useAdminUsuarios } from '../../hooks/usuario/useAdminUsuarios';
-import CreateUserModal from './modals/CreateUserModal';
-import EditUserModal from './modals/EditUserModal';
-import ModalDetalleUsuario from './modals/ModalDetalleUsuario';
-import { env } from '@/core/config/env'; // 👈 1. Importamos env
-
-const useUserColumns = (logic: ReturnType<typeof useAdminUsuarios>) => {
-  return useMemo<DataTableColumn<UsuarioDto>[]>(() => [
-    {
-      id: 'identidad',
-      label: 'Usuario / Identidad',
-      minWidth: 240,
-      cardPrimary: true, 
-      sortable: true,
-      render: (u) => (
-        <Stack direction="row" alignItems="center" spacing={1.5}>
-          <Avatar sx={{
-            width: 38, height: 38, fontWeight: 800,
-            bgcolor: u.activo ? alpha('#CC6333', 0.1) : alpha('#666', 0.1),
-            color: u.activo ? '#CC6333' : '#999',
-          }}>
-            {u.nombre_usuario.charAt(0).toUpperCase()}
-          </Avatar>
-          <Box>
-            <Typography variant="body2" fontWeight={700} noWrap>{u.nombre} {u.apellido}</Typography>
-            <Typography variant="caption" color="primary.main" display="block" sx={{ fontWeight: 600 }}>@{u.nombre_usuario}</Typography>
-            <Typography variant="caption" color="text.secondary">DNI: {u.dni}</Typography>
-          </Box>
-        </Stack>
-      ),
-    },
-    {
-      id: 'email', 
-      label: 'Contacto',
-      minWidth: 200,
-      cardSecondary: true,
-      sortable: true,
-      render: (u) => (
-        <Box>
-          <Typography variant="body2" noWrap sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-            {u.email}
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            Tel: {u.numero_telefono}
-          </Typography>
-        </Box>
-      ),
-    },
-    {
-      id: 'fecha_registro',
-      label: 'Registro',
-      minWidth: 120,
-      sortable: true,
-      hideOnMobile: true, 
-      render: (u) => (
-        <Typography variant="body2">
-          {/* 👈 2. Aplicamos env.defaultLocale */}
-          {new Date(u.fecha_registro || u.createdAt || '').toLocaleDateString(env.defaultLocale)}
-        </Typography>
-      ),
-    },
-    {
-      id: 'activo',
-      label: 'Estado',
-      align: 'center',
-      minWidth: 120,
-      render: (u) => (
-        <Stack direction="row" alignItems="center" spacing={1} justifyContent="center">
-          <Switch
-            checked={u.activo}
-            onChange={() => logic.handleToggleStatusClick(u)}
-            size="small"
-            disabled={u.rol === 'admin' || u.id === logic.currentUser?.id}
-            color="success"
-          />
-          <Chip
-            label={u.activo ? 'ACTIVO' : 'INACTIVO'}
-            size="small"
-            variant={u.activo ? 'filled' : 'outlined'}
-            color={u.activo ? 'success' : 'default'}
-            sx={{ fontSize: '0.6rem', fontWeight: 800, width: 75 }}
-          />
-        </Stack>
-      ),
-    },
-    {
-      id: 'acciones',
-      label: 'Acciones', 
-      align: 'right',
-      minWidth: 80, 
-      render: (u) => (
-        <Stack
-          direction="row"
-          spacing={0.5}
-          justifyContent="flex-end"
-          sx={{ width: 'fit-content', ml: 'auto' }} 
-        >
-          <Tooltip title="Ver Detalle">
-            <IconButton onClick={(e) => { e.stopPropagation(); logic.handleViewUser(u); }} size="small" color="info">
-              <Visibility fontSize="small" />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Editar">
-            <IconButton onClick={(e) => { e.stopPropagation(); logic.handleEditUser(u); }} size="small">
-              <EditIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-        </Stack>
-      ),
-    },
-  ], [logic]);
-};
+import UserFiltersBar from './components/UserFiltersBar';
+import UserModalsSection from './components/UserModalsSection';
+import useUserColumns from './hooks/useUserColumns';
 
 const AdminUsuarios: React.FC = () => {
   const logic = useAdminUsuarios();
@@ -160,29 +44,13 @@ const AdminUsuarios: React.FC = () => {
         <StatCard title="Usuario con 2fa activo" value={logic.stats.con2FA} icon={<Security />} color="warning" />
       </MetricsGrid>
 
-      <FilterBar sx={{ mb: 3 }}>
-        <Stack spacing={2} width="100%">
-          <FilterSearch
-            placeholder="Buscar por DNI, nombre..."
-            value={logic.searchTerm}
-            onSearch={logic.setSearchTerm}
-          />
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: '1.5fr 1fr 1fr 0.5fr' }, gap: 2 }}>
-            <FilterSelect
-              label="Estado"
-              value={logic.filterStatus}
-              onChange={(e) => logic.setFilterStatus(e.target.value)}
-            >
-              <MenuItem value="all">Todos</MenuItem>
-              <MenuItem value="active">Activos</MenuItem>
-              <MenuItem value="inactive">Inactivos</MenuItem>
-            </FilterSelect>
-            <TextField type="date" label="Desde" value={logic.startDate} onChange={(e) => logic.setStartDate(e.target.value)} InputLabelProps={{ shrink: true }} size="small" />
-            <TextField type="date" label="Hasta" value={logic.endDate} onChange={(e) => logic.setEndDate(e.target.value)} InputLabelProps={{ shrink: true }} size="small" />
-            <Button startIcon={<RestartAlt />} onClick={logic.clearFilters}>Limpiar</Button>
-          </Box>
-        </Stack>
-      </FilterBar>
+      <UserFiltersBar
+        searchTerm={logic.searchTerm} setSearchTerm={logic.setSearchTerm}
+        filterStatus={logic.filterStatus} setFilterStatus={logic.setFilterStatus}
+        startDate={logic.startDate} setStartDate={logic.setStartDate}
+        endDate={logic.endDate} setEndDate={logic.setEndDate}
+        clearFilters={logic.clearFilters}
+      />
 
       <QueryHandler isLoading={logic.isLoading} error={logic.error as Error}>
         <DataTable
@@ -190,49 +58,15 @@ const AdminUsuarios: React.FC = () => {
           data={logic.users}
           getRowKey={(u) => u.id}
           pagination
-          defaultRowsPerPage={env.defaultPageSize} // 👈 3. Aplicamos defaultPageSize global
-          loading={logic.isLoading} 
-          isRowActive={(u) => u.activo} 
-          onRowClick={(u) => logic.handleViewUser(u)} 
+          defaultRowsPerPage={env.defaultPageSize}
+          loading={logic.isLoading}
+          isRowActive={(u) => u.activo}
+          onRowClick={(u) => logic.handleViewUser(u)}
           emptyMessage="No se encontraron usuarios con los filtros aplicados"
         />
       </QueryHandler>
 
-      {/* --- MODALES --- */}
-      <CreateUserModal
-        open={logic.createModal.isOpen}
-        onClose={logic.createModal.close}
-        onSubmit={(data) => logic.createMutation.mutateAsync(data)}
-        isLoading={logic.createMutation.isPending}
-      />
-
-      <ModalDetalleUsuario
-        open={logic.detailModal.isOpen}
-        datosSeleccionados={logic.editingUser}
-        onClose={() => {
-          logic.detailModal.close();
-          logic.setEditingUser(null);
-        }}
-      />
-
-      {logic.editingUser && (
-        <EditUserModal
-          open={logic.editModal.isOpen}
-          user={logic.editingUser}
-          onClose={() => {
-            logic.editModal.close();
-            logic.setEditingUser(null);
-          }}
-          onSubmit={(id, data) => logic.updateMutation.mutateAsync({ id, data })}
-          isLoading={logic.updateMutation.isPending}
-        />
-      )}
-
-      <ConfirmDialog
-        controller={logic.confirmDialog}
-        onConfirm={() => logic.confirmDialog.data && logic.toggleStatusMutation.mutate(logic.confirmDialog.data)}
-        isLoading={logic.toggleStatusMutation.isPending}
-      />
+      <UserModalsSection logic={logic} />
     </PageContainer>
   );
 };
