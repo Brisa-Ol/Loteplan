@@ -12,7 +12,7 @@ import { useModal } from '@/shared/hooks/useModal';
 
 // API y DTOs
 import ContratoFirmadoService from '@/core/api/services/contrato-firmado.service';
-import type { ContratoFirmadoDto } from '@/core/types/dto/contrato-firmado.dto';
+import type { ContratoFirmadoDto } from '@/core/types/contrato-firmado.dto';
 import { useSortedData } from '@/features/admin/hooks/useSortedData';
 import { downloadSecureFile } from '@/shared/utils';
 

@@ -1,6 +1,6 @@
 // src/services/mercadoPago.service.ts
 
-import type { CheckoutResponseDto, CreateCheckoutGenericoDto, PaymentStatusResponseDto } from "@/core/types/dto/pagoMercado.dto";
+import type { CheckoutResponseDto, CreateCheckoutGenericoDto, PaymentStatusResponseDto } from "@/core/types/pagoMercado.dto";
 import httpService from "../httpService";
 import type { AxiosResponse } from "axios";
 import { notifyError } from "@/shared/utils/snackbarUtils";

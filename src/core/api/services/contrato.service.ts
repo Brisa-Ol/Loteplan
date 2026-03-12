@@ -1,4 +1,4 @@
-import type { ContratoFirmadoDto, ContratoFirmadoResponseDto, RegistrarFirmaRequestDto } from "@/core/types/dto/contrato-firmado.dto";
+import type { ContratoFirmadoDto, ContratoFirmadoResponseDto, RegistrarFirmaRequestDto } from "@/core/types/contrato-firmado.dto";
 import type { AxiosResponse } from "axios";
 import httpService from "../httpService";
 

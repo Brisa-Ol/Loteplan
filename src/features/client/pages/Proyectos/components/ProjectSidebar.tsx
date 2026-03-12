@@ -25,7 +25,7 @@ import {
 } from '@mui/material';
 import React from 'react';
 
-import type { ProyectoDto } from '@/core/types/dto/proyecto.dto';
+import type { ProyectoDto } from '@/core/types/proyecto.dto';
 import { useProyectoHelpers } from '@/features/client/hooks/useProyectoHelpers';
 
 // ==========================================

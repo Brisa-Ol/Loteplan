@@ -12,7 +12,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 
 import ImagenService from '@/core/api/services/imagen.service';
 import PujaService from '@/core/api/services/puja.service';
-import type { LoteDto } from '@/core/types/dto/lote.dto';
+import type { LoteDto } from '@/core/types/lote.dto';
 import { useImageLoader } from '@/features/client/hooks';
 import { useCurrencyFormatter } from '@/features/client/hooks/useCurrencyFormatter';
 import { useVerificarSuscripcion } from '@/features/client/hooks/useVerificarSuscripcion';

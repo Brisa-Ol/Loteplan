@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import type { ResumenCuentaDto } from '@/core/types/dto/resumenCuenta.dto';
+import type { ResumenCuentaDto } from '@/core/types/resumenCuenta.dto';
 import ResumenCuentaService from '@/core/api/services/resumenCuenta.service';
 import { useModal } from '@/shared/hooks/useModal';
 import { useSortedData } from '../useSortedData';

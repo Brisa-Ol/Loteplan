@@ -1,6 +1,6 @@
 // src/core/api/services/imagen.service.ts
 
-import type { CreateImagenDto, ImagenDto, UpdateImagenDto } from '@/core/types/dto/imagen.dto';
+import type { CreateImagenDto, ImagenDto, UpdateImagenDto } from '@/core/types/imagen.dto';
 import type { AxiosResponse } from 'axios';
 import httpService from '../httpService';
 import { env } from '@/core/config/env';

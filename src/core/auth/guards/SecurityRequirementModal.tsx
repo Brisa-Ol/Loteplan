@@ -1,10 +1,10 @@
 // src/components/domain/modals/SecurityRequirementModal/SecurityRequirementModal.tsx
 // (o la ruta donde lo tengas ubicado)
 
+import { Lock, VerifiedUser } from '@mui/icons-material';
+import { Stack, Typography } from '@mui/material';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Typography, Stack } from '@mui/material';
-import { Lock, VerifiedUser } from '@mui/icons-material';
 
 import { ROUTES } from '@/routes';
 import BaseModal from '../../../shared/components/domain/modals/BaseModal';

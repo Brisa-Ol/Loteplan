@@ -1,8 +1,8 @@
 // src/features/admin/pages/Finanzas/modals/DetalleResumenModal.tsx
 
 import PagoService from '@/core/api/services/pago.service';
-import type { PagoDto } from '@/core/types/dto/pago.dto';
-import type { ResumenCuentaDto } from '@/core/types/dto/resumenCuenta.dto';
+import type { PagoDto } from '@/core/types/pago.dto';
+import type { ResumenCuentaDto } from '@/core/types/resumenCuenta.dto';
 import BaseModal from '@/shared/components/domain/modals/BaseModal';
 import { ConfirmDialog } from '@/shared/components/domain/modals/ConfirmDialog';
 

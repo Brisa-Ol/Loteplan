@@ -23,7 +23,7 @@ import {
 } from 'recharts';
 
 // Hooks y DTOs
-import type { TransaccionDto } from '@/core/types/dto/transaccion.dto';
+import type { TransaccionDto } from '@/core/types/transaccion.dto';
 
 // Componentes Compartidos
 import { DataTable, type DataTableColumn } from '@/shared/components/data-grid/DataTable';

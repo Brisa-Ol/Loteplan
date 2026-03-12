@@ -38,7 +38,7 @@ import {
 } from 'recharts';
 
 // Hooks y DTOs
-import type { ContratoFirmadoDto } from '@/core/types/dto/contrato-firmado.dto';
+import type { ContratoFirmadoDto } from '@/core/types/contrato-firmado.dto';
 
 // Componentes Compartidos
 import { AdminPageHeader } from '@/shared/components/admin/Adminpageheader'; // ✅ Aplicado

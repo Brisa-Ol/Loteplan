@@ -43,7 +43,7 @@ import { PageHeader } from '../../../../../shared/components/layout/PageHeader';
 
 // --- Servicios y DTOs ---
 import kycService from '@/core/api/services/kyc.service';
-import type { KycStatusWithRecord, TipoDocumento } from '@/core/types/dto/kyc.dto';
+import type { KycStatusWithRecord, TipoDocumento } from '@/core/types/kyc.dto';
 
 // --- Componentes Locales ---
 import AlertBanner from '@/shared/components/ui/Alertbanner';

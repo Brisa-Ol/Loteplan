@@ -1,7 +1,7 @@
 
 import type { AxiosResponse } from 'axios';
 import httpService from '../httpService';
-import type { CreateMensajeDto, MensajeDto } from '@/core/types/dto/mensaje';
+import type { CreateMensajeDto, MensajeDto } from '@/core/types/mensaje';
 
 
 const BASE_ENDPOINT = '/mensajes';

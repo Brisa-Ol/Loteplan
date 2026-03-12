@@ -20,7 +20,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 // Servicios y Contexto
 import MensajeService from '@/core/api/services/mensaje.service';
 import { useAuth } from '@/core/context/AuthContext';
-import type { MensajeDto } from '@/core/types/dto/mensaje';
+import type { MensajeDto } from '@/core/types/mensaje';
 import { PageContainer, PageHeader } from '@/shared';
 
 

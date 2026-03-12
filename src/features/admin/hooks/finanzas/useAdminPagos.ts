@@ -4,7 +4,7 @@ import { useTheme } from '@mui/material';
 import useSnackbar from '@/shared/hooks/useSnackbar';
 import { useModal } from '@/shared/hooks/useModal';
 
-import type { PagoDto } from '@/core/types/dto/pago.dto';
+import type { PagoDto } from '@/core/types/pago.dto';
 import UsuarioService from '@/core/api/services/usuario.service';
 import PagoService from '@/core/api/services/pago.service';
 import ProyectoService from '@/core/api/services/proyecto.service';

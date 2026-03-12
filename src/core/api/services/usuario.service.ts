@@ -1,7 +1,7 @@
-import type { AdminDisable2FADto, ChangePasswordDto, CreateUsuarioDto, UpdateUserAdminDto, UpdateUserMeDto, UsuarioDto, ValidateDeactivationResponseDto } from "@/core/types/dto/usuario.dto";
+import type { AdminDisable2FADto, ChangePasswordDto, CreateUsuarioDto, UpdateUserAdminDto, UpdateUserMeDto, UsuarioDto, ValidateDeactivationResponseDto } from "@/core/types/usuario.dto";
 import type { AxiosResponse } from "axios";
 import httpService from "../httpService";
-import type { GenericResponseDto } from "@/core/types/dto/auth.dto";
+import type { GenericResponseDto } from "@/core/types/auth.dto";
 
 
 const ENDPOINT = '/usuarios';

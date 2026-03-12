@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useModal } from '@/shared/hooks/useModal';
-import type { InversionDto } from '@/core/types/dto/inversion.dto';
+import type { InversionDto } from '@/core/types/inversion.dto';
 import InversionService from '@/core/api/services/inversion.service';
 import { useSortedData } from '../useSortedData';
 import { env } from '@/core/config/env'; // 👈 1. Importamos la configuración global

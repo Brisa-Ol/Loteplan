@@ -1,7 +1,7 @@
 // src/shared/hooks/useNavbarMenu.tsx
 
 import { useAuth } from "@/core/context";
-import type { EstadoVerificacion } from "@/core/types/dto/kyc.dto";
+import type { EstadoVerificacion } from "@/core/types/kyc.dto";
 import { ROUTES } from "@/routes"; // ✅ Fix: import que faltaba
 import { useConfirmDialog } from "@/shared/hooks";
 import {

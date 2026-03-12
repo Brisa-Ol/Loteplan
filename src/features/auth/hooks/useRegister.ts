@@ -1,5 +1,5 @@
 import { useAuth } from "@/core/context/AuthContext";
-import type { RegisterRequestDto } from "@/core/types/dto/auth.dto";
+import type { RegisterRequestDto } from "@/core/types/auth.dto";
 import { useFormik } from "formik";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";

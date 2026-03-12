@@ -27,8 +27,8 @@ import {
 import React from 'react';
 
 import { env } from '@/core/config/env';
-import type { EstadoSubasta, LoteDto } from '../../../../../core/types/dto/lote.dto';
-import type { ProyectoDto } from '../../../../../core/types/dto/proyecto.dto';
+import type { EstadoSubasta, LoteDto } from '../../../../../core/types/lote.dto';
+import type { ProyectoDto } from '../../../../../core/types/proyecto.dto';
 
 
 interface ProyectoLotesManagerProps {

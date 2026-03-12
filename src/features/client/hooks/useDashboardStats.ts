@@ -1,7 +1,7 @@
-import type { InversionDto } from '@/core/types/dto/inversion.dto';
-import type { PagoDto } from '@/core/types/dto/pago.dto';
-import type { ResumenCuentaDto } from '@/core/types/dto/resumenCuenta.dto';
-import type { SuscripcionDto } from '@/core/types/dto/suscripcion.dto';
+import type { InversionDto } from '@/core/types/inversion.dto';
+import type { PagoDto } from '@/core/types/pago.dto';
+import type { ResumenCuentaDto } from '@/core/types/resumenCuenta.dto';
+import type { SuscripcionDto } from '@/core/types/suscripcion.dto';
 import { useMemo } from 'react';
 
 

@@ -19,7 +19,7 @@ import React, { memo, useMemo, useState } from 'react';
 
 import ImagenService from '@/core/api/services/imagen.service';
 import { useAuth } from '@/core/context/AuthContext';
-import type { LoteDto } from '@/core/types/dto/lote.dto';
+import type { LoteDto } from '@/core/types/lote.dto';
 import { useAuctionStatus } from '@/features/client/hooks/useAuctionStatus';
 import { useCurrencyFormatter } from '@/features/client/hooks/useCurrencyFormatter';
 import { useImageLoader } from '@/features/client/hooks/useImageLoader';

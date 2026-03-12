@@ -18,7 +18,7 @@ import {
 
 // Shared & Core
 import imagenService from '@/core/api/services/imagen.service';
-import type { CreateLoteDto, LoteDto, UpdateLoteDto } from '@/core/types/dto/lote.dto';
+import type { CreateLoteDto, LoteDto, UpdateLoteDto } from '@/core/types/lote.dto';
 import { DataTable, type DataTableColumn } from '@/shared/components/data-grid/DataTable';
 import { QueryHandler } from '@/shared/components/data-grid/QueryHandler';
 import { StatCard } from '@/shared/components/domain/cards/StatCard';

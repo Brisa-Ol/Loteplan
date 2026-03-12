@@ -1,4 +1,4 @@
-import type { ForgotPasswordDto, GenericResponseDto, LoginRequestDto, LoginResponseDto, LoginSuccessResponse, RegisterRequestDto, ResendConfirmationDto, ResetPasswordDto, Verify2faRequestDto } from "@/core/types/dto/auth.dto";
+import type { ForgotPasswordDto, GenericResponseDto, LoginRequestDto, LoginResponseDto, LoginSuccessResponse, RegisterRequestDto, ResendConfirmationDto, ResetPasswordDto, Verify2faRequestDto } from "@/core/types/auth.dto";
 import httpService from "../httpService";
 import type { AxiosResponse } from "axios";
 

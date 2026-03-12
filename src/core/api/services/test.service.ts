@@ -1,5 +1,5 @@
 
-import type { SimularImpagoResponseDto } from '@/core/types/dto/test.dto';
+import type { SimularImpagoResponseDto } from '@/core/types/test.dto';
 import type { AxiosResponse } from 'axios';
 import httpService from '../httpService';
 

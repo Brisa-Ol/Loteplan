@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTheme } from '@mui/material';
 
 import TransaccionService from '@/core/api/services/transaccion.service';
-import type { TransaccionDto } from '@/core/types/dto/transaccion.dto';
+import type { TransaccionDto } from '@/core/types/transaccion.dto';
 
 import { useSortedData } from '../useSortedData';
 import { useConfirmDialog, useModal, useSnackbar } from '@/shared/hooks';

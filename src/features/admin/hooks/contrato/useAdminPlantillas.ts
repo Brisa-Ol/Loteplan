@@ -8,7 +8,7 @@ import useSnackbar from '@/shared/hooks/useSnackbar';
 
 import ContratoPlantillaService from '@/core/api/services/contrato-plantilla.service';
 import ProyectoService from '@/core/api/services/proyecto.service';
-import type { ContratoPlantillaDto } from '@/core/types/dto/contrato-plantilla.dto';
+import type { ContratoPlantillaDto } from '@/core/types/contrato-plantilla.dto';
 
 import { env } from '@/core/config/env'; // 👈 1. Importamos la config
 import { downloadSecureFile } from '@/shared/utils/fileUtils';

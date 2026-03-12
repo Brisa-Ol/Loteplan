@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 
 import LoteService from '@/core/api/services/lote.service';
-import type { LoteDto } from '@/core/types/dto/lote.dto';
+import type { LoteDto } from '@/core/types/lote.dto';
 import { useConfirmDialog } from '@/shared/hooks/useConfirmDialog';
 import { useSnackbar } from '@/shared/hooks/useSnackbar';
 import { useSortedData } from '../useSortedData';

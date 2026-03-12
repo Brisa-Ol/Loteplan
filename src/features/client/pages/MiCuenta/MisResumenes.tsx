@@ -8,7 +8,7 @@ import React, { useMemo } from 'react';
 import { DetalleCuotaModal } from './perfil/modal/DetalleCuotaModal';
 
 // Hooks y DTOs
-import type { ResumenCuentaDto } from '@/core/types/dto/resumenCuenta.dto';
+import type { ResumenCuentaDto } from '@/core/types/resumenCuenta.dto';
 import { DataTable, PageContainer, PageHeader, QueryHandler, StatCard, type DataTableColumn } from '@/shared';
 import { useResumenesCuenta } from '../../hooks/useResumenesCuenta';
 

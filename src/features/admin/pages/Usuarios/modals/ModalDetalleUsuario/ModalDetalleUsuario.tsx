@@ -1,7 +1,7 @@
 // src/features/admin/pages/Usuarios/modals/ModalDetalleUsuario.tsx
 
 import { env } from '@/core/config/env';
-import type { UsuarioDto } from '@/core/types/dto/usuario.dto';
+import type { UsuarioDto } from '@/core/types/usuario.dto';
 import { BaseModal } from '@/shared';
 import {
   AdminPanelSettings as AdminIcon,
@@ -49,9 +49,9 @@ const IdentityColumn: React.FC<{ u: UsuarioDto }> = ({ u }) => {
         Identidad y Contacto
       </Typography>
       <Stack divider={<Divider sx={{ borderStyle: 'dashed', opacity: 0.6 }} />}>
-        <FilaInfo icon={<BadgeIcon />}  label="Documento (DNI)"       value={u.dni}              color={theme.palette.primary.main} />
-        <FilaInfo icon={<EmailIcon />}  label="Correo Electrónico"    value={u.email}            color={theme.palette.info.main}    />
-        <FilaInfo icon={<PhoneIcon />}  label="Teléfono de Contacto"  value={u.numero_telefono}  color={theme.palette.success.main} />
+        <FilaInfo icon={<BadgeIcon />} label="Documento (DNI)" value={u.dni} color={theme.palette.primary.main} />
+        <FilaInfo icon={<EmailIcon />} label="Correo Electrónico" value={u.email} color={theme.palette.info.main} />
+        <FilaInfo icon={<PhoneIcon />} label="Teléfono de Contacto" value={u.numero_telefono} color={theme.palette.success.main} />
       </Stack>
     </Box>
   );
@@ -74,7 +74,7 @@ const SecurityColumn: React.FC<{ u: UsuarioDto; formatearFecha: (s?: string) => 
         <Stack spacing={1.5}>
           {[
             { label: 'Verificación Email', value: u.confirmado_email ? 'VERIFICADO' : 'PENDIENTE', color: u.confirmado_email ? 'success' : 'error' },
-            { label: 'Seguridad 2FA',      value: u.is_2fa_enabled ? 'ACTIVO' : 'DESACTIVADO',    color: u.is_2fa_enabled ? 'info' : 'default' },
+            { label: 'Seguridad 2FA', value: u.is_2fa_enabled ? 'ACTIVO' : 'DESACTIVADO', color: u.is_2fa_enabled ? 'info' : 'default' },
           ].map(({ label, value, color }) => (
             <Box key={label} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Typography variant="body2" fontWeight={600} color="text.secondary">{label}</Typography>
@@ -85,8 +85,8 @@ const SecurityColumn: React.FC<{ u: UsuarioDto; formatearFecha: (s?: string) => 
       </Box>
 
       <Box sx={{ mt: 2 }}>
-        <FilaInfo icon={<CalendarIcon />} label="Fecha de Registro"      value={formatearFecha(u.fecha_registro)} />
-        <FilaInfo icon={<UpdateIcon />}   label="Última Sincronización"  value={formatearFecha(u.updatedAt)}      />
+        <FilaInfo icon={<CalendarIcon />} label="Fecha de Registro" value={formatearFecha(u.fecha_registro)} />
+        <FilaInfo icon={<UpdateIcon />} label="Última Sincronización" value={formatearFecha(u.updatedAt)} />
       </Box>
     </Box>
   );
@@ -124,7 +124,8 @@ const ModalDetalleUsuario: React.FC<Props> = ({ open, onClose, datosSeleccionado
 
         {/* Hero */}
         <Paper elevation={0} sx={heroPaperSx}>
-          <Avatar sx={{ width: 72, height: 72, fontSize: '1.75rem', fontWeight: 900,
+          <Avatar sx={{
+            width: 72, height: 72, fontSize: '1.75rem', fontWeight: 900,
             bgcolor: u.activo ? 'primary.main' : theme.palette.text.disabled,
             boxShadow: `0 4px 12px ${alpha(u.activo ? theme.palette.primary.main : '#000', 0.2)}`,
           }}>

@@ -15,7 +15,7 @@ import { useNavigate } from 'react-router-dom';
 
 import LoteService from '@/core/api/services/lote.service';
 import { useAuth } from '@/core/context/AuthContext';
-import type { LoteDto } from '@/core/types/dto/lote.dto';
+import type { LoteDto } from '@/core/types/lote.dto';
 import { ROUTES } from '@/routes';
 import { useModal } from '@/shared/hooks/useModal';
 import { useVerificarSuscripcion } from '../../hooks/useVerificarSuscripcion';

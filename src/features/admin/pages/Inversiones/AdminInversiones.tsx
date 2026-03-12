@@ -31,7 +31,7 @@ import { StatCard, StatusBadge } from '@/shared/components/domain/cards/StatCard
 import { FilterBar, FilterSearch, FilterSelect } from '@/shared/components/forms/FilterBar';
 import { PageContainer } from '@/shared/components/layout/PageContainer';
 
-import type { InversionDto } from '@/core/types/dto/inversion.dto';
+import type { InversionDto } from '@/core/types/inversion.dto';
 import { useAdminInversiones } from '../../hooks/finanzas/useAdminInversiones';
 import DetalleInversionModal from './modals/DetalleInversionModal';
 

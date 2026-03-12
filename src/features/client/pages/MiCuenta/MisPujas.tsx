@@ -16,7 +16,7 @@ import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 // Servicios y Tipos
 import PujaService from '@/core/api/services/puja.service';
-import type { PujaDto } from '@/core/types/dto/puja.dto';
+import type { PujaDto } from '@/core/types/puja.dto';
 import { ROUTES } from '@/routes';
 import { DataTable, PageContainer, PageHeader, QueryHandler, StatCard, useModal, type DataTableColumn } from '@/shared';
 import TwoFactorAuthModal from '@/shared/components/domain/modals/TwoFactorAuthModal';

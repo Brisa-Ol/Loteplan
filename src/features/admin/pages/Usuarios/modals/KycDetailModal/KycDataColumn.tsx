@@ -1,7 +1,7 @@
 // src/features/admin/pages/Usuarios/modals/sections/KycDataColumn.tsx
 
 import { env } from '@/core/config/env';
-import type { KycDTO } from '@/core/types/dto/kyc.dto';
+import type { KycDTO } from '@/core/types/kyc.dto';
 import {
     AdminPanelSettings as AdminIcon,
     CakeOutlined as BirthdayIcon,

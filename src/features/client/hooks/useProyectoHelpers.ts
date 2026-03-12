@@ -1,7 +1,7 @@
 // src/features/client/hooks/useProyectoHelpers.ts
 
 import ImagenService from '@/core/api/services/imagen.service';
-import type { ProyectoDto } from '@/core/types/dto/proyecto.dto';
+import type { ProyectoDto } from '@/core/types/proyecto.dto';
 import { Savings, TrendingUp } from '@mui/icons-material';
 import { useMemo } from 'react';
 

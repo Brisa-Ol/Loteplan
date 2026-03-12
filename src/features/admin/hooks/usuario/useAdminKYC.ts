@@ -1,6 +1,6 @@
 import kycService from '@/core/api/services/kyc.service';
 import { env } from '@/core/config/env'; // 👈 1. Importamos env
-import type { KycDTO } from '@/core/types/dto/kyc.dto';
+import type { KycDTO } from '@/core/types/kyc.dto';
 import { useConfirmDialog } from '@/shared/hooks/useConfirmDialog';
 import { useModal } from '@/shared/hooks/useModal';
 import useSnackbar from '@/shared/hooks/useSnackbar';

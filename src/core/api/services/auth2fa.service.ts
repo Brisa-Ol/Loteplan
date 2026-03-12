@@ -1,6 +1,6 @@
-import type { Disable2faRequestDto, Enable2faRequestDto, Generate2faSecretResponseDto } from "@/core/types/dto/auth2fa.dto";
+import type { Disable2faRequestDto, Enable2faRequestDto, Generate2faSecretResponseDto } from "@/core/types/auth2fa.dto";
 import httpService from "../httpService";
-import type { GenericResponseDto } from "@/core/types/dto/auth.dto";
+import type { GenericResponseDto } from "@/core/types/auth.dto";
 import type { AxiosResponse } from "axios";
 
 /**

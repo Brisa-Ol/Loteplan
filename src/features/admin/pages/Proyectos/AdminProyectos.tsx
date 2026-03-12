@@ -34,9 +34,9 @@ import {
 } from '@mui/material';
 import React, { memo, useMemo, useState } from 'react';
 
-import type { ProyectoDto } from '@/core/types/dto/proyecto.dto';
-import { useAdminProyectos } from '../../hooks/proyecto/useAdminProyectos';
 import { env } from '@/core/config/env'; // 👈 1. Importamos la configuración global
+import type { ProyectoDto } from '@/core/types/proyecto.dto';
+import { useAdminProyectos } from '../../hooks/proyecto/useAdminProyectos';
 
 import {
   AdminPageHeader, ConfirmDialog, DataTable, FilterBar,
@@ -123,7 +123,7 @@ const ProjectCard = memo<{
           )}
           {isMensual && cuotaAMostrar && (
             <Chip
-           
+
               label={`Cuota: ${proyecto.moneda} ${Number(cuotaAMostrar).toLocaleString(env.defaultLocale, { minimumFractionDigits: 2 })}`}
               size="small"
               color="success"

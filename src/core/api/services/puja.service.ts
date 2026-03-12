@@ -1,9 +1,9 @@
 // src/core/api/services/puja.service.ts
 
-import type { ConfirmarPuja2faDto, CreatePujaDto, PujaCheckoutResponse, PujaDto } from "@/core/types/dto/puja.dto";
+import type { ConfirmarPuja2faDto, CreatePujaDto, PujaCheckoutResponse, PujaDto } from "@/core/types/puja.dto";
 import type { AxiosResponse } from "axios";
 import httpService from "../httpService";
-import type { GenericResponseDto } from "@/core/types/dto/auth.dto";
+import type { GenericResponseDto } from "@/core/types/auth.dto";
 
 const BASE_ENDPOINT = '/pujas';
 

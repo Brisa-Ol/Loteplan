@@ -2,7 +2,7 @@
 
 import UsuarioService from '@/core/api/services/usuario.service';
 import { useAuth } from '@/core/context/AuthContext';
-import type { UpdateUserAdminDto, UsuarioDto } from '@/core/types/dto/usuario.dto';
+import type { UpdateUserAdminDto, UsuarioDto } from '@/core/types/usuario.dto';
 import { BaseModal, useSnackbar } from '@/shared';
 import { Edit as EditIcon, VpnKeyOutlined as KeyIcon, PersonOutline as PersonIcon } from '@mui/icons-material';
 import { Alert, Box, Chip, Divider, Stack, TextField } from '@mui/material';

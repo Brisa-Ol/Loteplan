@@ -1,9 +1,9 @@
 // src/services/favorito.service.ts
 
-import type { CheckFavoritoResponseDto, PopularidadLoteDTO, ToggleFavoritoRequestDto, ToggleFavoritoResponseDto } from '@/core/types/dto/favorito.dto';
+import type { CheckFavoritoResponseDto, PopularidadLoteDTO, ToggleFavoritoRequestDto, ToggleFavoritoResponseDto } from '@/core/types/favorito.dto';
 import type { AxiosResponse } from 'axios';
 import httpService from '../httpService';
-import type { LoteDto } from '@/core/types/dto/lote.dto';
+import type { LoteDto } from '@/core/types/lote.dto';
 
 // ✅ Importamos la utilidad para alertas manuales (validaciones de negocio)
 

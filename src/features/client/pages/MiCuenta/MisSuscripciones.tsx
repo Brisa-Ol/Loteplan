@@ -18,7 +18,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 // Hooks y tipos
-import type { SuscripcionDto, SuscripcionCanceladaDto } from '@/core/types/dto/suscripcion.dto';
+import type { SuscripcionDto, SuscripcionCanceladaDto } from '@/core/types/suscripcion.dto';
 import { useSuscripciones } from '../../hooks/useSuscripciones';
 import { useCurrencyFormatter } from '../../hooks/useCurrencyFormatter';
 import { ConfirmDialog, DataTable, PageContainer, PageHeader, QueryHandler, StatCard, useConfirmDialog, type DataTableColumn } from '@/shared';

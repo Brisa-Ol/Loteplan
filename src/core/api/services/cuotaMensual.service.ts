@@ -1,8 +1,8 @@
 
-import type { CreateCuotaMensualDto, CuotaBackendResponse, CuotaMensualDto, UpdateCuotaMensualDto } from '@/core/types/dto/cuotaMensual.dto';
+import type { CreateCuotaMensualDto, CuotaBackendResponse, CuotaMensualDto, UpdateCuotaMensualDto } from '@/core/types/cuotaMensual.dto';
 import type { AxiosResponse } from 'axios';
 import httpService from '../httpService';
-import type { GenericResponseDto } from '@/core/types/dto/auth.dto';
+import type { GenericResponseDto } from '@/core/types/auth.dto';
 
 const CuotaMensualService = {
 

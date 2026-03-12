@@ -1,7 +1,7 @@
 import type { AxiosResponse } from 'axios';
 import httpService from '../httpService';
-import type { ResumenCuentaDto, UpdateResumenCuentaDto } from '@/core/types/dto/resumenCuenta.dto';
-import type { GenericResponseDto } from '@/core/types/dto/auth.dto';
+import type { ResumenCuentaDto, UpdateResumenCuentaDto } from '@/core/types/resumenCuenta.dto';
+import type { GenericResponseDto } from '@/core/types/auth.dto';
 
 const BASE_ENDPOINT = '/resumen-cuentas'; 
 

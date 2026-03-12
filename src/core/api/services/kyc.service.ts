@@ -1,7 +1,7 @@
 // frontend/src/core/api/services/kyc.service.ts
 
 import httpService from "../httpService";
-import type { KycDTO, KycStatusDTO, SubmitKycDto, RejectKycDTO } from "@/core/types/dto/kyc.dto";
+import type { KycDTO, KycStatusDTO, SubmitKycDto, RejectKycDTO } from "@/core/types/kyc.dto";
 import { env } from "@/core/config/env"; // 👈 Importamos la configuración global
 
 const ENDPOINT = '/kyc';

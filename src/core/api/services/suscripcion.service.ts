@@ -7,7 +7,7 @@ import type {
   SuscripcionCanceladaDto, 
   SuscripcionDto, 
   SuscripcionInitResponse 
-} from '@/core/types/dto/suscripcion.dto';
+} from '@/core/types/suscripcion.dto';
 import type { AxiosResponse } from 'axios';
 import httpService from '../httpService';
 

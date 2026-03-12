@@ -5,7 +5,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useModal } from '../../../shared/hooks/useModal';
 import { useConfirmDialog } from '../../../shared/hooks/useConfirmDialog';
 import useSnackbar from '../../../shared/hooks/useSnackbar';
-import type { LoteDto } from '@/core/types/dto/lote.dto';
+import type { LoteDto } from '@/core/types/lote.dto';
 import ProyectoService from '@/core/api/services/proyecto.service';
 import SuscripcionService from '@/core/api/services/suscripcion.service';
 import FavoritoService from '@/core/api/services/favorito.service';

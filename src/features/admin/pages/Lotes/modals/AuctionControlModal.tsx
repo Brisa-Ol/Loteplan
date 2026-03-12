@@ -4,7 +4,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { AccessTime, Gavel, PlayCircleFilled, StopCircle } from '@mui/icons-material';
 import { Alert, Box, Chip, Stack, TextField, Typography, useTheme, alpha } from '@mui/material';
 
-import type { LoteDto } from '@/core/types/dto/lote.dto';
+import type { LoteDto } from '@/core/types/lote.dto';
 import { BaseModal } from '@/shared';
 
 

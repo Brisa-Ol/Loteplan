@@ -1,6 +1,6 @@
 import type { AxiosResponse } from "axios";
 import httpService from "../httpService";
-import type { ContratoFirmadoDto } from "@/core/types/dto/contrato-firmado.dto";
+import type { ContratoFirmadoDto } from "@/core/types/contrato-firmado.dto";
 
 
 const ContratoGeneralService = {

@@ -1,5 +1,5 @@
-import React from 'react';
 import { usePermissions } from '@/core/auth/hooks/usePermissions'; // Ajusta la ruta si es necesario
+import React from 'react';
 
 // Definimos los roles válidos según tu backend
 type UserRole = 'admin' | 'cliente';

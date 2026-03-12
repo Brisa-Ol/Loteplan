@@ -19,7 +19,7 @@ import React, { useMemo, useState } from 'react';
 import { env } from '@/core/config/env';
 import ContratoService from '@/core/api/services/contrato.service';
 import ImagenService from '@/core/api/services/imagen.service';
-import type { ContratoFirmadoDto } from '@/core/types/dto/contrato-firmado.dto';
+import type { ContratoFirmadoDto } from '@/core/types/contrato-firmado.dto';
 import PDFViewerMejorado from '../../Contratos/components/PDFViewerMejorado';
 import { BaseModal, useSnackbar } from '@/shared';
 

@@ -1,7 +1,7 @@
 // src/features/admin/pages/Usuarios/AdminKYC.tsx
 
 import { env } from '@/core/config/env';
-import type { KycDTO } from '@/core/types/dto/kyc.dto';
+import type { KycDTO } from '@/core/types/kyc.dto';
 import { AdminPageHeader, DataTable, MetricsGrid, PageContainer, QueryHandler, StatCard } from '@/shared';
 import {
   CheckCircle as CheckCircleIcon,

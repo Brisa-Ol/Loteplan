@@ -12,7 +12,7 @@ import {
 } from "@mui/material";
 import React, { useCallback, useRef } from "react";
 
-import type { ProyectoDto } from "@/core/types/dto/proyecto.dto";
+import type { ProyectoDto } from "@/core/types/proyecto.dto";
 import { useProyectoHelpers } from "@/features/client/hooks/useProyectoHelpers";
 
 export interface ProjectCardProps {

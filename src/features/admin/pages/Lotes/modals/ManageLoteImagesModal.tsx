@@ -16,8 +16,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { useCallback, useMemo, useState } from 'react';
 
 import imagenService from '@/core/api/services/imagen.service';
-import type { CreateImagenDto, ImagenDto } from '@/core/types/dto/imagen.dto';
-import type { LoteDto } from '@/core/types/dto/lote.dto';
+import type { CreateImagenDto, ImagenDto } from '@/core/types/imagen.dto';
+import type { LoteDto } from '@/core/types/lote.dto';
 import { BaseModal, ConfirmDialog, ImageUploadZone, QueryHandler, useConfirmDialog, useSnackbar } from '@/shared';
 
 

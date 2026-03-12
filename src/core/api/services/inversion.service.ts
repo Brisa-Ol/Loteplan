@@ -5,10 +5,10 @@ import type {
   InversionInitResponse, 
   InversionPorUsuarioDTO, 
   LiquidityRateDTO 
-} from "@/core/types/dto/inversion.dto";
+} from "@/core/types/inversion.dto";
 import type { AxiosResponse } from "axios";
 import httpService from "../httpService";
-import type { GenericResponseDto } from "@/core/types/dto/auth.dto";
+import type { GenericResponseDto } from "@/core/types/auth.dto";
 
 const BASE_ENDPOINT = '/inversiones';
 

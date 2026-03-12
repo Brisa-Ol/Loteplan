@@ -25,8 +25,8 @@ import {
 } from '@mui/material';
 
 import imagenService from '@/core/api/services/imagen.service';
-import type { LoteDto } from '@/core/types/dto/lote.dto';
-import type { ProyectoDto } from '@/core/types/dto/proyecto.dto';
+import type { LoteDto } from '@/core/types/lote.dto';
+import type { ProyectoDto } from '@/core/types/proyecto.dto';
 import { BaseModal } from '@/shared';
 
 // ============================================================================

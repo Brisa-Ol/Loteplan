@@ -28,13 +28,13 @@ import { useQuery } from '@tanstack/react-query';
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+import { env } from '@/core/config/env'; // 👈 1. Importamos la configuración global
 import PdfPreviewModal from '@/features/admin/pages/Contrato/modals/PdfPreviewModal';
+import { BaseModal } from '@/shared/components/domain';
 import ContratoPlantillaService from '../../../../../core/api/services/contrato-plantilla.service';
 import ImagenService from '../../../../../core/api/services/imagen.service';
-import type { LoteDto } from '../../../../../core/types/dto/lote.dto';
-import type { ProyectoDto } from '../../../../../core/types/dto/proyecto.dto';
-import { BaseModal } from '@/shared/components/domain';
-import { env } from '@/core/config/env'; // 👈 1. Importamos la configuración global
+import type { LoteDto } from '../../../../../core/types/lote.dto';
+import type { ProyectoDto } from '../../../../../core/types/proyecto.dto';
 
 interface DetalleProyectoModalProps {
   open: boolean;
@@ -273,7 +273,7 @@ const DetalleProyectoModal: React.FC<DetalleProyectoModalProps> = ({ open, onClo
                         </ListItemAvatar>
                         <ListItemText
                           primary={<Typography variant="body2" fontWeight={800}>{lote.nombre_lote}</Typography>}
-                          
+
                           secondary={<Typography variant="caption" fontWeight={600}>Base: ${Number(lote.precio_base).toLocaleString(env.defaultLocale)}</Typography>}
                         />
                         <Chip

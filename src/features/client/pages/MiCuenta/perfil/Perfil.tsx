@@ -51,7 +51,7 @@ import { PageContainer } from '../../../../../shared/components/layout/PageConta
 import kycService from '@/core/api/services/kyc.service';
 import UsuarioService from '@/core/api/services/usuario.service';
 import { useAuth } from '@/core/context/AuthContext';
-import type { ChangePasswordDto, UpdateUserMeDto } from '@/core/types/dto/usuario.dto';
+import type { ChangePasswordDto, UpdateUserMeDto } from '@/core/types/usuario.dto';
 import useSnackbar from '@/shared/hooks/useSnackbar';
 import { useConfirmDialog } from '../../../../../shared/hooks/useConfirmDialog';
 import SecuritySettings from '../SecuritySettings';

@@ -12,8 +12,8 @@ import React, { useMemo, useState } from 'react';
 
 import imagenService from '@/core/api/services/imagen.service';
 import { env } from '@/core/config/env'; // 👈 Importamos la config
-import type { LoteDto } from '@/core/types/dto/lote.dto';
-import type { PujaDto } from '@/core/types/dto/puja.dto';
+import type { LoteDto } from '@/core/types/lote.dto';
+import type { PujaDto } from '@/core/types/puja.dto';
 import { AdminPageHeader, AlertBanner, ConfirmDialog, DataTable, FilterBar, FilterSearch, MetricsGrid, PageContainer, QueryHandler, StatCard, ViewModeToggle, type ViewMode } from '@/shared';
 import { useAdminPujas } from '../../hooks/lotes/useAdminPujas';
 import DetallePujaModal from './modal/DetallePujaModal';

@@ -19,7 +19,7 @@ import ProyectoService from '@/core/api/services/proyecto.service';
 import SuscripcionService from '@/core/api/services/suscripcion.service';
 
 // Types
-import type { ContratoFirmadoDto } from '@/core/types/dto/contrato-firmado.dto';
+import type { ContratoFirmadoDto } from '@/core/types/contrato-firmado.dto';
 import { ROUTES } from '@/routes';
 import { CheckoutStateManager } from '../pages/Proyectos/modals/Checkout persistence';
 

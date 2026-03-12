@@ -1,6 +1,6 @@
 // src/pages/Admin/Pujas/modals/DetallePujaModal.tsx
 
-import type { PujaDto } from '@/core/types/dto/puja.dto';
+import type { PujaDto } from '@/core/types/puja.dto';
 import { BaseModal } from '@/shared';
 import {
   CalendarToday,

@@ -1,5 +1,5 @@
-import type { ContratoPlantillaDto, CreatePlantillaDto, UpdatePlantillaPdfDto } from "@/core/types/dto/contrato-plantilla.dto";
-import type { ContratoActionResponse } from "@/core/types/dto/contrato.dto";
+import type { ContratoPlantillaDto, CreatePlantillaDto, UpdatePlantillaPdfDto } from "@/core/types/contrato-plantilla.dto";
+import type { ContratoActionResponse } from "@/core/types/contrato.dto";
 import type { AxiosResponse } from "axios";
 import httpService from "../httpService";
 

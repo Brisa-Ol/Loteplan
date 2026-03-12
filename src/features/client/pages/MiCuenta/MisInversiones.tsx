@@ -11,7 +11,7 @@ import {
 
 // Material UI Icons
 import InversionService from '@/core/api/services/inversion.service';
-import type { InversionDto } from '@/core/types/dto/inversion.dto';
+import type { InversionDto } from '@/core/types/inversion.dto';
 import { PageContainer, PageHeader, StatCard } from '@/shared';
 import { DataTable, type DataTableColumn } from '@/shared/components/data-grid/DataTable';
 import { QueryHandler } from '@/shared/components/data-grid/QueryHandler';

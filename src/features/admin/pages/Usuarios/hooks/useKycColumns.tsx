@@ -1,6 +1,6 @@
 // src/features/admin/pages/Usuarios/hooks/useKycColumns.tsx
 
-import type { KycDTO } from '@/core/types/dto/kyc.dto';
+import type { KycDTO } from '@/core/types/kyc.dto';
 import type { DataTableColumn } from '@/shared';
 import { Visibility as VisibilityIcon } from '@mui/icons-material';
 import { alpha, Avatar, Box, Chip, IconButton, Stack, Tooltip, Typography, useTheme } from '@mui/material';

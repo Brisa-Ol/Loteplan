@@ -26,8 +26,8 @@ import React, { useEffect, useMemo } from 'react';
 import * as Yup from 'yup';
 
 import ProyectoService from '@/core/api/services/proyecto.service';
-import type { LoteDto, UpdateLoteDto } from '@/core/types/dto/lote.dto';
-import type { ProyectoDto } from '@/core/types/dto/proyecto.dto';
+import type { LoteDto, UpdateLoteDto } from '@/core/types/lote.dto';
+import type { ProyectoDto } from '@/core/types/proyecto.dto';
 import { BaseModal } from '@/shared';
 ;
 

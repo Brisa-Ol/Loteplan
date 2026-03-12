@@ -1,4 +1,4 @@
-import type { ConfirmarTransaccionResponse, CreateTransaccionDto, TransaccionDto, UpdateTransaccionDto } from "@/core/types/dto/transaccion.dto";
+import type { ConfirmarTransaccionResponse, CreateTransaccionDto, TransaccionDto, UpdateTransaccionDto } from "@/core/types/transaccion.dto";
 import type { AxiosResponse } from "axios";
 import httpService from "../httpService";
 

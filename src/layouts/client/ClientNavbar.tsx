@@ -20,7 +20,7 @@ import {
 
 // --- Hooks & Types ---
 import { useAuth } from '@/core/context/AuthContext';
-import type { UserDto } from '@/core/types/dto/auth.dto';
+import type { UserDto } from '@/core/types/auth.dto';
 import { ConfirmDialog } from '@/shared';
 import { NAVBAR_HEIGHT, useNavbarMenu, type NavItem } from '../useNavbarMenu';
 

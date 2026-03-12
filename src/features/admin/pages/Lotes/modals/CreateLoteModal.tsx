@@ -25,7 +25,7 @@ import React, { useCallback, useMemo } from 'react';
 import * as Yup from 'yup';
 
 import ProyectoService from '@/core/api/services/proyecto.service';
-import type { CreateLoteDto } from '@/core/types/dto/lote.dto';
+import type { CreateLoteDto } from '@/core/types/lote.dto';
 import { BaseModal, ImageUploadZone } from '@/shared';
 
 

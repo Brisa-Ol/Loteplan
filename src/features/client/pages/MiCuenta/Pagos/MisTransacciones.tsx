@@ -16,7 +16,7 @@ import React, { useMemo, useState, type JSX } from 'react';
 // Hooks y Servicios
 import TransaccionService from '@/core/api/services/transaccion.service';
 import { env } from '@/core/config/env';
-import type { TransaccionDto } from '@/core/types/dto/transaccion.dto';
+import type { TransaccionDto } from '@/core/types/transaccion.dto';
 import { useCurrencyFormatter } from '@/features/client/hooks/useCurrencyFormatter';
 import { DataTable, PageContainer, PageHeader, QueryHandler, StatCard, type DataTableColumn } from '@/shared';
 

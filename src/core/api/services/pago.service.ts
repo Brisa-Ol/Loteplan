@@ -1,8 +1,8 @@
 
-import type { ConfirmarPago2faDto, CreatePagoManualDto, GenerateAdvancePaymentsDto, MonthlyMetricsDto, OnTimeMetricsDto, PagoCheckoutResponse, PagoDto, UpdatePaymentAmountDto } from '@/core/types/dto/pago.dto';
+import type { ConfirmarPago2faDto, CreatePagoManualDto, GenerateAdvancePaymentsDto, MonthlyMetricsDto, OnTimeMetricsDto, PagoCheckoutResponse, PagoDto, UpdatePaymentAmountDto } from '@/core/types/pago.dto';
 import type { AxiosResponse } from 'axios';
 import httpService from '../httpService';
-import type { GenericResponseDto } from '@/core/types/dto/auth.dto';
+import type { GenericResponseDto } from '@/core/types/auth.dto';
 
 const BASE_ENDPOINT = '/pagos';
 

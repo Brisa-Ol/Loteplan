@@ -37,7 +37,7 @@ import { useCurrencyFormatter } from '../../hooks/useCurrencyFormatter';
 // Servicios y Tipos
 import FavoritoService from '@/core/api/services/favorito.service';
 import ImagenService from '@/core/api/services/imagen.service';
-import type { LoteDto } from '@/core/types/dto/lote.dto';
+import type { LoteDto } from '@/core/types/lote.dto';
 import { ROUTES } from '@/routes';
 import { ConfirmDialog, PageContainer, PageHeader, useConfirmDialog, useSnackbar } from '@/shared';
 import { useImageLoader } from '../../hooks';

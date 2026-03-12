@@ -2,7 +2,7 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import ResumenCuentaService from '@/core/api/services/resumenCuenta.service';
-import type { ResumenCuentaDto } from '@/core/types/dto/resumenCuenta.dto';
+import type { ResumenCuentaDto } from '@/core/types/resumenCuenta.dto';
 import { env } from '@/core/config/env'; // 👈 1. Importamos la configuración global
 
 export const useResumenesCuenta = () => {

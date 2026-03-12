@@ -1,5 +1,5 @@
-import type { GenericResponseDto } from '@/core/types/dto/auth.dto';
-import type { CreateLoteDto, LoteDto, UpdateLoteDto } from '@/core/types/dto/lote.dto';
+import type { GenericResponseDto } from '@/core/types/auth.dto';
+import type { CreateLoteDto, LoteDto, UpdateLoteDto } from '@/core/types/lote.dto';
 import type { AxiosResponse } from 'axios';
 import httpService from '../httpService';
 

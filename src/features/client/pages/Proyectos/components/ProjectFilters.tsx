@@ -18,7 +18,7 @@ import {
 } from "@mui/material";
 import React, { useCallback, useEffect, useState } from "react";
 
-import type { EstadoProyecto } from "@/core/types/dto/proyecto.dto";
+import type { EstadoProyecto } from "@/core/types/proyecto.dto";
 
 interface ProjectFiltersProps {
   onFilter: (filters: { status: string; search: string }) => void;

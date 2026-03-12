@@ -1,5 +1,7 @@
 // src/components/Admin/Proyectos/Components/ProyectoStateActions.tsx
 
+import { env } from '@/core/config/env'; // 👈 1. Importamos la configuración global
+import type { ProyectoDto } from '@/core/types/proyecto.dto';
 import {
   CheckCircle as CheckIcon,
   Event as EventIcon,
@@ -23,8 +25,6 @@ import {
   useTheme
 } from '@mui/material';
 import React from 'react';
-import type { ProyectoDto } from '../../../../../core/types/dto/proyecto.dto';
-import { env } from '@/core/config/env'; // 👈 1. Importamos la configuración global
 
 interface ProyectoStateActionsProps {
   proyecto: ProyectoDto;

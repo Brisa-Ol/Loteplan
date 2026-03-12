@@ -6,7 +6,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { useSortedData } from '../useSortedData';
 
-import type { CreateUsuarioDto, UpdateUserAdminDto, UsuarioDto } from '@/core/types/dto/usuario.dto';
+import type { CreateUsuarioDto, UpdateUserAdminDto, UsuarioDto } from '@/core/types/usuario.dto';
 
 export const useAdminUsuarios = () => {
   const queryClient = useQueryClient();

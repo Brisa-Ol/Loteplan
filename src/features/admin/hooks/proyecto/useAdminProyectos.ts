@@ -7,7 +7,7 @@ import ImagenService from '@/core/api/services/imagen.service';
 import ProyectoService from '@/core/api/services/proyecto.service';
 import { env } from '@/core/config/env'; // 👈 1. Importamos env
 
-import type { CreateProyectoDto, ProyectoDto, UpdateProyectoDto } from '@/core/types/dto/proyecto.dto';
+import type { CreateProyectoDto, ProyectoDto, UpdateProyectoDto } from '@/core/types/proyecto.dto';
 import { useConfirmDialog } from '@/shared/hooks/useConfirmDialog';
 import { useModal } from '@/shared/hooks/useModal';
 import useSnackbar from '@/shared/hooks/useSnackbar';

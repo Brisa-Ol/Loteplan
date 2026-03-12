@@ -9,8 +9,8 @@ import React, {
 } from 'react';
 
 // DTOs
-import type { LoginRequestDto, LoginResponseDto, LoginSuccessResponse, RegisterRequestDto, UserDto } from '@/core/types/dto/auth.dto';
-import type { Generate2faSecretResponseDto } from '@/core/types/dto/auth2fa.dto';
+import type { LoginRequestDto, LoginResponseDto, LoginSuccessResponse, RegisterRequestDto, UserDto } from '@/core/types/auth.dto';
+import type { Generate2faSecretResponseDto } from '@/core/types/auth2fa.dto';
 
 // Hooks Modulares
 import { use2FAManagement } from '@/features/auth/hooks/use2FAManagement';

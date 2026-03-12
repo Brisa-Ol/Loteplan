@@ -8,9 +8,9 @@ import PujaService from '@/core/api/services/puja.service';
 import UsuarioService from '@/core/api/services/usuario.service';
 import { env } from '@/core/config/env'; // 👈 1. Importamos la configuración
 
-import type { LoteDto } from '@/core/types/dto/lote.dto';
-import type { PujaDto } from '@/core/types/dto/puja.dto';
-import type { UsuarioDto } from '@/core/types/dto/usuario.dto';
+import type { LoteDto } from '@/core/types/lote.dto';
+import type { PujaDto } from '@/core/types/puja.dto';
+import type { UsuarioDto } from '@/core/types/usuario.dto';
 import { useConfirmDialog, useModal, useSnackbar } from '@/shared/hooks';
 import { useSortedData } from '../useSortedData';
 

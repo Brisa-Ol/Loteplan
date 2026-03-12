@@ -3,7 +3,7 @@ import { useCallback, useState } from 'react';
 
 import type { ApiError } from '@/core/api/httpService';
 import { secureStorage } from '@/core/auth/storage/secureStorage';
-import type { LoginRequestDto, LoginResponseDto, RegisterRequestDto, UserDto } from '@/core/types/dto/auth.dto';
+import type { LoginRequestDto, LoginResponseDto, RegisterRequestDto, UserDto } from '@/core/types/auth.dto';
 
 import AuthService from '@/core/api/services/auth.service';
 import kycService from '@/core/api/services/kyc.service';

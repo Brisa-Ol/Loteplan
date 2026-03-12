@@ -1,8 +1,8 @@
 // src/routes/ProtectedRoute/ProtectedRoute.tsx
+import { useAuth } from '@/core/context/AuthContext';
+import { Box, CircularProgress } from '@mui/material';
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { Box, CircularProgress } from '@mui/material';
-import { useAuth } from '@/core/context/AuthContext';
 
 
 

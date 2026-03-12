@@ -1,6 +1,6 @@
 // src/features/admin/pages/Usuarios/modals/KycDetailModal.tsx
 
-import type { KycDTO } from '@/core/types/dto/kyc.dto';
+import type { KycDTO } from '@/core/types/kyc.dto';
 import { BaseModal } from '@/shared';
 import {
   Badge as BadgeIcon,
@@ -22,15 +22,15 @@ interface KycDetailModalProps {
 }
 
 const STATUS_CONFIG = {
-  APROBADA:  { color: 'success' as const, label: 'APROBADA'  },
-  RECHAZADA: { color: 'error'   as const, label: 'RECHAZADA' },
+  APROBADA: { color: 'success' as const, label: 'APROBADA' },
+  RECHAZADA: { color: 'error' as const, label: 'RECHAZADA' },
   PENDIENTE: { color: 'warning' as const, label: 'PENDIENTE' },
 } as const;
 
 const KycDetailModal: React.FC<KycDetailModalProps> = ({ open, onClose, kyc, onApprove, onReject }) => {
   const statusConfig = useMemo(() => (
     kyc ? (STATUS_CONFIG[kyc.estado_verificacion as keyof typeof STATUS_CONFIG] ?? { color: 'primary' as const, label: kyc.estado_verificacion })
-        : { color: 'primary' as const, label: 'S/D' }
+      : { color: 'primary' as const, label: 'S/D' }
   ), [kyc]);
 
   if (!kyc) return null;

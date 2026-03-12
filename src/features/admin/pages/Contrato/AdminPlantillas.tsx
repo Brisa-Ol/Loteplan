@@ -40,7 +40,7 @@ import {
 } from 'recharts';
 
 // Hooks y DTOs
-import type { ContratoPlantillaDto } from '@/core/types/dto/contrato-plantilla.dto';
+import type { ContratoPlantillaDto } from '@/core/types/contrato-plantilla.dto';
 
 // Componentes Compartidos
 import { DataTable, type DataTableColumn } from '@/shared/components/data-grid/DataTable';

@@ -1,5 +1,5 @@
 import ContratoService from '@/core/api/services/contrato.service';
-import type { ContratoFirmadoDto } from '@/core/types/dto/contrato-firmado.dto';
+import type { ContratoFirmadoDto } from '@/core/types/contrato-firmado.dto';
 import useSnackbar from '@/shared/hooks/useSnackbar';
 import { useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState } from 'react';

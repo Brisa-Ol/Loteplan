@@ -1,5 +1,3 @@
-// src/components/Admin/Proyectos/Components/modals/ManageImagesModal.tsx
-
 import {
   Close as CloseIcon,
   Delete as DeleteIcon,
@@ -26,8 +24,8 @@ import React, { useCallback, useMemo, useState } from 'react';
 
 import imagenService from '@/core/api/services/imagen.service';
 import { env } from '@/core/config/env';
-import type { CreateImagenDto, ImagenDto } from '@/core/types/dto/imagen.dto';
-import type { ProyectoDto } from '@/core/types/dto/proyecto.dto';
+import type { CreateImagenDto, ImagenDto } from '@/core/types/imagen.dto';
+import type { ProyectoDto } from '@/core/types/proyecto.dto';
 import { BaseModal, ConfirmDialog, ImageUploadZone, QueryHandler, useConfirmDialog, useSnackbar } from '@/shared';
 
 const MAX_TOTAL_IMAGES = 10;

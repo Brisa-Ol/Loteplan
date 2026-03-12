@@ -1,4 +1,4 @@
-import type { ContratoPlantillaDto } from '@/core/types/dto/contrato-plantilla.dto';
+import type { ContratoPlantillaDto } from '@/core/types/contrato-plantilla.dto';
 import { BaseModal } from '@/shared/components/domain';
 import {
   EditNote as EditIcon,

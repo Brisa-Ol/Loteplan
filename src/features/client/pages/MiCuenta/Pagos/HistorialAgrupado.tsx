@@ -1,6 +1,6 @@
 
 import { env } from '@/core/config/env';
-import type { PagoDto } from '@/core/types/dto/pago.dto';
+import type { PagoDto } from '@/core/types/pago.dto';
 import {
   CheckCircle,
   ExpandMore,

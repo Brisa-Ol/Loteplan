@@ -31,7 +31,7 @@ import { StatCard, StatusBadge } from '@/shared/components/domain/cards/StatCard
 import { PageContainer } from '@/shared/components/layout/PageContainer';
 
 import imagenService from '@/core/api/services/imagen.service';
-import type { LoteDto } from '@/core/types/dto/lote.dto';
+import type { LoteDto } from '@/core/types/lote.dto';
 import { ConfirmDialog } from '@/shared/components/domain/modals/ConfirmDialog';
 import { useAdminLotePagos } from '../../hooks/lotes/useAdminLotePagos';
 

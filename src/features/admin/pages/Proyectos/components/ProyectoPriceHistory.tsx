@@ -1,3 +1,4 @@
+import { env } from '@/core/config/env'; // 👈 1. Importamos la configuración global
 import {
   CalendarToday as DateIcon,
   History as HistoryIcon,
@@ -17,8 +18,7 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import React from 'react';
 import CuotaMensualService from '../../../../../core/api/services/cuotaMensual.service';
-import type { CuotaMensualDto } from '../../../../../core/types/dto/cuotaMensual.dto';
-import { env } from '@/core/config/env'; // 👈 1. Importamos la configuración global
+import type { CuotaMensualDto } from '../../../../../core/types/cuotaMensual.dto';
 
 interface Props {
   proyectoId: number;

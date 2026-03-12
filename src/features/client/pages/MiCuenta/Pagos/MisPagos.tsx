@@ -1,7 +1,7 @@
 // src/features/client/pages/Pagos/MisPagos.tsx
 
 import PagoService from '@/core/api/services/pago.service';
-import type { PagoDto } from '@/core/types/dto/pago.dto';
+import type { PagoDto } from '@/core/types/pago.dto';
 import { useCurrencyFormatter } from '@/features/client/hooks/useCurrencyFormatter';
 import { ConfirmDialog, DataTable, PageContainer, PageHeader, QueryHandler, StatCard, useConfirmDialog, useModal, type DataTableColumn } from '@/shared';
 import TwoFactorAuthModal from '@/shared/components/domain/modals/TwoFactorAuthModal';

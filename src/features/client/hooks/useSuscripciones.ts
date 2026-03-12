@@ -1,7 +1,7 @@
 // src/pages/User/Suscripciones/hooks/useSuscripciones.ts
 import type { ApiError } from '@/core/api/httpService'; 
 import SuscripcionService from '@/core/api/services/suscripcion.service';
-import type { SuscripcionCanceladaDto, SuscripcionDto } from '@/core/types/dto/suscripcion.dto';
+import type { SuscripcionCanceladaDto, SuscripcionDto } from '@/core/types/suscripcion.dto';
 import useSnackbar from '@/shared/hooks/useSnackbar';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';

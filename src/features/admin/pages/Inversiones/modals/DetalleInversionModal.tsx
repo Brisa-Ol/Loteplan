@@ -26,7 +26,7 @@ import {
   useTheme
 } from '@mui/material';
 
-import type { InversionDto } from '../../../../../core/types/dto/inversion.dto';
+import type { InversionDto } from '../../../../../core/types/inversion.dto';
 import { BaseModal } from '@/shared';
 
 

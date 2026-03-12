@@ -9,8 +9,8 @@ import type {
   MonthlyProgressItem, 
   ProyectoDto, 
   UpdateProyectoDto 
-} from "@/core/types/dto/proyecto.dto";
-import type { GenericResponseDto } from "@/core/types/dto/auth.dto";
+} from "@/core/types/proyecto.dto";
+import type { GenericResponseDto } from "@/core/types/auth.dto";
 
 const BASE_ENDPOINT = '/proyectos';
 

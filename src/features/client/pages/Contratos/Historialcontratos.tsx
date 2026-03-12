@@ -25,7 +25,7 @@ import {
 // 👈 Eliminamos format y es (date-fns) para usar el estándar nativo con env
 import React, { useMemo } from 'react';
 import { VerContratoFirmadoModal } from '../Proyectos/modals/VerContratoFirmadoModal';
-import type { ContratoFirmadoDto } from '@/core/types/dto/contrato-firmado.dto';
+import type { ContratoFirmadoDto } from '@/core/types/contrato-firmado.dto';
 import { useHistorialContratos } from '../../hooks/useHistorialContratos';
 import { DataTable, PageContainer, PageHeader, QueryHandler, StatCard, type DataTableColumn } from '@/shared';
 import { env } from '@/core/config/env'; // 👈 1. Importamos env

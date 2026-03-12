@@ -1,7 +1,7 @@
 // src/features/admin/pages/Usuarios/hooks/useUserColumns.tsx
 
 import { env } from '@/core/config/env';
-import type { UsuarioDto } from '@/core/types/dto/usuario.dto';
+import type { UsuarioDto } from '@/core/types/usuario.dto';
 import type { DataTableColumn } from '@/shared';
 import {
     Edit as EditIcon,

@@ -11,7 +11,7 @@ import ProyectoService from '@/core/api/services/proyecto.service';
 import PujaService from '@/core/api/services/puja.service';
 import { env } from '@/core/config/env'; // 👈 1. Importamos la configuración global
 
-import type { CreateLoteDto, LoteDto, UpdateLoteDto } from '@/core/types/dto/lote.dto';
+import type { CreateLoteDto, LoteDto, UpdateLoteDto } from '@/core/types/lote.dto';
 import { useConfirmDialog, useModal, useSnackbar } from '@/shared';
 import { useSortedData } from '../useSortedData';
 

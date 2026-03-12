@@ -59,7 +59,7 @@ import { CheckoutStateManager, type CheckoutPersistedState } from './Checkout pe
 
 // Types
 import CuotaMensualService from '@/core/api/services/cuotaMensual.service';
-import type { ProyectoDto } from '@/core/types/dto/proyecto.dto';
+import type { ProyectoDto } from '@/core/types/proyecto.dto';
 import { env } from '@/core/config/env';
 
 // ===================================================

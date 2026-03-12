@@ -10,7 +10,7 @@ import FavoritoService from '@/core/api/services/favorito.service';
 import LoteService from '@/core/api/services/lote.service';
 import SuscripcionService from '@/core/api/services/suscripcion.service';
 import { useAuth } from '@/core/context/AuthContext';
-import type { CheckFavoritoResponseDto } from '@/core/types/dto/favorito.dto';
+import type { CheckFavoritoResponseDto } from '@/core/types/favorito.dto';
 import useSnackbar from '@/shared/hooks/useSnackbar';
 import { env } from '@/core/config/env'; // 👈 1. Importación de env
 

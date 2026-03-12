@@ -1,5 +1,5 @@
 import { env } from '@/core/config/env';
-import type { ContratoPlantillaDto, UpdatePlantillaPdfDto } from '@/core/types/dto/contrato-plantilla.dto';
+import type { ContratoPlantillaDto, UpdatePlantillaPdfDto } from '@/core/types/contrato-plantilla.dto';
 import { BaseModal } from '@/shared/components/domain';
 import { useSnackbar } from '@/shared/hooks';
 import {

@@ -1,6 +1,6 @@
 // src/pages/Admin/Plantillas/components/modals/CreatePlantillaModal.tsx
 import { env } from '@/core/config/env';
-import type { CreatePlantillaDto } from '@/core/types/dto/contrato-plantilla.dto';
+import type { CreatePlantillaDto } from '@/core/types/contrato-plantilla.dto';
 import { BaseModal } from '@/shared/components/domain';
 import { useSnackbar } from '@/shared/hooks/useSnackbar';
 import {

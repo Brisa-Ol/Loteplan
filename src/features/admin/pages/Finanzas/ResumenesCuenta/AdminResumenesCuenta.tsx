@@ -22,7 +22,7 @@ import {
 } from '@mui/material';
 import React, { useMemo, useState } from 'react';
 
-import type { ResumenCuentaDto } from '@/core/types/dto/resumenCuenta.dto';
+import type { ResumenCuentaDto } from '@/core/types/resumenCuenta.dto';
 import { useAdminResumenes } from '@/features/admin/hooks/finanzas/useAdminResumenes';
 import { AdminPageHeader } from '@/shared/components/admin/Adminpageheader';
 import MetricsGrid from '@/shared/components/admin/Metricsgrid';
