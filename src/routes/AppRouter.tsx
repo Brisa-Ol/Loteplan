@@ -6,6 +6,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 
 import { ROUTES } from '.';
 import ProtectedRoute from '../core/auth/guards/ProtectedRoute';
+import SecuritySettings from '@/features/client/pages/MiCuenta/SecuritySettings/SecuritySettings';
 
 // ============ LAZY LOADING ============
 
@@ -32,17 +33,17 @@ const DetalleProyecto = lazy(() => import('@/features/client/pages/Proyectos/Det
 
 // Client Dashboard & Features
 const UserDashboard = lazy(() => import('@/features/client/pages/UserDashboard/UserDashboard'));
-const MisPagos = lazy(() => import('@/features/client/pages/MiCuenta/Pagos/MisPagos'));
+const MisPagos = lazy(() => import('@/features/client/pages/MiCuenta/pagos/MisPagos'));
 const MisInversiones = lazy(() => import('@/features/client/pages/MiCuenta/MisInversiones'));
 const MisSuscripciones = lazy(() => import('@/features/client/pages/MiCuenta/MisSuscripciones'));
 const MisPujas = lazy(() => import('@/features/client/pages/MiCuenta/MisPujas'));
-const MisTransacciones = lazy(() => import('@/features/client/pages/MiCuenta/Pagos/MisTransacciones'));
+const MisTransacciones = lazy(() => import('@/features/client/pages/MiCuenta/pagos/MisTransacciones'));
 const MisResumenes = lazy(() => import('@/features/client/pages/MiCuenta/MisResumenes'));
-const PagoResult = lazy(() => import('@/features/client/pages/MiCuenta/Pagos/PagoResult'));
+const PagoResult = lazy(() => import('@/features/client/pages/MiCuenta/pagos/PagoResult'));
 const Perfil = lazy(() => import('@/features/client/pages/MiCuenta/perfil/Perfil'));
 const VerificacionKYC = lazy(() => import('@/features/client/pages/MiCuenta/kyc/VerificacionKYC'));
-const MensajesPage = lazy(() => import('@/features/client/pages/MiCuenta/MensajesPage'));
-const SecuritySettings = lazy(() => import('@/features/client/pages/MiCuenta/SecuritySettings'));
+const MensajesPage = lazy(() => import('@/features/client/pages/MiCuenta/mensajepage/MensajesPage'));
+
 const MisFavoritos = lazy(() => import('@/features/client/pages/MiCuenta/MisFavoritos'));
 const Historialcontratos = lazy(() => import('@/features/client/pages/Contratos/Historialcontratos'));
 const DetalleLote = lazy(() => import('@/features/client/pages/Lotes/DetalleLote'));

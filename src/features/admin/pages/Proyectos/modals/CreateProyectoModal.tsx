@@ -239,7 +239,7 @@ const CreateProyectoModal: React.FC<any> = ({ open, onClose, onSubmit, isLoading
     const schema = currentStepLabel === 'Información' ? projectSchema : quotaSchema;
 
     try {
-
+      
       await schema.validate(formik.values, { abortEarly: false });
 
       console.log("datos validados")
@@ -306,31 +306,31 @@ const CreateProyectoModal: React.FC<any> = ({ open, onClose, onSubmit, isLoading
         {currentStepLabel === 'Información' && (
           <Stack spacing={3}>
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '2fr 1fr' }, gap: 2 }}>
-              <FastTextField
-                label="Nombre del Proyecto"
-                formikValue={formik.values.nombre_proyecto}
-                onCommit={set('nombre_proyecto')}
-                error={formik.touched.nombre_proyecto && !!formik.errors.nombre_proyecto}
-                helperText={formik.touched.nombre_proyecto && formik.errors.nombre_proyecto as string}
+              <FastTextField 
+                label="Nombre del Proyecto" 
+                formikValue={formik.values.nombre_proyecto} 
+                onCommit={set('nombre_proyecto')} 
+                error={formik.touched.nombre_proyecto && !!formik.errors.nombre_proyecto} 
+                helperText={formik.touched.nombre_proyecto && formik.errors.nombre_proyecto as string} 
               />
-              <FastTextField
-                label="Forma Jurídica"
-                formikValue={formik.values.forma_juridica}
-                onCommit={set('forma_juridica')}
-                error={formik.touched.forma_juridica && !!formik.errors.forma_juridica}
+              <FastTextField 
+                label="Forma Jurídica" 
+                formikValue={formik.values.forma_juridica} 
+                onCommit={set('forma_juridica')} 
+                error={formik.touched.forma_juridica && !!formik.errors.forma_juridica} 
                 helperText={formik.touched.forma_juridica && formik.errors.forma_juridica as string}
               />
             </Box>
 
-            <FastTextField
-              fullWidth
-              multiline
-              rows={3}
-              label="Descripción"
-              formikValue={formik.values.descripcion}
-              onCommit={set('descripcion')}
-              error={formik.touched.descripcion && !!formik.errors.descripcion}
-              helperText={formik.touched.descripcion && formik.errors.descripcion as string}
+            <FastTextField 
+              fullWidth 
+              multiline 
+              rows={3} 
+              label="Descripción" 
+              formikValue={formik.values.descripcion} 
+              onCommit={set('descripcion')} 
+              error={formik.touched.descripcion && !!formik.errors.descripcion} 
+              helperText={formik.touched.descripcion && formik.errors.descripcion as string} 
             />
 
             <Divider><Chip label="Finanzas y Cupos" size="small" sx={{ fontWeight: 800, fontSize: '0.6rem' }} /></Divider>
@@ -340,78 +340,78 @@ const CreateProyectoModal: React.FC<any> = ({ open, onClose, onSubmit, isLoading
                 <MenuItem value="mensual">Plan de Ahorro</MenuItem>
                 <MenuItem value="directo">Inversión Directa</MenuItem>
               </TextField>
-              <FastTextField
-                type="number"
-                label="Monto Objetivo"
-                onKeyDown={blockInvalidChar}
+              <FastTextField 
+                type="number" 
+                label="Monto Objetivo" 
+                onKeyDown={blockInvalidChar} 
                 inputProps={{ min: 1 }}
-                InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }}
-                formikValue={formik.values.monto_inversion}
-                onCommit={set('monto_inversion')}
-                error={formik.touched.monto_inversion && !!formik.errors.monto_inversion}
-                helperText={formik.touched.monto_inversion && formik.errors.monto_inversion as string}
+                InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }} 
+                formikValue={formik.values.monto_inversion} 
+                onCommit={set('monto_inversion')} 
+                error={formik.touched.monto_inversion && !!formik.errors.monto_inversion} 
+                helperText={formik.touched.monto_inversion && formik.errors.monto_inversion as string} 
               />
             </Box>
 
             {formik.values.tipo_inversion === 'mensual' && (
               <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 3, bgcolor: alpha(theme.palette.primary.main, 0.02) }}>
                 <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr 1fr' }, gap: 2 }}>
-                  <FastTextField
-                    type="number"
-                    label="Plazo (Meses)"
-                    onKeyDown={blockInvalidChar}
+                  <FastTextField 
+                    type="number" 
+                    label="Plazo (Meses)" 
+                    onKeyDown={blockInvalidChar} 
                     inputProps={{ min: 1 }}
-                    formikValue={formik.values.plazo_inversion}
-                    onCommit={set('plazo_inversion')}
-                    error={formik.touched.plazo_inversion && !!formik.errors.plazo_inversion}
+                    formikValue={formik.values.plazo_inversion} 
+                    onCommit={set('plazo_inversion')} 
+                    error={formik.touched.plazo_inversion && !!formik.errors.plazo_inversion} 
                     helperText={formik.touched.plazo_inversion && formik.errors.plazo_inversion as string}
                   />
-                  <FastTextField
-                    type="number"
-                    label="Mín. Suscriptores"
-                    onKeyDown={blockInvalidChar}
+                  <FastTextField 
+                    type="number" 
+                    label="Mín. Suscriptores" 
+                    onKeyDown={blockInvalidChar} 
                     inputProps={{ min: 1 }}
-                    formikValue={formik.values.suscripciones_minimas}
-                    onCommit={set('suscripciones_minimas')}
-                    error={formik.touched.suscripciones_minimas && !!formik.errors.suscripciones_minimas}
-                    helperText={formik.touched.suscripciones_minimas && formik.errors.suscripciones_minimas as string}
+                    formikValue={formik.values.suscripciones_minimas} 
+                    onCommit={set('suscripciones_minimas')} 
+                    error={formik.touched.suscripciones_minimas && !!formik.errors.suscripciones_minimas} 
+                    helperText={formik.touched.suscripciones_minimas && formik.errors.suscripciones_minimas as string} 
                   />
-                  <FastTextField
-                    type="number"
-                    label="Cupo Máximo"
-                    onKeyDown={blockInvalidChar}
+                  <FastTextField 
+                    type="number" 
+                    label="Cupo Máximo" 
+                    onKeyDown={blockInvalidChar} 
                     inputProps={{ min: 1 }}
-                    formikValue={formik.values.obj_suscripciones}
-                    onCommit={set('obj_suscripciones')}
-                    error={formik.touched.obj_suscripciones && !!formik.errors.obj_suscripciones}
-                    helperText={formik.touched.obj_suscripciones && formik.errors.obj_suscripciones as string}
+                    formikValue={formik.values.obj_suscripciones} 
+                    onCommit={set('obj_suscripciones')} 
+                    error={formik.touched.obj_suscripciones && !!formik.errors.obj_suscripciones} 
+                    helperText={formik.touched.obj_suscripciones && formik.errors.obj_suscripciones as string} 
                   />
                 </Box>
               </Paper>
             )}
 
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
-              <FastTextField
-                type="date"
-                label="Apertura"
-                InputLabelProps={{ shrink: true }}
+              <FastTextField 
+                type="date" 
+                label="Apertura" 
+                InputLabelProps={{ shrink: true }} 
                 inputProps={{ min: today }} // Bloqueo HTML fechas pasadas
-                formikValue={formik.values.fecha_inicio}
-                onCommit={set('fecha_inicio')}
-                error={formik.touched.fecha_inicio && !!formik.errors.fecha_inicio}
-                helperText={formik.touched.fecha_inicio && formik.errors.fecha_inicio as string}
-                sx={styles.dateField}
+                formikValue={formik.values.fecha_inicio} 
+                onCommit={set('fecha_inicio')} 
+                error={formik.touched.fecha_inicio && !!formik.errors.fecha_inicio} 
+                helperText={formik.touched.fecha_inicio && formik.errors.fecha_inicio as string} 
+                sx={styles.dateField} 
               />
-              <FastTextField
-                type="date"
-                label="Cierre"
-                InputLabelProps={{ shrink: true }}
+              <FastTextField 
+                type="date" 
+                label="Cierre" 
+                InputLabelProps={{ shrink: true }} 
                 inputProps={{ min: formik.values.fecha_inicio || today }} // Bloqueo HTML antes de apertura
-                formikValue={formik.values.fecha_cierre}
-                onCommit={set('fecha_cierre')}
-                error={formik.touched.fecha_cierre && !!formik.errors.fecha_cierre}
-                helperText={formik.touched.fecha_cierre && formik.errors.fecha_cierre as string}
-                sx={styles.dateField}
+                formikValue={formik.values.fecha_cierre} 
+                onCommit={set('fecha_cierre')} 
+                error={formik.touched.fecha_cierre && !!formik.errors.fecha_cierre} 
+                helperText={formik.touched.fecha_cierre && formik.errors.fecha_cierre as string} 
+                sx={styles.dateField} 
               />
             </Box>
           </Stack>
@@ -424,33 +424,33 @@ const CreateProyectoModal: React.FC<any> = ({ open, onClose, onSubmit, isLoading
             <Box>
               <Typography sx={styles.sectionTitle} mb={2}>Variables de Costo (Referencia)</Typography>
               <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '2fr 1fr 1.5fr' }, gap: 2 }}>
-                <FastTextField
-                  label="Insumo Referencia"
-                  formikValue={formik.values.nombre_cemento_cemento}
-                  onCommit={set('nombre_cemento_cemento')}
-                  error={formik.touched.nombre_cemento_cemento && !!formik.errors.nombre_cemento_cemento}
-                  helperText={formik.touched.nombre_cemento_cemento && formik.errors.nombre_cemento_cemento as string}
+                <FastTextField 
+                  label="Insumo Referencia" 
+                  formikValue={formik.values.nombre_cemento_cemento} 
+                  onCommit={set('nombre_cemento_cemento')} 
+                  error={formik.touched.nombre_cemento_cemento && !!formik.errors.nombre_cemento_cemento} 
+                  helperText={formik.touched.nombre_cemento_cemento && formik.errors.nombre_cemento_cemento as string} 
                 />
-                <FastTextField
-                  type="number"
-                  label="Unidades"
-                  onKeyDown={blockInvalidChar}
+                <FastTextField 
+                  type="number" 
+                  label="Unidades" 
+                  onKeyDown={blockInvalidChar} 
                   inputProps={{ min: 1 }}
-                  formikValue={formik.values.valor_cemento_unidades}
-                  onCommit={set('valor_cemento_unidades')}
-                  error={formik.touched.valor_cemento_unidades && !!formik.errors.valor_cemento_unidades}
-                  helperText={formik.touched.valor_cemento_unidades && formik.errors.valor_cemento_unidades as string}
+                  formikValue={formik.values.valor_cemento_unidades} 
+                  onCommit={set('valor_cemento_unidades')} 
+                  error={formik.touched.valor_cemento_unidades && !!formik.errors.valor_cemento_unidades} 
+                  helperText={formik.touched.valor_cemento_unidades && formik.errors.valor_cemento_unidades as string} 
                 />
-                <FastTextField
-                  type="number"
-                  label="Precio Unit."
-                  onKeyDown={blockInvalidChar}
+                <FastTextField 
+                  type="number" 
+                  label="Precio Unit." 
+                  onKeyDown={blockInvalidChar} 
                   inputProps={{ min: 0 }}
-                  formikValue={formik.values.valor_cemento}
-                  onCommit={set('valor_cemento')}
-                  InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }}
-                  error={formik.touched.valor_cemento && !!formik.errors.valor_cemento}
-                  helperText={formik.touched.valor_cemento && formik.errors.valor_cemento as string}
+                  formikValue={formik.values.valor_cemento} 
+                  onCommit={set('valor_cemento')} 
+                  InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }} 
+                  error={formik.touched.valor_cemento && !!formik.errors.valor_cemento} 
+                  helperText={formik.touched.valor_cemento && formik.errors.valor_cemento as string} 
                 />
               </Box>
             </Box>
@@ -461,49 +461,49 @@ const CreateProyectoModal: React.FC<any> = ({ open, onClose, onSubmit, isLoading
             <Box>
               <Typography sx={styles.sectionTitle} mb={2}>Distribución y Porcentajes (%)</Typography>
               <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1fr' }, gap: 2 }}>
-                <FastTextField
-                  type="number"
-                  label="% Capital (Plan)"
-                  onKeyDown={blockInvalidChar}
+                <FastTextField 
+                  type="number" 
+                  label="% Capital (Plan)" 
+                  onKeyDown={blockInvalidChar} 
                   inputProps={{ min: 0, max: 100 }}
-                  formikValue={formik.values.porcentaje_plan}
-                  onCommit={set('porcentaje_plan')}
-                  InputProps={{ endAdornment: <InputAdornment position="end">%</InputAdornment> }}
-                  error={formik.touched.porcentaje_plan && !!formik.errors.porcentaje_plan}
-                  helperText={formik.touched.porcentaje_plan && formik.errors.porcentaje_plan as string}
+                  formikValue={formik.values.porcentaje_plan} 
+                  onCommit={set('porcentaje_plan')} 
+                  InputProps={{ endAdornment: <InputAdornment position="end">%</InputAdornment> }} 
+                  error={formik.touched.porcentaje_plan && !!formik.errors.porcentaje_plan} 
+                  helperText={formik.touched.porcentaje_plan && formik.errors.porcentaje_plan as string} 
                 />
-                <FastTextField
-                  type="number"
-                  label="% Carga Admin."
-                  onKeyDown={blockInvalidChar}
+                <FastTextField 
+                  type="number" 
+                  label="% Carga Admin." 
+                  onKeyDown={blockInvalidChar} 
                   inputProps={{ min: 0, max: 100 }}
-                  formikValue={formik.values.porcentaje_administrativo}
-                  onCommit={set('porcentaje_administrativo')}
-                  InputProps={{ endAdornment: <InputAdornment position="end">%</InputAdornment> }}
-                  error={formik.touched.porcentaje_administrativo && !!formik.errors.porcentaje_administrativo}
-                  helperText={formik.touched.porcentaje_administrativo && formik.errors.porcentaje_administrativo as string}
+                  formikValue={formik.values.porcentaje_administrativo} 
+                  onCommit={set('porcentaje_administrativo')} 
+                  InputProps={{ endAdornment: <InputAdornment position="end">%</InputAdornment> }} 
+                  error={formik.touched.porcentaje_administrativo && !!formik.errors.porcentaje_administrativo} 
+                  helperText={formik.touched.porcentaje_administrativo && formik.errors.porcentaje_administrativo as string} 
                 />
-                <FastTextField
-                  type="number"
-                  label="% IVA (s/ Admin)"
-                  onKeyDown={blockInvalidChar}
+                <FastTextField 
+                  type="number" 
+                  label="% IVA (s/ Admin)" 
+                  onKeyDown={blockInvalidChar} 
                   inputProps={{ min: 0, max: 100 }}
-                  formikValue={formik.values.porcentaje_iva}
-                  onCommit={set('porcentaje_iva')}
-                  InputProps={{ endAdornment: <InputAdornment position="end">%</InputAdornment> }}
-                  error={formik.touched.porcentaje_iva && !!formik.errors.porcentaje_iva}
-                  helperText={formik.touched.porcentaje_iva && formik.errors.porcentaje_iva as string}
+                  formikValue={formik.values.porcentaje_iva} 
+                  onCommit={set('porcentaje_iva')} 
+                  InputProps={{ endAdornment: <InputAdornment position="end">%</InputAdornment> }} 
+                  error={formik.touched.porcentaje_iva && !!formik.errors.porcentaje_iva} 
+                  helperText={formik.touched.porcentaje_iva && formik.errors.porcentaje_iva as string} 
                 />
               </Box>
             </Box>
 
-            <SimulationDisplay
-              plazo={formik.values.plazo_inversion}
-              unidades={formik.values.valor_cemento_unidades}
-              precio={formik.values.valor_cemento}
-              pctPlan={formik.values.porcentaje_plan}
-              pctAdmin={formik.values.porcentaje_administrativo}
-              pctIva={formik.values.porcentaje_iva}
+            <SimulationDisplay 
+              plazo={formik.values.plazo_inversion} 
+              unidades={formik.values.valor_cemento_unidades} 
+              precio={formik.values.valor_cemento} 
+              pctPlan={formik.values.porcentaje_plan} 
+              pctAdmin={formik.values.porcentaje_administrativo} 
+              pctIva={formik.values.porcentaje_iva} 
             />
           </Stack>
         )}
@@ -530,21 +530,21 @@ const CreateProyectoModal: React.FC<any> = ({ open, onClose, onSubmit, isLoading
               <Button variant="contained" component="label" startIcon={<UploadIcon />} sx={{ borderRadius: 2, fontWeight: 700 }}>
                 {contratoFile ? 'Reemplazar Archivo' : 'Seleccionar PDF'}
                 {/* 👈 3. Agregamos validación del tamaño máximo del archivo para el PDF */}
-                <input
-                  type="file"
-                  hidden
-                  accept="application/pdf"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0] || null;
+                <input 
+                  type="file" 
+                  hidden 
+                  accept="application/pdf" 
+                  onChange={(e) => { 
+                    const f = e.target.files?.[0] || null; 
                     if (f && f.size > env.maxFileSize) {
                       alert(`El archivo excede el tamaño máximo permitido de ${env.maxFileSize / (1024 * 1024)}MB.`);
                       // Limpiamos el input para que pueda intentar subir otro de inmediato
-                      e.target.value = '';
+                      e.target.value = ''; 
                       return;
                     }
-                    setContratoFile(f);
-                    if (f) setNombreContrato(f.name.replace('.pdf', ''));
-                  }}
+                    setContratoFile(f); 
+                    if (f) setNombreContrato(f.name.replace('.pdf', '')); 
+                  }} 
                 />
               </Button>
             </Box>

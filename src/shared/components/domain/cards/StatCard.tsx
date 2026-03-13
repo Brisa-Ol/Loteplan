@@ -20,7 +20,7 @@ import React from 'react';
 
 type StatColor = 'primary' | 'secondary' | 'error' | 'warning' | 'info' | 'success';
 
-type StatusType =
+export type StatusType =
   | 'active'
   | 'inactive'
   | 'pending'

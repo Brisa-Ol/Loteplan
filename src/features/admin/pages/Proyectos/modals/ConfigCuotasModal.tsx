@@ -19,11 +19,11 @@ import * as Yup from 'yup';
 
 import CuotaMensualService from '@/core/api/services/cuotaMensual.service';
 import { env } from '@/core/config/env'; // 👈 1. Importamos env
-import type { CreateCuotaMensualDto } from '@/core/types/cuotaMensual.dto';
-import type { ProyectoDto } from '@/core/types/proyecto.dto';
 import BaseModal from '@/shared/components/domain/modals/BaseModal';
 import useSnackbar from '@/shared/hooks/useSnackbar';
 import ProyectoPriceHistory from '../components/ProyectoPriceHistory';
+import type { ProyectoDto } from '@/core/types/proyecto.dto';
+import type { CreateCuotaMensualDto } from '@/core/types/cuotaMensual.dto';
 
 // ============================================================================
 // INTERFACES Y VALIDACIÓN

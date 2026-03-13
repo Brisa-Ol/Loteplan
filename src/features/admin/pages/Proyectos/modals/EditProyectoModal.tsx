@@ -31,8 +31,6 @@ import { useFormik } from 'formik';
 import React, { useEffect } from 'react';
 import * as Yup from 'yup';
 
-
-
 // --- FUNCIONES Y VARIABLES AUXILIARES ---
 
 const blockInvalidChar = (e: React.KeyboardEvent) =>

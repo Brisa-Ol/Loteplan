@@ -1,6 +1,4 @@
 // src/components/Admin/Proyectos/Components/ProyectoBasicInfo.tsx
-import { env } from '@/core/config/env'; // 👈 1. Importamos la configuración global
-import type { ProyectoDto } from '@/core/types/proyecto.dto';
 import {
     CalendarMonth as CalendarMonthIcon,
     Description as DescriptionIcon,
@@ -21,6 +19,8 @@ import {
     alpha, useTheme
 } from '@mui/material';
 import React from 'react';
+import { env } from '@/core/config/env'; // 👈 1. Importamos la configuración global
+import type { ProyectoDto } from '@/core/types/proyecto.dto';
 
 interface ProyectoBasicInfoProps {
     proyecto: ProyectoDto;

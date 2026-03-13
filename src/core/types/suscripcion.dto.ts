@@ -24,7 +24,7 @@ export interface SuscripcionDto extends BaseDTO {
     obj_suscripciones: number;
     suscripciones_actuales: number;
   };
-   createdAt: string;  // Override optional → required
+  createdAt: string;  // Override optional → required
   updatedAt: string;
 }
 
@@ -35,7 +35,7 @@ export interface SuscripcionCanceladaDto extends BaseDTO {
   meses_pagados: number;
   monto_pagado_total: string; // DECIMAL llega como string
   fecha_cancelacion: string;
-  
+
   usuarioCancelador?: {
     nombre: string;
     apellido: string;
