@@ -33,7 +33,7 @@ const useCancelacionesColumns = (): DataTableColumn<SuscripcionCanceladaDto>[] =
           </Avatar>
           <Box minWidth={0}>
             <Typography variant="body2" fontWeight={700} noWrap>{item.usuarioCancelador?.nombre} {item.usuarioCancelador?.apellido}</Typography>
-            <Typography variant="caption" color="text.secondary" display="block">@{item.usuarioCancelador?.nombre_usuario}</Typography>
+            <Typography variant="caption" color="text.secondary" display="block">@{item.usuarioCancelador?.nombre}</Typography>
           </Box>
         </Stack>
       ),

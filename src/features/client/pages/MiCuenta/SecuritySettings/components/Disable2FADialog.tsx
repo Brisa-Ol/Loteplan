@@ -1,62 +1,98 @@
-// src/pages/client/MiCuenta/components/Disable2FADialog.tsx
-
-import { Close, Visibility, VisibilityOff } from '@mui/icons-material';
 import {
-    Alert, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle,
-    IconButton, InputAdornment, Stack, TextField, useTheme
+    ShieldOutlined as ShieldIcon,
+    Visibility, VisibilityOff
+} from '@mui/icons-material';
+import {
+    Alert, IconButton, InputAdornment, Stack, TextField, Typography
 } from '@mui/material';
 import React from 'react';
+// Importación adicional necesaria para el Box interno si no estaba
+import { Box } from '@mui/material';
+
+import { BaseModal } from '@/shared';
 import type { use2FADisable } from '../hooks/use2FADisable';
 
-interface Props { disable: ReturnType<typeof use2FADisable>; }
+interface Props {
+    disable: ReturnType<typeof use2FADisable>;
+}
 
 const Disable2FADialog: React.FC<Props> = ({ disable }) => {
-    const theme = useTheme();
     return (
-        <Dialog open={disable.isOpen} onClose={disable.close} maxWidth="xs" fullWidth>
-            <DialogTitle display="flex" justifyContent="space-between" alignItems="center" sx={{ borderBottom: `1px solid ${theme.palette.divider}` }}>
-                Desactivar 2FA
-                <IconButton onClick={disable.close} size="small"><Close /></IconButton>
-            </DialogTitle>
+        <BaseModal
+            open={disable.isOpen}
+            onClose={disable.close}
+            title="Desactivar 2FA"
+            subtitle="Confirmación de seguridad requerida"
+            icon={<ShieldIcon />}
+            headerColor="error" // Usamos error porque es una acción destructiva/sensible
+            confirmText="Desactivar Seguridad"
+            confirmButtonColor="error"
+            onConfirm={disable.confirm}
+            isLoading={disable.isLoading}
+            disableConfirm={!disable.password || disable.code.length !== 6}
+            maxWidth="xs"
+        >
+            <Stack spacing={3}>
+                <Box>
+                    <Alert severity="warning" sx={{ mb: 2, borderRadius: 2 }}>
+                        Al desactivar la verificación en dos pasos, tu cuenta quedará menos protegida ante accesos no autorizados.
+                    </Alert>
 
-            <DialogContent sx={{ mt: 2 }}>
-                <Alert severity="warning" sx={{ mb: 3 }}>Tu cuenta quedará menos protegida.</Alert>
-                {disable.error && <Alert severity="error" sx={{ mb: 2 }}>{disable.error}</Alert>}
+                    {disable.error && (
+                        <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>
+                            {disable.error}
+                        </Alert>
+                    )}
+                </Box>
 
-                <Stack spacing={2}>
-                    <TextField
-                        fullWidth label="Contraseña Actual"
-                        type={disable.showPassword ? 'text' : 'password'}
-                        value={disable.password}
-                        onChange={(e) => disable.setPassword(e.target.value)}
-                        InputProps={{
-                            endAdornment: (
-                                <InputAdornment position="end">
-                                    <IconButton onClick={() => disable.setShowPassword(!disable.showPassword)} edge="end">
-                                        {disable.showPassword ? <VisibilityOff /> : <Visibility />}
-                                    </IconButton>
-                                </InputAdornment>
-                            )
-                        }}
-                    />
-                    <TextField
-                        fullWidth label="Código 2FA" placeholder="000000"
-                        value={disable.code}
-                        onChange={(e) => disable.setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                        inputProps={{ maxLength: 6, style: { textAlign: 'center', letterSpacing: 4, fontWeight: 600 } }}
-                    />
-                </Stack>
-            </DialogContent>
+                <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                    Por favor, confirma tu identidad para continuar:
+                </Typography>
 
-            <DialogActions sx={{ p: 2, borderTop: `1px solid ${theme.palette.divider}` }}>
-                <Button onClick={disable.close} color="inherit">Cancelar</Button>
-                <Button onClick={disable.confirm} color="error" variant="contained"
-                    disabled={disable.isLoading || !disable.password || disable.code.length !== 6}>
-                    {disable.isLoading ? <CircularProgress size={20} color="inherit" /> : 'Confirmar Desactivación'}
-                </Button>
-            </DialogActions>
-        </Dialog>
+                <TextField
+                    fullWidth
+                    label="Contraseña Actual"
+                    type={disable.showPassword ? 'text' : 'password'}
+                    value={disable.password}
+                    onChange={(e) => disable.setPassword(e.target.value)}
+                    placeholder="Tu contraseña de ingreso"
+                    InputProps={{
+                        endAdornment: (
+                            <InputAdornment position="end">
+                                <IconButton
+                                    onClick={() => disable.setShowPassword(!disable.showPassword)}
+                                    edge="end"
+                                    size="small"
+                                >
+                                    {disable.showPassword ? <VisibilityOff /> : <Visibility />}
+                                </IconButton>
+                            </InputAdornment>
+                        )
+                    }}
+                />
+
+                <TextField
+                    fullWidth
+                    label="Código 2FA"
+                    placeholder="000 000"
+                    value={disable.code}
+                    onChange={(e) => disable.setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    inputProps={{
+                        maxLength: 6,
+                        style: {
+                            textAlign: 'center',
+                            letterSpacing: 8,
+                            fontWeight: 800,
+                            fontSize: '1.2rem'
+                        }
+                    }}
+                    helperText="Introduce el código de 6 dígitos de tu app de autenticación"
+                />
+            </Stack>
+        </BaseModal>
     );
 };
+
+
 
 export default Disable2FADialog;

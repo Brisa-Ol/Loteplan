@@ -1,0 +1,81 @@
+import { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import kycService from '@/core/api/services/kyc.service';
+
+import useSnackbar from '@/shared/hooks/useSnackbar';
+import type { KycStatusWithRecord, TipoDocumento } from '@/core/types/kyc.dto';
+
+export const useKYCLogic = () => {
+  const queryClient = useQueryClient();
+  const { showSuccess, showError } = useSnackbar();
+
+  const [activeStep, setActiveStep] = useState(0);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const [personalData, setPersonalData] = useState({
+    tipo_documento: 'DNI' as TipoDocumento,
+    numero_documento: '',
+    nombre_completo: '',
+    fecha_nacimiento: ''
+  });
+
+  const [files, setFiles] = useState({
+    frente: null as File | null,
+    dorso: null as File | null,
+    selfie: null as File | null,
+    video: null as File | null,
+  });
+
+  const { data: kycStatus, isLoading, error } = useQuery({
+    queryKey: ['kycStatus'],
+    queryFn: kycService.getStatus,
+    retry: false,
+  });
+
+  useEffect(() => {
+    if (kycStatus && 'tipo_documento' in kycStatus && kycStatus.estado_verificacion === 'RECHAZADA') {
+      const record = kycStatus as KycStatusWithRecord;
+      setPersonalData({
+        tipo_documento: record.tipo_documento || 'DNI',
+        numero_documento: record.numero_documento || '',
+        nombre_completo: record.nombre_completo || '',
+        fecha_nacimiento: record.fecha_nacimiento?.split('T')[0] || ''
+      });
+    }
+  }, [kycStatus]);
+
+  const uploadMutation = useMutation({
+    mutationFn: async () => {
+      // Geolocation logic... (abreviado para limpieza)
+      return kycService.submit({
+        ...personalData,
+        documento_frente: files.frente!,
+        documento_dorso: files.dorso || undefined,
+        selfie_con_documento: files.selfie!,
+        video_verificacion: files.video || undefined,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['kycStatus'] });
+      showSuccess('Enviado a revisión');
+      setActiveStep(0);
+    },
+    onError: (err: any) => showError(err.response?.data?.mensaje || 'Error al enviar')
+  });
+
+  const handleNext = () => {
+    if (activeStep === 0 && (!personalData.numero_documento || !personalData.nombre_completo)) 
+      return setFormError('Completa los campos obligatorios.');
+    if (activeStep === 1 && (!files.frente || !files.selfie)) 
+      return setFormError('Sube los documentos obligatorios.');
+    
+    setFormError(null);
+    setActiveStep(prev => prev + 1);
+  };
+
+  return {
+    kycStatus, isLoading, error, activeStep, personalData, setPersonalData,
+    files, setFiles, formError, setFormError, uploadMutation, handleNext,
+    handleBack: () => setActiveStep(prev => prev - 1)
+  };
+};

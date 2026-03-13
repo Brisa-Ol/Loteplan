@@ -1,14 +1,44 @@
-// src/core/types/dto/suscripcion.dto.ts
-
 import type { BaseDTO } from "./base.dto";
+
+// --- DTOs de Entrada (Payloads) ---
+export interface IniciarSuscripcionDto {
+  id_proyecto: number;
+  tokens_a_suscribir: number;
+}
+
+export interface ConfirmarSuscripcion2faDto {
+  id_proyecto: number;
+  codigo_2fa: string;
+}
+
+// --- DTOs de Salida (Respuestas) ---
+export interface SuscripcionInitResponse {
+  requiere2FA: boolean;
+  checkoutUrl?: string; // URL de MercadoPago
+  mensaje?: string;
+}
+
+export interface MorosidadDTO {
+  tasa_morosidad: number;
+  total_suscripciones: number;
+  suscripciones_en_mora: number;
+}
+
+export interface CancelacionDTO {
+  tasa_cancelacion: number;
+  total_canceladas: number;
+  periodo: string;
+}
 
 export interface SuscripcionDto extends BaseDTO {
   id_usuario: number;
   id_proyecto: number;
   tokens_disponibles: number;
   meses_a_pagar: number;
-  saldo_a_favor: string;      // DECIMAL llega como string
-  monto_total_pagado: string; // DECIMAL llega como string
+  saldo_a_favor: string; 
+  monto_total_pagado: string;
+  createdAt: string; // Pisamos el opcional de BaseDTO para que sea obligatorio
+  updatedAt: string;
   usuario?: {
     id: number;
     nombre: string;
@@ -24,8 +54,6 @@ export interface SuscripcionDto extends BaseDTO {
     obj_suscripciones: number;
     suscripciones_actuales: number;
   };
-  createdAt: string;  // Override optional → required
-  updatedAt: string;
 }
 
 export interface SuscripcionCanceladaDto extends BaseDTO {
@@ -33,25 +61,22 @@ export interface SuscripcionCanceladaDto extends BaseDTO {
   id_usuario: number;
   id_proyecto: number;
   meses_pagados: number;
-  monto_pagado_total: string; // DECIMAL llega como string
+  monto_pagado_total: string;
   fecha_cancelacion: string;
-
+  createdAt: string;
+  updatedAt: string;
   usuarioCancelador?: {
     nombre: string;
     apellido: string;
     email: string;
-    nombre_usuario: string;
   };
-
   proyectoCancelado?: {
     nombre_proyecto: string;
   };
 
-  // ⬇️ ESTO ES LO QUE FALTA PARA SOLUCIONAR EL ERROR ⬇️
-  // Debe ser un objeto, no un número (el ID ya está arriba)
   suscripcionOriginal?: {
     id: number;
-    monto_total_pagado: string; // Aquí está la propiedad que buscabas
+    monto_total_pagado: string;
     activo: boolean;
   };
 }

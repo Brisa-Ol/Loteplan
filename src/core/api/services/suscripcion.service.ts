@@ -1,24 +1,23 @@
-// src/services/suscripcion.service.ts
-import type { 
-  CancelacionDTO, 
-  ConfirmarSuscripcion2faDto, 
-  IniciarSuscripcionDto, 
-  MorosidadDTO, 
-  SuscripcionCanceladaDto, 
-  SuscripcionDto, 
-  SuscripcionInitResponse 
-} from '@/core/types/suscripcion.dto';
 import type { AxiosResponse } from 'axios';
 import httpService from '../httpService';
+import type { 
+  SuscripcionCanceladaDto, 
+  SuscripcionDto, 
+  IniciarSuscripcionDto, 
+  ConfirmarSuscripcion2faDto, 
+  SuscripcionInitResponse,
+  MorosidadDTO,
+  CancelacionDTO 
+} from '@/core/types/suscripcion.dto';
 
-// ✅ RUTAS SINCRONIZADAS CON TU BACKEND (App.js)
-const BASE_PRINCIPAL = '/suscripciones';
+// Rutas base según App.js (asumiendo que así se montaron)
+const BASE_PRINCIPAL = '/suscripciones'; 
 const BASE_HISTORIAL = '/suscripcionesCanceladas'; 
 
 const SuscripcionService = {
 
   // =================================================
-  // 👤 GESTIÓN USUARIO (Basado en suscripcion_proyecto.routes.js)
+  // 👤 GESTIÓN USUARIO (Operaciones Activas)
   // =================================================
   
   iniciar: async (data: IniciarSuscripcionDto): Promise<AxiosResponse<SuscripcionInitResponse>> => {
@@ -38,22 +37,19 @@ const SuscripcionService = {
   },
 
   /**
-   * ✅ CORREGIDO: En tu back el usuario usa DELETE sobre /mis_suscripciones/:id
+   * Usuario cancela su propia suscripción. 
+   * Backend: DELETE /suscripciones/mis_suscripciones/:id
    */
   cancelar: async (id: number): Promise<AxiosResponse<{ mensaje: string }>> => {
     return await httpService.delete(`${BASE_PRINCIPAL}/mis_suscripciones/${id}`);
   },
 
   // =================================================
-  // 👮 GESTIÓN ADMIN (Basado en suscripcion_proyecto.routes.js)
+  // 👮 GESTIÓN ADMIN
   // =================================================
 
   findAll: async (): Promise<AxiosResponse<SuscripcionDto[]>> => {
     return await httpService.get(`${BASE_PRINCIPAL}/`); 
-  },
-
-  findAllActivas: async (): Promise<AxiosResponse<SuscripcionDto[]>> => {
-    return await httpService.get(`${BASE_PRINCIPAL}/activas`); 
   },
 
   getById: async (id: number): Promise<AxiosResponse<SuscripcionDto>> => {
@@ -61,13 +57,14 @@ const SuscripcionService = {
   },
 
   /**
-   * ✅ CORREGIDO: Ruta específica para Admin
+   * Admin cancela suscripción de un tercero
+   * Backend: DELETE /suscripciones/:id
    */
   cancelarAdmin: async (id: number): Promise<AxiosResponse<{ message: string }>> => {
     return await httpService.delete(`${BASE_PRINCIPAL}/${id}`);
   },
 
-  // Métricas (KPIs)
+  // KPIs
   getMorosityMetrics: async (): Promise<AxiosResponse<MorosidadDTO>> => {
     return await httpService.get(`${BASE_PRINCIPAL}/metrics/morosidad`);
   },
@@ -76,36 +73,19 @@ const SuscripcionService = {
     return await httpService.get(`${BASE_PRINCIPAL}/metrics/cancelacion`);
   },
 
-  // Proyectos
-  getAllByProyectoId: async (proyectoId: number): Promise<AxiosResponse<SuscripcionDto[]>> => {
-    return await httpService.get(`${BASE_PRINCIPAL}/proyecto/${proyectoId}/all`);
-  },
-
-  getActiveByProyectoId: async (proyectoId: number): Promise<AxiosResponse<SuscripcionDto[]>> => {
-    return await httpService.get(`${BASE_PRINCIPAL}/proyecto/${proyectoId}`);
-  },
-
   // =================================================
-  // 🛑 HISTORIAL CANCELACIONES (Basado en suscripcion.routes.js)
+  // 🛑 HISTORIAL DE CANCELACIONES
   // =================================================
 
-  /**
-   * ✅ CORREGIDO: Ruta del usuario para ver sus canceladas
-   */
   getMisCanceladas: async (): Promise<AxiosResponse<SuscripcionCanceladaDto[]>> => {
+    // Backend router: suscripcion.routes.js montado en /suscripcionesCanceladas
     return await httpService.get(`${BASE_HISTORIAL}/mis_canceladas`);
   },
 
-  /**
-   * ✅ CORREGIDO: Ruta del admin para ver historial general
-   */
   getAllCanceladas: async (): Promise<AxiosResponse<SuscripcionCanceladaDto[]>> => {
     return await httpService.get(`${BASE_HISTORIAL}/canceladas`);
   },
 
-  /**
-   * ✅ CORREGIDO: Ruta del admin para ver historial por proyecto
-   */
   getCanceladasByProyectoId: async (proyectoId: number): Promise<AxiosResponse<SuscripcionCanceladaDto[]>> => {
     return await httpService.get(`${BASE_HISTORIAL}/proyecto/canceladas/${proyectoId}`);
   }

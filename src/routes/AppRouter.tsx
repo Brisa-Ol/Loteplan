@@ -44,7 +44,7 @@ const Perfil = lazy(() => import('@/features/client/pages/MiCuenta/perfil/Perfil
 const VerificacionKYC = lazy(() => import('@/features/client/pages/MiCuenta/kyc/VerificacionKYC'));
 const MensajesPage = lazy(() => import('@/features/client/pages/MiCuenta/mensajepage/MensajesPage'));
 
-const MisFavoritos = lazy(() => import('@/features/client/pages/MiCuenta/MisFavoritos'));
+const MisFavoritos = lazy(() => import('@/features/client/pages/MiCuenta/misfavoritos/MisFavoritos'));
 const Historialcontratos = lazy(() => import('@/features/client/pages/Contratos/Historialcontratos'));
 const DetalleLote = lazy(() => import('@/features/client/pages/Lotes/DetalleLote'));
 
