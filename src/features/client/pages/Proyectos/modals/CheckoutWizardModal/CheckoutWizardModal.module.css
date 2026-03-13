@@ -1,0 +1,10 @@
+.containerLabel{
+    display: flex;
+    
+    justify-content: center;
+}
+
+.retryButton{
+    background-color: #E07A4D;
+    color: #F6F6F6;
+}

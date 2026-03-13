@@ -96,7 +96,7 @@ create: async (data: CreateImagenDto): Promise<AxiosResponse<ImagenDto>> => {
   
     if (data.descripcion) formData.append('descripcion', data.descripcion);
     if (data.id_lote) formData.append('id_lote', String(data.id_lote));
-    //if (data.id_proyecto) formData.append('id_proyecto', String(data.id_proyecto));
+    if (data.id_proyecto) formData.append('id_proyecto', String(data.id_proyecto));
     
     return await httpService.post(BASE_ENDPOINT, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
