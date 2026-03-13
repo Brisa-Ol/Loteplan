@@ -9,7 +9,7 @@ import { BrowserRouter } from 'react-router-dom';
 
 import { AuthProvider } from './core/context/AuthContext';
 import { SnackbarProvider } from './core/context/SnackbarContext';
-import theme from './core/theme';
+import theme from './core/theme/globalStyles';
 import AppRouter from './routes/AppRouter';
 
 const queryClient = new QueryClient({

@@ -26,7 +26,7 @@ import { SecurityRequirementModal } from '@/core/auth/guards/SecurityRequirement
 import { PageContainer } from '@/shared';
 import { ProjectHero } from './components/ProjectHero';
 import { ProjectSidebar } from './components/ProjectSidebar';
-import { CheckoutWizardModal } from './modals/CheckoutWizardModal';
+import { CheckoutWizardModal } from './modals/CheckoutWizardModal/CheckoutWizardModal';
 import ListaLotesProyecto from '../Lotes/ListaLotesProyecto';
 
 // 🚀 LAZY LOADING

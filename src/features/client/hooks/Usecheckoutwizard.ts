@@ -35,6 +35,12 @@ interface UseCheckoutWizardProps {
   onSuccess?: () => void;
 }
 
+type PaymentStatus =
+  | "idle"
+	| "processing"
+	| "success"
+	| "failed";
+
 // ===================================================
 // CONSTANTS
 // ===================================================
@@ -61,6 +67,10 @@ export const useCheckoutWizard = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [isVerificandoPago, setIsVerificandoPago] = useState(false);
   const [pagoExitoso, setPagoExitoso] = useState(false);
+
+  //probando 3 estados de pago
+  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>("idle");
+
   const [transaccionId, setTransaccionId] = useState<number | null>(null);
   const [error2FA, setError2FA] = useState<string | null>(null);
 
@@ -169,7 +179,7 @@ export const useCheckoutWizard = ({
   const iniciarVerificacionPago = useCallback(async (id: number) => {
     if (isVerifyingRef.current) return;
     isVerifyingRef.current = true;
-    setIsVerificandoPago(true);
+    setPaymentStatus("processing");
 
     try {
       for (let i = 0; i < MAX_PAYMENT_VERIFICATION_ATTEMPTS; i++) {
@@ -178,14 +188,16 @@ export const useCheckoutWizard = ({
           const estado = (res.data?.transaccion?.estado || (res.data as any)?.estado) as any;
 
           if (estado === 'pagado' || estado === 'approved') {
-            setPagoExitoso(true);
+            //setPagoExitoso(true);
+            setPaymentStatus("success");
             setIsVerificandoPago(false);
             showSuccess('¡Pago confirmado exitosamente!');
             return true;
           }
 
           if (estado === 'fallido' || estado === 'rejected') {
-            setIsVerificandoPago(false);
+            //setIsVerificandoPago(false);
+            setPaymentStatus("failed")
             showError('El pago fue rechazado.');
             return false;
           }
@@ -197,6 +209,7 @@ export const useCheckoutWizard = ({
       }
 
       setIsVerificandoPago(false);
+      setPaymentStatus("processing")
       showWarning('El pago sigue procesándose. Puedes cerrar y volver más tarde.');
       return false;
     } finally {
@@ -241,7 +254,9 @@ export const useCheckoutWizard = ({
       // 1. DESCARGAR LA PLANTILLA PDF
       const pdfUrl = ImagenService.resolveImageUrl(plantillaContrato.url_archivo);
       const pdfBytes = await fetch(pdfUrl).then(res => res.arrayBuffer());
-      const pdfDoc = await PDFDocument.load(pdfBytes);
+      const pdfDoc = await PDFDocument.load(pdfBytes ,{
+        ignoreEncryption: true
+      });
 
       // ===================================================
       // 2. EMBEBER LA FIRMA EN EL PDF
@@ -342,15 +357,17 @@ export const useCheckoutWizard = ({
   // ===================================================
   return {
     isProcessing,
+    paymentStatus,
     isVerificandoPago,
-    pagoExitoso,
+    //pagoExitoso,
     transaccionId,
     error2FA,
     handleConfirmInvestment,
     handleConfirmarPago2FA,
     handleSignContract,
     iniciarVerificacionPago,
-    setPagoExitoso,
+    setPaymentStatus,
+    //setPagoExitoso,
     setTransaccionId,
     setError2FA,
   };

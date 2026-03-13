@@ -41,6 +41,9 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+//Estilos
+import styles from './CheckoutWizardModal.module.css'
+
 // Services
 import ContratoFirmadoService from '@/core/api/services/contrato-firmado.service';
 import ContratoPlantillaService from '@/core/api/services/contrato-plantilla.service';
@@ -49,13 +52,13 @@ import MercadoPagoService from '@/core/api/services/pagoMercado.service';
 
 // Components
 import BaseModal from '@/shared/components/domain/modals/BaseModal';
-import PDFViewerMejorado from '../../Contratos/components/PDFViewerMejorado';
+import PDFViewerMejorado from '../../../Contratos/components/PDFViewerMejorado';
 
 // Hooks
 import { useCheckoutWizard } from '@/features/client/hooks/Usecheckoutwizard';
 import { useCurrencyFormatter } from '@/features/client/hooks/useCurrencyFormatter';
 import useSnackbar from '@/shared/hooks/useSnackbar';
-import { CheckoutStateManager, type CheckoutPersistedState } from './Checkout persistence';
+import { CheckoutStateManager, type CheckoutPersistedState } from '../Checkout persistence';
 
 // Types
 import CuotaMensualService from '@/core/api/services/cuotaMensual.service';
@@ -450,7 +453,7 @@ StepConfirmacion.displayName = 'StepConfirmacion';
 
 const StepContrato = React.memo<{ plantilla: any; isLoading: boolean; }>(({ plantilla, isLoading }) => {
   if (isLoading) return <CircularProgress />;
-  if (!plantilla) return <Typography>No hay contrato disponible.</Typography>;
+  //if (!plantilla) return <Typography>No hay contrato disponible.</Typography>;
   return (
     <Box sx={{
       display: 'flex',          // ✅ CRÍTICO: Activa flexbox interno
@@ -511,19 +514,36 @@ const StepSeguridad = React.memo<{
 ));
 StepSeguridad.displayName = 'StepSeguridad';
 
-const StepPago = React.memo<{ pagoExitoso: boolean; }>(
-  ({ pagoExitoso }) => (
-    <Stack alignItems="center" justifyContent="center" height="100%" minHeight="40vh" spacing={4}>
-      {pagoExitoso ? (
-        <CheckCircle sx={{ fontSize: 60, color: 'success.main' }} />
-      ) : (
-        <CircularProgress size={80} />
-      )}
-      <Typography variant="h5" fontWeight={700}>
-        {pagoExitoso ? '¡Pago Acreditado!' : 'Procesando...'}
-      </Typography>
-    </Stack>
-  )
+
+
+const StepPago = React.memo<{ paymentStatus: string; onRetry: () => void }>(
+	({ paymentStatus, onRetry }) => (
+		<Stack alignItems="center" justifyContent="center" height="100%" minHeight="40vh" spacing={4}>
+			{paymentStatus === "success" && (
+				<CheckCircle sx={{ fontSize: 60, color: 'success.main' }} />
+			)}
+
+			{paymentStatus === "processing" && (
+				<CircularProgress size={80} />
+			)}
+
+			{paymentStatus === "failed" && (
+        <>
+          <Alert severity="error">
+            El pago fue rechazado. Intenta nuevamente.
+          </Alert>
+          
+        </>
+			)}
+
+			<Typography variant="h5" fontWeight={700}>
+				{paymentStatus === "success" && "¡Pago Acreditado!"}
+				{paymentStatus === "processing" && "Procesando pago..."}
+				{paymentStatus === "failed" && "Pago rechazado"}
+			</Typography>
+      <Button className={styles.retryButton} onClick={onRetry}>Intentar Nuevamente</Button>
+		</Stack>
+	)
 );
 StepPago.displayName = 'StepPago';
 
@@ -599,15 +619,17 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
   // CHECKOUT WIZARD HOOK
   const {
     isProcessing,
+    paymentStatus,
     isVerificandoPago,
-    pagoExitoso,
+    // pagoExitoso,
     transaccionId,
     error2FA,
     handleConfirmInvestment,
     handleConfirmarPago2FA,
     handleSignContract,
     iniciarVerificacionPago,
-    setPagoExitoso,
+    setPaymentStatus,
+    //setPagoExitoso,
     setTransaccionId,
   } = useCheckoutWizard({
     proyecto,
@@ -634,19 +656,21 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
       tipo,
       activeStep,
       transactionId: transaccionId,
-      paymentSuccess: pagoExitoso,
+      paymentSuccess: paymentStatus === "success",
       signatureDataUrl,
       location,
       timestamp: Date.now()
     };
     CheckoutStateManager.saveState(state);
-  }, [proyecto.id, tipo, activeStep, transaccionId, pagoExitoso, signatureDataUrl, location]);
+  }, [proyecto.id, tipo, paymentStatus, activeStep, transaccionId, signatureDataUrl, location]);
 
   useEffect(() => {
-    if (open && (pagoExitoso || activeStep >= 3 || transaccionId)) {
+    if (open && (paymentStatus === "success" || activeStep >= 3 || transaccionId)) {
       persistState();
     }
-  }, [open, pagoExitoso, activeStep, transaccionId, persistState]);
+  }, [open, activeStep, transaccionId, persistState]);
+
+  
 
   // RECUPERACIÓN DE ESTADO
   useEffect(() => {
@@ -657,7 +681,8 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
     if (savedState) {
       if (savedState.paymentSuccess && savedState.transactionId) {
         setTransaccionId(savedState.transactionId);
-        setPagoExitoso(true);
+        //setPagoExitoso(true);
+        setPaymentStatus("success")
         setLocation(savedState.location);
         setActiveStep(4); // ✅ Ir directo a FIRMA (paso 4)
         showInfo('Pago confirmado. Firma tu contrato para finalizar.');
@@ -680,7 +705,8 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
           const estado = (res.data?.transaccion?.estado || (res.data as any)?.estado) as any;
           if (estado === 'pagado' || estado === 'approved') {
             setTransaccionId(txId!);
-            setPagoExitoso(true);
+            //setPagoExitoso(true);
+            setPaymentStatus("success")
             CheckoutStateManager.markPaymentSuccess(proyecto.id, txId!);
             setActiveStep(4); // ✅ Ir directo a FIRMA (paso 4)
             showInfo('Pago confirmado. Firma tu contrato para finalizar.');
@@ -690,12 +716,12 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
     }
 
     hasAttemptedRecovery.current = true;
-  }, [open, proyecto.id, effectiveInversionId, effectivePagoId, showInfo, setTransaccionId, setPagoExitoso]);
+  }, [open, proyecto.id, effectiveInversionId, effectivePagoId, showInfo, setTransaccionId]);
 
   const handleRecoverState = useCallback(() => {
     if (!recoveredState) return;
     setTransaccionId(recoveredState.transactionId);
-    setPagoExitoso(recoveredState.paymentSuccess);
+    setPaymentStatus(recoveredState.paymentSuccess ? "success" : "processing");
     setSignatureDataUrl(recoveredState.signatureDataUrl);
     setLocation(recoveredState.location);
 
@@ -710,7 +736,7 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
       }
     }
     setShowRecoveryPrompt(false);
-  }, [recoveredState, showInfo, iniciarVerificacionPago, setTransaccionId, setPagoExitoso]);
+  }, [recoveredState, showInfo, iniciarVerificacionPago, setTransaccionId, setPaymentStatus]);
 
   const handleDiscardRecovery = useCallback(() => {
     CheckoutStateManager.clearState();
@@ -733,7 +759,7 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
   const handleStepAction = useCallback(async () => {
     switch (activeStep) {
       case 0:
-        if (pagoExitoso && transaccionId) {
+        if (paymentStatus === "success" && transaccionId) {
           setActiveStep(4); // ✅ Saltar directo a firma si ya pagó
           return;
         }
@@ -747,7 +773,7 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
 
       case 2:
         if (codigo2FA.length === CODIGO_2FA_LENGTH) {
-          if (pagoExitoso && transaccionId) {
+          if (paymentStatus === "success" && transaccionId) {
             // ✅ Si ya pagó antes, vamos directo a firma
             setActiveStep(4);
           } else {
@@ -756,6 +782,10 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
           }
         }
         break;
+
+      case 3:
+        setActiveStep(4)
+        break
 
       case 4:
         // ✅ CAMBIO CRÍTICO: Pedir 2FA fresco para la firma
@@ -776,7 +806,7 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
     }
   }, [
     activeStep,
-    pagoExitoso,
+    //pagoExitoso,
     transaccionId,
     codigo2FA,
     codigo2FAFirma,
@@ -793,11 +823,12 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
     if (isVerificandoPago || isProcessing) return;
     onClose();
     setTimeout(() => {
-      if (!pagoExitoso || activeStep === 0) CheckoutStateManager.clearState();
+      if (paymentStatus !== "success" || activeStep === 0) CheckoutStateManager.clearState();
       setActiveStep(0);
       setCodigo2FA('');
       setCodigo2FAFirma(''); // ✅ Limpiar código de firma
-      setPagoExitoso(false);
+      //setPagoExitoso(false);
+      setPaymentStatus("idle")
       setSignatureDataUrl(null);
       setSignaturePosition(null);
       setLocation(null);
@@ -806,7 +837,7 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
       setRecoveredState(null);
       hasAttemptedRecovery.current = false;
     }, 300);
-  }, [isVerificandoPago, isProcessing, onClose, pagoExitoso, activeStep, setPagoExitoso, setTransaccionId]);
+  }, [isVerificandoPago, isProcessing, onClose, paymentStatus, activeStep, setPaymentStatus, setTransaccionId]);
 
   // ✅ ACTUALIZAR isStepValid
   const isStepValid = useMemo(() => {
@@ -822,12 +853,34 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
   }, [activeStep, codigo2FA, codigo2FAFirma, location, signatureDataUrl]);
 
   const getButtonText = () => {
-    if (isProcessing) return 'Procesando...';
-    if (activeStep === 4) return 'Finalizar Firma';
-    if (activeStep === 2 && pagoExitoso) return 'Continuar a Firma';
-    if (activeStep === 2) return 'Ir a Pagar';
-    return 'Continuar';
+    const pagoExitoso = paymentStatus === "success"
+    if (isProcessing){
+       return 'Procesando...'
+
+    }else if(activeStep === 4 && pagoExitoso){
+      console.log("Paso 4 pagado")
+      return 'Continuar a Firma'
+    }
+    else if(activeStep === 4){
+    console.log("Paso 4 sin paga")
+
+      return 'Finalizar Firma'
+
+    }else if(activeStep === 2 && pagoExitoso){
+      console.log("Paso 2 pagado")
+
+      return 'Continuar a Firma'
+
+    }else if(activeStep === 2){
+      console.log("Paso 2 sin paga")
+      return 'Ir a Pagar'
+    }
+    else{
+      return 'Continuar'
+    }
+
   };
+
 
   return (
     <>
@@ -880,7 +933,7 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
             >
               {activeStep === 0 ? 'Cancelar' : 'Atrás'}
             </Button>
-            {activeStep !== 3 && (
+            {(activeStep !== 3 || paymentStatus === "success")&& (
               <Button
                 variant="contained"
                 color={activeStep === 4 ? 'success' : 'primary'}
@@ -908,7 +961,7 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
             <Stepper activeStep={activeStep} alternativeLabel sx={{ pt: 2 }}>
               {STEPS.map((step, index) => (
                 <Step key={step.label}>
-                  <StepLabel
+                  <StepLabel className={styles.containerLabel}
                     StepIconProps={{
                       sx: {
                         '&.Mui-active': {
@@ -919,7 +972,8 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
                       }
                     }}
                   >
-                    {step.label}
+                    {step.label} 
+                  
                   </StepLabel>
                 </Step>
               ))}
@@ -946,7 +1000,7 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
                 error={error2FA}
               />
             )}
-            {activeStep === 3 && <StepPago pagoExitoso={pagoExitoso} />}
+            {activeStep === 3 && <StepPago paymentStatus={paymentStatus} onRetry={() => setActiveStep(0)}/>}
             {activeStep === 4 && (
               <Stack spacing={3} height="100%">
                 {/* ✅ AGREGAR INPUT DE 2FA ANTES DE LA FIRMA */}
