@@ -3,11 +3,12 @@ import type { BaseDTO } from "./base.dto";
 // --- DTOs de Entrada (Payloads) ---
 export interface IniciarSuscripcionDto {
   id_proyecto: number;
-  tokens_a_suscribir: number;
+  tokens_a_suscribir?: number;
 }
 
 export interface ConfirmarSuscripcion2faDto {
-  id_proyecto: number;
+  id_proyecto?: number;
+  transaccionId: number,
   codigo_2fa: string;
 }
 

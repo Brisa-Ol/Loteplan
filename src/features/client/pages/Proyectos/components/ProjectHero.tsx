@@ -102,7 +102,14 @@ export const ProjectHero: React.FC<ProjectHeroProps> = ({ proyecto }) => {
           src={helpers.imagenes[activeStep]}
           onLoad={() => setImageLoaded(true)}
           onError={(e) => {
-            (e.target as HTMLImageElement).src = '/assets/placeholder-project.jpg';
+            const img = e.currentTarget;
+
+            if (!img.src.includes('placeholder-proyect.jpg')) {
+              img.src = '/assets/placeholder-proyect.jpg';
+            } else {
+              img.onerror = null;
+            }
+
             setImageLoaded(true);
           }}
           sx={{
