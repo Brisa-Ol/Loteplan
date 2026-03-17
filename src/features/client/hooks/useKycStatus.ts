@@ -1,7 +1,7 @@
 // src/shared/hooks/useKycStatus.ts
 
-import { useMemo } from 'react';
 import type { ChipProps } from '@mui/material';
+import { useMemo } from 'react';
 
 type KycStatus = 'APROBADA' | 'PENDIENTE' | 'RECHAZADA' | 'NO_INICIADO' | undefined;
 

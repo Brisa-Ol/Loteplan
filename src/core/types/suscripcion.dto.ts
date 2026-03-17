@@ -3,7 +3,7 @@ import type { BaseDTO } from "./base.dto";
 // --- DTOs de Entrada (Payloads) ---
 export interface IniciarSuscripcionDto {
   id_proyecto: number;
-  tokens_a_suscribir: number;
+  tokens_a_suscribir?: number;
 }
 
 export interface ConfirmarSuscripcion2faDto {
@@ -14,20 +14,23 @@ export interface ConfirmarSuscripcion2faDto {
 // --- DTOs de Salida (Respuestas) ---
 export interface SuscripcionInitResponse {
   requiere2FA: boolean;
-  checkoutUrl?: string; // URL de MercadoPago
+  checkoutUrl?: string;
   mensaje?: string;
 }
 
+
 export interface MorosidadDTO {
   tasa_morosidad: number;
-  total_suscripciones: number;
-  suscripciones_en_mora: number;
+  total_pagos_generados: number;
+  total_en_riesgo: number;
 }
+
 
 export interface CancelacionDTO {
   tasa_cancelacion: number;
   total_canceladas: number;
-  periodo: string;
+  total_suscripciones: number; // ❌ faltaba este campo
+  // ❌ "periodo" eliminado: el backend no lo devuelve
 }
 
 export interface SuscripcionDto extends BaseDTO {
@@ -35,9 +38,9 @@ export interface SuscripcionDto extends BaseDTO {
   id_proyecto: number;
   tokens_disponibles: number;
   meses_a_pagar: number;
-  saldo_a_favor: string; 
+  saldo_a_favor: string;
   monto_total_pagado: string;
-  createdAt: string; // Pisamos el opcional de BaseDTO para que sea obligatorio
+  createdAt: string;
   updatedAt: string;
   usuario?: {
     id: number;
@@ -49,6 +52,7 @@ export interface SuscripcionDto extends BaseDTO {
   proyectoAsociado?: {
     id: number;
     nombre_proyecto: string;
+    tipo_inversion: string;
     estado_proyecto: string;
     plazo_inversion: number;
     obj_suscripciones: number;
@@ -73,7 +77,6 @@ export interface SuscripcionCanceladaDto extends BaseDTO {
   proyectoCancelado?: {
     nombre_proyecto: string;
   };
-
   suscripcionOriginal?: {
     id: number;
     monto_total_pagado: string;

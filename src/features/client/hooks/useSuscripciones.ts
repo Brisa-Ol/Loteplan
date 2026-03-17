@@ -1,5 +1,5 @@
 // src/pages/User/Suscripciones/hooks/useSuscripciones.ts
-import type { ApiError } from '@/core/api/httpService'; 
+import type { ApiError } from '@/core/api/httpService';
 import SuscripcionService from '@/core/api/services/suscripcion.service';
 import type { SuscripcionCanceladaDto, SuscripcionDto } from '@/core/types/suscripcion.dto';
 import useSnackbar from '@/shared/hooks/useSnackbar';
@@ -53,7 +53,7 @@ export const useSuscripciones = () => {
     // 3. Mutación Cancelar
     const cancelMutation = useMutation({
         mutationFn: async (id: number) => {
-            const response = await SuscripcionService.cancelar(id);
+            const response = await SuscripcionService.cancelarMiSuscripcion(id); // ← era "cancelar"
             return response.data;
         },
         onSuccess: (_, id) => {

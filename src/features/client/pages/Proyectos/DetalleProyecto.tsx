@@ -24,10 +24,10 @@ import { useVerificarSuscripcion } from '../../hooks/useVerificarSuscripcion';
 
 import { SecurityRequirementModal } from '@/core/auth/guards/SecurityRequirementModal';
 import { PageContainer } from '@/shared';
+import ListaLotesProyecto from '../Lotes/ListaLotesProyecto';
 import { ProjectHero } from './components/ProjectHero';
 import { ProjectSidebar } from './components/ProjectSidebar';
 import { CheckoutWizardModal } from './modals/CheckoutWizardModal/CheckoutWizardModal';
-import ListaLotesProyecto from '../Lotes/ListaLotesProyecto';
 
 // 🚀 LAZY LOADING
 const ProjectGallery = lazy(() => import('./components/ProjectGallery').then(m => ({ default: m.ProjectGallery })));

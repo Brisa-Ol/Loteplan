@@ -1,9 +1,9 @@
 // src/features/admin/pages/Suscripciones/AdminSuscripciones.tsx
 
-import { useAdminSuscripciones } from '../../hooks/finanzas/useAdminSuscripciones';
 import { AdminPageHeader, AlertBanner, PageContainer } from '@/shared';
 import { Box, Chip, Stack } from '@mui/material';
 import React, { useMemo } from 'react';
+import { useAdminSuscripciones } from '../../hooks/finanzas/useAdminSuscripciones';
 import CancelacionesTab from './components/CancelacionesTab';
 import SuscripcionesActiveTab from './components/SuscripcionesActiveTab';
 
@@ -22,7 +22,7 @@ const AdminSuscripciones: React.FC = () => {
 
   const TABS = [
     { label: 'Suscripciones Activas', index: 0 },
-    { label: 'Historial de Bajas',    index: 1 },
+    { label: 'Historial de Bajas', index: 1 },
   ];
 
   return (
