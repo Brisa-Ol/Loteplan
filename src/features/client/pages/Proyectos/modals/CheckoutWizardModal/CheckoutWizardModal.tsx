@@ -541,7 +541,7 @@ const StepPago = React.memo<{ paymentStatus: string; onRetry: () => void }>(
 				{paymentStatus === "processing" && "Procesando pago..."}
 				{paymentStatus === "failed" && "Pago rechazado"}
 			</Typography>
-      <Button className={styles.retryButton} onClick={onRetry}>Intentar Nuevamente</Button>
+        {paymentStatus === "failed" &&<Button className={styles.retryButton} onClick={onRetry}>Intentar Nuevamente</Button>}
 		</Stack>
 	)
 );

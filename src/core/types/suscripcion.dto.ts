@@ -7,7 +7,8 @@ export interface IniciarSuscripcionDto {
 }
 
 export interface ConfirmarSuscripcion2faDto {
-  id_proyecto: number;
+  id_proyecto?: number;
+  transaccionId: number,
   codigo_2fa: string;
 }
 

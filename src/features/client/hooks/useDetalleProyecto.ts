@@ -96,11 +96,23 @@ export const useDetalleProyecto = () => {
 
   // --- ESTADOS DERIVADOS ---
   const yaFirmo = useMemo(() => {
-    if (!isAuthenticated || !misContratos || !proyecto) return false;
-    return misContratos.some(
-      c => c.id_proyecto === proyecto.id && c.estado_firma === 'FIRMADO'
-    );
-  }, [misContratos, proyecto, isAuthenticated]);
+	if (!isAuthenticated || !misContratos || !proyecto) return false;
+
+	const contratoFirmado = misContratos.some(
+		c => c.id_proyecto === proyecto.id && c.estado_firma === 'FIRMADO'
+	);
+
+	if (proyecto.tipo_inversion === 'mensual') {
+		const suscripcionActiva = misSuscripciones?.some(
+			s => s.id_proyecto === proyecto.id && s.activo
+		) ?? false;
+
+		return contratoFirmado && suscripcionActiva;
+	}
+
+	return contratoFirmado;
+
+}, [misContratos, misSuscripciones, proyecto, isAuthenticated]);
 
   const puedeFirmar = useMemo(() => {
     if (!proyecto || !isAuthenticated) return false;
