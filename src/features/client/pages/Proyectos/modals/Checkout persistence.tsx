@@ -14,8 +14,8 @@ import React from "react";
 
 // ✅ Helper centralizado: solo loguea si env.enableDebugLogs está activo
 const log = {
-  info:  (...args: unknown[]) => { if (env.enableDebugLogs) console.log(...args); },
-  warn:  (...args: unknown[]) => { if (env.enableDebugLogs) console.warn(...args); },
+  info: (...args: unknown[]) => { if (env.enableDebugLogs) console.log(...args); },
+  warn: (...args: unknown[]) => { if (env.enableDebugLogs) console.warn(...args); },
   error: (...args: unknown[]) => { if (env.enableDebugLogs) console.error(...args); },
 };
 
@@ -118,13 +118,13 @@ export class CheckoutStateManager {
    */
   private static loadLegacyState(projectId: number): CheckoutPersistedState | null {
     try {
-      const savedTxId    = localStorage.getItem(STORAGE_KEYS.TRANSACTION_ID);
-      const savedProjId  = localStorage.getItem(STORAGE_KEYS.PROJECT_ID);
-      const savedStep    = localStorage.getItem(STORAGE_KEYS.ACTIVE_STEP);
+      const savedTxId = localStorage.getItem(STORAGE_KEYS.TRANSACTION_ID);
+      const savedProjId = localStorage.getItem(STORAGE_KEYS.PROJECT_ID);
+      const savedStep = localStorage.getItem(STORAGE_KEYS.ACTIVE_STEP);
       const savedSuccess = localStorage.getItem(STORAGE_KEYS.PAYMENT_SUCCESS);
-      const savedSig     = localStorage.getItem(STORAGE_KEYS.SIGNATURE_DATA);
-      const savedLoc     = localStorage.getItem(STORAGE_KEYS.LOCATION);
-      const savedTipo    = localStorage.getItem(STORAGE_KEYS.TIPO);
+      const savedSig = localStorage.getItem(STORAGE_KEYS.SIGNATURE_DATA);
+      const savedLoc = localStorage.getItem(STORAGE_KEYS.LOCATION);
+      const savedTipo = localStorage.getItem(STORAGE_KEYS.TIPO);
 
       if (!savedTxId || savedProjId !== String(projectId)) return null;
 

@@ -40,7 +40,7 @@ interface SignatureStamp {
 interface PDFViewerMejoradoProps {
   pdfUrl: string;
   signatureDataUrl: string | null;
-  onSignaturePositionSet?: (pos: SignatureStamp) => void;
+  onSignaturePositionSet?: (pos: SignatureStamp | null) => void;
   readOnlyMode?: boolean;
 }
 
@@ -149,7 +149,7 @@ const PDFViewerMejorado: React.FC<PDFViewerMejoradoProps> = ({
                     position: 'relative',
                     boxShadow: theme.shadows[6],
                     cursor: (signatureDataUrl && !readOnlyMode) ? 'crosshair' : 'default',
-                    lineHeight: 0 
+                    lineHeight: 0
                   }}
                 >
                   <Page
@@ -174,13 +174,17 @@ const PDFViewerMejorado: React.FC<PDFViewerMejoradoProps> = ({
                         borderRadius: 1,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         zIndex: 10, pointerEvents: 'none',
-                        transform: 'translate(-50%, -50%)' 
+                        transform: 'translate(-50%, -50%)'
                       }}
                     >
                       <Box component="img" src={signatureDataUrl!} sx={{ width: '80%', height: '80%', objectFit: 'contain' }} />
                       <IconButton
                         size="small"
-                        onClick={(e) => { e.stopPropagation(); setSignature(null); }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSignature(null);
+                          onSignaturePositionSet?.(null);
+                        }}
                         sx={{
                           position: 'absolute', top: -12, right: -12, bgcolor: 'error.main', color: 'white',
                           '&:hover': { bgcolor: 'error.dark' }, pointerEvents: 'auto', width: 24, height: 24

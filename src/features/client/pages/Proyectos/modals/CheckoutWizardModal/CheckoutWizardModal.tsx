@@ -42,7 +42,7 @@ import { useQuery } from '@tanstack/react-query';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 //Estilos
-import styles from './CheckoutWizardModal.module.css'
+import styles from './CheckoutWizardModal.module.css';
 
 // Services
 import ContratoFirmadoService from '@/core/api/services/contrato-firmado.service';
@@ -62,8 +62,8 @@ import { CheckoutStateManager, type CheckoutPersistedState } from '../Checkout p
 
 // Types
 import CuotaMensualService from '@/core/api/services/cuotaMensual.service';
-import type { ProyectoDto } from '@/core/types/proyecto.dto';
 import { env } from '@/core/config/env';
+import type { ProyectoDto } from '@/core/types/proyecto.dto';
 
 // ===================================================
 // CONSTANTS
@@ -517,33 +517,33 @@ StepSeguridad.displayName = 'StepSeguridad';
 
 
 const StepPago = React.memo<{ paymentStatus: string; onRetry: () => void }>(
-	({ paymentStatus, onRetry }) => (
-		<Stack alignItems="center" justifyContent="center" height="100%" minHeight="40vh" spacing={4}>
-			{paymentStatus === "success" && (
-				<CheckCircle sx={{ fontSize: 60, color: 'success.main' }} />
-			)}
+  ({ paymentStatus, onRetry }) => (
+    <Stack alignItems="center" justifyContent="center" height="100%" minHeight="40vh" spacing={4}>
+      {paymentStatus === "success" && (
+        <CheckCircle sx={{ fontSize: 60, color: 'success.main' }} />
+      )}
 
-			{paymentStatus === "processing" && (
-				<CircularProgress size={80} />
-			)}
+      {paymentStatus === "processing" && (
+        <CircularProgress size={80} />
+      )}
 
-			{paymentStatus === "failed" && (
+      {paymentStatus === "failed" && (
         <>
           <Alert severity="error">
             El pago fue rechazado. Intenta nuevamente.
           </Alert>
-          
-        </>
-			)}
 
-			<Typography variant="h5" fontWeight={700}>
-				{paymentStatus === "success" && "¡Pago Acreditado!"}
-				{paymentStatus === "processing" && "Procesando pago..."}
-				{paymentStatus === "failed" && "Pago rechazado"}
-			</Typography>
-        {paymentStatus === "failed" &&<Button className={styles.retryButton} onClick={onRetry}>Intentar Nuevamente</Button>}
-		</Stack>
-	)
+        </>
+      )}
+
+      <Typography variant="h5" fontWeight={700}>
+        {paymentStatus === "success" && "¡Pago Acreditado!"}
+        {paymentStatus === "processing" && "Procesando pago..."}
+        {paymentStatus === "failed" && "Pago rechazado"}
+      </Typography>
+      {paymentStatus === "failed" && <Button className={styles.retryButton} onClick={onRetry}>Intentar Nuevamente</Button>}
+    </Stack>
+  )
 );
 StepPago.displayName = 'StepPago';
 
@@ -580,7 +580,7 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
   const hasAttemptedRecovery = useRef(false);
 
   // PLANTILLA
- const { data: plantillas, isLoading: loadingPlantilla } = useQuery({
+  const { data: plantillas, isLoading: loadingPlantilla } = useQuery({
     queryKey: ['plantillaContrato', proyecto.id],
     queryFn: async () => {
       const response = await ContratoPlantillaService.findByProject(proyecto.id);
@@ -670,7 +670,7 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
     }
   }, [open, activeStep, transaccionId, persistState]);
 
-  
+
 
   // RECUPERACIÓN DE ESTADO
   useEffect(() => {
@@ -680,12 +680,12 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
 
     if (savedState) {
       if (savedState.paymentSuccess && savedState.transactionId) {
-        setTransaccionId(savedState.transactionId);
-        //setPagoExitoso(true);
-        setPaymentStatus("success")
-        setLocation(savedState.location);
-        setActiveStep(4); // ✅ Ir directo a FIRMA (paso 4)
-        showInfo('Pago confirmado. Firma tu contrato para finalizar.');
+  setTransaccionId(savedState.transactionId);
+  setPaymentStatus("success");
+  setLocation(savedState.location);
+  setCodigo2FAFirma(''); // ✅ limpiar código viejo
+  setActiveStep(4);
+  showInfo('Pago confirmado. Firma tu contrato para finalizar.');
         hasAttemptedRecovery.current = true;
         return;
       }
@@ -726,7 +726,7 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
     setLocation(recoveredState.location);
 
     if (recoveredState.paymentSuccess) {
-      // ✅ Si el pago ya fue exitoso, ir directo a FIRMA (paso 4)
+      setCodigo2FAFirma('');
       setActiveStep(4);
       showInfo('Pago confirmado. Firma tu contrato para finalizar.');
     } else {
@@ -788,19 +788,16 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
         break
 
       case 4:
-        // ✅ CAMBIO CRÍTICO: Pedir 2FA fresco para la firma
         if (!codigo2FAFirma || codigo2FAFirma.length !== CODIGO_2FA_LENGTH) {
           showError('Debes ingresar tu código 2FA para firmar el contrato');
           return;
         }
-
+        if (!signaturePosition) {
+          showError('Debes colocar tu firma sobre el contrato antes de continuar');
+          return;
+        }
         if (signatureDataUrl && location) {
-          await handleSignContract(
-            signatureDataUrl,
-            signaturePosition,
-            location,
-            codigo2FAFirma // ✅ Usar el código 2FA de firma
-          );
+          await handleSignContract(signatureDataUrl, signaturePosition, location, codigo2FAFirma);
         }
         break;
     }
@@ -846,36 +843,35 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
       case 1: return true;
       case 2: return codigo2FA.length === CODIGO_2FA_LENGTH && !!location;
       case 4:
-        // ✅ Validar que tenga firma Y código 2FA fresco
-        return !!signatureDataUrl && codigo2FAFirma.length === CODIGO_2FA_LENGTH;
+        return !!signatureDataUrl && codigo2FAFirma.length === CODIGO_2FA_LENGTH && !!signaturePosition;
       default: return true;
     }
-  }, [activeStep, codigo2FA, codigo2FAFirma, location, signatureDataUrl]);
+  }, [activeStep, codigo2FA, codigo2FAFirma, location, signatureDataUrl, signaturePosition]);
 
   const getButtonText = () => {
     const pagoExitoso = paymentStatus === "success"
-    if (isProcessing){
-       return 'Procesando...'
+    if (isProcessing) {
+      return 'Procesando...'
 
-    }else if(activeStep === 4 && pagoExitoso){
+    } else if (activeStep === 4 && pagoExitoso) {
       console.log("Paso 4 pagado")
       return 'Continuar a Firma'
     }
-    else if(activeStep === 4){
-    console.log("Paso 4 sin paga")
+    else if (activeStep === 4) {
+      console.log("Paso 4 sin paga")
 
       return 'Finalizar Firma'
 
-    }else if(activeStep === 2 && pagoExitoso){
+    } else if (activeStep === 2 && pagoExitoso) {
       console.log("Paso 2 pagado")
 
       return 'Continuar a Firma'
 
-    }else if(activeStep === 2){
+    } else if (activeStep === 2) {
       console.log("Paso 2 sin paga")
       return 'Ir a Pagar'
     }
-    else{
+    else {
       return 'Continuar'
     }
 
@@ -892,7 +888,7 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
           subtitle="Detectamos un proceso incompleto"
           icon={<Refresh />}
           headerColor="warning"
-          maxWidth="lg"
+          maxWidth="md"
         >
           <Stack spacing={3} p={2}>
             <Alert severity="info" icon={<Info />}>
@@ -900,9 +896,6 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
               <Typography variant="caption">Puedes continuar donde lo dejaste.</Typography>
             </Alert>
             <Stack direction="row" spacing={2}>
-              <Button variant="outlined" fullWidth onClick={handleDiscardRecovery} startIcon={<Close />}>
-                Empezar de Nuevo
-              </Button>
               <Button variant="contained" fullWidth onClick={handleRecoverState} startIcon={<Refresh />} color="primary">
                 Continuar
               </Button>
@@ -925,7 +918,13 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
         customActions={
           <Stack direction={{ xs: 'column-reverse', sm: 'row' }} spacing={2} width="100%" justifyContent="space-between">
             <Button
-              onClick={activeStep === 0 ? handleClose : () => setActiveStep(p => p - 1)}
+              onClick={activeStep === 0 ? handleClose : () => {
+                if (activeStep === 4) {
+                  setSignatureDataUrl(null);
+                  setSignaturePosition(null);
+                }
+                setActiveStep(p => p - 1);
+              }}
               disabled={isProcessing || isVerificandoPago || activeStep === 3}
               startIcon={activeStep === 0 ? <Close /> : <ArrowBack />}
               color="inherit"
@@ -933,7 +932,7 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
             >
               {activeStep === 0 ? 'Cancelar' : 'Atrás'}
             </Button>
-            {(activeStep !== 3 || paymentStatus === "success")&& (
+            {(activeStep !== 3 || paymentStatus === "success") && (
               <Button
                 variant="contained"
                 color={activeStep === 4 ? 'success' : 'primary'}
@@ -972,8 +971,8 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
                       }
                     }}
                   >
-                    {step.label} 
-                  
+                    {step.label}
+
                   </StepLabel>
                 </Step>
               ))}
@@ -1000,7 +999,7 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
                 error={error2FA}
               />
             )}
-            {activeStep === 3 && <StepPago paymentStatus={paymentStatus} onRetry={() => setActiveStep(0)}/>}
+            {activeStep === 3 && <StepPago paymentStatus={paymentStatus} onRetry={() => setActiveStep(0)} />}
             {activeStep === 4 && (
               <Stack spacing={3} height="100%">
                 {/* ✅ AGREGAR INPUT DE 2FA ANTES DE LA FIRMA */}
@@ -1033,7 +1032,7 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
                     </Alert>
                     <SignatureCanvas
                       onSave={setSignatureDataUrl}
-                      onClear={() => setSignatureDataUrl(null)}
+                      onClear={() => { setSignatureDataUrl(null); setSignaturePosition(null); }}
                       initialSignature={signatureDataUrl}
                     />
                   </Box>
@@ -1044,7 +1043,13 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
                   <Box flex={1} display="flex" flexDirection="column" sx={{ minHeight: { xs: '65vh', md: '70vh' }, mt: 2 }}>
                     <Alert severity="success" variant="outlined" sx={{ borderRadius: 2, mb: 2 }}>
                       <Typography variant="body2" fontWeight={600}>✓ Firma capturada correctamente</Typography>
-                      <Button size="small" onClick={() => setSignatureDataUrl(null)}>Cambiar Firma</Button>
+                      {signaturePosition
+                        ? <Typography variant="caption" color="success.main">✓ Firma posicionada en el contrato</Typography>
+                        : <Typography variant="caption" color="warning.main">⚠ Haz clic en el contrato para colocar tu firma</Typography>
+                      }
+                      <Button size="small" onClick={() => { setSignatureDataUrl(null); setSignaturePosition(null); }}>
+                        Cambiar Firma
+                      </Button>
                     </Alert>
 
                     <Box

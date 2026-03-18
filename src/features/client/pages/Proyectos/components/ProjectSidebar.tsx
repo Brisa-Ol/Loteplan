@@ -35,7 +35,8 @@ export interface ProjectSidebarLogic {
   user: any | null;
   puedeFirmar: boolean;
   yaFirmo: boolean;
-  yaCancelado: boolean; // ← nuevo
+  tieneFirmaPendiente: boolean;
+  yaCancelado: boolean;
   handleMainAction: () => void;
   handleClickFirmar: () => void;
   handleVerContratoFirmado: () => void;
@@ -180,7 +181,7 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({ logic, proyecto 
 
           <Box>
             {/* CASO 1: FINALIZADO */}
-            {isFinalizado ? (
+            {isFinalizado && !paso1Completo ? (
               <Stack spacing={2}>
                 <Alert severity="success" icon={<CheckCircle />} sx={{ borderRadius: 2 }}>
                   El proyecto concluyó exitosamente.
@@ -188,123 +189,125 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({ logic, proyecto 
               </Stack>
             ) :
 
-            /* CASO 2: PRE-LANZAMIENTO (sin suscripción activa) */
-            isPrelanzamiento && !paso1Completo ? (
-              <Stack spacing={2}>
-                {helpers.esMensual && <TokenValueProposition />}
-                <Alert severity="info" icon={<InfoOutlined />} sx={{ borderRadius: 2 }}>
-                  Este proyecto abre suscripciones el <strong>{fechaInicio.toLocaleDateString()}</strong>.
-                </Alert>
-                <Button variant="contained" disabled fullWidth size="large" startIcon={<CalendarMonth />} sx={{ fontWeight: 800, bgcolor: 'action.disabledBackground' }}>
-                  Apertura Próximamente
-                </Button>
-              </Stack>
-            ) :
+              /* CASO 2: PRE-LANZAMIENTO (sin suscripción activa) */
+              isPrelanzamiento && !paso1Completo ? (
+                <Stack spacing={2}>
+                  {helpers.esMensual && <TokenValueProposition />}
+                  <Alert severity="info" icon={<InfoOutlined />} sx={{ borderRadius: 2 }}>
+                    Este proyecto abre suscripciones el <strong>{fechaInicio.toLocaleDateString()}</strong>.
+                  </Alert>
+                  <Button variant="contained" disabled fullWidth size="large" startIcon={<CalendarMonth />} sx={{ fontWeight: 800, bgcolor: 'action.disabledBackground' }}>
+                    Apertura Próximamente
+                  </Button>
+                </Stack>
+              ) :
 
-            /* CASO 3: LLENO / AGOTADO (sin suscripción activa) */
-            isLleno && !paso1Completo ? (
-              <Stack spacing={2}>
-                <Alert severity="error" icon={<Lock />} sx={{ borderRadius: 2 }}>
-                  <strong>Cupos Agotados.</strong> Ya no se aceptan nuevas suscripciones en este proyecto.
-                </Alert>
-                <Button variant="contained" disabled fullWidth size="large" startIcon={<Lock />} sx={{ fontWeight: 800, bgcolor: 'action.disabledBackground' }}>
-                  Proyecto Lleno
-                </Button>
-              </Stack>
-            ) :
-
-            /* CASO 4: NO LOGUEADO */
-            !user ? (
-              <Stack spacing={2}>
-                {helpers.esMensual && <TokenValueProposition />}
-                <Button variant="contained" fullWidth size="large" onClick={logic.handleMainAction} startIcon={<Lock />} sx={{ fontWeight: 700 }}>
-                  {helpers.esMensual ? 'Identificate para Suscribirte' : 'Identificate para Invertir'}
-                </Button>
-              </Stack>
-            ) :
-
-            /* CASO 5: LOGUEADO Y CANCELADO ANTERIORMENTE */
-            logic.yaCancelado && !paso1Completo ? (
-              <Stack spacing={2}>
-                <Alert severity="warning" icon={<InfoOutlined />} sx={{ borderRadius: 2 }}>
-                  Cancelaste tu suscripción a este proyecto.
-                  {!isLleno && ' Podés volver a suscribirte si hay cupos disponibles.'}
-                </Alert>
-                {!isLleno && (
-                  <>
-                    {helpers.esMensual && <TokenValueProposition />}
-                    <Button
-                      variant="outlined"
-                      color="warning"
-                      fullWidth
-                      size="large"
-                      onClick={logic.handleMainAction}
-                      endIcon={<ArrowForward />}
-                      startIcon={<ReplayOutlined />}
-                      sx={{ fontWeight: 700 }}
-                    >
-                      Volver a Suscribirme
-                    </Button>
-                  </>
-                )}
-              </Stack>
-            ) :
-
-            /* CASO 6: LOGUEADO — FLUJO NORMAL */
-            (
-              <>
-                {/* 6A: Pendiente de Pago */}
-                {!paso1Completo && (
+                /* CASO 3: LLENO / AGOTADO (sin suscripción activa) */
+                isLleno && !paso1Completo ? (
                   <Stack spacing={2}>
-                    {helpers.esMensual && <TokenValueProposition />}
-                    <Button
-                      variant="contained" fullWidth size="large"
-                      onClick={logic.handleMainAction}
-                      disabled={logic.handleInversion.isPending}
-                      endIcon={!logic.handleInversion.isPending && <ArrowForward />}
-                      sx={{ fontWeight: 700 }}
-                    >
-                      {logic.handleInversion.isPending ? 'Procesando...' : helpers.esMensual ? 'Pagar Cuota de Ingreso' : 'Invertir en el Pack'}
-                    </Button>
-
-                    {helpers.esMensual && helpers.progreso && (
-                      <Box sx={{ p: 2, bgcolor: alpha(theme.palette.success.main, 0.08), borderRadius: 2 }}>
-                        <Stack direction="row" justifyContent="space-between" mb={1}>
-                          <Typography variant="caption" fontWeight={700} color="success.dark">Cupos Disponibles</Typography>
-                          <Typography variant="caption" fontWeight={800} color="success.main">{helpers.progreso.disponibles}</Typography>
-                        </Stack>
-                        <LinearProgress variant="determinate" value={helpers.progreso.porcentaje} color="success" sx={{ height: 6, borderRadius: 3 }} />
-                      </Box>
-                    )}
-                  </Stack>
-                )}
-
-                {/* 6B: Pagado, Pendiente de Firma */}
-                {paso1Completo && !paso2Completo && (
-                  <Stack spacing={2}>
-                    <Alert severity="warning" icon={<HistoryEdu />}>
-                      Pago confirmado. Firma tu contrato para asegurar tu lugar.
+                    <Alert severity="error" icon={<Lock />} sx={{ borderRadius: 2 }}>
+                      <strong>Cupos Agotados.</strong> Ya no se aceptan nuevas suscripciones en este proyecto.
                     </Alert>
-                    <Button variant="contained" color="warning" fullWidth size="large" onClick={logic.handleClickFirmar} sx={{ color: 'white', fontWeight: 700 }}>
-                      Firmar Contrato Digital
-                    </Button>
-                    <Button variant="text" size="small" onClick={logic.modales.contrato.open} sx={{ fontWeight: 600 }}>
-                      Ver borrador del contrato
+                    <Button variant="contained" disabled fullWidth size="large" startIcon={<Lock />} sx={{ fontWeight: 800, bgcolor: 'action.disabledBackground' }}>
+                      Proyecto Lleno
                     </Button>
                   </Stack>
-                )}
+                ) :
 
-                {/* 6C: Proceso Completado */}
-                {paso2Completo && (
-                  <Stack spacing={2}>
-                    <Alert severity="success" icon={<CheckCircle />}>¡Suscripción completada exitosamente!</Alert>
-                    <Button variant="outlined" color="success" fullWidth onClick={logic.handleVerContratoFirmado} startIcon={<Download />} sx={{ fontWeight: 700 }}>
-                      Descargar Contrato
-                    </Button>
-                  </Stack>
-                )}
-              </>
-            )}
+                  /* CASO 4: NO LOGUEADO */
+                  !user ? (
+                    <Stack spacing={2}>
+                      {helpers.esMensual && <TokenValueProposition />}
+                      <Button variant="contained" fullWidth size="large" onClick={logic.handleMainAction} startIcon={<Lock />} sx={{ fontWeight: 700 }}>
+                        {helpers.esMensual ? 'Identificate para Suscribirte' : 'Identificate para Invertir'}
+                      </Button>
+                    </Stack>
+                  ) :
+
+                    /* CASO 5: LOGUEADO Y CANCELADO ANTERIORMENTE */
+                    logic.yaCancelado && !paso1Completo ? (
+                      <Stack spacing={2}>
+                        <Alert severity="warning" icon={<InfoOutlined />} sx={{ borderRadius: 2 }}>
+                          Cancelaste tu suscripción a este proyecto.
+                          {!isLleno && ' Podés volver a suscribirte si hay cupos disponibles.'}
+                        </Alert>
+                        {!isLleno && (
+                          <>
+                            {helpers.esMensual && <TokenValueProposition />}
+                            <Button
+                              variant="outlined"
+                              color="warning"
+                              fullWidth
+                              size="large"
+                              onClick={logic.handleMainAction}
+                              endIcon={<ArrowForward />}
+                              startIcon={<ReplayOutlined />}
+                              sx={{ fontWeight: 700 }}
+                            >
+                              Volver a Suscribirme
+                            </Button>
+                          </>
+                        )}
+                      </Stack>
+                    ) :
+
+                      /* CASO 6: LOGUEADO — FLUJO NORMAL */
+                      (
+                        <>
+                          {/* 6A: Pendiente de Pago */}
+                          {!paso1Completo && (
+                            <Stack spacing={2}>
+                              {helpers.esMensual && <TokenValueProposition />}
+                              <Button
+                                variant="contained" fullWidth size="large"
+                                onClick={logic.handleMainAction}
+                                disabled={logic.handleInversion.isPending}
+                                endIcon={!logic.handleInversion.isPending && <ArrowForward />}
+                                sx={{ fontWeight: 700 }}
+                              >
+                                {logic.handleInversion.isPending ? 'Procesando...' : helpers.esMensual ? 'Pagar Cuota de Ingreso' : 'Invertir en el Pack'}
+                              </Button>
+
+                              {helpers.esMensual && helpers.progreso && (
+                                <Box sx={{ p: 2, bgcolor: alpha(theme.palette.success.main, 0.08), borderRadius: 2 }}>
+                                  <Stack direction="row" justifyContent="space-between" mb={1}>
+                                    <Typography variant="caption" fontWeight={700} color="success.dark">Cupos Disponibles</Typography>
+                                    <Typography variant="caption" fontWeight={800} color="success.main">{helpers.progreso.disponibles}</Typography>
+                                  </Stack>
+                                  <LinearProgress variant="determinate" value={helpers.progreso.porcentaje} color="success" sx={{ height: 6, borderRadius: 3 }} />
+                                </Box>
+                              )}
+                            </Stack>
+                          )}
+
+                          {/* 6B: Pagado, Pendiente de Firma */}
+                          {paso1Completo && !paso2Completo && (
+                            <Stack spacing={2}>
+                              <Alert severity="warning" icon={<HistoryEdu />}>
+                                Pago confirmado. Firma tu contrato para asegurar tu lugar.
+                              </Alert>
+                              <Button variant="contained" color="warning" fullWidth size="large" onClick={logic.handleClickFirmar} sx={{ color: 'white', fontWeight: 700 }}>
+                                Firmar Contrato Digital
+                              </Button>
+                              <Button variant="text" size="small" onClick={logic.modales.contrato.open} sx={{ fontWeight: 600 }}>
+                                Ver borrador del contrato
+                              </Button>
+                            </Stack>
+                          )}
+
+                          {/* 6C: Proceso Completado */}
+                          {paso2Completo && (
+                            <Stack spacing={2}>
+                              <Alert severity="success" icon={<CheckCircle />}>
+                                {helpers.esMensual ? '¡Suscripción completada exitosamente!' : '¡Inversión completada exitosamente!'}
+                              </Alert>
+                              <Button variant="outlined" color="success" fullWidth onClick={logic.handleVerContratoFirmado} startIcon={<Download />} sx={{ fontWeight: 700 }}>
+                                Descargar Contrato
+                              </Button>
+                            </Stack>
+                          )}
+                        </>
+                      )}
           </Box>
 
           <Divider />

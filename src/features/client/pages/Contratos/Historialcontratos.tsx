@@ -23,12 +23,12 @@ import {
   alpha, useTheme
 } from '@mui/material';
 // 👈 Eliminamos format y es (date-fns) para usar el estándar nativo con env
-import React, { useMemo } from 'react';
-import { VerContratoFirmadoModal } from '../Proyectos/modals/VerContratoFirmadoModal';
-import type { ContratoFirmadoDto } from '@/core/types/contrato-firmado.dto';
-import { useHistorialContratos } from '../../hooks/useHistorialContratos';
-import { DataTable, PageContainer, PageHeader, QueryHandler, StatCard, type DataTableColumn } from '@/shared';
 import { env } from '@/core/config/env'; // 👈 1. Importamos env
+import type { ContratoFirmadoDto } from '@/core/types/contrato-firmado.dto';
+import { DataTable, PageContainer, PageHeader, QueryHandler, StatCard, type DataTableColumn } from '@/shared';
+import React, { useMemo } from 'react';
+import { useHistorialContratos } from '../../hooks/useHistorialContratos';
+import { VerContratoFirmadoModal } from '../Proyectos/modals/VerContratoFirmadoModal';
 
 const HistorialContratos: React.FC = () => {
   const theme = useTheme();
@@ -91,13 +91,13 @@ const HistorialContratos: React.FC = () => {
         <Box>
           <Typography variant="body2" fontWeight={600}>
             {/* 👈 2. Aplicamos env.defaultLocale para consistencia regional */}
-            {row.fecha_firma 
-              ? new Date(row.fecha_firma).toLocaleDateString(env.defaultLocale, { day: '2-digit', month: 'short', year: 'numeric' }) 
+            {row.fecha_firma
+              ? new Date(row.fecha_firma).toLocaleDateString(env.defaultLocale, { day: '2-digit', month: 'short', year: 'numeric' })
               : '-'}
           </Typography>
           <Typography variant="caption" color="text.secondary">
-            {row.fecha_firma 
-              ? new Date(row.fecha_firma).toLocaleTimeString(env.defaultLocale, { hour: '2-digit', minute: '2-digit' }) + ' hs' 
+            {row.fecha_firma
+              ? new Date(row.fecha_firma).toLocaleTimeString(env.defaultLocale, { hour: '2-digit', minute: '2-digit' }) + ' hs'
               : ''}
           </Typography>
         </Box>

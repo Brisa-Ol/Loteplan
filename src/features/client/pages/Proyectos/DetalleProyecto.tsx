@@ -1,5 +1,3 @@
-// src/features/client/pages/Proyectos/DetalleProyecto.tsx
-
 import {
   ArrowBack, AutoGraph, CalendarMonth, CheckCircle,
   Gavel, GppGood,

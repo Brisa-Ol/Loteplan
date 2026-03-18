@@ -87,22 +87,15 @@ export interface UsuarioDto extends BaseDTO {
   nombre_usuario: string;
   email: string;
   rol: 'cliente' | 'admin';
-
-  // Estados de Seguridad
-  /** Indica si validó su email. */
   confirmado_email: boolean;
   /** Indica si tiene la autenticación de dos pasos activada. */
   is_2fa_enabled: boolean;
   /** Si es false, el usuario está "baneado" o eliminado lógicamente. */
   activo: boolean;
-
-  // Datos Personales
   nombre: string;
   apellido: string;
   dni: string;
   numero_telefono: string;
-
-  // Metadatos (Sequelize)
   fecha_registro?: string;
   createdAt?: string;
   updatedAt?: string;
