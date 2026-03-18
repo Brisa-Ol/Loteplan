@@ -10,6 +10,7 @@ import {
   CloudUpload,
   Description,
   Draw,
+  HistoryEdu,
   Info,
   Lock,
   Payment,
@@ -102,6 +103,23 @@ interface Location {
 }
 
 // ===================================================
+// UTILIDAD: detectar pago aprobado en cualquier
+// estructura de respuesta de la API.
+//
+// Suscripciones: { transaccion: { estado: 'pagado' } }
+// Inversiones:   { inversion: { estado: 'pagado' } }
+// Respuesta plana: { estado: 'pagado' }
+// ===================================================
+function isPaymentApproved(data: any): boolean {
+  const estado =
+    data?.transaccion?.estado   // suscripciones / pagos mensuales
+    ?? data?.inversion?.estado  // inversiones directas
+    ?? data?.estado             // respuesta plana
+    ?? '';
+  return estado === 'pagado' || estado === 'approved';
+}
+
+// ===================================================
 // SIGNATURE CANVAS COMPONENT
 // ===================================================
 const SignatureCanvas = React.memo<{
@@ -118,11 +136,9 @@ const SignatureCanvas = React.memo<{
   const setupCanvas = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas?.parentElement) return;
-
     const parent = canvas.parentElement;
     canvas.width = parent.clientWidth;
     canvas.height = parent.clientHeight;
-
     const context = canvas.getContext('2d');
     if (context) {
       context.strokeStyle = theme.palette.text.primary;
@@ -130,7 +146,6 @@ const SignatureCanvas = React.memo<{
       context.lineCap = 'round';
       context.lineJoin = 'round';
       setCtx(context);
-
       if (initialSignature && !hasSignature) {
         const img = new Image();
         img.onload = () => {
@@ -146,25 +161,17 @@ const SignatureCanvas = React.memo<{
   useEffect(() => {
     const timeoutId = setTimeout(setupCanvas, 100);
     window.addEventListener('resize', setupCanvas);
-    return () => {
-      window.removeEventListener('resize', setupCanvas);
-      clearTimeout(timeoutId);
-    };
+    return () => { window.removeEventListener('resize', setupCanvas); clearTimeout(timeoutId); };
   }, [setupCanvas]);
 
   const getPointerPosition = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     const canvas = canvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
-
     const rect = canvas.getBoundingClientRect();
     const isTouchEvent = 'touches' in e;
     const clientX = isTouchEvent ? e.touches[0].clientX : e.clientX;
     const clientY = isTouchEvent ? e.touches[0].clientY : e.clientY;
-
-    return {
-      x: clientX - rect.left,
-      y: clientY - rect.top
-    };
+    return { x: clientX - rect.left, y: clientY - rect.top };
   }, []);
 
   const startDrawing = useCallback((e: React.MouseEvent | React.TouchEvent) => {
@@ -185,92 +192,50 @@ const SignatureCanvas = React.memo<{
   }, [isDrawing, ctx, getPointerPosition]);
 
   const stopDrawing = useCallback(() => {
-    if (isDrawing && ctx) {
-      ctx.closePath();
-      setIsDrawing(false);
-    }
+    if (isDrawing && ctx) { ctx.closePath(); setIsDrawing(false); }
   }, [isDrawing, ctx]);
 
   const handleClear = useCallback(() => {
     const canvas = canvasRef.current;
-    if (ctx && canvas) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      setHasSignature(false);
-      onClear();
-    }
+    if (ctx && canvas) { ctx.clearRect(0, 0, canvas.width, canvas.height); setHasSignature(false); onClear(); }
   }, [ctx, onClear]);
 
   const handleSave = useCallback(() => {
     const canvas = canvasRef.current;
-    if (canvas && hasSignature) {
-      const dataUrl = canvas.toDataURL('image/png');
-      onSave(dataUrl);
-    }
+    if (canvas && hasSignature) onSave(canvas.toDataURL('image/png'));
   }, [hasSignature, onSave]);
 
   return (
     <Box>
-      <Paper
-        variant="outlined"
-        sx={{
-          mb: 2,
-          overflow: 'hidden',
-          touchAction: 'none',
-          bgcolor: 'background.default',
-          border: `2px dashed ${theme.palette.divider}`,
-          borderRadius: 2,
-          position: 'relative',
-          height: { xs: 180, sm: 220 },
-          transition: 'all 0.3s ease',
-          '&:hover': { borderColor: 'primary.main' }
-        }}
-      >
+      <Paper variant="outlined" sx={{
+        mb: 2, overflow: 'hidden', touchAction: 'none',
+        bgcolor: 'background.default',
+        border: `2px dashed ${theme.palette.divider}`,
+        borderRadius: 2, position: 'relative',
+        height: { xs: 180, sm: 220 },
+        transition: 'all 0.3s ease',
+        '&:hover': { borderColor: 'primary.main' }
+      }}>
         {!hasSignature && !isDrawing && (
-          <Box
-            position="absolute"
-            top="50%"
-            left="50%"
-            sx={{
-              transform: 'translate(-50%, -50%)',
-              pointerEvents: 'none',
-              textAlign: 'center'
-            }}
-          >
+          <Box position="absolute" top="50%" left="50%"
+            sx={{ transform: 'translate(-50%, -50%)', pointerEvents: 'none', textAlign: 'center' }}>
             <Draw sx={{ fontSize: 40, color: 'action.disabled', mb: 1 }} />
-            <Typography variant="caption" color="text.disabled">
-              Firma aquí dentro
-            </Typography>
+            <Typography variant="caption" color="text.disabled">Firma aquí dentro</Typography>
           </Box>
         )}
-        <canvas
-          ref={canvasRef}
-          onMouseDown={startDrawing}
-          onMouseMove={draw}
-          onMouseUp={stopDrawing}
-          onMouseLeave={stopDrawing}
-          onTouchStart={startDrawing}
-          onTouchMove={draw}
-          onTouchEnd={stopDrawing}
-          style={{
-            width: '100%',
-            height: '100%',
-            cursor: 'crosshair',
-            display: 'block'
-          }}
+        <canvas ref={canvasRef}
+          onMouseDown={startDrawing} onMouseMove={draw} onMouseUp={stopDrawing} onMouseLeave={stopDrawing}
+          onTouchStart={startDrawing} onTouchMove={draw} onTouchEnd={stopDrawing}
+          style={{ width: '100%', height: '100%', cursor: 'crosshair', display: 'block' }}
         />
       </Paper>
       <Stack direction="row" spacing={2} justifyContent="center">
-        <Button size="small" onClick={handleClear} startIcon={<Clear />} variant="outlined" color="error">
-          Borrar
-        </Button>
-        <Button size="small" variant="contained" onClick={handleSave} startIcon={<Save />} disabled={!hasSignature}>
-          Usar Firma
-        </Button>
+        <Button size="small" onClick={handleClear} startIcon={<Clear />} variant="outlined" color="error">Borrar</Button>
+        <Button size="small" variant="contained" onClick={handleSave} startIcon={<Save />} disabled={!hasSignature}>Usar Firma</Button>
       </Stack>
     </Box>
   );
 });
-
 SignatureCanvas.displayName = 'SignatureCanvas';
 
 // ===================================================
@@ -291,26 +256,18 @@ const StepConfirmacion = React.memo<{
       <Alert severity="info" variant="outlined" sx={{ borderRadius: 2 }}>
         Revisa los detalles de tu {isSuscripcion ? 'suscripción' : 'inversión'} antes de iniciar el pago.
       </Alert>
-
       <Paper variant="outlined" sx={{ overflow: 'hidden', borderRadius: 2 }}>
-        {/* Cabecera del Resumen */}
         <Box sx={{ bgcolor: 'primary.main', color: 'primary.contrastText', p: 2 }}>
-          <Typography variant="h6" fontWeight={700}>
-            {proyecto.nombre_proyecto}
-          </Typography>
+          <Typography variant="h6" fontWeight={700}>{proyecto.nombre_proyecto}</Typography>
           <Typography variant="body2" sx={{ opacity: 0.9 }}>
             {isSuscripcion ? 'Plan de Ahorro Mensual' : 'Inversión Directa (Pago Único)'}
           </Typography>
         </Box>
-
         <Stack spacing={0}>
-          {/* Modalidad y Plazo */}
           <Box p={2} borderBottom={`1px solid ${theme.palette.divider}`}>
             <Stack direction="row" justifyContent="space-between" mb={isSuscripcion && proyecto.plazo_inversion ? 1 : 0}>
               <Typography color="text.secondary">Modalidad</Typography>
-              <Typography fontWeight={600}>
-                {isSuscripcion ? 'Suscripción Mensual' : 'Aporte Único'}
-              </Typography>
+              <Typography fontWeight={600}>{isSuscripcion ? 'Suscripción Mensual' : 'Aporte Único'}</Typography>
             </Stack>
             {isSuscripcion && proyecto.plazo_inversion && (
               <Stack direction="row" justifyContent="space-between">
@@ -319,15 +276,9 @@ const StepConfirmacion = React.memo<{
               </Stack>
             )}
           </Box>
-
-          {/* ✨ DESGLOSE MATEMÁTICO ESTILO TICKET ✨ */}
           {isSuscripcion && cuotaActiva && (
             <Box p={2} bgcolor={alpha(theme.palette.primary.main, 0.02)}>
-
-              {/* BLOQUE 1: VALOR MÓVIL */}
-              <Typography variant="overline" color="primary.main" fontWeight={800} sx={{ display: 'block', mb: 1, lineHeight: 1 }}>
-                1. Cálculo del Valor Móvil
-              </Typography>
+              <Typography variant="overline" color="primary.main" fontWeight={800} sx={{ display: 'block', mb: 1, lineHeight: 1 }}>1. Cálculo del Valor Móvil</Typography>
               <Stack spacing={0.5} mb={3}>
                 <Stack direction="row" justifyContent="space-between">
                   <Typography variant="body2" color="text.secondary">Precio {cuotaActiva.nombre_cemento_cemento}</Typography>
@@ -344,11 +295,7 @@ const StepConfirmacion = React.memo<{
                   </Stack>
                 </Box>
               </Stack>
-
-              {/* BLOQUE 2: FINANCIACIÓN */}
-              <Typography variant="overline" color="primary.main" fontWeight={800} sx={{ display: 'block', mb: 1, lineHeight: 1 }}>
-                2. Base a Financiar
-              </Typography>
+              <Typography variant="overline" color="primary.main" fontWeight={800} sx={{ display: 'block', mb: 1, lineHeight: 1 }}>2. Base a Financiar</Typography>
               <Stack spacing={0.5} mb={3}>
                 <Stack direction="row" justifyContent="space-between">
                   <Typography variant="body2" color="text.secondary">Valor Móvil Total</Typography>
@@ -365,47 +312,29 @@ const StepConfirmacion = React.memo<{
                   </Stack>
                 </Box>
               </Stack>
-
-              {/* BLOQUE 3: COMPOSICIÓN DE LA CUOTA */}
-              {/* BLOQUE 3: COMPOSICIÓN DE LA CUOTA */}
-              <Typography variant="overline" color="primary.main" fontWeight={800} sx={{ display: 'block', mb: 1, lineHeight: 1 }}>
-                3. Composición de tu Cuota
-              </Typography>
-
+              <Typography variant="overline" color="primary.main" fontWeight={800} sx={{ display: 'block', mb: 1, lineHeight: 1 }}>3. Composición de tu Cuota</Typography>
               <Stack spacing={1} sx={{ p: 1.5, bgcolor: 'background.paper', borderRadius: 1, border: `1px solid ${theme.palette.divider}` }}>
-
                 <Stack direction="row" justifyContent="space-between" alignItems="center">
                   <Box>
                     <Typography variant="body2" fontWeight={600}>Cuota Pura Mínima</Typography>
-                    {/* 👇 AQUÍ MOSTRAMOS LA CUENTA EXACTA (ej: $1.40 ÷ 12 meses) 👇 */}
-                    <Typography variant="caption" color="text.disabled">
-                      {formatCurrency(Number(cuotaActiva.total_del_plan))} ÷ {cuotaActiva.total_cuotas_proyecto} meses
-                    </Typography>
+                    <Typography variant="caption" color="text.disabled">{formatCurrency(Number(cuotaActiva.total_del_plan))} ÷ {cuotaActiva.total_cuotas_proyecto} meses</Typography>
                   </Box>
                   <Typography variant="body2" fontWeight={600}>{formatCurrency(Number(cuotaActiva.valor_mensual))}</Typography>
                 </Stack>
-
                 <Stack direction="row" justifyContent="space-between" alignItems="center">
                   <Box>
                     <Typography variant="body2" color="text.secondary">Gastos Administrativos</Typography>
-                    <Typography variant="caption" color="text.disabled">
-                      ({Number(cuotaActiva.porcentaje_administrativo) * 100}% sobre Cuota Pura)
-                    </Typography>
+                    <Typography variant="caption" color="text.disabled">({Number(cuotaActiva.porcentaje_administrativo) * 100}% sobre Cuota Pura)</Typography>
                   </Box>
                   <Typography variant="body2" color="text.secondary">+ {formatCurrency(Number(cuotaActiva.carga_administrativa))}</Typography>
                 </Stack>
-
                 <Stack direction="row" justifyContent="space-between" alignItems="center">
                   <Box>
                     <Typography variant="body2" color="text.secondary">IVA</Typography>
-                    <Typography variant="caption" color="text.disabled">
-                      ({Number(cuotaActiva.porcentaje_iva) * 100}% sobre Gastos)
-                    </Typography>
+                    <Typography variant="caption" color="text.disabled">({Number(cuotaActiva.porcentaje_iva) * 100}% sobre Gastos)</Typography>
                   </Box>
                   <Typography variant="body2" color="text.secondary">+ {formatCurrency(Number(cuotaActiva.iva_carga_administrativa))}</Typography>
                 </Stack>
-
-                {/* Línea divisoria punteada antes del total */}
                 <Box borderTop={`2px dashed ${theme.palette.divider}`} pt={1} mt={1}>
                   <Stack direction="row" justifyContent="space-between" alignItems="center">
                     <Typography variant="subtitle2" fontWeight={800} color="text.primary">Valor Final de la Cuota</Typography>
@@ -413,11 +342,8 @@ const StepConfirmacion = React.memo<{
                   </Stack>
                 </Box>
               </Stack>
-
             </Box>
           )}
-
-          {/* Gran Total a Pagar Hoy */}
           <Box p={3} display="flex" justifyContent="space-between" alignItems="center" bgcolor={alpha(theme.palette.success.main, 0.1)}>
             <Box>
               <Typography fontWeight={800} color="text.primary" variant="subtitle1">
@@ -427,54 +353,26 @@ const StepConfirmacion = React.memo<{
                 {isSuscripcion ? 'A pagar hoy para activar el plan' : 'A pagar hoy'}
               </Typography>
             </Box>
-            <Typography variant="h4" fontWeight={900} color="success.main">
-              {montoTotalStr}
-            </Typography>
+            <Typography variant="h4" fontWeight={900} color="success.main">{montoTotalStr}</Typography>
           </Box>
         </Stack>
       </Paper>
-
-      {/* Beneficio de la Suscripción */}
       {isSuscripcion && (
         <Alert severity="success" icon={<Token />} sx={{ borderRadius: 2 }}>
-          <Typography variant="body2" fontWeight={700} mb={0.5}>
-            ¡Beneficio Exclusivo!
-          </Typography>
-          <Typography variant="caption">
-            Al abonar esta primera cuota recibes <strong>1 Token de Subasta</strong> para participar por la adjudicación de lotes.
-          </Typography>
+          <Typography variant="body2" fontWeight={700} mb={0.5}>¡Beneficio Exclusivo!</Typography>
+          <Typography variant="caption">Al abonar esta primera cuota recibes <strong>1 Token de Subasta</strong> para participar por la adjudicación de lotes.</Typography>
         </Alert>
       )}
     </Stack>
   );
 });
-
 StepConfirmacion.displayName = 'StepConfirmacion';
 
 const StepContrato = React.memo<{ plantilla: any; isLoading: boolean; }>(({ plantilla, isLoading }) => {
-  if (isLoading) return <CircularProgress />;
-  //if (!plantilla) return <Typography>No hay contrato disponible.</Typography>;
+  if (isLoading || !plantilla) return <CircularProgress />;
   return (
-    <Box sx={{
-      display: 'flex',          // ✅ CRÍTICO: Activa flexbox interno
-      flexDirection: 'column',  // ✅ CRÍTICO: Apila en columna
-      flex: 1,                  // ✅ CRÍTICO: Le dice al Box que llene el modal
-      minHeight: { xs: '70vh', md: '75vh' }, // Altura responsiva
-      bgcolor: 'grey.100',
-      borderRadius: 2,
-      border: '1px solid #e0e0e0',
-      overflow: 'hidden'
-    }}>
-      <iframe
-        src={ImagenService.resolveImageUrl(plantilla.url_archivo)}
-        title="Contrato"
-        style={{
-          width: '100%',
-          height: '100%',
-          border: 'none',
-          flex: 1                 // ✅ CRÍTICO: Obliga al iframe a estirarse
-        }}
-      />
+    <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: { xs: '70vh', md: '75vh' }, bgcolor: 'grey.100', borderRadius: 2, border: '1px solid #e0e0e0', overflow: 'hidden' }}>
+      <iframe src={ImagenService.resolveImageUrl(plantilla.url_archivo)} title="Contrato" style={{ width: '100%', height: '100%', border: 'none', flex: 1 }} />
     </Box>
   );
 });
@@ -488,64 +386,70 @@ const StepSeguridad = React.memo<{
   error: any;
 }>(({ codigo2FA, setCodigo2FA, location, isProcessing, error }) => (
   <Stack spacing={4} alignItems="center" py={2} maxWidth="sm" mx="auto">
-    <Avatar sx={{ bgcolor: 'primary.main', width: 56, height: 56 }}>
-      <Lock />
-    </Avatar>
+    <Avatar sx={{ bgcolor: 'primary.main', width: 56, height: 56 }}><Lock /></Avatar>
     <Box textAlign="center">
       <Typography variant="h5" fontWeight={700}>Verificación 2FA</Typography>
-      <Typography variant="body2" color="text.secondary">
-        Ingresa el código de Google Authenticator.
-      </Typography>
+      <Typography variant="body2" color="text.secondary">Ingresa el código de Google Authenticator.</Typography>
     </Box>
     {!location && <Alert severity="warning" sx={{ width: '100%' }}>Acceso a Ubicación Requerido</Alert>}
     <TextField
-      autoFocus
-      value={codigo2FA}
+      autoFocus value={codigo2FA}
       onChange={(e) => setCodigo2FA(e.target.value.replace(/\D/g, '').slice(0, 6))}
-      placeholder="000 000"
-      disabled={isProcessing || !location}
-      error={!!error}
-      helperText={error}
-      fullWidth
-      inputProps={{ maxLength: 6 }}
-      sx={{ maxWidth: 300 }}
+      placeholder="000 000" disabled={isProcessing || !location}
+      error={!!error} helperText={error} fullWidth inputProps={{ maxLength: 6 }} sx={{ maxWidth: 300 }}
     />
   </Stack>
 ));
 StepSeguridad.displayName = 'StepSeguridad';
 
-
-
-const StepPago = React.memo<{ paymentStatus: string; onRetry: () => void }>(
-  ({ paymentStatus, onRetry }) => (
-    <Stack alignItems="center" justifyContent="center" height="100%" minHeight="40vh" spacing={4}>
-      {paymentStatus === "success" && (
-        <CheckCircle sx={{ fontSize: 60, color: 'success.main' }} />
-      )}
-
-      {paymentStatus === "processing" && (
-        <CircularProgress size={80} />
-      )}
-
-      {paymentStatus === "failed" && (
-        <>
-          <Alert severity="error">
-            El pago fue rechazado. Intenta nuevamente.
-          </Alert>
-
-        </>
-      )}
-
-      <Typography variant="h5" fontWeight={700}>
-        {paymentStatus === "success" && "¡Pago Acreditado!"}
-        {paymentStatus === "processing" && "Procesando pago..."}
-        {paymentStatus === "failed" && "Pago rechazado"}
-      </Typography>
-      {paymentStatus === "failed" && <Button className={styles.retryButton} onClick={onRetry}>Intentar Nuevamente</Button>}
-    </Stack>
-  )
-);
+const StepPago = React.memo<{ paymentStatus: string; onRetry: () => void }>(({ paymentStatus, onRetry }) => (
+  <Stack alignItems="center" justifyContent="center" height="100%" minHeight="40vh" spacing={4}>
+    {paymentStatus === "success" && <CheckCircle sx={{ fontSize: 60, color: 'success.main' }} />}
+    {paymentStatus === "processing" && <CircularProgress size={80} />}
+    {paymentStatus === "failed" && <Alert severity="error">El pago fue rechazado. Intenta nuevamente.</Alert>}
+    <Typography variant="h5" fontWeight={700}>
+      {paymentStatus === "success" && "¡Pago Acreditado!"}
+      {paymentStatus === "processing" && "Procesando pago..."}
+      {paymentStatus === "failed" && "Pago rechazado"}
+    </Typography>
+    {paymentStatus === "failed" && <Button className={styles.retryButton} onClick={onRetry}>Intentar Nuevamente</Button>}
+  </Stack>
+));
 StepPago.displayName = 'StepPago';
+
+// ===================================================
+// BANNER PAGO EXITOSO — visible al inicio del paso 4
+// Funciona igual para inversiones y suscripciones
+// ===================================================
+const PagoExitosoBanner: React.FC<{ tipo: 'suscripcion' | 'inversion' }> = ({ tipo }) => {
+  const theme = useTheme();
+  return (
+    <Box sx={{
+      p: 2.5, borderRadius: 2,
+      bgcolor: alpha(theme.palette.success.main, 0.08),
+      border: `1px solid ${alpha(theme.palette.success.main, 0.3)}`,
+      display: 'flex', alignItems: 'center', gap: 2,
+    }}>
+      <Box sx={{
+        bgcolor: 'success.main', borderRadius: '50%',
+        width: 48, height: 48, minWidth: 48,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        boxShadow: `0 4px 14px ${alpha(theme.palette.success.main, 0.45)}`,
+      }}>
+        <CheckCircle sx={{ color: 'white', fontSize: 28 }} />
+      </Box>
+      <Box>
+        <Typography variant="subtitle2" fontWeight={800} color="success.dark">
+          ¡Pago acreditado exitosamente!
+        </Typography>
+        <Typography variant="caption" color="text.secondary">
+          Tu {tipo === 'suscripcion' ? 'suscripción' : 'inversión'} fue procesada.
+          Completá la firma del contrato para finalizar.
+        </Typography>
+      </Box>
+    </Box>
+  );
+};
 
 // ===================================================
 // MAIN COMPONENT
@@ -563,14 +467,14 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
   const { showSuccess, showInfo, showError } = useSnackbar();
   const formatCurrency = useCurrencyFormatter({
     currency: proyecto.moneda === 'USD' ? 'USD' : 'ARS',
-    minimumFractionDigits: 2, // 👈 Agrega esto
-    maximumFractionDigits: 2  // 👈 Agrega esto
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
   });
 
   // STATE
   const [activeStep, setActiveStep] = useState(0);
   const [codigo2FA, setCodigo2FA] = useState('');
-  const [codigo2FAFirma, setCodigo2FAFirma] = useState(''); // ✅ NUEVO estado para la firma
+  const [codigo2FAFirma, setCodigo2FAFirma] = useState('');
   const [location, setLocation] = useState<Location | null>(null);
   const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
   const [signaturePosition, setSignaturePosition] = useState<SignaturePosition | null>(null);
@@ -579,49 +483,38 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
 
   const hasAttemptedRecovery = useRef(false);
 
-  // PLANTILLA
+  // QUERIES
   const { data: plantillas, isLoading: loadingPlantilla } = useQuery({
     queryKey: ['plantillaContrato', proyecto.id],
-    queryFn: async () => {
-      const response = await ContratoPlantillaService.findByProject(proyecto.id);
-      return response.data;
-    },
+    queryFn: async () => (await ContratoPlantillaService.findByProject(proyecto.id)).data,
     enabled: open,
-    staleTime: env.queryStaleTime,   // ✅ antes: 5 * 60 * 1000
+    staleTime: env.queryStaleTime,
   });
 
   const plantillaActual = useMemo(
     () => (plantillas && plantillas.length > 0 ? plantillas[0] : null),
     [plantillas]
   );
-  // 2. ✨ AQUÍ FALTA DEFINIR cuotaActiva ✨ (Copia y pega esto)
+
   const { data: cuotaActiva, isLoading: loadingCuota } = useQuery({
     queryKey: ['cuotaActiva', proyecto.id],
-    queryFn: async () => {
-      const response = await CuotaMensualService.getLastByProjectId(proyecto.id);
-      return response.data.cuota;
-    },
+    queryFn: async () => (await CuotaMensualService.getLastByProjectId(proyecto.id)).data.cuota,
     enabled: open && tipo === 'suscripcion',
-    staleTime: env.queryStaleTime,   // ✅ antes: 5 * 60 * 1000
+    staleTime: env.queryStaleTime,
   });
 
   const montoAMostrar = useMemo(() => {
-    if (tipo === 'inversion') {
-      return formatCurrency(Number(proyecto.monto_inversion || 0));
-    }
-    if (loadingCuota) return "Calculando...";
-
+    if (tipo === 'inversion') return formatCurrency(Number(proyecto.monto_inversion || 0));
+    if (loadingCuota) return 'Calculando...';
     const valor = cuotaActiva?.valor_mensual_final || proyecto.valor_cuota_referencia || 0;
-
-    // 👇 Retorna el valor en crudo (sin formatear) agregando un "$" en texto
     return `$ ${valor}`;
   }, [formatCurrency, proyecto, tipo, cuotaActiva, loadingCuota]);
+
   // CHECKOUT WIZARD HOOK
   const {
     isProcessing,
     paymentStatus,
     isVerificandoPago,
-    // pagoExitoso,
     transaccionId,
     error2FA,
     handleConfirmInvestment,
@@ -629,7 +522,6 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
     handleSignContract,
     iniciarVerificacionPago,
     setPaymentStatus,
-    //setPagoExitoso,
     setTransaccionId,
   } = useCheckoutWizard({
     proyecto,
@@ -638,97 +530,121 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
     onSuccess: () => {
       showSuccess('¡Proceso completado exitosamente!');
       CheckoutStateManager.clearState();
-      setTimeout(() => {
-        handleClose();
-        window.location.reload();
-      }, 2000);
+      setTimeout(() => { handleClose(); window.location.reload(); }, 2000);
     }
   });
 
-
+  // IDs efectivos: combinan el estado interno del hook con los props del padre.
+  // Para inversiones usa effectiveInversionId, para suscripciones usa effectivePagoId.
   const effectiveInversionId = transaccionId || initialInversionId;
   const effectivePagoId = transaccionId || initialPagoId;
 
   // PERSISTENCIA
   const persistState = useCallback(() => {
-    const state: CheckoutPersistedState = {
+    CheckoutStateManager.saveState({
       projectId: proyecto.id,
       tipo,
       activeStep,
       transactionId: transaccionId,
-      paymentSuccess: paymentStatus === "success",
+      paymentSuccess: paymentStatus === 'success',
       signatureDataUrl,
       location,
       timestamp: Date.now()
-    };
-    CheckoutStateManager.saveState(state);
+    });
   }, [proyecto.id, tipo, paymentStatus, activeStep, transaccionId, signatureDataUrl, location]);
 
   useEffect(() => {
-    if (open && (paymentStatus === "success" || activeStep >= 3 || transaccionId)) {
+    if (open && (paymentStatus === 'success' || activeStep >= 3 || transaccionId)) {
       persistState();
     }
   }, [open, activeStep, transaccionId, persistState]);
 
-
-
-  // RECUPERACIÓN DE ESTADO
+  // ===================================================
+  // RECUPERACIÓN DE ESTADO POST-PAGO
+  //
+  // Misma lógica para suscripciones e inversiones:
+  //
+  //  1. Estado guardado con paymentSuccess=true
+  //     → abrir directo en paso 4 (firma)
+  //
+  //  2. Estado guardado a mitad sin pago confirmado
+  //     → mostrar prompt de recuperación
+  //
+  //  3. Sin estado guardado pero con ID en props
+  //     (el usuario volvió desde MercadoPago)
+  //     → consultar API y, si está pagado, ir al paso 4
+  //
+  //  isPaymentApproved() cubre la estructura de respuesta
+  //  tanto de inversiones como de suscripciones.
+  // ===================================================
   useEffect(() => {
     if (!open || hasAttemptedRecovery.current) return;
 
     const savedState = CheckoutStateManager.loadState(proyecto.id);
 
-    if (savedState) {
-      if (savedState.paymentSuccess && savedState.transactionId) {
-  setTransaccionId(savedState.transactionId);
-  setPaymentStatus("success");
-  setLocation(savedState.location);
-  setCodigo2FAFirma(''); // ✅ limpiar código viejo
-  setActiveStep(4);
-  showInfo('Pago confirmado. Firma tu contrato para finalizar.');
-        hasAttemptedRecovery.current = true;
-        return;
-      }
-
-      if (savedState.activeStep >= 3 && savedState.transactionId) {
-        setRecoveredState(savedState);
-        setShowRecoveryPrompt(true);
-        hasAttemptedRecovery.current = true;
-        return;
-      }
+    // CASO 1: pago ya confirmado en sesión anterior
+    if (savedState?.paymentSuccess && savedState.transactionId) {
+      setTransaccionId(savedState.transactionId);
+      setPaymentStatus('success');
+      setLocation(savedState.location);
+      setCodigo2FAFirma('');
+      setActiveStep(4);
+      showInfo(
+        tipo === 'suscripcion'
+          ? '¡Pago confirmado! Firmá el contrato para activar tu suscripción.'
+          : '¡Pago confirmado! Firmá el contrato para finalizar tu inversión.'
+      );
+      hasAttemptedRecovery.current = true;
+      return;
     }
 
-    if (!savedState && (effectiveInversionId || effectivePagoId)) {
-      const txId = effectiveInversionId || effectivePagoId;
-      MercadoPagoService.getPaymentStatus(txId!, true)
+    // CASO 2: proceso interrumpido sin pago confirmado
+   if (savedState && savedState.activeStep >= 3 && savedState.transactionId) {
+      setRecoveredState(savedState);
+      setShowRecoveryPrompt(true);
+      hasAttemptedRecovery.current = true;
+      return;
+    }
+
+    // CASO 3: sin estado local pero llega ID por props
+    // Aplica tanto para inversiones (effectiveInversionId) como suscripciones (effectivePagoId)
+    const txId = effectiveInversionId || effectivePagoId;
+    if (!savedState && txId) {
+      MercadoPagoService.getPaymentStatus(txId, true)
         .then(res => {
-          const estado = (res.data?.transaccion?.estado || (res.data as any)?.estado) as any;
-          if (estado === 'pagado' || estado === 'approved') {
-            setTransaccionId(txId!);
-            //setPagoExitoso(true);
-            setPaymentStatus("success")
-            CheckoutStateManager.markPaymentSuccess(proyecto.id, txId!);
-            setActiveStep(4); // ✅ Ir directo a FIRMA (paso 4)
-            showInfo('Pago confirmado. Firma tu contrato para finalizar.');
+          if (isPaymentApproved(res.data)) {
+            setTransaccionId(txId);
+            setPaymentStatus('success');
+            CheckoutStateManager.markPaymentSuccess(proyecto.id, txId);
+            setActiveStep(4);
+            showInfo(
+              tipo === 'suscripcion'
+                ? '¡Pago confirmado! Firmá el contrato para activar tu suscripción.'
+                : '¡Pago confirmado! Firmá el contrato para finalizar tu inversión.'
+            );
           }
         })
         .catch(err => console.warn('⚠️ Error verificando pago:', err));
     }
 
     hasAttemptedRecovery.current = true;
-  }, [open, proyecto.id, effectiveInversionId, effectivePagoId, showInfo, setTransaccionId]);
+  }, [open, proyecto.id, tipo, effectiveInversionId, effectivePagoId, showInfo, setTransaccionId, setPaymentStatus]);
 
   const handleRecoverState = useCallback(() => {
     if (!recoveredState) return;
     setTransaccionId(recoveredState.transactionId);
-    setPaymentStatus(recoveredState.paymentSuccess ? "success" : "processing");
+    setPaymentStatus(recoveredState.paymentSuccess ? 'success' : 'processing');
     setSignatureDataUrl(recoveredState.signatureDataUrl);
     setLocation(recoveredState.location);
 
     if (recoveredState.paymentSuccess) {
       setCodigo2FAFirma('');
       setActiveStep(4);
-      showInfo('Pago confirmado. Firma tu contrato para finalizar.');
+      showInfo(
+        tipo === 'suscripcion'
+          ? '¡Pago confirmado! Firmá el contrato para activar tu suscripción.'
+          : '¡Pago confirmado! Firmá el contrato para finalizar tu inversión.'
+      );
     } else {
       setActiveStep(recoveredState.activeStep);
       if (recoveredState.transactionId && recoveredState.activeStep >= 3) {
@@ -736,7 +652,7 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
       }
     }
     setShowRecoveryPrompt(false);
-  }, [recoveredState, showInfo, iniciarVerificacionPago, setTransaccionId, setPaymentStatus]);
+  }, [recoveredState, tipo, showInfo, iniciarVerificacionPago, setTransaccionId, setPaymentStatus]);
 
   const handleDiscardRecovery = useCallback(() => {
     CheckoutStateManager.clearState();
@@ -748,45 +664,34 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
   useEffect(() => {
     if ((activeStep === 2 || activeStep === 4) && open && !location) {
       ContratoFirmadoService.getCurrentPosition()
-        .then(pos => {
-          if (pos) setLocation(pos);
-        })
+        .then(pos => { if (pos) setLocation(pos); })
         .catch(err => console.warn('Error obteniendo ubicación:', err));
     }
   }, [activeStep, open, location]);
 
-  // ✅ MODIFICAR handleStepAction
+  // ACCIONES POR PASO
   const handleStepAction = useCallback(async () => {
     switch (activeStep) {
       case 0:
-        if (paymentStatus === "success" && transaccionId) {
-          setActiveStep(4); // ✅ Saltar directo a firma si ya pagó
-          return;
-        }
+        if (paymentStatus === 'success' && transaccionId) { setActiveStep(4); return; }
         await handleConfirmInvestment();
         setActiveStep(1);
         break;
-
       case 1:
         setActiveStep(2);
         break;
-
       case 2:
         if (codigo2FA.length === CODIGO_2FA_LENGTH) {
-          if (paymentStatus === "success" && transaccionId) {
-            // ✅ Si ya pagó antes, vamos directo a firma
+          if (paymentStatus === 'success' && transaccionId) {
             setActiveStep(4);
           } else {
-            // ✅ Si es la primera vez, confirmar pago
             await handleConfirmarPago2FA(codigo2FA);
           }
         }
         break;
-
       case 3:
-        setActiveStep(4)
-        break
-
+        setActiveStep(4);
+        break;
       case 4:
         if (!codigo2FAFirma || codigo2FAFirma.length !== CODIGO_2FA_LENGTH) {
           showError('Debes ingresar tu código 2FA para firmar el contrato');
@@ -802,30 +707,20 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
         break;
     }
   }, [
-    activeStep,
-    //pagoExitoso,
-    transaccionId,
-    codigo2FA,
-    codigo2FAFirma,
-    signatureDataUrl,
-    signaturePosition,
-    location,
-    handleConfirmInvestment,
-    handleConfirmarPago2FA,
-    handleSignContract,
-    showError
+    activeStep, transaccionId, paymentStatus,
+    codigo2FA, codigo2FAFirma, signatureDataUrl, signaturePosition, location,
+    handleConfirmInvestment, handleConfirmarPago2FA, handleSignContract, showError
   ]);
 
   const handleClose = useCallback(() => {
     if (isVerificandoPago || isProcessing) return;
     onClose();
     setTimeout(() => {
-      if (paymentStatus !== "success" || activeStep === 0) CheckoutStateManager.clearState();
+      if (paymentStatus !== 'success' || activeStep === 0) CheckoutStateManager.clearState();
       setActiveStep(0);
       setCodigo2FA('');
-      setCodigo2FAFirma(''); // ✅ Limpiar código de firma
-      //setPagoExitoso(false);
-      setPaymentStatus("idle")
+      setCodigo2FAFirma('');
+      setPaymentStatus('idle');
       setSignatureDataUrl(null);
       setSignaturePosition(null);
       setLocation(null);
@@ -836,47 +731,21 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
     }, 300);
   }, [isVerificandoPago, isProcessing, onClose, paymentStatus, activeStep, setPaymentStatus, setTransaccionId]);
 
-  // ✅ ACTUALIZAR isStepValid
   const isStepValid = useMemo(() => {
     switch (activeStep) {
-      case 0: return true;
-      case 1: return true;
       case 2: return codigo2FA.length === CODIGO_2FA_LENGTH && !!location;
-      case 4:
-        return !!signatureDataUrl && codigo2FAFirma.length === CODIGO_2FA_LENGTH && !!signaturePosition;
+      case 4: return !!signatureDataUrl && codigo2FAFirma.length === CODIGO_2FA_LENGTH && !!signaturePosition;
       default: return true;
     }
   }, [activeStep, codigo2FA, codigo2FAFirma, location, signatureDataUrl, signaturePosition]);
 
   const getButtonText = () => {
-    const pagoExitoso = paymentStatus === "success"
-    if (isProcessing) {
-      return 'Procesando...'
-
-    } else if (activeStep === 4 && pagoExitoso) {
-      console.log("Paso 4 pagado")
-      return 'Continuar a Firma'
-    }
-    else if (activeStep === 4) {
-      console.log("Paso 4 sin paga")
-
-      return 'Finalizar Firma'
-
-    } else if (activeStep === 2 && pagoExitoso) {
-      console.log("Paso 2 pagado")
-
-      return 'Continuar a Firma'
-
-    } else if (activeStep === 2) {
-      console.log("Paso 2 sin paga")
-      return 'Ir a Pagar'
-    }
-    else {
-      return 'Continuar'
-    }
-
+    if (isProcessing) return 'Procesando...';
+    if (activeStep === 4) return 'Firmar Contrato';
+    if (activeStep === 2 && paymentStatus === 'success') return 'Continuar a Firma';
+    if (activeStep === 2) return 'Ir a Pagar';
+    return 'Continuar';
   };
-
 
   return (
     <>
@@ -893,13 +762,11 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
           <Stack spacing={3} p={2}>
             <Alert severity="info" icon={<Info />}>
               <Typography variant="body2" fontWeight={600}>Encontramos una sesión anterior</Typography>
-              <Typography variant="caption">Puedes continuar donde lo dejaste.</Typography>
+              <Typography variant="caption">Podés continuar donde lo dejaste.</Typography>
             </Alert>
-            <Stack direction="row" spacing={2}>
-              <Button variant="contained" fullWidth onClick={handleRecoverState} startIcon={<Refresh />} color="primary">
-                Continuar
-              </Button>
-            </Stack>
+            <Button variant="contained" fullWidth onClick={handleRecoverState} startIcon={<Refresh />} color="primary">
+              Continuar
+            </Button>
           </Stack>
         </BaseModal>
       )}
@@ -919,10 +786,7 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
           <Stack direction={{ xs: 'column-reverse', sm: 'row' }} spacing={2} width="100%" justifyContent="space-between">
             <Button
               onClick={activeStep === 0 ? handleClose : () => {
-                if (activeStep === 4) {
-                  setSignatureDataUrl(null);
-                  setSignaturePosition(null);
-                }
+                if (activeStep === 4) { setSignatureDataUrl(null); setSignaturePosition(null); }
                 setActiveStep(p => p - 1);
               }}
               disabled={isProcessing || isVerificandoPago || activeStep === 3}
@@ -932,20 +796,16 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
             >
               {activeStep === 0 ? 'Cancelar' : 'Atrás'}
             </Button>
-            {(activeStep !== 3 || paymentStatus === "success") && (
+            {(activeStep !== 3 || paymentStatus === 'success') && (
               <Button
                 variant="contained"
                 color={activeStep === 4 ? 'success' : 'primary'}
                 onClick={handleStepAction}
                 disabled={!isStepValid || isProcessing}
                 endIcon={
-                  isProcessing ? (
-                    <CircularProgress size={20} color="inherit" />
-                  ) : activeStep === 4 ? (
-                    <CloudUpload />
-                  ) : (
-                    <ArrowForward />
-                  )
+                  isProcessing
+                    ? <CircularProgress size={20} color="inherit" />
+                    : activeStep === 4 ? <CloudUpload /> : <ArrowForward />
                 }
                 fullWidth={isMobile}
               >
@@ -960,7 +820,8 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
             <Stepper activeStep={activeStep} alternativeLabel sx={{ pt: 2 }}>
               {STEPS.map((step, index) => (
                 <Step key={step.label}>
-                  <StepLabel className={styles.containerLabel}
+                  <StepLabel
+                    className={styles.containerLabel}
                     StepIconProps={{
                       sx: {
                         '&.Mui-active': {
@@ -972,7 +833,6 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
                     }}
                   >
                     {step.label}
-
                   </StepLabel>
                 </Step>
               ))}
@@ -982,36 +842,45 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
           <Box flex={1} overflow="auto" p={{ xs: 2, md: 2 }} display="flex" flexDirection="column">
             {activeStep === 0 && (
               <StepConfirmacion
-                proyecto={proyecto}
-                tipo={tipo}
-                montoTotalStr={montoAMostrar}      // 👈 Coincide con el nombre en el componente
-                cuotaActiva={cuotaActiva}          // 👈 Le pasas el desglose que trajiste de la BD
-                formatCurrency={formatCurrency}    // 👈 Le pasas la función para formatear la moneda
+                proyecto={proyecto} tipo={tipo}
+                montoTotalStr={montoAMostrar} cuotaActiva={cuotaActiva}
+                formatCurrency={formatCurrency}
               />
             )}
             {activeStep === 1 && <StepContrato plantilla={plantillaActual} isLoading={loadingPlantilla} />}
             {activeStep === 2 && (
               <StepSeguridad
-                codigo2FA={codigo2FA}
-                setCodigo2FA={setCodigo2FA}
-                location={location}
-                isProcessing={isProcessing}
-                error={error2FA}
+                codigo2FA={codigo2FA} setCodigo2FA={setCodigo2FA}
+                location={location} isProcessing={isProcessing} error={error2FA}
               />
             )}
             {activeStep === 3 && <StepPago paymentStatus={paymentStatus} onRetry={() => setActiveStep(0)} />}
+
+            {/* =====================================================
+                PASO 4 — FIRMA DEL CONTRATO
+                Flujo idéntico para inversiones y suscripciones:
+                  1. Banner de pago exitoso
+                  2. Instrucción + código 2FA para autorizar la firma
+                  3. Canvas para dibujar la firma
+                  4. PDF para posicionar la firma
+            ===================================================== */}
             {activeStep === 4 && (
               <Stack spacing={3} height="100%">
-                {/* ✅ AGREGAR INPUT DE 2FA ANTES DE LA FIRMA */}
-                <Alert severity="warning" icon={<Lock />} sx={{ borderRadius: 2 }}>
-                  <Typography variant="body2" fontWeight={600} mb={1}>
-                    Verificación de seguridad requerida
+
+                {/* ✅ Confirmación visual del pago */}
+                <PagoExitosoBanner tipo={tipo} />
+
+                {/* ✅ Contexto del paso */}
+                <Alert severity="info" icon={<HistoryEdu />} sx={{ borderRadius: 2 }}>
+                  <Typography variant="body2" fontWeight={600} mb={0.5}>
+                    Paso final: firma digital del contrato
                   </Typography>
                   <Typography variant="caption">
-                    Para firmar el contrato necesitas ingresar tu código 2FA actual.
+                    Ingresá tu código 2FA, dibujá tu firma y posicionala sobre el contrato para completar el proceso.
                   </Typography>
                 </Alert>
 
+                {/* ✅ 2FA exclusivo para la firma */}
                 <TextField
                   autoFocus
                   label="Código 2FA para firmar"
@@ -1022,13 +891,14 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
                   fullWidth
                   inputProps={{ maxLength: 6 }}
                   sx={{ maxWidth: 400, mx: 'auto' }}
-                  helperText="Ingresa el código de tu aplicación Google Authenticator"
+                  helperText="Ingresá el código de tu aplicación Google Authenticator"
                 />
 
+                {/* ✅ Canvas de firma */}
                 <Fade in={!signatureDataUrl} unmountOnExit>
                   <Box>
-                    <Alert severity="info" icon={<Draw />} sx={{ borderRadius: 2, mb: 3 }}>
-                      <Typography variant="body2">Dibuja tu firma digital en el recuadro.</Typography>
+                    <Alert severity="warning" icon={<Draw />} sx={{ borderRadius: 2, mb: 3 }}>
+                      <Typography variant="body2">Dibujá tu firma digital en el recuadro de abajo.</Typography>
                     </Alert>
                     <SignatureCanvas
                       onSave={setSignatureDataUrl}
@@ -1038,27 +908,22 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
                   </Box>
                 </Fade>
 
+                {/* ✅ PDF con posicionamiento de la firma */}
                 <Fade in={!!signatureDataUrl} unmountOnExit>
-                  {/* ✅ Agregamos flex={1} a este Box principal */}
                   <Box flex={1} display="flex" flexDirection="column" sx={{ minHeight: { xs: '65vh', md: '70vh' }, mt: 2 }}>
                     <Alert severity="success" variant="outlined" sx={{ borderRadius: 2, mb: 2 }}>
                       <Typography variant="body2" fontWeight={600}>✓ Firma capturada correctamente</Typography>
                       {signaturePosition
                         ? <Typography variant="caption" color="success.main">✓ Firma posicionada en el contrato</Typography>
-                        : <Typography variant="caption" color="warning.main">⚠ Haz clic en el contrato para colocar tu firma</Typography>
+                        : <Typography variant="caption" color="warning.main">⚠ Hacé clic en el contrato para colocar tu firma</Typography>
                       }
                       <Button size="small" onClick={() => { setSignatureDataUrl(null); setSignaturePosition(null); }}>
                         Cambiar Firma
                       </Button>
                     </Alert>
-
-                    <Box
-                      flex={1}
-                      borderRadius={2}
-                      overflow="hidden"
+                    <Box flex={1} borderRadius={2} overflow="hidden"
                       border={`1px solid ${theme.palette.divider}`}
-                      sx={{ display: 'flex', flexDirection: 'column' }} // ✅ Mantiene el PDF expandido
-                    >
+                      sx={{ display: 'flex', flexDirection: 'column' }}>
                       <PDFViewerMejorado
                         pdfUrl={plantillaActual ? ImagenService.resolveImageUrl(plantillaActual.url_archivo) : ''}
                         signatureDataUrl={signatureDataUrl}
@@ -1067,6 +932,7 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
                     </Box>
                   </Box>
                 </Fade>
+
               </Stack>
             )}
           </Box>

@@ -35,17 +35,13 @@ export interface ProjectSidebarLogic {
   user: any | null;
   puedeFirmar: boolean;
   yaFirmo: boolean;
-  yaCancelado: boolean; // ← nuevo
+  yaCancelado: boolean;
+  tieneFirmaPendiente: boolean; // ✅ agregar
   handleMainAction: () => void;
   handleClickFirmar: () => void;
   handleVerContratoFirmado: () => void;
-  handleInversion: {
-    isPending: boolean;
-    mutate: () => void;
-  };
-  modales: {
-    contrato: { open: () => void };
-  };
+  handleInversion: { isPending: boolean; mutate: () => void };
+  modales: { contrato: { open: () => void } };
 }
 
 interface ProjectSidebarProps {
@@ -154,7 +150,7 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({ logic, proyecto 
   const helpers = useProyectoHelpers(proyecto);
 
   const user = logic.user;
-  const paso1Completo = logic.puedeFirmar || logic.yaFirmo;
+  const paso1Completo = logic.puedeFirmar || logic.yaFirmo || logic.tieneFirmaPendiente;
   const paso2Completo = logic.yaFirmo;
 
   // 🧠 LÓGICA MAESTRA DE ESTADOS
@@ -180,13 +176,13 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({ logic, proyecto 
 
           <Box>
             {/* CASO 1: FINALIZADO */}
-            {isFinalizado ? (
-              <Stack spacing={2}>
-                <Alert severity="success" icon={<CheckCircle />} sx={{ borderRadius: 2 }}>
-                  El proyecto concluyó exitosamente.
-                </Alert>
-              </Stack>
-            ) :
+           {isFinalizado && !paso1Completo ? (
+  <Stack spacing={2}>
+    <Alert severity="success" icon={<CheckCircle />} sx={{ borderRadius: 2 }}>
+      El proyecto concluyó exitosamente.
+    </Alert>
+  </Stack>
+) :
 
             /* CASO 2: PRE-LANZAMIENTO (sin suscripción activa) */
             isPrelanzamiento && !paso1Completo ? (
@@ -279,30 +275,32 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({ logic, proyecto 
                   </Stack>
                 )}
 
-                {/* 6B: Pagado, Pendiente de Firma */}
-                {paso1Completo && !paso2Completo && (
-                  <Stack spacing={2}>
-                    <Alert severity="warning" icon={<HistoryEdu />}>
-                      Pago confirmado. Firma tu contrato para asegurar tu lugar.
-                    </Alert>
-                    <Button variant="contained" color="warning" fullWidth size="large" onClick={logic.handleClickFirmar} sx={{ color: 'white', fontWeight: 700 }}>
-                      Firmar Contrato Digital
-                    </Button>
-                    <Button variant="text" size="small" onClick={logic.modales.contrato.open} sx={{ fontWeight: 600 }}>
-                      Ver borrador del contrato
-                    </Button>
-                  </Stack>
-                )}
+              {/* 6B: Pagado, Pendiente de Firma */}
+{paso1Completo && !paso2Completo && (
+  <Stack spacing={2}>
+    <Alert severity="warning" icon={<HistoryEdu />}>
+      Pago confirmado. Firma tu contrato para asegurar tu lugar.
+    </Alert>
+    <Button variant="contained" color="warning" fullWidth size="large" onClick={logic.handleClickFirmar} sx={{ color: 'white', fontWeight: 700 }}>
+      Firmar Contrato Digital
+    </Button>
+    <Button variant="text" size="small" onClick={logic.modales.contrato.open} sx={{ fontWeight: 600 }}>
+      Ver borrador del contrato
+    </Button>
+  </Stack>
+)}
 
-                {/* 6C: Proceso Completado */}
-                {paso2Completo && (
-                  <Stack spacing={2}>
-                    <Alert severity="success" icon={<CheckCircle />}>¡Suscripción completada exitosamente!</Alert>
-                    <Button variant="outlined" color="success" fullWidth onClick={logic.handleVerContratoFirmado} startIcon={<Download />} sx={{ fontWeight: 700 }}>
-                      Descargar Contrato
-                    </Button>
-                  </Stack>
-                )}
+{/* 6C: Proceso Completado */}
+{paso2Completo && (
+  <Stack spacing={2}>
+    <Alert severity="success" icon={<CheckCircle />}>
+      {helpers.esMensual ? '¡Suscripción completada exitosamente!' : '¡Inversión completada exitosamente!'}
+    </Alert>
+    <Button variant="outlined" color="success" fullWidth onClick={logic.handleVerContratoFirmado} startIcon={<Download />} sx={{ fontWeight: 700 }}>
+      Descargar Contrato
+    </Button>
+  </Stack>
+)}
               </>
             )}
           </Box>

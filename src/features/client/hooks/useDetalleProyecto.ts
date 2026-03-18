@@ -114,12 +114,11 @@ const yaFirmo = useMemo(() => {
 
     if (CheckoutStateManager.hasRecoverableState(proyecto.id)) return true;
 
-    if (proyecto.tipo_inversion === 'directo') {
-     return misInversiones?.some(
-  i => i.id_proyecto === proyecto.id && 
-  (i.estado === 'fallido' || i.estado === 'reembolsado')
-) ?? false;
-    }
+if (proyecto.tipo_inversion === 'directo') {
+  return misInversiones?.some(
+    i => i.id_proyecto === proyecto.id && i.estado === 'pagado'
+  ) ?? false;
+}
 
     if (proyecto.tipo_inversion === 'mensual') {
       return misSuscripciones?.some(

@@ -28,7 +28,7 @@ import {
     useTheme
 } from '@mui/material';
 import { useFormik } from 'formik';
-import React, { useEffect } from 'react';
+import React, { useMemo } from 'react';
 import * as Yup from 'yup';
 
 // --- FUNCIONES Y VARIABLES AUXILIARES ---
@@ -86,23 +86,46 @@ const EditProyectoModal: React.FC<EditProyectoModalProps> = ({
 }) => {
     const theme = useTheme();
 
+    // 1. Definimos los valores iniciales de forma dinámica usando useMemo.
+    // Al pasar esto directo a Formik, la propiedad formik.dirty sabrá exactamente contra qué comparar.
+    const initialValues = useMemo(() => {
+        if (!proyecto) {
+            return {
+                nombre_proyecto: '',
+                descripcion: '',
+                forma_juridica: '',
+                fecha_inicio: '',
+                fecha_cierre: '',
+                activo: true,
+                estado_proyecto: 'En Espera',
+                latitud: '' as string | number,
+                longitud: '' as string | number,
+                obj_suscripciones: '' as string | number,
+                suscripciones_minimas: '' as string | number,
+                plazo_inversion: '' as string | number,
+            };
+        }
+
+        return {
+            nombre_proyecto: proyecto.nombre_proyecto || '',
+            descripcion: proyecto.descripcion || '',
+            forma_juridica: proyecto.forma_juridica || '',
+            fecha_inicio: proyecto.fecha_inicio ? proyecto.fecha_inicio.split('T')[0] : '',
+            fecha_cierre: proyecto.fecha_cierre ? proyecto.fecha_cierre.split('T')[0] : '',
+            activo: proyecto.activo ?? true,
+            estado_proyecto: proyecto.estado_proyecto || 'En Espera',
+            latitud: proyecto.latitud ?? '',
+            longitud: proyecto.longitud ?? '',
+            obj_suscripciones: proyecto.obj_suscripciones ?? '',
+            suscripciones_minimas: proyecto.suscripciones_minimas ?? '',
+            plazo_inversion: proyecto.plazo_inversion ?? '',
+        };
+    }, [proyecto]);
+
     const formik = useFormik({
-        initialValues: {
-            nombre_proyecto: '',
-            descripcion: '',
-            forma_juridica: '',
-            fecha_inicio: '',
-            fecha_cierre: '',
-            activo: true,
-            estado_proyecto: 'En Espera',
-            latitud: '' as string | number,
-            longitud: '' as string | number,
-            obj_suscripciones: '' as string | number,
-            suscripciones_minimas: '' as string | number,
-            plazo_inversion: '' as string | number,
-        },
+        initialValues, // Usamos el useMemo de arriba
         validationSchema,
-        enableReinitialize: true,
+        enableReinitialize: true, // Esto hace que si cambia el proyecto, actualice los initialValues internamente
         onSubmit: async (values) => {
             if (!proyecto) return;
 
@@ -128,25 +151,6 @@ const EditProyectoModal: React.FC<EditProyectoModalProps> = ({
         },
     });
 
-    useEffect(() => {
-        if (proyecto && open) {
-            formik.setValues({
-                nombre_proyecto: proyecto.nombre_proyecto || '',
-                descripcion: proyecto.descripcion || '',
-                forma_juridica: proyecto.forma_juridica || '',
-                fecha_inicio: proyecto.fecha_inicio ? proyecto.fecha_inicio.split('T')[0] : '',
-                fecha_cierre: proyecto.fecha_cierre ? proyecto.fecha_cierre.split('T')[0] : '',
-                activo: proyecto.activo ?? true,
-                estado_proyecto: proyecto.estado_proyecto || 'En Espera',
-                latitud: proyecto.latitud ?? '',
-                longitud: proyecto.longitud ?? '',
-                obj_suscripciones: proyecto.obj_suscripciones ?? '',
-                suscripciones_minimas: proyecto.suscripciones_minimas ?? '',
-                plazo_inversion: proyecto.plazo_inversion ?? '',
-            });
-        }
-    }, [proyecto, open]);
-
     const handleClose = () => {
         formik.resetForm();
         onClose();
@@ -171,8 +175,8 @@ const EditProyectoModal: React.FC<EditProyectoModalProps> = ({
             confirmButtonIcon={<SaveIcon />}
             onConfirm={formik.submitForm}
             isLoading={isLoading}
-            // Solo deshabilitamos si no es válido o está cargando
-            disableConfirm={!formik.isValid || isLoading}
+            // 2. Aquí está la magia: !formik.dirty deshabilita el botón si no hubo cambios.
+            disableConfirm={!formik.isValid || !formik.dirty || isLoading}
             maxWidth="md"
             // Permite que componentes como selectores de fecha funcionen correctamente
             disableEnforceFocus
