@@ -21,13 +21,16 @@ import {
   Divider,
   LinearProgress,
   Stack,
-  Typography, useTheme
+  Typography, useTheme,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from '@mui/material';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 
 import type { ProyectoDto } from '@/core/types/proyecto.dto';
 import { useProyectoHelpers } from '@/features/client/hooks/useProyectoHelpers';
-import SuscripcionService from '@/core/api/services/suscripcion.service';
 import { ROUTES } from '@/routes';
 import { useNavigate } from 'react-router-dom';
 
@@ -54,6 +57,7 @@ export interface ProjectSidebarLogic {
 interface ProjectSidebarProps {
   logic: ProjectSidebarLogic;
   proyecto: ProyectoDto;
+  cantProyectUser: number
 }
 
 // ==========================================
@@ -151,41 +155,21 @@ const PriceHeader: React.FC<{ helpers: any, isPrelanzamiento: boolean, isLleno: 
 // ==========================================
 // 5. COMPONENTE PRINCIPAL
 // ==========================================
-export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({ logic, proyecto }) => {
+export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({ logic, proyecto, cantProyectUser }) => {
 
   //variables Thomy
-
-  const [cantProyectsUser, setCantProyectsUser] = useState(0)
+  const [openResubModal, setOpenResubModal] = useState(false)
   const navigate = useNavigate()  
+
   //fin variables Thomy
 
   //Funciones Thomy
 
   //Llamar los proyectos del usuario
-  useEffect(() => {
-	const getProyects = async () => {
-		const proyectsFetched = await SuscripcionService.getMisSuscripciones();
-
-		const data = proyectsFetched.data;
-
-		console.log(data);
-
-		
-
-		const cantidadSuscripciones = data.filter(
-			(p) => p.id_proyecto === proyecto.id
-		).length;
-
-		setCantProyectsUser(cantidadSuscripciones);
-
-		console.log(cantidadSuscripciones);
-	};
-
-	getProyects();
-}, [proyecto.id]);
+  
 
   const handleClickContracts = () => {
-    if(cantProyectsUser > 1){
+    if(cantProyectUser > 1){
       navigate(ROUTES.CLIENT.CUENTA.CONTRATOS)
     }else{
       logic.handleVerContratoFirmado
@@ -295,16 +279,16 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({ logic, proyecto 
                       {paso2Completo && (
                       <Stack spacing={2}>
                         <Alert severity="success" icon={<CheckCircle />}>
-                          {cantProyectsUser === 1
+                          {cantProyectUser === 1
                             ? 'Ya tienes una suscripción activa'
-                            : `Tienes ${cantProyectsUser} suscripciones activas`}
+                            : `Tienes ${cantProyectUser} suscripciones activas`}
                         </Alert>
 
                         {/* 🔁 Volver a suscribirse */}
                         <Button
                           variant="contained"
                           fullWidth
-                          onClick={logic.handleMainAction}
+                          onClick={() => setOpenResubModal(true)}
                           sx={{ fontWeight: 700 }}
                         >
                           Volver a suscribirse para adquirir otro Token
@@ -319,7 +303,7 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({ logic, proyecto 
                           startIcon={<Download />}
                           sx={{ fontWeight: 700 }}
                         >
-                          {cantProyectsUser > 1
+                          {cantProyectUser > 1
                             ? 'Ver contratos'
                             : 'Descargar contrato'}
                         </Button>
@@ -344,6 +328,42 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({ logic, proyecto 
 
         </Stack>
       </Box>
+
+          <Dialog open={openResubModal} onClose={() => setOpenResubModal(false)}>
+      <DialogTitle>Volver a suscribirse</DialogTitle>
+
+      <DialogContent>
+        <Typography>
+          Ya tenés una suscripción activa en este proyecto.
+        </Typography>
+
+        <Typography sx={{ mt: 2 }}>
+          Si continuás:
+        </Typography>
+
+        <Box component="ul" sx={{ pl: 2, mt: 1 }}>
+          <li>Se generará una nueva inversión independiente</li>
+          <li>Deberás realizar otro pago mensual</li>
+          <li>Obtendrás un token adicional para tus pujas</li>
+        </Box>
+      </DialogContent>
+
+      <DialogActions>
+        <Button onClick={() => setOpenResubModal(false)}>
+          Cancelar
+        </Button>
+
+        <Button
+          variant="contained"
+          onClick={() => {
+            setOpenResubModal(false);
+            logic.handleMainAction(); // 👈 recién acá disparás el flujo
+          }}
+        >
+          Continuar
+        </Button>
+      </DialogActions>
+    </Dialog>
     </Card>
   );
 };

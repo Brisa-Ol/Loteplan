@@ -13,7 +13,7 @@ import {
   Paper, Skeleton, Stack, Tab, Tabs, Typography, alpha, useTheme
 } from '@mui/material';
 import { useIsFetching } from '@tanstack/react-query';
-import React, { Suspense, lazy, useCallback, useMemo } from 'react';
+import React, { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
 import { useSecurityGuard } from '@/core/auth/hooks/useSecurityGuard';
@@ -28,6 +28,7 @@ import { ProjectHero } from './components/ProjectHero';
 import { ProjectSidebar } from './components/ProjectSidebar';
 import { CheckoutWizardModal } from './modals/CheckoutWizardModal/CheckoutWizardModal';
 import ListaLotesProyecto from '../Lotes/ListaLotesProyecto';
+import SuscripcionService from '@/core/api/services/suscripcion.service';
 
 // 🚀 LAZY LOADING
 const ProjectGallery = lazy(() => import('./components/ProjectGallery').then(m => ({ default: m.ProjectGallery })));
@@ -94,6 +95,10 @@ const TabOverview = React.memo(({ proyecto, esMensual, googleMapsUrl }: any) => 
 // ===================================================
 
 const DetalleProyecto: React.FC = () => {
+
+  
+
+  //Fin Funciones Thomy
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated } = useAuth();
@@ -102,7 +107,36 @@ const DetalleProyecto: React.FC = () => {
 
   const logic = useDetalleProyecto();
   const isFetching = useIsFetching();
+  //variable Thomy
 
+  const [cantProyectsUser, setCantProyectsUser] = useState(0)
+
+    //fin variables Thomy
+
+      //Funciones Thomy
+
+  //Llamar los proyectos del usuario
+  useEffect(() => {
+	const getProyects = async () => {
+		const proyectsFetched = await SuscripcionService.getMisSuscripciones();
+
+		const data = proyectsFetched.data;
+
+		console.log(data);
+
+		const cantidadSuscripciones = data.filter(
+			(p) => p.id_proyecto === logic.proyecto?.id
+		).length;
+
+		setCantProyectsUser(cantidadSuscripciones);
+
+		console.log(cantidadSuscripciones);
+	};
+
+	getProyects();
+}, [logic.proyecto?.id]);
+
+  //Fin Funciones Thomy
   const currentTab = useMemo(() => {
     const tab = searchParams.get('tab');
     return tab === 'inventario' ? 2 : tab === 'galeria' ? 1 : 0;
@@ -134,7 +168,8 @@ const DetalleProyecto: React.FC = () => {
     handleMainAction: handleOpenCheckoutSecurely,
     handleClickFirmar: handleOpenCheckoutSecurely,
   }), [logic, handleOpenCheckoutSecurely]);
-
+  
+  
   if (logic.loadingProyecto) return <Box p={10} textAlign="center"><CircularProgress /></Box>;
   if (!logic.proyecto) return <PageContainer><Alert severity="error">Proyecto no encontrado.</Alert></PageContainer>;
 
@@ -180,7 +215,7 @@ const DetalleProyecto: React.FC = () => {
         </Box>
 
         <Box sx={{ width: { xs: '100%', lg: 380 }, flexShrink: 0 }}>
-          <MemoizedSidebar logic={secureLogic} proyecto={logic.proyecto} />
+          <MemoizedSidebar logic={secureLogic} proyecto={logic.proyecto} cantProyectUser={cantProyectsUser} />
         </Box>
       </Box>
 
