@@ -23,10 +23,13 @@ import {
   Stack,
   Typography, useTheme
 } from '@mui/material';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 import type { ProyectoDto } from '@/core/types/proyecto.dto';
 import { useProyectoHelpers } from '@/features/client/hooks/useProyectoHelpers';
+import SuscripcionService from '@/core/api/services/suscripcion.service';
+import { ROUTES } from '@/routes';
+import { useNavigate } from 'react-router-dom';
 
 // ==========================================
 // 1. INTERFACES
@@ -149,6 +152,48 @@ const PriceHeader: React.FC<{ helpers: any, isPrelanzamiento: boolean, isLleno: 
 // 5. COMPONENTE PRINCIPAL
 // ==========================================
 export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({ logic, proyecto }) => {
+
+  //variables Thomy
+
+  const [cantProyectsUser, setCantProyectsUser] = useState(0)
+  const navigate = useNavigate()  
+  //fin variables Thomy
+
+  //Funciones Thomy
+
+  //Llamar los proyectos del usuario
+  useEffect(() => {
+	const getProyects = async () => {
+		const proyectsFetched = await SuscripcionService.getMisSuscripciones();
+
+		const data = proyectsFetched.data;
+
+		console.log(data);
+
+		
+
+		const cantidadSuscripciones = data.filter(
+			(p) => p.id_proyecto === proyecto.id
+		).length;
+
+		setCantProyectsUser(cantidadSuscripciones);
+
+		console.log(cantidadSuscripciones);
+	};
+
+	getProyects();
+}, [proyecto.id]);
+
+  const handleClickContracts = () => {
+    if(cantProyectsUser > 1){
+      navigate(ROUTES.CLIENT.CUENTA.CONTRATOS)
+    }else{
+      logic.handleVerContratoFirmado
+    }
+  }
+
+  //Fin Funciones Thomy
+
   const theme = useTheme();
   const helpers = useProyectoHelpers(proyecto);
 
@@ -248,11 +293,38 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({ logic, proyecto 
 
                       {/* 5C: Proceso Completado */}
                       {paso2Completo && (
-                        <Stack spacing={2}>
-                          <Alert severity="success" icon={<CheckCircle />}>¡Suscripción completada exitosamente!</Alert>
-                          <Button variant="outlined" color="success" fullWidth onClick={logic.handleVerContratoFirmado} startIcon={<Download />} sx={{ fontWeight: 700 }}>Descargar Contrato</Button>
-                        </Stack>
-                      )}
+                      <Stack spacing={2}>
+                        <Alert severity="success" icon={<CheckCircle />}>
+                          {cantProyectsUser === 1
+                            ? 'Ya tienes una suscripción activa'
+                            : `Tienes ${cantProyectsUser} suscripciones activas`}
+                        </Alert>
+
+                        {/* 🔁 Volver a suscribirse */}
+                        <Button
+                          variant="contained"
+                          fullWidth
+                          onClick={logic.handleMainAction}
+                          sx={{ fontWeight: 700 }}
+                        >
+                          Volver a suscribirse para adquirir otro Token
+                        </Button>
+
+                        {/* 📄 Contratos */}
+                        <Button
+                          variant="outlined"
+                          color="success"
+                          fullWidth
+                          onClick={handleClickContracts}
+                          startIcon={<Download />}
+                          sx={{ fontWeight: 700 }}
+                        >
+                          {cantProyectsUser > 1
+                            ? 'Ver contratos'
+                            : 'Descargar contrato'}
+                        </Button>
+                      </Stack>
+                    )}
                     </>
                   )}
           </Box>
