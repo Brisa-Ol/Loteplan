@@ -103,6 +103,7 @@ export interface ProyectoDto extends BaseDTO {
   // Relaciones (Includes)
   lotes?: LoteDto[];
   imagenes?: ImagenDto[];
+  map_url: string | null
 }
 
 // ==========================================

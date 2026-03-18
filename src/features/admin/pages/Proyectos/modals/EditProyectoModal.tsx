@@ -97,6 +97,7 @@ const EditProyectoModal: React.FC<EditProyectoModalProps> = ({
             estado_proyecto: 'En Espera',
             latitud: '' as string | number,
             longitud: '' as string | number,
+            maps_url: '',
             obj_suscripciones: '' as string | number,
             suscripciones_minimas: '' as string | number,
             plazo_inversion: '' as string | number,
@@ -140,6 +141,7 @@ const EditProyectoModal: React.FC<EditProyectoModalProps> = ({
                 estado_proyecto: proyecto.estado_proyecto || 'En Espera',
                 latitud: proyecto.latitud ?? '',
                 longitud: proyecto.longitud ?? '',
+                maps_url: proyecto.map_url ?? '',
                 obj_suscripciones: proyecto.obj_suscripciones ?? '',
                 suscripciones_minimas: proyecto.suscripciones_minimas ?? '',
                 plazo_inversion: proyecto.plazo_inversion ?? '',
@@ -345,6 +347,14 @@ const EditProyectoModal: React.FC<EditProyectoModalProps> = ({
                                     {...formik.getFieldProps('longitud')}
                                     error={formik.touched.longitud && !!formik.errors.longitud}
                                     helperText={formik.touched.longitud && formik.errors.longitud}
+                                    InputProps={{ startAdornment: <InputAdornment position="start"><WorldIcon fontSize='small' color="action" /></InputAdornment> }}
+                                    sx={commonInputSx}
+                                />
+                                <TextField
+                                    fullWidth label="Maps URL" type="text"
+                                    //{...formik.getFieldProps('longitud')}
+                                    error={formik.touched.longitud && !!formik.errors.longitud}
+                                    helperText={formik.touched.maps_url && formik.errors.maps_url}
                                     InputProps={{ startAdornment: <InputAdornment position="start"><WorldIcon fontSize='small' color="action" /></InputAdornment> }}
                                     sx={commonInputSx}
                                 />
