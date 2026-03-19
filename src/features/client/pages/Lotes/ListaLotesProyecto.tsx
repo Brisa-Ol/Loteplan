@@ -167,7 +167,8 @@ const ListaLotesProyecto: React.FC<ListaLotesProyectoProps> = ({ idProyecto }) =
             !!user &&
             Array.isArray(loteSeleccionado.pujas) &&
             loteSeleccionado.pujas.some(
-              (p) => Number(p.id_usuario) === Number(user.id) && p.estado_puja === 'activa'
+              // ✅ CORRECCIÓN: Reconoce participación si tiene una puja que NO está cancelada (activa o perdedora)
+              (p) => Number(p.id_usuario) === Number(user.id) && p.estado_puja !== 'cancelada'
             )
           }
           soyGanador={

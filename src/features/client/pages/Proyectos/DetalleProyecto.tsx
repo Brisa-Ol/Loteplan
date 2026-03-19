@@ -97,7 +97,7 @@ const TabOverview = React.memo(({ proyecto, esMensual, googleMapsUrl }: any) => 
 
 const DetalleProyecto: React.FC = () => {
 
-  
+
 
   //Fin Funciones Thomy
   const navigate = useNavigate();
@@ -112,30 +112,30 @@ const DetalleProyecto: React.FC = () => {
 
   const [cantProyectsUser, setCantProyectsUser] = useState(0)
 
-    //fin variables Thomy
+  //fin variables Thomy
 
-      //Funciones Thomy
+  //Funciones Thomy
 
   //Llamar los proyectos del usuario
   useEffect(() => {
-	const getProyects = async () => {
-		const proyectsFetched = await SuscripcionService.getMisSuscripciones();
+    const getProyects = async () => {
+      const proyectsFetched = await SuscripcionService.getMisSuscripciones();
 
-		const data = proyectsFetched.data;
+      const data = proyectsFetched.data;
 
-		console.log(data);
+      console.log(data);
 
-		const cantidadSuscripciones = data.filter(
-			(p) => p.id_proyecto === logic.proyecto?.id
-		).length;
+      const cantidadSuscripciones = data.filter(
+        (p) => p.id_proyecto === logic.proyecto?.id
+      ).length;
 
-		setCantProyectsUser(cantidadSuscripciones);
+      setCantProyectsUser(cantidadSuscripciones);
 
-		console.log(cantidadSuscripciones);
-	};
+      console.log(cantidadSuscripciones);
+    };
 
-	getProyects();
-}, [logic.proyecto?.id]);
+    getProyects();
+  }, [logic.proyecto?.id]);
 
   //Fin Funciones Thomy
   const currentTab = useMemo(() => {
@@ -171,8 +171,8 @@ const DetalleProyecto: React.FC = () => {
     handleMainAction: handleOpenCheckoutSecurely,
     handleClickFirmar: handleOpenCheckoutSecurely,
   }), [logic, handleOpenCheckoutSecurely]);
-  
-  
+
+
   if (logic.loadingProyecto) return <Box p={10} textAlign="center"><CircularProgress /></Box>;
   if (!logic.proyecto) return <PageContainer><Alert severity="error">Proyecto no encontrado.</Alert></PageContainer>;
 

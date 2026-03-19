@@ -79,12 +79,11 @@ const LoteCard: React.FC<LoteCardProps> = ({
   };
 
   // ─────────────────────────────────────────────
-  // LÓGICA DE SUBASTA (Sincronizada con DetalleLote)
+  // LÓGICA DE SUBASTA
   // ─────────────────────────────────────────────
   const isActiva = lote.estado_subasta === 'activa';
   const subastaFinalizada = lote.estado_subasta === 'finalizada';
 
-  // Lógica exacta de "quién va ganando":
   const esLiderActual = useMemo(() => {
     if (!isAuthenticated || !user || !isActiva) return false;
     return Number(lote.ultima_puja?.id_usuario) === Number(user.id);
@@ -95,16 +94,20 @@ const LoteCard: React.FC<LoteCardProps> = ({
     return Number(lote.id_ganador) === Number(user.id);
   }, [subastaFinalizada, lote.id_ganador, isAuthenticated, user]);
 
-  // Se considera ganador si va ganando ahora, o si la subasta terminó y él ganó
+  // ✅ NUEVA LÓGICA: Verificar si el usuario ya tiene una puja en este lote 
+  // (aunque no sea la ganadora en este momento)
+  const yaParticipa = useMemo(() => {
+    if (!isAuthenticated || !user || !isActiva) return false;
+    return Array.isArray(lote.pujas) && lote.pujas.some((p: any) => Number(p.id_usuario) === Number(user.id) && p.estado_puja === 'activa');
+  }, [isActiva, lote.pujas, isAuthenticated, user]);
+
   const soyGanador = esLiderActual || esGanadorDefinitivo;
 
-  // Si está activo, está suscrito, y (tiene tokens o ya es el líder actual)
-  const puedePujar = isActiva && isSubscribed && (hasTokens || esLiderActual);
+  // ✅ CORRECCIÓN: Puede pujar si tiene tokens, si es el líder actual, o si YA PARTICIPA (mejora gratuita)
+  const puedePujar = isActiva && isSubscribed && (hasTokens || esLiderActual || yaParticipa);
 
   const handleBotonClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    // Si no está logueado, lo mandamos al detalle (donde le pedirá loguearse si intenta pujar)
-    // Si puede pujar, abrimos el modal
     if (!isAuthenticated || puedePujar) {
       if(!isAuthenticated) {
         onNavigate(lote.id);
@@ -112,7 +115,6 @@ const LoteCard: React.FC<LoteCardProps> = ({
         onPujar(lote);
       }
     } else {
-      // Si no puede pujar (ej. subasta cerrada o no tiene tokens), va al detalle
       onNavigate(lote.id);
     }
   };
@@ -126,12 +128,13 @@ const LoteCard: React.FC<LoteCardProps> = ({
         : { text: "Detalles", icon: <ArrowForward /> };
     }
     if (puedePujar) {
-      return esLiderActual
+      // ✅ Si ya participa o es líder, el botón dice "Mejorar" en lugar de "Pujar"
+      return (esLiderActual || yaParticipa)
         ? { text: "Mejorar", icon: <EmojiEmotions /> }
         : { text: "Pujar", icon: <Gavel /> };
     }
     return { text: "Detalles", icon: <ArrowForward /> };
-  }, [isLoadingSub, isAuthenticated, subastaFinalizada, esGanadorDefinitivo, puedePujar, esLiderActual]);
+  }, [isLoadingSub, isAuthenticated, subastaFinalizada, esGanadorDefinitivo, puedePujar, esLiderActual, yaParticipa]);
 
   return (
     <Fade in={true} timeout={400}>
@@ -154,14 +157,12 @@ const LoteCard: React.FC<LoteCardProps> = ({
         {/* ── SECCIÓN DE IMAGEN ── */}
         <Box position="relative" sx={{ paddingTop: '56.25%', bgcolor: '#ECECEC', overflow: 'hidden' }}>
 
-          {/* ❤️ FavoritoButton unificado — usa React Query internamente */}
           <Box position="absolute" top={8} right={8} zIndex={20}
             sx={{ bgcolor: 'rgba(255,255,255,0.9)', borderRadius: '50%', boxShadow: 2 }}
           >
             <FavoritoButton loteId={lote.id} size="small" />
           </Box>
 
-          {/* Imagen / Placeholder */}
           {hasNoImageRecord ? (
             <Stack
               sx={{ position: 'absolute', inset: 0, bgcolor: 'grey.200', color: 'text.disabled' }}
@@ -190,7 +191,6 @@ const LoteCard: React.FC<LoteCardProps> = ({
             </>
           )}
 
-          {/* Flechas de carrusel */}
           {!hasNoImageRecord && imagenes.length > 1 && (
             <>
               <IconButton className="nav-arrow" onClick={handlePrev} sx={{
@@ -208,13 +208,11 @@ const LoteCard: React.FC<LoteCardProps> = ({
             </>
           )}
 
-          {/* Degradado inferior */}
           <Box sx={{
             position: 'absolute', inset: 0,
             background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 50%)', zIndex: 3
           }} />
 
-          {/* Chip de estado */}
           <Box position="absolute" top={12} left={12} zIndex={4}>
             <Chip
               label={soyGanador ? "¡VAS GANANDO!" : statusConfig.label}
@@ -229,10 +227,10 @@ const LoteCard: React.FC<LoteCardProps> = ({
             />
           </Box>
 
-          {/* Precio sobre la imagen */}
+          {/* ✅ Precios sincronizados visualmente */}
           <Box position="absolute" bottom={12} left={12} zIndex={4}>
             <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)', display: 'block', fontWeight: 700 }}>
-              {lote.ultima_puja?.monto ? 'OFERTA ACTUAL' : 'PRECIO BASE'}
+              {lote.ultima_puja?.monto ? 'OFERTA ACTUAL LÍDER' : 'PRECIO BASE INICIAL'}
             </Typography>
             <Typography variant="h5" sx={{ color: 'white', fontWeight: 900 }}>
               {formatCurrency(

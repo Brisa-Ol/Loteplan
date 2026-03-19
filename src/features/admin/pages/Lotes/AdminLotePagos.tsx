@@ -23,16 +23,17 @@ import {
   XAxis, YAxis
 } from 'recharts';
 
-import { AdminPageHeader } from '@/shared/components/admin/Adminpageheader'; // ✅ Componente Header estandarizado
+// ✅ Importamos env para usar defaultLocale y evitar hardcodear 'es-AR'
+import imagenService from '@/core/api/services/imagen.service';
+import { env } from '@/core/config/env';
+import type { LoteDto } from '@/core/types/lote.dto';
+
+import { AdminPageHeader } from '@/shared/components/admin/Adminpageheader';
 import { DataTable, type DataTableColumn } from '@/shared/components/data-grid/DataTable';
 import { QueryHandler } from '@/shared/components/data-grid/QueryHandler';
 import { StatCard, StatusBadge } from '@/shared/components/domain/cards/StatCard';
-
-import { PageContainer } from '@/shared/components/layout/PageContainer';
-
-import imagenService from '@/core/api/services/imagen.service';
-import type { LoteDto } from '@/core/types/lote.dto';
 import { ConfirmDialog } from '@/shared/components/domain/modals/ConfirmDialog';
+import { PageContainer } from '@/shared/components/layout/PageContainer';
 import { useAdminLotePagos } from '../../hooks/lotes/useAdminLotePagos';
 
 // ============================================================================
@@ -87,7 +88,6 @@ const RiskDistributionChart = React.memo<{ data: any[]; theme: any }>(({ data, t
     </Card>
   );
 });
-
 RiskDistributionChart.displayName = 'RiskDistributionChart';
 
 const RiskLoteCard = React.memo<{ lote: LoteDto; theme: any; diasRestantes: number }>(({ lote, theme, diasRestantes }) => {
@@ -130,19 +130,31 @@ const RiskLoteCard = React.memo<{ lote: LoteDto; theme: any; diasRestantes: numb
         <Stack spacing={2}>
           <Box>
             <Stack direction="row" justifyContent="space-between" mb={0.5}>
-              <Typography variant="caption" fontWeight={800} color={isCritical ? 'error.main' : 'warning.main'}>{intentos}/3 FALLOS</Typography>
+              <Typography variant="caption" fontWeight={800} color={isCritical ? 'error.main' : 'warning.main'}>
+                {intentos}/3 FALLOS
+              </Typography>
               <Typography variant="caption" color="text.secondary">{Math.round((intentos / 3) * 100)}%</Typography>
             </Stack>
-            <LinearProgress variant="determinate" value={(intentos / 3) * 100} color={isCritical ? 'error' : 'warning'} sx={{ height: 6, borderRadius: 10 }} />
+            <LinearProgress
+              variant="determinate"
+              value={(intentos / 3) * 100}
+              color={isCritical ? 'error' : 'warning'}
+              sx={{ height: 6, borderRadius: 10 }}
+            />
           </Box>
           <Stack direction="row" justifyContent="space-between" alignItems="center">
+            {/* ✅ env.defaultLocale — antes era 'es-AR' hardcodeado */}
             <Typography variant="h6" fontWeight={800} color="primary.main">
-              ${Number(lote.precio_base).toLocaleString('es-AR')}
+              ${Number(lote.precio_base).toLocaleString(env.defaultLocale)}
             </Typography>
             <Chip
               label={`${diasRestantes} días`}
               size="small"
-              sx={{ bgcolor: diasRestantes <= 10 ? 'error.light' : 'success.light', color: diasRestantes <= 10 ? 'error.main' : 'success.main', fontWeight: 800 }}
+              sx={{
+                bgcolor: diasRestantes <= 10 ? 'error.light' : 'success.light',
+                color: diasRestantes <= 10 ? 'error.main' : 'success.main',
+                fontWeight: 800,
+              }}
             />
           </Stack>
         </Stack>
@@ -150,7 +162,6 @@ const RiskLoteCard = React.memo<{ lote: LoteDto; theme: any; diasRestantes: numb
     </Card>
   );
 });
-
 RiskLoteCard.displayName = 'RiskLoteCard';
 
 // ============================================================================
@@ -165,9 +176,16 @@ const AdminLotePagos: React.FC = () => {
 
   const columnsCobros = useMemo<DataTableColumn<LoteDto>[]>(() => [
     {
-      id: 'lote', label: 'Referencia', minWidth: 200, render: (l) => (
+      id: 'lote',
+      label: 'Referencia',
+      minWidth: 200,
+      render: (l) => (
         <Stack direction="row" spacing={2} alignItems="center">
-          <Avatar src={l.imagenes?.[0] ? imagenService.resolveImageUrl(l.imagenes[0].url) : undefined} variant="rounded" sx={{ width: 36, height: 36, border: `1px solid ${theme.palette.divider}` }}>
+          <Avatar
+            src={l.imagenes?.[0] ? imagenService.resolveImageUrl(l.imagenes[0].url) : undefined}
+            variant="rounded"
+            sx={{ width: 36, height: 36, border: `1px solid ${theme.palette.divider}` }}
+          >
             <ImageIcon sx={{ fontSize: 18 }} />
           </Avatar>
           <Box>
@@ -178,15 +196,18 @@ const AdminLotePagos: React.FC = () => {
       )
     },
     {
-      id: 'ganador', label: 'Deudor adjudicado', minWidth: 260, render: (l) => {
+      id: 'ganador',
+      label: 'Deudor adjudicado',
+      minWidth: 260,
+      render: (l) => {
         const g = l.ganador;
-        const alias = g?.nombre_usuario ? `@${g.nombre_usuario}` : g ? `${g.nombre} ${g.apellido}` : `ID #${l.id_ganador}`;
+        const alias = g?.nombre_usuario
+          ? `@${g.nombre_usuario}`
+          : g ? `${g.nombre} ${g.apellido}` : `ID #${l.id_ganador}`;
 
         return (
           <Stack spacing={0.5}>
-            <Typography variant="body2" fontWeight={800} color="text.primary">
-              {alias}
-            </Typography>
+            <Typography variant="body2" fontWeight={800} color="text.primary">{alias}</Typography>
             <Stack spacing={0.2}>
               <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5, fontWeight: 600 }}>
                 <Person sx={{ fontSize: 12 }} /> {g ? `${g.nombre} ${g.apellido}` : 'Adjudicado'}
@@ -202,14 +223,19 @@ const AdminLotePagos: React.FC = () => {
       }
     },
     {
-      id: 'plazo', label: 'Vencimiento', render: (l) => {
+      id: 'plazo',
+      label: 'Vencimiento',
+      render: (l) => {
         if (!l.fecha_fin) return '-';
         const fechaLimite = new Date(new Date(l.fecha_fin).getTime() + (90 * 24 * 60 * 60 * 1000));
         const hoy = new Date();
         const dias = Math.ceil((fechaLimite.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
         return (
           <Box>
-            <Typography variant="body2" fontWeight={700}>{fechaLimite.toLocaleDateString('es-AR')}</Typography>
+            {/* ✅ env.defaultLocale — antes era 'es-AR' hardcodeado */}
+            <Typography variant="body2" fontWeight={700}>
+              {fechaLimite.toLocaleDateString(env.defaultLocale)}
+            </Typography>
             <Typography variant="caption" color={dias < 10 ? 'error.main' : 'success.main'} sx={{ fontWeight: 800 }}>
               {dias > 0 ? `${dias} días` : 'VENCIDO'}
             </Typography>
@@ -218,29 +244,45 @@ const AdminLotePagos: React.FC = () => {
       }
     },
     {
-      id: 'estado', label: 'Situación', render: (l) => {
+      id: 'estado',
+      label: 'Situación',
+      render: (l) => {
         const intentos = l.intentos_fallidos_pago || 0;
         if (intentos >= 3) return <StatusBadge status="failed" customLabel="SANCIONABLE" />;
         if (intentos > 0) return <StatusBadge status="warning" customLabel={`${intentos}/3 FALLOS`} />;
-
         return (
-          <Chip label="Al día" size="small" sx={{ bgcolor: 'success.light', color: 'success.main', fontWeight: 800, borderRadius: 1 }} />
+          <Chip
+            label="Al día"
+            size="small"
+            sx={{ bgcolor: 'success.light', color: 'success.main', fontWeight: 800, borderRadius: 1 }}
+          />
         );
       }
     },
     {
-      id: 'monto', label: 'Monto Final', align: 'right', render: (l) => (
+      id: 'monto',
+      label: 'Monto Final',
+      align: 'right',
+      render: (l) => (
         <Box textAlign="right">
+          {/* ✅ env.defaultLocale — antes era 'es-AR' hardcodeado */}
           <Typography variant="body2" fontWeight={900} sx={{ fontFamily: 'monospace', color: 'primary.dark' }}>
-            ${Number(l.monto_ganador_lote || l.precio_base).toLocaleString('es-AR')}
+            ${Number(l.monto_ganador_lote || l.precio_base).toLocaleString(env.defaultLocale)}
           </Typography>
         </Box>
       )
     },
     {
-      id: 'acciones', label: '', align: 'right', render: (l) => (
-        <Tooltip title={l.intentos_fallidos_pago >= 3 ? "Liberar Lote" : "Añadir Fallo"}>
-          <IconButton size="small" sx={{ color: 'error.main', bgcolor: alpha(theme.palette.error.main, 0.05) }} onClick={() => logic.handleForceFinish?.(l)}>
+      id: 'acciones',
+      label: '',
+      align: 'right',
+      render: (l) => (
+        <Tooltip title={l.intentos_fallidos_pago >= 3 ? 'Liberar Lote' : 'Añadir Fallo'}>
+          <IconButton
+            size="small"
+            sx={{ color: 'error.main', bgcolor: alpha(theme.palette.error.main, 0.05) }}
+            onClick={() => logic.handleForceFinish?.(l)}
+          >
             {l.intentos_fallidos_pago >= 3 ? <Block fontSize="small" /> : <CancelScheduleSend fontSize="small" />}
           </IconButton>
         </Tooltip>
@@ -250,17 +292,24 @@ const AdminLotePagos: React.FC = () => {
 
   return (
     <PageContainer maxWidth="xl" sx={{ py: 4, bgcolor: 'background.default' }}>
-      {/* 1. HEADER ESTANDARIZADO */}
+      {/* 1. HEADER */}
       <AdminPageHeader
         title="Pagos y seguimiento de subastas"
         subtitle="Seguimiento de adjudicaciones, riesgo de cartera y plazos de pago."
       />
 
-      {/* 2. KPIS Y RIESGO */}
+      {/* 2. KPIs */}
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 3, mb: 5 }}>
         <StatCard title="Lotes en Mora" value={logic.analytics.totalPendientes} icon={<Timeline />} color="warning" loading={logic.isLoading} />
         <StatCard title="Riesgo Crítico" value={logic.analytics.cantidadCritica} icon={<ErrorOutline />} color="error" loading={logic.isLoading} />
-        <StatCard title="Capital en Riesgo" value={`$${logic.analytics.capitalEnRiesgo.toLocaleString('es-AR', { notation: 'compact' })}`} icon={<AttachMoney />} color="info" loading={logic.isLoading} />
+        {/* ✅ env.defaultLocale — antes era 'es-AR' hardcodeado */}
+        <StatCard
+          title="Capital en Riesgo"
+          value={`$${logic.analytics.capitalEnRiesgo.toLocaleString(env.defaultLocale, { notation: 'compact' })}`}
+          icon={<AttachMoney />}
+          color="info"
+          loading={logic.isLoading}
+        />
       </Box>
 
       {/* 3. TABS Y CONTROLES */}
@@ -279,7 +328,7 @@ const AdminLotePagos: React.FC = () => {
         )}
       </Stack>
 
-      {/* 4. CONTENIDO CONDICIONAL */}
+      {/* 4. CONTENIDO */}
       <QueryHandler isLoading={logic.isLoading} error={logic.error as Error}>
         {tabIndex === 0 ? (
           <Box>
@@ -289,7 +338,12 @@ const AdminLotePagos: React.FC = () => {
             {viewMode === 'cards' ? (
               <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)', xl: 'repeat(3, 1fr)' }, gap: 3 }}>
                 {logic.lotes.map(lote => (
-                  <RiskLoteCard key={lote.id} lote={lote} theme={theme} diasRestantes={logic.calcularDiasRestantes(lote.fecha_fin)} />
+                  <RiskLoteCard
+                    key={lote.id}
+                    lote={lote}
+                    theme={theme}
+                    diasRestantes={logic.calcularDiasRestantes(lote.fecha_fin)}
+                  />
                 ))}
               </Box>
             ) : (

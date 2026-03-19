@@ -35,12 +35,12 @@ import {
 import TwoFactorAuthModal from '@/shared/components/domain/modals/TwoFactorAuthModal';
 
 // Hooks Locales
+import { useAuctionStatus } from '../../hooks';
 import { useCurrencyFormatter } from '../../hooks/useCurrencyFormatter';
 import { useImageLoader } from '../../hooks/useImageLoader';
 import { useVerificarSuscripcion } from '../../hooks/useVerificarSuscripcion';
 import { FavoritoButton } from './components/BotonFavorito';
 import { PujarModal } from './modals/PujarModal';
-import { useAuctionStatus } from '../../hooks';
 
 
 const pulse = keyframes`
@@ -130,7 +130,7 @@ const DetalleLote: React.FC = () => {
   // 2. LÓGICA DE NEGOCIO (Win Info)
   const winInfo = useMemo(() => {
     if (!lote || !user?.id) {
-      return { esLiderActual: false, esGanadorDefinitivo: false, montoFinal: 0, pujaId: null, status: 'desconocido', miPujaId: null };
+      return { esLiderActual: false, esGanadorDefinitivo: false, montoFinal: 0, pujaId: null, status: 'desconocido', miPujaId: null, hayOfertas: false };
     }
 
     const pujaId = lote.id_puja_mas_alta ?? null;
@@ -138,6 +138,7 @@ const DetalleLote: React.FC = () => {
     let status = 'desconocido';
     let miPujaId = null;
     let idUsuarioLider = null;
+    let hayOfertas = false; 
 
     if (Array.isArray(lote.pujas) && lote.pujas.length > 0) {
       const pGanadora = lote.pujas.find((p: any) => p.id === pujaId);
@@ -145,22 +146,25 @@ const DetalleLote: React.FC = () => {
         montoFinal = Number(pGanadora.monto_puja);
         status = pGanadora.estado_puja;
         idUsuarioLider = Number(pGanadora.id_usuario);
+        hayOfertas = true;
       }
-      const miPuja = lote.pujas.find((p: any) => Number(p.id_usuario) === Number(user.id) && p.estado_puja === 'activa');
+      // ✅ CORRECCIÓN: Buscamos cualquier puja que no esté cancelada para confirmar participación
+      const miPuja = lote.pujas.find((p: any) => Number(p.id_usuario) === Number(user.id) && p.estado_puja !== 'cancelada');
       if (miPuja) miPujaId = miPuja.id;
     } else if (lote.ultima_puja) {
       montoFinal = Number(lote.ultima_puja.monto);
       idUsuarioLider = Number(lote.ultima_puja.id_usuario);
+      hayOfertas = true;
     }
 
     const subastaFinalizada = lote.estado_subasta === 'finalizada';
     const esGanadorDefinitivo = subastaFinalizada && Number(lote.id_ganador) === Number(user.id);
     const esLiderActual = !subastaFinalizada && idUsuarioLider === Number(user.id);
 
-    return { esGanadorDefinitivo, esLiderActual, pujaId, miPujaId, montoFinal, status };
+    return { esGanadorDefinitivo, esLiderActual, pujaId, miPujaId, montoFinal, status, hayOfertas };
   }, [lote, user?.id]);
 
-  // ✅ Variables derivadas del estado — deben estar ANTES del renderizado preventivo
+  // ✅ Variables derivadas del estado
   const statusConfig = useAuctionStatus(lote?.estado_subasta);
   const isActiva = lote?.estado_subasta === 'activa';
   const soyGanador = winInfo.esLiderActual || winInfo.esGanadorDefinitivo;
@@ -169,8 +173,9 @@ const DetalleLote: React.FC = () => {
   const yaPago = winInfo.status === 'ganadora_pagada';
   const debesPagar = winInfo.esGanadorDefinitivo && subastaFinalizada && !yaPago;
 
-  const puedePujar = !subastaFinalizada && estaSuscripto && (tokensDisponibles > 0 || winInfo.esLiderActual || !!winInfo.miPujaId);
-  const puedeCancelar = !subastaFinalizada && !!winInfo.miPujaId && !winInfo.esLiderActual;
+  // ✅ CORRECCIÓN: Para poder pujar, la subasta DEBE estar Activa
+  const puedePujar = isActiva && estaSuscripto && (tokensDisponibles > 0 || winInfo.esLiderActual || !!winInfo.miPujaId);
+  const puedeCancelar = isActiva && !!winInfo.miPujaId && !winInfo.esLiderActual;
 
   // ✅ Suscripto, subasta activa, pero sin tokens ni puja activa ni es líder
   const sinTokensParaPujar =
@@ -229,7 +234,7 @@ const DetalleLote: React.FC = () => {
         <Portal><Box sx={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9999 }}><LinearProgress sx={{ height: 2 }} /></Box></Portal>
       )}
 
-      {/* ✅ PageHeader con chip de estado sincronizado con LoteCard */}
+      {/* ✅ PageHeader con chip de estado sincronizado */}
       <PageHeader
         title={lote.nombre_lote}
         subtitle={`ID #${lote.id} • ${lote.proyecto?.nombre_proyecto}`}
@@ -298,9 +303,19 @@ const DetalleLote: React.FC = () => {
               </Stack>
             </Box>
             <CardContent sx={{ p: 4 }}>
-              <Typography variant="overline">Oferta Actual</Typography>
-              <Typography variant="h3" fontWeight={900} color="success.main" gutterBottom>
-                {fmt(winInfo.montoFinal)}
+              
+              <Box mb={2}>
+                <Typography variant="caption" color="text.secondary" fontWeight={700} display="block">
+                  PRECIO BASE INICIAL: {fmt(Number(lote.precio_base))}
+                </Typography>
+              </Box>
+
+              <Typography variant="overline" color={winInfo.hayOfertas ? "primary.main" : "text.secondary"}>
+                {winInfo.hayOfertas ? 'OFERTA ACTUAL LÍDER' : 'SIN OFERTAS (Precio Base)'}
+              </Typography>
+              
+              <Typography variant="h3" fontWeight={900} color={winInfo.hayOfertas ? "success.main" : "text.primary"} gutterBottom>
+                {fmt(winInfo.montoFinal)} 
               </Typography>
 
               <Stack spacing={2} mt={4}>
@@ -316,20 +331,11 @@ const DetalleLote: React.FC = () => {
                   {winInfo.esLiderActual || !!winInfo.miPujaId ? 'MEJORAR MI OFERTA' : 'OFERTAR AHORA'}
                 </Button>
 
-                {/* ✅ Aviso sin tokens: suscripto pero agotó su token y no tiene puja activa */}
                 {sinTokensParaPujar && (
                   <Fade in timeout={300}>
-                    <Alert
-                      severity="warning"
-                      icon={<TokenOutlined fontSize="small" />}
-                      sx={{ borderRadius: 2 }}
-                    >
-                      <Typography variant="caption" fontWeight={800} display="block">
-                        Sin tokens disponibles
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        Ya utilizaste tu token en este proyecto. Solo podés mejorar una puja activa propia.
-                      </Typography>
+                    <Alert severity="warning" icon={<TokenOutlined fontSize="small" />} sx={{ borderRadius: 2 }}>
+                      <Typography variant="caption" fontWeight={800} display="block">Sin tokens disponibles</Typography>
+                      <Typography variant="caption" color="text.secondary">Ya utilizaste tu token en este proyecto.</Typography>
                     </Alert>
                   </Fade>
                 )}

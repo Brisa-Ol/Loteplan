@@ -42,17 +42,12 @@ export const PujarModal: React.FC<Props> = ({
   const [monto, setMonto] = useState('');
   const [errorLocal, setErrorLocal] = useState<string | null>(null);
 
-  // ✅ Nuevo estado para guardar el mínimo al abrir el modal
+  // ✅ Estado para guardar el mínimo al abrir el modal
   const [minimoAlAbrir, setMinimoAlAbrir] = useState(0);
 
-  // Hook de carga de imagen para el mini-header
   const { isLoading: imgLoading, hasError: imgError, handleLoad, handleError } = useImageLoader();
-
   const { tieneTokens } = useVerificarSuscripcion(lote?.id_proyecto ?? undefined);
 
-  // ─────────────────────────────────────────────
-  // LÓGICA DE IMAGEN PREVENTIVA
-  // ─────────────────────────────────────────────
   const rawUrl = lote?.imagenes?.[0]?.url;
   const hasNoImageRecord = !rawUrl || rawUrl.trim() === '';
 
@@ -61,11 +56,28 @@ export const PujarModal: React.FC<Props> = ({
     return ImagenService.resolveImageUrl(rawUrl);
   }, [rawUrl, hasNoImageRecord]);
 
-  const { precioMinimoRequerido, precioActual } = useMemo(() => {
-    if (!lote) return { precioMinimoRequerido: 0, precioActual: 0 };
-    const actual = Number(lote.ultima_puja?.monto || lote.precio_base);
-    const minimo = lote.ultima_puja ? actual + INCREMENTO_PASO : actual;
-    return { precioMinimoRequerido: minimo, precioActual: actual };
+  // ✅ Lógica corregida para buscar la puja más alta donde sea que venga
+  const { precioMinimoRequerido, precioActual, hayOfertas, precioBase } = useMemo(() => {
+    if (!lote) return { precioMinimoRequerido: 0, precioActual: 0, hayOfertas: false, precioBase: 0 };
+    
+    const base = Number(lote.precio_base || 0);
+    let actual = base;
+    let tieneOfertas = false;
+    
+    if (lote.id_puja_mas_alta && Array.isArray(lote.pujas)) {
+      const pGanadora = lote.pujas.find((p: any) => p.id === lote.id_puja_mas_alta);
+      if (pGanadora) {
+        actual = Number(pGanadora.monto_puja);
+        tieneOfertas = true;
+      }
+    } else if (lote.ultima_puja?.monto) {
+      actual = Number(lote.ultima_puja.monto);
+      tieneOfertas = true;
+    }
+    
+    // Si hay oferta previa, suma el paso. Si es la primera oferta, también debe ser mayor que la base.
+    const minimo = actual + INCREMENTO_PASO;
+    return { precioMinimoRequerido: minimo, precioActual: actual, hayOfertas: tieneOfertas, precioBase: base };
   }, [lote]);
 
   // ✅ useEffect actualizado
@@ -112,7 +124,6 @@ export const PujarModal: React.FC<Props> = ({
     >
       <Stack spacing={3}>
 
-        {/* ── MINI HEADER VISUAL DEL LOTE ── */}
         <Box
           sx={{
             height: 120, borderRadius: 2, overflow: 'hidden', position: 'relative',
@@ -138,7 +149,6 @@ export const PujarModal: React.FC<Props> = ({
                   opacity: imgLoading ? 0 : 1, transition: 'opacity 0.3s'
                 }}
               />
-              {/* Overlay con nombre del lote */}
               <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, p: 1, background: 'linear-gradient(transparent, rgba(0,0,0,0.7))', color: 'white' }}>
                 <Typography variant="caption" fontWeight={800} noWrap display="block">
                   {lote.nombre_lote}
@@ -148,7 +158,6 @@ export const PujarModal: React.FC<Props> = ({
           )}
         </Box>
 
-        {/* Indicador de urgencia */}
         <Box
           sx={{
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1,
@@ -166,15 +175,20 @@ export const PujarModal: React.FC<Props> = ({
           </Typography>
         </Box>
 
-        {/* Precios de referencia */}
         <Box p={2} bgcolor="background.paper" borderRadius={2} border="1px solid" borderColor="divider">
+          <Stack direction="row" justifyContent="space-between" mb={1}>
+            <Typography variant="caption" color="text.secondary">Precio Base Inicial:</Typography>
+            <Typography variant="body2" color="text.secondary">{formatCurrency(precioBase)}</Typography>
+          </Stack>
           <Stack direction="row" justifyContent="space-between">
-            <Typography variant="caption" color="text.secondary">Oferta Líder:</Typography>
+            <Typography variant="caption" color="text.secondary">
+              {hayOfertas ? 'Oferta Líder Actual:' : 'Sin Ofertas (Mínimo arranca en):'}
+            </Typography>
             <Typography variant="body2" fontWeight={800}>{formatCurrency(precioActual)}</Typography>
           </Stack>
           <Divider sx={{ my: 1, borderStyle: 'dashed' }} />
           <Stack direction="row" justifyContent="space-between">
-            <Typography variant="caption" color="primary.main" fontWeight={800}>Mínimo a ofertar:</Typography>
+            <Typography variant="caption" color="primary.main" fontWeight={800}>Mínimo a ofertar ahora:</Typography>
             <Typography variant="body2" color="primary.main" fontWeight={900}>
               {formatCurrency(precioMinimoRequerido)}
             </Typography>
@@ -206,7 +220,6 @@ export const PujarModal: React.FC<Props> = ({
           InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }}
         />
 
-        {/* Botones de incremento rápido */}
         <Stack direction="row" spacing={1}>
           {[10_000, 100_000, 500_000].map((v) => (
             <Button

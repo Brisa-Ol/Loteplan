@@ -168,7 +168,7 @@ const AdminPujas: React.FC = () => {
         onClose={() => { logic.modales.detallePuja.close(); logic.setPujaSeleccionada(null); }}
         puja={logic.pujaSeleccionada}
         userName={logic.pujaSeleccionada ? logic.getUserName(logic.pujaSeleccionada.id_usuario) : undefined}
-        isHighest={logic.pujaSeleccionada && logic.pujasPorLote[logic.pujaSeleccionada.id_lote]?.[0]?.id === logic.pujaSeleccionada.id}
+        isHighest={!!logic.pujaSeleccionada && logic.pujasPorLote[logic.pujaSeleccionada.id_lote]?.[0]?.id === logic.pujaSeleccionada.id}
         rankingPosition={logic.pujaSeleccionada ? (logic.pujasPorLote[logic.pujaSeleccionada.id_lote]?.findIndex(p => p.id === logic.pujaSeleccionada?.id) + 1) : undefined}
       />
 

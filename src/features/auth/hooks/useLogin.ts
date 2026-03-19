@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import * as Yup from "yup";
 
-type LocalErrorType = 'invalid_credentials' | 'account_not_activated' | 'session_expired' | 'generic';
+type LocalErrorType = 'invalid_credentials' | 'account_not_activated' | 'session_expired' | 'generic' |'rate_limited';
 
 export const useLogin = () => {
   const navigate = useNavigate();
@@ -57,22 +57,35 @@ export const useLogin = () => {
     }
   }, [isInitializing, isAuthenticated, user, requires2FA, navigate, from]);
 
-  // Helper de errores
-  const parseError = (err: any) => {
-    console.error("Login Error:", err);
-    let rawMsg = typeof err === 'string' ? err : err?.response?.data?.message || err?.message || "Error inesperado.";
-    const msgLower = rawMsg.toLowerCase();
+ // 2. Agregar el caso 429 en parseError — ANTES del resto de checks
+const parseError = (err: any) => {
+  console.error("Login Error:", err);
 
-    if (msgLower.includes('credenciales') || msgLower.includes('401')) {
-      setLocalError({ type: 'invalid_credentials', msg: "Credenciales incorrectas." });
-    } else if (msgLower.includes('no activada') || msgLower.includes('verificar')) {
-      setLocalError({ type: 'account_not_activated', msg: "Cuenta no activada." });
-    } else if (msgLower.includes('sesión') || msgLower.includes('token')) {
-      setLocalError({ type: 'session_expired', msg: "Sesión expirada." });
-    } else {
-      setLocalError({ type: 'generic', msg: rawMsg });
-    }
-  };
+  // ✅ Chequear status HTTP primero, antes de parsear el mensaje
+  const status = err?.response?.status;
+  if (status === 429) {
+    setLocalError({ 
+      type: 'rate_limited', 
+      msg: 'Demasiados intentos. Esperá unos minutos antes de intentar nuevamente.' 
+    });
+    return;
+  }
+
+  let rawMsg = typeof err === 'string' 
+    ? err 
+    : err?.response?.data?.message || err?.message || "Error inesperado.";
+  const msgLower = rawMsg.toLowerCase();
+
+  if (msgLower.includes('credenciales') || msgLower.includes('401')) {
+    setLocalError({ type: 'invalid_credentials', msg: "Credenciales incorrectas." });
+  } else if (msgLower.includes('no activada') || msgLower.includes('verificar')) {
+    setLocalError({ type: 'account_not_activated', msg: "Cuenta no activada." });
+  } else if (msgLower.includes('sesión') || msgLower.includes('token')) {
+    setLocalError({ type: 'session_expired', msg: "Sesión expirada." });
+  } else {
+    setLocalError({ type: 'generic', msg: rawMsg });
+  }
+};
 
   // Formulario
   const formik = useFormik({

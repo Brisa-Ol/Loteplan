@@ -5,11 +5,13 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 
 import LoteService from '@/core/api/services/lote.service';
+// ✅ Importamos PujaService — LoteService.cancelarAdjudicacion no existe
+import PujaService from '@/core/api/services/puja.service';
+import { env } from '@/core/config/env';
 import type { LoteDto } from '@/core/types/lote.dto';
 import { useConfirmDialog } from '@/shared/hooks/useConfirmDialog';
 import { useSnackbar } from '@/shared/hooks/useSnackbar';
 import { useSortedData } from '../useSortedData';
-import { env } from '@/core/config/env'; // 👈 1. Importamos env
 
 // ============================================================================
 // HELPERS
@@ -31,18 +33,17 @@ export const useAdminLotePagos = () => {
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useSnackbar();
 
-  // ✅ Fix: useConfirmDialog reemplaza useModal + confirmConfig manual
   const confirmDialog = useConfirmDialog();
 
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('cards');
+  // ✅ selectedLote guarda el LoteDto completo — necesario para la mutación
   const [selectedLote, setSelectedLote] = useState<LoteDto | null>(null);
 
   // --- DATA FETCHING ---
   const { data: lotesRaw = [], isLoading, error } = useQuery({
     queryKey: ['adminLotesPagos'],
     queryFn: async () => (await LoteService.findAllAdmin()).data,
-    // 👈 2. Aplicamos variables de entorno con fallbacks
-    refetchInterval: env.queryRefetchInterval || 30000, 
+    refetchInterval: env.queryRefetchInterval || 30000,
     staleTime: env.queryStaleTime || 10000,
   });
 
@@ -65,47 +66,56 @@ export const useAdminLotePagos = () => {
     );
 
     const chartData = [
-      { name: 'Normal (0)', value: lotesPendientesTotal.filter(l => !l.intentos_fallidos_pago).length, color: theme.palette.success.light },
-      { name: 'Bajo (1)', value: lotesPendientesTotal.filter(l => l.intentos_fallidos_pago === 1).length, color: theme.palette.warning.light },
-      { name: 'Alto (2)', value: lotesPendientesTotal.filter(l => l.intentos_fallidos_pago === 2).length, color: theme.palette.error.main },
-      { name: 'Crítico (3+)', value: lotesPendientesTotal.filter(l => (l.intentos_fallidos_pago || 0) >= 3).length, color: theme.palette.error.dark },
+      { name: 'Normal (0)', value: lotesPendientesTotal.filter(l => !l.intentos_fallidos_pago).length },
+      { name: 'Bajo (1)', value: lotesPendientesTotal.filter(l => l.intentos_fallidos_pago === 1).length },
+      { name: 'Alto (2)', value: lotesPendientesTotal.filter(l => l.intentos_fallidos_pago === 2).length },
+      { name: 'Crítico (3+)', value: lotesPendientesTotal.filter(l => (l.intentos_fallidos_pago || 0) >= 3).length },
     ];
 
     return {
       totalPendientes: lotesPendientesTotal.length,
       cantidadCritica: riesgoCriticoItems.length,
       capitalEnRiesgo,
-      chartData
+      chartData,
     };
-  }, [lotesPendientesTotal, theme]);
+  }, [lotesPendientesTotal]);
 
   // --- MUTACIÓN ---
+  // ✅ Recibe el LoteDto completo para decidir qué método de PujaService usar:
+  //    - Si tiene puja ganadora → cancelarGanadoraAnticipada (devuelve token)
+  //    - Si no                 → manageAuctionEnd con idGanador: null (libera el lote)
   const sancionarMutation = useMutation({
-    mutationFn: async (loteId: number) => await LoteService.cancelarAdjudicacion(loteId),
+    mutationFn: async (lote: LoteDto) => {
+      if (lote.id_puja_mas_alta) {
+        return await PujaService.cancelarGanadoraAnticipada(
+          lote.id_puja_mas_alta,
+          'Incumplimiento de pago — sanción administrativa'
+        );
+      }
+      return await PujaService.manageAuctionEnd(lote.id, null);
+    },
     onSuccess: (res) => {
-      showSuccess(res.data?.message || 'Adjudicación procesada correctamente.');
+      const msg = (res.data as any)?.message || 'Adjudicación procesada correctamente.';
+      showSuccess(msg);
       queryClient.invalidateQueries({ queryKey: ['adminLotesPagos'] });
       confirmDialog.close();
     },
     onError: (err: any) => {
-      if (err.response?.status === 404) {
-        showError('Error: Falta la ruta POST /lotes/:id/impago en el Backend.');
-      } else {
-        showError('Error al procesar la sanción.');
-      }
-    }
+      showError(err.response?.data?.error || 'Error al procesar la sanción.');
+    },
   });
 
   // --- ACCIONES ---
   const handleForceFinish = (lote: LoteDto) => {
+    // ✅ Guardamos el lote completo — la mutación lo necesita entero
     setSelectedLote(lote);
-    // ✅ Usamos el sistema de confirmación unificado — 'force_finish' ya tiene config en useConfirmDialog
-    confirmDialog.confirm('force_finish', { idLote: lote.id });
+    confirmDialog.confirm('force_finish', lote);
   };
 
   const handleConfirmAction = () => {
     if (selectedLote) {
-      sancionarMutation.mutate(selectedLote.id);
+      // ✅ Pasamos el LoteDto completo a la mutación
+      sancionarMutation.mutate(selectedLote);
     }
   };
 
@@ -124,7 +134,7 @@ export const useAdminLotePagos = () => {
     handleConfirmAction,
     calcularDiasRestantes,
     modales: {
-      confirm: confirmDialog // ✅ Tipo correcto para ConfirmDialog
-    }
+      confirm: confirmDialog,
+    },
   };
 };
