@@ -37,6 +37,7 @@ import { useImageLoader } from '../../hooks/useImageLoader';
 import { useVerificarSuscripcion } from '../../hooks/useVerificarSuscripcion';
 import { FavoritoButton } from './components/BotonFavorito';
 import { PujarModal } from './modals/PujarModal';
+import { MapUrlIframe } from '@/features/admin/pages/Proyectos/modals/MapUrlIframe/MapUrlIframe';
 
 // ─────────────────────────────────────────────
 // HELPERS & SUBCOMPONENTES
@@ -238,6 +239,7 @@ const DetalleLote: React.FC = () => {
               <Typography variant="subtitle2" color="text.secondary">CIERRE: {formatFullDate(lote.fecha_fin)}</Typography>
             </CardContent>
           </Card>
+            <MapUrlIframe map_url={lote.map_url} ></MapUrlIframe>
         </Box>
 
         <Box>

@@ -29,6 +29,7 @@ import ProyectoService from '@/core/api/services/proyecto.service';
 import type { LoteDto, UpdateLoteDto } from '@/core/types/lote.dto';
 import type { ProyectoDto } from '@/core/types/proyecto.dto';
 import { BaseModal } from '@/shared';
+import { extractAndValidateMapUrl } from '@/shared/utils/extractAndValidateMapUrl';
 ;
 
 
@@ -89,7 +90,7 @@ const ProjectSection = React.memo(({ value, proyectos, isLoading, onChange, onBl
   );
 });
 
-const FinanceSection = React.memo(({ precio, lat, lng, touched, error, onChange, onBlur, disabled }: any) => (
+const FinanceSection = React.memo(({ precio, lat, lng, touched, error, onChange, onBlur, disabled, maps }: any) => (
   <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
     <Box flex={1}>
       <Typography sx={SECTION_TITLE_SX}><MonetizationIcon fontSize="inherit" /> Valor Base</Typography>
@@ -105,6 +106,7 @@ const FinanceSection = React.memo(({ precio, lat, lng, touched, error, onChange,
     <Box flex={1}>
       <Typography sx={SECTION_TITLE_SX}><LocationOn fontSize="inherit" /> Georreferencia</Typography>
       <Stack direction="row" spacing={1}>
+        <TextField fullWidth label="Maps" size="small" name="map_url" value={maps} onChange={onChange} onBlur={onBlur} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
         <TextField fullWidth label="Lat" size="small" name="latitud" value={lat} onChange={onChange} onBlur={onBlur} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
         <TextField fullWidth label="Lng" size="small" name="longitud" value={lng} onChange={onChange} onBlur={onBlur} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
       </Stack>
@@ -168,13 +170,25 @@ const EditLoteModal: React.FC<EditLoteModalProps> = ({ open, onClose, onSubmit, 
     fecha_fin: Yup.date().transform((v, o) => o === '' ? null : v).nullable().when('fecha_inicio', {
       is: (val: any) => val instanceof Date && !isNaN(val.getTime()),
       then: (schema) => schema.min(Yup.ref('fecha_inicio'), 'Posterior al inicio'),
+      
     }),
+    map_url: Yup.string().nullable()
+        .test("valid-map-url", "URL de mapa inválida o no embebible", function (value) {
+        if (!value) return true;
+    
+        try {
+          extractAndValidateMapUrl(value);
+          return true;
+        } catch (e: any) {
+          return this.createError({ message: e.message });
+        }
+      }),
   }), []);
 
   const formik = useFormik({
     initialValues: {
       nombre_lote: '', precio_base: '', id_proyecto: '',
-      fecha_inicio: '', fecha_fin: '', latitud: '', longitud: ''
+      fecha_inicio: '', fecha_fin: '', latitud: '', longitud: '', map_url : ''
     },
     validationSchema,
     enableReinitialize: true,
@@ -186,6 +200,9 @@ const EditLoteModal: React.FC<EditLoteModalProps> = ({ open, onClose, onSubmit, 
         id_proyecto: values.id_proyecto === '' ? null : Number(values.id_proyecto),
         latitud: values.latitud !== '' ? Number(values.latitud) : null,
         longitud: values.longitud !== '' ? Number(values.longitud) : null,
+        map_url:  values.map_url
+          ? extractAndValidateMapUrl(values.map_url)
+          : null
       };
       if (values.fecha_inicio) payload.fecha_inicio = values.fecha_inicio;
       if (values.fecha_fin) payload.fecha_fin = values.fecha_fin;
@@ -204,6 +221,7 @@ const EditLoteModal: React.FC<EditLoteModalProps> = ({ open, onClose, onSubmit, 
         fecha_fin: lote.fecha_fin ? lote.fecha_fin.substring(0, 16) : '',
         latitud: lote.latitud !== null ? String(lote.latitud) : '',
         longitud: lote.longitud !== null ? String(lote.longitud) : '',
+        map_url: lote.map_url !== null ? String(lote.map_url) : ''
       });
     }
   }, [lote, open]);
@@ -268,7 +286,7 @@ const EditLoteModal: React.FC<EditLoteModalProps> = ({ open, onClose, onSubmit, 
 
           <FinanceSection
             precio={formik.values.precio_base} lat={formik.values.latitud} lng={formik.values.longitud}
-            touched={formik.touched.precio_base} error={formik.errors.precio_base}
+            touched={formik.touched.precio_base} error={formik.errors.precio_base} maps={formik.values.map_url}
             onChange={formik.handleChange} onBlur={formik.handleBlur} disabled={isSubastaActiva}
           />
 

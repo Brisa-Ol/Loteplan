@@ -163,6 +163,8 @@ const DetalleProyectoModal: React.FC<DetalleProyectoModalProps> = ({ open, onClo
         }
       >
         <Stack spacing={0}>
+          {/* MODAL DE PREVIEW UBICACION
+                  <MapUrlIframe map_url={proyecto.map_url}></MapUrlIframe> */}
           {/* 📸 HERO / CARRUSEL */}
           <Box sx={styles.heroBox}>
             <CardMedia
@@ -395,6 +397,8 @@ const DetalleProyectoModal: React.FC<DetalleProyectoModalProps> = ({ open, onClo
         idProyecto={proyecto.id}
         nombreArchivo={`Contrato Marco - ${proyecto.nombre_proyecto}`}
       />
+
+      
     </>
   );
 };

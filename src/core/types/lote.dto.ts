@@ -50,7 +50,7 @@ excluir_estadisticas: boolean;
   // 6. Ubicación Geográfica
   latitud: number | null;  
   longitud: number | null; 
-
+  map_url: string | null
   // 7. Relaciones (Includes opcionales)
   imagenes?: ImagenDto[];
   proyecto?: ProyectoMinimalDto; // 👈 Ahora contiene la lógica del Back
@@ -80,6 +80,7 @@ export interface UpdateLoteDto extends Partial<CreateLoteDto> {
   intentos_fallidos_pago?: number;
   excedente_visualizacion?: number;
   monto_ganador_lote?: string | null;
+  map_url: string | null
 }
 
 // ==========================================

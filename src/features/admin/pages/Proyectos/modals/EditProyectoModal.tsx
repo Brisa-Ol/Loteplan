@@ -2,6 +2,7 @@
 
 import type { ProyectoDto, UpdateProyectoDto } from '@/core/types/proyecto.dto';
 import { BaseModal } from '@/shared';
+import { extractAndValidateMapUrl } from '@/shared/utils/extractAndValidateMapUrl';
 import {
     CalendarMonth as CalendarIcon,
     Description as DescriptionIcon,
@@ -32,58 +33,6 @@ import React, { useMemo } from 'react';
 import * as Yup from 'yup';
 
 // --- FUNCIONES Y VARIABLES AUXILIARES ---
-
-//Funciones Thomy
-
-const extractAndValidateMapUrl = (value: string) => {
-
-    if(!value) return value;
-
-    let urlStr = value.trim()
-
-    //detecta si es iframe
-    if (value.includes("<iframe")) {
-		const parser = new DOMParser();
-		const doc = parser.parseFromString(value, "text/html");
-		const iframe = doc.querySelector("iframe");
-
-		if (!iframe) {
-			throw new Error("Iframe inválido");
-		}
-
-		const src = iframe.getAttribute("src");
-		if (!src) {
-			throw new Error("El iframe no tiene src");
-		}
-
-		urlStr = src;
-	}
-
-    //validar url
-    let url: URL;
-	try {
-		url = new URL(urlStr);
-	} catch {
-		throw new Error("URL inválida");
-	}
-
-	// Seguridad estricta
-	if (url.protocol !== "https:") {
-		throw new Error("Debe usar HTTPS");
-	}
-
-	if (url.hostname !== "www.google.com") {
-		throw new Error("Solo se permiten mapas de Google Maps");
-	}
-
-	if (!url.pathname.startsWith("/maps/embed")) {
-		throw new Error("Debe ser una URL de tipo embed");
-	}
-
-	return urlStr;
-}
-
-//Fin funciones Thomy
 
 const blockInvalidChar = (e: React.KeyboardEvent) =>
     ['e', 'E', '-', '+'].includes(e.key) && e.preventDefault();
@@ -205,6 +154,15 @@ const EditProyectoModal: React.FC<EditProyectoModalProps> = ({
             const cleanData = Object.fromEntries(
                 Object.entries(values).map(([key, val]) => {
                     if (val === '') return [key, null];
+
+                    // cachea solo el src del iframe de google maps
+                    if (key === "map_url") {
+                        try {
+                            return [key, val ? extractAndValidateMapUrl(val as string) : null];
+                        } catch {
+                            return [key, null]; // o podés lanzar error si querés bloquear
+                        }
+                    }
 
                     // Lógica de negocio para inversión directa
                     if (proyecto.tipo_inversion === 'directo' && (key === 'obj_suscripciones' || key === 'suscripciones_minimas')) {
@@ -409,6 +367,15 @@ const EditProyectoModal: React.FC<EditProyectoModalProps> = ({
                             </Typography>
                             <Stack direction="row" spacing={2}>
                                 <TextField
+                                    fullWidth label="Maps URL" type="text"
+                                    {...formik.getFieldProps('map_url')}
+                                    error={formik.touched.map_url && !!formik.errors.map_url}
+                                    helperText={formik.touched.map_url && formik.errors.map_url}
+                                    InputProps={{ startAdornment: <InputAdornment position="start"><WorldIcon fontSize='small' color="action" /></InputAdornment> }}
+                                    sx={commonInputSx}
+                                    
+                                />
+                                <TextField
                                     fullWidth label="Latitud" type="number"
                                     {...formik.getFieldProps('latitud')}
                                     error={formik.touched.latitud && !!formik.errors.latitud}
@@ -423,15 +390,6 @@ const EditProyectoModal: React.FC<EditProyectoModalProps> = ({
                                     helperText={formik.touched.longitud && formik.errors.longitud}
                                     InputProps={{ startAdornment: <InputAdornment position="start"><WorldIcon fontSize='small' color="action" /></InputAdornment> }}
                                     sx={commonInputSx}
-                                />
-                                <TextField
-                                    fullWidth label="Maps URL" type="text"
-                                    {...formik.getFieldProps('map_url')}
-                                    error={formik.touched.map_url && !!formik.errors.map_url}
-                                    helperText={formik.touched.map_url && formik.errors.map_url}
-                                    InputProps={{ startAdornment: <InputAdornment position="start"><WorldIcon fontSize='small' color="action" /></InputAdornment> }}
-                                    sx={commonInputSx}
-                                    
                                 />
                                 
                             </Stack>
