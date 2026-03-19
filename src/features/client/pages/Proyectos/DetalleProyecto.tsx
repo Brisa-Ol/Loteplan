@@ -1,5 +1,3 @@
-// src/features/client/pages/Proyectos/DetalleProyecto.tsx
-
 import {
   ArrowBack, AutoGraph, CalendarMonth, CheckCircle,
   Gavel, GppGood,
@@ -24,10 +22,11 @@ import { useVerificarSuscripcion } from '../../hooks/useVerificarSuscripcion';
 
 import { SecurityRequirementModal } from '@/core/auth/guards/SecurityRequirementModal';
 import { PageContainer } from '@/shared';
+import ListaLotesProyecto from '../Lotes/ListaLotesProyecto';
 import { ProjectHero } from './components/ProjectHero';
 import { ProjectSidebar } from './components/ProjectSidebar';
 import { CheckoutWizardModal } from './modals/CheckoutWizardModal/CheckoutWizardModal';
-import ListaLotesProyecto from '../Lotes/ListaLotesProyecto';
+
 import SuscripcionService from '@/core/api/services/suscripcion.service';
 
 // 🚀 LAZY LOADING

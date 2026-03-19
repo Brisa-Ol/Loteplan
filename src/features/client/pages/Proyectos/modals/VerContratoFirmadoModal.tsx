@@ -16,12 +16,12 @@ import {
 } from '@mui/material';
 import React, { useMemo, useState } from 'react';
 
-import { env } from '@/core/config/env';
 import ContratoService from '@/core/api/services/contrato.service';
 import ImagenService from '@/core/api/services/imagen.service';
+import { env } from '@/core/config/env';
 import type { ContratoFirmadoDto } from '@/core/types/contrato-firmado.dto';
-import PDFViewerMejorado from '../../Contratos/components/PDFViewerMejorado';
 import { BaseModal, useSnackbar } from '@/shared';
+import PDFViewerMejorado from '../../Contratos/components/PDFViewerMejorado';
 
 interface Props {
   open: boolean;

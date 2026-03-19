@@ -95,23 +95,18 @@ export const useDetalleProyecto = () => {
   });
 
   // --- ESTADOS DERIVADOS ---
-  const yaFirmo = useMemo(() => {
-	if (!isAuthenticated || !misContratos || !proyecto) return false;
-
-	const contratoFirmado = misContratos.some(
-		c => c.id_proyecto === proyecto.id && c.estado_firma === 'FIRMADO'
-	);
-
-	if (proyecto.tipo_inversion === 'mensual') {
-		const suscripcionActiva = misSuscripciones?.some(
-			s => s.id_proyecto === proyecto.id && s.activo
-		) ?? false;
-
-		return contratoFirmado && suscripcionActiva;
-	}
-
-	return contratoFirmado;
-
+const yaFirmo = useMemo(() => {
+  if (!isAuthenticated || !misContratos || !proyecto) return false;
+  const contratoFirmado = misContratos.some(
+    c => c.id_proyecto === proyecto.id && c.estado_firma === 'FIRMADO'
+  );
+  if (proyecto.tipo_inversion === 'mensual') {
+    const suscripcionActiva = misSuscripciones?.some(
+      s => s.id_proyecto === proyecto.id && s.activo
+    ) ?? false;
+    return contratoFirmado && suscripcionActiva;
+  }
+  return contratoFirmado;
 }, [misContratos, misSuscripciones, proyecto, isAuthenticated]);
 
   const puedeFirmar = useMemo(() => {
@@ -119,11 +114,11 @@ export const useDetalleProyecto = () => {
 
     if (CheckoutStateManager.hasRecoverableState(proyecto.id)) return true;
 
-    if (proyecto.tipo_inversion === 'directo') {
-      return misInversiones?.some(
-        i => i.id_proyecto === proyecto.id && i.estado === 'pagado'
-      ) ?? false;
-    }
+if (proyecto.tipo_inversion === 'directo') {
+  return misInversiones?.some(
+    i => i.id_proyecto === proyecto.id && i.estado === 'pagado'
+  ) ?? false;
+}
 
     if (proyecto.tipo_inversion === 'mensual') {
       return misSuscripciones?.some(
@@ -133,7 +128,11 @@ export const useDetalleProyecto = () => {
 
     return false;
   }, [proyecto, isAuthenticated, misInversiones, misSuscripciones]);
-
+  const tieneFirmaPendiente = useMemo(() => {
+    if (!proyecto) return false;
+    const saved = CheckoutStateManager.loadState(proyecto.id);
+    return !!(saved?.paymentSuccess && saved?.transactionId);
+  }, [proyecto]);
   const coverImage = useMemo(() => {
     if (!proyecto?.imagenes?.[0]) return '/assets/placeholder-project.jpg';
     return ImagenService.resolveImageUrl(proyecto.imagenes[0].url);
@@ -324,6 +323,7 @@ export const useDetalleProyecto = () => {
     porcentaje,
     mostrarTabLotes,   // ✅ Lógica corregida: true solo para tipo 'mensual'
     yaFirmo,
+    tieneFirmaPendiente,
     puedeFirmar,
     is2FAMissing,
     error2FA,

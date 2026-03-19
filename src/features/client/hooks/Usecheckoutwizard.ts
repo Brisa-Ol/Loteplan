@@ -6,13 +6,13 @@ import InversionService from '@/core/api/services/inversion.service';
 import MercadoPagoService from '@/core/api/services/pagoMercado.service';
 import SuscripcionService from '@/core/api/services/suscripcion.service';
 import { useAuth } from '@/core/context';
+import type { ContratoPlantillaDto } from '@/core/types/contrato-plantilla.dto';
 import type { ProyectoDto } from '@/core/types/proyecto.dto';
 import useSnackbar from '@/shared/hooks/useSnackbar';
 import { calculateFileHash } from '@/shared/utils/fileUtils';
 import { PDFDocument } from 'pdf-lib';
 import { useCallback, useRef, useState } from 'react';
 import { CheckoutStateManager } from '../pages/Proyectos/modals/Checkout persistence';
-import type { ContratoPlantillaDto } from '@/core/types/contrato-plantilla.dto';
 
 // ===================================================
 // TYPES
@@ -37,9 +37,9 @@ interface UseCheckoutWizardProps {
 
 type PaymentStatus =
   | "idle"
-	| "processing"
-	| "success"
-	| "failed";
+  | "processing"
+  | "success"
+  | "failed";
 
 // ===================================================
 // CONSTANTS
@@ -254,7 +254,7 @@ export const useCheckoutWizard = ({
       // 1. DESCARGAR LA PLANTILLA PDF
       const pdfUrl = ImagenService.resolveImageUrl(plantillaContrato.url_archivo);
       const pdfBytes = await fetch(pdfUrl).then(res => res.arrayBuffer());
-      const pdfDoc = await PDFDocument.load(pdfBytes ,{
+      const pdfDoc = await PDFDocument.load(pdfBytes, {
         ignoreEncryption: true
       });
 

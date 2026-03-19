@@ -1,21 +1,21 @@
-import type { 
-  ConfirmInversion2faDto, 
-  CreateInversionDto, 
-  InversionDto, 
-  InversionInitResponse, 
-  InversionPorUsuarioDTO, 
-  LiquidityRateDTO 
+import type { GenericResponseDto } from "@/core/types/auth.dto";
+import type {
+  ConfirmInversion2faDto,
+  CreateInversionDto,
+  InversionDto,
+  InversionInitResponse,
+  InversionPorUsuarioDTO,
+  LiquidityRateDTO
 } from "@/core/types/inversion.dto";
 import type { AxiosResponse } from "axios";
 import httpService from "../httpService";
-import type { GenericResponseDto } from "@/core/types/auth.dto";
 
 const BASE_ENDPOINT = '/inversiones';
 
 // Interfaz para la respuesta estándar del backend: { mensaje, data }
 interface BackendResponse<T> {
-    mensaje: string;
-    data: T;
+  mensaje: string;
+  data: T;
 }
 
 const InversionService = {
@@ -56,7 +56,7 @@ const InversionService = {
    * ⚠️ Nota: El backend suele devolver un array directo o { data: [...] }.
    * Ajustamos a BackendResponse<InversionDto[]> para ser consistentes.
    */
-getMisInversiones: async (): Promise<AxiosResponse<InversionDto[]>> => {
+  getMisInversiones: async (): Promise<AxiosResponse<InversionDto[]>> => {
     return await httpService.get(`${BASE_ENDPOINT}/mis_inversiones`);
   },
 
@@ -65,7 +65,7 @@ getMisInversiones: async (): Promise<AxiosResponse<InversionDto[]>> => {
    * Backend: inversionService.findById
    * Endpoint: GET /inversiones/:id
    */
-getById: async (id: number): Promise<AxiosResponse<InversionDto>> => {
+  getById: async (id: number): Promise<AxiosResponse<InversionDto>> => {
     return await httpService.get(`${BASE_ENDPOINT}/${id}`);
   },
 
@@ -78,7 +78,7 @@ getById: async (id: number): Promise<AxiosResponse<InversionDto>> => {
    * Backend: inversionService.findAll
    * Endpoint: GET /inversiones
    */
-findAll: async (): Promise<AxiosResponse<InversionDto[]>> => {
+  findAll: async (): Promise<AxiosResponse<InversionDto[]>> => {
     return await httpService.get(BASE_ENDPOINT);
   },
 

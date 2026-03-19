@@ -14,6 +14,7 @@ import React, { useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import LoteService from '@/core/api/services/lote.service';
+import { env } from '@/core/config/env'; // 👈 1. Importación de env
 import { useAuth } from '@/core/context/AuthContext';
 import type { LoteDto } from '@/core/types/lote.dto';
 import { ROUTES } from '@/routes';
@@ -21,7 +22,6 @@ import { useModal } from '@/shared/hooks/useModal';
 import { useVerificarSuscripcion } from '../../hooks/useVerificarSuscripcion';
 import LoteCard from './components/LoteCard';
 import { PujarModal } from './modals/PujarModal';
-import { env } from '@/core/config/env'; // 👈 1. Importación de env
 
 // ===================================================
 // SKELETON LOADER
@@ -70,7 +70,7 @@ const ListaLotesProyecto: React.FC<ListaLotesProyectoProps> = ({ idProyecto }) =
       return todos.filter((l) => Number(l.id_proyecto) === Number(idProyecto));
     },
     // 👈 2. Aplicamos el tiempo de caché centralizado
-    staleTime: env.queryStaleTime || 300000, 
+    staleTime: env.queryStaleTime || 300000,
     enabled: !!idProyecto,
   });
 

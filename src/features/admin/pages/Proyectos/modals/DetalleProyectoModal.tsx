@@ -1,16 +1,22 @@
 // src/components/Admin/Proyectos/Components/modals/DetalleProyectoModal.tsx
 
 import {
-  AccountBalance, AttachMoney,
+  AttachMoney,
+  CalendarToday,
   Description as ContractIcon,
+  DateRange,
   Edit as EditIcon,
+  EventAvailable,
+  Flag,
   Inventory2 as InventoryIcon,
-  LocationOn,
+  Layers,
   Map,
   ArrowForwardIos as NextIcon,
   OpenInNew,
   PeopleAlt,
   ArrowBackIosNew as PrevIcon,
+  Timer,
+  TrackChanges,
   UploadFile as UploadIcon,
   Visibility as VisibilityIcon
 } from '@mui/icons-material';
@@ -28,13 +34,13 @@ import { useQuery } from '@tanstack/react-query';
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+import { env } from '@/core/config/env';
+import type { LoteDto } from '@/core/types/lote.dto';
+import type { ProyectoDto } from '@/core/types/proyecto.dto';
 import PdfPreviewModal from '@/features/admin/pages/Contrato/modals/PdfPreviewModal';
+import { BaseModal } from '@/shared/components/domain';
 import ContratoPlantillaService from '../../../../../core/api/services/contrato-plantilla.service';
 import ImagenService from '../../../../../core/api/services/imagen.service';
-import { BaseModal } from '@/shared/components/domain';
-import { env } from '@/core/config/env'; // 👈 1. Importamos la configuración global
-import type { ProyectoDto } from '@/core/types/proyecto.dto';
-import type { LoteDto } from '@/core/types/lote.dto';
 
 interface DetalleProyectoModalProps {
   open: boolean;
@@ -61,7 +67,7 @@ const DetalleProyectoModal: React.FC<DetalleProyectoModalProps> = ({ open, onClo
       return activas.reduce((prev, curr) => curr.version > prev.version ? curr : prev);
     },
     enabled: open && !!proyecto,
-    staleTime: env.queryStaleTime || 30000, // 👈 2. Aplicamos la variable global
+    staleTime: env.queryStaleTime || 30000,
   });
 
   // --- Memos de Lógica ---
@@ -144,6 +150,15 @@ const DetalleProyectoModal: React.FC<DetalleProyectoModalProps> = ({ open, onClo
               variant="outlined"
               sx={{ fontWeight: 800, fontSize: '0.6rem' }}
             />
+            {proyecto.pack_de_lotes && (
+              <Chip
+                icon={<Layers style={{ fontSize: 12 }} />}
+                label="PACK DE LOTES"
+                size="small"
+                color="info"
+                sx={{ fontWeight: 800, fontSize: '0.6rem' }}
+              />
+            )}
           </Stack>
         }
       >
@@ -184,35 +199,101 @@ const DetalleProyectoModal: React.FC<DetalleProyectoModalProps> = ({ open, onClo
 
           <Stack spacing={3}>
             {/* 📊 MÉTRICAS RÁPIDAS */}
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' }, gap: 2 }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }, gap: 2 }}>
               <Paper elevation={0} sx={styles.statCard}>
                 <Stack direction="row" alignItems="center" spacing={1} mb={1}>
                   <AttachMoney color="success" sx={{ fontSize: 18 }} />
                   <Typography variant="caption" fontWeight={900} color="text.secondary">INVERSIÓN TOTAL</Typography>
                 </Stack>
-                {/* 👈 3. Aplicamos el Locale Global */}
                 <Typography variant="h6" fontWeight={900}>{proyecto.moneda} {Number(proyecto.monto_inversion).toLocaleString(env.defaultLocale)}</Typography>
               </Paper>
 
               <Paper elevation={0} sx={styles.statCard}>
                 <Stack direction="row" alignItems="center" spacing={1} mb={1}>
                   <PeopleAlt color="primary" sx={{ fontSize: 18 }} />
-                  <Typography variant="caption" fontWeight={900} color="text.secondary">CAPACIDAD</Typography>
+                  <Typography variant="caption" fontWeight={900} color="text.secondary">SUSCRIPCIONES TOTALES</Typography>
                 </Stack>
                 <Typography variant="h6" fontWeight={900}>{proyecto.suscripciones_actuales} / {proyecto.obj_suscripciones}</Typography>
               </Paper>
 
-              <Paper elevation={0} sx={{ ...styles.statCard, bgcolor: alpha(theme.palette.info.main, 0.03) }}>
-                <Stack direction="row" spacing={1} mb={1}>
-                  <AccountBalance color="info" sx={{ fontSize: 18 }} />
-                  <Typography variant="caption" fontWeight={900} color="info.main">DATOS LEGALES</Typography>
+              {/* RECUADRO: SUSCRIPCIONES MÍNIMAS */}
+              <Paper elevation={0} sx={styles.statCard}>
+                <Stack direction="row" alignItems="center" spacing={1} mb={1}>
+                  <Flag color="warning" sx={{ fontSize: 18 }} />
+                  <Typography variant="caption" fontWeight={900} color="text.secondary">META MÍNIMA</Typography>
                 </Stack>
-                <Typography variant="body2" fontWeight={800} noWrap>{proyecto.forma_juridica || 'Fideicomiso'}</Typography>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  <LocationOn sx={{ fontSize: 12 }} /> {proyecto.latitud ? 'Georreferenciado' : 'Ubicación Pendiente'}
+                <Typography variant="h6" fontWeight={900}>{proyecto.suscripciones_minimas || 0}</Typography>
+              </Paper>
+
+              <Paper elevation={0} sx={{ ...styles.statCard, bgcolor: alpha(theme.palette.info.main, 0.03) }}>
+                <Stack direction="row" alignItems="center" spacing={1} mb={1}>
+                  <TrackChanges color="info" sx={{ fontSize: 18 }} />
+                  <Typography variant="caption" fontWeight={900} color="info.main">OBJETIVO TOTAL</Typography>
+                </Stack>
+                <Typography variant="h6" fontWeight={900}>
+                  {proyecto.obj_suscripciones || 0}
+                </Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: -0.5 }}>
+                  Suscripciones a alcanzar
                 </Typography>
               </Paper>
             </Box>
+
+            {/* 📅 CRONOGRAMA Y TIEMPOS */}
+            <Paper
+              elevation={0}
+              variant="outlined"
+              sx={{
+                p: 2.5,
+                borderRadius: 3,
+                display: 'grid',
+                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' },
+                gap: 3,
+                bgcolor: alpha(theme.palette.background.default, 0.4)
+              }}
+            >
+              <Box>
+                <Stack direction="row" spacing={1} alignItems="center" mb={0.5}>
+                  <CalendarToday color="primary" sx={{ fontSize: 18 }} />
+                  <Typography variant="caption" fontWeight={900} color="text.secondary">FECHA INICIO</Typography>
+                </Stack>
+                <Typography variant="body2" fontWeight={800}>
+                  {new Date(proyecto.fecha_inicio).toLocaleDateString(env.defaultLocale)}
+                </Typography>
+              </Box>
+
+              <Box>
+                <Stack direction="row" spacing={1} alignItems="center" mb={0.5}>
+                  <EventAvailable color="error" sx={{ fontSize: 18 }} />
+                  <Typography variant="caption" fontWeight={900} color="text.secondary">FECHA CIERRE</Typography>
+                </Stack>
+                <Typography variant="body2" fontWeight={800}>
+                  {new Date(proyecto.fecha_cierre).toLocaleDateString(env.defaultLocale)}
+                </Typography>
+              </Box>
+
+              <Box>
+                <Stack direction="row" spacing={1} alignItems="center" mb={0.5}>
+                  <DateRange color="info" sx={{ fontSize: 18 }} />
+                  <Typography variant="caption" fontWeight={900} color="text.secondary">INICIO PROCESO</Typography>
+                </Stack>
+                <Typography variant="body2" fontWeight={800}>
+                  {proyecto.fecha_inicio_proceso
+                    ? new Date(proyecto.fecha_inicio_proceso).toLocaleDateString(env.defaultLocale)
+                    : 'No asignada'}
+                </Typography>
+              </Box>
+
+              <Box>
+                <Stack direction="row" spacing={1} alignItems="center" mb={0.5}>
+                  <Timer color="warning" sx={{ fontSize: 18 }} />
+                  <Typography variant="caption" fontWeight={900} color="text.secondary">TIEMPO RESTANTE</Typography>
+                </Stack>
+                <Typography variant="body2" fontWeight={800}>
+                  {proyecto.meses_restantes} meses
+                </Typography>
+              </Box>
+            </Paper>
 
             {/* 📜 VINCULACIÓN DE CONTRATO */}
             <Paper
@@ -273,7 +354,7 @@ const DetalleProyectoModal: React.FC<DetalleProyectoModalProps> = ({ open, onClo
                         </ListItemAvatar>
                         <ListItemText
                           primary={<Typography variant="body2" fontWeight={800}>{lote.nombre_lote}</Typography>}
-                          
+
                           secondary={<Typography variant="caption" fontWeight={600}>Base: ${Number(lote.precio_base).toLocaleString(env.defaultLocale)}</Typography>}
                         />
                         <Chip

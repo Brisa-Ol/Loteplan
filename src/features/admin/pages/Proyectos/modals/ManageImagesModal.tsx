@@ -20,7 +20,7 @@ import {
   useTheme
 } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 import imagenService from '@/core/api/services/imagen.service';
 import { env } from '@/core/config/env';
@@ -29,6 +29,12 @@ import type { ProyectoDto } from '@/core/types/proyecto.dto';
 import { BaseModal, ConfirmDialog, ImageUploadZone, QueryHandler, useConfirmDialog, useSnackbar } from '@/shared';
 
 const MAX_TOTAL_IMAGES = 10;
+
+// Tipamos el estado local para manejar correctamente la memoria de la vista previa
+interface StagedImage {
+  file: File;
+  preview: string;
+}
 
 interface ManageImagesModalProps {
   open: boolean;
@@ -44,7 +50,7 @@ const ManageImagesModal: React.FC<ManageImagesModalProps> = ({ open, onClose, pr
   const { showSuccess, showError, showWarning } = useSnackbar();
   const confirmDialog = useConfirmDialog();
 
-  const [stagedFiles, setStagedFiles] = useState<File[]>([]);
+  const [stagedFiles, setStagedFiles] = useState<StagedImage[]>([]);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [deletingImageId, setDeletingImageId] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -60,6 +66,13 @@ const ManageImagesModal: React.FC<ManageImagesModalProps> = ({ open, onClose, pr
   const totalCount = serverImages.length + stagedFiles.length;
   const remainingSlots = Math.max(0, MAX_TOTAL_IMAGES - totalCount);
   const isLimitReached = totalCount >= MAX_TOTAL_IMAGES;
+
+  // Limpieza de memoria (URLs) al desmontar el componente si hay archivos en staging
+  useEffect(() => {
+    return () => {
+      stagedFiles.forEach(img => URL.revokeObjectURL(img.preview));
+    };
+  }, []);
 
   // 🗑️ MUTATION: BORRAR
   const deleteMutation = useMutation({
@@ -91,21 +104,29 @@ const ManageImagesModal: React.FC<ManageImagesModalProps> = ({ open, onClose, pr
 
   // --- Handlers ---
   const handleFilesSelected = (files: File | File[] | null) => {
-    if (!files || !Array.isArray(files)) return;
+    if (!files) return;
+    const filesArray = Array.isArray(files) ? files : [files];
     setUploadError(null);
 
-    const validFiles = files.filter(file => {
-      // Validación de Tipo (Solo imágenes)
+    const validFiles = filesArray.filter(file => {
+      // 1. Validación de Tipo (Solo imágenes)
       if (!file.type.startsWith('image/')) {
         showWarning(`${file.name} no es un formato de imagen válido.`);
         return false;
       }
 
-      // ✅ Uso de env.maxImageSize en lugar de maxFileSize
+      // 2. Validación de Tamaño
       if (file.size > env.maxImageSize) {
         showWarning(`${file.name} excede el límite de ${env.maxImageSize / (1024 * 1024)}MB.`);
         return false;
       }
+
+      // 3. Validación de Duplicados (evita subir la misma imagen 2 veces en staging)
+      if (stagedFiles.some(staged => staged.file.name === file.name && staged.file.size === file.size)) {
+        showWarning(`La imagen ${file.name} ya está en la lista de subida.`);
+        return false;
+      }
+
       return true;
     });
 
@@ -113,7 +134,24 @@ const ManageImagesModal: React.FC<ManageImagesModalProps> = ({ open, onClose, pr
     if (validFiles.length > remainingSlots) {
       showWarning(`Límite alcanzado: solo se añadieron ${remainingSlots} imágenes.`);
     }
-    setStagedFiles(prev => [...prev, ...allowed]);
+
+    // Creamos las URLs de manera segura
+    const newStaged = allowed.map(file => ({
+      file,
+      preview: URL.createObjectURL(file)
+    }));
+
+    setStagedFiles(prev => [...prev, ...newStaged]);
+  };
+
+  const handleRemoveStaged = (indexToRemove: number) => {
+    setStagedFiles(prev => {
+      const newFiles = [...prev];
+      // Limpiamos la memoria del navegador antes de quitarlo de la vista
+      URL.revokeObjectURL(newFiles[indexToRemove].preview);
+      newFiles.splice(indexToRemove, 1);
+      return newFiles;
+    });
   };
 
   const handleSaveChanges = async () => {
@@ -121,25 +159,33 @@ const ManageImagesModal: React.FC<ManageImagesModalProps> = ({ open, onClose, pr
     setIsSaving(true);
     setProgress({ current: 0, total: stagedFiles.length });
 
-    const uploadPromises = stagedFiles.map(file =>
-      uploadMutation.mutateAsync({ file, descripcion: file.name })
+    const uploadPromises = stagedFiles.map(staged => {
+      // 4. Validación longitud descripción: Recortamos el nombre del archivo para evitar errores SQL (500)
+      const safeDescription = staged.file.name.substring(0, 100);
+
+      return uploadMutation.mutateAsync({ file: staged.file, descripcion: safeDescription })
         .then(() => setProgress(prev => prev ? { ...prev, current: prev.current + 1 } : null))
         .catch(() => { /* error manejado al final */ })
-    );
+    });
 
     await Promise.allSettled(uploadPromises);
+
+    // Limpiamos memoria y reseteamos staging
+    stagedFiles.forEach(img => URL.revokeObjectURL(img.preview));
+    setStagedFiles([]);
+
     queryClient.invalidateQueries({ queryKey });
     setIsSaving(false);
     setProgress(null);
-    setStagedFiles([]);
     showSuccess('Galería actualizada correctamente');
   };
 
   const performClose = useCallback(() => {
+    stagedFiles.forEach(img => URL.revokeObjectURL(img.preview));
     setStagedFiles([]);
     setUploadError(null);
     onClose();
-  }, [onClose]);
+  }, [onClose, stagedFiles]);
 
   const handleCloseAttempt = () => {
     if (stagedFiles.length > 0) confirmDialog.confirm('close_with_unsaved_changes', { count: stagedFiles.length });
@@ -216,7 +262,7 @@ const ManageImagesModal: React.FC<ManageImagesModalProps> = ({ open, onClose, pr
                 onChange={handleFilesSelected}
                 maxFiles={remainingSlots}
                 disabled={isWorking}
-                label={`Arrastra imágenes aquí (Max. ${env.maxImageSize / (1024 * 1024)}MB)`} // ✅ Mostramos el límite en la UI
+                label={`Arrastra imágenes aquí (Max. ${env.maxImageSize / (1024 * 1024)}MB)`}
               />
             ) : (
               <Alert severity="warning" variant="outlined" sx={{ borderRadius: 2 }}>
@@ -232,12 +278,12 @@ const ManageImagesModal: React.FC<ManageImagesModalProps> = ({ open, onClose, pr
                 Nuevas imágenes a sincronizar
               </Typography>
               <Box display="flex" gap={2} flexWrap="wrap">
-                {stagedFiles.map((file, index) => (
-                  <Box key={index} sx={{ ...styles.imagePaper, width: 100, borderColor: 'warning.main', borderStyle: 'dashed' }}>
-                    <Box component="img" src={URL.createObjectURL(file)} sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                {stagedFiles.map((staged, index) => (
+                  <Box key={`${staged.file.name}-${index}`} sx={{ ...styles.imagePaper, width: 100, borderColor: 'warning.main', borderStyle: 'dashed' }}>
+                    <Box component="img" src={staged.preview} sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     <IconButton
                       size="small"
-                      onClick={() => setStagedFiles(prev => prev.filter((_, i) => i !== index))}
+                      onClick={() => handleRemoveStaged(index)}
                       sx={{ position: 'absolute', top: 4, right: 4, bgcolor: 'rgba(0,0,0,0.5)', color: 'white', '&:hover': { bgcolor: 'error.main' } }}
                     >
                       <CloseIcon fontSize="small" />
@@ -270,7 +316,10 @@ const ManageImagesModal: React.FC<ManageImagesModalProps> = ({ open, onClose, pr
                           sx={{
                             color: 'white',
                             bgcolor: alpha(theme.palette.error.main, 0.8),
-                            '&:hover': { bgcolor: theme.palette.error.main }
+                            '&:hover': { bgcolor: theme.palette.error.main },
+                            opacity: 0,
+                            transition: 'opacity 0.2s',
+                            '.MuiPaper-root:hover &': { opacity: 1 } // Solo se muestra en hover
                           }}
                         >
                           {deletingImageId === img.id ? <CircularProgress size={20} color="inherit" /> : <DeleteIcon />}

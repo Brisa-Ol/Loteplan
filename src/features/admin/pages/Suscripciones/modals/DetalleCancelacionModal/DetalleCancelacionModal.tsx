@@ -52,7 +52,7 @@ const ActorsBlock: React.FC<{ cancelacion: SuscripcionCanceladaDto; fullName: st
                 <Typography variant="body1" fontWeight={800}>{fullName}</Typography>
                 <Stack direction="row" spacing={0.5} alignItems="center" mt={0.5}>
                     <AlternateEmail sx={{ fontSize: 14, color: 'text.disabled' }} />
-                    <Typography variant="body2" color="error.main" fontWeight={700}>@{cancelacion.usuarioCancelador?.nombre_usuario || 'sin_username'}</Typography>
+                    <Typography variant="body2" color="error.main" fontWeight={700}>@{cancelacion.usuarioCancelador?.nombre || 'sin_username'}</Typography>
                 </Stack>
                 <Typography variant="caption" color="text.secondary" display="block" mt={1}>{cancelacion.usuarioCancelador?.email || 'Email no disponible'}</Typography>
             </Paper>

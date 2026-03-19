@@ -1,5 +1,3 @@
-// src/features/client/pages/Proyectos/components/ProjectSidebar.tsx
-
 import {
   ArrowForward,
   CalendarMonth,
@@ -10,6 +8,7 @@ import {
   InfoOutlined,
   Lock,
   MonetizationOn,
+  ReplayOutlined,
   Token as TokenIcon
 } from '@mui/icons-material';
 import {
@@ -42,16 +41,13 @@ export interface ProjectSidebarLogic {
   user: any | null;
   puedeFirmar: boolean;
   yaFirmo: boolean;
+  yaCancelado: boolean;
+  tieneFirmaPendiente: boolean; // ✅ agregar
   handleMainAction: () => void;
   handleClickFirmar: () => void;
   handleVerContratoFirmado: () => void;
-  handleInversion: {
-    isPending: boolean;
-    mutate: () => void;
-  };
-  modales: {
-    contrato: { open: () => void };
-  };
+  handleInversion: { isPending: boolean; mutate: () => void };
+  modales: { contrato: { open: () => void } };
 }
 
 interface ProjectSidebarProps {
@@ -115,7 +111,6 @@ const ProcessStepper: React.FC<any> = ({ paso1Completo, paso2Completo, esMensual
 // ==========================================
 const PriceHeader: React.FC<{ helpers: any, isPrelanzamiento: boolean, isLleno: boolean }> = ({ helpers, isPrelanzamiento, isLleno }) => {
   const BadgeIcon = helpers.badge.icon;
-  // Color del header según el estado del proyecto
   const bgHeader = isLleno ? 'grey.600' : isPrelanzamiento ? 'info.main' : (helpers.badge.color === 'success' ? 'success.main' : 'primary.main');
 
   return (
@@ -126,7 +121,6 @@ const PriceHeader: React.FC<{ helpers: any, isPrelanzamiento: boolean, isLleno: 
           <BadgeIcon sx={{ fontSize: 18 }} />
           <Typography variant="caption" fontWeight={700} color="inherit">{helpers.badge.label}</Typography>
         </Box>
-
         {isLleno ? (
           <Box sx={{ bgcolor: 'rgba(211, 47, 47, 0.8)', px: 1.5, py: 0.5, borderRadius: 1 }}>
             <Typography variant="caption" fontWeight={800} color="inherit">AGOTADO</Typography>
@@ -146,7 +140,10 @@ const PriceHeader: React.FC<{ helpers: any, isPrelanzamiento: boolean, isLleno: 
       </Typography>
       <Typography variant="h3" fontWeight={700} sx={{ mb: 1, color: 'inherit' }}>{helpers.precioFormateado}</Typography>
       {helpers.esMensual && (
-        <Stack direction="row" alignItems="center" gap={1} sx={{ opacity: 0.95 }}><CalendarMonth fontSize="small" /><Typography variant="body2" fontWeight={600} color="inherit">{helpers.plazoTexto}</Typography></Stack>
+        <Stack direction="row" alignItems="center" gap={1} sx={{ opacity: 0.95 }}>
+          <CalendarMonth fontSize="small" />
+          <Typography variant="body2" fontWeight={600} color="inherit">{helpers.plazoTexto}</Typography>
+        </Stack>
       )}
     </Box>
   );
@@ -158,15 +155,12 @@ const PriceHeader: React.FC<{ helpers: any, isPrelanzamiento: boolean, isLleno: 
 export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({ logic, proyecto, cantProyectUser }) => {
 
   //variables Thomy
+
   const [openResubModal, setOpenResubModal] = useState(false)
   const navigate = useNavigate()  
-
   //fin variables Thomy
 
   //Funciones Thomy
-
-  //Llamar los proyectos del usuario
-  
 
   const handleClickContracts = () => {
     if(cantProyectUser > 1){
@@ -182,7 +176,7 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({ logic, proyecto,
   const helpers = useProyectoHelpers(proyecto);
 
   const user = logic.user;
-  const paso1Completo = logic.puedeFirmar || logic.yaFirmo;
+  const paso1Completo = logic.puedeFirmar || logic.yaFirmo || logic.tieneFirmaPendiente;
   const paso2Completo = logic.yaFirmo;
 
   // 🧠 LÓGICA MAESTRA DE ESTADOS
@@ -193,87 +187,134 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({ logic, proyecto,
   const isLleno = proyecto.suscripciones_actuales >= (proyecto.obj_suscripciones || 1);
   const isFinalizado = proyecto.estado_proyecto === 'Finalizado';
 
+  // El stepper solo se muestra si el usuario tiene o tuvo una participación activa
+  const mostrarStepper = user && (paso1Completo || paso2Completo);
+
   return (
     <Card sx={{ position: { lg: 'sticky' }, top: { lg: 100 }, overflow: 'visible' }}>
       <PriceHeader helpers={helpers} isPrelanzamiento={isPrelanzamiento} isLleno={isLleno} />
 
       <Box p={3}>
         <Stack spacing={3}>
-          {user && <ProcessStepper paso1Completo={paso1Completo} paso2Completo={paso2Completo} esMensual={helpers.esMensual} />}
+          {mostrarStepper && (
+            <ProcessStepper paso1Completo={paso1Completo} paso2Completo={paso2Completo} esMensual={helpers.esMensual} />
+          )}
 
           <Box>
             {/* CASO 1: FINALIZADO */}
-            {isFinalizado ? (
+           {isFinalizado && !paso1Completo ? (
+  <Stack spacing={2}>
+    <Alert severity="success" icon={<CheckCircle />} sx={{ borderRadius: 2 }}>
+      El proyecto concluyó exitosamente.
+    </Alert>
+  </Stack>
+) :
+
+            /* CASO 2: PRE-LANZAMIENTO (sin suscripción activa) */
+            isPrelanzamiento && !paso1Completo ? (
               <Stack spacing={2}>
-                <Alert severity="success" icon={<CheckCircle />} sx={{ borderRadius: 2 }}>El proyecto concluyó exitosamente.</Alert>
+                {helpers.esMensual && <TokenValueProposition />}
+                <Alert severity="info" icon={<InfoOutlined />} sx={{ borderRadius: 2 }}>
+                  Este proyecto abre suscripciones el <strong>{fechaInicio.toLocaleDateString()}</strong>.
+                </Alert>
+                <Button variant="contained" disabled fullWidth size="large" startIcon={<CalendarMonth />} sx={{ fontWeight: 800, bgcolor: 'action.disabledBackground' }}>
+                  Apertura Próximamente
+                </Button>
               </Stack>
             ) :
-              /* CASO 2: PRE-LANZAMIENTO */
-              isPrelanzamiento && !paso1Completo ? (
-                <Stack spacing={2}>
-                  {helpers.esMensual && <TokenValueProposition />}
-                  <Alert severity="info" icon={<InfoOutlined />} sx={{ borderRadius: 2 }}>
-                    Este proyecto abre suscripciones el <strong>{fechaInicio.toLocaleDateString()}</strong>.
-                  </Alert>
-                  <Button variant="contained" disabled fullWidth size="large" startIcon={<CalendarMonth />} sx={{ fontWeight: 800, bgcolor: 'action.disabledBackground' }}>
-                    Apertura Próximamente
-                  </Button>
-                </Stack>
-              ) :
-                /* CASO 3: LLENO / AGOTADO (Solo bloquea si el usuario no ha pagado aún) */
-                isLleno && !paso1Completo ? (
-                  <Stack spacing={2}>
-                    <Alert severity="error" icon={<Lock />} sx={{ borderRadius: 2 }}>
-                      <strong>Cupos Agotados.</strong> Ya no se aceptan nuevas suscripciones en este proyecto.
-                    </Alert>
-                    <Button variant="contained" disabled fullWidth size="large" startIcon={<Lock />} sx={{ fontWeight: 800, bgcolor: 'action.disabledBackground' }}>
-                      Proyecto Lleno
+
+            /* CASO 3: LLENO / AGOTADO (sin suscripción activa) */
+            isLleno && !paso1Completo ? (
+              <Stack spacing={2}>
+                <Alert severity="error" icon={<Lock />} sx={{ borderRadius: 2 }}>
+                  <strong>Cupos Agotados.</strong> Ya no se aceptan nuevas suscripciones en este proyecto.
+                </Alert>
+                <Button variant="contained" disabled fullWidth size="large" startIcon={<Lock />} sx={{ fontWeight: 800, bgcolor: 'action.disabledBackground' }}>
+                  Proyecto Lleno
+                </Button>
+              </Stack>
+            ) :
+
+            /* CASO 4: NO LOGUEADO */
+            !user ? (
+              <Stack spacing={2}>
+                {helpers.esMensual && <TokenValueProposition />}
+                <Button variant="contained" fullWidth size="large" onClick={logic.handleMainAction} startIcon={<Lock />} sx={{ fontWeight: 700 }}>
+                  {helpers.esMensual ? 'Identificate para Suscribirte' : 'Identificate para Invertir'}
+                </Button>
+              </Stack>
+            ) :
+
+            /* CASO 5: LOGUEADO Y CANCELADO ANTERIORMENTE */
+            logic.yaCancelado && !paso1Completo ? (
+              <Stack spacing={2}>
+                <Alert severity="warning" icon={<InfoOutlined />} sx={{ borderRadius: 2 }}>
+                  Cancelaste tu suscripción a este proyecto.
+                  {!isLleno && ' Podés volver a suscribirte si hay cupos disponibles.'}
+                </Alert>
+                {!isLleno && (
+                  <>
+                    {helpers.esMensual && <TokenValueProposition />}
+                    <Button
+                      variant="outlined"
+                      color="warning"
+                      fullWidth
+                      size="large"
+                      onClick={logic.handleMainAction}
+                      endIcon={<ArrowForward />}
+                      startIcon={<ReplayOutlined />}
+                      sx={{ fontWeight: 700 }}
+                    >
+                      Volver a Suscribirme
                     </Button>
+                  </>
+                )}
+              </Stack>
+            ) :
+
+            /* CASO 6: LOGUEADO — FLUJO NORMAL */
+            (
+              <>
+                {/* 6A: Pendiente de Pago */}
+                {!paso1Completo && (
+                  <Stack spacing={2}>
+                    {helpers.esMensual && <TokenValueProposition />}
+                    <Button
+                      variant="contained" fullWidth size="large"
+                      onClick={logic.handleMainAction}
+                      disabled={logic.handleInversion.isPending}
+                      endIcon={!logic.handleInversion.isPending && <ArrowForward />}
+                      sx={{ fontWeight: 700 }}
+                    >
+                      {logic.handleInversion.isPending ? 'Procesando...' : helpers.esMensual ? 'Pagar Cuota de Ingreso' : 'Invertir en el Pack'}
+                    </Button>
+
+                    {helpers.esMensual && helpers.progreso && (
+                      <Box sx={{ p: 2, bgcolor: alpha(theme.palette.success.main, 0.08), borderRadius: 2 }}>
+                        <Stack direction="row" justifyContent="space-between" mb={1}>
+                          <Typography variant="caption" fontWeight={700} color="success.dark">Cupos Disponibles</Typography>
+                          <Typography variant="caption" fontWeight={800} color="success.main">{helpers.progreso.disponibles}</Typography>
+                        </Stack>
+                        <LinearProgress variant="determinate" value={helpers.progreso.porcentaje} color="success" sx={{ height: 6, borderRadius: 3 }} />
+                      </Box>
+                    )}
                   </Stack>
-                ) :
-                  /* CASO 4: ABIERTO PERO NO LOGUEADO */
-                  !user ? (
-                    <Stack spacing={2}>
-                      {helpers.esMensual && <TokenValueProposition />}
-                      <Button variant="contained" fullWidth size="large" onClick={logic.handleMainAction} startIcon={<Lock />} sx={{ fontWeight: 700 }}>
-                        {helpers.esMensual ? 'Identificate para Suscribirte' : 'Identificate para Invertir'}
-                      </Button>
-                    </Stack>
-                  ) : (
-                    /* CASO 5: ABIERTO Y LOGUEADO (Flujo Normal) */
-                    <>
-                      {/* 5A: Pendiente de Pago */}
-                      {!paso1Completo && (
-                        <Stack spacing={2}>
-                          {helpers.esMensual && <TokenValueProposition />}
-                          <Button
-                            variant="contained" fullWidth size="large"
-                            onClick={logic.handleMainAction} disabled={logic.handleInversion.isPending}
-                            endIcon={!logic.handleInversion.isPending && <ArrowForward />} sx={{ fontWeight: 700 }}
-                          >
-                            {logic.handleInversion.isPending ? 'Procesando...' : helpers.esMensual ? 'Pagar Cuota de Ingreso' : 'Invertir en el Pack'}
-                          </Button>
+                )}
 
-                          {helpers.esMensual && helpers.progreso && (
-                            <Box sx={{ p: 2, bgcolor: alpha(theme.palette.success.main, 0.08), borderRadius: 2 }}>
-                              <Stack direction="row" justifyContent="space-between" mb={1}>
-                                <Typography variant="caption" fontWeight={700} color="success.dark">Cupos Disponibles</Typography>
-                                <Typography variant="caption" fontWeight={800} color="success.main">{helpers.progreso.disponibles}</Typography>
-                              </Stack>
-                              <LinearProgress variant="determinate" value={helpers.progreso.porcentaje} color="success" sx={{ height: 6, borderRadius: 3 }} />
-                            </Box>
-                          )}
-                        </Stack>
-                      )}
-
-                      {/* 5B: Pagado, Pendiente de Firma */}
-                      {paso1Completo && !paso2Completo && (
-                        <Stack spacing={2}>
-                          <Alert severity="warning" icon={<HistoryEdu />}>Pago confirmado. Firma tu contrato para asegurar tu lugar.</Alert>
-                          <Button variant="contained" color="warning" fullWidth size="large" onClick={logic.handleClickFirmar} sx={{ color: 'white', fontWeight: 700 }}>Firmar Contrato Digital</Button>
-                          <Button variant="text" size="small" onClick={logic.modales.contrato.open} sx={{ fontWeight: 600 }}>Ver borrador del contrato</Button>
-                        </Stack>
-                      )}
+              {/* 6B: Pagado, Pendiente de Firma */}
+{paso1Completo && !paso2Completo && (
+  <Stack spacing={2}>
+    <Alert severity="warning" icon={<HistoryEdu />}>
+      Pago confirmado. Firma tu contrato para asegurar tu lugar.
+    </Alert>
+    <Button variant="contained" color="warning" fullWidth size="large" onClick={logic.handleClickFirmar} sx={{ color: 'white', fontWeight: 700 }}>
+      Firmar Contrato Digital
+    </Button>
+    <Button variant="text" size="small" onClick={logic.modales.contrato.open} sx={{ fontWeight: 600 }}>
+      Ver borrador del contrato
+    </Button>
+  </Stack>
+)}
 
                       {/* 5C: Proceso Completado */}
                       {paso2Completo && (
@@ -318,11 +359,17 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({ logic, proyecto,
           <Stack spacing={1.5}>
             <Stack direction="row" alignItems="center" gap={1.5}>
               <Box sx={{ bgcolor: alpha(theme.palette.success.main, 0.1), p: 1, borderRadius: 1.5, display: 'flex' }}><GppGood color="success" fontSize="small" /></Box>
-              <Box><Typography variant="subtitle2" color="text.primary" display="block" fontWeight={700}>Operación Legal</Typography><Typography variant="caption" color="text.secondary">Protección jurídica garantizada</Typography></Box>
+              <Box>
+                <Typography variant="subtitle2" color="text.primary" display="block" fontWeight={700}>Operación Legal</Typography>
+                <Typography variant="caption" color="text.secondary">Protección jurídica garantizada</Typography>
+              </Box>
             </Stack>
             <Stack direction="row" alignItems="center" gap={1.5}>
               <Box sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), p: 1, borderRadius: 1.5, display: 'flex' }}><Description color="primary" fontSize="small" /></Box>
-              <Box><Typography variant="subtitle2" color="text.primary" display="block" fontWeight={700}>Contrato Digital</Typography><Typography variant="caption" color="text.secondary">Firma electrónica válida</Typography></Box>
+              <Box>
+                <Typography variant="subtitle2" color="text.primary" display="block" fontWeight={700}>Contrato Digital</Typography>
+                <Typography variant="caption" color="text.secondary">Firma electrónica válida</Typography>
+              </Box>
             </Stack>
           </Stack>
 

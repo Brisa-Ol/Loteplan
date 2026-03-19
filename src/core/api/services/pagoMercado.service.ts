@@ -1,12 +1,12 @@
 // src/services/mercadoPago.service.ts
 
 import type { CheckoutResponseDto, CreateCheckoutGenericoDto, PaymentStatusResponseDto } from "@/core/types/pagoMercado.dto";
-import httpService from "../httpService";
-import type { AxiosResponse } from "axios";
 import { notifyError } from "@/shared/utils/snackbarUtils";
+import type { AxiosResponse } from "axios";
+import httpService from "../httpService";
 
 
-const BASE_ENDPOINT = '/payment'; 
+const BASE_ENDPOINT = '/payment';
 
 /**
  * Servicio para la integración con Mercado Pago.
