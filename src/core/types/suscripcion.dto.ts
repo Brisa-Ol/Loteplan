@@ -19,13 +19,11 @@ export interface SuscripcionInitResponse {
   mensaje?: string;
 }
 
-
 export interface MorosidadDTO {
   tasa_morosidad: number;
   total_pagos_generados: number;
   total_en_riesgo: number;
 }
-
 
 export interface CancelacionDTO {
   tasa_cancelacion: number;
@@ -68,6 +66,8 @@ export interface SuscripcionCanceladaDto extends BaseDTO {
   meses_pagados: number;
   monto_pagado_total: string;
   fecha_cancelacion: string;
+  devolucion_realizada: boolean; // <-- NUEVO
+  fecha_devolucion: string | null; // <-- NUEVO
   createdAt: string;
   updatedAt: string;
   usuarioCancelador?: {

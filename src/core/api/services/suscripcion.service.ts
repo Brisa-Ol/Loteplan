@@ -79,6 +79,11 @@ const SuscripcionService = {
 
   getCanceladasByProyectoId: async (proyectoId: number): Promise<AxiosResponse<SuscripcionCanceladaDto[]>> => {
     return await httpService.get(`${BASE_HISTORIAL}/proyecto/canceladas/${proyectoId}`);
+  },
+
+  /** 💰 NUEVO: Marca la devolución como realizada (Solo Admin) */
+  marcarDevolucion: async (id: number): Promise<AxiosResponse<{ success: boolean; mensaje: string; registro: SuscripcionCanceladaDto }>> => {
+    return await httpService.patch(`${BASE_HISTORIAL}/canceladas/${id}/devolucion`);
   }
 };
 

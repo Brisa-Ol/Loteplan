@@ -73,24 +73,24 @@ const MisSuscripciones: React.FC = () => {
                 </Typography>
             )
         },
-{
-    id: 'monto',
-    label: 'Capital Ahorrado',
-    render: (row: SuscripcionDto) => {
-        // Convertimos el string "0.00" a número de forma segura
-        const monto = Number(row.monto_total_pagado || 0);
-        
-        return (
-            <Typography 
-                variant="body2" 
-                fontWeight={700} 
-                color={monto > 0 ? "primary.main" : "text.secondary"}
-            >
-                {formatCurrency(monto)}
-            </Typography>
-        );
-    }
-},
+        {
+            id: 'monto',
+            label: 'Capital Ahorrado',
+            render: (row: SuscripcionDto) => {
+                // Convertimos el string "0.00" a número de forma segura
+                const monto = Number(row.monto_total_pagado || 0);
+                
+                return (
+                    <Typography 
+                        variant="body2" 
+                        fontWeight={700} 
+                        color={monto > 0 ? "primary.main" : "text.secondary"}
+                    >
+                        {formatCurrency(monto)}
+                    </Typography>
+                );
+            }
+        },
         {
             id: 'tokens',
             label: 'Tokens Disponibles',
@@ -160,6 +160,22 @@ const MisSuscripciones: React.FC = () => {
                         {new Date(row.fecha_cancelacion).toLocaleDateString()}
                     </Typography>
                 </Box>
+            )
+        },
+        {
+            id: 'devolucion',
+            label: 'Devolución',
+            align: 'center',
+            render: (row) => (
+                row.devolucion_realizada ? (
+                    <Tooltip title={row.fecha_devolucion ? `Reintegrado el ${new Date(row.fecha_devolucion).toLocaleDateString()}` : 'Reintegrado'}>
+                        <CheckCircle color="success" />
+                    </Tooltip>
+                ) : (
+                    <Tooltip title="Reintegro pendiente">
+                        <Cancel color="error" />
+                    </Tooltip>
+                )
             )
         }
     ], [formatCurrency]);
