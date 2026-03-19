@@ -25,7 +25,6 @@ import { useCurrencyFormatter } from '@/features/client/hooks/useCurrencyFormatt
 import { useImageLoader } from '@/features/client/hooks/useImageLoader';
 import { FavoritoButton } from './BotonFavorito';
 
-
 const pulse = keyframes`
   0% { box-shadow: 0 0 0 0 rgba(46, 125, 50, 0.7); }
   70% { box-shadow: 0 0 0 6px rgba(46, 125, 50, 0); }
@@ -80,35 +79,59 @@ const LoteCard: React.FC<LoteCardProps> = ({
   };
 
   // ─────────────────────────────────────────────
-  // LÓGICA DE SUBASTA
+  // LÓGICA DE SUBASTA (Sincronizada con DetalleLote)
   // ─────────────────────────────────────────────
   const isActiva = lote.estado_subasta === 'activa';
+  const subastaFinalizada = lote.estado_subasta === 'finalizada';
 
-  const soyGanador = useMemo(() => {
-    if (!isAuthenticated || !user) return false;
-    return isActiva
-      ? lote.ultima_puja?.id_usuario === user.id
-      : lote.id_ganador === user.id;
-  }, [isActiva, lote, isAuthenticated, user]);
+  // Lógica exacta de "quién va ganando":
+  const esLiderActual = useMemo(() => {
+    if (!isAuthenticated || !user || !isActiva) return false;
+    return Number(lote.ultima_puja?.id_usuario) === Number(user.id);
+  }, [isActiva, lote.ultima_puja?.id_usuario, isAuthenticated, user]);
 
-  const puedePujar = isSubscribed && isActiva && (hasTokens || soyGanador);
+  const esGanadorDefinitivo = useMemo(() => {
+    if (!isAuthenticated || !user || !subastaFinalizada) return false;
+    return Number(lote.id_ganador) === Number(user.id);
+  }, [subastaFinalizada, lote.id_ganador, isAuthenticated, user]);
+
+  // Se considera ganador si va ganando ahora, o si la subasta terminó y él ganó
+  const soyGanador = esLiderActual || esGanadorDefinitivo;
+
+  // Si está activo, está suscrito, y (tiene tokens o ya es el líder actual)
+  const puedePujar = isActiva && isSubscribed && (hasTokens || esLiderActual);
 
   const handleBotonClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!isAuthenticated || puedePujar) onPujar(lote);
-    else onNavigate(lote.id);
+    // Si no está logueado, lo mandamos al detalle (donde le pedirá loguearse si intenta pujar)
+    // Si puede pujar, abrimos el modal
+    if (!isAuthenticated || puedePujar) {
+      if(!isAuthenticated) {
+        onNavigate(lote.id);
+      } else {
+        onPujar(lote);
+      }
+    } else {
+      // Si no puede pujar (ej. subasta cerrada o no tiene tokens), va al detalle
+      onNavigate(lote.id);
+    }
   };
 
   const buttonState = useMemo(() => {
     if (isLoadingSub) return { text: "...", icon: null };
     if (!isAuthenticated) return { text: "Ingresar", icon: <Lock /> };
+    if (subastaFinalizada) {
+      return esGanadorDefinitivo 
+        ? { text: "Ver mi Lote", icon: <EmojiEmotions /> } 
+        : { text: "Detalles", icon: <ArrowForward /> };
+    }
     if (puedePujar) {
-      return soyGanador
+      return esLiderActual
         ? { text: "Mejorar", icon: <EmojiEmotions /> }
         : { text: "Pujar", icon: <Gavel /> };
     }
     return { text: "Detalles", icon: <ArrowForward /> };
-  }, [isLoadingSub, isAuthenticated, puedePujar, soyGanador]);
+  }, [isLoadingSub, isAuthenticated, subastaFinalizada, esGanadorDefinitivo, puedePujar, esLiderActual]);
 
   return (
     <Fade in={true} timeout={400}>
@@ -194,13 +217,14 @@ const LoteCard: React.FC<LoteCardProps> = ({
           {/* Chip de estado */}
           <Box position="absolute" top={12} left={12} zIndex={4}>
             <Chip
-              label={statusConfig.label}
-              color={statusConfig.color}
+              label={soyGanador ? "¡VAS GANANDO!" : statusConfig.label}
+              color={soyGanador ? "success" : statusConfig.color as any}
               size="small"
               sx={{
                 fontWeight: 900,
                 color: 'white',
-                ...(isActiva && { animation: `${pulse} 2s infinite` })
+                ...((isActiva && !soyGanador) && { animation: `${pulse} 2s infinite` }),
+                ...(soyGanador && { boxShadow: 4 })
               }}
             />
           </Box>

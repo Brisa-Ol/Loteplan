@@ -173,8 +173,9 @@ const DetalleProyecto: React.FC = () => {
     tieneFirmaPendiente: (logic as any).tieneFirmaPendiente || false,
     handleMainAction: handleOpenCheckoutSecurely,
     handleClickFirmar: handleOpenCheckoutSecurely,
-  } as any), [logic, handleOpenCheckoutSecurely]);
-
+  }), [logic, handleOpenCheckoutSecurely]);
+  
+  
   if (logic.loadingProyecto) return <Box p={10} textAlign="center"><CircularProgress /></Box>;
   if (!logic.proyecto) return <PageContainer><Alert severity="error">Proyecto no encontrado.</Alert></PageContainer>;
 

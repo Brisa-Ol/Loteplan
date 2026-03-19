@@ -1,59 +1,58 @@
 // src/shared/hooks/useAuctionStatus.ts
-
 import { useMemo } from 'react';
 import { useTheme, alpha } from '@mui/material';
 import type { ChipProps } from '@mui/material';
 
-type AuctionStatus = 'activa' | 'pendiente' | 'finalizada' | string;
+type AuctionStatus = 'activa' | 'pendiente' | 'finalizada' | 'cancelada' | string;
 
 interface StatusConfig {
   label: string;
   color: ChipProps['color'];
-  icon?: React.ReactElement;
-  bgColor?: string;
+  bgColor: string;
+  // Color hexadecimal directo del tema — útil para sx customizados
+  hexColor: string;
 }
 
-/**
- * Hook para obtener la configuración visual de un estado de subasta
- * 
- * @param status - Estado de la subasta
- * @returns Configuración de color, label e icono
- * 
- * @example
- * const statusConfig = useAuctionStatus(lote.estado_subasta);
- * 
- * <Chip 
- *   label={statusConfig.label}
- *   color={statusConfig.color}
- *   icon={statusConfig.icon}
- * />
- */
 export const useAuctionStatus = (status: AuctionStatus): StatusConfig => {
   const theme = useTheme();
 
   return useMemo(() => {
     const configs: Record<string, StatusConfig> = {
       activa: {
-        label: 'En Subasta',
-        color: 'success',
-        bgColor: alpha(theme.palette.success.main, 0.1),
+        label: 'EN SUBASTA',
+        color: 'primary',
+        // #CC6333 — primary.main del tema
+        hexColor: theme.palette.primary.main,
+        bgColor: alpha(theme.palette.primary.main, 0.1),
       },
       pendiente: {
-        label: 'Próximamente',
+        label: 'PRÓXIMAMENTE',
         color: 'warning',
+        // #F57C00 — warning.main del tema
+        hexColor: theme.palette.warning.main,
         bgColor: alpha(theme.palette.warning.main, 0.1),
       },
       finalizada: {
-        label: 'Finalizada',
+        label: 'FINALIZADA',
+        color: 'default',
+        // #999999 — text.disabled del tema
+        hexColor: theme.palette.text.disabled,
+        bgColor: alpha(theme.palette.text.disabled, 0.1),
+      },
+      cancelada: {
+        label: 'CANCELADA',
         color: 'error',
+        // #D32F2F — error.main del tema
+        hexColor: theme.palette.error.main,
         bgColor: alpha(theme.palette.error.main, 0.1),
       },
     };
 
-    return configs[status] || {
-      label: status,
+    return configs[status] ?? {
+      label: (status ?? 'DESCONOCIDO').toUpperCase(),
       color: 'default',
-      bgColor: alpha(theme.palette.grey[700], 0.1),
+      hexColor: theme.palette.text.disabled,
+      bgColor: alpha(theme.palette.text.disabled, 0.1),
     };
   }, [status, theme]);
 };

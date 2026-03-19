@@ -14,7 +14,7 @@ import React, { useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import LoteService from '@/core/api/services/lote.service';
-import { env } from '@/core/config/env'; // 👈 1. Importación de env
+import { env } from '@/core/config/env';
 import { useAuth } from '@/core/context/AuthContext';
 import type { LoteDto } from '@/core/types/lote.dto';
 import { ROUTES } from '@/routes';
@@ -69,7 +69,6 @@ const ListaLotesProyecto: React.FC<ListaLotesProyectoProps> = ({ idProyecto }) =
       const todos = (await LoteService.getAllActive()).data;
       return todos.filter((l) => Number(l.id_proyecto) === Number(idProyecto));
     },
-    // 👈 2. Aplicamos el tiempo de caché centralizado
     staleTime: env.queryStaleTime || 300000,
     enabled: !!idProyecto,
   });
@@ -171,7 +170,10 @@ const ListaLotesProyecto: React.FC<ListaLotesProyectoProps> = ({ idProyecto }) =
               (p) => Number(p.id_usuario) === Number(user.id) && p.estado_puja === 'activa'
             )
           }
-          soyGanador={!!user && Number(loteSeleccionado.id_ganador) === Number(user.id)}
+          soyGanador={
+            !!user &&
+            Number(loteSeleccionado.ultima_puja?.id_usuario) === Number(user.id)
+          }
           onSuccess={() => queryClient.invalidateQueries({ queryKey: ['lotes', 'proyecto', idProyecto] })}
         />
       )}
