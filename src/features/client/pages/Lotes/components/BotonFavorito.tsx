@@ -1,7 +1,7 @@
 // src/shared/components/ui/buttons/FavoritoButton.tsx
 
 import { Favorite, FavoriteBorder } from '@mui/icons-material';
-import { IconButton, Tooltip, Zoom,alpha } from '@mui/material';
+import { IconButton, Tooltip, Zoom, alpha } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import React from 'react';
 
@@ -9,10 +9,10 @@ import React from 'react';
 import FavoritoService from '@/core/api/services/favorito.service';
 import LoteService from '@/core/api/services/lote.service';
 import SuscripcionService from '@/core/api/services/suscripcion.service';
+import { env } from '@/core/config/env'; // 👈 1. Importación de env
 import { useAuth } from '@/core/context/AuthContext';
 import type { CheckFavoritoResponseDto } from '@/core/types/favorito.dto';
 import useSnackbar from '@/shared/hooks/useSnackbar';
-import { env } from '@/core/config/env'; // 👈 1. Importación de env
 
 interface FavoritoButtonProps {
   loteId: number;
@@ -35,7 +35,7 @@ export const FavoritoButton: React.FC<FavoritoButtonProps> = ({
     queryFn: async () => (await FavoritoService.checkEsFavorito(loteId)).data,
     enabled: isAuthenticated,
     // 👈 2. Usamos el estándar global para estados de UI rápidos
-    staleTime: env.queryStaleTime || 300000, 
+    staleTime: env.queryStaleTime || 300000,
   });
 
   const isFavorite = status?.es_favorito ?? false;
@@ -46,7 +46,7 @@ export const FavoritoButton: React.FC<FavoritoButtonProps> = ({
     queryFn: async () => (await LoteService.getByIdActive(loteId)).data,
     enabled: isAuthenticated && !isFavorite,
     // 👈 3. Datos de lote son más estáticos: duplicamos el staleTime
-    staleTime: (env.queryStaleTime || 300000) * 2 
+    staleTime: (env.queryStaleTime || 300000) * 2
   });
 
   const { data: suscripciones } = useQuery({
@@ -59,7 +59,7 @@ export const FavoritoButton: React.FC<FavoritoButtonProps> = ({
 
   // 3. MUTACIÓN OPTIMISTA
   // Se encarga de cambiar el icono al instante sin esperar al servidor
-  
+
   const mutation = useMutation({
     mutationFn: () => FavoritoService.toggle(loteId),
     onMutate: async () => {
@@ -78,7 +78,7 @@ export const FavoritoButton: React.FC<FavoritoButtonProps> = ({
       const serverState = response.data.agregado;
       // Sincronizamos con la realidad del servidor
       queryClient.setQueryData<CheckFavoritoResponseDto>(QUERY_KEY, { es_favorito: serverState });
-      
+
       // Invalidamos listas globales de favoritos para que se refresquen en segundo plano
       queryClient.invalidateQueries({ queryKey: ['misFavoritos'] });
 
@@ -134,9 +134,9 @@ export const FavoritoButton: React.FC<FavoritoButtonProps> = ({
           '&:hover': {
             color: isFavorite ? 'error.dark' : 'error.main',
             transform: 'scale(1.2)',
-            bgcolor: (theme) => theme.palette.mode === 'dark' 
-                ? alpha(theme.palette.common.white, 0.05) 
-                : alpha(theme.palette.error.main, 0.04)
+            bgcolor: (theme) => theme.palette.mode === 'dark'
+              ? alpha(theme.palette.common.white, 0.05)
+              : alpha(theme.palette.error.main, 0.04)
           },
           '&:active': { transform: 'scale(0.9)' }
         }}

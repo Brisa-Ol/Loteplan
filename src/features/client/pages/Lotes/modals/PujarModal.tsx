@@ -42,6 +42,9 @@ export const PujarModal: React.FC<Props> = ({
   const [monto, setMonto] = useState('');
   const [errorLocal, setErrorLocal] = useState<string | null>(null);
 
+  // ✅ Nuevo estado para guardar el mínimo al abrir el modal
+  const [minimoAlAbrir, setMinimoAlAbrir] = useState(0);
+
   // Hook de carga de imagen para el mini-header
   const { isLoading: imgLoading, hasError: imgError, handleLoad, handleError } = useImageLoader();
 
@@ -65,12 +68,15 @@ export const PujarModal: React.FC<Props> = ({
     return { precioMinimoRequerido: minimo, precioActual: actual };
   }, [lote]);
 
+  // ✅ useEffect actualizado
   useEffect(() => {
-    if (open && lote) {
+    if (open) {
       setMonto(precioMinimoRequerido.toString());
+      setMinimoAlAbrir(precioMinimoRequerido);
       setErrorLocal(null);
     }
-  }, [open, lote, precioMinimoRequerido]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const mutation = useMutation({
     mutationFn: async () => {
@@ -174,6 +180,15 @@ export const PujarModal: React.FC<Props> = ({
             </Typography>
           </Stack>
         </Box>
+
+        {/* ✅ Alerta dinámica antes del TextField */}
+        {precioMinimoRequerido > minimoAlAbrir && (
+          <Alert severity="error" sx={{ borderRadius: 2 }}>
+            <Typography variant="caption" fontWeight={800}>
+              ¡ATENCIÓN! Alguien acaba de ofertar. El nuevo mínimo es {formatCurrency(precioMinimoRequerido)}.
+            </Typography>
+          </Alert>
+        )}
 
         <TextField
           autoFocus

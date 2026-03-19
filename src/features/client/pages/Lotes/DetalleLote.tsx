@@ -3,12 +3,15 @@
 import {
   BookmarkBorder,
   Gavel,
-  Timer
+  Timer,
+  TokenOutlined
 } from '@mui/icons-material';
 import {
   Alert, alpha,
   Box, Button, Card, CardContent,
+  Chip,
   Fade,
+  keyframes,
   LinearProgress,
   Paper, Portal, Skeleton, Stack, Typography, useTheme
 } from '@mui/material';
@@ -37,6 +40,14 @@ import { useImageLoader } from '../../hooks/useImageLoader';
 import { useVerificarSuscripcion } from '../../hooks/useVerificarSuscripcion';
 import { FavoritoButton } from './components/BotonFavorito';
 import { PujarModal } from './modals/PujarModal';
+import { useAuctionStatus } from '../../hooks';
+
+
+const pulse = keyframes`
+  0%   { box-shadow: 0 0 0 0 rgba(46, 125, 50, 0.7); }
+  70%  { box-shadow: 0 0 0 6px rgba(46, 125, 50, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(46, 125, 50, 0); }
+`;
 
 // ─────────────────────────────────────────────
 // HELPERS & SUBCOMPONENTES
@@ -119,36 +130,57 @@ const DetalleLote: React.FC = () => {
   // 2. LÓGICA DE NEGOCIO (Win Info)
   const winInfo = useMemo(() => {
     if (!lote || !user?.id) {
-      return { isWinner: false, montoFinal: 0, pujaId: null, status: 'desconocido', miPujaId: null };
+      return { esLiderActual: false, esGanadorDefinitivo: false, montoFinal: 0, pujaId: null, status: 'desconocido', miPujaId: null };
     }
-    const isWinner = Number(lote.id_ganador) === Number(user.id);
+
     const pujaId = lote.id_puja_mas_alta ?? null;
     let montoFinal = Number(lote.precio_base);
     let status = 'desconocido';
     let miPujaId = null;
+    let idUsuarioLider = null;
 
     if (Array.isArray(lote.pujas) && lote.pujas.length > 0) {
       const pGanadora = lote.pujas.find((p: any) => p.id === pujaId);
       if (pGanadora) {
         montoFinal = Number(pGanadora.monto_puja);
         status = pGanadora.estado_puja;
+        idUsuarioLider = Number(pGanadora.id_usuario);
       }
       const miPuja = lote.pujas.find((p: any) => Number(p.id_usuario) === Number(user.id) && p.estado_puja === 'activa');
       if (miPuja) miPujaId = miPuja.id;
     } else if (lote.ultima_puja) {
       montoFinal = Number(lote.ultima_puja.monto);
+      idUsuarioLider = Number(lote.ultima_puja.id_usuario);
     }
 
-    return { isWinner, pujaId, miPujaId, montoFinal, status };
+    const subastaFinalizada = lote.estado_subasta === 'finalizada';
+    const esGanadorDefinitivo = subastaFinalizada && Number(lote.id_ganador) === Number(user.id);
+    const esLiderActual = !subastaFinalizada && idUsuarioLider === Number(user.id);
+
+    return { esGanadorDefinitivo, esLiderActual, pujaId, miPujaId, montoFinal, status };
   }, [lote, user?.id]);
+
+  // ✅ Variables derivadas del estado — deben estar ANTES del renderizado preventivo
+  const statusConfig = useAuctionStatus(lote?.estado_subasta);
+  const isActiva = lote?.estado_subasta === 'activa';
+  const soyGanador = winInfo.esLiderActual || winInfo.esGanadorDefinitivo;
 
   const subastaFinalizada = lote?.estado_subasta === 'finalizada';
   const yaPago = winInfo.status === 'ganadora_pagada';
-  const debesPagar = winInfo.isWinner && subastaFinalizada && !yaPago;
-  const puedePujar = !subastaFinalizada && estaSuscripto && (tokensDisponibles > 0 || winInfo.isWinner);
-  const puedeCancelar = !subastaFinalizada && !!winInfo.miPujaId && !winInfo.isWinner;
+  const debesPagar = winInfo.esGanadorDefinitivo && subastaFinalizada && !yaPago;
 
-  // 3. MUTACIONES (Las que faltaban)
+  const puedePujar = !subastaFinalizada && estaSuscripto && (tokensDisponibles > 0 || winInfo.esLiderActual || !!winInfo.miPujaId);
+  const puedeCancelar = !subastaFinalizada && !!winInfo.miPujaId && !winInfo.esLiderActual;
+
+  // ✅ Suscripto, subasta activa, pero sin tokens ni puja activa ni es líder
+  const sinTokensParaPujar =
+    isActiva &&
+    estaSuscripto &&
+    tokensDisponibles === 0 &&
+    !winInfo.esLiderActual &&
+    !winInfo.miPujaId;
+
+  // 3. MUTACIONES
   const mutationPago = useMutation({
     mutationFn: async (pujaId: number) => {
       setSelectedPujaId(pujaId);
@@ -197,10 +229,27 @@ const DetalleLote: React.FC = () => {
         <Portal><Box sx={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9999 }}><LinearProgress sx={{ height: 2 }} /></Box></Portal>
       )}
 
+      {/* ✅ PageHeader con chip de estado sincronizado con LoteCard */}
       <PageHeader
         title={lote.nombre_lote}
         subtitle={`ID #${lote.id} • ${lote.proyecto?.nombre_proyecto}`}
-        action={<FavoritoButton loteId={lote.id} size="large" />}
+        action={
+          <Stack direction="row" spacing={1.5} alignItems="center">
+            <Chip
+              label={soyGanador ? '¡VAS GANANDO!' : statusConfig.label}
+              color={soyGanador ? 'success' : statusConfig.color as any}
+              sx={{
+                fontWeight: 900,
+                color: 'white',
+                ...((isActiva && !soyGanador) && {
+                  animation: `${pulse} 2s infinite`,
+                }),
+                ...(soyGanador && { boxShadow: 4 }),
+              }}
+            />
+            <FavoritoButton loteId={lote.id} size="large" />
+          </Stack>
+        }
       />
 
       {debesPagar && (
@@ -250,14 +299,45 @@ const DetalleLote: React.FC = () => {
             </Box>
             <CardContent sx={{ p: 4 }}>
               <Typography variant="overline">Oferta Actual</Typography>
-              <Typography variant="h3" fontWeight={900} color="success.main" gutterBottom>{fmt(winInfo.montoFinal)}</Typography>
+              <Typography variant="h3" fontWeight={900} color="success.main" gutterBottom>
+                {fmt(winInfo.montoFinal)}
+              </Typography>
 
               <Stack spacing={2} mt={4}>
-                <Button variant="contained" fullWidth size="large" onClick={pujarModal.open} disabled={!puedePujar} startIcon={<Gavel />} sx={{ py: 2, fontWeight: 900 }}>
-                  {winInfo.isWinner ? 'MEJORAR MI OFERTA' : 'OFERTAR AHORA'}
+                <Button
+                  variant="contained"
+                  fullWidth
+                  size="large"
+                  onClick={pujarModal.open}
+                  disabled={!puedePujar}
+                  startIcon={<Gavel />}
+                  sx={{ py: 2, fontWeight: 900 }}
+                >
+                  {winInfo.esLiderActual || !!winInfo.miPujaId ? 'MEJORAR MI OFERTA' : 'OFERTAR AHORA'}
                 </Button>
+
+                {/* ✅ Aviso sin tokens: suscripto pero agotó su token y no tiene puja activa */}
+                {sinTokensParaPujar && (
+                  <Fade in timeout={300}>
+                    <Alert
+                      severity="warning"
+                      icon={<TokenOutlined fontSize="small" />}
+                      sx={{ borderRadius: 2 }}
+                    >
+                      <Typography variant="caption" fontWeight={800} display="block">
+                        Sin tokens disponibles
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Ya utilizaste tu token en este proyecto. Solo podés mejorar una puja activa propia.
+                      </Typography>
+                    </Alert>
+                  </Fade>
+                )}
+
                 {puedeCancelar && (
-                  <Button variant="text" color="error" onClick={handleSolicitarCancelacion}>Retirar mi puja</Button>
+                  <Button variant="text" color="error" onClick={handleSolicitarCancelacion}>
+                    Retirar mi puja
+                  </Button>
                 )}
               </Stack>
             </CardContent>
@@ -266,7 +346,9 @@ const DetalleLote: React.FC = () => {
       </Box>
 
       <TwoFactorAuthModal open={twoFaModal.isOpen} onClose={twoFaModal.close} onSubmit={(c) => confirmar2FA.mutate(c)} isLoading={confirmar2FA.isPending} error={twoFAError} />
-      <PujarModal {...pujarModal.modalProps} lote={lote} yaParticipa={!!winInfo.miPujaId} soyGanador={winInfo.isWinner} onSuccess={() => queryClient.invalidateQueries({ queryKey: ['lote', id] })} />
+
+      <PujarModal {...pujarModal.modalProps} lote={lote} yaParticipa={!!winInfo.miPujaId} soyGanador={winInfo.esLiderActual} onSuccess={() => queryClient.invalidateQueries({ queryKey: ['lote', id] })} />
+
       <ConfirmDialog controller={confirmDialog} onConfirm={handleConfirmarCancelacion} isLoading={mutationCancelar.isPending} />
     </Box>
   );

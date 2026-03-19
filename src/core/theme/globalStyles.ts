@@ -1,5 +1,5 @@
-import { createTheme, responsiveFontSizes, alpha } from "@mui/material/styles";
 import type { Components, Theme } from "@mui/material/styles";
+import { alpha, createTheme, responsiveFontSizes } from "@mui/material/styles";
 
 export const colors = {
   primary: { main: "#CC6333", light: "#E07A4D", dark: "#A34D26", contrastText: "#FFFFFF" },
@@ -89,10 +89,10 @@ const components: Components<Theme> = {
   },
   MuiCard: {
     styleOverrides: {
-      root: { 
-        borderRadius: 12, 
+      root: {
+        borderRadius: 12,
         boxShadow: "0 4px 16px rgba(0, 0, 0, 0.08)",
-        transition: "all 0.3s ease" 
+        transition: "all 0.3s ease"
       },
     },
   },
