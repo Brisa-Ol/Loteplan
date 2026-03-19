@@ -111,7 +111,8 @@ interface EditProyectoModalProps {
     isLoading?: boolean;
 }
 
-const validationSchema = Yup.object({
+// 1. Convertimos el esquema en una función dinámica que recibe el tipo de inversión
+const getValidationSchema = (tipo_inversion?: string) => Yup.object({
     nombre_proyecto: Yup.string().min(5, 'Mínimo 5 caracteres').required('Requerido'),
     descripcion: Yup.string().min(20, 'Describe mejor el proyecto (mín 20 car.)').required('Requerido'),
     forma_juridica: Yup.string().required('Requerido'),
@@ -140,15 +141,19 @@ const validationSchema = Yup.object({
 			return false;
 		}
 	}),
-    obj_suscripciones: Yup.number().nullable().min(1, 'Mínimo 1'),
-    suscripciones_minimas: Yup.number()
-        .nullable()
-        .min(1, 'Mínimo 1')
-        .test('min-max', 'No puede superar al cupo máximo', function (value) {
-            if (!value || !this.parent.obj_suscripciones) return true;
-            return value <= this.parent.obj_suscripciones;
-        }),
-    plazo_inversion: Yup.number().nullable().min(1, 'Mínimo 1 mes'),
+    // 2. Solo exigimos validar plazos y cupos si es un Plan Mensual
+    ...(tipo_inversion === 'mensual' ? {
+        obj_suscripciones: Yup.number().typeError('Requerido').required('Requerido').min(1, 'Mínimo 1'),
+        suscripciones_minimas: Yup.number()
+            .typeError('Requerido')
+            .required('Requerido')
+            .min(1, 'Mínimo 1')
+            .test('min-max', 'No puede superar al cupo máximo', function (value) {
+                if (!value || !this.parent.obj_suscripciones) return true;
+                return value <= this.parent.obj_suscripciones;
+            }),
+        plazo_inversion: Yup.number().typeError('Requerido').required('Requerido').min(1, 'Mínimo 1 mes'),
+    } : {})
 });
 
 const EditProyectoModal: React.FC<EditProyectoModalProps> = ({
@@ -156,8 +161,6 @@ const EditProyectoModal: React.FC<EditProyectoModalProps> = ({
 }) => {
     const theme = useTheme();
 
-    // 1. Definimos los valores iniciales de forma dinámica usando useMemo.
-    // Al pasar esto directo a Formik, la propiedad formik.dirty sabrá exactamente contra qué comparar.
     const initialValues = useMemo(() => {
         if (!proyecto) {
             return {
@@ -194,10 +197,15 @@ const EditProyectoModal: React.FC<EditProyectoModalProps> = ({
         };
     }, [proyecto]);
 
+    // 3. Generamos el esquema de validación actual
+    const currentValidationSchema = useMemo(() => {
+        return getValidationSchema(proyecto?.tipo_inversion);
+    }, [proyecto?.tipo_inversion]);
+
     const formik = useFormik({
-        initialValues, // Usamos el useMemo de arriba
-        validationSchema,
-        enableReinitialize: true, // Esto hace que si cambia el proyecto, actualice los initialValues internamente
+        initialValues,
+        validationSchema: currentValidationSchema, // Usamos el esquema dinámico
+        enableReinitialize: true,
         onSubmit: async (values) => {
             if (!proyecto) return;
 
@@ -247,10 +255,9 @@ const EditProyectoModal: React.FC<EditProyectoModalProps> = ({
             confirmButtonIcon={<SaveIcon />}
             onConfirm={formik.submitForm}
             isLoading={isLoading}
-            // 2. Aquí está la magia: !formik.dirty deshabilita el botón si no hubo cambios.
+            // ✅ Solo se habilita si es válido Y el usuario modificó algún dato (!formik.dirty)
             disableConfirm={!formik.isValid || !formik.dirty || isLoading}
             maxWidth="md"
-            // Permite que componentes como selectores de fecha funcionen correctamente
             disableEnforceFocus
             headerExtra={
                 <Stack direction="row" spacing={1}>
