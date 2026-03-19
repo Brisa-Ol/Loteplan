@@ -1,3 +1,5 @@
+// src/features/client/pages/Proyectos/DetalleProyecto.tsx
+
 import {
   ArrowBack, AutoGraph, CalendarMonth, CheckCircle,
   Gavel, GppGood,
@@ -164,11 +166,18 @@ const DetalleProyecto: React.FC = () => {
 
   const secureLogic = useMemo(() => ({
     ...logic,
+    yaCancelado: (logic as any).yaCancelado || false,
+    tieneFirmaPendiente: (logic as any).tieneFirmaPendiente || false,
     handleMainAction: handleOpenCheckoutSecurely,
     handleClickFirmar: handleOpenCheckoutSecurely,
+<<<<<<< HEAD
   }), [logic, handleOpenCheckoutSecurely]);
   
   
+=======
+  } as any), [logic, handleOpenCheckoutSecurely]);
+
+>>>>>>> 47efe89eafa201244f4a523eccc1849eb10a08b9
   if (logic.loadingProyecto) return <Box p={10} textAlign="center"><CircularProgress /></Box>;
   if (!logic.proyecto) return <PageContainer><Alert severity="error">Proyecto no encontrado.</Alert></PageContainer>;
 
@@ -176,7 +185,25 @@ const DetalleProyecto: React.FC = () => {
     <PageContainer maxWidth="xl" sx={{ pb: 8 }}>
       {isFetching > 0 && <LinearProgress sx={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 10000, height: 2 }} />}
 
-      <Button startIcon={<ArrowBack />} onClick={() => navigate(-1)} sx={{ mb: 3, fontWeight: 700, color: 'text.secondary', textTransform: 'none' }}>Volver</Button>
+      {/* ✅ Botón Volver más pequeño y a la izquierda */}
+      <Box sx={{ mb: 5, display: 'flex', justifyContent: 'flex-start' }}>
+        <Button
+          size="small"
+          startIcon={<ArrowBack fontSize="small" />}
+          onClick={() => navigate(-1)}
+          sx={{
+            fontWeight: 700,
+            color: 'text.secondary',
+            textTransform: 'none',
+            borderRadius: 2,
+            px: 1.5,
+            py: 0.5,
+            '&:hover': { bgcolor: alpha(theme.palette.text.secondary, 0.08) }
+          }}
+        >
+          Volver
+        </Button>
+      </Box>
 
       <MemoizedHero proyecto={logic.proyecto} />
 

@@ -29,7 +29,7 @@ export interface CancelacionDTO {
   tasa_cancelacion: number;
   total_canceladas: number;
   total_suscripciones: number; // ❌ faltaba este campo
-  // ❌ "periodo" eliminado: el backend no lo devuelve
+  
 }
 
 export interface SuscripcionDto extends BaseDTO {

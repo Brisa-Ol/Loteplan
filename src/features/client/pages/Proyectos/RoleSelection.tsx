@@ -1,7 +1,7 @@
 // src/features/client/pages/Proyectos/ProyectosUnificados.tsx
 
 import { useQuery } from '@tanstack/react-query';
-import React, { memo, useCallback, useMemo, useState } from "react";
+import React, { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 // Material UI
@@ -81,12 +81,19 @@ const ProyectosUnificados: React.FC = () => {
   const navigate = useNavigate();
   const theme = useTheme();
 
-  // ✅ Estado inicial y paso de "ver más" desde env.defaultPageSize
+  // ✅ Estado inicial
   const [perfilSeleccionado, setPerfilSeleccionado] = useState<'ahorrista' | 'inversionista'>('ahorrista');
   const [itemsVisibles, setItemsVisibles] = useState(env.defaultPageSize);
   const [filtros] = useState({ search: '', status: 'todos' });
 
-  // ✅ staleTime desde env.queryStaleTime en lugar de hardcoded 30min
+  // ✅ NUEVO: Recuperar el perfil guardado al montar el componente (al volver atrás)
+  useEffect(() => {
+    const savedPerfil = sessionStorage.getItem('proyectosPerfil');
+    if (savedPerfil === 'ahorrista' || savedPerfil === 'inversionista') {
+      setPerfilSeleccionado(savedPerfil);
+    }
+  }, []);
+
   const { data: proyectosInv, isLoading: loadingInv } = useQuery({
     queryKey: ['proyectosInversionista'],
     queryFn: async () => (await proyectoService.getInversionistasActive()).data,
@@ -121,10 +128,11 @@ const ProyectosUnificados: React.FC = () => {
     navigate(ROUTES.PROYECTOS.DETALLE.replace(':id', String(id)));
   }, [navigate]);
 
-  // ✅ Al cambiar perfil, el reset también usa env.defaultPageSize
+  // ✅ NUEVO: Guardar en sessionStorage cuando se cambia el perfil
   const handleCambioPerfil = useCallback((nuevo: 'ahorrista' | 'inversionista') => {
     setPerfilSeleccionado(nuevo);
     setItemsVisibles(env.defaultPageSize);
+    sessionStorage.setItem('proyectosPerfil', nuevo);
   }, []);
 
   return (
@@ -196,7 +204,6 @@ const ProyectosUnificados: React.FC = () => {
                 <Box textAlign="center" mt={8}>
                   <Button
                     variant="outlined" size="large"
-                    // ✅ Incrementa en env.defaultPageSize en lugar de 9 hardcodeado
                     onClick={() => setItemsVisibles(v => v + env.defaultPageSize)}
                     sx={{ px: 8, py: 1.5, borderRadius: 3, borderWidth: 2, fontWeight: 800 }}
                   >

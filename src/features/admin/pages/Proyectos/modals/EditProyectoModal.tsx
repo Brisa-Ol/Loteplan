@@ -124,21 +124,14 @@ const getValidationSchema = (tipo_inversion?: string) => Yup.object({
     latitud: Yup.number().nullable().min(-90, 'Latitud inválida').max(90, 'Latitud inválida'),
     longitud: Yup.number().nullable().min(-180, 'Longitud inválida').max(180, 'Longitud inválida'),
     map_url: Yup.string().nullable()
-    .transform((value) => {
-        try{
-            return extractAndValidateMapUrl(value);
-        } catch {
-            return value; //deja que falle en el test
-        }
-    })
-    .test("valid-map-url", "URL de mapa inválida o no embebible", (value) => {
+    .test("valid-map-url", "URL de mapa inválida o no embebible", function (value) {
 		if (!value) return true;
 
 		try {
 			extractAndValidateMapUrl(value);
 			return true;
-		} catch {
-			return false;
+		} catch (e: any) {
+			return this.createError({ message: e.message });
 		}
 	}),
     // 2. Solo exigimos validar plazos y cupos si es un Plan Mensual
@@ -438,16 +431,7 @@ const EditProyectoModal: React.FC<EditProyectoModalProps> = ({
                                     helperText={formik.touched.map_url && formik.errors.map_url}
                                     InputProps={{ startAdornment: <InputAdornment position="start"><WorldIcon fontSize='small' color="action" /></InputAdornment> }}
                                     sx={commonInputSx}
-                                    onBlur={(e) => {
-                                        formik.handleBlur(e); // importante para que Formik marque touched
-
-                                        try {
-                                            const clean = extractAndValidateMapUrl(e.target.value);
-                                            formik.setFieldValue("map_url", clean);
-                                        } catch {
-                                            // no hacemos nada → Yup se encarga del error
-                                        }
-                                    }}
+                                    
                                 />
                                 
                             </Stack>

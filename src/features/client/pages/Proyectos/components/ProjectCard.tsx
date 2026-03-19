@@ -2,17 +2,21 @@
 
 import {
   ArrowForward,
+  CheckCircle,
   EventAvailable,
   LocalOffer,
-  Timer
+  Timer,
+  Visibility
 } from "@mui/icons-material";
 import {
   alpha, Box, Button, Card, CardContent, CardMedia, Chip, Divider,
   LinearProgress, Stack, Tooltip, Typography, useTheme, Zoom
 } from "@mui/material";
-import React, { useCallback, useRef } from "react";
+import React, { useCallback, useMemo, useRef } from "react";
 
 import type { ProyectoDto } from "@/core/types/proyecto.dto";
+import { useAuth } from "@/core/context/AuthContext";
+import { useSuscripciones } from "@/features/client/hooks/useSuscripciones";
 import { useProyectoHelpers } from "@/features/client/hooks/useProyectoHelpers";
 
 export interface ProjectCardProps {
@@ -29,12 +33,13 @@ const CardHeader: React.FC<{
   tiempoLabel: string;
   esUrgente: boolean;
   tooltipFecha: string;
-  isPrelanzamiento: boolean; // 🆕 Reemplaza a isEnEspera
+  isPrelanzamiento: boolean;
   isLleno: boolean;
+  estaSuscrito: boolean;
   onImageError: () => void;
 }> = ({
   imagenPrincipal, badge, esPack, estadoConfig,
-  nombreProyecto, tiempoLabel, esUrgente, tooltipFecha, isPrelanzamiento, isLleno,
+  nombreProyecto, tiempoLabel, esUrgente, tooltipFecha, isPrelanzamiento, isLleno, estaSuscrito,
   onImageError
 }) => {
     const isFinalizado = estadoConfig.label.toLowerCase() === 'finalizado';
@@ -53,7 +58,9 @@ const CardHeader: React.FC<{
 
         {/* 🧠 LÓGICA VISUAL DE ESTADOS */}
         <Stack spacing={0.5} sx={{ position: 'absolute', top: 12, right: 12 }} alignItems="flex-end">
-          {isFinalizado ? (
+          {estaSuscrito ? (
+             <Chip icon={<CheckCircle sx={{ fontSize: '16px !important' }} />} label="SUSCRIPTO" color="success" size="small" sx={{ fontWeight: 800, color: 'white', boxShadow: 2 }} />
+          ) : isFinalizado ? (
             <Chip label="FINALIZADO" color="success" size="small" sx={{ fontWeight: 800, color: 'white', boxShadow: 2 }} />
           ) : isLleno ? (
             <Chip label="CUPOS AGOTADOS" color="error" size="small" sx={{ fontWeight: 800, color: 'white', boxShadow: 2 }} />
@@ -65,7 +72,7 @@ const CardHeader: React.FC<{
           {esPack && <Chip icon={<LocalOffer sx={{ fontSize: 14 }} />} label="PACK" color="warning" size="small" sx={{ fontWeight: 800, boxShadow: 2 }} />}
         </Stack>
 
-        {tiempoLabel && !isFinalizado && (
+        {tiempoLabel && !isFinalizado && !estaSuscrito && (
           <Tooltip title={tooltipFecha} arrow TransitionComponent={Zoom} placement="top">
             <Chip icon={timeIcon} label={tiempoLabel} size="small" color={timeColor} sx={{ position: 'absolute', bottom: 12, right: 12, fontWeight: 700, boxShadow: 3, ...(esUrgente && { animation: 'pulse-urgency 2s infinite', '@keyframes pulse-urgency': { '0%': { boxShadow: '0 0 0 0 rgba(211, 47, 47, 0.7)' }, '70%': { boxShadow: '0 0 0 6px rgba(211, 47, 47, 0)' }, '100%': { boxShadow: '0 0 0 0 rgba(211, 47, 47, 0)' } } }) }} />
           </Tooltip>
@@ -80,6 +87,14 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, onClick }) =>
   const imageState = useRef<{ error: boolean }>({ error: false });
   const handleImageError = useCallback(() => { imageState.current.error = true; }, []);
 
+  // ✅ Verificación de suscripción
+  const { isAuthenticated } = useAuth();
+  const { suscripciones } = useSuscripciones(); 
+  const estaSuscrito = useMemo(() => {
+    if (!isAuthenticated) return false;
+    return suscripciones.some(sub => sub.id_proyecto === project.id);
+  }, [suscripciones, project.id, isAuthenticated]);
+
   // 🧠 LÓGICA DE TIEMPO Y CUPOS
   const hoy = new Date();
   const fechaInicio = new Date(project.fecha_inicio);
@@ -89,12 +104,28 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, onClick }) =>
   const imagenFinal = imageState.current.error ? '/assets/placeholder-project.jpg' : helpers.imagenPrincipal;
   const tooltipFecha = isPrelanzamiento ? `Apertura programada: ${helpers.fechas.inicio}` : `Fecha límite: ${helpers.fechas.cierre}`;
 
+  // ✅ Determinar apariencia y texto del botón
+  const buttonVariant = (helpers.estaFinalizado || isLleno) && !estaSuscrito ? "outlined" : "contained";
+  const buttonColor = estaSuscrito ? "success" : "primary";
+  let buttonText = "Suscribirme";
+  let buttonIcon = <ArrowForward />;
+
+  if (estaSuscrito) {
+    buttonText = "Ver mi Plan";
+    buttonIcon = <Visibility />;
+  } else if (helpers.estaFinalizado || isLleno) {
+    buttonText = "Cupos Agotados";
+    buttonIcon = <></>;
+  } else if (isPrelanzamiento) {
+    buttonText = "Ver Detalles";
+  }
+
   return (
-    <Card onClick={onClick} sx={{ height: "100%", display: "flex", flexDirection: "column", cursor: 'pointer', borderRadius: 3, overflow: 'hidden', border: `1px solid ${theme.palette.divider}`, transition: 'all 0.3s ease', "&:hover": { transform: "translateY(-6px)", boxShadow: theme.shadows[10], borderColor: theme.palette.primary.main } }}>
+    <Card onClick={onClick} sx={{ height: "100%", display: "flex", flexDirection: "column", cursor: 'pointer', borderRadius: 3, overflow: 'hidden', border: `1px solid ${theme.palette.divider}`, transition: 'all 0.3s ease', "&:hover": { transform: "translateY(-6px)", boxShadow: theme.shadows[10], borderColor: theme.palette[buttonColor].main } }}>
       <CardHeader
         imagenPrincipal={imagenFinal} badge={helpers.badge} esPack={!!project.pack_de_lotes} estadoConfig={helpers.estadoConfig} nombreProyecto={project.nombre_proyecto}
         tiempoLabel={helpers.tiempoLabel} esUrgente={helpers.esUrgente} tooltipFecha={tooltipFecha}
-        isPrelanzamiento={isPrelanzamiento} isLleno={isLleno} onImageError={handleImageError}
+        isPrelanzamiento={isPrelanzamiento} isLleno={isLleno} estaSuscrito={estaSuscrito} onImageError={handleImageError}
       />
 
       <CardContent sx={{ flexGrow: 1, display: "flex", flexDirection: "column", p: 3 }}>
@@ -103,15 +134,23 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, onClick }) =>
           <Typography variant="body2" color="text.secondary" sx={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', minHeight: 40 }}>{project.descripcion}</Typography>
         </Box>
 
-        {/* Muestra la barra de progreso solo si NO es prelanzamiento */}
+        {/* ✅ Muestra la barra de progreso siempre que NO sea prelanzamiento (incluso si está suscrito) */}
         {helpers.esMensual && helpers.progreso && !isPrelanzamiento && (
-          <Box sx={{ mb: 3, p: 1.5, bgcolor: alpha(theme.palette.primary.main, 0.04), borderRadius: 2 }}>
+          <Box sx={{ mb: estaSuscrito ? 1.5 : 3, p: 1.5, bgcolor: alpha(theme.palette.primary.main, 0.04), borderRadius: 2 }}>
             <Stack direction="row" justifyContent="space-between" mb={1}>
               <Typography variant="caption" fontWeight={800} color="primary">CUPO DISPONIBLE</Typography>
               <Typography variant="caption" fontWeight={800}>{helpers.progreso.actual} / {helpers.progreso.meta}</Typography>
             </Stack>
             <LinearProgress variant="determinate" value={helpers.progreso.porcentaje} sx={{ height: 8, borderRadius: 4 }} />
           </Box>
+        )}
+
+        {/* ✅ Aviso de suscripción activa debajo del progreso (más compacto) */}
+        {estaSuscrito && (
+           <Box sx={{ mb: 2, p: 1, bgcolor: alpha(theme.palette.success.main, 0.08), borderRadius: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+             <CheckCircle color="success" fontSize="small" />
+             <Typography variant="body2" fontWeight={800} color="success.main">Participando de este Proyecto</Typography>
+           </Box>
         )}
 
         <Box sx={{ mt: 'auto' }}>
@@ -128,11 +167,13 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, onClick }) =>
           </Stack>
 
           <Button
-            variant={helpers.estaFinalizado || isLleno ? "outlined" : "contained"}
-            fullWidth endIcon={!helpers.estaFinalizado && !isLleno && !isPrelanzamiento && <ArrowForward />}
-            sx={{ py: 1.2, fontWeight: 800, borderRadius: 2, boxShadow: helpers.estaFinalizado || isLleno ? 'none' : 3 }}
+            variant={buttonVariant}
+            color={buttonColor}
+            fullWidth 
+            endIcon={buttonIcon}
+            sx={{ py: 1.2, fontWeight: 800, borderRadius: 2, boxShadow: buttonVariant === 'outlined' ? 'none' : 3 }}
           >
-            {helpers.estaFinalizado || isLleno ? 'CUPOS AGOTADOS' : (isPrelanzamiento ? 'Ver Detalles' : 'Suscribirme')}
+            {buttonText}
           </Button>
         </Box>
       </CardContent>
