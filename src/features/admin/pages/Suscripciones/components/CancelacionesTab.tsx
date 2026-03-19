@@ -2,24 +2,28 @@
 
 import SuscripcionService from '@/core/api/services/suscripcion.service';
 import type { SuscripcionCanceladaDto } from '@/core/types/suscripcion.dto';
-import { DataTable, FilterBar, FilterSearch, QueryHandler, StatCard, useModal } from '@/shared';
-import { Cancel, Clear as ClearIcon, MoneyOff, TrendingDown } from '@mui/icons-material';
-import { Box, Button, Paper, Stack, TextField, useTheme } from '@mui/material';
-import { useQuery } from '@tanstack/react-query';
+import { BaseModal, DataTable, FilterBar, FilterSearch, QueryHandler, StatCard, useModal } from '@/shared';
+import { Cancel, CheckCircle, Clear as ClearIcon, MoneyOff, ReportProblem, TrendingDown } from '@mui/icons-material';
+import { Box, Button, Chip, Paper, Stack, TextField, Typography, useTheme } from '@mui/material';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { useCallback, useMemo, useState } from 'react';
 import useCancelacionesColumns from '../hooks/useCancelacionesColumns';
 import DetalleCancelacionModal from '../modals/DetalleCancelacionModal/DetalleCancelacionModal';
 
-
 const CancelacionesTab: React.FC = () => {
     const theme = useTheme();
     const detailModal = useModal();
-    const columns = useCancelacionesColumns();
+    const baseColumns = useCancelacionesColumns();
+    const queryClient = useQueryClient();
 
     const [searchTerm, setSearchTerm] = useState('');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
     const [selectedCancelacion, setSelectedCancelacion] = useState<SuscripcionCanceladaDto | null>(null);
+
+    // ✅ Estados para el modal de confirmación de devolución
+    const [refundModalOpen, setRefundModalOpen] = useState(false);
+    const [refundTargetId, setRefundTargetId] = useState<number | null>(null);
 
     const { data: cancelaciones = [], isLoading, error } = useQuery({
         queryKey: ['adminCancelaciones'],
@@ -32,6 +36,16 @@ const CancelacionesTab: React.FC = () => {
     const { data: metrics, isLoading: loadingMetrics } = useQuery({
         queryKey: ['adminCancelacionesMetrics'],
         queryFn: async () => (await SuscripcionService.getCancellationMetrics()).data,
+    });
+
+    // ✅ Mutación para marcar la devolución (ACTUALIZADA PARA RECARGAR LA PÁGINA)
+    const { mutate: marcarDevolucion, isPending: isMutating } = useMutation({
+        mutationFn: (id: number) => SuscripcionService.marcarDevolucion(id),
+        onSuccess: () => {
+            setRefundModalOpen(false);
+            setRefundTargetId(null);
+            window.location.reload(); // <-- Aquí recarga la página al confirmar
+        },
     });
 
     const filteredCancelaciones = useMemo(() => {
@@ -68,6 +82,44 @@ const CancelacionesTab: React.FC = () => {
         setSelectedCancelacion(item);
         detailModal.open();
     }, [detailModal]);
+
+    // ✅ Columnas extendidas con Botón / Check
+    const columnsWithDevolucion = useMemo(() => [
+        ...baseColumns,
+        {
+            id: 'devolucion',
+            label: 'Devolución',
+            render: (row: SuscripcionCanceladaDto) => {
+                if (row.devolucion_realizada) {
+                    return (
+                        <Chip
+                            icon={<CheckCircle />}
+                            label="Devuelto"
+                            color="success"
+                            size="small"
+                            variant="outlined"
+                        />
+                    );
+                }
+
+                return (
+                    <Button
+                        variant="contained"
+                        color="primary"
+                        size="small"
+                        disabled={isMutating}
+                        onClick={(e) => {
+                            e.stopPropagation(); // Evita que se abra el modal de detalle de la fila
+                            setRefundTargetId(row.id);
+                            setRefundModalOpen(true);
+                        }}
+                    >
+                        Reintegrar
+                    </Button>
+                );
+            },
+        }
+    ], [baseColumns, isMutating]);
 
     const isFiltered = !!(startDate || endDate || searchTerm);
 
@@ -108,7 +160,7 @@ const CancelacionesTab: React.FC = () => {
             <QueryHandler isLoading={isLoading} error={error as Error | null}>
                 <Paper elevation={0} sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 3, overflow: 'hidden' }}>
                     <DataTable
-                        columns={columns}
+                        columns={columnsWithDevolucion}
                         data={filteredCancelaciones}
                         getRowKey={(row) => row.id}
                         onRowClick={handleVerDetalle}
@@ -123,6 +175,26 @@ const CancelacionesTab: React.FC = () => {
                 onClose={detailModal.close}
                 cancelacion={selectedCancelacion}
             />
+
+            {/* ✅ BaseModal implementado para la Confirmación de Devolución */}
+            <BaseModal
+                open={refundModalOpen}
+                onClose={() => !isMutating && setRefundModalOpen(false)}
+                title="Confirmar Reintegro"
+                subtitle="Registro definitivo de devolución"
+                icon={<ReportProblem />}
+                headerColor="warning"
+                confirmText="Confirmar Devolución"
+                confirmButtonColor="warning"
+                onConfirm={() => refundTargetId && marcarDevolucion(refundTargetId)}
+                isLoading={isMutating}
+                disableConfirm={isMutating}
+                maxWidth="sm"
+            >
+                <Typography color="text.secondary" sx={{ fontSize: '1.05rem', lineHeight: 1.6 }}>
+                    ¿Estás seguro de que deseas marcar esta suscripción como devuelta? Esta acción registrará de manera permanente que el dinero ya fue transferido al cliente y <strong>no se puede deshacer</strong>.
+                </Typography>
+            </BaseModal>
         </Box>
     );
 };

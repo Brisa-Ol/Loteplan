@@ -2,13 +2,28 @@
 
 import { AdminPageHeader, AlertBanner, PageContainer } from '@/shared';
 import { Box, Chip, Stack } from '@mui/material';
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useAdminSuscripciones } from '../../hooks/finanzas/useAdminSuscripciones';
 import CancelacionesTab from './components/CancelacionesTab';
 import SuscripcionesActiveTab from './components/SuscripcionesActiveTab';
 
 const AdminSuscripciones: React.FC = () => {
   const logic = useAdminSuscripciones();
+
+  // ✅ NUEVO: Recuperar la pestaña guardada al recargar la página
+  useEffect(() => {
+    const savedTab = sessionStorage.getItem('adminSuscripcionesTab');
+    if (savedTab !== null) {
+      logic.setTabIndex(Number(savedTab));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ✅ NUEVO: Guardar la pestaña en sessionStorage cuando se hace clic
+  const handleTabChange = (index: number) => {
+    logic.setTabIndex(index);
+    sessionStorage.setItem('adminSuscripcionesTab', index.toString());
+  };
 
   const criticalAlerts = useMemo(() => {
     if (logic.stats.tasaMorosidad <= 15) return [];
@@ -39,7 +54,7 @@ const AdminSuscripciones: React.FC = () => {
           {TABS.map(({ label, index }) => (
             <Chip
               key={index} label={label}
-              onClick={() => logic.setTabIndex(index)}
+              onClick={() => handleTabChange(index)} // ✅ Usamos la nueva función aquí
               color={logic.tabIndex === index ? 'primary' : 'default'}
               variant={logic.tabIndex === index ? 'filled' : 'outlined'}
               sx={{ fontWeight: 700, px: 1 }}
