@@ -30,6 +30,7 @@ import { ProjectSidebar } from './components/ProjectSidebar';
 import { CheckoutWizardModal } from './modals/CheckoutWizardModal/CheckoutWizardModal';
 
 import SuscripcionService from '@/core/api/services/suscripcion.service';
+import { MapUrlIframe } from '@/features/admin/pages/Proyectos/modals/MapUrlIframe/MapUrlIframe';
 
 // 🚀 LAZY LOADING
 const ProjectGallery = lazy(() => import('./components/ProjectGallery').then(m => ({ default: m.ProjectGallery })));
@@ -86,7 +87,9 @@ const TabOverview = React.memo(({ proyecto, esMensual, googleMapsUrl }: any) => 
             <DataPoint label="Estado" value={proyecto.estado_proyecto} icon={<CheckCircle fontSize="small" />} />
           </Box>
         </Paper>
+      <MapUrlIframe map_url={proyecto.map_url} type_proyect={esMensual}></MapUrlIframe>
       </Stack>
+      
     </Fade>
   );
 });
@@ -249,6 +252,8 @@ const DetalleProyecto: React.FC = () => {
           tipo={esMensual ? 'suscripcion' : 'inversion'}
         />
       )}
+
+      
     </PageContainer>
   );
 };

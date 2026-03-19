@@ -27,6 +27,7 @@ import * as Yup from 'yup';
 import ProyectoService from '@/core/api/services/proyecto.service';
 import type { CreateLoteDto } from '@/core/types/lote.dto';
 import { BaseModal, ImageUploadZone } from '@/shared';
+import { extractAndValidateMapUrl } from '@/shared/utils/extractAndValidateMapUrl';
 
 
 // ============================================================================
@@ -78,7 +79,7 @@ const ProjectSection = React.memo(({ value, proyectos, isLoading, onChange, hand
   </Box>
 ));
 
-const FinanceSection = React.memo(({ precio, lat, lng, touched, error, onChange, handleBlur }: any) => (
+const FinanceSection = React.memo(({ precio, lat, lng, touched, error, onChange, handleBlur, maps }: any) => (
   <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
     <Box flex={1}>
       <Typography sx={SECTION_TITLE_SX}><MonetizationIcon fontSize="inherit" /> Valor de Salida</Typography>
@@ -95,6 +96,7 @@ const FinanceSection = React.memo(({ precio, lat, lng, touched, error, onChange,
     <Box flex={1}>
       <Typography sx={SECTION_TITLE_SX}><LocationOn fontSize="inherit" /> Georreferencia (GPS)</Typography>
       <Stack direction="row" spacing={1}>
+        <TextField fullWidth label="Maps" size="small" name="map_url" value={maps} onChange={onChange} onBlur={handleBlur} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
         <TextField fullWidth label="Latitud" size="small" name="latitud" value={lat} onChange={onChange} onBlur={handleBlur} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
         <TextField fullWidth label="Longitud" size="small" name="longitud" value={lng} onChange={onChange} onBlur={handleBlur} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
       </Stack>
@@ -153,12 +155,23 @@ const CreateLoteModal: React.FC<CreateLoteModalProps> = ({ open, onClose, onSubm
       is: (val: any) => val instanceof Date,
       then: (schema) => schema.min(Yup.ref('fecha_inicio'), 'Posterior al inicio')
     }),
+    map_url: Yup.string().nullable()
+            .test("valid-map-url", "URL de mapa inválida o no embebible", function (value) {
+            if (!value) return true;
+        
+            try {
+              extractAndValidateMapUrl(value);
+              return true;
+            } catch (e: any) {
+              return this.createError({ message: e.message });
+            }
+          }),
   }), []);
 
   const formik = useFormik({
     initialValues: {
       nombre_lote: '', precio_base: '', id_proyecto: '',
-      fecha_inicio: '', fecha_fin: '', latitud: '', longitud: '',
+      fecha_inicio: '', fecha_fin: '', latitud: '', longitud: '', map_url: '',
       file: null as File | null
     },
     validationSchema,
@@ -174,6 +187,9 @@ const CreateLoteModal: React.FC<CreateLoteModalProps> = ({ open, onClose, onSubm
         dataToSubmit.latitud = Number(values.latitud);
         dataToSubmit.longitud = Number(values.longitud);
       }
+      dataToSubmit.map_url = values.map_url
+                ? extractAndValidateMapUrl(values.map_url)
+                : null
 
       if (values.fecha_inicio) dataToSubmit.fecha_inicio = values.fecha_inicio;
       if (values.fecha_fin) dataToSubmit.fecha_fin = values.fecha_fin;
@@ -248,7 +264,7 @@ const CreateLoteModal: React.FC<CreateLoteModalProps> = ({ open, onClose, onSubm
 
           <FinanceSection
             precio={formik.values.precio_base} lat={formik.values.latitud} lng={formik.values.longitud}
-            touched={formik.touched.precio_base} error={formik.errors.precio_base}
+            touched={formik.touched.precio_base} error={formik.errors.precio_base} maps={formik.values.map_url}
             onChange={formik.handleChange} handleBlur={formik.handleBlur}
           />
 
