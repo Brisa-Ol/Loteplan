@@ -33,6 +33,58 @@ import * as Yup from 'yup';
 
 // --- FUNCIONES Y VARIABLES AUXILIARES ---
 
+//Funciones Thomy
+
+const extractAndValidateMapUrl = (value: string) => {
+
+    if(!value) return value;
+
+    let urlStr = value.trim()
+
+    //detecta si es iframe
+    if (value.includes("<iframe")) {
+		const parser = new DOMParser();
+		const doc = parser.parseFromString(value, "text/html");
+		const iframe = doc.querySelector("iframe");
+
+		if (!iframe) {
+			throw new Error("Iframe inválido");
+		}
+
+		const src = iframe.getAttribute("src");
+		if (!src) {
+			throw new Error("El iframe no tiene src");
+		}
+
+		urlStr = src;
+	}
+
+    //validar url
+    let url: URL;
+	try {
+		url = new URL(urlStr);
+	} catch {
+		throw new Error("URL inválida");
+	}
+
+	// Seguridad estricta
+	if (url.protocol !== "https:") {
+		throw new Error("Debe usar HTTPS");
+	}
+
+	if (url.hostname !== "www.google.com") {
+		throw new Error("Solo se permiten mapas de Google Maps");
+	}
+
+	if (!url.pathname.startsWith("/maps/embed")) {
+		throw new Error("Debe ser una URL de tipo embed");
+	}
+
+	return urlStr;
+}
+
+//Fin funciones Thomy
+
 const blockInvalidChar = (e: React.KeyboardEvent) =>
     ['e', 'E', '-', '+'].includes(e.key) && e.preventDefault();
 
@@ -70,6 +122,24 @@ const validationSchema = Yup.object({
         .min(Yup.ref('fecha_inicio'), 'Debe ser posterior al inicio'),
     latitud: Yup.number().nullable().min(-90, 'Latitud inválida').max(90, 'Latitud inválida'),
     longitud: Yup.number().nullable().min(-180, 'Longitud inválida').max(180, 'Longitud inválida'),
+    map_url: Yup.string().nullable()
+    .transform((value) => {
+        try{
+            return extractAndValidateMapUrl(value);
+        } catch {
+            return value; //deja que falle en el test
+        }
+    })
+    .test("valid-map-url", "URL de mapa inválida o no embebible", (value) => {
+		if (!value) return true;
+
+		try {
+			extractAndValidateMapUrl(value);
+			return true;
+		} catch {
+			return false;
+		}
+	}),
     obj_suscripciones: Yup.number().nullable().min(1, 'Mínimo 1'),
     suscripciones_minimas: Yup.number()
         .nullable()
@@ -100,6 +170,7 @@ const EditProyectoModal: React.FC<EditProyectoModalProps> = ({
                 estado_proyecto: 'En Espera',
                 latitud: '' as string | number,
                 longitud: '' as string | number,
+                map_url: '',
                 obj_suscripciones: '' as string | number,
                 suscripciones_minimas: '' as string | number,
                 plazo_inversion: '' as string | number,
@@ -116,6 +187,7 @@ const EditProyectoModal: React.FC<EditProyectoModalProps> = ({
             estado_proyecto: proyecto.estado_proyecto || 'En Espera',
             latitud: proyecto.latitud ?? '',
             longitud: proyecto.longitud ?? '',
+            map_url: proyecto.map_url ?? '',
             obj_suscripciones: proyecto.obj_suscripciones ?? '',
             suscripciones_minimas: proyecto.suscripciones_minimas ?? '',
             plazo_inversion: proyecto.plazo_inversion ?? '',
@@ -354,12 +426,23 @@ const EditProyectoModal: React.FC<EditProyectoModalProps> = ({
                                 />
                                 <TextField
                                     fullWidth label="Maps URL" type="text"
-                                    //{...formik.getFieldProps('longitud')}
-                                    error={formik.touched.longitud && !!formik.errors.longitud}
-                                    helperText={formik.touched.maps_url && formik.errors.maps_url}
+                                    {...formik.getFieldProps('map_url')}
+                                    error={formik.touched.map_url && !!formik.errors.map_url}
+                                    helperText={formik.touched.map_url && formik.errors.map_url}
                                     InputProps={{ startAdornment: <InputAdornment position="start"><WorldIcon fontSize='small' color="action" /></InputAdornment> }}
                                     sx={commonInputSx}
+                                    onBlur={(e) => {
+                                        formik.handleBlur(e); // importante para que Formik marque touched
+
+                                        try {
+                                            const clean = extractAndValidateMapUrl(e.target.value);
+                                            formik.setFieldValue("map_url", clean);
+                                        } catch {
+                                            // no hacemos nada → Yup se encarga del error
+                                        }
+                                    }}
                                 />
+                                
                             </Stack>
                         </Box>
 
