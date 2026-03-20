@@ -4,20 +4,30 @@ import {
   BookmarkBorder,
   Gavel,
   Timer,
-  TokenOutlined
+  TokenOutlined,
 } from '@mui/icons-material';
 import {
-  Alert, alpha,
-  Box, Button, Card, CardContent,
+  Alert,
+  alpha,
+  Box,
+  Button,
+  Card,
+  CardContent,
   Chip,
+  Divider,
   Fade,
   keyframes,
   LinearProgress,
-  Paper, Portal, Skeleton, Stack, Typography, useTheme
+  Paper,
+  Portal,
+  Skeleton,
+  Stack,
+  Typography,
+  useTheme,
 } from '@mui/material';
 import { useIsFetching, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 
 // Core & Shared
 import ImagenService from '@/core/api/services/imagen.service';
@@ -30,7 +40,7 @@ import {
   PageHeader,
   useConfirmDialog,
   useModal,
-  useSnackbar
+  useSnackbar,
 } from '@/shared';
 import TwoFactorAuthModal from '@/shared/components/domain/modals/TwoFactorAuthModal';
 
@@ -41,8 +51,8 @@ import { useImageLoader } from '../../hooks/useImageLoader';
 import { useVerificarSuscripcion } from '../../hooks/useVerificarSuscripcion';
 import { FavoritoButton } from './components/BotonFavorito';
 import { PujarModal } from './modals/PujarModal';
-import { MapUrlIframe } from '@/features/admin/pages/Proyectos/modals/MapUrlIframe/MapUrlIframe';
 
+// ─── Animaciones ─────────────────────────────────────────────────────────────
 
 const pulse = keyframes`
   0%   { box-shadow: 0 0 0 0 rgba(46, 125, 50, 0.7); }
@@ -50,17 +60,20 @@ const pulse = keyframes`
   100% { box-shadow: 0 0 0 0 rgba(46, 125, 50, 0); }
 `;
 
-// ─────────────────────────────────────────────
-// HELPERS & SUBCOMPONENTES
-// ─────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const formatFullDate = (dateString?: string | null) => {
+const formatFullDate = (dateString?: string | null): string => {
   if (!dateString) return '--/--/--';
   return new Intl.DateTimeFormat(env.defaultLocale || 'es-AR', {
-    day: '2-digit', month: 'long', year: 'numeric',
-    hour: '2-digit', minute: '2-digit',
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
   }).format(new Date(dateString));
 };
+
+// ─── CountdownTimer ───────────────────────────────────────────────────────────
 
 const CountdownTimer = ({ endDate }: { endDate: string }) => {
   const [timeLeft, setTimeLeft] = useState('');
@@ -79,9 +92,12 @@ const CountdownTimer = ({ endDate }: { endDate: string }) => {
       const s = Math.floor((diff % 60_000) / 1_000);
       setTimeLeft(`${h}h ${m}m ${s}s`);
     };
+
     tick();
     timerRef.current = setInterval(tick, 1000);
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
   }, [endDate]);
 
   return (
@@ -91,17 +107,14 @@ const CountdownTimer = ({ endDate }: { endDate: string }) => {
   );
 };
 
-// ─────────────────────────────────────────────
-// COMPONENTE PRINCIPAL
-// ─────────────────────────────────────────────
+// ─── DetalleLote ──────────────────────────────────────────────────────────────
 
 const DetalleLote: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const theme = useTheme();
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const { showSuccess, showInfo, showError } = useSnackbar();
+  const { showSuccess, showError } = useSnackbar();
   const fmt = useCurrencyFormatter();
 
   const pujarModal = useModal();
@@ -111,87 +124,135 @@ const DetalleLote: React.FC = () => {
   const [selectedPujaId, setSelectedPujaId] = useState<number | null>(null);
   const [twoFAError, setTwoFAError] = useState<string | null>(null);
 
-  const {
-    isLoading: isLoadingImage,
-    hasError,
-    handleLoad,
-    handleError
-  } = useImageLoader();
+  const { isLoading: isLoadingImage, hasError, handleLoad, handleError } = useImageLoader();
 
-  // 1. OBTENCIÓN DE DATOS
-  const { data: lote, isLoading } = useQuery({
+  // ─── Query: datos del lote ────────────────────────────────────────────────
+  // Devuelve: id_puja_mas_alta (solo el ID), precio_base, imagenes, ganador.
+  // No incluye el monto del líder — para eso usamos mis_pujas.
+
+  const { data: lote, isLoading: isLoadingLote } = useQuery({
     queryKey: ['lote', id],
     queryFn: async () => (await LoteService.getByIdActive(Number(id))).data as any,
     refetchInterval: 3000,
   });
 
+  // ─── Query: pujas propias del usuario ─────────────────────────────────────
+  // GET /api/pujas/mis_pujas → incluye monto_puja, id_lote, estado_puja, id.
+  // Fuente de verdad para participación y monto propio.
+
+  const { data: misPujas = [] } = useQuery({
+    queryKey: ['mis-pujas'],
+    queryFn: async () => (await PujaService.getMyPujas()).data,
+    refetchInterval: 3000,
+    enabled: !!user?.id,
+  });
+
   const isFetching = useIsFetching({ queryKey: ['lote', id] });
   const { estaSuscripto, tokensDisponibles } = useVerificarSuscripcion(lote?.id_proyecto);
 
-  // 2. LÓGICA DE NEGOCIO (Win Info)
+  // ─── Mi puja activa en este lote ──────────────────────────────────────────
+
+  const miPujaEnEsteLote = useMemo(() => {
+    if (!misPujas.length || !lote) return null;
+    return (
+      misPujas.find(
+        (p: any) =>
+          Number(p.id_lote) === Number(lote.id) && p.estado_puja !== 'cancelada'
+      ) ?? null
+    );
+  }, [misPujas, lote]);
+
+  // ─── Estado de precios ────────────────────────────────────────────────────
+  //
+  // Con los endpoints disponibles podemos saber:
+  //   - precioBase:     siempre disponible en el lote
+  //   - hayOfertas:     lote.id_puja_mas_alta !== null
+  //   - soyLider:       miPuja.id === lote.id_puja_mas_alta
+  //   - miMonto:        miPuja.monto_puja (si participo)
+  //   - montoLider:     SOLO si soy el líder (mi propio monto)
+  //                     → desconocido si hay otro líder
+  //
+  // Cuando soy líder mostramos el monto exacto.
+  // Cuando no soy líder pero hay ofertas: mostramos que fui superado con mi monto.
+
+const preciosInfo = useMemo(() => {
+  if (!lote) {
+    return { precioBase: 0, hayOfertas: false, soyLider: false, montoLider: 0, montoLiderConocido: false, miMonto: 0 };
+  }
+
+  const base = Number(lote.precio_base || 0);
+  const hayOfertas = !!lote.id_puja_mas_alta;
+  const miMonto = miPujaEnEsteLote ? Number(miPujaEnEsteLote.monto_puja) : 0;
+
+  const soyLider =
+    !!miPujaEnEsteLote &&
+    !!lote.id_puja_mas_alta &&
+    Number(miPujaEnEsteLote.id) === Number(lote.id_puja_mas_alta);
+
+  // ✅ Leer el monto real del líder desde el include del backend
+  const montoLiderExterno = Number(lote.pujaMasAlta?.monto_puja || 0);
+  const montoLider = soyLider ? miMonto : montoLiderExterno;
+  const montoLiderConocido = !hayOfertas || montoLider > 0;
+
+  return { precioBase: base, hayOfertas, soyLider, montoLider, montoLiderConocido, miMonto };
+}, [lote, miPujaEnEsteLote]);
+  // ─── Estado del usuario en la subasta ────────────────────────────────────
+
   const winInfo = useMemo(() => {
-    if (!lote || !user?.id) {
-      return { esLiderActual: false, esGanadorDefinitivo: false, montoFinal: 0, pujaId: null, status: 'desconocido', miPujaId: null, hayOfertas: false };
-    }
+    const defaults = {
+      esLiderActual: false,
+      esGanadorDefinitivo: false,
+      montoFinal: preciosInfo.montoLider,
+      pujaId: null as number | null,
+      miPujaId: null as number | null,
+      status: 'desconocido',
+    };
 
-    const pujaId = lote.id_puja_mas_alta ?? null;
-    let montoFinal = Number(lote.precio_base);
-    let status = 'desconocido';
-    let miPujaId = null;
-    let idUsuarioLider = null;
-    let hayOfertas = false; 
-
-    if (Array.isArray(lote.pujas) && lote.pujas.length > 0) {
-      const pGanadora = lote.pujas.find((p: any) => p.id === pujaId);
-      if (pGanadora) {
-        montoFinal = Number(pGanadora.monto_puja);
-        status = pGanadora.estado_puja;
-        idUsuarioLider = Number(pGanadora.id_usuario);
-        hayOfertas = true;
-      }
-      // ✅ CORRECCIÓN: Buscamos cualquier puja que no esté cancelada para confirmar participación
-      const miPuja = lote.pujas.find((p: any) => Number(p.id_usuario) === Number(user.id) && p.estado_puja !== 'cancelada');
-      if (miPuja) miPujaId = miPuja.id;
-    } else if (lote.ultima_puja) {
-      montoFinal = Number(lote.ultima_puja.monto);
-      idUsuarioLider = Number(lote.ultima_puja.id_usuario);
-      hayOfertas = true;
-    }
+    if (!lote || !user?.id) return defaults;
 
     const subastaFinalizada = lote.estado_subasta === 'finalizada';
-    const esGanadorDefinitivo = subastaFinalizada && Number(lote.id_ganador) === Number(user.id);
-    const esLiderActual = !subastaFinalizada && idUsuarioLider === Number(user.id);
+    const esGanadorDefinitivo =
+      subastaFinalizada && Number(lote.id_ganador) === Number(user.id);
 
-    return { esGanadorDefinitivo, esLiderActual, pujaId, miPujaId, montoFinal, status, hayOfertas };
-  }, [lote, user?.id]);
+    return {
+      esLiderActual: preciosInfo.soyLider && !subastaFinalizada,
+      esGanadorDefinitivo,
+      montoFinal: preciosInfo.montoLider,
+      pujaId: esGanadorDefinitivo ? (miPujaEnEsteLote?.id ?? null) : null,
+      miPujaId: miPujaEnEsteLote?.id ?? null,
+      status: miPujaEnEsteLote?.estado_puja ?? 'desconocido',
+    };
+  }, [lote, user?.id, preciosInfo, miPujaEnEsteLote]);
 
-  // ✅ Variables derivadas del estado
+  // ─── Flags derivados ──────────────────────────────────────────────────────
+
   const statusConfig = useAuctionStatus(lote?.estado_subasta);
   const isActiva = lote?.estado_subasta === 'activa';
-  const soyGanador = winInfo.esLiderActual || winInfo.esGanadorDefinitivo;
-
   const subastaFinalizada = lote?.estado_subasta === 'finalizada';
+  const yaParticipa = !!winInfo.miPujaId;
+  const soyGanador = winInfo.esLiderActual || winInfo.esGanadorDefinitivo;
+  const fuiSuperado = yaParticipa && !winInfo.esLiderActual && isActiva;
   const yaPago = winInfo.status === 'ganadora_pagada';
   const debesPagar = winInfo.esGanadorDefinitivo && subastaFinalizada && !yaPago;
 
-  // ✅ CORRECCIÓN: Para poder pujar, la subasta DEBE estar Activa
-  const puedePujar = isActiva && estaSuscripto && (tokensDisponibles > 0 || winInfo.esLiderActual || !!winInfo.miPujaId);
-  const puedeCancelar = isActiva && !!winInfo.miPujaId && !winInfo.esLiderActual;
-
-  // ✅ Suscripto, subasta activa, pero sin tokens ni puja activa ni es líder
+  const puedePujar = isActiva && estaSuscripto && (tokensDisponibles > 0 || yaParticipa);
+  const puedeCancelar = isActiva && yaParticipa && !winInfo.esLiderActual;
   const sinTokensParaPujar =
-    isActiva &&
-    estaSuscripto &&
-    tokensDisponibles === 0 &&
-    !winInfo.esLiderActual &&
-    !winInfo.miPujaId;
+    isActiva && estaSuscripto && tokensDisponibles === 0 && !yaParticipa;
 
-  // 3. MUTACIONES
+  // ─── Invalidación ─────────────────────────────────────────────────────────
+
+  const invalidarTodo = () => {
+    queryClient.invalidateQueries({ queryKey: ['lote', id] });
+    queryClient.invalidateQueries({ queryKey: ['mis-pujas'] });
+  };
+
+  // ─── Mutations ────────────────────────────────────────────────────────────
+
   const mutationPago = useMutation({
     mutationFn: async (pujaId: number) => {
       setSelectedPujaId(pujaId);
-      const response = await PujaService.initiatePayment(pujaId);
-      return response.data;
+      return (await PujaService.initiatePayment(pujaId)).data;
     },
     onSuccess: (data: any) => {
       if (data.is2FARequired) twoFaModal.open();
@@ -202,8 +263,11 @@ const DetalleLote: React.FC = () => {
   });
 
   const confirmar2FA = useMutation({
-    mutationFn: (code: string) => PujaService.confirmPayment2FA({ pujaId: selectedPujaId!, codigo_2fa: code }),
-    onSuccess: (res: any) => { if (res.data?.url_checkout) window.location.href = res.data.url_checkout; },
+    mutationFn: (code: string) =>
+      PujaService.confirmPayment2FA({ pujaId: selectedPujaId!, codigo_2fa: code }),
+    onSuccess: (res: any) => {
+      if (res.data?.url_checkout) window.location.href = res.data.url_checkout;
+    },
     onError: () => setTwoFAError('Código incorrecto.'),
   });
 
@@ -211,31 +275,54 @@ const DetalleLote: React.FC = () => {
     mutationFn: (pujaId: number) => PujaService.cancelMyPuja(pujaId),
     onSuccess: () => {
       showSuccess('Puja retirada. Token devuelto.');
-      queryClient.invalidateQueries({ queryKey: ['lote', id] });
+      invalidarTodo();
       confirmDialog.close();
     },
     onError: (err: any) => showError(err.message || 'Error al cancelar'),
   });
 
-  // 4. HANDLERS
-  const handlePagar = () => { if (winInfo.pujaId) mutationPago.mutate(winInfo.pujaId); };
-  const handleSolicitarCancelacion = () => { confirmDialog.confirm('cancel_puja', { monto: winInfo.montoFinal }); };
-  const handleConfirmarCancelacion = () => { if (winInfo.miPujaId) mutationCancelar.mutate(winInfo.miPujaId); };
+  // ─── Handlers ─────────────────────────────────────────────────────────────
 
-  // 5. RENDERIZADO PREVENTIVO
-  if (isLoading) return <Box p={4}><Skeleton variant="rectangular" height={400} sx={{ borderRadius: 4 }} /></Box>;
+  const handlePagar = () => {
+    if (winInfo.pujaId) mutationPago.mutate(winInfo.pujaId);
+  };
+
+  const handleSolicitarCancelacion = () => {
+    confirmDialog.confirm('cancel_puja', { monto: winInfo.montoFinal });
+  };
+
+  const handleConfirmarCancelacion = () => {
+    if (winInfo.miPujaId) mutationCancelar.mutate(winInfo.miPujaId);
+  };
+
+  // ─── Early returns ────────────────────────────────────────────────────────
+
+  if (isLoadingLote) {
+    return (
+      <Box p={4}>
+        <Skeleton variant="rectangular" height={400} sx={{ borderRadius: 4 }} />
+      </Box>
+    );
+  }
+
   if (!lote) return <Alert severity="error">Lote no encontrado</Alert>;
 
   const rawUrl = lote?.imagenes?.[0]?.url;
   const imagenUrl = rawUrl ? ImagenService.resolveImageUrl(rawUrl) : null;
 
+  // ─── Render ───────────────────────────────────────────────────────────────
+
   return (
     <Box sx={{ maxWidth: 1400, mx: 'auto', p: { xs: 2, md: 4 }, pb: 12 }}>
+
       {isFetching > 0 && (
-        <Portal><Box sx={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9999 }}><LinearProgress sx={{ height: 2 }} /></Box></Portal>
+        <Portal>
+          <Box sx={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9999 }}>
+            <LinearProgress sx={{ height: 2 }} />
+          </Box>
+        </Portal>
       )}
 
-      {/* ✅ PageHeader con chip de estado sincronizado */}
       <PageHeader
         title={lote.nombre_lote}
         subtitle={`ID #${lote.id} • ${lote.proyecto?.nombre_proyecto}`}
@@ -243,13 +330,11 @@ const DetalleLote: React.FC = () => {
           <Stack direction="row" spacing={1.5} alignItems="center">
             <Chip
               label={soyGanador ? '¡VAS GANANDO!' : statusConfig.label}
-              color={soyGanador ? 'success' : statusConfig.color as any}
+              color={soyGanador ? 'success' : (statusConfig.color as any)}
               sx={{
                 fontWeight: 900,
                 color: 'white',
-                ...((isActiva && !soyGanador) && {
-                  animation: `${pulse} 2s infinite`,
-                }),
+                ...(isActiva && !soyGanador && { animation: `${pulse} 2s infinite` }),
                 ...(soyGanador && { boxShadow: 4 }),
               }}
             />
@@ -262,21 +347,54 @@ const DetalleLote: React.FC = () => {
         <Fade in timeout={500}>
           <Paper sx={{ mb: 4, p: 3, bgcolor: 'success.main', color: 'white', borderRadius: 4 }}>
             <Stack direction="row" justifyContent="space-between" alignItems="center">
-              <Typography variant="h5" fontWeight={900}>¡GANASTE! Total: {fmt(winInfo.montoFinal)}</Typography>
-              <Button variant="contained" color="inherit" onClick={handlePagar} sx={{ color: 'success.main', fontWeight: 900 }}>PAGAR AHORA</Button>
+              <Typography variant="h5" fontWeight={900}>
+                ¡GANASTE! Total: {fmt(winInfo.montoFinal)}
+              </Typography>
+              <Button
+                variant="contained"
+                color="inherit"
+                onClick={handlePagar}
+                sx={{ color: 'success.main', fontWeight: 900 }}
+              >
+                PAGAR AHORA
+              </Button>
             </Stack>
           </Paper>
         </Fade>
       )}
 
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1.8fr 1.2fr' }, gap: 4 }}>
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', lg: '1.8fr 1.2fr' },
+          gap: 4,
+        }}
+      >
+        {/* Columna izquierda — imagen + fechas */}
         <Box>
-          <Paper variant="outlined" sx={{ height: 450, borderRadius: 4, position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'grey.50' }}>
+          <Paper
+            variant="outlined"
+            sx={{
+              height: 450,
+              borderRadius: 4,
+              position: 'relative',
+              overflow: 'hidden',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              bgcolor: 'grey.50',
+            }}
+          >
             {!imagenUrl ? (
-              <Stack alignItems="center" color="text.disabled"><BookmarkBorder sx={{ fontSize: 60 }} /><Typography>SIN IMAGEN</Typography></Stack>
+              <Stack alignItems="center" color="text.disabled">
+                <BookmarkBorder sx={{ fontSize: 60 }} />
+                <Typography>SIN IMAGEN</Typography>
+              </Stack>
             ) : (
               <>
-                {isLoadingImage && <Skeleton variant="rectangular" sx={{ position: 'absolute', inset: 0, zIndex: 1 }} />}
+                {isLoadingImage && (
+                  <Skeleton variant="rectangular" sx={{ position: 'absolute', inset: 0, zIndex: 1 }} />
+                )}
                 <Box
                   component="img"
                   src={hasError ? '/assets/placeholder.jpg' : imagenUrl}
@@ -287,40 +405,112 @@ const DetalleLote: React.FC = () => {
               </>
             )}
           </Paper>
+
           <Card variant="outlined" sx={{ mt: 3, borderRadius: 3 }}>
             <CardContent>
-              <Typography variant="subtitle2" color="text.secondary">INICIO: {formatFullDate(lote.fecha_inicio)}</Typography>
-              <Typography variant="subtitle2" color="text.secondary">CIERRE: {formatFullDate(lote.fecha_fin)}</Typography>
+              <Typography variant="subtitle2" color="text.secondary">
+                INICIO: {formatFullDate(lote.fecha_inicio)}
+              </Typography>
+              <Typography variant="subtitle2" color="text.secondary">
+                CIERRE: {formatFullDate(lote.fecha_fin)}
+              </Typography>
             </CardContent>
           </Card>
-            <MapUrlIframe map_url={lote.map_url} ></MapUrlIframe>
         </Box>
 
+        {/* Columna derecha — card de subasta */}
         <Box>
           <Card variant="outlined" sx={{ borderRadius: 4, position: 'sticky', top: 100 }}>
+
+            {/* Countdown */}
             <Box sx={{ p: 2, textAlign: 'center', bgcolor: alpha(theme.palette.primary.main, 0.05) }}>
               <Stack direction="row" justifyContent="center" spacing={1} color="primary.main">
                 <Timer fontSize="small" />
                 <CountdownTimer endDate={lote.fecha_fin} />
               </Stack>
             </Box>
-            <CardContent sx={{ p: 4 }}>
-              
-              <Box mb={2}>
-                <Typography variant="caption" color="text.secondary" fontWeight={700} display="block">
-                  PRECIO BASE INICIAL: {fmt(Number(lote.precio_base))}
+
+            <CardContent sx={{ p: 4, textAlign: 'center' }}>
+
+              {/* ── Precio base ── */}
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="overline" color="text.disabled" sx={{ fontWeight: 700, letterSpacing: 1 }}>
+                  PRECIO BASE
+                </Typography>
+                <Typography variant="h5" fontWeight={700} color="text.secondary">
+                  {fmt(preciosInfo.precioBase)}
                 </Typography>
               </Box>
 
-              <Typography variant="overline" color={winInfo.hayOfertas ? "primary.main" : "text.secondary"}>
-                {winInfo.hayOfertas ? 'OFERTA ACTUAL LÍDER' : 'SIN OFERTAS (Precio Base)'}
-              </Typography>
-              
-              <Typography variant="h3" fontWeight={900} color={winInfo.hayOfertas ? "success.main" : "text.primary"} gutterBottom>
-                {fmt(winInfo.montoFinal)} 
-              </Typography>
+              <Divider sx={{ mb: 2, borderStyle: 'dashed' }} />
 
-              <Stack spacing={2} mt={4}>
+              {/* CASO 1 — sin ofertas */}
+              {!preciosInfo.hayOfertas && (
+                <>
+                  <Typography variant="overline" color="text.secondary" sx={{ fontWeight: 800, letterSpacing: 1 }}>
+                    SIN OFERTAS AÚN
+                  </Typography>
+                  <Typography variant="h3" fontWeight={900} color="text.disabled" sx={{ mb: 3 }}>
+                    —
+                  </Typography>
+                </>
+              )}
+
+              {/* CASO 2 — soy el líder */}
+              {preciosInfo.hayOfertas && preciosInfo.soyLider && (
+                <>
+                  <Typography variant="overline" color="success.main" sx={{ fontWeight: 800, letterSpacing: 1 }}>
+                    OFERTA LÍDER — SOS VOS
+                  </Typography>
+                  <Typography variant="h3" fontWeight={900} color="success.main" sx={{ mb: 3 }}>
+                    {fmt(preciosInfo.montoLider)}
+                  </Typography>
+                </>
+              )}
+
+              {/* CASO 3 — fui superado */}
+              {preciosInfo.hayOfertas && fuiSuperado && (
+                <>
+                  <Typography variant="overline" color="error.main" sx={{ fontWeight: 800, letterSpacing: 1 }}>
+                    ¡TE SUPERARON!
+                  </Typography>
+                  <Typography variant="h3" fontWeight={900} color="error.main" sx={{ mb: 1 }}>
+                    {fmt(preciosInfo.miMonto)}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 3 }}>
+                    Tu oferta actual — hay una más alta
+                  </Typography>
+                </>
+              )}
+
+              {/* CASO 4 — hay ofertas, no participa */}
+              {preciosInfo.hayOfertas && !preciosInfo.soyLider && !fuiSuperado && (
+                <>
+                  <Typography variant="overline" color="warning.main" sx={{ fontWeight: 800, letterSpacing: 1 }}>
+                    SUBASTA EN CURSO
+                  </Typography>
+                  <Typography variant="h3" fontWeight={900} color="warning.main" sx={{ mb: 3 }}>
+                    Hay ofertas
+                  </Typography>
+                </>
+              )}
+
+              {/* Aviso adicional cuando fui superado */}
+              {fuiSuperado && (
+                <Fade in timeout={300}>
+                  <Alert severity="warning" sx={{ borderRadius: 2, textAlign: 'left', mb: 2 }}>
+                    <Typography variant="caption" fontWeight={800} display="block">
+                      Alguien superó tu oferta
+                    </Typography>
+                    <Typography variant="caption">
+                      Podés mejorar tu oferta sin consumir tokens adicionales.
+                    </Typography>
+                  </Alert>
+                </Fade>
+              )}
+
+              {/* Acciones */}
+              <Stack spacing={2}>
                 <Button
                   variant="contained"
                   fullWidth
@@ -328,22 +518,35 @@ const DetalleLote: React.FC = () => {
                   onClick={pujarModal.open}
                   disabled={!puedePujar}
                   startIcon={<Gavel />}
-                  sx={{ py: 2, fontWeight: 900 }}
+                  sx={{ py: 2, fontWeight: 900, borderRadius: 3 }}
                 >
-                  {winInfo.esLiderActual || !!winInfo.miPujaId ? 'MEJORAR MI OFERTA' : 'OFERTAR AHORA'}
+                  {yaParticipa ? 'MEJORAR MI OFERTA' : 'OFERTAR AHORA'}
                 </Button>
 
                 {sinTokensParaPujar && (
                   <Fade in timeout={300}>
-                    <Alert severity="warning" icon={<TokenOutlined fontSize="small" />} sx={{ borderRadius: 2 }}>
-                      <Typography variant="caption" fontWeight={800} display="block">Sin tokens disponibles</Typography>
-                      <Typography variant="caption" color="text.secondary">Ya utilizaste tu token en este proyecto.</Typography>
+                    <Alert
+                      severity="warning"
+                      icon={<TokenOutlined fontSize="small" />}
+                      sx={{ borderRadius: 2, textAlign: 'left' }}
+                    >
+                      <Typography variant="caption" fontWeight={800} display="block">
+                        Sin tokens disponibles
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Ya utilizaste tu token en este proyecto y no tenés una puja activa aquí.
+                      </Typography>
                     </Alert>
                   </Fade>
                 )}
 
                 {puedeCancelar && (
-                  <Button variant="text" color="error" onClick={handleSolicitarCancelacion}>
+                  <Button
+                    variant="text"
+                    color="error"
+                    onClick={handleSolicitarCancelacion}
+                    sx={{ fontWeight: 700 }}
+                  >
                     Retirar mi puja
                   </Button>
                 )}
@@ -353,11 +556,29 @@ const DetalleLote: React.FC = () => {
         </Box>
       </Box>
 
-      <TwoFactorAuthModal open={twoFaModal.isOpen} onClose={twoFaModal.close} onSubmit={(c) => confirmar2FA.mutate(c)} isLoading={confirmar2FA.isPending} error={twoFAError} />
-
-      <PujarModal {...pujarModal.modalProps} lote={lote} yaParticipa={!!winInfo.miPujaId} soyGanador={winInfo.esLiderActual} onSuccess={() => queryClient.invalidateQueries({ queryKey: ['lote', id] })} />
-
-      <ConfirmDialog controller={confirmDialog} onConfirm={handleConfirmarCancelacion} isLoading={mutationCancelar.isPending} />
+      {/* Modales */}
+      <TwoFactorAuthModal
+        open={twoFaModal.isOpen}
+        onClose={twoFaModal.close}
+        onSubmit={(c) => confirmar2FA.mutate(c)}
+        isLoading={confirmar2FA.isPending}
+        error={twoFAError}
+      />
+      <PujarModal
+        {...pujarModal.modalProps}
+        lote={lote}
+        montoLiderConocido={preciosInfo.montoLiderConocido}
+        montoLider={preciosInfo.montoLider}
+        miMontoActual={preciosInfo.miMonto > 0 ? preciosInfo.miMonto : undefined}
+        yaParticipa={yaParticipa}
+        soyGanador={winInfo.esLiderActual}
+        onSuccess={invalidarTodo}
+      />
+      <ConfirmDialog
+        controller={confirmDialog}
+        onConfirm={handleConfirmarCancelacion}
+        isLoading={mutationCancelar.isPending}
+      />
     </Box>
   );
 };

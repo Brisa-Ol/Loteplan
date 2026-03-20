@@ -9,7 +9,7 @@ import ImagenService from '@/core/api/services/imagen.service';
 import LoteService from '@/core/api/services/lote.service';
 import ProyectoService from '@/core/api/services/proyecto.service';
 import PujaService from '@/core/api/services/puja.service';
-import { env } from '@/core/config/env'; // 👈 1. Importamos la configuración global
+import { env } from '@/core/config/env'; 
 
 import type { CreateLoteDto, LoteDto, UpdateLoteDto } from '@/core/types/lote.dto';
 import { useConfirmDialog, useModal, useSnackbar } from '@/shared';

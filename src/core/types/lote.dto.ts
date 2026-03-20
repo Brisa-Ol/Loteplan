@@ -42,7 +42,10 @@ export interface LoteDto extends BaseDTO {
   // 4. Relaciones de Subasta (Foreign Keys)
   id_puja_mas_alta: number | null;
   id_ganador: number | null;
-
+pujaMasAlta?: {
+  id: number;
+  monto_puja: string;
+} | null;
   // 5. Campos de Control (Críticos según tu modelo)
   intentos_fallidos_pago: number; 
   excedente_visualizacion: number; 

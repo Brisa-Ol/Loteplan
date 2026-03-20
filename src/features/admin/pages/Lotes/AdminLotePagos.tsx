@@ -145,7 +145,7 @@ const RiskLoteCard = React.memo<{ lote: LoteDto; theme: any; diasRestantes: numb
           <Stack direction="row" justifyContent="space-between" alignItems="center">
             {/* ✅ env.defaultLocale — antes era 'es-AR' hardcodeado */}
             <Typography variant="h6" fontWeight={800} color="primary.main">
-              ${Number(lote.precio_base).toLocaleString(env.defaultLocale)}
+              ${Number(lote.monto_ganador_lote || lote.precio_base).toLocaleString(env.defaultLocale)}
             </Typography>
             <Chip
               label={`${diasRestantes} días`}
