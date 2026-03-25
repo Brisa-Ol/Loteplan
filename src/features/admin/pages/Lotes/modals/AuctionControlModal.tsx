@@ -1,8 +1,8 @@
 // src/features/admin/pages/Lotes/modals/AuctionControlModal.tsx
 
-import React, { useEffect, useState, useMemo } from 'react';
 import { AccessTime, Gavel, PlayCircleFilled, StopCircle } from '@mui/icons-material';
-import { Alert, Box, Chip, Stack, TextField, Typography, useTheme, alpha } from '@mui/material';
+import { Alert, alpha, Box, Chip, Stack, TextField, Typography, useTheme } from '@mui/material';
+import React, { useEffect, useMemo, useState } from 'react';
 
 import type { LoteDto } from '@/core/types/lote.dto';
 import { BaseModal } from '@/shared';
@@ -92,9 +92,9 @@ const AuctionControlModal: React.FC<Props> = ({ open, onClose, lote, onStart, on
       icon: <StopCircle />, color: 'error' as const, btnText: 'Finalizar Ahora',
       desc: 'Se cerrará la subasta inmediatamente y se adjudicará al ganador actual (si existe).'
     };
-    return { 
-      title: 'Subasta Finalizada', icon: <Gavel />, color: 'info' as const, 
-      btnText: 'Cerrar', desc: 'Esta subasta ya terminó.' 
+    return {
+      title: 'Subasta Finalizada', icon: <Gavel />, color: 'info' as const,
+      btnText: 'Cerrar', desc: 'Esta subasta ya terminó.'
     };
   }, [lote, isPending, isActive]);
 
@@ -141,10 +141,10 @@ const AuctionControlModal: React.FC<Props> = ({ open, onClose, lote, onStart, on
     >
       <Stack spacing={3}>
         {/* Alerta Informativa */}
-        <Alert 
-          severity={config.color} 
-          variant="outlined" 
-          icon={config.icon} 
+        <Alert
+          severity={config.color}
+          variant="outlined"
+          icon={config.icon}
           sx={{ borderRadius: 2, fontWeight: 600 }}
         >
           {config.desc}
@@ -165,32 +165,32 @@ const AuctionControlModal: React.FC<Props> = ({ open, onClose, lote, onStart, on
               DURACIÓN ESTIMADA (AUTO-CONFIG)
             </Typography>
             <Stack direction="row" spacing={1} mb={3}>
-              <Chip 
-                icon={<AccessTime sx={{ fontSize: '1rem !important' }} />} 
-                label="24 Horas" 
-                onClick={() => setQuickDuration(1)} 
-                clickable 
+              <Chip
+                icon={<AccessTime sx={{ fontSize: '1rem !important' }} />}
+                label="24 Horas"
+                onClick={() => setQuickDuration(1)}
+                clickable
                 sx={{ fontWeight: 700 }}
-                color="primary" 
-                variant="outlined" 
+                color="primary"
+                variant="outlined"
               />
-              <Chip 
-                icon={<AccessTime sx={{ fontSize: '1rem !important' }} />} 
-                label="3 Días" 
-                onClick={() => setQuickDuration(3)} 
-                clickable 
+              <Chip
+                icon={<AccessTime sx={{ fontSize: '1rem !important' }} />}
+                label="3 Días"
+                onClick={() => setQuickDuration(3)}
+                clickable
                 sx={{ fontWeight: 700 }}
-                color="primary" 
-                variant="outlined" 
+                color="primary"
+                variant="outlined"
               />
-              <Chip 
-                icon={<AccessTime sx={{ fontSize: '1rem !important' }} />} 
-                label="1 Semana" 
-                onClick={() => setQuickDuration(7)} 
-                clickable 
+              <Chip
+                icon={<AccessTime sx={{ fontSize: '1rem !important' }} />}
+                label="1 Semana"
+                onClick={() => setQuickDuration(7)}
+                clickable
                 sx={{ fontWeight: 700 }}
-                color="primary" 
-                variant="outlined" 
+                color="primary"
+                variant="outlined"
               />
             </Stack>
 

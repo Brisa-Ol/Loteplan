@@ -147,13 +147,32 @@ const FastTextField = React.memo(({ formikValue, onCommit, onBlur, ...props }: a
 
 const SimulationDisplay = React.memo(({ plazo, unidades, precio, pctPlan, pctAdmin, pctIva }: any) => {
   const theme = useTheme();
+
   const calc = useMemo(() => {
+    const roundTo2 = (n: number) => Math.round(n * 100) / 100;
+
     const vPlazo = Number(plazo) || 1;
     const valorMovil = (Number(unidades) || 0) * (Number(precio) || 0);
-    const cuotaPura = (valorMovil * (pctPlan / 100)) / vPlazo;
-    const cargaAdmin = valorMovil * (pctAdmin / 100);
-    const ivaSobreAdmin = cargaAdmin * (pctIva / 100);
-    return { cuotaPura, gastos: cargaAdmin + ivaSobreAdmin, final: cuotaPura + cargaAdmin + ivaSobreAdmin };
+
+    // 1. Cuota Pura (El backend multiplica directo, ej: 10 * 70 = 700)
+    const totalDelPlan = valorMovil * Number(pctPlan);
+    const cuotaPura = totalDelPlan / vPlazo;
+
+    // 2. Carga Administrativa (Se divide la carga total por el plazo de meses)
+    const cargaAdminTotal = valorMovil * (Number(pctAdmin) / 100);
+    const cargaAdmin = cargaAdminTotal / vPlazo;
+
+    // 3. IVA Administrativo
+    const ivaSobreAdmin = cargaAdmin * (Number(pctIva) / 100);
+
+    // 4. Final redondeado
+    const final = roundTo2(cuotaPura + cargaAdmin + ivaSobreAdmin);
+
+    return {
+      cuotaPura,
+      gastos: cargaAdmin + ivaSobreAdmin,
+      final
+    };
   }, [plazo, unidades, precio, pctPlan, pctAdmin, pctIva]);
 
   return (

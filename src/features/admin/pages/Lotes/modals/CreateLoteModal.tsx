@@ -156,16 +156,16 @@ const CreateLoteModal: React.FC<CreateLoteModalProps> = ({ open, onClose, onSubm
       then: (schema) => schema.min(Yup.ref('fecha_inicio'), 'Posterior al inicio')
     }),
     map_url: Yup.string().nullable()
-            .test("valid-map-url", "URL de mapa inválida o no embebible", function (value) {
-            if (!value) return true;
-        
-            try {
-              extractAndValidateMapUrl(value);
-              return true;
-            } catch (e: any) {
-              return this.createError({ message: e.message });
-            }
-          }),
+      .test("valid-map-url", "URL de mapa inválida o no embebible", function (value) {
+        if (!value) return true;
+
+        try {
+          extractAndValidateMapUrl(value);
+          return true;
+        } catch (e: any) {
+          return this.createError({ message: e.message });
+        }
+      }),
   }), []);
 
   const formik = useFormik({
@@ -188,8 +188,8 @@ const CreateLoteModal: React.FC<CreateLoteModalProps> = ({ open, onClose, onSubm
         dataToSubmit.longitud = Number(values.longitud);
       }
       dataToSubmit.map_url = values.map_url
-                ? extractAndValidateMapUrl(values.map_url)
-                : null
+        ? extractAndValidateMapUrl(values.map_url)
+        : null
 
       if (values.fecha_inicio) dataToSubmit.fecha_inicio = values.fecha_inicio;
       if (values.fecha_fin) dataToSubmit.fecha_fin = values.fecha_fin;

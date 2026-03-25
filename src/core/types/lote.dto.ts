@@ -83,7 +83,7 @@ export interface UpdateLoteDto extends Partial<CreateLoteDto> {
   intentos_fallidos_pago?: number;
   excedente_visualizacion?: number;
   monto_ganador_lote?: string | null;
-  map_url: string | null
+  map_url?: string | null
 }
 
 // ==========================================

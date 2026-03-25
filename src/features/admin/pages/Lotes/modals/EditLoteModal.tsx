@@ -170,12 +170,12 @@ const EditLoteModal: React.FC<EditLoteModalProps> = ({ open, onClose, onSubmit, 
     fecha_fin: Yup.date().transform((v, o) => o === '' ? null : v).nullable().when('fecha_inicio', {
       is: (val: any) => val instanceof Date && !isNaN(val.getTime()),
       then: (schema) => schema.min(Yup.ref('fecha_inicio'), 'Posterior al inicio'),
-      
+
     }),
     map_url: Yup.string().nullable()
-        .test("valid-map-url", "URL de mapa inválida o no embebible", function (value) {
+      .test("valid-map-url", "URL de mapa inválida o no embebible", function (value) {
         if (!value) return true;
-    
+
         try {
           extractAndValidateMapUrl(value);
           return true;
@@ -188,7 +188,7 @@ const EditLoteModal: React.FC<EditLoteModalProps> = ({ open, onClose, onSubmit, 
   const formik = useFormik({
     initialValues: {
       nombre_lote: '', precio_base: '', id_proyecto: '',
-      fecha_inicio: '', fecha_fin: '', latitud: '', longitud: '', map_url : ''
+      fecha_inicio: '', fecha_fin: '', latitud: '', longitud: '', map_url: ''
     },
     validationSchema,
     enableReinitialize: true,
@@ -200,7 +200,7 @@ const EditLoteModal: React.FC<EditLoteModalProps> = ({ open, onClose, onSubmit, 
         id_proyecto: values.id_proyecto === '' ? null : Number(values.id_proyecto),
         latitud: values.latitud !== '' ? Number(values.latitud) : null,
         longitud: values.longitud !== '' ? Number(values.longitud) : null,
-        map_url:  values.map_url
+        map_url: values.map_url
           ? extractAndValidateMapUrl(values.map_url)
           : null
       };
