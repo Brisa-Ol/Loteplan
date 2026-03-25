@@ -62,15 +62,21 @@ const MisSuscripciones: React.FC = () => {
     }, [confirmDialog.data, cancelarSuscripcion, confirmDialog]);
 
     // ── COLUMNAS: PLANES ACTIVOS (Nombres de proyectos resaltados) ──
-    const activeCols = useMemo<DataTableColumn<SuscripcionDto>[]>(() => [
+   const activeCols = useMemo<DataTableColumn<SuscripcionDto>[]>(() => [
         {
             id: 'proyecto',
-            label: 'Proyecto',
+            label: 'Proyecto / Suscripción',
             minWidth: 320,
             render: (row) => (
-                <Typography variant="subtitle2" fontWeight={800} color="primary.main">
-                    {row.proyectoAsociado?.nombre_proyecto || 'Cargando nombre...'}
-                </Typography>
+                <Box>
+                    <Typography variant="subtitle2" fontWeight={800} color="primary.main">
+                        {row.proyectoAsociado?.nombre_proyecto || 'Cargando nombre...'}
+                    </Typography>
+                    {/* 👇 Agregamos el ID de suscripción y la fecha de inicio */}
+                    <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ display: 'block', mt: 0.5 }}>
+                        Suscripción #{row.id} • Alta: {new Date(row.createdAt).toLocaleDateString()}
+                    </Typography>
+                </Box>
             )
         },
         {
@@ -131,14 +137,20 @@ const MisSuscripciones: React.FC = () => {
 
     // ── COLUMNAS: HISTORIAL DE BAJAS (Sin IDs, solo nombres) ──
     const canceledCols = useMemo<DataTableColumn<SuscripcionCanceladaDto>[]>(() => [
-        {
+       {
             id: 'proyecto',
-            label: 'Proyecto',
+            label: 'Proyecto / Suscripción',
             minWidth: 320,
             render: (row) => (
-                <Typography variant="subtitle2" fontWeight={700} color="text.secondary">
-                    {row.proyectoCancelado?.nombre_proyecto || 'Proyecto Finalizado'}
-                </Typography>
+                <Box>
+                    <Typography variant="subtitle2" fontWeight={700} color="text.secondary">
+                        {row.proyectoCancelado?.nombre_proyecto || 'Proyecto Finalizado'}
+                    </Typography>
+                    {/* 👇 Agregamos el ID de la suscripción original */}
+                    <Typography variant="caption" color="text.disabled" fontWeight={600} sx={{ display: 'block', mt: 0.5 }}>
+                        Suscripción Orig. #{row.id_suscripcion_original}
+                    </Typography>
+                </Box>
             )
         },
         {
@@ -244,12 +256,18 @@ const MisSuscripciones: React.FC = () => {
             </QueryHandler>
 
             {/* MODAL DE CONFIRMACIÓN */}
+           {/* MODAL DE CONFIRMACIÓN */}
             <ConfirmDialog
                 controller={confirmDialog}
                 onConfirm={handleConfirmCancel}
                 isLoading={isCancelling}
                 title="¿Confirmas la baja del plan?"
-                description="Al cancelar tu participación en este proyecto, tu capital acumulado pasará a proceso de liquidación."
+                // 👇 Hacemos la descripción dinámica usando confirmDialog.data
+                description={
+                    confirmDialog.data 
+                    ? `Estás a punto de cancelar la Suscripción #${confirmDialog.data.id} correspondiente al proyecto "${confirmDialog.data.proyectoAsociado?.nombre_proyecto}". Tu capital acumulado pasará a proceso de liquidación.`
+                    : "Al cancelar tu participación en este proyecto, tu capital acumulado pasará a proceso de liquidación."
+                }
             />
         </PageContainer>
     );
