@@ -9,7 +9,7 @@ import {
     CheckCircle, Groups, TrendingDown, WarningAmber,
 } from '@mui/icons-material';
 import { Box, MenuItem, Paper, Stack, Typography, useTheme } from '@mui/material';
-import React from 'react';
+import React, { useMemo } from 'react';
 
 import useSuscripcionesColumns from '../hooks/useSuscripcionesColumns';
 import DetalleSuscripcionModal from '../modals/DetalleSuscripcionModal/DetalleSuscripcionModal';
@@ -34,6 +34,11 @@ interface Props {
 const SuscripcionesActiveTab: React.FC<Props> = ({ logic }) => {
     const theme = useTheme();
     const columns = useSuscripcionesColumns(logic);
+
+    // ✅ NUEVO: Filtramos explícitamente para asegurar que SOLO se vean las activas
+    const suscripcionesSoloActivas = useMemo(() => {
+        return logic.filteredSuscripciones.filter((s) => s.activo === true);
+    }, [logic.filteredSuscripciones]);
 
     return (
         <Box>
@@ -73,12 +78,11 @@ const SuscripcionesActiveTab: React.FC<Props> = ({ logic }) => {
                 <Paper elevation={0} sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 3, overflow: 'hidden' }}>
                     <DataTable
                         columns={columns}
-                        data={logic.filteredSuscripciones}
+                        // ✅ Usamos la lista filtrada que solo tiene activas
+                        data={suscripcionesSoloActivas} 
                         getRowKey={(s) => s.id}
-                        isRowActive={(s) => !!s.activo}
-                        showInactiveToggle={false}
                         highlightedRowId={logic.highlightedId}
-                        emptyMessage="No se encontraron registros activos."
+                        emptyMessage="No se encontraron suscripciones activas."
                         pagination
                     />
                 </Paper>
