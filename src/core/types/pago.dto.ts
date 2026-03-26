@@ -51,7 +51,7 @@ export interface PagoDto extends BaseDTO {
   fecha_vencimiento: string; // ISO Date Only (YYYY-MM-DD)
   fecha_pago?: string;       // ISO Date Only
 
-  // 🆕 Se agregó el estado 'forzado' que añadiste en el backend
+motivo?: string;
   estado_pago: 'pendiente' | 'pagado' | 'vencido' | 'cancelado' | 'cubierto_por_puja' | 'forzado';
   suscripcion?: SuscripcionDto;
 }

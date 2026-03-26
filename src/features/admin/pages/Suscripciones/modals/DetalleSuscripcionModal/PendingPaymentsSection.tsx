@@ -45,7 +45,7 @@ const PendingPaymentsSection: React.FC<Props> = ({
     onSuccess: () => {
       showSuccess('Cobro forzado registrado exitosamente.');
       handleCloseForcePaymentModal();
-      // Invalidar queries relevantes para que la tabla se actualice
+      queryClient.invalidateQueries({ queryKey: ['historialPagosSuscripcion'] });
       queryClient.invalidateQueries({ queryKey: ['suscripciones'] });
       queryClient.invalidateQueries({ queryKey: ['pagosPendientesSuscripcion'] });
     },
