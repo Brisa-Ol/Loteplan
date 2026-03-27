@@ -2,9 +2,12 @@ import type { GenericResponseDto } from "@/core/types/auth.dto";
 import type {
   ConfirmInversion2faDto,
   CreateInversionDto,
+  InversionCreatedResponse,
   InversionDto,
   InversionInitResponse,
   InversionPorUsuarioDTO,
+  InversionStartPaymentDTO,
+  InversionStartPaymentResponse,
   LiquidityRateDTO
 } from "@/core/types/inversion.dto";
 import type { AxiosResponse } from "axios";
@@ -33,12 +36,27 @@ const InversionService = {
     return await httpService.post(`${BASE_ENDPOINT}`, data);
   },
 
+  crearInversion: async (data: CreateInversionDto): Promise<AxiosResponse<InversionCreatedResponse>> => {
+    return await httpService.post(`${BASE_ENDPOINT}/crear`, data);
+  },
+
   /**
    * Inicia el flujo de pago (checkout) para una inversión existente.
    * Endpoint: POST /inversiones/iniciar-pago/:id
    */
-  iniciarPago: async (inversionId: number): Promise<AxiosResponse<InversionInitResponse>> => {
+  iniciarPago: async (inversionId: number,): Promise<AxiosResponse<InversionInitResponse>> => {
     return await httpService.post(`${BASE_ENDPOINT}/iniciar-pago/${inversionId}`);
+  },
+
+  startPayment: async (data: InversionStartPaymentDTO): Promise<InversionStartPaymentResponse> => {
+    try{
+      const response = await httpService.post(`${BASE_ENDPOINT}/pagar`, data)
+      return response.data
+    }catch (err){
+      console.error("Error en startPayment:", err);
+      throw err;
+    }
+
   },
 
   /**

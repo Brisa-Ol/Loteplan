@@ -60,11 +60,13 @@ export const useDetalleProyecto = () => {
   const checkoutWizardModal = useModal();
   const firmadoModal = useModal();
   const contratoModal = useModal();
+  const checkoutInversionModal = useModal();
 
   const modales = {
     checkoutWizard: checkoutWizardModal,
     firmado: firmadoModal,
     contrato: contratoModal,
+    checkoutInversion: checkoutInversionModal
   };
 
   // --- QUERIES ---
@@ -182,6 +184,7 @@ if (proyecto.tipo_inversion === 'directo') {
           tipo: proyecto.tipo_inversion === 'mensual' ? 'suscripcion' : 'inversion',
           activeStep: 0,
           transactionId: txId,
+          inversionId: null,
           paymentSuccess: false,
           signatureDataUrl: null,
           location: null,
@@ -284,7 +287,11 @@ if (proyecto.tipo_inversion === 'directo') {
       return navigate('/client/MiCuenta/SecuritySettings');
     }
     setError2FA(null);
-    modales.checkoutWizard.open();
+    if(proyecto?.tipo_inversion === 'directo') {
+      modales.checkoutInversion.open();
+    }else{
+      modales.checkoutWizard.open();
+    }
   };
 
   const handleVerContratoFirmado = async () => {

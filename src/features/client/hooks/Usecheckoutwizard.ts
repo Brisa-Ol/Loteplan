@@ -13,6 +13,8 @@ import { calculateFileHash } from '@/shared/utils/fileUtils';
 import { PDFDocument } from 'pdf-lib';
 import { useCallback, useRef, useState } from 'react';
 import { CheckoutStateManager } from '../pages/Proyectos/modals/Checkout persistence';
+import TransaccionService from '@/core/api/services/transaccion.service';
+import { set } from 'date-fns';
 
 // ===================================================
 // TYPES
@@ -72,6 +74,7 @@ export const useCheckoutWizard = ({
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>("idle");
 
   const [transaccionId, setTransaccionId] = useState<number | null>(null);
+  const [inversionId, setInversionId]   = useState<number | null>(null); 
   const [error2FA, setError2FA] = useState<string | null>(null);
 
   const isVerifyingRef = useRef(false);
@@ -79,40 +82,100 @@ export const useCheckoutWizard = ({
   // ===================================================
   // CONFIRMACIÓN DE INVERSIÓN/SUSCRIPCIÓN
   // ===================================================
-  const handleConfirmInvestment = useCallback(async () => {
-    try {
-      setIsProcessing(true);
-      setError2FA(null);
+  const handleConfirmInvestment = useCallback(async (codigo2FA?:string, location?: Location | null) => {
+  try {
+    setIsProcessing(true);
+    setError2FA(null);
 
-      let response;
+    let txId: number | null = null;
+    let invId: number | null = null;
+      console.log("Antes de if inversion")
+    if (tipo === 'inversion' && codigo2FA) {
+      console.log("Entró a if inversion")
+      // ===================================================
+      // 1. CREAR INVERSIÓN
+      // ===================================================
+      const response = await InversionService.crearInversion({
+        id_proyecto: proyecto.id,
+      });
 
-      if (tipo === 'inversion') {
-        response = await InversionService.iniciar({
-          id_proyecto: proyecto.id,
-        });
-      } else {
-        response = await SuscripcionService.iniciar({
-          id_proyecto: proyecto.id,
-        });
+      invId = response.data.inversionId!;
+      console.log(invId)
+
+      if (!invId) {
+        throw new Error('No se recibió el ID de la inversión');
       }
 
-      const data = response?.data as any;
-      const txId = data?.inversionId || data?.transaccionId || data?.id;
+      setInversionId(invId);
 
-      if (txId) {
-        setTransaccionId(txId);
-        showSuccess('Registro creado. Procede con la verificación 2FA.');
-      } else {
-        throw new Error('No se recibió ID de transacción');
+      // ===================================================
+      // 2. INICIAR PAGO (ACÁ SALE LA TRANSACCIÓN)
+      // ===================================================
+      console.log(invId)
+      const paymentResponse = await InversionService.startPayment({
+        inversionId: invId,
+        codigo_2fa: codigo2FA 
+      });
+      console.log(invId)
+      console.log(paymentResponse)
+      txId = paymentResponse.transaccionId!;
+      console.log(txId)
+      setTransaccionId(txId);
+
+      // 👉 redirección directa
+      const redirectUrl = paymentResponse.redirectUrl;
+
+      CheckoutStateManager.saveState({
+            projectId: proyecto.id,
+            tipo,
+            activeStep: 3,
+            transactionId: transaccionId,
+            inversionId: inversionId,
+            paymentSuccess: paymentStatus === 'success',
+            signatureDataUrl: redirectUrl,
+            location: location || null,
+            timestamp: Date.now()
+          })
+          console.log("💾 GUARDANDO ESTADO:", {
+            projectId: proyecto.id,
+            inversionId,
+            transaccionId,
+            activeStep:3
+          });
+
+
+      if (redirectUrl) {
+        window.location.href = redirectUrl;
+        return;
       }
-    } catch (error: any) {
-      const msg = error.response?.data?.message || error.message || 'Error al crear el registro';
-      showError(msg);
-      throw error;
-    } finally {
-      setIsProcessing(false);
+
+    } else {
+      // SUSCRIPCIÓN (ya viene todo junto)
+      const response = await SuscripcionService.iniciar({
+        id_proyecto: proyecto.id,
+      });
+
+      txId = response.data.transaccionId;
     }
-  }, [tipo, proyecto, showSuccess, showError]);
+
+    // ===================================================
+    // VALIDACIÓN FINAL
+    // ===================================================
+    if (txId) {
+      setTransaccionId(txId);
+      showSuccess('Registro creado. Procede con el pago.');
+    } else {
+      throw new Error('No se recibió ID de transacción');
+    }
+
+  } catch (error: any) {
+    const msg = error.response?.data?.message || error.message || 'Error al crear el registro';
+    showError(msg);
+    throw error;
+  } finally {
+    setIsProcessing(false);
+  }
+}, [tipo, proyecto, showSuccess, showError]);
 
   // ===================================================
   // CONFIRMACIÓN DE PAGO CON 2FA
@@ -154,6 +217,7 @@ export const useCheckoutWizard = ({
           tipo,
           activeStep: 3,
           transactionId: transaccionId,
+          inversionId: inversionId,
           paymentSuccess: false,
           signatureDataUrl: null,
           location: null,
@@ -171,7 +235,7 @@ export const useCheckoutWizard = ({
     } finally {
       setIsProcessing(false);
     }
-  }, [tipo, transaccionId, proyecto, showError]);
+  }, [tipo, transaccionId, inversionId, proyecto, showError]);
 
   // ===================================================
   // VERIFICACIÓN DE PAGO
@@ -361,6 +425,7 @@ export const useCheckoutWizard = ({
     isVerificandoPago,
     //pagoExitoso,
     transaccionId,
+    inversionId,
     error2FA,
     handleConfirmInvestment,
     handleConfirmarPago2FA,
@@ -369,6 +434,7 @@ export const useCheckoutWizard = ({
     setPaymentStatus,
     //setPagoExitoso,
     setTransaccionId,
+    setInversionId,
     setError2FA,
   };
 };

@@ -17,6 +17,7 @@ export interface SuscripcionInitResponse {
   requiere2FA: boolean;
   checkoutUrl?: string;
   mensaje?: string;
+  transaccionId: number
 }
 
 export interface MorosidadDTO {

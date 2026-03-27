@@ -23,6 +23,7 @@ const log = {
 export const STORAGE_KEYS = {
   CHECKOUT_STATE: 'checkout_wizard_state',
   TRANSACTION_ID: 'checkout_tx_id',
+  INVERSION_ID: 'checkout_inv_id',
   PROJECT_ID: 'checkout_proj_id',
   ACTIVE_STEP: 'checkout_active_step',
   PAYMENT_SUCCESS: 'checkout_payment_success',
@@ -37,6 +38,7 @@ export interface CheckoutPersistedState {
   tipo: 'suscripcion' | 'inversion';
   activeStep: number;
   transactionId: number | null;
+  inversionId:   number | null;
   paymentSuccess: boolean;
   signatureDataUrl: string | null;
   location: { lat: string; lng: string } | null;
@@ -61,6 +63,10 @@ export class CheckoutStateManager {
       if (state.transactionId) {
         localStorage.setItem(STORAGE_KEYS.TRANSACTION_ID, String(state.transactionId));
         localStorage.setItem(STORAGE_KEYS.PROJECT_ID, String(state.projectId));
+      }
+
+      if (state.inversionId){
+        localStorage.setItem(STORAGE_KEYS.INVERSION_ID, String(state.inversionId))
       }
 
       localStorage.setItem(STORAGE_KEYS.ACTIVE_STEP, String(state.activeStep));
@@ -119,6 +125,7 @@ export class CheckoutStateManager {
   private static loadLegacyState(projectId: number): CheckoutPersistedState | null {
     try {
       const savedTxId = localStorage.getItem(STORAGE_KEYS.TRANSACTION_ID);
+      const savedInversionId = localStorage.getItem(STORAGE_KEYS.INVERSION_ID)
       const savedProjId = localStorage.getItem(STORAGE_KEYS.PROJECT_ID);
       const savedStep = localStorage.getItem(STORAGE_KEYS.ACTIVE_STEP);
       const savedSuccess = localStorage.getItem(STORAGE_KEYS.PAYMENT_SUCCESS);
@@ -133,6 +140,7 @@ export class CheckoutStateManager {
         tipo: (savedTipo as 'suscripcion' | 'inversion') || 'inversion',
         activeStep: savedStep ? Number(savedStep) : 0,
         transactionId: Number(savedTxId),
+        inversionId: Number(savedInversionId),
         paymentSuccess: savedSuccess === 'true',
         signatureDataUrl: savedSig || null,
         location: savedLoc ? JSON.parse(savedLoc) : null,

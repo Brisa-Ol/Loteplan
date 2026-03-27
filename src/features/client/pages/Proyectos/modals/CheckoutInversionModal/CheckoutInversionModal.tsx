@@ -43,7 +43,7 @@ import { useQuery } from '@tanstack/react-query';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 //Estilos
-import styles from './CheckoutWizardModal.module.css';
+import styles from './CheckoutInversionModal.module.css';
 
 // Services
 import ContratoFirmadoService from '@/core/api/services/contrato-firmado.service';
@@ -72,9 +72,9 @@ import type { ProyectoDto } from '@/core/types/proyecto.dto';
 const CODIGO_2FA_LENGTH = 6;
 
 const STEPS = [
+{ label: 'Seguridad', icon: <Security /> },
   { label: 'Resumen', icon: <ShoppingCart /> },
   { label: 'Contrato', icon: <Description /> },
-  { label: 'Seguridad', icon: <Security /> },
   { label: 'Pago', icon: <Payment /> },
   { label: 'Firma', icon: <Draw /> },
 ] as const;
@@ -82,7 +82,7 @@ const STEPS = [
 // ===================================================
 // TYPES
 // ===================================================
-export interface CheckoutWizardModalProps {
+export interface CheckoutInversionModalProps {
   open: boolean;
   onClose: () => void;
   proyecto: ProyectoDto;
@@ -97,7 +97,7 @@ interface SignaturePosition {
   page: number;
 }
 
-interface Location {
+export interface Location {
   lat: string;
   lng: string;
 }
@@ -243,31 +243,31 @@ SignatureCanvas.displayName = 'SignatureCanvas';
 // ===================================================
 const StepConfirmacion = React.memo<{
   proyecto: ProyectoDto;
-  tipo: 'suscripcion' | 'inversion';
+  tipo:'suscripcion'|'inversion';
   montoTotalStr: string;
   cuotaActiva?: any;
   formatCurrency: (value: number) => string;
 }>(({ proyecto, tipo, montoTotalStr, cuotaActiva, formatCurrency }) => {
   const theme = useTheme();
-  const isSuscripcion = tipo === 'suscripcion';
+  const isSuscripcion = false
 
   return (
     <Stack spacing={3} maxWidth="sm" mx="auto">
       <Alert severity="info" variant="outlined" sx={{ borderRadius: 2 }}>
-        Revisa los detalles de tu {isSuscripcion ? 'suscripción' : 'inversión'} antes de iniciar el pago.
+        Revisa los detalles de tu {'inversión'} antes de iniciar el pago.
       </Alert>
       <Paper variant="outlined" sx={{ overflow: 'hidden', borderRadius: 2 }}>
         <Box sx={{ bgcolor: 'primary.main', color: 'primary.contrastText', p: 2 }}>
           <Typography variant="h6" fontWeight={700}>{proyecto.nombre_proyecto}</Typography>
           <Typography variant="body2" sx={{ opacity: 0.9 }}>
-            {isSuscripcion ? 'Plan de Ahorro Mensual' : 'Inversión Directa (Pago Único)'}
+            {'Inversión Directa (Pago Único)'}
           </Typography>
         </Box>
         <Stack spacing={0}>
           <Box p={2} borderBottom={`1px solid ${theme.palette.divider}`}>
-            <Stack direction="row" justifyContent="space-between" mb={isSuscripcion && proyecto.plazo_inversion ? 1 : 0}>
+            <Stack direction="row" justifyContent="space-between" mb={proyecto.plazo_inversion ? 1 : 0}>
               <Typography color="text.secondary">Modalidad</Typography>
-              <Typography fontWeight={600}>{isSuscripcion ? 'Suscripción Mensual' : 'Aporte Único'}</Typography>
+              <Typography fontWeight={600}>{'Aporte Único'}</Typography>
             </Stack>
             {isSuscripcion && proyecto.plazo_inversion && (
               <Stack direction="row" justifyContent="space-between">
@@ -347,10 +347,10 @@ const StepConfirmacion = React.memo<{
           <Box p={3} display="flex" justifyContent="space-between" alignItems="center" bgcolor={alpha(theme.palette.success.main, 0.1)}>
             <Box>
               <Typography fontWeight={800} color="text.primary" variant="subtitle1">
-                {isSuscripcion ? 'Valor Final de la Cuota' : 'Monto a Invertir'}
+                {'Monto a Invertir'}
               </Typography>
               <Typography variant="caption" color="text.secondary" fontWeight={500}>
-                {isSuscripcion ? 'A pagar hoy para activar el plan' : 'A pagar hoy'}
+                {'A pagar hoy'}
               </Typography>
             </Box>
             <Typography variant="h4" fontWeight={900} color="success.main">{montoTotalStr}</Typography>
@@ -454,7 +454,7 @@ const PagoExitosoBanner: React.FC<{ tipo: 'suscripcion' | 'inversion' }> = ({ ti
 // ===================================================
 // MAIN COMPONENT
 // ===================================================
-export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
+export const CheckoutInversionModal: React.FC<CheckoutInversionModalProps> = ({
   open,
   onClose,
   proyecto,
@@ -554,7 +554,7 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
       location,
       timestamp: Date.now()
     });
-  }, [proyecto.id, tipo, paymentStatus, activeStep, transaccionId, signatureDataUrl, location]);
+  }, [proyecto.id, tipo, paymentStatus, inversionId, activeStep, transaccionId, signatureDataUrl, location]);
 
   useEffect(() => {
     if (open && (paymentStatus === 'success' || activeStep >= 3 || transaccionId)) {
@@ -585,52 +585,42 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
 
     const savedState = CheckoutStateManager.loadState(proyecto.id);
 
-    const txId2 = savedState?.transactionId 
-    || effectiveInversionId 
-    || effectivePagoId;
+    const transaccionIdSaved = savedState?.transactionId 
+
+    const inversionIdSaved = savedState?.inversionId;
 
     // ===================================================
   // 🔥 CASO PRINCIPAL: SI HAY TX → SIEMPRE VERIFICAR PAGO
   // ===================================================
-  if (txId2) {
-    (async () => {
-      try {
-        setTransaccionId(txId2);
+  if (savedState?.activeStep! >= 3 && transaccionIdSaved) {
+  setTransaccionId(transaccionIdSaved);
 
-        const res = await MercadoPagoService.getPaymentStatus(txId2, true);
+  (async () => {
+    try {
+      const res = await MercadoPagoService.getPaymentStatus(transaccionIdSaved, true);
 
-        if (isPaymentApproved(res.data)) {
-          setPaymentStatus('success');
-          CheckoutStateManager.markPaymentSuccess(proyecto.id, txId2);
-          setActiveStep(4);
-
-          showInfo(
-            tipo === 'suscripcion'
-              ? '¡Pago confirmado! Firmá el contrato para activar tu suscripción.'
-              : '¡Pago confirmado! Firmá el contrato para finalizar tu inversión.'
-          );
-
-          hasAttemptedRecovery.current = true;
-          return;
-        }
-
-        // 👇 NO pagado → mostrar recovery si había progreso
-        if (savedState!.activeStep >= 3) {
-          setRecoveredState(savedState);
-          setShowRecoveryPrompt(true);
-        } else {
-          setActiveStep(3); // volver a pago
-        }
-
-      } catch (err) {
-        console.warn('⚠️ Error verificando pago:', err);
-      } finally {
-        hasAttemptedRecovery.current = true;
+      if (isPaymentApproved(res.data)) {
+        setPaymentStatus('success');
+        CheckoutStateManager.markPaymentSuccess(proyecto.id, transaccionIdSaved);
+        setActiveStep(4);
+      } else {
+        // 🔥 ACA ESTÁ LA CLAVE
+        setPaymentStatus('processing');
+        setActiveStep(3); // 👉 IR DIRECTO A PAGO
       }
-    })();
 
-    return;
-  }
+    } catch (err) {
+      console.warn('⚠️ Error verificando pago:', err);
+
+      // fallback seguro
+      setActiveStep(3);
+    } finally {
+      hasAttemptedRecovery.current = true;
+    }
+  })();
+
+  return;
+}
 
     // CASO 1: pago ya confirmado en sesión anterior
     if (savedState?.paymentSuccess && savedState.transactionId) {
@@ -649,18 +639,16 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
     }
 
     // CASO 2: proceso interrumpido sin pago confirmado
-   if (savedState && savedState.activeStep >= 3 && savedState.transactionId) {
-      setRecoveredState(savedState);
-      setShowRecoveryPrompt(true);
-      hasAttemptedRecovery.current = true;
-      return;
-    }
+//    if (savedState && savedState.activeStep >= 3 && savedState.transactionId) {
+//       setRecoveredState(savedState);
+//       setShowRecoveryPrompt(true);
+//       hasAttemptedRecovery.current = true;
+//       return;
+//     }
 
     // CASO 3: sin estado local pero llega ID por props
     // Aplica tanto para inversiones (effectiveInversionId) como suscripciones (effectivePagoId)
-    const txId = savedState?.transactionId 
-                || effectiveInversionId 
-                || effectivePagoId;
+    const txId = savedState?.transactionId || effectivePagoId;
     if (txId) {
       MercadoPagoService.getPaymentStatus(txId, true)
         .then(res => {
@@ -723,50 +711,45 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
 
   // ACCIONES POR PASO
   const handleStepAction = useCallback(async () => {
-    switch (activeStep) {
-      case 0:
-        const yaIniciado = tipo === 'inversion' 
-          ? (paymentStatus === 'success' && inversionId)
-          : (paymentStatus === 'success' && transaccionId);
-          
-        if (yaIniciado) { setActiveStep(4); return; }
-        await handleConfirmInvestment();
-        setActiveStep(1);
-        break;
-      case 1:
-        setActiveStep(2);
-        break;
-      case 2:
-        if (codigo2FA.length === CODIGO_2FA_LENGTH) {
-          if (paymentStatus === 'success' && transaccionId) {
-            setActiveStep(4);
-          } else {
-            await handleConfirmarPago2FA(codigo2FA);
-          }
+  switch (activeStep) {
+    case 2: // Seguridad (antes era case 2)
+      if (codigo2FA.length === CODIGO_2FA_LENGTH) {
+        if (paymentStatus === 'success' && transaccionId) {
+          setActiveStep(4);
+        } else {
+          await handleConfirmInvestment(codigo2FA, location); // crea la inversión con el 2FA ya disponible
+          setActiveStep(3);
         }
-        break;
-      case 3:
-        setActiveStep(4);
-        break;
-      case 4:
-        if (!codigo2FAFirma || codigo2FAFirma.length !== CODIGO_2FA_LENGTH) {
-          showError('Debes ingresar tu código 2FA para firmar el contrato');
-          return;
-        }
-        if (!signaturePosition) {
-          showError('Debes colocar tu firma sobre el contrato antes de continuar');
-          return;
-        }
-        if (signatureDataUrl && location) {
-          await handleSignContract(signatureDataUrl, signaturePosition, location, codigo2FAFirma);
-        }
-        break;
-    }
-  }, [
-    activeStep, transaccionId, paymentStatus,
-    codigo2FA, codigo2FAFirma, signatureDataUrl, signaturePosition, location,
-    handleConfirmInvestment, handleConfirmarPago2FA, handleSignContract, showError
-  ]);
+      }
+      break;
+    case 1: 
+      setActiveStep(2);
+      break;
+    case 0: 
+      setActiveStep(1);
+      break;
+    case 3: // Pago
+      setActiveStep(4);
+      break;
+    case 4: // Firma
+      if (!codigo2FAFirma || codigo2FAFirma.length !== CODIGO_2FA_LENGTH) {
+        showError('Debes ingresar tu código 2FA para firmar el contrato');
+        return;
+      }
+      if (!signaturePosition) {
+        showError('Debes colocar tu firma sobre el contrato antes de continuar');
+        return;
+      }
+      if (signatureDataUrl && location) {
+        await handleSignContract(signatureDataUrl, signaturePosition, location, codigo2FAFirma);
+      }
+      break;
+  }
+}, [
+  activeStep, transaccionId, paymentStatus,
+  codigo2FA, codigo2FAFirma, signatureDataUrl, signaturePosition, location,
+  handleConfirmInvestment, handleConfirmarPago2FA, handleSignContract, showError
+]);
 
   const handleClose = useCallback(() => {
     if (isVerificandoPago || isProcessing) return;
@@ -830,9 +813,9 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
       <BaseModal
         open={open && !showRecoveryPrompt}
         onClose={handleClose}
-        title={tipo === 'suscripcion' ? 'Nueva Suscripción' : 'Nueva Inversión'}
+        title={'Nueva Inversión'}
         subtitle={proyecto.nombre_proyecto}
-        icon={tipo === 'suscripcion' ? <VerifiedUser /> : <Business />}
+        icon={<Business />}
         headerColor={activeStep === 4 ? 'success' : 'primary'}
         fullScreen={isMobile}
         maxWidth="md"

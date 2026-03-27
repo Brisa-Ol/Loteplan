@@ -31,6 +31,7 @@ import { CheckoutWizardModal } from './modals/CheckoutWizardModal/CheckoutWizard
 
 import SuscripcionService from '@/core/api/services/suscripcion.service';
 import { MapUrlIframe } from '@/features/admin/pages/Proyectos/modals/MapUrlIframe/MapUrlIframe';
+import { CheckoutInversionModal } from './modals/CheckoutInversionModal/CheckoutInversionModal';
 
 // 🚀 LAZY LOADING
 const ProjectGallery = lazy(() => import('./components/ProjectGallery').then(m => ({ default: m.ProjectGallery })));
@@ -162,10 +163,20 @@ const DetalleProyecto: React.FC = () => {
   const { tokensDisponibles } = useVerificarSuscripcion(Number(logic.proyecto?.id));
   const { withSecurityCheck, securityModalProps } = useSecurityGuard();
 
-  const handleOpenCheckoutSecurely = useCallback(() => {
-    if (!isAuthenticated) return navigate(ROUTES.LOGIN, { state: { from: location.pathname } });
+const handleOpenCheckoutSecurely = useCallback(() => {
+  if (!isAuthenticated) return navigate(ROUTES.LOGIN, { state: { from: location.pathname } });
+  
+  if (logic.proyecto?.tipo_inversion === 'directo') {
+    withSecurityCheck(() => logic.modales.checkoutInversion.open());
+  } else {
     withSecurityCheck(() => logic.modales.checkoutWizard.open());
-  }, [isAuthenticated, navigate, location.pathname, withSecurityCheck, logic.modales.checkoutWizard]);
+  }
+}, [
+  isAuthenticated, navigate, location.pathname, withSecurityCheck,
+  logic.proyecto?.tipo_inversion,
+  logic.modales.checkoutWizard,
+  logic.modales.checkoutInversion,  
+]);
 
   const secureLogic = useMemo(() => ({
     ...logic,
@@ -245,13 +256,22 @@ const DetalleProyecto: React.FC = () => {
 
       <SecurityRequirementModal {...securityModalProps} />
       {isAuthenticated && (
-        <CheckoutWizardModal
+        (esMensual 
+          ? <CheckoutWizardModal
           open={logic.modales.checkoutWizard.isOpen}
           onClose={logic.modales.checkoutWizard.close}
           proyecto={logic.proyecto}
-          tipo={esMensual ? 'suscripcion' : 'inversion'}
+          tipo={'suscripcion'}
         />
-      )}
+      :
+        <CheckoutInversionModal
+          open={logic.modales.checkoutInversion.isOpen}
+          onClose={logic.modales.checkoutInversion.close}
+          proyecto={logic.proyecto}
+          tipo='inversion'
+        />
+      ))}
+    
 
       
     </PageContainer>
