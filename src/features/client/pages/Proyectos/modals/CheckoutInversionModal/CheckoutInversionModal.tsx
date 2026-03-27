@@ -65,6 +65,7 @@ import { CheckoutStateManager, type CheckoutPersistedState } from '../Checkout p
 import CuotaMensualService from '@/core/api/services/cuotaMensual.service';
 import { env } from '@/core/config/env';
 import type { ProyectoDto } from '@/core/types/proyecto.dto';
+import type { ContratoTrackingResponse } from '@/core/types/contrato.dto';
 
 // ===================================================
 // CONSTANTS
@@ -89,6 +90,7 @@ export interface CheckoutInversionModalProps {
   tipo: 'suscripcion' | 'inversion';
   inversionId?: number;
   pagoId?: number;
+  trackingData?: ContratoTrackingResponse | null
 }
 
 interface SignaturePosition {
@@ -460,7 +462,8 @@ export const CheckoutInversionModal: React.FC<CheckoutInversionModalProps> = ({
   proyecto,
   tipo,
   inversionId: initialInversionId,
-  pagoId: initialPagoId
+  pagoId: initialPagoId,
+  trackingData
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -582,6 +585,22 @@ export const CheckoutInversionModal: React.FC<CheckoutInversionModalProps> = ({
   // ===================================================
   useEffect(() => {
     if (!open || hasAttemptedRecovery.current) return;
+
+     // 🔥 PRIORIDAD MÁXIMA: trackingData manda
+  if (
+    trackingData &&
+    trackingData.tiene_pago &&
+    !trackingData.tiene_contrato_firmado &&
+    trackingData.puede_firmar
+  ) {
+    console.log("🚀 Ir directo a firma por trackingData");
+
+    setPaymentStatus('success'); // importante para UI
+    setActiveStep(4); // 👉 paso firma
+
+    hasAttemptedRecovery.current = true;
+    return;
+  }
 
     const savedState = CheckoutStateManager.loadState(proyecto.id);
 
@@ -741,7 +760,7 @@ export const CheckoutInversionModal: React.FC<CheckoutInversionModalProps> = ({
         return;
       }
       if (signatureDataUrl && location) {
-        await handleSignContract(signatureDataUrl, signaturePosition, location, codigo2FAFirma);
+        await handleSignContract(signatureDataUrl, signaturePosition, location, codigo2FAFirma, trackingData);
       }
       break;
   }

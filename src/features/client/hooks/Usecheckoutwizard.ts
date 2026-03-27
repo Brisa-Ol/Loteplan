@@ -15,6 +15,7 @@ import { useCallback, useRef, useState } from 'react';
 import { CheckoutStateManager } from '../pages/Proyectos/modals/Checkout persistence';
 import TransaccionService from '@/core/api/services/transaccion.service';
 import { set } from 'date-fns';
+import type { ContratoTrackingResponse } from '@/core/types/contrato.dto';
 
 // ===================================================
 // TYPES
@@ -288,15 +289,16 @@ export const useCheckoutWizard = ({
     signatureDataUrl: string,
     signaturePosition: SignaturePosition | null,
     location: Location | null,
-    codigo2FA: string // ✅ Código 2FA FRESCO para la firma
+    codigo2FA: string, // ✅ Código 2FA FRESCO para la firma
+    trackingData?: ContratoTrackingResponse | null
   ) => {
     if (!plantillaContrato) {
       showError('No hay plantilla de contrato disponible');
       return;
     }
 
-    if (!transaccionId) {
-      showError('Falta el ID de transacción');
+    if (trackingData?.puede_firmar === false && trackingData?.tiene_pago === false) {
+      showError('Ya se ha firmado este contrato o el pago no se ha registrado.');
       return;
     }
 

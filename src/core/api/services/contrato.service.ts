@@ -1,6 +1,7 @@
 import type { ContratoFirmadoDto, ContratoFirmadoResponseDto, RegistrarFirmaRequestDto } from "@/core/types/contrato-firmado.dto";
 import type { AxiosResponse } from "axios";
 import httpService from "../httpService";
+import type { ContratoTrackingResponse } from "@/core/types/contrato.dto";
 
 
 const BASE_ENDPOINT = '/contratos'; 
@@ -65,6 +66,14 @@ const ContratoService = {
    */
   findAllSigned: async (): Promise<AxiosResponse<ContratoFirmadoDto[]>> => {
     return await httpService.get(`${BASE_ENDPOINT}/`);
+  },
+
+  /*
+    Rastrea el el estado de pago, el estado de firma de un contrato segun el proyecto id y el usuario id
+  */
+  trackPaymentAndContract: async (proyectId: number): Promise<ContratoTrackingResponse> => {
+    const response = await httpService.get(`${BASE_ENDPOINT}/track/${proyectId}`)
+    return response.data
   },
 
   // =================================================

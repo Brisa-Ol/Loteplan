@@ -65,6 +65,7 @@ import { CheckoutStateManager, type CheckoutPersistedState } from '../Checkout p
 import CuotaMensualService from '@/core/api/services/cuotaMensual.service';
 import { env } from '@/core/config/env';
 import type { ProyectoDto } from '@/core/types/proyecto.dto';
+import type { ContratoTrackingResponse } from '@/core/types/contrato.dto';
 
 // ===================================================
 // CONSTANTS
@@ -89,6 +90,7 @@ export interface CheckoutWizardModalProps {
   tipo: 'suscripcion' | 'inversion';
   inversionId?: number;
   pagoId?: number;
+  trackingData?: ContratoTrackingResponse | null
 }
 
 interface SignaturePosition {
@@ -460,7 +462,8 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
   proyecto,
   tipo,
   inversionId: initialInversionId,
-  pagoId: initialPagoId
+  pagoId: initialPagoId,
+  trackingData
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -583,12 +586,20 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
   useEffect(() => {
     if (!open || hasAttemptedRecovery.current) return;
 
+    if (tipo === 'suscripcion' && trackingData?.puede_firmar) {
+    console.log("🚀 Suscripción: directo a firma por trackingData");
+
+    setPaymentStatus('success');
+    setActiveStep(4);
+
+
+    hasAttemptedRecovery.current = true;
+    return;
+  }
+
     const savedState = CheckoutStateManager.loadState(proyecto.id);
 
-    const txId2 = savedState?.transactionId 
-    || effectiveInversionId 
-    || effectivePagoId;
-
+    const txId2 = savedState?.transactionId || effectivePagoId;
     // ===================================================
   // 🔥 CASO PRINCIPAL: SI HAY TX → SIEMPRE VERIFICAR PAGO
   // ===================================================

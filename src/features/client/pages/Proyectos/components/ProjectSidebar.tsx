@@ -26,12 +26,14 @@ import {
   DialogContent,
   DialogActions
 } from '@mui/material';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import type { ProyectoDto } from '@/core/types/proyecto.dto';
 import { useProyectoHelpers } from '@/features/client/hooks/useProyectoHelpers';
 import { ROUTES } from '@/routes';
 import { useNavigate } from 'react-router-dom';
+import ContratoService from '@/core/api/services/contrato.service';
+import type { ContratoTrackingResponse } from '@/core/types/contrato.dto';
 
 // ==========================================
 // 1. INTERFACES
@@ -53,7 +55,8 @@ export interface ProjectSidebarLogic {
 interface ProjectSidebarProps {
   logic: ProjectSidebarLogic;
   proyecto: ProyectoDto;
-  cantProyectUser: number
+  cantProyectUser: number,
+  puedeFirmar?: boolean | undefined
 }
 
 // ==========================================
@@ -152,12 +155,13 @@ const PriceHeader: React.FC<{ helpers: any, isPrelanzamiento: boolean, isLleno: 
 // ==========================================
 // 5. COMPONENTE PRINCIPAL
 // ==========================================
-export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({ logic, proyecto, cantProyectUser }) => {
+export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({ logic, proyecto, cantProyectUser, puedeFirmar }) => {
 
   //variables Thomy
 
   const [openResubModal, setOpenResubModal] = useState(false)
   const navigate = useNavigate()  
+
   //fin variables Thomy
 
   //Funciones Thomy
@@ -166,7 +170,15 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({ logic, proyecto,
     if(cantProyectUser > 1){
       navigate(ROUTES.CLIENT.CUENTA.CONTRATOS)
     }else{
-      logic.handleVerContratoFirmado
+      logic.handleVerContratoFirmado()
+    }
+  }
+
+  const handleSubscriptionOrSigning = () => {
+    if(puedeFirmar){
+      logic.handleClickFirmar()
+    }else{
+      setOpenResubModal(true)
     }
   }
 
@@ -302,19 +314,19 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({ logic, proyecto,
                 )}
 
               {/* 6B: Pagado, Pendiente de Firma */}
-{paso1Completo && !paso2Completo && (
-  <Stack spacing={2}>
-    <Alert severity="warning" icon={<HistoryEdu />}>
-      Pago confirmado. Firma tu contrato para asegurar tu lugar.
-    </Alert>
-    <Button variant="contained" color="warning" fullWidth size="large" onClick={logic.handleClickFirmar} sx={{ color: 'white', fontWeight: 700 }}>
-      Firmar Contrato Digital
-    </Button>
-    <Button variant="text" size="small" onClick={logic.modales.contrato.open} sx={{ fontWeight: 600 }}>
-      Ver borrador del contrato
-    </Button>
-  </Stack>
-)}
+              {paso1Completo && !paso2Completo && (
+                <Stack spacing={2}>
+                  <Alert severity="warning" icon={<HistoryEdu />}>
+                    Pago confirmado. Firma tu contrato para asegurar tu lugar.
+                  </Alert>
+                  <Button variant="contained" color="warning" fullWidth size="large" onClick={logic.handleClickFirmar} sx={{ color: 'white', fontWeight: 700 }}>
+                    Firmar Contrato Digital
+                  </Button>
+                  <Button variant="text" size="small" onClick={logic.modales.contrato.open} sx={{ fontWeight: 600 }}>
+                    Ver borrador del contrato
+                  </Button>
+                </Stack>
+              )}
 
                       {/* 5C: Proceso Completado */}
                       {paso2Completo && (
@@ -329,10 +341,10 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({ logic, proyecto,
                         <Button
                           variant="contained"
                           fullWidth
-                          onClick={() => setOpenResubModal(true)}
+                          onClick={handleSubscriptionOrSigning}
                           sx={{ fontWeight: 700 }}
                         >
-                          Volver a suscribirse para adquirir otro Token
+                          {puedeFirmar ? 'Firmar contrato' : 'Volver a suscribirse para adquirir otro Token'}
                         </Button>
 
                         {/* 📄 Contratos */}

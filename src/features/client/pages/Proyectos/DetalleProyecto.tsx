@@ -32,6 +32,8 @@ import { CheckoutWizardModal } from './modals/CheckoutWizardModal/CheckoutWizard
 import SuscripcionService from '@/core/api/services/suscripcion.service';
 import { MapUrlIframe } from '@/features/admin/pages/Proyectos/modals/MapUrlIframe/MapUrlIframe';
 import { CheckoutInversionModal } from './modals/CheckoutInversionModal/CheckoutInversionModal';
+import type { ContratoTrackingResponse } from '@/core/types/contrato.dto';
+import ContratoService from '@/core/api/services/contrato.service';
 
 // 🚀 LAZY LOADING
 const ProjectGallery = lazy(() => import('./components/ProjectGallery').then(m => ({ default: m.ProjectGallery })));
@@ -115,6 +117,8 @@ const DetalleProyecto: React.FC = () => {
   //variable Thomy
 
   const [cantProyectsUser, setCantProyectsUser] = useState(0)
+  const [trackingData, setTrackingData] = useState<ContratoTrackingResponse | null>(null)
+  
 
   //fin variables Thomy
 
@@ -140,6 +144,29 @@ const DetalleProyecto: React.FC = () => {
 
     getProyects();
   }, [logic.proyecto?.id]);
+  
+    useEffect(() => {
+    if (!logic.proyecto?.id) return; // 🔥 CLAVE
+    const trackingContracts = async () => {
+      try {
+        console.log(`Id proyecto: ${logic.proyecto?.id}`)
+        const res = await ContratoService.trackPaymentAndContract(Number(logic.proyecto?.id));
+        console.log(res)
+        setTrackingData(res);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+  
+    trackingContracts();
+    console.log(trackingData)
+  }, [logic.proyecto?.id]);
+  
+  
+  
+  
+
+
 
   //Fin Funciones Thomy
   const currentTab = useMemo(() => {
@@ -250,7 +277,7 @@ const handleOpenCheckoutSecurely = useCallback(() => {
         </Box>
 
         <Box sx={{ width: { xs: '100%', lg: 380 }, flexShrink: 0 }}>
-          <MemoizedSidebar logic={secureLogic} proyecto={logic.proyecto} cantProyectUser={cantProyectsUser} />
+          <MemoizedSidebar logic={secureLogic} proyecto={logic.proyecto} cantProyectUser={cantProyectsUser} puedeFirmar={trackingData?.puede_firmar} />
         </Box>
       </Box>
 
@@ -262,6 +289,7 @@ const handleOpenCheckoutSecurely = useCallback(() => {
           onClose={logic.modales.checkoutWizard.close}
           proyecto={logic.proyecto}
           tipo={'suscripcion'}
+          trackingData={trackingData}
         />
       :
         <CheckoutInversionModal
@@ -269,6 +297,7 @@ const handleOpenCheckoutSecurely = useCallback(() => {
           onClose={logic.modales.checkoutInversion.close}
           proyecto={logic.proyecto}
           tipo='inversion'
+          trackingData={trackingData}
         />
       ))}
     
