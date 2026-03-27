@@ -2,6 +2,7 @@
 
 import type { BaseDTO } from "./base.dto";
 import type { ImagenDto } from "./imagen.dto";
+import type { EstadoPuja } from "./puja.dto";
 
 // ==========================================
 // 🛠️ ENUMS & TYPES
@@ -45,6 +46,7 @@ export interface LoteDto extends BaseDTO {
 pujaMasAlta?: {
   id: number;
   monto_puja: string;
+  estado_puja: EstadoPuja;
 } | null;
   // 5. Campos de Control (Críticos según tu modelo)
   intentos_fallidos_pago: number; 
