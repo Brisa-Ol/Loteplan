@@ -31,7 +31,7 @@ const AdminSuscripciones: React.FC = () => {
       severity: 'error' as const,
       title: 'Morosidad Crítica',
       message: `La tasa de morosidad es del ${logic.stats.tasaMorosidad}% ($${Number(logic.stats.totalEnRiesgo).toLocaleString()} en riesgo).`,
-      action: { label: 'Ver Morosos', onClick: () => logic.setFilterStatus('inactivas') },
+      action: { label: 'Ver Morosos', onClick: () => logic.setTabIndex(1) },
     }];
   }, [logic]);
 

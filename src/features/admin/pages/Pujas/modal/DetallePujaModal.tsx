@@ -241,10 +241,6 @@ const DetallePujaModal: React.FC<Props> = ({
                 <Typography sx={styles.labelCaption}>TITULAR REGISTRADO</Typography>
                 <Typography variant="body2" fontWeight={700}>{userName || 'No especificado'}</Typography>
               </Box>
-              <Box>
-                <Typography sx={styles.labelCaption}>ID INTERNO</Typography>
-                <Typography variant="body2" color="primary.main" fontWeight={800}>USR-{puja.id_usuario}</Typography>
-              </Box>
             </Stack>
           </Paper>
 
@@ -255,14 +251,10 @@ const DetallePujaModal: React.FC<Props> = ({
             </Stack>
             <Stack spacing={2}>
               <Box>
-                <Typography sx={styles.labelCaption}>NOMENCLATURA DEL LOTE</Typography>
+                <Typography sx={styles.labelCaption}>NOMBRE DEL LOTE</Typography>
                 <Typography variant="body2" fontWeight={700} noWrap>
                   {loteName || puja.lote?.nombre_lote || `ID: ${puja.id_lote}`}
                 </Typography>
-              </Box>
-              <Box>
-                <Typography sx={styles.labelCaption}>REFERENCIA TÉCNICA</Typography>
-                <Typography variant="body2" color="secondary.dark" fontWeight={800}>LT-{puja.id_lote}</Typography>
               </Box>
             </Stack>
           </Paper>

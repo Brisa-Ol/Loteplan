@@ -8,7 +8,7 @@
  */
 export interface Enable2faRequestDto {
   /** Código TOTP de 6 dígitos actual. */
-  token: string; 
+  token: string;
 }
 
 /**
@@ -19,7 +19,7 @@ export interface Disable2faRequestDto {
   /** Contraseña actual del usuario. */
   contraseña: string;
   /** Código TOTP de 6 dígitos actual. */
-  token: string; 
+  token: string;
 }
 
 /**
@@ -28,7 +28,7 @@ export interface Disable2faRequestDto {
 export interface Generate2faSecretResponseDto {
   message: string;
   /** Clave secreta en texto (Base32). Útil si el usuario no puede escanear el QR. */
-  secret: string;      
+  secret: string;
   /** URL con protocolo `otpauth://`. Debe ser convertida a imagen QR por el frontend. */
-  otpauthUrl: string;  
+  otpauthUrl: string;
 }

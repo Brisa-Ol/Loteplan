@@ -38,11 +38,17 @@ const useCancelacionesColumns = (): DataTableColumn<SuscripcionCanceladaDto>[] =
         </Stack>
       ),
     },
-    {
+{
       id: 'proyecto', label: 'Permanencia', minWidth: 180,
       render: (item) => (
         <Box>
-          <Typography variant="body2" fontWeight={600} color="text.primary">{item.proyectoCancelado?.nombre_proyecto}</Typography>
+          <Typography variant="body2" fontWeight={600} color="text.primary">
+            {item.proyectoCancelado?.nombre_proyecto}
+          </Typography>
+          {/* ✅ NUEVO: Mostramos el ID original de la suscripción para evitar confusiones */}
+          <Typography variant="caption" color="text.secondary" fontWeight={700} display="block" sx={{ mb: 0.5 }}>
+             Suscripción Orig. #{item.id_suscripcion_original}
+          </Typography>
           <Chip
             label={`${item.meses_pagados} meses pagados`} size="small"
             sx={{ height: 18, fontSize: '0.6rem', bgcolor: alpha(theme.palette.info.main, 0.1), color: 'info.main', fontWeight: 800 }}

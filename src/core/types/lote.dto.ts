@@ -2,6 +2,7 @@
 
 import type { BaseDTO } from "./base.dto";
 import type { ImagenDto } from "./imagen.dto";
+import type { EstadoPuja } from "./puja.dto";
 
 // ==========================================
 // 🛠️ ENUMS & TYPES
@@ -21,11 +22,11 @@ export type EstadoProyecto = 'En Espera' | 'En proceso' | 'Finalizado';
  */
 export interface LoteDto extends BaseDTO {
   // 1. Identificadores
-  id_proyecto: number | null; 
+  id_proyecto: number | null;
 
   // 2. Datos básicos
   nombre_lote: string;
-  precio_base: string; 
+  precio_base: string;
   monto_ganador_lote: string | null;
   ultima_puja?: {
     id: number;
@@ -36,26 +37,30 @@ export interface LoteDto extends BaseDTO {
 
   // 3. Estado y Tiempos
   estado_subasta: EstadoSubasta;
-  fecha_inicio: string | null; 
+  fecha_inicio: string | null;
   fecha_fin: string | null;
 
   // 4. Relaciones de Subasta (Foreign Keys)
   id_puja_mas_alta: number | null;
   id_ganador: number | null;
-
+  pujaMasAlta?: {
+    id: number;
+    monto_puja: string;
+    estado_puja: EstadoPuja;
+  } | null;
   // 5. Campos de Control (Críticos según tu modelo)
-  intentos_fallidos_pago: number; 
-  excedente_visualizacion: number; 
-excluir_estadisticas: boolean;
+  intentos_fallidos_pago: number;
+  excedente_visualizacion: number;
+  excluir_estadisticas: boolean;
   // 6. Ubicación Geográfica
-  latitud: number | null;  
-  longitud: number | null; 
+  latitud: number | null;
+  longitud: number | null;
   map_url: string | null
   // 7. Relaciones (Includes opcionales)
   imagenes?: ImagenDto[];
   proyecto?: ProyectoMinimalDto; // 👈 Ahora contiene la lógica del Back
   ganador?: UsuarioMinimalDto;
-  pujas?: any[]; 
+  pujas?: any[];
 }
 
 // ==========================================
@@ -80,7 +85,7 @@ export interface UpdateLoteDto extends Partial<CreateLoteDto> {
   intentos_fallidos_pago?: number;
   excedente_visualizacion?: number;
   monto_ganador_lote?: string | null;
-  map_url: string | null
+  map_url?: string | null
 }
 
 // ==========================================
@@ -107,7 +112,7 @@ export interface ProyectoMinimalDto extends BaseDTO {
 }
 
 export interface UsuarioMinimalDto {
- id: number;
+  id: number;
   nombre: string;
   apellido: string;
   email: string;

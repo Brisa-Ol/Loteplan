@@ -1,33 +1,20 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useTheme } from '@mui/material';
-import useSnackbar from '@/shared/hooks/useSnackbar';
-import { useModal } from '@/shared/hooks/useModal';
+// src/features/admin/pages/Suscripciones/hooks/finanzas/useAdminSuscripciones.ts
+
 import { useConfirmDialog } from '@/shared/hooks/useConfirmDialog';
+import { useModal } from '@/shared/hooks/useModal';
+import useSnackbar from '@/shared/hooks/useSnackbar';
+import { useTheme } from '@mui/material';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback, useMemo, useState } from 'react';
 
-import type { SuscripcionDto } from '@/core/types/suscripcion.dto';
-import SuscripcionService from '@/core/api/services/suscripcion.service';
 import ProyectoService from '@/core/api/services/proyecto.service';
+import SuscripcionService from '@/core/api/services/suscripcion.service';
+import { env } from '@/core/config/env';
+import type { SuscripcionDto } from '@/core/types/suscripcion.dto';
 import { useSortedData } from '../useSortedData';
-import { env } from '@/core/config/env'; // 👈 1. Importamos env
-
 
 // ============================================================================
-// HOOK DE DEBOUNCE (Inline para consistencia)
-// ============================================================================
-function useDebouncedValue<T>(value: T, delay: number = 300): T {
-    const [debouncedValue, setDebouncedValue] = useState<T>(value);
-
-    useEffect(() => {
-        const handler = setTimeout(() => setDebouncedValue(value), delay);
-        return () => clearTimeout(handler);
-    }, [value, delay]);
-
-    return debouncedValue;
-}
-
-// ============================================================================
-// HOOK PRINCIPAL - ULTRA OPTIMIZADO
+// HOOK PRINCIPAL
 // ============================================================================
 export const useAdminSuscripciones = () => {
     const queryClient = useQueryClient();
@@ -47,40 +34,28 @@ export const useAdminSuscripciones = () => {
     const [tabIndex, setTabIndex] = useState(0);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterProject, setFilterProject] = useState<string>('all');
-    const [filterStatus, setFilterStatus] = useState<'all' | 'activas' | 'inactivas'>('activas');
-    
-    // 🆕 NUEVOS ESTADOS: Rango de Fechas
-    const [startDate, setStartDate] = useState<string>('');
-    const [endDate, setEndDate] = useState<string>('');
 
     // Selección
     const [selectedSuscripcion, setSelectedSuscripcion] = useState<SuscripcionDto | null>(null);
 
-    // ✨ DEBOUNCE del search term
-    const debouncedSearchTerm = useDebouncedValue(searchTerm, 300);
-
     // --- QUERIES CON CACHE OPTIMIZADO ---
+
+    // 1. Solo traemos las ACTIVAS (Las inactivas se manejan en la pestaña de bajas)
     const { data: suscripcionesRaw = [], isLoading: l1, error } = useQuery({
-        queryKey: ['adminSuscripciones', filterStatus],
-        queryFn: async () => {
-            if (filterStatus === 'activas') {
-                return (await SuscripcionService.findAllActivas()).data;
-            }
-            return (await SuscripcionService.findAll()).data;
-        },
-        staleTime: env.queryStaleTime || 30000, // 👈 2. Aplicamos variable global
+        queryKey: ['adminSuscripcionesActivas'],
+        queryFn: async () => (await SuscripcionService.findAllActivas()).data,
+        staleTime: env.queryStaleTime || 30000,
         gcTime: 5 * 60 * 1000,
         refetchOnWindowFocus: false,
     });
 
-    // ✨ 1. ORDENAMIENTO + HIGHLIGHT
     const { sortedData: suscripcionesOrdenadas, highlightedId, triggerHighlight } = useSortedData(suscripcionesRaw);
 
     // Selectores auxiliares (Proyectos)
     const { data: proyectos = [] } = useQuery({
         queryKey: ['adminProyectosSelect'],
         queryFn: async () => (await ProyectoService.getAllAdmin()).data,
-        staleTime: 60000, // Lo dejamos fijo porque es un diccionario
+        staleTime: 60000,
         gcTime: 10 * 60 * 1000,
     });
 
@@ -88,23 +63,23 @@ export const useAdminSuscripciones = () => {
     const { data: morosidadStats, isLoading: l2 } = useQuery({
         queryKey: ['metricsMorosidad'],
         queryFn: async () => (await SuscripcionService.getMorosityMetrics()).data,
-        staleTime: env.queryStaleTime || 30000, // 👈 3. Aplicamos variable global
+        staleTime: env.queryStaleTime || 30000,
     });
 
     const { data: cancelacionStats, isLoading: l3 } = useQuery({
         queryKey: ['metricsCancelacionMetrics'],
         queryFn: async () => (await SuscripcionService.getCancellationMetrics()).data,
-        staleTime: env.queryStaleTime || 30000, // 👈 4. Aplicamos variable global
+        staleTime: env.queryStaleTime || 30000,
     });
 
     const isLoading = l1 || l2 || l3;
 
     // --- FILTRADO OPTIMIZADO ---
     const filteredSuscripciones = useMemo(() => {
-        const term = debouncedSearchTerm.toLowerCase();
+        const term = searchTerm.toLowerCase();
 
         return suscripcionesOrdenadas.filter(suscripcion => {
-            // 1. Filtro de Texto (Short-circuit)
+            // 1. Filtro de Texto
             const matchesSearch = !term || (
                 suscripcion.usuario?.nombre.toLowerCase().includes(term) ||
                 suscripcion.usuario?.apellido.toLowerCase().includes(term) ||
@@ -116,23 +91,9 @@ export const useAdminSuscripciones = () => {
             // 2. Filtro de Proyecto
             const matchesProject = filterProject === 'all' || suscripcion.id_proyecto === Number(filterProject);
 
-            // 3. Filtro de Estado (Manual por si se usa findAll)
-            let matchesStatus = true;
-            if (filterStatus === 'activas') matchesStatus = suscripcion.activo === true;
-            if (filterStatus === 'inactivas') matchesStatus = suscripcion.activo === false;
-
-            // 4. 🆕 FILTRO: Rango de Fechas (Usando createdAt para "Alta")
-            let matchesDate = true;
-            const itemDate = suscripcion.createdAt ? new Date(suscripcion.createdAt).toISOString().split('T')[0] : null;
-
-            if (itemDate) {
-                if (startDate && itemDate < startDate) matchesDate = false;
-                if (endDate && itemDate > endDate) matchesDate = false;
-            }
-
-            return matchesSearch && matchesProject && matchesStatus && matchesDate;
+            return matchesSearch && matchesProject;
         });
-    }, [suscripcionesOrdenadas, debouncedSearchTerm, filterProject, filterStatus, startDate, endDate]);
+    }, [suscripcionesOrdenadas, searchTerm, filterProject]);
 
     // Cálculos Stats
     const stats = useMemo(() => {
@@ -153,9 +114,11 @@ export const useAdminSuscripciones = () => {
     const cancelarMutation = useMutation({
         mutationFn: async (id: number) => await SuscripcionService.cancelarAdmin(id),
         onSuccess: (_, id) => {
-            queryClient.invalidateQueries({ queryKey: ['adminSuscripciones'] });
+            queryClient.invalidateQueries({ queryKey: ['adminSuscripcionesActivas'] });
             queryClient.invalidateQueries({ queryKey: ['metricsCancelacionMetrics'] });
             queryClient.invalidateQueries({ queryKey: ['metricsMorosidad'] });
+            // Invalida también las canceladas para que la otra pestaña se actualice
+            queryClient.invalidateQueries({ queryKey: ['adminCancelaciones'] });
 
             modales.confirm.close();
             triggerHighlight(id);
@@ -169,10 +132,6 @@ export const useAdminSuscripciones = () => {
     });
 
     // --- HANDLERS ---
-    const handleTabChange = useCallback((_event: React.SyntheticEvent, newValue: number) => {
-        setTabIndex(newValue);
-    }, []);
-
     const handleCancelarClick = useCallback((suscripcion: SuscripcionDto) => {
         if (!suscripcion.activo) return;
         modales.confirm.confirm('admin_cancel_subscription', suscripcion);
@@ -199,17 +158,11 @@ export const useAdminSuscripciones = () => {
         // State
         tabIndex,
         setTabIndex,
-        handleTabChange,
         searchTerm, setSearchTerm,
         filterProject, setFilterProject,
-        filterStatus, setFilterStatus,
         selectedSuscripcion,
-        
-        // 🆕 NUEVOS RETORNOS: Fechas
-        startDate, setStartDate,
-        endDate, setEndDate,
 
-        // ✨ UX Props
+        // UX Props
         highlightedId,
 
         // Data & Stats

@@ -210,7 +210,16 @@ const AdminProyectos: React.FC = () => {
     const total = data.length;
     const activos = data.filter(p => p.activo).length;
     const mensuales = data.filter(p => p.tipo_inversion === 'mensual').length;
-    const volumen = data.reduce((acc, p) => acc + (Number(p.monto_inversion || 0) * (p.suscripciones_actuales || 0)), 0);
+
+    // ✅ CORRECCIÓN: Volumen diferenciado por tipo de inversión para no romper los números
+    const volumen = data.reduce((acc, p) => {
+      if (p.tipo_inversion === 'mensual') {
+        return acc + (Number(p.monto_inversion || 0) * (p.suscripciones_actuales || 0));
+      } else {
+        return acc + Number(p.monto_inversion || 0);
+      }
+    }, 0);
+
     return { total, activos, mensuales, volumen };
   }, [logic.filteredProyectos]);
 
@@ -336,7 +345,8 @@ const AdminProyectos: React.FC = () => {
           const isObjetivoAlcanzado = p.suscripciones_actuales >= (p.obj_suscripciones || 1);
           const hasLotes = p.lotes && p.lotes.length > 0;
           const isReadyToStart = canStart && (!p.pack_de_lotes || hasLotes);
-          const canRevert = isMensual && p.estado_proyecto === 'En proceso' && !isObjetivoAlcanzado;
+          const isBajoMinimo = p.suscripciones_actuales < (p.suscripciones_minimas || 0);
+          const canRevert = isMensual && p.estado_proyecto === 'En proceso' && isBajoMinimo;
           return (
             <Stack direction="row" spacing={0.5} justifyContent="flex-end">
               <Tooltip title="Imágenes">

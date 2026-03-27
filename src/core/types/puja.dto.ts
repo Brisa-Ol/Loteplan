@@ -8,13 +8,13 @@ import type { ProyectoDto } from "./proyecto.dto";
 // 🛠️ ENUMS & TYPES
 // ==========================================
 
-export type EstadoPuja = 
-  | 'activa' 
-  | 'ganadora_pendiente' 
-  | 'ganadora_pagada' 
-  | 'perdedora' 
-  | 'cancelada' 
-  | 'cubierto_por_puja' 
+export type EstadoPuja =
+  | 'activa'
+  | 'ganadora_pendiente'
+  | 'ganadora_pagada'
+  | 'perdedora'
+  | 'cancelada'
+  | 'cubierto_por_puja'
   | 'ganadora_incumplimiento';
 
 // ==========================================
@@ -48,8 +48,8 @@ export interface PujaDto extends BaseDTO {
   monto_puja: number;
   fecha_puja: string; // ISO Date
   estado_puja: EstadoPuja;
-  fecha_vencimiento_pago?: string; 
-  
+  fecha_vencimiento_pago?: string;
+
   id_proyecto: number;
   id_lote: number;
   id_usuario: number;
@@ -57,7 +57,7 @@ export interface PujaDto extends BaseDTO {
   id_suscripcion: number;
 
   // --- Relaciones Anidadas (Includes) ---
-  
+
   // El lote donde se realizó la puja
   lote?: LoteDto;
 
@@ -85,7 +85,7 @@ export interface PujaDto extends BaseDTO {
  */
 export interface PujaCheckoutResponse {
   message: string;
-  url_checkout?: string; 
+  url_checkout?: string;
   transaccion_id?: number;
   is2FARequired?: boolean;
   pujaId?: number;

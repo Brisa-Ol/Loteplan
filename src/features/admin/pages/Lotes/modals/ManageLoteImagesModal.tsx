@@ -80,7 +80,7 @@ const ManageLoteImagesModal: React.FC<ManageLoteImagesModalProps> = ({
       return imagenService.create(imagenData);
     },
   });
-  
+
 
   // --- Handlers ---
   const handleCloseModal = useCallback(() => {

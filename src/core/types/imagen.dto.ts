@@ -8,7 +8,7 @@ import type { BaseDTO } from "./base.dto";
 export interface ImagenDto extends BaseDTO {
   url: string;         // Ej: '/uploads/imagenes/foto-123.jpg'
   descripcion?: string;
-  
+
   // Relaciones
   id_proyecto: number | null;
   id_lote: number | null;
@@ -24,10 +24,10 @@ export interface ImagenDto extends BaseDTO {
  */
 export interface CreateImagenDto {
   // El archivo físico del input type="file"
-  file: File; 
-  
+  file: File;
+
   descripcion?: string;
-  
+
   // Debe enviarse al menos uno de los dos
   id_proyecto?: number | null;
   id_lote?: number | null;
@@ -41,6 +41,6 @@ export interface UpdateImagenDto {
   descripcion?: string;
   id_proyecto?: number | null;
   id_lote?: number | null;
-  
+
   activo?: boolean;
 }

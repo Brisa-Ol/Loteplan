@@ -1,6 +1,5 @@
 // src/features/admin/pages/Lotes/modals/LoteOverviewModal.tsx
 
-import React, { useEffect, useMemo, useState } from 'react';
 import {
   AttachMoney,
   Inventory as InventoryIcon,
@@ -23,6 +22,7 @@ import {
   alpha,
   useTheme
 } from '@mui/material';
+import React, { useEffect, useMemo, useState } from 'react';
 
 import imagenService from '@/core/api/services/imagen.service';
 import type { LoteDto } from '@/core/types/lote.dto';
@@ -225,22 +225,22 @@ const LoteOverviewModal: React.FC<LoteOverviewModalProps> = ({ open, onClose, lo
 
           {/* Ganador adjudicado */}
           {lote.ganador && (
-            <Paper elevation={0} sx={{ 
-              p: 2.5, borderRadius: 3, 
-              border: '1px solid', 
-              borderColor: alpha(theme.palette.primary.main, 0.2), 
-              bgcolor: alpha(theme.palette.primary.main, 0.03) 
+            <Paper elevation={0} sx={{
+              p: 2.5, borderRadius: 3,
+              border: '1px solid',
+              borderColor: alpha(theme.palette.primary.main, 0.2),
+              bgcolor: alpha(theme.palette.primary.main, 0.03)
             }}>
               <Stack direction="row" spacing={1} alignItems="center" mb={2}>
                 <WinnerIcon sx={{ color: 'primary.main', fontSize: 20 }} />
                 <Typography variant="subtitle2" fontWeight={900} color="primary.main">GANADOR ADJUDICADO</Typography>
               </Stack>
               <Stack direction="row" spacing={2} alignItems="center">
-                <Avatar sx={{ 
-                  bgcolor: 'primary.main', 
-                  width: 48, height: 48, 
-                  fontWeight: 900, 
-                  boxShadow: `0 4px 10px ${alpha(theme.palette.primary.main, 0.3)}` 
+                <Avatar sx={{
+                  bgcolor: 'primary.main',
+                  width: 48, height: 48,
+                  fontWeight: 900,
+                  boxShadow: `0 4px 10px ${alpha(theme.palette.primary.main, 0.3)}`
                 }}>
                   {lote.ganador.nombre.charAt(0)}
                 </Avatar>

@@ -25,26 +25,26 @@ export interface CreateProyectoDto {
   descripcion?: string;
   tipo_inversion: TipoInversion;
   moneda: MonedaProyecto;
-  
+
   // Configuración Financiera
-  monto_inversion: number; 
-  plazo_inversion?: number; 
+  monto_inversion: number;
+  plazo_inversion?: number;
   forma_juridica?: string;
-  
+
   // Configuración Suscripción
   obj_suscripciones?: number;
   suscripciones_minimas?: number; // ✅ Sincronizado con el modelo
-  
+
   // Fechas
-  fecha_inicio: string; 
-  fecha_cierre: string; 
-  
+  fecha_inicio: string;
+  fecha_cierre: string;
+
   // Ubicación
   latitud?: number;
   longitud?: number;
-  
+
   // Relaciones Iniciales
-  lotesIds?: number[]; 
+  lotesIds?: number[];
 }
 
 export interface UpdateProyectoDto extends Partial<Omit<CreateProyectoDto, 'lotesIds' | 'tipo_inversion'>> {
@@ -69,37 +69,37 @@ export interface AsignarLotesDto {
 export interface ProyectoDto extends BaseDTO {
   nombre_proyecto: string;
   descripcion: string;
-  
+
   tipo_inversion: TipoInversion;
   estado_proyecto: EstadoProyecto;
-  
+
   // Datos Financieros
   monto_inversion: number;
   moneda: MonedaProyecto;
   plazo_inversion?: number;
   forma_juridica?: string;
-  
+
   // Datos de Progreso (Sincronizados con Sequelize)
   suscripciones_actuales: number;
   suscripciones_minimas: number; // ✅ Agregado del modelo
   obj_suscripciones: number;
   objetivo_notificado: boolean; // ✅ Agregado del modelo
   valor_cuota_referencia?: number; // Este mapea a cuota.valor_mensual_final
-  nombre_cemento_cemento?: string; 
+  nombre_cemento_cemento?: string;
   valor_cemento?: number;
   // Datos de Tiempo
   fecha_inicio: string;
   fecha_cierre: string;
   fecha_inicio_proceso?: string; // ✅ DATEONLY en Back
   meses_restantes: number;      // ✅ Integer en Back
-  
+
   // Configuración
   pack_de_lotes: boolean; // 👈 Tu campo crítico del modelo
-  
+
   // Ubicación
   latitud?: number;
   longitud?: number;
-  
+
   // Relaciones (Includes)
   lotes?: LoteDto[];
   imagenes?: ImagenDto[];
@@ -113,7 +113,7 @@ export interface ProyectoDto extends BaseDTO {
 export interface CompletionRateDTO {
   total_iniciados: number;
   total_finalizados: number;
-  tasa_culminacion: string; 
+  tasa_culminacion: string;
 }
 
 export interface MonthlyProgressItem {

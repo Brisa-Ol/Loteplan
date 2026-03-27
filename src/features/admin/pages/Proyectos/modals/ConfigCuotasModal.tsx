@@ -19,11 +19,11 @@ import * as Yup from 'yup';
 
 import CuotaMensualService from '@/core/api/services/cuotaMensual.service';
 import { env } from '@/core/config/env'; // 👈 1. Importamos env
+import type { CreateCuotaMensualDto } from '@/core/types/cuotaMensual.dto';
+import type { ProyectoDto } from '@/core/types/proyecto.dto';
 import BaseModal from '@/shared/components/domain/modals/BaseModal';
 import useSnackbar from '@/shared/hooks/useSnackbar';
 import ProyectoPriceHistory from '../components/ProyectoPriceHistory';
-import type { ProyectoDto } from '@/core/types/proyecto.dto';
-import type { CreateCuotaMensualDto } from '@/core/types/cuotaMensual.dto';
 
 // ============================================================================
 // INTERFACES Y VALIDACIÓN
@@ -101,9 +101,9 @@ const ConfigCuotasModal: React.FC<ConfigCuotasModalProps> = ({ open, onClose, pr
             createMutation.mutate({
                 ...values,
                 id_proyecto: proyecto.id,
-                porcentaje_plan: values.porcentaje_plan / 100,
+                porcentaje_plan: values.porcentaje_plan,
                 porcentaje_administrativo: values.porcentaje_administrativo / 100,
-                porcentaje_iva: values.porcentaje_iva / 100
+                porcentaje_iva: values.porcentaje_iva / 100,
             });
         },
     });
@@ -134,13 +134,24 @@ const ConfigCuotasModal: React.FC<ConfigCuotasModalProps> = ({ open, onClose, pr
         const unidades = Number(formik.values.valor_cemento_unidades) || 0;
         const precio = Number(formik.values.valor_cemento) || 0;
 
+        const roundTo2 = (n: number) => Math.round(n * 100) / 100;
+
         const valorMovil = unidades * precio;
-        const totalDelPlan = valorMovil * (Number(formik.values.porcentaje_plan) / 100);
+
+        const totalDelPlan = valorMovil * Number(formik.values.porcentaje_plan);
         const valorMensual = totalDelPlan / plazo;
 
-        const cargaAdmin = valorMovil * (Number(formik.values.porcentaje_administrativo) / 100);
+        // 2. Carga Administrativa
+
+        const cargaAdminTotal = valorMovil * (Number(formik.values.porcentaje_administrativo) / 100);
+        const cargaAdmin = cargaAdminTotal / plazo;
+
+        // 3. IVA Administrativo
+
         const ivaCarga = cargaAdmin * (Number(formik.values.porcentaje_iva) / 100);
-        const valorFinal = valorMensual + cargaAdmin + ivaCarga;
+
+        // 4. Valor Final Redondeado
+        const valorFinal = roundTo2(valorMensual + cargaAdmin + ivaCarga);
 
         return { valorMensual, cargaAdmin, ivaCarga, valorFinal };
     }, [formik.values, proyecto]);

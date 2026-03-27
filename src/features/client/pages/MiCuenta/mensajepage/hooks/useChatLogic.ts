@@ -6,6 +6,8 @@ import { useMemo, useState } from 'react';
 
 export const SYSTEM_USER_ID = 2;
 
+const REFETCH_INTERVAL = Number(import.meta.env.VITE_QUERY_REFETCH_INTERVAL) || 30_000;
+
 export interface ConversationItem {
   contactId: number;
   contactName: string;
@@ -23,7 +25,8 @@ export const useChatLogic = () => {
   const { data: mensajes = [], isLoading } = useQuery<MensajeDto[]>({
     queryKey: ['misMensajes'],
     queryFn: async () => (await MensajeService.obtenerMisMensajes()).data,
-    refetchInterval: 5000
+    refetchInterval: REFETCH_INTERVAL,
+    refetchIntervalInBackground: false,
   });
 
   const conversations = useMemo((): ConversationItem[] => {
@@ -49,28 +52,36 @@ export const useChatLogic = () => {
         contactName: contactId === SYSTEM_USER_ID ? 'Soporte Técnico' : `${contactInfo?.nombre} ${contactInfo?.apellido}`,
         lastMessage: lastMsg,
         unreadCount: msgs.filter((m: MensajeDto) => m.id_receptor === user.id && !m.leido).length,
-        allMessages: msgs
+        allMessages: msgs,
       };
-    }).sort((a, b) => new Date(b.lastMessage.fecha_envio).getTime() - new Date(a.lastMessage.fecha_envio).getTime());
+    }).sort((a, b) =>
+      new Date(b.lastMessage.fecha_envio).getTime() - new Date(a.lastMessage.fecha_envio).getTime()
+    );
   }, [mensajes, user]);
 
   const sendMutation = useMutation({
     mutationFn: async () => {
-      if (!selectedContactId || !newMessage.trim()) return;
+      if (!selectedContactId || !newMessage.trim()) {
+        throw new Error('No hay destinatario o el mensaje está vacío.');
+      }
       return await MensajeService.enviarMensaje({ id_receptor: selectedContactId, contenido: newMessage });
     },
     onSuccess: () => {
       setNewMessage('');
       queryClient.invalidateQueries({ queryKey: ['misMensajes'] });
-    }
+    },
   });
 
-  const markReadMutation = useMutation({
+  const { mutate: markRead } = useMutation({
     mutationFn: (msgId: number) => MensajeService.marcarComoLeido(msgId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['misMensajes'] });
+    onSuccess: (_, msgId) => {
+
+      queryClient.setQueryData<MensajeDto[]>(['misMensajes'], (old = []) =>
+        old.map(m => (m.id === msgId ? { ...m, leido: true } : m))
+      );
+      // Solo invalida el conteo del badge (request pequeño, necesario para el navbar).
       queryClient.invalidateQueries({ queryKey: ['mensajesNoLeidos'] });
-    }
+    },
   });
 
   return {
@@ -82,6 +93,6 @@ export const useChatLogic = () => {
     newMessage,
     setNewMessage,
     sendMutation,
-    markReadMutation
+    markRead,
   };
 };

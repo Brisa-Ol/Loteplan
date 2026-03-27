@@ -23,10 +23,6 @@ import { useVerificarSuscripcion } from '../../hooks/useVerificarSuscripcion';
 import LoteCard from './components/LoteCard';
 import { PujarModal } from './modals/PujarModal';
 
-// ===================================================
-// SKELETON LOADER
-// ===================================================
-
 const LoteCardSkeleton = () => (
   <Box sx={{ borderRadius: 4, overflow: 'hidden', border: '1px solid', borderColor: 'divider' }}>
     <Skeleton variant="rectangular" height={200} />
@@ -38,10 +34,6 @@ const LoteCardSkeleton = () => (
     </Box>
   </Box>
 );
-
-// ===================================================
-// COMPONENTE PRINCIPAL
-// ===================================================
 
 interface ListaLotesProyectoProps {
   idProyecto: number;
@@ -55,14 +47,8 @@ const ListaLotesProyecto: React.FC<ListaLotesProyectoProps> = ({ idProyecto }) =
   const pujarModal = useModal();
   const [loteSeleccionado, setLoteSeleccionado] = useState<LoteDto | null>(null);
 
-  // Suscripción del usuario a este proyecto
-  const {
-    estaSuscripto,
-    tokensDisponibles,
-    isLoading: isLoadingSub,
-  } = useVerificarSuscripcion(idProyecto);
+  const { estaSuscripto, tokensDisponibles, isLoading: isLoadingSub } = useVerificarSuscripcion(idProyecto);
 
-  // Lotes del proyecto
   const { data: lotes, isLoading, isError } = useQuery({
     queryKey: ['lotes', 'proyecto', idProyecto],
     queryFn: async () => {
@@ -73,57 +59,45 @@ const ListaLotesProyecto: React.FC<ListaLotesProyectoProps> = ({ idProyecto }) =
     enabled: !!idProyecto,
   });
 
-  // ── Handlers ──
+  const handleNavigate = useCallback((id: number) => navigate(ROUTES.CLIENT.LOTES.DETALLE.replace(':id', String(id))), [navigate]);
 
-  const handleNavigate = useCallback(
-    (id: number) => navigate(ROUTES.CLIENT.LOTES.DETALLE.replace(':id', String(id))),
-    [navigate]
-  );
+  const handlePujar = useCallback((lote: LoteDto) => {
+    setLoteSeleccionado(lote);
+    pujarModal.open();
+  }, [pujarModal]);
 
-  const handlePujar = useCallback(
-    (lote: LoteDto) => {
-      setLoteSeleccionado(lote);
-      pujarModal.open();
-    },
-    [pujarModal]
-  );
+  // ✅ Funciones utilitarias para verificar la participación y liderazgo del lote seleccionado
+  const isLider = useCallback((lote: LoteDto) => {
+    if (!user) return false;
+    if (lote.id_puja_mas_alta && Array.isArray(lote.pujas)) {
+      const pLider = lote.pujas.find(p => p.id === lote.id_puja_mas_alta);
+      if (pLider) return Number(pLider.id_usuario) === Number(user.id);
+    }
+    if (lote.ultima_puja) return Number(lote.ultima_puja.id_usuario) === Number(user.id);
+    return false;
+  }, [user]);
 
-  // ── Estados de carga / error ──
+  const participa = useCallback((lote: LoteDto) => {
+    if (!user || !Array.isArray(lote.pujas)) return false;
+    return lote.pujas.some((p) => Number(p.id_usuario) === Number(user.id) && p.estado_puja !== 'cancelada');
+  }, [user]);
 
   if (isLoading) {
     return (
-      <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', xl: 'repeat(3, 1fr)' },
-          gap: 3,
-        }}
-      >
-        {Array.from({ length: 3 }).map((_, i) => (
-          <LoteCardSkeleton key={i} />
-        ))}
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', xl: 'repeat(3, 1fr)' }, gap: 3 }}>
+        {Array.from({ length: 3 }).map((_, i) => <LoteCardSkeleton key={i} />)}
       </Box>
     );
   }
 
-  if (isError) {
-    return (
-      <Alert severity="error" sx={{ borderRadius: 3 }}>
-        No se pudieron cargar los lotes. Intentá nuevamente más tarde.
-      </Alert>
-    );
-  }
+  if (isError) return <Alert severity="error" sx={{ borderRadius: 3 }}>No se pudieron cargar los lotes.</Alert>;
 
   if (!lotes || lotes.length === 0) {
     return (
       <Stack alignItems="center" justifyContent="center" spacing={2} py={8}>
         <FilterListOff sx={{ fontSize: 56, color: 'text.disabled' }} />
-        <Typography variant="h6" color="text.secondary" fontWeight={700}>
-          Sin lotes disponibles
-        </Typography>
-        <Typography variant="body2" color="text.disabled" textAlign="center">
-          Este proyecto aún no tiene lotes publicados para subasta.
-        </Typography>
+        <Typography variant="h6" color="text.secondary" fontWeight={700}>Sin lotes disponibles</Typography>
+        <Typography variant="body2" color="text.disabled" textAlign="center">Este proyecto aún no tiene lotes publicados para subasta.</Typography>
       </Stack>
     );
   }
@@ -132,29 +106,16 @@ const ListaLotesProyecto: React.FC<ListaLotesProyectoProps> = ({ idProyecto }) =
     <>
       <Stack direction="row" alignItems="center" spacing={1} mb={3}>
         <Gavel sx={{ color: 'text.secondary', fontSize: 20 }} />
-        <Typography variant="body2" color="text.secondary" fontWeight={700}>
-          {lotes.length} lote{lotes.length !== 1 ? 's' : ''} en subasta
-        </Typography>
+        <Typography variant="body2" color="text.secondary" fontWeight={700}>{lotes.length} lote{lotes.length !== 1 ? 's' : ''} en subasta</Typography>
         {isLoadingSub && <CircularProgress size={14} />}
       </Stack>
 
-      <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', xl: 'repeat(3, 1fr)' },
-          gap: 3,
-        }}
-      >
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', xl: 'repeat(3, 1fr)' }, gap: 3 }}>
         {lotes.map((lote) => (
           <LoteCard
-            key={lote.id}
-            lote={lote}
-            onNavigate={handleNavigate}
-            onPujar={handlePujar}
-            isSubscribed={estaSuscripto}
-            hasTokens={tokensDisponibles > 0}
-            isLoadingSub={isLoadingSub}
-            isAuthenticated={isAuthenticated}
+            key={lote.id} lote={lote} onNavigate={handleNavigate} onPujar={handlePujar}
+            isSubscribed={estaSuscripto} hasTokens={tokensDisponibles > 0}
+            isLoadingSub={isLoadingSub} isAuthenticated={isAuthenticated}
           />
         ))}
       </Box>
@@ -163,18 +124,8 @@ const ListaLotesProyecto: React.FC<ListaLotesProyectoProps> = ({ idProyecto }) =
         <PujarModal
           {...pujarModal.modalProps}
           lote={loteSeleccionado}
-          yaParticipa={
-            !!user &&
-            Array.isArray(loteSeleccionado.pujas) &&
-            loteSeleccionado.pujas.some(
-              // ✅ CORRECCIÓN: Reconoce participación si tiene una puja que NO está cancelada (activa o perdedora)
-              (p) => Number(p.id_usuario) === Number(user.id) && p.estado_puja !== 'cancelada'
-            )
-          }
-          soyGanador={
-            !!user &&
-            Number(loteSeleccionado.ultima_puja?.id_usuario) === Number(user.id)
-          }
+          yaParticipa={participa(loteSeleccionado)}
+          soyGanador={isLider(loteSeleccionado)}
           onSuccess={() => queryClient.invalidateQueries({ queryKey: ['lotes', 'proyecto', idProyecto] })}
         />
       )}

@@ -2,10 +2,8 @@ import { PageContainer, PageHeader } from '@/shared';
 import { Box, Paper, useTheme } from '@mui/material';
 import React, { useEffect, useRef } from 'react';
 
-// Importamos el Hook de lógica
 import { SYSTEM_USER_ID, useChatLogic } from './hooks/useChatLogic';
 
-// Importamos los Sub-componentes
 import ChatHeader from './components/ChatHeader';
 import ChatInput from './components/ChatInput';
 import ChatSidebar from './components/ChatSidebar';
@@ -16,7 +14,11 @@ const MensajesPage: React.FC = () => {
   const theme = useTheme();
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
-  // Extraemos toda la lógica y estado del Hook
+  // Registro de IDs ya enviados al backend para marcar como leídos.
+  // Aunque el efecto se re-ejecute (por polling o cambio de chat), nunca
+  // se duplica un PUT para el mismo mensaje.
+  const markedIdsRef = useRef(new Set<number>());
+
   const {
     user,
     conversations,
@@ -26,40 +28,52 @@ const MensajesPage: React.FC = () => {
     newMessage,
     setNewMessage,
     sendMutation,
-    markReadMutation
+    markRead,
   } = useChatLogic();
 
-  // Encontramos el chat que el usuario está viendo actualmente
   const activeChat = conversations.find(c => c.contactId === selectedContactId);
 
-  // 1. Efecto de Auto-selección inicial (selecciona el primero de la lista)
+  // Limpiar el registro al cambiar de conversación para que los mensajes
+  // no leídos del nuevo chat sí se procesen correctamente.
+  useEffect(() => {
+    markedIdsRef.current.clear();
+  }, [selectedContactId]);
+
+  // 1. Auto-selección inicial
   useEffect(() => {
     if (!selectedContactId && conversations.length > 0) {
       setSelectedContactId(conversations[0].contactId);
     }
   }, [conversations, selectedContactId, setSelectedContactId]);
 
-  // 2. Efecto de Scroll automático al recibir mensajes o cambiar de chat
+  // 2. Scroll automático al recibir mensajes nuevos o cambiar de chat
   useEffect(() => {
     if (chatContainerRef.current) {
       const { scrollHeight, clientHeight } = chatContainerRef.current;
       chatContainerRef.current.scrollTo({
         top: scrollHeight - clientHeight,
-        behavior: 'smooth'
+        behavior: 'smooth',
       });
     }
   }, [selectedContactId, activeChat?.allMessages.length]);
 
-  // 3. Efecto para marcar mensajes como leídos
+  // 3. Marcar mensajes como leídos.
+  // El ref `markedIdsRef` actúa como guardia: cada ID solo se envía una vez,
+  // independientemente de cuántas veces se re-ejecute el efecto (polling, etc.)
   useEffect(() => {
-    if (selectedContactId && user && activeChat) {
-      activeChat.allMessages.forEach(msg => {
-        if (msg.id_receptor === user.id && !msg.leido) {
-          markReadMutation.mutate(msg.id);
-        }
+    if (!selectedContactId || !user || !activeChat) return;
+
+    activeChat.allMessages
+      .filter(msg =>
+        msg.id_receptor === user.id &&
+        !msg.leido &&
+        !markedIdsRef.current.has(msg.id)
+      )
+      .forEach(msg => {
+        markedIdsRef.current.add(msg.id);
+        markRead(msg.id);
       });
-    }
-  }, [selectedContactId, activeChat, user, markReadMutation]);
+  }, [selectedContactId, user?.id, activeChat?.allMessages.length, markRead]);
 
   return (
     <PageContainer maxWidth="xl">
@@ -78,7 +92,6 @@ const MensajesPage: React.FC = () => {
           borderRadius: 3,
         }}
       >
-        {/* Lado Izquierdo: Lista de Chats */}
         <ChatSidebar
           conversations={conversations}
           selectedId={selectedContactId}
@@ -87,24 +100,19 @@ const MensajesPage: React.FC = () => {
           systemId={SYSTEM_USER_ID}
         />
 
-        {/* Lado Derecho: Contenido del Chat */}
         <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', bgcolor: '#f5f7fb' }}>
           {selectedContactId ? (
             <>
-              {/* Cabecera del chat seleccionado */}
               <ChatHeader
                 activeChat={activeChat}
                 systemId={SYSTEM_USER_ID}
+                selectedContactId={selectedContactId}
               />
-
-              {/* Área de burbujas de mensajes */}
               <MessageList
                 ref={chatContainerRef}
                 messages={activeChat?.allMessages || []}
                 currentUserId={user?.id}
               />
-
-              {/* Input para escribir nuevos mensajes */}
               <ChatInput
                 value={newMessage}
                 onChange={setNewMessage}
@@ -113,7 +121,6 @@ const MensajesPage: React.FC = () => {
               />
             </>
           ) : (
-            /* Estado cuando no hay nada seleccionado */
             <EmptyChatState />
           )}
         </Box>

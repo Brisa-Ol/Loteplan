@@ -31,6 +31,12 @@ export interface UpdatePaymentAmountDto {
   monto: number;
 }
 
+// 🆕 DTO para actualizar el estado general de un pago
+export interface UpdatePaymentStatusDto {
+  estado_pago: 'pendiente' | 'pagado' | 'vencido' | 'cancelado' | 'cubierto_por_puja' | 'forzado';
+  motivo?: string;
+}
+
 // ==========================================
 // 📥 RESPONSE DTOs (Lo que recibes)
 // ==========================================
@@ -45,8 +51,9 @@ export interface PagoDto extends BaseDTO {
   fecha_vencimiento: string; // ISO Date Only (YYYY-MM-DD)
   fecha_pago?: string;       // ISO Date Only
 
-estado_pago: 'pendiente' | 'pagado' | 'vencido' | 'cancelado' | 'cubierto_por_puja';
-suscripcion?: SuscripcionDto;
+  motivo?: string;
+  estado_pago: 'pendiente' | 'pagado' | 'vencido' | 'cancelado' | 'cubierto_por_puja' | 'forzado';
+  suscripcion?: SuscripcionDto;
 }
 
 /**

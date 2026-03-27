@@ -12,16 +12,7 @@ export type TipoDocumento = 'DNI' | 'PASAPORTE' | 'LICENCIA';
 // 📦 DTO PRINCIPAL (Modelo Completo)
 // ==========================================
 
-/**
- * Representación completa de un registro de Verificación de Identidad (KYC).
- * Refleja la tabla `verificacion_identidad` y sus relaciones.
- *
- * Hereda de BaseDTO: id, activo, fecha_creacion, fecha_actualizacion.
- *
- * Nota sobre timestamps: Sequelize manda createdAt/updatedAt en toJSON().
- * BaseDTO los declara como fecha_creacion/fecha_actualizacion.
- * createdAt se incluye aquí porque es el nombre real que llega del back.
- */
+
 export interface KycDTO extends BaseDTO {
 
   /** ID del usuario dueño de la verificación (FK). */

@@ -1,4 +1,4 @@
-// src/features/admin/hooks/useAdminPujas.ts
+// src/features/admin/hooks/lotes/useAdminPujas.ts
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import LoteService from '@/core/api/services/lote.service';
 import PujaService from '@/core/api/services/puja.service';
 import UsuarioService from '@/core/api/services/usuario.service';
-import { env } from '@/core/config/env'; // 👈 1. Importamos la configuración
+import { env } from '@/core/config/env';
 
 import type { LoteDto } from '@/core/types/lote.dto';
 import type { PujaDto } from '@/core/types/puja.dto';
@@ -14,10 +14,8 @@ import type { UsuarioDto } from '@/core/types/usuario.dto';
 import { useConfirmDialog, useModal, useSnackbar } from '@/shared/hooks';
 import { useSortedData } from '../useSortedData';
 
+// ─── Debounce helper ─────────────────────────────────────────────────────────
 
-// ============================================================================
-// DEBOUNCE HELPER
-// ============================================================================
 function useDebouncedValue<T>(value: T, delay: number = 300): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
   useEffect(() => {
@@ -27,33 +25,34 @@ function useDebouncedValue<T>(value: T, delay: number = 300): T {
   return debouncedValue;
 }
 
+// ─── Hook ─────────────────────────────────────────────────────────────────────
+
 export const useAdminPujas = () => {
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useSnackbar();
 
-  // --- MODALES (Nivel Superior) ---
+  // ─── Modales ───────────────────────────────────────────────────────────────
+
   const detallePujaModal = useModal();
   const confirmDialog = useConfirmDialog();
 
   const modales = useMemo(() => ({
     detallePuja: detallePujaModal,
-    confirmDialog: confirmDialog
+    confirmDialog,
   }), [detallePujaModal, confirmDialog]);
 
-  // --- ESTADOS UI ---
+  // ─── Estados UI ───────────────────────────────────────────────────────────
+
   const [tabValue, setTabValue] = useState(0);
   const [filterLoteNombre, setFilterLoteNombre] = useState('');
   const [filterUserId, setFilterUserId] = useState('');
-
-  // Selección
   const [pujaSeleccionada, setPujaSeleccionada] = useState<PujaDto | null>(null);
 
-  // Debounce
   const debouncedFilterLote = useDebouncedValue(filterLoteNombre, 300);
 
-  // --- QUERIES INTELIGENTES ---
+  // ─── Queries ──────────────────────────────────────────────────────────────
 
-  // 1. Usuarios (Cache agresivo - Es un diccionario)
+  // Usuarios — diccionario, cache agresivo
   const { data: usuarios = [] } = useQuery<UsuarioDto[]>({
     queryKey: ['adminUsuarios', 'simple'],
     queryFn: async () => (await UsuarioService.findAll()).data,
@@ -61,37 +60,34 @@ export const useAdminPujas = () => {
     gcTime: 1000 * 60 * 30,
   });
 
-  // 2. Lotes
+  // Lotes — polling solo en tab "En Vivo"
   const {
     data: lotesRaw = [],
     isLoading: loadingLotes,
-    error: errorLotes
+    error: errorLotes,
   } = useQuery<LoteDto[]>({
     queryKey: ['adminLotes', tabValue === 0 ? 'active' : 'all'],
     queryFn: async () => {
       if (tabValue === 0) return (await LoteService.getAllActive()).data;
       return (await LoteService.findAllAdmin()).data;
     },
-    // 👈 2. El polling del Tab 0 se mantiene en 10s, el resto no pollea.
-    refetchInterval: tabValue === 0 ? 10000 : false,
-    // 👈 3. Aplicamos env.queryStaleTime solo al Tab general (no en vivo)
-    staleTime: tabValue === 0 ? 5000 : (env.queryStaleTime || 30000),
+    refetchInterval: tabValue === 0 ? 10_000 : false,
+    staleTime: tabValue === 0 ? 5_000 : (env.queryStaleTime || 30_000),
   });
 
-  // 3. Pujas (SOLO para TAB 0 - En Vivo)
+  // Pujas activas — solo para tab 0 (En Vivo), polling agresivo
   const {
     data: pujasActivas = [],
     isLoading: loadingPujas,
-    error: errorPujas
+    error: errorPujas,
   } = useQuery<PujaDto[]>({
     queryKey: ['adminPujas', 'active'],
     queryFn: async () => (await PujaService.getAllActive()).data,
     enabled: tabValue === 0,
-    // 👈 4. El polling de pujas se mantiene agresivo (5s) por ser "En Vivo"
-    refetchInterval: 5000,
+    refetchInterval: 5_000,
   });
 
-  // --- PROCESAMIENTO DE DATOS ---
+  // ─── Procesamiento ────────────────────────────────────────────────────────
 
   const usuariosMap = useMemo(() => {
     const map: Record<number, string> = {};
@@ -101,12 +97,12 @@ export const useAdminPujas = () => {
     return map;
   }, [usuarios]);
 
-  // ✅ La función ahora simplemente busca en el diccionario
-  const getUserName = useCallback((id: number) => {
-    return usuariosMap[id] || `ID #${id}`;
-  }, [usuariosMap]);
+  const getUserName = useCallback(
+    (id: number) => usuariosMap[id] || `ID #${id}`,
+    [usuariosMap]
+  );
 
-  // Mapa de Pujas
+  // Mapa de pujas por lote, ordenado por monto desc
   const pujasPorLote = useMemo(() => {
     if (tabValue !== 0) return {};
     const map: Record<number, PujaDto[]> = {};
@@ -123,33 +119,34 @@ export const useAdminPujas = () => {
     return map;
   }, [pujasActivas, tabValue]);
 
-  // Filtrado General de Lotes
   const { sortedData: filteredLotes, highlightedId, triggerHighlight } = useSortedData(lotesRaw);
 
-  // Analytics y Listas por Tab
+  // Analytics por tab
   const analytics = useMemo(() => {
     const search = debouncedFilterLote.toLowerCase();
 
-    const lotesFiltradosPorNombre = filteredLotes.filter(l =>
+    const lotesFiltrados = filteredLotes.filter(l =>
       !search || l.nombre_lote.toLowerCase().includes(search)
     );
 
-    // Tab 0: Activos
-    const activos = lotesFiltradosPorNombre.filter(l => l.estado_subasta === 'activa');
+    const activos = lotesFiltrados.filter(l => l.estado_subasta === 'activa');
 
-    // Tab 1: Gestión de Cobros
-    const pendientesPago = lotesFiltradosPorNombre.filter(l =>
+    const pendientesPago = lotesFiltrados.filter(l =>
       l.estado_subasta === 'finalizada' &&
       l.id_ganador &&
       (l.intentos_fallidos_pago || 0) < 3
     );
 
-    // Tab 2: Impagos / Riesgo
-    const lotesEnRiesgo = lotesFiltradosPorNombre.filter(l => (l.intentos_fallidos_pago || 0) > 0);
+    const lotesEnRiesgo = lotesFiltrados.filter(l =>
+      (l.intentos_fallidos_pago || 0) > 0
+    );
 
+    // useAdminPujas.ts — en analytics
     const dineroEnJuego = activos.reduce((acc, lote) => {
       const topPuja = pujasPorLote[lote.id]?.[0];
-      return acc + (topPuja ? Number(topPuja.monto_puja) : Number(lote.precio_base));
+      // ✅ fallback a pujaMasAlta si aún no cargaron las pujasActivas
+      const monto = topPuja?.monto_puja ?? lote.pujaMasAlta?.monto_puja ?? lote.precio_base;
+      return acc + Number(monto);
     }, 0);
 
     return {
@@ -157,11 +154,11 @@ export const useAdminPujas = () => {
       pendientesPago,
       lotesEnRiesgo,
       dineroEnJuego,
-      totalPujas: pujasActivas.length
+      totalPujas: pujasActivas.length,
     };
   }, [filteredLotes, debouncedFilterLote, pujasPorLote, pujasActivas.length]);
 
-  // --- MUTACIONES ---
+  // ─── Mutaciones ───────────────────────────────────────────────────────────
 
   const endAuctionMutation = useMutation({
     mutationFn: (id: number) => LoteService.endAuction(id),
@@ -172,46 +169,46 @@ export const useAdminPujas = () => {
       modales.confirmDialog.close();
       triggerHighlight(id);
     },
-    onError: () => { showError('Error al finalizar'); modales.confirmDialog.close(); }
+    onError: () => {
+      showError('Error al finalizar la subasta');
+      modales.confirmDialog.close();
+    },
   });
 
   const forceFinishMutation = useMutation({
-    mutationFn: ({ idLote, idGanador }: { idLote: number, idGanador: number | null }) =>
+    mutationFn: ({ idLote, idGanador }: { idLote: number; idGanador: number | null }) =>
       PujaService.manageAuctionEnd(idLote, idGanador),
-    onSuccess: (_, variables) => {
-      showSuccess("Gestión ejecutada manualmente.");
+    onSuccess: (_, { idLote }) => {
+      showSuccess('Gestión ejecutada manualmente.');
       queryClient.invalidateQueries({ queryKey: ['adminLotes'] });
-      triggerHighlight(variables.idLote);
+      queryClient.invalidateQueries({ queryKey: ['adminPujas'] });
+      triggerHighlight(idLote);
       modales.confirmDialog.close();
     },
     onError: (err: any) => {
       showError(`Error: ${err.response?.data?.error || 'Datos inválidos'}`);
       modales.confirmDialog.close();
-    }
+    },
   });
 
   const cancelarGanadoraMutation = useMutation({
-    mutationFn: async ({ id, motivo }: { id: number; motivo: string }) => {
-      return await PujaService.cancelarGanadoraAnticipada(id, motivo);
-    },
-    onSuccess: (res) => {
+    mutationFn: ({ id, motivo }: { id: number; motivo: string }) =>
+      PujaService.cancelarGanadoraAnticipada(id, motivo),
+    onSuccess: res => {
       queryClient.invalidateQueries({ queryKey: ['adminLotes'] });
-      const msg = res.data?.message || 'Adjudicación anulada y token devuelto.';
-      showSuccess(`✅ ${msg}`);
+      queryClient.invalidateQueries({ queryKey: ['adminPujas'] });
+      showSuccess(`✅ ${res.data?.message || 'Adjudicación anulada y token devuelto.'}`);
       modales.confirmDialog.close();
     },
     onError: (err: any) => {
       showError(err.response?.data?.message || 'Error al cancelar adjudicación');
       modales.confirmDialog.close();
-    }
+    },
   });
 
-  // 🆕 Mutación para Revertir Pago
   const revertirPagoMutation = useMutation({
-    mutationFn: async (idPuja: number) => {
-      return await PujaService.revertWinnerPayment(idPuja);
-    },
-    onSuccess: (res) => {
+    mutationFn: (idPuja: number) => PujaService.revertWinnerPayment(idPuja),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminLotes'] });
       queryClient.invalidateQueries({ queryKey: ['adminPujas'] });
       showSuccess('✅ Pago revertido a estado pendiente.');
@@ -220,55 +217,59 @@ export const useAdminPujas = () => {
     onError: (err: any) => {
       showError(err.response?.data?.message || 'Error al revertir pago');
       modales.confirmDialog.close();
-    }
+    },
   });
 
-  // --- HANDLERS ---
+  // ─── Handlers ─────────────────────────────────────────────────────────────
+
+  /**
+   * Abre el modal de detalle para una puja específica.
+   * Centraliza la lógica de selección + apertura de modal.
+   */
+  const handleOpenDetallePuja = useCallback((puja: PujaDto) => {
+    setPujaSeleccionada(puja);
+    modales.detallePuja.open();
+  }, [modales.detallePuja]);
+
+  const handleCloseDetallePuja = useCallback(() => {
+    modales.detallePuja.close();
+    // Pequeño delay para no mostrar null mientras cierra la animación
+    setTimeout(() => setPujaSeleccionada(null), 300);
+  }, [modales.detallePuja]);
 
   const handleFinalizarSubasta = useCallback((lote: LoteDto) => {
     modales.confirmDialog.confirm('end_auction', lote);
   }, [modales.confirmDialog]);
 
-  // 🆕 Handler para el botón "Sancionar/Forzar Finalización"
   const handleForceFinish = useCallback((lote: LoteDto) => {
     modales.confirmDialog.confirm('force_finish', {
       idLote: lote.id,
-      idGanador: lote.id_ganador
+      idGanador: lote.id_ganador,
     });
   }, [modales.confirmDialog]);
 
-  // 🆕 Handler para el botón "Revertir Pago"
   const handleRevertirPago = useCallback((lote: LoteDto) => {
     if (lote.id_puja_mas_alta) {
-      modales.confirmDialog.confirm('revert_payment', {
-        pujaId: lote.id_puja_mas_alta
-      });
+      modales.confirmDialog.confirm('revert_payment', { pujaId: lote.id_puja_mas_alta });
     } else {
       showError('No hay puja ganadora asociada para revertir.');
     }
   }, [modales.confirmDialog, showError]);
 
-  const handleCancelarAdjudicacion = useCallback(async (lote: LoteDto) => {
-    try {
-      if (lote.id_puja_mas_alta) {
-        modales.confirmDialog.confirm('cancel_ganadora_anticipada', {
-          ...lote,
-          pujaId: lote.id_puja_mas_alta,
-          id_ganador: lote.id_ganador
-        });
-      } else {
-        showError('No se pudo identificar la puja ganadora automáticamente.');
-      }
-    } catch (e) {
-      console.error(e);
-      showError('Error al preparar cancelación');
+  const handleCancelarAdjudicacion = useCallback((lote: LoteDto) => {
+    if (lote.id_puja_mas_alta) {
+      modales.confirmDialog.confirm('cancel_ganadora_anticipada', {
+        ...lote,
+        pujaId: lote.id_puja_mas_alta,
+      });
+    } else {
+      showError('No se pudo identificar la puja ganadora automáticamente.');
     }
   }, [modales.confirmDialog, showError]);
 
-  // ⚡ ORQUESTADOR CENTRAL DE CONFIRMACIONES
+  // Orquestador central de confirmaciones
   const handleConfirmAction = useCallback((inputValue?: string) => {
     const { action, data } = modales.confirmDialog;
-
     if (!data) return;
 
     switch (action) {
@@ -276,18 +277,13 @@ export const useAdminPujas = () => {
         endAuctionMutation.mutate(data.id);
         break;
       case 'cancel_ganadora_anticipada':
-        // ✅ CAMBIO 2: Si no hay inputValue, mandamos un string genérico 
-        // o dejamos que pase para que el backend asigne el suyo por defecto.
         cancelarGanadoraMutation.mutate({
           id: data.pujaId,
-          motivo: inputValue?.trim() || "Cancelación administrativa desde el panel"
+          motivo: inputValue?.trim() || 'Cancelación administrativa desde el panel',
         });
         break;
       case 'force_finish':
-        forceFinishMutation.mutate({
-          idLote: data.idLote,
-          idGanador: data.idGanador
-        });
+        forceFinishMutation.mutate({ idLote: data.idLote, idGanador: data.idGanador });
         break;
       case 'revert_payment':
         revertirPagoMutation.mutate(data.pujaId);
@@ -295,46 +291,52 @@ export const useAdminPujas = () => {
     }
   }, [modales.confirmDialog, endAuctionMutation, cancelarGanadoraMutation, forceFinishMutation, revertirPagoMutation]);
 
+  // ─── Return ───────────────────────────────────────────────────────────────
+
   return {
-    // Estado
+    // Estado UI
     tabValue, setTabValue,
     filterLoteNombre, setFilterLoteNombre,
     filterUserId, setFilterUserId,
 
-    // UX Props
+    // UX
     highlightedId,
 
-    // Datos y Loading
+    // Loading / Error
     loading: loadingLotes || (tabValue === 0 && loadingPujas),
     error: errorLotes || (tabValue === 0 ? errorPujas : null),
 
-    // Estado global de mutación (útil para deshabilitar botones)
-    isMutating: endAuctionMutation.isPending ||
+    isMutating:
+      endAuctionMutation.isPending ||
       forceFinishMutation.isPending ||
       cancelarGanadoraMutation.isPending ||
       revertirPagoMutation.isPending,
 
+    // Datos
     analytics,
     pujasPorLote,
     getUserName,
 
-    // Seleccionados
-    pujaSeleccionada, setPujaSeleccionada,
+    // Puja seleccionada
+    pujaSeleccionada,
+    setPujaSeleccionada,
 
     // Modales
     modales,
 
-    // Actions (API para el Componente)
+    // Handlers
+    handleOpenDetallePuja,
+    handleCloseDetallePuja,
     handleFinalizarSubasta,
     handleCancelarAdjudicacion,
-    handleRevertirPago, // ✅ Ahora existe
-    handleForceFinish,  // ✅ Ahora existe
+    handleRevertirPago,
+    handleForceFinish,
     handleConfirmAction,
 
     // Mutations (por si se necesitan individualmente)
+    endAuctionMutation,
     forceFinishMutation,
     cancelarGanadoraMutation,
-    endAuctionMutation,
-    revertirPagoMutation
+    revertirPagoMutation,
   };
 };

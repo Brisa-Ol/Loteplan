@@ -2,9 +2,9 @@
 
 import SuscripcionService from '@/core/api/services/suscripcion.service';
 import type { SuscripcionCanceladaDto } from '@/core/types/suscripcion.dto';
-import { BaseModal, DataTable, FilterBar, FilterSearch, QueryHandler, StatCard, useModal } from '@/shared';
-import { Cancel, CheckCircle, Clear as ClearIcon, MoneyOff, ReportProblem, TrendingDown } from '@mui/icons-material';
-import { Box, Button, Chip, Paper, Stack, TextField, Typography, useTheme } from '@mui/material';
+import { BaseModal, DataTable, FilterBar, FilterSearch, QueryHandler, StatCard, useModal, type DataTableColumn } from '@/shared';
+import { Cancel, CheckCircle, Clear as ClearIcon, MoneyOff, ReportProblem, TrendingDown, Visibility } from '@mui/icons-material';
+import { alpha, Box, Button, Chip, IconButton, Paper, Stack, TextField, Typography, useTheme } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { useCallback, useMemo, useState } from 'react';
 import useCancelacionesColumns from '../hooks/useCancelacionesColumns';
@@ -83,8 +83,8 @@ const CancelacionesTab: React.FC = () => {
         detailModal.open();
     }, [detailModal]);
 
-    // ✅ Columnas extendidas con Botón / Check
-    const columnsWithDevolucion = useMemo(() => [
+
+    const columnsWithDevolucion = useMemo<DataTableColumn<SuscripcionCanceladaDto>[]>(() => [
         ...baseColumns,
         {
             id: 'devolucion',
@@ -109,7 +109,7 @@ const CancelacionesTab: React.FC = () => {
                         size="small"
                         disabled={isMutating}
                         onClick={(e) => {
-                            e.stopPropagation(); // Evita que se abra el modal de detalle de la fila
+                            e.stopPropagation();
                             setRefundTargetId(row.id);
                             setRefundModalOpen(true);
                         }}
@@ -118,8 +118,25 @@ const CancelacionesTab: React.FC = () => {
                     </Button>
                 );
             },
+        },
+        {
+            id: 'acciones',
+            label: '',
+            align: 'right' as const, // 👈 SOLUCIÓN AL ERROR DE TIPADO
+            render: (row: SuscripcionCanceladaDto) => (
+                <IconButton
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        handleVerDetalle(row);
+                    }}
+                    size="small"
+                    sx={{ color: 'primary.main', bgcolor: alpha(theme.palette.primary.main, 0.05), ml: 1 }}
+                >
+                    <Visibility fontSize="small" />
+                </IconButton>
+            )
         }
-    ], [baseColumns, isMutating]);
+    ], [baseColumns, isMutating, handleVerDetalle, theme]);
 
     const isFiltered = !!(startDate || endDate || searchTerm);
 

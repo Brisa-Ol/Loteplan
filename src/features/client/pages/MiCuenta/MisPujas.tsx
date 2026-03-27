@@ -1,43 +1,65 @@
 // src/features/client/pages/Pujas/MisPujas.tsx
 
+import PujaService from '@/core/api/services/puja.service';
+import type { PujaDto } from '@/core/types/puja.dto';
+import { ROUTES } from '@/routes';
+import { BaseModal, DataTable, PageContainer, PageHeader, QueryHandler, StatCard, useModal, type DataTableColumn } from '@/shared';
+import TwoFactorAuthModal from '@/shared/components/domain/modals/TwoFactorAuthModal';
 import {
-  CalendarMonth,
-  Cancel, CheckCircle, EmojiEvents, Gavel,
+  Cancel,
+  Celebration,
+  CheckCircle, EmojiEvents, Gavel,
+  InfoOutlined,
   MonetizationOn,
   Payment, Visibility
 } from '@mui/icons-material';
 import {
-  Box, Button, Chip, IconButton, Paper, Stack,
+  alpha,
+  Avatar,
+  Box, Button, Chip,
+  Divider,
+  IconButton, Paper, Stack,
   Tab, Tabs, Tooltip, Typography,
   useTheme
 } from '@mui/material';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import React, { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-// Servicios y Tipos
-import PujaService from '@/core/api/services/puja.service';
-import type { PujaDto } from '@/core/types/puja.dto';
-import { ROUTES } from '@/routes';
-import { DataTable, PageContainer, PageHeader, QueryHandler, StatCard, useModal, type DataTableColumn } from '@/shared';
-import TwoFactorAuthModal from '@/shared/components/domain/modals/TwoFactorAuthModal';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import useSnackbar from '../../../../shared/hooks/useSnackbar';
 import { useCurrencyFormatter } from '../../hooks/useCurrencyFormatter';
 
 const MisPujas: React.FC = () => {
   const navigate = useNavigate();
   const theme = useTheme();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { showError } = useSnackbar();
   const formatCurrency = useCurrencyFormatter();
 
   const [tabValue, setTabValue] = useState(0);
   const twoFaModal = useModal();
-  const [selectedPujaId, setSelectedPujaId] = useState<number | null>(null);
+  const checkoutModal = useModal();
+  const successPaymentModal = useModal();
+
+  const [selectedPuja, setSelectedPuja] = useState<PujaDto | null>(null);
   const [twoFAError, setTwoFAError] = useState<string | null>(null);
 
-  const { data: misPujas = [], isLoading, error } = useQuery<PujaDto[]>({
+  // --- QUERIES ---
+  const { data: misPujas = [], isLoading, error, refetch } = useQuery<PujaDto[]>({
     queryKey: ['misPujas'],
     queryFn: async () => (await PujaService.getMyPujas()).data,
   });
+
+  // LÓGICA DE DETECCIÓN DE PAGO EXITOSO AL VOLVER DE MERCADO PAGO
+  useEffect(() => {
+    const status = searchParams.get('status');
+    const collectionStatus = searchParams.get('collection_status');
+
+    if (status === 'approved' || collectionStatus === 'approved') {
+      successPaymentModal.open();
+      setSearchParams({}); // Limpiar URL
+      refetch(); // Actualizar tabla para ver el estado 'ganadora_pagada'
+    }
+  }, [searchParams, refetch]);
 
   const { activePujas, historyPujas, stats } = useMemo(() => {
     const activeStates = ['activa', 'ganadora_pendiente'];
@@ -45,7 +67,11 @@ const MisPujas: React.FC = () => {
     const history = misPujas.filter(p => !activeStates.includes(p.estado_puja));
 
     const totalComprometido = active.reduce((acc, curr) => acc + Number(curr.monto_puja || 0), 0);
-    const ganadas = misPujas.filter(p => ['ganadora_pagada', 'ganadora_pendiente'].includes(p.estado_puja)).length;
+    
+    // ✅ CORREGIDO: Usamos estado_puja y el valor correcto 'ganadora_pagada'
+    const ganadas = misPujas.filter(p => 
+      ['ganadora_pagada', 'ganadora_pendiente'].includes(p.estado_puja)
+    ).length;
 
     return {
       activePujas: active.sort((a, b) => new Date(b.fecha_puja).getTime() - new Date(a.fecha_puja).getTime()),
@@ -54,12 +80,16 @@ const MisPujas: React.FC = () => {
     };
   }, [misPujas]);
 
+  // --- HANDLERS ---
+  const handlePagarClick = (puja: PujaDto) => {
+    setSelectedPuja(puja);
+    checkoutModal.open();
+  };
+
   const iniciarPagoMutation = useMutation({
-    mutationFn: async (pujaId: number) => {
-      setSelectedPujaId(pujaId);
-      return await PujaService.initiatePayment(pujaId);
-    },
+    mutationFn: async (pujaId: number) => await PujaService.initiatePayment(pujaId),
     onSuccess: (res: any) => {
+      checkoutModal.close();
       if (res.data?.is2FARequired || res.status === 202) {
         setTwoFAError(null);
         twoFaModal.open();
@@ -71,31 +101,28 @@ const MisPujas: React.FC = () => {
   });
 
   const confirmar2FAMutation = useMutation({
-    mutationFn: (codigo: string) =>
-      PujaService.confirmPayment2FA({ pujaId: selectedPujaId!, codigo_2fa: codigo }),
+    mutationFn: (code: string) =>
+      PujaService.confirmPayment2FA({
+        pujaId: selectedPuja!.id,
+        codigo_2fa: code
+      }),
     onSuccess: (res: any) => {
-      if (res.data?.url_checkout) window.location.href = res.data.url_checkout;
+      if (res.data?.url_checkout) {
+        window.location.href = res.data.url_checkout;
+      }
       twoFaModal.close();
     },
     onError: (err: any) => setTwoFAError(err.response?.data?.message || "Código incorrecto")
   });
 
-  // ── COLUMNAS CORREGIDAS ──
   const columns = useMemo<DataTableColumn<PujaDto>[]>(() => [
     {
       id: 'proyecto',
       label: 'Proyecto',
       minWidth: 200,
       render: (puja) => {
-        // ✅ SOLUCIÓN: Buscamos en el path del JSON real y fallback al DTO
-        const nombreProj = (puja.lote as any)?.proyectoLote?.nombre_proyecto
-          || puja.proyectoAsociado?.nombre_proyecto
-          || 'Proyecto General';
-        return (
-          <Typography variant="subtitle2" fontWeight={800} color="primary.main">
-            {nombreProj}
-          </Typography>
-        );
+        const nombreProj = (puja.lote as any)?.proyectoLote?.nombre_proyecto || puja.proyectoAsociado?.nombre_proyecto || 'Proyecto General';
+        return <Typography variant="subtitle2" fontWeight={800} color="primary.main">{nombreProj}</Typography>;
       }
     },
     {
@@ -105,9 +132,7 @@ const MisPujas: React.FC = () => {
       render: (puja) => (
         <Stack direction="row" spacing={1} alignItems="center">
           <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: puja.estado_puja === 'activa' ? 'success.main' : 'divider' }} />
-          <Typography variant="body2" fontWeight={600}>
-            {puja.lote?.nombre_lote || `Lote #${puja.id_lote}`}
-          </Typography>
+          <Typography variant="body2" fontWeight={600}>{puja.lote?.nombre_lote || `Lote #${puja.id_lote}`}</Typography>
         </Stack>
       )
     },
@@ -115,11 +140,7 @@ const MisPujas: React.FC = () => {
       id: 'monto',
       label: 'Mi Oferta',
       minWidth: 140,
-      render: (puja) => (
-        <Typography variant="body2" fontWeight={700}>
-          {formatCurrency(puja.monto_puja)}
-        </Typography>
-      )
+      render: (puja) => <Typography variant="body2" fontWeight={700}>{formatCurrency(puja.monto_puja)}</Typography>
     },
     {
       id: 'estado',
@@ -137,17 +158,6 @@ const MisPujas: React.FC = () => {
       }
     },
     {
-      id: 'fecha',
-      label: 'Fecha',
-      minWidth: 120,
-      render: (puja) => (
-        <Typography variant="caption" color="text.secondary" display="flex" alignItems="center" gap={0.5}>
-          <CalendarMonth sx={{ fontSize: 14 }} />
-          {new Date(puja.fecha_puja).toLocaleDateString()}
-        </Typography>
-      )
-    },
-    {
       id: 'acciones',
       label: 'Gestión',
       align: 'right',
@@ -156,7 +166,7 @@ const MisPujas: React.FC = () => {
           {puja.estado_puja === 'ganadora_pendiente' && (
             <Button
               variant="contained" color="warning" size="small"
-              onClick={() => iniciarPagoMutation.mutate(puja.id)}
+              onClick={() => handlePagarClick(puja)}
               disabled={iniciarPagoMutation.isPending}
               startIcon={<Payment />}
               sx={{ fontWeight: 800, borderRadius: 2 }}
@@ -197,11 +207,84 @@ const MisPujas: React.FC = () => {
             columns={columns}
             data={tabValue === 0 ? activePujas : historyPujas}
             getRowKey={(row) => row.id}
-            emptyMessage={tabValue === 0 ? "No tienes ofertas activas." : "El historial está vacío."}
             pagination
           />
         </Paper>
       </QueryHandler>
+
+      {/* MODAL DE RESUMEN DE PAGO */}
+      <BaseModal
+        open={checkoutModal.isOpen}
+        onClose={checkoutModal.close}
+        title="Resumen de Adjudicación"
+        maxWidth="xs"
+        confirmText="Continuar al Pago"
+        onConfirm={() => iniciarPagoMutation.mutate(selectedPuja!.id)}
+        isLoading={iniciarPagoMutation.isPending}
+        headerColor="success"
+        icon={<EmojiEvents />}
+      >
+        {selectedPuja && (
+          <Stack spacing={3}>
+            <Box sx={{ textAlign: 'center', py: 1 }}>
+              <Typography variant="h6" fontWeight={900} color="success.main">¡Felicitaciones!</Typography>
+              <Typography variant="body2" color="text.secondary">Has ganado la subasta para el siguiente lote:</Typography>
+            </Box>
+
+            <Paper variant="outlined" sx={{ p: 2, bgcolor: alpha(theme.palette.primary.main, 0.02), borderRadius: 2 }}>
+              <Stack spacing={1.5}>
+                <Box display="flex" justifyContent="space-between">
+                  <Typography variant="caption" fontWeight={700} color="text.secondary">PROYECTO</Typography>
+                  <Typography variant="body2" fontWeight={800}>{(selectedPuja.lote as any)?.proyectoLote?.nombre_proyecto || 'General'}</Typography>
+                </Box>
+                <Box display="flex" justifyContent="space-between">
+                  <Typography variant="caption" fontWeight={700} color="text.secondary">LOTE</Typography>
+                  <Typography variant="body2" fontWeight={800}>{selectedPuja.lote?.nombre_lote}</Typography>
+                </Box>
+                <Divider />
+                <Box display="flex" justifyContent="space-between" alignItems="center">
+                  <Typography variant="subtitle2" fontWeight={900}>TOTAL A PAGAR</Typography>
+                  <Typography variant="h6" fontWeight={900} color="primary.main">{formatCurrency(selectedPuja.monto_puja)}</Typography>
+                </Box>
+              </Stack>
+            </Paper>
+
+            <Box sx={{ display: 'flex', gap: 1.5, p: 1.5, bgcolor: alpha(theme.palette.info.main, 0.05), borderRadius: 2, border: `1px solid ${alpha(theme.palette.info.main, 0.1)}` }}>
+              <InfoOutlined color="info" fontSize="small" />
+              <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.4 }}>
+                Al continuar, se generará una orden de pago segura.
+              </Typography>
+            </Box>
+          </Stack>
+        )}
+      </BaseModal>
+
+      {/* MODAL DE PAGO EXITOSO */}
+      <BaseModal
+        open={successPaymentModal.isOpen}
+        onClose={successPaymentModal.close}
+        title="¡Pago Confirmado!"
+        maxWidth="xs"
+        hideConfirmButton
+        cancelText="Entendido"
+        headerColor="success"
+        icon={<CheckCircle />}
+      >
+        <Stack spacing={2} alignItems="center" sx={{ textAlign: 'center', py: 2 }}>
+          <Avatar sx={{ bgcolor: alpha(theme.palette.success.main, 0.1), width: 60, height: 60 }}>
+            <Celebration sx={{ color: 'success.main', fontSize: 35 }} />
+          </Avatar>
+          <Box>
+            <Typography variant="h6" fontWeight={900}>¡Adjudicación Exitosa!</Typography>
+            <Typography variant="body2" color="text.secondary">
+              Tu lote ya figura como <b>ADJUDICADO</b>. Puedes revisarlo en tu historial.
+            </Typography>
+          </Box>
+          <Button variant="contained" color="success" fullWidth onClick={successPaymentModal.close} sx={{ mt: 2, fontWeight: 800 }}>
+            Cerrar
+          </Button>
+        </Stack>
+      </BaseModal>
 
       <TwoFactorAuthModal
         open={twoFaModal.isOpen}

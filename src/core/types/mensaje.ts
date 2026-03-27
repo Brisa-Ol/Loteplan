@@ -5,7 +5,7 @@ import type { BaseDTO } from "./base.dto";
 // ==========================================
 
 export interface CreateMensajeDto {
-  id_receptor: number; // ID del destinatario
+  id_receptor: number;
   contenido: string;
 }
 
@@ -26,12 +26,13 @@ export interface MensajeDto extends BaseDTO {
   contenido: string;
   fecha_envio: string; // ISO Date
   leido: boolean;
-  
+
   // Relaciones (Include del backend)
   remitente?: UsuarioMensajeDto;
   receptor?: UsuarioMensajeDto;
 }
 
+
 export interface ConteoNoLeidosDto {
-  count: number; // Tu backend devuelve { count: N } o similar, verificar controller
+  conteo: number;
 }

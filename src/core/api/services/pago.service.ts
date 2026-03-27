@@ -1,5 +1,4 @@
-
-import type { ConfirmarPago2faDto, CreatePagoManualDto, GenerateAdvancePaymentsDto, MonthlyMetricsDto, OnTimeMetricsDto, PagoCheckoutResponse, PagoDto, UpdatePaymentAmountDto } from '@/core/types/pago.dto';
+import type { ConfirmarPago2faDto, CreatePagoManualDto, GenerateAdvancePaymentsDto, MonthlyMetricsDto, OnTimeMetricsDto, PagoCheckoutResponse, PagoDto, UpdatePaymentAmountDto, UpdatePaymentStatusDto } from '@/core/types/pago.dto';
 import type { AxiosResponse } from 'axios';
 import httpService from '../httpService';
 import type { GenericResponseDto } from '@/core/types/auth.dto';
@@ -26,6 +25,11 @@ const PagoService = {
 
   confirmarPago2FA: async (data: ConfirmarPago2faDto): Promise<AxiosResponse<PagoCheckoutResponse>> => {
     return await httpService.post(`${BASE_ENDPOINT}/confirmar-pago-2fa`, data);
+  },
+
+  // 🆕 Obtiene el historial de pagos de una suscripción propia del usuario autenticado
+  getMySubscriptionHistory: async (suscripcionId: number): Promise<AxiosResponse<{ message: string, data: PagoDto[] }>> => {
+    return await httpService.get(`${BASE_ENDPOINT}/historial/mi-suscripcion/${suscripcionId}`);
   },
 
   // =================================================
@@ -79,11 +83,22 @@ const PagoService = {
   updatePaymentAmount: async (idPago: number, data: UpdatePaymentAmountDto): Promise<AxiosResponse<PagoDto>> => {
     return await httpService.patch(`${BASE_ENDPOINT}/${idPago}/monto`, data);
   },
-confirmarManual: async (idPago: number): Promise<AxiosResponse<PagoDto>> => {
+
+  confirmarManual: async (idPago: number): Promise<AxiosResponse<PagoDto>> => {
     return await httpService.patch(`${BASE_ENDPOINT}/${idPago}/estado`, { 
       estado_pago: 'pagado',
       motivo: 'Cobro manual administrativo (Efectivo/Oficina)' 
     });
+  },
+
+  // 🆕 Permite actualizar a cualquier estado válido y agregar un motivo (PATCH /:id/estado)
+  updatePaymentStatus: async (idPago: number, data: UpdatePaymentStatusDto): Promise<AxiosResponse<{ message: string, pago: PagoDto }>> => {
+    return await httpService.patch(`${BASE_ENDPOINT}/${idPago}/estado`, data);
+  },
+
+  // 🆕 Obtiene el historial completo de pagos de una suscripción para administradores
+  getHistorialSuscripcion: async (suscripcionId: number): Promise<AxiosResponse<PagoDto[]>> => {
+    return await httpService.get(`${BASE_ENDPOINT}/historial/suscripcion/${suscripcionId}`);
   }
 };
 

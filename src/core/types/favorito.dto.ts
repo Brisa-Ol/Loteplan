@@ -39,7 +39,7 @@ export interface BackendEstadisticasResponse {
   lote_mas_votado: { lote: LoteEstadisticaBackend; total_favoritos: number } | null;
   lote_menos_votado: { lote: LoteEstadisticaBackend; total_favoritos: number } | null;
   estadisticas_lotes: Array<{
-    lote: LoteEstadisticaBackend; 
+    lote: LoteEstadisticaBackend;
     total_favoritos: number;
   }>;
 }
