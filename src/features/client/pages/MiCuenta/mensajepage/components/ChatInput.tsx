@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Stack, TextField, IconButton, CircularProgress } from '@mui/material';
+import { Box, Stack, TextField, IconButton, CircularProgress, useTheme } from '@mui/material';
 import { Send as SendIcon } from '@mui/icons-material';
 
 interface Props {
@@ -10,6 +10,9 @@ interface Props {
 }
 
 const ChatInput: React.FC<Props> = ({ value, onChange, onSend, disabled }) => {
+
+  const theme = useTheme();
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -18,7 +21,7 @@ const ChatInput: React.FC<Props> = ({ value, onChange, onSend, disabled }) => {
   };
 
   return (
-    <Box p={2} bgcolor="background.paper" borderTop="1px solid divider">
+    <Box p={2} bgcolor="background.paper" borderTop={`1px solid ${theme.palette.divider}`}>
       <Stack direction="row" spacing={1} alignItems="flex-end">
         <TextField
           fullWidth

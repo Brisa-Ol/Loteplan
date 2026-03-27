@@ -7,13 +7,13 @@ import type { BaseDTO } from "./base.dto";
 export interface CreateResumenCuentaDto {
   id_suscripcion: number;
   id_proyecto: number;
-  
+
   // Configuración de la cuota base
   nombre_cemento: string;
   valor_cemento_unidades: number;
   valor_cemento: number;
   meses_proyecto: number;
-  
+
   // Porcentajes
   porcentaje_plan: number;
   porcentaje_administrativo: number;

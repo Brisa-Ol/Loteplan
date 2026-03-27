@@ -1,6 +1,6 @@
 // src/types/dto/pagoMercado.dto.ts
 
-import type { EstadoTransaccion } from './transaccion.dto'; 
+import type { EstadoTransaccion } from './transaccion.dto';
 
 // ==========================================
 // 📤 REQUEST DTOs
@@ -51,7 +51,7 @@ export interface PaymentStatusResponseDto {
     id_suscripcion?: number;
     id_proyecto?: number;
   };
-  
+
   pagoPasarela: {
     id: number;
     transaccionIdPasarela: string;

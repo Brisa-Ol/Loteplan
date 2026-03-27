@@ -1,4 +1,4 @@
-import { type BaseDTO } from './base.dto'; 
+import { type BaseDTO } from './base.dto';
 import type { EstadoVerificacion } from './kyc.dto';
 
 // ==========================================
@@ -17,7 +17,7 @@ export interface RegisterRequestDto {
   /** Contraseña segura. Debe contener mayúscula, minúscula y número. Mínimo 8 caracteres. */
   contraseña: string;
   /** Documento Nacional de Identidad. Solo números (7-8 dígitos). */
-  dni: string; 
+  dni: string;
   /** Nombre real del usuario (Perfil). */
   nombre: string;
   /** Apellido real del usuario (Perfil). */
@@ -31,7 +31,7 @@ export interface RegisterRequestDto {
  */
 export interface LoginRequestDto {
   /** Puede ser el `nombre_usuario` o el `email`. */
-  identificador: string; 
+  identificador: string;
   /** Contraseña en texto plano (se hashea en el backend). */
   contraseña: string;
 }
@@ -79,12 +79,12 @@ export interface UserDto extends BaseDTO {
   nombre_usuario: string;
   email: string;
   /** Rol del usuario para control de acceso (RBAC). */
-  rol: 'cliente' | 'admin'; 
+  rol: 'cliente' | 'admin';
   /** Indica si el usuario completó la validación por correo. */
   confirmado_email: boolean;
   /** Indica si el usuario tiene activado el Doble Factor de Autenticación. */
   is_2fa_enabled: boolean;
-  
+
   // Datos de perfil opcionales
   nombre?: string;
   apellido?: string;
@@ -125,7 +125,7 @@ export interface LoginSuccessResponse {
 export interface Login2FARequiredResponse {
   message: string;
   /** Token JWT temporal. SOLO sirve para validar el endpoint `/auth/2fa/verify`. */
-  twoFaToken: string; 
+  twoFaToken: string;
   /** Bandera que activa el modal de código TOTP en el frontend. */
   is2FARequired: true;
   /** Datos mínimos del usuario (usualmente solo ID) por seguridad. */

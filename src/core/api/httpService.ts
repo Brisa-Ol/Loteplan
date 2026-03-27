@@ -24,8 +24,8 @@ let isRedirectingToLogin = false;
 // CONFIGURACIÓN DE INSTANCIA
 // ════════════════════════════════════════════════════════════
 const httpService = axios.create({
-  baseURL: env.apiBaseUrl, 
-  timeout: 30000, 
+  baseURL: env.apiBaseUrl,
+  timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json'

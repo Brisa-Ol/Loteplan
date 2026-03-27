@@ -25,11 +25,11 @@ export interface ContratoPlantillaDto extends BaseDTO {
   url_archivo: string;
   hash_archivo_original: string; // Hash SHA-256
   version: number;
-  
+
   id_proyecto: number | null;
   id_usuario_creacion: number;
 
   // 🚨 Campo calculado en el backend (integrity check)
-  integrity_compromised?: boolean; 
+  integrity_compromised?: boolean;
   activo: boolean;
 }

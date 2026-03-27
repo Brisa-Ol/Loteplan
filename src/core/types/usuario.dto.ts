@@ -100,7 +100,7 @@ export interface UsuarioDto extends BaseDTO {
   createdAt?: string;
   updatedAt?: string;
 
-estado_kyc?: EstadoVerificacion;
+  estado_kyc?: EstadoVerificacion;
 }
 
 /**
