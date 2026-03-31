@@ -491,13 +491,13 @@ const AdminPujas: React.FC = () => {
         isHighest={
           !!logic.pujaSeleccionada &&
           logic.pujasPorLote[logic.pujaSeleccionada.id_lote]?.[0]?.id ===
-            logic.pujaSeleccionada.id
+          logic.pujaSeleccionada.id
         }
         rankingPosition={
           logic.pujaSeleccionada
             ? (logic.pujasPorLote[logic.pujaSeleccionada.id_lote]?.findIndex(
-                p => p.id === logic.pujaSeleccionada?.id
-              ) ?? -1) + 1 || undefined
+              p => p.id === logic.pujaSeleccionada?.id
+            ) ?? -1) + 1 || undefined
             : undefined
         }
       />

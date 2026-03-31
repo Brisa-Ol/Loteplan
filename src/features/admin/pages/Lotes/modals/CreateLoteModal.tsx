@@ -109,6 +109,17 @@ const ScheduleSection = React.memo(({ inicio, fin, touchedInicio, errorInicio, t
     const input = e.currentTarget.querySelector('input');
     if (input) input.showPicker();
   };
+
+  // Guardamos los estilos del input en una constante para no repetir código
+  const dateInputStyles = {
+    '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: 'background.paper' },
+    '& input::-webkit-calendar-picker-indicator': {
+      cursor: 'pointer',
+      // Este filtro transforma cualquier color base (blanco o negro) al naranja #CC6333
+      filter: 'brightness(0) saturate(100%) invert(46%) sepia(50%) saturate(1637%) hue-rotate(345deg) brightness(90%) contrast(85%)'
+    }
+  };
+
   return (
     <Box sx={{ bgcolor: alpha('#CC6333', 0.04), p: 2.5, borderRadius: 3, border: '1px dashed', borderColor: alpha('#CC6333', 0.2) }}>
       <Typography sx={SECTION_TITLE_SX}><CalendarIcon sx={{ color: '#CC6333' }} fontSize="inherit" /> Cronograma de Subasta</Typography>
@@ -117,13 +128,13 @@ const ScheduleSection = React.memo(({ inicio, fin, touchedInicio, errorInicio, t
           fullWidth type="datetime-local" label="Apertura" InputLabelProps={{ shrink: true }}
           name="fecha_inicio" value={inicio} onChange={onChange} onBlur={handleBlur} onMouseDown={handlePicker}
           inputProps={{ min: minDate }} error={touchedInicio && Boolean(errorInicio)} helperText={touchedInicio && (errorInicio as string)}
-          sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: 'background.paper' } }}
+          sx={dateInputStyles}
         />
         <TextField
           fullWidth type="datetime-local" label="Cierre" InputLabelProps={{ shrink: true }}
           name="fecha_fin" value={fin} onChange={onChange} onBlur={handleBlur} onMouseDown={handlePicker}
           inputProps={{ min: inicio || minDate }} error={touchedFin && Boolean(errorFin)} helperText={touchedFin && (errorFin as string)}
-          sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: 'background.paper' } }}
+          sx={dateInputStyles}
         />
       </Stack>
     </Box>

@@ -1,20 +1,28 @@
 // src/features/admin/pages/Cobranzas/AdminLotePagos.tsx
 
 import {
-  AttachMoney, Block, CancelScheduleSend, CheckCircle,
+  AssignmentInd,
+  AttachMoney, 
+  Block, 
+  CancelScheduleSend, 
+  CheckCircle,
   Dashboard as DashboardIcon,
   ErrorOutline,
   History as HistoryIcon,
   Image as ImageIcon,
   ListAlt as ListIcon,
   MailOutline,
-  Person, Timeline,
+  Person, 
+  Phone,
+  Timeline,
   TrendingUp
 } from '@mui/icons-material';
 import {
   Avatar, Box, Card, CardContent, Chip,
-  Divider, IconButton, LinearProgress, Paper, Stack, Tab, Tabs, ToggleButton,
-  ToggleButtonGroup, Tooltip, Typography, alpha, useTheme
+  IconButton, Paper, Stack, Tab,
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
+  Tabs,
+  Tooltip, Typography, alpha, useTheme
 } from '@mui/material';
 import React, { useMemo, useState } from 'react';
 import {
@@ -27,6 +35,7 @@ import {
 import imagenService from '@/core/api/services/imagen.service';
 import { env } from '@/core/config/env';
 import type { LoteDto } from '@/core/types/lote.dto';
+import type { PujaDto } from '@/core/types/puja.dto';
 
 import { AdminPageHeader } from '@/shared/components/admin/Adminpageheader';
 import { DataTable, type DataTableColumn } from '@/shared/components/data-grid/DataTable';
@@ -37,9 +46,8 @@ import { PageContainer } from '@/shared/components/layout/PageContainer';
 import { useAdminLotePagos } from '../../hooks/lotes/useAdminLotePagos';
 
 // ============================================================================
-// HELPERS DE SINCRONIZACIÓN
+// HELPERS
 // ============================================================================
-// Un lote se considera pagado si su puja más alta tiene el estado 'ganadora_pagada'
 const checkIsPaid = (lote: LoteDto) => lote.pujaMasAlta?.estado_puja === 'ganadora_pagada';
 
 // ============================================================================
@@ -50,7 +58,6 @@ const AdminLotePagos: React.FC = () => {
   const logic = useAdminLotePagos();
   const theme = useTheme();
   const [tabIndex, setTabIndex] = useState(0);
-  const [viewMode, setViewMode] = useState<'table' | 'cards'>('cards');
 
   const columnsCobros = useMemo<DataTableColumn<LoteDto>[]>(() => [
     {
@@ -102,7 +109,6 @@ const AdminLotePagos: React.FC = () => {
       id: 'plazo',
       label: 'Vencimiento',
       render: (l) => {
-        // 🆕 SINCRONIZACIÓN: Si ya pagó, mostramos etiqueta de éxito
         if (checkIsPaid(l)) return <Typography variant="caption" fontWeight={900} color="success.main">PAGO RECIBIDO</Typography>;
 
         if (!l.fecha_fin) return '-';
@@ -123,7 +129,6 @@ const AdminLotePagos: React.FC = () => {
       id: 'estado',
       label: 'Situación',
       render: (l) => {
-        // 🆕 SINCRONIZACIÓN: Reflejamos el pago del cliente
         if (checkIsPaid(l)) return <StatusBadge status="completed" customLabel="PAGADO" />;
 
         const intentos = l.intentos_fallidos_pago || 0;
@@ -158,7 +163,6 @@ const AdminLotePagos: React.FC = () => {
         const isPaid = checkIsPaid(l);
         return (
           <Stack direction="row" spacing={1} justifyContent="flex-end">
-            {/* 🆕 Si ya pagó, mostramos icono de Check o Historial, sino las sanciones */}
             {isPaid ? (
               <Tooltip title="Ver detalles de pago">
                 <IconButton size="small" sx={{ color: 'success.main', bgcolor: alpha(theme.palette.success.main, 0.05) }}>
@@ -208,37 +212,36 @@ const AdminLotePagos: React.FC = () => {
             <Tab label="Cobros y Seguimiento" icon={<ListIcon sx={{ fontSize: 18 }} />} iconPosition="start" sx={{ fontWeight: 700 }} />
           </Tabs>
         </Paper>
-        {tabIndex === 0 && (
-          <ToggleButtonGroup value={viewMode} exclusive onChange={(_, val) => val && setViewMode(val)} size="small">
-            <ToggleButton value="table" sx={{ fontWeight: 700 }}>TABLA</ToggleButton>
-            <ToggleButton value="cards" sx={{ fontWeight: 700 }}>CARDS</ToggleButton>
-          </ToggleButtonGroup>
-        )}
       </Stack>
 
       <QueryHandler isLoading={logic.isLoading} error={logic.error as Error}>
         {tabIndex === 0 ? (
           <Box>
+            {/* PESTAÑA 0: DASHBOARD */}
             <Box sx={{ height: 320, mb: 5 }}>
               <RiskDistributionChart data={logic.analytics.chartData} theme={theme} />
             </Box>
-            {viewMode === 'cards' ? (
-              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)', xl: 'repeat(3, 1fr)' }, gap: 3 }}>
-                {logic.lotes.map(lote => (
-                  <RiskLoteCard
-                    key={lote.id}
-                    lote={lote}
-                    theme={theme}
-                    diasRestantes={logic.calcularDiasRestantes(lote.fecha_fin)}
-                  />
-                ))}
-              </Box>
-            ) : (
-              <DataTable columns={columnsCobros} data={logic.lotes} getRowKey={row => row.id} showInactiveToggle={false} pagination />
-            )}
+
+            {/* Nueva tabla Top 3 debajo del gráfico */}
+            <Box sx={{ mb: 5 }}>
+              <Top3PostoresTable
+                lotes={logic.lotesPendientesTotal}
+                pujasPorLote={logic.pujasPorLote}
+                theme={theme}
+              />
+            </Box>
           </Box>
         ) : (
-          <DataTable columns={columnsCobros} data={logic.lotesPendientesTotal} getRowKey={row => row.id} showInactiveToggle={false} pagination />
+          <>
+            {/* PESTAÑA 1: COBROS Y SEGUIMIENTOS */}
+            <DataTable
+              columns={columnsCobros}
+              data={logic.lotesPendientesTotal}
+              getRowKey={row => row.id}
+              showInactiveToggle={false}
+              pagination
+            />
+          </>
         )}
       </QueryHandler>
 
@@ -248,98 +251,8 @@ const AdminLotePagos: React.FC = () => {
 };
 
 // ============================================================================
-// CARDS SINCRONIZADAS
+// GRÁFICO 
 // ============================================================================
-
-const RiskLoteCard = React.memo<{ lote: LoteDto; theme: any; diasRestantes: number }>(({ lote, theme, diasRestantes }) => {
-  const intentos = lote.intentos_fallidos_pago || 0;
-  const isPaid = checkIsPaid(lote);
-  const isCritical = intentos >= 2;
-
-  const g = lote.ganador;
-  const displayName = g?.nombre_usuario ? `@${g.nombre_usuario}` : g ? `${g.nombre} ${g.apellido}` : `ID #${lote.id_ganador}`;
-
-  return (
-    <Card
-      variant="outlined"
-      sx={{
-        borderLeft: '6px solid',
-        borderLeftColor: isPaid ? 'success.main' : (isCritical ? 'error.main' : 'warning.main'),
-        bgcolor: 'background.default',
-        transition: '0.3s',
-        '&:hover': { transform: 'translateY(-4px)', boxShadow: theme.shadows[4] }
-      }}
-    >
-      <CardContent sx={{ p: 2.5 }}>
-        <Stack direction="row" spacing={2} mb={2}>
-          <Avatar
-            src={lote.imagenes?.[0] ? imagenService.resolveImageUrl(lote.imagenes[0].url) : undefined}
-            variant="rounded"
-            sx={{ width: 48, height: 48, bgcolor: isPaid ? alpha(theme.palette.success.main, 0.08) : alpha(theme.palette.primary.main, 0.08) }}
-          >
-            {isPaid ? <CheckCircle sx={{ color: theme.palette.success.main }} /> : <ImageIcon sx={{ color: theme.palette.primary.main }} />}
-          </Avatar>
-          <Box minWidth={0}>
-            <Typography variant="subtitle2" fontWeight={800} noWrap>{lote.nombre_lote}</Typography>
-            <Stack direction="row" spacing={0.5} alignItems="center">
-              <Person sx={{ fontSize: 14, color: isPaid ? 'success.main' : theme.palette.primary.main }} />
-              <Typography variant="caption" fontWeight={600} color="text.secondary" noWrap>
-                {displayName}
-              </Typography>
-            </Stack>
-          </Box>
-        </Stack>
-
-        <Divider sx={{ mb: 2, borderStyle: 'dashed' }} />
-
-        <Stack spacing={2}>
-          {isPaid ? (
-            <Box sx={{ py: 1 }}>
-              <Chip
-                icon={<CheckCircle />}
-                label="COBRO CONFIRMADO"
-                color="success"
-                sx={{ fontWeight: 900, width: '100%', borderRadius: 2 }}
-              />
-            </Box>
-          ) : (
-            <Box>
-              <Stack direction="row" justifyContent="space-between" mb={0.5}>
-                <Typography variant="caption" fontWeight={800} color={isCritical ? 'error.main' : 'warning.main'}>
-                  {intentos}/3 FALLOS
-                </Typography>
-                <Typography variant="caption" color="text.secondary">{Math.round((intentos / 3) * 100)}%</Typography>
-              </Stack>
-              <LinearProgress
-                variant="determinate"
-                value={(intentos / 3) * 100}
-                color={isCritical ? 'error' : 'warning'}
-                sx={{ height: 6, borderRadius: 10 }}
-              />
-            </Box>
-          )}
-
-          <Stack direction="row" justifyContent="space-between" alignItems="center">
-            <Typography variant="h6" fontWeight={900} color={isPaid ? "success.main" : "primary.main"}>
-              ${Number(lote.monto_ganador_lote || lote.precio_base).toLocaleString(env.defaultLocale)}
-            </Typography>
-            {!isPaid && (
-              <Chip
-                label={`${diasRestantes} días`}
-                size="small"
-                sx={{
-                  bgcolor: diasRestantes <= 10 ? 'error.light' : 'success.light',
-                  color: diasRestantes <= 10 ? 'error.main' : 'success.main',
-                  fontWeight: 800,
-                }}
-              />
-            )}
-          </Stack>
-        </Stack>
-      </CardContent>
-    </Card>
-  );
-});
 
 const RiskDistributionChart = React.memo<{ data: any[]; theme: any }>(({ data, theme }) => {
   const orangePalette = [theme.palette.primary.light, theme.palette.primary.main, theme.palette.primary.dark];
@@ -368,6 +281,154 @@ const RiskDistributionChart = React.memo<{ data: any[]; theme: any }>(({ data, t
             </BarChart>
           </ResponsiveContainer>
         </Box>
+      </CardContent>
+    </Card>
+  );
+});
+
+// ============================================================================
+// TABLA TOP 3 POSTORES 
+// ============================================================================
+
+const Top3PostoresTable = React.memo<{
+  lotes: LoteDto[];
+  pujasPorLote: Record<number, PujaDto[]>;
+  theme: any
+}>(({ lotes, pujasPorLote, theme }) => {
+  return (
+    <Card variant="outlined" sx={{ bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' }}>
+      <CardContent sx={{ p: 0 }}>
+        <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Box>
+            <Typography variant="h6" color="text.primary" fontWeight={700}>Top 3 Postores</Typography>
+            <Typography variant="caption" color="text.secondary">Información de contacto en caso de incumplimiento del ganador principal</Typography>
+          </Box>
+          <Chip icon={<Person />} label="Directorio de Contacto" size="small" color="primary" variant="outlined" sx={{ fontWeight: 700 }} />
+        </Box>
+
+        <TableContainer sx={{ maxHeight: 400 }}>
+          <Table stickyHeader size="small">
+            
+            {/* 🛠️ CORRECCIÓN AQUÍ: Fondos sólidos y bordes de color para evitar el solapamiento al scrollear */}
+            <TableHead>
+              <TableRow>
+                <TableCell sx={{ fontWeight: 800, bgcolor: 'background.paper' }}>
+                  Lote / Proyecto
+                </TableCell>
+                <TableCell sx={{ fontWeight: 800, bgcolor: 'background.paper', color: 'success.main', borderBottom: `2px solid ${theme.palette.success.main}` }}>
+                  1º Puesto (Adjudicado)
+                </TableCell>
+                <TableCell sx={{ fontWeight: 800, bgcolor: 'background.paper', color: 'warning.main', borderBottom: `2px solid ${theme.palette.warning.main}` }}>
+                  2º Puesto (Reserva 1)
+                </TableCell>
+                <TableCell sx={{ fontWeight: 800, bgcolor: 'background.paper', color: 'info.main', borderBottom: `2px solid ${theme.palette.info.main}` }}>
+                  3º Puesto (Reserva 2)
+                </TableCell>
+              </TableRow>
+            </TableHead>
+
+            <TableBody>
+              {lotes.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
+                    <Typography variant="caption" color="text.secondary">No hay lotes en mora para mostrar</Typography>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                lotes.map((lote) => {
+                  const pujas = pujasPorLote[lote.id] || [];
+                  const top3 = [pujas[0], pujas[1], pujas[2]];
+
+                  // Buscamos el nombre del proyecto
+                  const nombreProyecto = lote.proyecto?.nombre_proyecto || (pujas[0] as any)?.lote?.proyectoLote?.nombre_proyecto;
+
+                  return (
+                    <TableRow key={lote.id} hover>
+                      <TableCell sx={{ borderRight: '1px solid', borderColor: 'divider', verticalAlign: 'top', pt: 1.5 }}>
+                        <Typography variant="body2" fontWeight={800}>{lote.nombre_lote}</Typography>
+                        <Typography variant="caption" color="text.disabled" display="block">ID Lote: {lote.id}</Typography>
+
+                        {/* Etiqueta con el nombre del Proyecto */}
+                        {nombreProyecto && (
+                          <Chip
+                            label={nombreProyecto}
+                            size="small"
+                            variant="outlined"
+                            sx={{
+                              mt: 1,
+                              fontSize: '0.65rem',
+                              height: 22,
+                              fontWeight: 700,
+                              borderColor: theme.palette.divider,
+                              bgcolor: alpha(theme.palette.primary.main, 0.05)
+                            }}
+                          />
+                        )}
+                      </TableCell>
+
+                      {top3.map((puja, index) => {
+                        if (!puja || !puja.usuario) {
+                          return (
+                            <TableCell key={index} sx={{ borderRight: index !== 2 ? '1px solid' : 'none', borderColor: 'divider' }}>
+                              <Typography variant="caption" color="text.disabled" fontStyle="italic">Sin postor</Typography>
+                            </TableCell>
+                          );
+                        }
+
+                        const u = puja.usuario;
+
+                        // Color sutil según el estado de la puja
+                        const estadoColor =
+                          puja.estado_puja.includes('ganadora') ? 'warning' : 'default';
+
+                        return (
+                          <TableCell key={puja.id} sx={{ borderRight: index !== 2 ? '1px solid' : 'none', borderColor: 'divider' }}>
+                            <Box display="flex" flexDirection="column" gap={0.5} py={0.5}>
+
+                              <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+                                <Typography variant="body2" fontWeight={700} color="text.primary">
+                                  {u.nombre} {u.apellido}
+                                </Typography>
+                                {/* Estado de la puja */}
+                                <Chip
+                                  label={puja.estado_puja.replace('_', ' ').toUpperCase()}
+                                  size="small"
+                                  color={estadoColor as any}
+                                  sx={{ fontSize: '0.55rem', height: 18, fontWeight: 800 }}
+                                />
+                              </Stack>
+
+                              {/* Email */}
+                              <Box display="flex" alignItems="center" gap={0.5}>
+                                <MailOutline sx={{ fontSize: 14, color: 'text.secondary' }} />
+                                <Typography variant="caption" color="text.secondary" noWrap maxWidth={180}>
+                                  {u.email}
+                                </Typography>
+                              </Box>
+
+              
+
+                              {/* Monto y Fecha */}
+                              <Stack direction="row" justifyContent="space-between" alignItems="center" mt={0.5} sx={{ borderTop: '1px dashed', borderColor: 'divider', pt: 0.5 }}>
+                                <Typography variant="caption" fontWeight={800} color="primary">
+                                  Oferta: ${Number(puja.monto_puja).toLocaleString(env.defaultLocale)}
+                                </Typography>
+                                <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.65rem' }}>
+                                  {new Date(puja.fecha_puja).toLocaleDateString()}
+                                </Typography>
+                              </Stack>
+
+                            </Box>
+                          </TableCell>
+                        );
+                      })}
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
       </CardContent>
     </Card>
   );

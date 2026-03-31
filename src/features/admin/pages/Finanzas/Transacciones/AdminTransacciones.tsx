@@ -253,6 +253,17 @@ const AdminTransacciones: React.FC = () => {
     }
   ], [logic, theme]);
 
+  // Estilos compartidos para los inputs de fecha (con el ícono del calendario en naranja)
+  const dateInputStyles = {
+    width: { xs: '50%', sm: 140 },
+    bgcolor: 'background.paper',
+    borderRadius: 1,
+    '& input::-webkit-calendar-picker-indicator': {
+      cursor: 'pointer',
+      filter: 'brightness(0) saturate(100%) invert(46%) sepia(50%) saturate(1637%) hue-rotate(345deg) brightness(90%) contrast(85%)'
+    }
+  };
+
   return (
     <PageContainer maxWidth="xl" sx={{ py: 3 }}>
       {/* 1. HEADER ESTANDARIZADO */}
@@ -347,7 +358,7 @@ const AdminTransacciones: React.FC = () => {
               InputLabelProps={{ shrink: true }}
               value={logic.dateFrom}
               onChange={(e) => logic.setDateFrom(e.target.value)}
-              sx={{ width: { xs: '50%', sm: 140 }, bgcolor: 'background.paper', borderRadius: 1 }}
+              sx={dateInputStyles}
             />
             <Typography color="text.secondary">-</Typography>
             <TextField
@@ -357,7 +368,7 @@ const AdminTransacciones: React.FC = () => {
               InputLabelProps={{ shrink: true }}
               value={logic.dateTo}
               onChange={(e) => logic.setDateTo(e.target.value)}
-              sx={{ width: { xs: '50%', sm: 140 }, bgcolor: 'background.paper', borderRadius: 1 }}
+              sx={dateInputStyles}
             />
           </Stack>
 

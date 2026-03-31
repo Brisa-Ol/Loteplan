@@ -39,6 +39,12 @@ const LoteService = {
     return await httpService.get(`${BASE_ENDPOINT}/proyecto/${idProyecto}`);
   },
 
+  /**
+   * 🆕 NUEVO: Obtiene todos los lotes ganados y pagados por el usuario autenticado
+   */
+  getMyLotesGanados: async (): Promise<AxiosResponse<LoteDto[]>> => {
+    return await httpService.get(`${BASE_ENDPOINT}/mis_lotes_ganados`);
+  },
   // =================================================
   // ⚙️ GESTIÓN ADMINISTRATIVA (ADMIN)
   // =================================================

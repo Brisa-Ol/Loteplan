@@ -2,9 +2,17 @@
 
 import type { useAdminInversiones } from '@/features/admin/hooks/finanzas/useAdminInversiones';
 import { FilterBar, FilterSearch, FilterSelect } from '@/shared/components/forms/FilterBar';
-import { RestartAlt as ClearIcon } from '@mui/icons-material';
-import { alpha, Box, IconButton, MenuItem, Stack, TextField, Tooltip, useTheme } from '@mui/material';
+import { Box, MenuItem, Stack, TextField, useTheme } from '@mui/material';
 import React from 'react';
+
+// Estilos compartidos para los inputs de fecha (ícono del calendario en naranja #CC6333)
+const dateInputStyles = {
+  width: { xs: '50%', sm: 140 },
+  '& input::-webkit-calendar-picker-indicator': {
+    cursor: 'pointer',
+    filter: 'brightness(0) saturate(100%) invert(46%) sepia(50%) saturate(1637%) hue-rotate(345deg) brightness(90%) contrast(85%)'
+  }
+};
 
 interface Props {
   logic: ReturnType<typeof useAdminInversiones>;
@@ -19,6 +27,7 @@ const InversionesFiltersBar: React.FC<Props> = ({
   logic, startDate, endDate, onStartDateChange, onEndDateChange, onClear
 }) => {
   const theme = useTheme();
+
   return (
     <FilterBar sx={{ mb: 3, p: 2 }}>
       <Box sx={{ display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, gap: 2, alignItems: { xs: 'stretch', lg: 'center' }, width: '100%' }}>
@@ -30,12 +39,24 @@ const InversionesFiltersBar: React.FC<Props> = ({
         <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2, flexWrap: 'wrap', alignItems: 'center', justifyContent: { xs: 'center', lg: 'flex-end' } }}>
 
           <Stack direction="row" spacing={1} sx={{ width: { xs: '100%', sm: 'auto' } }}>
-            <TextField type="date" label="Desde" size="small" InputLabelProps={{ shrink: true }}
-              value={startDate} onChange={(e) => onStartDateChange(e.target.value)}
-              sx={{ width: { xs: '50%', sm: 140 } }} />
-            <TextField type="date" label="Hasta" size="small" InputLabelProps={{ shrink: true }}
-              value={endDate} onChange={(e) => onEndDateChange(e.target.value)}
-              sx={{ width: { xs: '50%', sm: 140 } }} />
+            <TextField
+              type="date"
+              label="Desde"
+              size="small"
+              InputLabelProps={{ shrink: true }}
+              value={startDate}
+              onChange={(e) => onStartDateChange(e.target.value)}
+              sx={dateInputStyles} // 👈 Se aplica el estilo naranja
+            />
+            <TextField
+              type="date"
+              label="Hasta"
+              size="small"
+              InputLabelProps={{ shrink: true }}
+              value={endDate}
+              onChange={(e) => onEndDateChange(e.target.value)}
+              sx={dateInputStyles} // 👈 Se aplica el estilo naranja
+            />
           </Stack>
 
           <Box sx={{ display: 'flex', gap: 1.5, width: { xs: '100%', sm: 'auto' } }}>
@@ -52,13 +73,6 @@ const InversionesFiltersBar: React.FC<Props> = ({
               ))}
             </FilterSelect>
           </Box>
-
-          <Tooltip title="Limpiar filtros">
-            <IconButton onClick={onClear} size="small" sx={{ bgcolor: alpha(theme.palette.error.main, 0.08), color: 'error.main', '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.15) } }}>
-              <ClearIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-
         </Box>
       </Box>
     </FilterBar>

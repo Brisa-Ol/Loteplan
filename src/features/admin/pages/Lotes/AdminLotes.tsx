@@ -10,7 +10,7 @@ import {
 } from '@mui/icons-material';
 // MUI Components
 import {
-  Avatar, Box, Button, 
+  Avatar, Box, Button,
   Card, CardContent, Chip,
   Divider, IconButton, MenuItem, Stack, Switch, ToggleButton,
   ToggleButtonGroup, Tooltip, Typography, alpha, useTheme

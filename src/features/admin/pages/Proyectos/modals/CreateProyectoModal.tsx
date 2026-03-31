@@ -9,7 +9,8 @@ import {
   CheckCircle as CheckCircleIcon,
   PictureAsPdf as PdfIcon,
   Business as ProjectIcon,
-  CloudUpload as UploadIcon
+  CloudUpload as UploadIcon,
+  CalendarMonth as CalendarIcon
 } from '@mui/icons-material';
 import {
   alpha,
@@ -201,6 +202,53 @@ const SimulationDisplay = React.memo(({ plazo, unidades, precio, pctPlan, pctAdm
   );
 });
 
+const SECTION_TITLE_SX = {
+  fontWeight: 800,
+  color: 'text.secondary',
+  textTransform: 'uppercase',
+  mb: 1.5,
+  display: 'flex',
+  alignItems: 'center',
+  gap: 1,
+  fontSize: '0.65rem',
+  letterSpacing: 1
+};
+
+const ScheduleSection = React.memo(({ inicio, fin, touchedInicio, errorInicio, touchedFin, errorFin, onCommitInicio, onCommitFin, minDate }: any) => {
+  const handlePicker = (e: React.MouseEvent) => {
+    const input = e.currentTarget.querySelector('input');
+    if (input) input.showPicker();
+  };
+
+  const dateInputStyles = {
+    '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: 'background.paper' },
+    '& input::-webkit-calendar-picker-indicator': {
+      cursor: 'pointer',
+      filter: 'brightness(0) saturate(100%) invert(46%) sepia(50%) saturate(1637%) hue-rotate(345deg) brightness(90%) contrast(85%)'
+    }
+  };
+
+  return (
+    <Box sx={{ mt: 2, bgcolor: alpha('#CC6333', 0.04), p: 2.5, borderRadius: 3, border: '1px dashed', borderColor: alpha('#CC6333', 0.2) }}>
+      <Typography sx={SECTION_TITLE_SX}><CalendarIcon sx={{ color: '#CC6333' }} fontSize="inherit" /> Cronograma de Proyecto</Typography>
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+        <FastTextField
+          fullWidth type="date" label="Apertura" InputLabelProps={{ shrink: true }}
+          formikValue={inicio} onCommit={onCommitInicio} onMouseDown={handlePicker}
+          inputProps={{ min: minDate }} error={touchedInicio && Boolean(errorInicio)} helperText={touchedInicio && (errorInicio as string)}
+          sx={dateInputStyles}
+        />
+        <FastTextField
+          fullWidth type="date" label="Cierre" InputLabelProps={{ shrink: true }}
+          formikValue={fin} onCommit={onCommitFin} onMouseDown={handlePicker}
+          inputProps={{ min: inicio || minDate }} error={touchedFin && Boolean(errorFin)} helperText={touchedFin && (errorFin as string)}
+          sx={dateInputStyles}
+        />
+      </Stack>
+    </Box>
+  );
+});
+
 // ─────────────────────────────────────────────────────────────────────────────
 // COMPONENTE PRINCIPAL
 // ─────────────────────────────────────────────────────────────────────────────
@@ -214,7 +262,7 @@ const CreateProyectoModal: React.FC<any> = ({ open, onClose, onSubmit, isLoading
 
   const formik = useFormik({
     initialValues: INITIAL_VALUES,
-    validationSchema: fullValidationSchema, // ✅ Formik ahora conoce las reglas de validación
+    validationSchema: fullValidationSchema,
     validateOnChange: true,
     validateOnBlur: true,
     onSubmit: async (values) => {
@@ -230,16 +278,9 @@ const CreateProyectoModal: React.FC<any> = ({ open, onClose, onSubmit, isLoading
   });
 
   const styles = useMemo(() => ({
-    dateField: {
-      '& input::-webkit-calendar-picker-indicator': {
-        position: 'absolute', left: 0, top: 0, width: '100%', height: '100%',
-        margin: 0, padding: 0, cursor: 'pointer', opacity: 0,
-      }
-    },
     sectionTitle: { fontWeight: 800, color: 'text.secondary', textTransform: 'uppercase', fontSize: '0.65rem', letterSpacing: 1 }
   }), []);
 
-  // Actualiza el campo en Formik y lo marca como 'tocado' para forzar la validación visual
   const set = useCallback((field: string) => (value: string) => {
     formik.setFieldValue(field, value);
     formik.setFieldTouched(field, true, true);
@@ -262,11 +303,9 @@ const CreateProyectoModal: React.FC<any> = ({ open, onClose, onSubmit, isLoading
     const schema = currentStepLabel === 'Información' ? projectSchema : quotaSchema;
 
     try {
-      // ✅ Validamos explícitamente solo los campos de este paso
       await schema.validate(formik.values, { abortEarly: false });
       setActiveStep(prev => prev + 1);
     } catch (err: any) {
-      // ✅ Si falla la validación, "tocamos" los campos con errores para que se pinten de rojo
       const stepTouched: Record<string, boolean> = {};
       err.inner?.forEach((e: any) => {
         if (e.path) stepTouched[e.path] = true;
@@ -357,6 +396,7 @@ const CreateProyectoModal: React.FC<any> = ({ open, onClose, onSubmit, isLoading
 
             <Divider><Chip label="Finanzas y Cupos" size="small" sx={{ fontWeight: 800, fontSize: '0.6rem' }} /></Divider>
 
+            {/* SE RESTAURÓ ESTE BLOQUE */}
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
               <TextField select fullWidth label="Modelo Inversión" {...formik.getFieldProps('tipo_inversion')} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}>
                 <MenuItem value="mensual">Plan de Ahorro</MenuItem>
@@ -412,37 +452,23 @@ const CreateProyectoModal: React.FC<any> = ({ open, onClose, onSubmit, isLoading
               </Paper>
             )}
 
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
-              <FastTextField
-                type="date"
-                label="Apertura"
-                InputLabelProps={{ shrink: true }}
-                inputProps={{ min: today }} // Bloqueo HTML fechas pasadas
-                formikValue={formik.values.fecha_inicio}
-                onCommit={set('fecha_inicio')}
-                error={formik.touched.fecha_inicio && !!formik.errors.fecha_inicio}
-                helperText={formik.touched.fecha_inicio && formik.errors.fecha_inicio as string}
-                sx={styles.dateField}
-              />
-              <FastTextField
-                type="date"
-                label="Cierre"
-                InputLabelProps={{ shrink: true }}
-                inputProps={{ min: formik.values.fecha_inicio || today }} // Bloqueo HTML antes de apertura
-                formikValue={formik.values.fecha_cierre}
-                onCommit={set('fecha_cierre')}
-                error={formik.touched.fecha_cierre && !!formik.errors.fecha_cierre}
-                helperText={formik.touched.fecha_cierre && formik.errors.fecha_cierre as string}
-                sx={styles.dateField}
-              />
-            </Box>
+            <ScheduleSection
+              inicio={formik.values.fecha_inicio}
+              fin={formik.values.fecha_cierre}
+              touchedInicio={formik.touched.fecha_inicio}
+              errorInicio={formik.errors.fecha_inicio}
+              touchedFin={formik.touched.fecha_cierre}
+              errorFin={formik.errors.fecha_cierre}
+              onCommitInicio={set('fecha_inicio')}
+              onCommitFin={set('fecha_cierre')}
+              minDate={today}
+            />
           </Stack>
         )}
 
         {/* ── PASO 2: CUOTAS ── */}
         {currentStepLabel === 'Cuotas' && (
           <Stack spacing={4}>
-            {/* Fila 1: Insumo, Unidades y Precio */}
             <Box>
               <Typography sx={styles.sectionTitle} mb={2}>Variables de Costo (Referencia)</Typography>
               <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '2fr 1fr 1.5fr' }, gap: 2 }}>
@@ -479,7 +505,6 @@ const CreateProyectoModal: React.FC<any> = ({ open, onClose, onSubmit, isLoading
 
             <Divider />
 
-            {/* Fila 2: Porcentajes agregados */}
             <Box>
               <Typography sx={styles.sectionTitle} mb={2}>Distribución y Porcentajes (%)</Typography>
               <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1fr' }, gap: 2 }}>

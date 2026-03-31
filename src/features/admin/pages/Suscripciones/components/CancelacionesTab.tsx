@@ -4,11 +4,22 @@ import SuscripcionService from '@/core/api/services/suscripcion.service';
 import type { SuscripcionCanceladaDto } from '@/core/types/suscripcion.dto';
 import { BaseModal, DataTable, FilterBar, FilterSearch, QueryHandler, StatCard, useModal, type DataTableColumn } from '@/shared';
 import { Cancel, CheckCircle, Clear as ClearIcon, MoneyOff, ReportProblem, TrendingDown, Visibility } from '@mui/icons-material';
-import { alpha, Box, Button, Chip, IconButton, Paper, Stack, TextField, Typography, useTheme } from '@mui/material';
+import { alpha, Box, Button, Chip, IconButton, Paper, Stack, TextField, Tooltip, Typography, useTheme } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { useCallback, useMemo, useState } from 'react';
 import useCancelacionesColumns from '../hooks/useCancelacionesColumns';
 import DetalleCancelacionModal from '../modals/DetalleCancelacionModal/DetalleCancelacionModal';
+
+// Estilos compartidos para los inputs de fecha (ícono del calendario en naranja #CC6333)
+const dateInputStyles = {
+    width: { xs: '50%', sm: 140 },
+    bgcolor: 'background.paper',
+    borderRadius: 1,
+    '& input::-webkit-calendar-picker-indicator': {
+        cursor: 'pointer',
+        filter: 'brightness(0) saturate(100%) invert(46%) sepia(50%) saturate(1637%) hue-rotate(345deg) brightness(90%) contrast(85%)'
+    }
+};
 
 const CancelacionesTab: React.FC = () => {
     const theme = useTheme();
@@ -21,7 +32,7 @@ const CancelacionesTab: React.FC = () => {
     const [endDate, setEndDate] = useState('');
     const [selectedCancelacion, setSelectedCancelacion] = useState<SuscripcionCanceladaDto | null>(null);
 
-    // ✅ Estados para el modal de confirmación de devolución
+    // Estados para el modal de confirmación de devolución
     const [refundModalOpen, setRefundModalOpen] = useState(false);
     const [refundTargetId, setRefundTargetId] = useState<number | null>(null);
 
@@ -38,13 +49,13 @@ const CancelacionesTab: React.FC = () => {
         queryFn: async () => (await SuscripcionService.getCancellationMetrics()).data,
     });
 
-    // ✅ Mutación para marcar la devolución (ACTUALIZADA PARA RECARGAR LA PÁGINA)
+    // Mutación para marcar la devolución
     const { mutate: marcarDevolucion, isPending: isMutating } = useMutation({
         mutationFn: (id: number) => SuscripcionService.marcarDevolucion(id),
         onSuccess: () => {
             setRefundModalOpen(false);
             setRefundTargetId(null);
-            window.location.reload(); // <-- Aquí recarga la página al confirmar
+            window.location.reload();
         },
     });
 
@@ -84,59 +95,96 @@ const CancelacionesTab: React.FC = () => {
     }, [detailModal]);
 
 
-    const columnsWithDevolucion = useMemo<DataTableColumn<SuscripcionCanceladaDto>[]>(() => [
-        ...baseColumns,
-        {
-            id: 'devolucion',
-            label: 'Devolución',
-            render: (row: SuscripcionCanceladaDto) => {
-                if (row.devolucion_realizada) {
+    // ✅ SEPARACIÓN DE COLUMNAS: ID Y FECHA BAJA SIN NEGRITA
+    const columnsWithDevolucion = useMemo<DataTableColumn<SuscripcionCanceladaDto>[]>(() => {
+        const filteredColumns = baseColumns.filter(c => c.id !== 'id' && c.id !== 'fecha_cancelacion');
+
+        return [
+            {
+                id: 'id',
+                label: 'ID',
+                minWidth: 70,
+                render: (row) => (
+                    <Typography variant="body1" fontWeight={800} color="text.primary">
+                        #{row.id}
+                    </Typography>
+                )
+            },
+            {
+                id: 'fecha_cancelacion',
+                label: 'Fecha Baja',
+                minWidth: 120,
+                render: (row) => {
+                    if (!row.fecha_cancelacion) {
+                        return <Typography variant="body2" color="text.secondary">---</Typography>;
+                    }
+                    const dateObj = new Date(row.fecha_cancelacion);
                     return (
-                        <Chip
-                            icon={<CheckCircle />}
-                            label="Devuelto"
-                            color="success"
-                            size="small"
-                            variant="outlined"
-                        />
+                        <Box>
+                            {/* 👇 Aquí le quitamos el fontWeight 800 para que se vea normal */}
+                            <Typography variant="body2" color="text.primary" fontWeight={500}>
+                                {dateObj.toLocaleDateString('es-AR')}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: '0.8rem' }}>
+                                {dateObj.toLocaleTimeString('es-AR', { hour: 'numeric', minute: '2-digit', hour12: true })}
+                            </Typography>
+                        </Box>
                     );
                 }
+            },
+            ...filteredColumns,
+            {
+                id: 'devolucion',
+                label: 'Devolución',
+                render: (row: SuscripcionCanceladaDto) => {
+                    if (row.devolucion_realizada) {
+                        return (
+                            <Chip
+                                icon={<CheckCircle />}
+                                label="Devuelto"
+                                color="success"
+                                size="small"
+                                variant="outlined"
+                            />
+                        );
+                    }
 
-                return (
-                    <Button
-                        variant="contained"
-                        color="primary"
-                        size="small"
-                        disabled={isMutating}
+                    return (
+                        <Button
+                            variant="contained"
+                            size="small"
+                            disabled={isMutating}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setRefundTargetId(row.id);
+                                setRefundModalOpen(true);
+                            }}
+                            sx={{ bgcolor: '#CC6333', color: 'white', '&:hover': { bgcolor: '#b5582e' }, fontWeight: 600, boxShadow: 'none' }}
+                        >
+                            Reintegrar
+                        </Button>
+                    );
+                },
+            },
+            {
+                id: 'acciones',
+                label: '',
+                align: 'right' as const,
+                render: (row: SuscripcionCanceladaDto) => (
+                    <IconButton
                         onClick={(e) => {
                             e.stopPropagation();
-                            setRefundTargetId(row.id);
-                            setRefundModalOpen(true);
+                            handleVerDetalle(row);
                         }}
+                        size="small"
+                        sx={{ color: '#CC6333', bgcolor: alpha('#CC6333', 0.08), ml: 1 }}
                     >
-                        Reintegrar
-                    </Button>
-                );
-            },
-        },
-        {
-            id: 'acciones',
-            label: '',
-            align: 'right' as const, // 👈 SOLUCIÓN AL ERROR DE TIPADO
-            render: (row: SuscripcionCanceladaDto) => (
-                <IconButton
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        handleVerDetalle(row);
-                    }}
-                    size="small"
-                    sx={{ color: 'primary.main', bgcolor: alpha(theme.palette.primary.main, 0.05), ml: 1 }}
-                >
-                    <Visibility fontSize="small" />
-                </IconButton>
-            )
-        }
-    ], [baseColumns, isMutating, handleVerDetalle, theme]);
+                        <Visibility fontSize="small" />
+                    </IconButton>
+                )
+            }
+        ];
+    }, [baseColumns, isMutating, handleVerDetalle, theme]);
 
     const isFiltered = !!(startDate || endDate || searchTerm);
 
@@ -148,30 +196,57 @@ const CancelacionesTab: React.FC = () => {
                 <StatCard title={tituloMontoLiquidado} value={`$${totalMontoLiquidado.toLocaleString('es-AR')}`} color="info" icon={<MoneyOff />} loading={isLoading} />
             </Box>
 
-            <FilterBar>
-                <FilterSearch
-                    placeholder="Buscar por ex-titular, proyecto o ID..."
-                    value={searchTerm} onSearch={setSearchTerm}
-                    sx={{ minWidth: { xs: '100%', md: 300 } }}
-                />
-                <Stack direction="row" spacing={2} alignItems="center" sx={{ flexWrap: 'wrap', gap: { xs: 2, md: 0 } }}>
-                    <TextField label="Desde" type="date" size="small" InputLabelProps={{ shrink: true }}
-                        value={startDate} onChange={(e) => setStartDate(e.target.value)}
-                        sx={{ bgcolor: 'background.paper', borderRadius: 1 }}
-                    />
-                    <TextField label="Hasta" type="date" size="small" InputLabelProps={{ shrink: true }}
-                        value={endDate} onChange={(e) => setEndDate(e.target.value)}
-                        inputProps={{ min: startDate }} sx={{ bgcolor: 'background.paper', borderRadius: 1 }}
-                    />
-                    {(startDate || endDate) && (
-                        <Button color="error" size="small" startIcon={<ClearIcon />}
-                            onClick={() => { setStartDate(''); setEndDate(''); }}
-                            sx={{ textTransform: 'none', fontWeight: 600 }}
-                        >
-                            Limpiar Fechas
-                        </Button>
-                    )}
-                </Stack>
+            <FilterBar sx={{ mb: 3, p: 2 }}>
+                <Box sx={{ display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, gap: 2, alignItems: { xs: 'stretch', lg: 'center' }, width: '100%' }}>
+                    
+                    <Box sx={{ flex: 1, minWidth: { xs: '100%', lg: 300 } }}>
+                        <FilterSearch
+                            placeholder="Buscar por ex-titular, proyecto o ID..."
+                            value={searchTerm} 
+                            onSearch={setSearchTerm}
+                            fullWidth
+                        />
+                    </Box>
+
+                    <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2, flexWrap: 'wrap', alignItems: 'center', justifyContent: { xs: 'center', lg: 'flex-end' } }}>
+                        <Stack direction="row" spacing={1} sx={{ width: { xs: '100%', sm: 'auto' } }}>
+                            <TextField 
+                                label="Desde" 
+                                type="date" 
+                                size="small" 
+                                InputLabelProps={{ shrink: true }}
+                                value={startDate} 
+                                onChange={(e) => setStartDate(e.target.value)}
+                                sx={dateInputStyles}
+                            />
+                            <TextField 
+                                label="Hasta" 
+                                type="date" 
+                                size="small" 
+                                InputLabelProps={{ shrink: true }}
+                                value={endDate} 
+                                onChange={(e) => setEndDate(e.target.value)}
+                                inputProps={{ min: startDate }} 
+                                sx={dateInputStyles}
+                            />
+                        </Stack>
+
+                        <Tooltip title="Limpiar filtros">
+                            <IconButton 
+                                onClick={() => { setStartDate(''); setEndDate(''); setSearchTerm(''); }} 
+                                size="small" 
+                                sx={{ 
+                                    bgcolor: alpha(theme.palette.error.main, 0.08), 
+                                    color: 'error.main', 
+                                    '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.15) },
+                                    height: 40, width: 40
+                                }}
+                            >
+                                <ClearIcon fontSize="small" />
+                            </IconButton>
+                        </Tooltip>
+                    </Box>
+                </Box>
             </FilterBar>
 
             <QueryHandler isLoading={isLoading} error={error as Error | null}>
@@ -193,7 +268,6 @@ const CancelacionesTab: React.FC = () => {
                 cancelacion={selectedCancelacion}
             />
 
-            {/* ✅ BaseModal implementado para la Confirmación de Devolución */}
             <BaseModal
                 open={refundModalOpen}
                 onClose={() => !isMutating && setRefundModalOpen(false)}

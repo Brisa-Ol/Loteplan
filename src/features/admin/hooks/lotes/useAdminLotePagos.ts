@@ -5,28 +5,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 
 import LoteService from '@/core/api/services/lote.service';
-// ✅ Importamos PujaService — LoteService.cancelarAdjudicacion no existe
 import PujaService from '@/core/api/services/puja.service';
 import { env } from '@/core/config/env';
 import type { LoteDto } from '@/core/types/lote.dto';
+import type { PujaDto } from '@/core/types/puja.dto';
 import { useConfirmDialog } from '@/shared/hooks/useConfirmDialog';
 import { useSnackbar } from '@/shared/hooks/useSnackbar';
-import { useSortedData } from '../useSortedData';
-
-// ============================================================================
-// HELPERS
-// ============================================================================
-
-const calcularDiasRestantes = (fechaFin: string | null): number => {
-  if (!fechaFin) return 90;
-  const fechaLimite = new Date(new Date(fechaFin).getTime() + 90 * 24 * 60 * 60 * 1000);
-  const diff = fechaLimite.getTime() - new Date().getTime();
-  return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
-};
-
-// ============================================================================
-// HOOK PRINCIPAL
-// ============================================================================
 
 export const useAdminLotePagos = () => {
   const theme = useTheme();
@@ -34,29 +18,41 @@ export const useAdminLotePagos = () => {
   const { showSuccess, showError } = useSnackbar();
 
   const confirmDialog = useConfirmDialog();
-
-  const [viewMode, setViewMode] = useState<'table' | 'cards'>('cards');
-  // ✅ selectedLote guarda el LoteDto completo — necesario para la mutación
   const [selectedLote, setSelectedLote] = useState<LoteDto | null>(null);
 
-  // --- DATA FETCHING ---
-  const { data: lotesRaw = [], isLoading, error } = useQuery({
+  // --- DATA FETCHING: LOTES ---
+  const { data: lotesRaw = [], isLoading: isLoadingLotes, error: errorLotes } = useQuery({
     queryKey: ['adminLotesPagos'],
     queryFn: async () => (await LoteService.findAllAdmin()).data,
     refetchInterval: env.queryRefetchInterval || 30000,
     staleTime: env.queryStaleTime || 10000,
   });
 
+  // --- DATA FETCHING: PUJAS (Para armar el Top 3) ---
+  const { data: pujasRaw = [], isLoading: isLoadingPujas } = useQuery({
+    queryKey: ['adminPujasTodas'],
+    queryFn: async () => (await PujaService.getAllAdmin()).data,
+    refetchInterval: env.queryRefetchInterval || 30000,
+  });
+
+  // --- AGRUPAR PUJAS POR LOTE ---
+  const pujasPorLote = useMemo(() => {
+    const map: Record<number, PujaDto[]> = {};
+    pujasRaw.forEach(p => {
+      if (!map[p.id_lote]) map[p.id_lote] = [];
+      map[p.id_lote].push(p);
+    });
+    // Ordenar de mayor a menor monto en cada lote
+    Object.keys(map).forEach(k => {
+      map[Number(k)].sort((a, b) => Number(b.monto_puja) - Number(a.monto_puja));
+    });
+    return map;
+  }, [pujasRaw]);
+
   // --- FILTROS ---
   const lotesPendientesTotal = useMemo(() => {
     return lotesRaw.filter((l) => l.estado_subasta === 'finalizada' && l.id_ganador);
   }, [lotesRaw]);
-
-  const lotesRiesgo = useMemo(() => {
-    return lotesPendientesTotal.filter(l => (l.intentos_fallidos_pago || 0) > 0);
-  }, [lotesPendientesTotal]);
-
-  const { sortedData: lotes, highlightedId } = useSortedData(lotesRiesgo);
 
   // --- ANALYTICS ---
   const analytics = useMemo(() => {
@@ -81,9 +77,6 @@ export const useAdminLotePagos = () => {
   }, [lotesPendientesTotal]);
 
   // --- MUTACIÓN ---
-  // ✅ Recibe el LoteDto completo para decidir qué método de PujaService usar:
-  //    - Si tiene puja ganadora → cancelarGanadoraAnticipada (devuelve token)
-  //    - Si no                 → manageAuctionEnd con idGanador: null (libera el lote)
   const sancionarMutation = useMutation({
     mutationFn: async (lote: LoteDto) => {
       if (lote.id_puja_mas_alta) {
@@ -98,6 +91,7 @@ export const useAdminLotePagos = () => {
       const msg = (res.data as any)?.message || 'Adjudicación procesada correctamente.';
       showSuccess(msg);
       queryClient.invalidateQueries({ queryKey: ['adminLotesPagos'] });
+      queryClient.invalidateQueries({ queryKey: ['adminPujasTodas'] });
       confirmDialog.close();
     },
     onError: (err: any) => {
@@ -105,36 +99,27 @@ export const useAdminLotePagos = () => {
     },
   });
 
-  // --- ACCIONES ---
   const handleForceFinish = (lote: LoteDto) => {
-    // ✅ Guardamos el lote completo — la mutación lo necesita entero
     setSelectedLote(lote);
     confirmDialog.confirm('force_finish', lote);
   };
 
   const handleConfirmAction = () => {
     if (selectedLote) {
-      // ✅ Pasamos el LoteDto completo a la mutación
       sancionarMutation.mutate(selectedLote);
     }
   };
 
   return {
     theme,
-    viewMode,
-    setViewMode,
-    lotes,
     lotesPendientesTotal,
+    pujasPorLote, 
     analytics,
-    isLoading,
-    error,
-    highlightedId,
+    isLoading: isLoadingLotes || isLoadingPujas,
+    error: errorLotes,
     isMutating: sancionarMutation.isPending,
     handleForceFinish,
     handleConfirmAction,
-    calcularDiasRestantes,
-    modales: {
-      confirm: confirmDialog,
-    },
+    modales: { confirm: confirmDialog },
   };
 };

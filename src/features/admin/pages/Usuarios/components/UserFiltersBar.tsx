@@ -1,9 +1,17 @@
 // src/features/admin/pages/Usuarios/components/UserFiltersBar.tsx
 
 import { FilterBar, FilterSearch, FilterSelect } from '@/shared';
-import { RestartAlt } from '@mui/icons-material';
-import { Box, Button, MenuItem, Stack, TextField } from '@mui/material';
+import { Box, MenuItem, Stack, TextField, useTheme } from '@mui/material';
 import React from 'react';
+
+// Estilos compartidos para los inputs de fecha (ícono del calendario en naranja #CC6333)
+const dateInputStyles = {
+  width: { xs: '50%', sm: 140 },
+  '& input::-webkit-calendar-picker-indicator': {
+    cursor: 'pointer',
+    filter: 'brightness(0) saturate(100%) invert(46%) sepia(50%) saturate(1637%) hue-rotate(345deg) brightness(90%) contrast(85%)'
+  }
+};
 
 interface UserFiltersBarProps {
   searchTerm: string;
@@ -23,34 +31,68 @@ const UserFiltersBar: React.FC<UserFiltersBarProps> = ({
   startDate, setStartDate,
   endDate, setEndDate,
   clearFilters,
-}) => (
-  <FilterBar sx={{ mb: 3 }}>
-    <Stack spacing={2} width="100%">
-      <FilterSearch
-        placeholder="Buscar por DNI, nombre..."
-        value={searchTerm}
-        onSearch={setSearchTerm}
-      />
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: '1.5fr 1fr 1fr 0.5fr' }, gap: 2 }}>
-        <FilterSelect label="Estado" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
-          <MenuItem value="all">Todos</MenuItem>
-          <MenuItem value="active">Activos</MenuItem>
-          <MenuItem value="inactive">Inactivos</MenuItem>
-        </FilterSelect>
-        <TextField
-          type="date" label="Desde" value={startDate}
-          onChange={(e) => setStartDate(e.target.value)}
-          InputLabelProps={{ shrink: true }} size="small"
-        />
-        <TextField
-          type="date" label="Hasta" value={endDate}
-          onChange={(e) => setEndDate(e.target.value)}
-          InputLabelProps={{ shrink: true }} size="small"
-        />
-        <Button startIcon={<RestartAlt />} onClick={clearFilters}>Limpiar</Button>
+}) => {
+  const theme = useTheme();
+
+  return (
+    <FilterBar sx={{ mb: 3, p: 2 }}>
+      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, gap: 2, alignItems: { xs: 'stretch', lg: 'center' }, width: '100%' }}>
+
+        {/* BUSCADOR (Ocupa el espacio disponible a la izquierda) */}
+        <Box sx={{ flex: 1, minWidth: { xs: '100%', lg: 300 } }}>
+          <FilterSearch
+            placeholder="Buscar por DNI, nombre o correo..."
+            value={searchTerm}
+            onSearch={setSearchTerm}
+            fullWidth
+          />
+        </Box>
+
+        {/* CONTENEDOR DE FILTROS Y BOTONES (Alineados a la derecha en desktop) */}
+        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2, flexWrap: 'wrap', alignItems: 'center', justifyContent: { xs: 'center', lg: 'flex-end' } }}>
+
+          {/* FECHAS */}
+          <Stack direction="row" spacing={1} sx={{ width: { xs: '100%', sm: 'auto' } }}>
+            <TextField
+              type="date"
+              label="Desde"
+              size="small"
+              InputLabelProps={{ shrink: true }}
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              sx={dateInputStyles}
+            />
+            <TextField
+              type="date"
+              label="Hasta"
+              size="small"
+              InputLabelProps={{ shrink: true }}
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              sx={dateInputStyles}
+            />
+          </Stack>
+
+          {/* SELECT ESTADO */}
+          <Box sx={{ display: 'flex', gap: 1.5, width: { xs: '100%', sm: 'auto' } }}>
+            <FilterSelect
+              label="Estado"
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              sx={{ flex: 1, minWidth: 140 }}
+            >
+              <MenuItem value="all">Todos</MenuItem>
+              <MenuItem value="active">Activos</MenuItem>
+              <MenuItem value="inactive">Inactivos</MenuItem>
+            </FilterSelect>
+          </Box>
+
+
+
+        </Box>
       </Box>
-    </Stack>
-  </FilterBar>
-);
+    </FilterBar>
+  );
+};
 
 export default UserFiltersBar;

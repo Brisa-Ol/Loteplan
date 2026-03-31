@@ -2,7 +2,7 @@
 
 import { AdminPageHeader, AlertBanner, PageContainer } from '@/shared';
 import { Box, Chip, Stack } from '@mui/material';
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useAdminSuscripciones } from '../../hooks/finanzas/useAdminSuscripciones';
 import CancelacionesTab from './components/CancelacionesTab';
 import SuscripcionesActiveTab from './components/SuscripcionesActiveTab';
@@ -10,7 +10,34 @@ import SuscripcionesActiveTab from './components/SuscripcionesActiveTab';
 const AdminSuscripciones: React.FC = () => {
   const logic = useAdminSuscripciones();
 
-  // ✅ NUEVO: Recuperar la pestaña guardada al recargar la página
+  // Estados para el filtro de fechas
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+
+  // Lógica de filtrado interceptando la fecha 'createdAt'
+  const dataConFiltroFechas = useMemo(() => {
+    // Aquí el hook original nos devuelve "filteredSuscripciones"
+    const baseData = logic.filteredSuscripciones || []; 
+    
+    return baseData.filter((item: any) => {
+      if (!startDate && !endDate) return true;
+      
+      const itemDate = new Date(item.createdAt);
+      
+      if (startDate) {
+        const start = new Date(startDate + 'T00:00:00');
+        if (itemDate < start) return false;
+      }
+      if (endDate) {
+        const end = new Date(endDate + 'T23:59:59');
+        if (itemDate > end) return false;
+      }
+      
+      return true;
+    });
+  }, [logic.filteredSuscripciones, startDate, endDate]);
+
+  // Recuperar la pestaña guardada al recargar la página
   useEffect(() => {
     const savedTab = sessionStorage.getItem('adminSuscripcionesTab');
     if (savedTab !== null) {
@@ -19,7 +46,7 @@ const AdminSuscripciones: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ✅ NUEVO: Guardar la pestaña en sessionStorage cuando se hace clic
+  // Guardar la pestaña en sessionStorage cuando se hace clic
   const handleTabChange = (index: number) => {
     logic.setTabIndex(index);
     sessionStorage.setItem('adminSuscripcionesTab', index.toString());
@@ -54,7 +81,7 @@ const AdminSuscripciones: React.FC = () => {
           {TABS.map(({ label, index }) => (
             <Chip
               key={index} label={label}
-              onClick={() => handleTabChange(index)} // ✅ Usamos la nueva función aquí
+              onClick={() => handleTabChange(index)}
               color={logic.tabIndex === index ? 'primary' : 'default'}
               variant={logic.tabIndex === index ? 'filled' : 'outlined'}
               sx={{ fontWeight: 700, px: 1 }}
@@ -63,7 +90,18 @@ const AdminSuscripciones: React.FC = () => {
         </Stack>
       </Box>
 
-      {logic.tabIndex === 0 ? <SuscripcionesActiveTab logic={logic} /> : <CancelacionesTab />}
+      {/* Le inyectamos la data filtrada correcta (filteredSuscripciones) y los estados de fecha */}
+      {logic.tabIndex === 0 ? (
+        <SuscripcionesActiveTab 
+          logic={{ ...logic, filteredSuscripciones: dataConFiltroFechas }} 
+          startDate={startDate}
+          setStartDate={setStartDate}
+          endDate={endDate}
+          setEndDate={setEndDate}
+        />
+      ) : (
+        <CancelacionesTab />
+      )}
     </PageContainer>
   );
 };

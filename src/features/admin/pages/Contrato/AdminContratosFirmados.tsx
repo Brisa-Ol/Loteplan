@@ -230,6 +230,17 @@ const AdminContratosFirmados: React.FC = () => {
     }
   ], [theme, logic]);
 
+  // Estilos compartidos para los inputs de fecha (con el ícono del calendario en naranja)
+  const dateInputStyles = {
+    width: { xs: '100%', sm: 150 },
+    bgcolor: 'background.paper',
+    borderRadius: 1,
+    '& input::-webkit-calendar-picker-indicator': {
+      cursor: 'pointer',
+      filter: 'brightness(0) saturate(100%) invert(46%) sepia(50%) saturate(1637%) hue-rotate(345deg) brightness(90%) contrast(85%)'
+    }
+  };
+
   return (
     <PageContainer maxWidth="xl" sx={{ py: 3 }}>
       {/* ✅ APLICACIÓN DEL HEADER ESTANDARIZADO */}
@@ -270,8 +281,8 @@ const AdminContratosFirmados: React.FC = () => {
             <MenuItem value="suscripcion">Suscripciones</MenuItem>
           </FilterSelect>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ width: { xs: '100%', md: 'auto' } }}>
-            <TextField label="Desde" type="date" size="small" value={logic.startDate} onChange={(e) => logic.setStartDate(e.target.value)} InputLabelProps={{ shrink: true }} sx={{ width: { xs: '100%', sm: 150 }, bgcolor: 'background.paper', borderRadius: 1 }} />
-            <TextField label="Hasta" type="date" size="small" value={logic.endDate} onChange={(e) => logic.setEndDate(e.target.value)} InputLabelProps={{ shrink: true }} sx={{ width: { xs: '100%', sm: 150 }, bgcolor: 'background.paper', borderRadius: 1 }} />
+            <TextField label="Desde" type="date" size="small" value={logic.startDate} onChange={(e) => logic.setStartDate(e.target.value)} InputLabelProps={{ shrink: true }} sx={dateInputStyles} />
+            <TextField label="Hasta" type="date" size="small" value={logic.endDate} onChange={(e) => logic.setEndDate(e.target.value)} InputLabelProps={{ shrink: true }} sx={dateInputStyles} />
           </Stack>
         </FilterBar>
       </Stack>
