@@ -160,20 +160,21 @@ export const useAdminPujas = () => {
 
   // ─── Mutaciones ───────────────────────────────────────────────────────────
 
-  const endAuctionMutation = useMutation({
-    mutationFn: (id: number) => LoteService.endAuction(id),
-    onSuccess: (_, id) => {
-      queryClient.invalidateQueries({ queryKey: ['adminLotes'] });
-      queryClient.invalidateQueries({ queryKey: ['adminPujas'] });
-      showSuccess('Subasta finalizada correctamente');
-      modales.confirmDialog.close();
-      triggerHighlight(id);
-    },
-    onError: () => {
-      showError('Error al finalizar la subasta');
-      modales.confirmDialog.close();
-    },
-  });
+const endAuctionMutation = useMutation({
+  mutationFn: (id: number) => LoteService.endAuction(id),
+  onSuccess: (_, id) => {
+    // 👇 Igual que arriba
+    queryClient.refetchQueries({ queryKey: ['adminLotes'] });
+    queryClient.refetchQueries({ queryKey: ['adminPujas'] });
+    showSuccess('Subasta finalizada correctamente');
+    modales.confirmDialog.close();
+    triggerHighlight(id);
+  },
+  onError: () => {
+    showError('Error al finalizar la subasta');
+    modales.confirmDialog.close();
+  },
+});
 
   const forceFinishMutation = useMutation({
     mutationFn: ({ idLote, idGanador }: { idLote: number; idGanador: number | null }) =>
@@ -237,9 +238,9 @@ export const useAdminPujas = () => {
     setTimeout(() => setPujaSeleccionada(null), 300);
   }, [modales.detallePuja]);
 
-  const handleFinalizarSubasta = useCallback((lote: LoteDto) => {
-    modales.confirmDialog.confirm('end_auction', lote);
-  }, [modales.confirmDialog]);
+  const handleFinalizarSubasta = useCallback((idLote: number) => {
+  modales.confirmDialog.confirm('end_auction', { id: idLote });
+}, [modales.confirmDialog]);
 
   const handleForceFinish = useCallback((lote: LoteDto) => {
     modales.confirmDialog.confirm('force_finish', {

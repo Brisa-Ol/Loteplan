@@ -173,7 +173,7 @@ interface LiveCardProps {
   lote: LoteDto;
   pujas: PujaDto[];
   getUserName: (id: number) => string;
-  onFinish: (l: LoteDto) => void;
+  onFinish: (l: number) => void;
   onPujaClick: (puja: PujaDto) => void;
 }
 
@@ -273,7 +273,7 @@ const LiveAuctionCard = React.memo<LiveCardProps>(({
           color="error"
           size="small"
           startIcon={<StopCircle />}
-          onClick={() => onFinish(lote)}
+          onClick={() => onFinish(lote.id)}
           sx={{ fontWeight: 700 }}
         >
           Finalizar Subasta
@@ -457,7 +457,7 @@ const AdminPujas: React.FC = () => {
                         size="small"
                         variant="contained"
                         color="error"
-                        onClick={() => logic.handleFinalizarSubasta(l)}
+                        onClick={() => logic.handleFinalizarSubasta(l.id)}
                         startIcon={<StopCircle fontSize="small" />}
                         sx={{ fontWeight: 700 }}
                       >

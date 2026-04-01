@@ -84,8 +84,8 @@ const LoteService = {
    * ✅ Alineado con /:id/start_auction
    */
   startAuction: async (id: number): Promise<AxiosResponse<StartAuctionResponse>> => {
-    return await httpService.post(`${BASE_ENDPOINT}/${id}/start_auction`);
-  },
+  return await httpService.post(`${BASE_ENDPOINT}/${id}/start_auction`);
+},
 
   /**
    * ✅ Alineado con /:id/end

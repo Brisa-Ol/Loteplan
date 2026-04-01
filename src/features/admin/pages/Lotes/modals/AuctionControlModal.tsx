@@ -16,7 +16,7 @@ interface Props {
   open: boolean;
   onClose: () => void;
   lote: LoteDto | null;
-  onStart: (id: number, dates: { fecha_inicio: string; fecha_fin: string }) => void;
+  onStart: (id: number) => void;
   onEnd: (id: number) => void;
   isLoading: boolean;
 }
@@ -50,7 +50,7 @@ const AuctionControlModal: React.FC<Props> = ({ open, onClose, lote, onStart, on
 
   // --- Helpers de Lógica ---
   const isPending = lote?.estado_subasta === 'pendiente';
-  const isActive = lote?.estado_subasta === 'activa';
+  const isActive = lote?.estado_subasta?.toLowerCase() === 'activa';
   const isFinished = lote?.estado_subasta === 'finalizada';
   const isFormValid = formData.fecha_inicio !== '' && formData.fecha_fin !== '' && !dateError;
 
@@ -73,7 +73,7 @@ const AuctionControlModal: React.FC<Props> = ({ open, onClose, lote, onStart, on
   const handleConfirm = () => {
     if (!lote) return;
     if (isPending) {
-      onStart(lote.id, { fecha_inicio: formData.fecha_inicio, fecha_fin: formData.fecha_fin });
+      onStart(lote.id);
     } else if (isActive) {
       onEnd(lote.id);
     }

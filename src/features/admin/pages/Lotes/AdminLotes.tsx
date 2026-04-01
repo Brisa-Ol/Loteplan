@@ -35,6 +35,7 @@ import CreateLoteModal from './modals/CreateLoteModal';
 import EditLoteModal from './modals/EditLoteModal';
 import LoteOverviewModal from './modals/LoteOverviewModal';
 import ManageLoteImagesModal from './modals/ManageLoteImagesModal';
+import { useAdminPujas } from '../../hooks/lotes/useAdminPujas';
 
 // ============================================================================
 // COMPONENTE: CARD DE LOTE
@@ -161,7 +162,9 @@ const LoteCard: React.FC<{
 // COMPONENTE PRINCIPAL
 // ============================================================================
 const AdminLotes: React.FC = () => {
-  const logic = useAdminLotes();
+  const Loteslogic = useAdminLotes();
+
+  
 
   // 1. Configuración para Proyectos (Lista larga con scroll y fuente reducida)
   const proyectoMenuProps = {
@@ -205,9 +208,9 @@ const AdminLotes: React.FC = () => {
           <Avatar
             src={l.imagenes?.[0] ? imagenService.resolveImageUrl(l.imagenes[0].url) : undefined}
             variant="rounded"
-            sx={{ width: 40, height: 40, bgcolor: alpha(logic.theme.palette.primary.main, 0.1) }}
+            sx={{ width: 40, height: 40, bgcolor: alpha(Loteslogic.theme.palette.primary.main, 0.1) }}
           >
-            <Inventory sx={{ color: logic.theme.palette.primary.main, fontSize: 20 }} />
+            <Inventory sx={{ color: Loteslogic.theme.palette.primary.main, fontSize: 20 }} />
           </Avatar>
           <Box minWidth={0}>
             <Typography variant="body2" fontWeight={600} noWrap>{l.nombre_lote}</Typography>
@@ -221,7 +224,7 @@ const AdminLotes: React.FC = () => {
       label: 'Proyecto',
       minWidth: 200,
       render: (l) => {
-        const proyecto = logic.proyectos.find((p) => p.id === l.id_proyecto);
+        const proyecto = Loteslogic.proyectos.find((p) => p.id === l.id_proyecto);
         return (
           <Stack spacing={0.5} alignItems="flex-start">
             <Chip label={proyecto?.nombre_proyecto || "S/P"} size="small" variant="outlined" color="primary" />
@@ -263,29 +266,29 @@ const AdminLotes: React.FC = () => {
       render: (l) => (
         <Stack direction="row" justifyContent="flex-end" spacing={1}>
           <Tooltip title="Ver Detalles">
-            <IconButton onClick={() => logic.handleOpenOverview(l)} size="small" color="info">
+            <IconButton onClick={() => Loteslogic.handleOpenOverview(l)} size="small" color="info">
               <Visibility fontSize="small" />
             </IconButton>
           </Tooltip>
           <Tooltip title="Gestionar Imágenes">
-            <IconButton onClick={() => logic.handleManageImages(l)} size="small" color="success">
+            <IconButton onClick={() => Loteslogic.handleManageImages(l)} size="small" color="success">
               <Collections fontSize="small" />
             </IconButton>
           </Tooltip>
           <Tooltip title="Subasta">
-            <IconButton onClick={() => logic.handleAuctionClick(l)} size="small" color="primary" disabled={!l.activo}>
+            <IconButton onClick={() => Loteslogic.handleAuctionClick(l)} size="small" color="primary" disabled={!l.activo}>
               <Gavel fontSize="small" />
             </IconButton>
           </Tooltip>
           <Tooltip title="Editar">
-            <IconButton onClick={() => logic.handleOpenEdit(l)} size="small">
+            <IconButton onClick={() => Loteslogic.handleOpenEdit(l)} size="small">
               <Edit fontSize="small" />
             </IconButton>
           </Tooltip>
         </Stack>
       )
     }
-  ], [logic.proyectos, logic.theme, logic.isToggling]);
+  ], [Loteslogic.proyectos, Loteslogic.theme, Loteslogic.isToggling]);
 
   return (
     <PageContainer maxWidth="xl" sx={{ py: 3 }}>
@@ -298,7 +301,7 @@ const AdminLotes: React.FC = () => {
           <Button
             variant="contained"
             startIcon={<AddIcon />}
-            onClick={logic.modales.create.open}
+            onClick={Loteslogic.modales.create.open}
             fullWidth // Responsive para móviles
             sx={{ fontWeight: 800, px: 3, py: 1.2, borderRadius: 2 }}
           >
@@ -309,10 +312,10 @@ const AdminLotes: React.FC = () => {
 
       {/* KPI GRID */}
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' }, gap: 2, mb: 4 }}>
-        <StatCard title="Total Lotes" value={logic.stats.total} icon={<Inventory />} color="primary" loading={logic.loadingLotes} />
-        <StatCard title="En Subasta" value={logic.stats.enSubasta} icon={<Gavel />} color="success" loading={logic.loadingLotes} />
-        <StatCard title="Finalizados" value={logic.stats.finalizados} icon={<CheckCircle />} color="info" loading={logic.loadingLotes} />
-        <StatCard title="Sin Proyecto" value={logic.stats.huerfanos} icon={<AssignmentLate />} color="warning" loading={logic.loadingLotes} />
+        <StatCard title="Total Lotes" value={Loteslogic.stats.total} icon={<Inventory />} color="primary" loading={Loteslogic.loadingLotes} />
+        <StatCard title="En Subasta" value={Loteslogic.stats.enSubasta} icon={<Gavel />} color="success" loading={Loteslogic.loadingLotes} />
+        <StatCard title="Finalizados" value={Loteslogic.stats.finalizados} icon={<CheckCircle />} color="info" loading={Loteslogic.loadingLotes} />
+        <StatCard title="Sin Proyecto" value={Loteslogic.stats.huerfanos} icon={<AssignmentLate />} color="warning" loading={Loteslogic.loadingLotes} />
       </Box>
 
       {/* FILTROS Y VISTA */}
@@ -320,22 +323,22 @@ const AdminLotes: React.FC = () => {
         <FilterBar sx={{ flex: 1, width: '100%' }}>
           <FilterSearch
             placeholder="Buscar por nombre o ID..."
-            value={logic.searchTerm}
-            onChange={(e) => logic.setSearchTerm(e.target.value)}
+            value={Loteslogic.searchTerm}
+            onChange={(e) => Loteslogic.setSearchTerm(e.target.value)}
             sx={{ flex: 2 }}
           />
 
           {/* 🚀 FILTRO DE PROYECTO ACTUALIZADO */}
           <FilterSelect
             label="Proyecto"
-            value={logic.filterProject}
-            onChange={(e: any) => logic.setFilterProject(e.target.value)}
+            value={Loteslogic.filterProject}
+            onChange={(e: any) => Loteslogic.setFilterProject(e.target.value)}
             SelectProps={{
               MenuProps: proyectoMenuProps
             }}
           >
             <MenuItem value="all">Todos los Lotes</MenuItem>
-            {logic.proyectos.map((p) => (
+            {Loteslogic.proyectos.map((p) => (
               <MenuItem key={p.id} value={p.id} sx={{ py: 1.5 }}>
                 <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between" width="100%">
                   <Typography variant="body2">{p.nombre_proyecto}</Typography>
@@ -348,7 +351,7 @@ const AdminLotes: React.FC = () => {
                       fontSize: '0.55rem',
                       height: 18,
                       fontWeight: 800,
-                      bgcolor: p.tipo_inversion === 'directo' ? alpha(logic.theme.palette.info.main, 0.1) : alpha(logic.theme.palette.warning.main, 0.1),
+                      bgcolor: p.tipo_inversion === 'directo' ? alpha(Loteslogic.theme.palette.info.main, 0.1) : alpha(Loteslogic.theme.palette.warning.main, 0.1),
                       color: p.tipo_inversion === 'directo' ? 'info.main' : 'warning.main',
                       border: '1px solid',
                       borderColor: 'transparent'
@@ -361,8 +364,8 @@ const AdminLotes: React.FC = () => {
 
           <FilterSelect
             label="Estado"
-            value={logic.filterEstadoSubasta}
-            onChange={(e: any) => logic.setFilterEstadoSubasta(e.target.value)}
+            value={Loteslogic.filterEstadoSubasta}
+            onChange={(e: any) => Loteslogic.setFilterEstadoSubasta(e.target.value)}
             SelectProps={{
               MenuProps: estadoMenuProps
             }}
@@ -373,76 +376,76 @@ const AdminLotes: React.FC = () => {
           </FilterSelect>
         </FilterBar>
 
-        <ToggleButtonGroup value={logic.viewMode} exclusive onChange={(_, m) => m && logic.setViewMode(m)} size="small" sx={{ bgcolor: 'background.paper' }}>
+        <ToggleButtonGroup value={Loteslogic.viewMode} exclusive onChange={(_, m) => m && Loteslogic.setViewMode(m)} size="small" sx={{ bgcolor: 'background.paper' }}>
           <ToggleButton value="table"><ViewList /></ToggleButton>
           <ToggleButton value="grid"><GridView /></ToggleButton>
         </ToggleButtonGroup>
       </Stack>
 
-      <QueryHandler isLoading={logic.loadingLotes} error={logic.error as Error}>
-        {logic.viewMode === 'grid' ? (
+      <QueryHandler isLoading={Loteslogic.loadingLotes} error={Loteslogic.error as Error}>
+        {Loteslogic.viewMode === 'grid' ? (
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' }, gap: 3 }}>
-            {logic.filteredLotes.map((lote) => (
+            {Loteslogic.filteredLotes.map((lote) => (
               <LoteCard
                 key={lote.id}
                 lote={lote}
-                proyecto={logic.proyectos.find(p => p.id === lote.id_proyecto)}
-                onOverview={() => logic.handleOpenOverview(lote)}
-                onEdit={() => logic.handleOpenEdit(lote)}
-                onImages={() => logic.handleManageImages(lote)}
-                onAuction={() => logic.handleAuctionClick(lote)}
-                onToggle={() => logic.handleToggleActive(lote)}
-                isToggling={logic.isToggling && logic.modales.confirm.data?.id === lote.id}
-                canSubastar={logic.checkIsSubastable(lote).allowed}
+                proyecto={Loteslogic.proyectos.find(p => p.id === lote.id_proyecto)}
+                onOverview={() => Loteslogic.handleOpenOverview(lote)}
+                onEdit={() => Loteslogic.handleOpenEdit(lote)}
+                onImages={() => Loteslogic.handleManageImages(lote)}
+                onAuction={() => Loteslogic.handleAuctionClick(lote)}
+                onToggle={() => Loteslogic.handleToggleActive(lote)}
+                isToggling={Loteslogic.isToggling && Loteslogic.modales.confirm.data?.id === lote.id}
+                canSubastar={Loteslogic.checkIsSubastable(lote).allowed}
               />
             ))}
           </Box>
         ) : (
-          <DataTable columns={columns} data={logic.filteredLotes} getRowKey={(r) => r.id} pagination />
+          <DataTable columns={columns} data={Loteslogic.filteredLotes} getRowKey={(r) => r.id} pagination />
         )}
       </QueryHandler>
 
       <CreateLoteModal
-        {...logic.modales.create.modalProps}
+        {...Loteslogic.modales.create.modalProps}
         onSubmit={async (data: CreateLoteDto, file: File | null) => {
-          await logic.saveLote({ dto: data, file });
+          await Loteslogic.saveLote({ dto: data, file });
         }}
-        isLoading={logic.isSaving}
+        isLoading={Loteslogic.isSaving}
       />
 
       <EditLoteModal
-        {...logic.modales.edit.modalProps}
-        lote={logic.selectedLote}
+        {...Loteslogic.modales.edit.modalProps}
+        lote={Loteslogic.selectedLote}
         onSubmit={async (id: number, data: UpdateLoteDto) => {
-          await logic.saveLote({ dto: data, id });
+          await Loteslogic.saveLote({ dto: data, id });
         }}
-        isLoading={logic.isSaving}
+        isLoading={Loteslogic.isSaving}
       />
 
-      {logic.selectedLote && (
+      {Loteslogic.selectedLote && (
         <>
           <ManageLoteImagesModal
-            {...logic.modales.images.modalProps}
-            lote={logic.selectedLote}
+            {...Loteslogic.modales.images.modalProps}
+            lote={Loteslogic.selectedLote}
           />
           <LoteOverviewModal
-            open={logic.modales.overview.isOpen}
-            onClose={logic.modales.overview.close}
-            lote={logic.selectedLote}
-            proyecto={logic.proyectos.find(p => p.id === logic.selectedLote?.id_proyecto)}
+            open={Loteslogic.modales.overview.isOpen}
+            onClose={Loteslogic.modales.overview.close}
+            lote={Loteslogic.selectedLote}
+            proyecto={Loteslogic.proyectos.find(p => p.id === Loteslogic.selectedLote?.id_proyecto)}
           />
           <AuctionControlModal
-            open={logic.modales.auction.isOpen}
-            onClose={logic.modales.auction.close}
-            lote={logic.selectedLote}
-            isLoading={logic.isAuctionLoading}
-            onStart={(id) => logic.startAuctionFn(id)}
-            onEnd={(id) => logic.endAuctionFn(id)}
+            open={Loteslogic.modales.auction.isOpen}
+            onClose={Loteslogic.modales.auction.close}
+            lote={Loteslogic.selectedLote}
+            isLoading={Loteslogic.isAuctionLoading}
+            onStart={(id) => Loteslogic.startAuctionFn(id)}
+            onEnd={(id) => Loteslogic.endAuctionFn(id)}
           />
         </>
       )}
 
-      <ConfirmDialog controller={logic.modales.confirm} onConfirm={logic.handleConfirmAction} isLoading={logic.isToggling} />
+      <ConfirmDialog controller={Loteslogic.modales.confirm} onConfirm={Loteslogic.handleConfirmAction} isLoading={Loteslogic.isToggling} />
     </PageContainer>
   );
 };

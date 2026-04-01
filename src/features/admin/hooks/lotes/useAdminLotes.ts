@@ -14,6 +14,7 @@ import { env } from '@/core/config/env';
 import type { CreateLoteDto, LoteDto, UpdateLoteDto } from '@/core/types/lote.dto';
 import { useConfirmDialog, useModal, useSnackbar } from '@/shared';
 import { useSortedData } from '../useSortedData';
+import { finalizarSubasta } from '@/shared/utils/pujaUtils';
 
 function useDebouncedValue<T>(value: T, delay: number = 300): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
@@ -163,17 +164,35 @@ export const useAdminLotes = () => {
     onError: (err: any) => { showError(err.response?.data?.error || 'Error'); modales.confirm.close(); }
   });
 
-  const startAuction = useMutation({
-    mutationFn: (id: number) => LoteService.startAuction(id),
-    onSuccess: (_, id) => { queryClient.invalidateQueries({ queryKey: ['adminLotes'] }); modales.auction.close(); triggerHighlight(id); showSuccess('Subasta iniciada'); },
-    onError: () => showError('Error al iniciar subasta'),
-  });
+const startAuction = useMutation({
+  mutationFn: (id: number) => LoteService.startAuction(id),
+  onSuccess: (_, id) => {
+    // Actualiza el cache directamente sin esperar un GET
+    queryClient.setQueryData<LoteDto[]>(['adminLotes'], (old = []) =>
+      old.map(l => l.id === id ? { ...l, estado_subasta: 'activa' } : l)
+    );
+    modales.auction.close();
+    triggerHighlight(id);
+    showSuccess('Subasta iniciada');
+  },
+  onError: () => showError('Error al iniciar subasta'),
+});
 
-  const endAuction = useMutation({
-    mutationFn: async (id: number) => await PujaService.manageAuctionEnd(id, null),
-    onSuccess: (_, id) => { queryClient.invalidateQueries({ queryKey: ['adminLotes'] }); modales.auction.close(); triggerHighlight(id); showSuccess('Subasta finalizada'); },
-    onError: (err: any) => showError(err.response?.data?.message || 'Error al finalizar'),
-  });
+const endAuction = useMutation({
+  mutationFn: (id: number) => LoteService.endAuction(id),
+  onSuccess: (_, id) => {
+    // Actualiza el cache directamente sin esperar un GET
+    queryClient.setQueryData<LoteDto[]>(['adminLotes'], (old = []) =>
+      old.map(l => l.id === id ? { ...l, estado_subasta: 'finalizada' } : l)
+    );
+    modales.auction.close();
+    triggerHighlight(id);
+    showSuccess('Subasta finalizada');
+  },
+  onError: (err: any) =>
+    showError(err.response?.data?.message || 'Error al finalizar'),
+});
+
 
   // --- HANDLERS ---
   const handleCloseAllModals = useCallback(() => {
