@@ -79,7 +79,7 @@ const UserDashboard: React.FC = () => {
   });
   const { data: pagos } = useQuery({
     queryKey: ['misPagosPendientes'],
-    queryFn: async () => (await PagoService.getMyPayments()).data
+    queryFn: async () => (await PagoService.getMyPayments())  
   });
   const { data: misPujas } = useQuery({
     queryKey: ['misPujasCheck'],

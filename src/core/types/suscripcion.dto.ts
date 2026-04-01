@@ -36,6 +36,7 @@ export interface CancelacionDTO {
 export interface SuscripcionDto extends BaseDTO {
   id_usuario: number;
   id_proyecto: number;
+  activo: boolean;
   tokens_disponibles: number;
   meses_a_pagar: number;
   saldo_a_favor: string;
@@ -58,6 +59,11 @@ export interface SuscripcionDto extends BaseDTO {
     obj_suscripciones: number;
     suscripciones_actuales: number;
   };
+}
+
+export interface ProyectoDirectoDTO {
+    id: number,
+    nombre_proyecto: string
 }
 
 export interface SuscripcionCanceladaDto extends BaseDTO {

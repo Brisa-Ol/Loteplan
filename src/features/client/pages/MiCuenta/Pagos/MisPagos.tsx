@@ -15,7 +15,8 @@ import {
 } from '@mui/material';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import React, { useCallback, useMemo, useState } from 'react';
-import { HistorialPagosAgrupado } from './HistorialAgrupado';
+import { HistorialPagosAgrupado } from './HistorialAgrupado/HistorialAgrupado';
+
 
 const getStatusConfig = (status: string) => {
   switch (status) {
@@ -66,9 +67,10 @@ const MisPagos: React.FC = () => {
 
   const pagosQuery = useQuery<PagoDto[]>({
     queryKey: ['misPagos'],
-    queryFn: async () => (await PagoService.getMyPayments()).data,
+    queryFn: PagoService.getMyPayments,
   });
-
+  console.log(pagosQuery.data);
+  
   const isLoading = pagosQuery.isLoading;
 
   const { filteredData, counts, historialData, stats } = useMemo(() => {
@@ -87,7 +89,9 @@ const MisPagos: React.FC = () => {
     return {
       filteredData: currentTab === 0 ? sorted.filter(p => p.estado_pago === 'pendiente') : sorted.filter(p => p.estado_pago === 'vencido'),
       counts,
-      historialData: sorted.filter(p => ['pagado', 'cubierto_por_puja'].includes(p.estado_pago)),
+      historialData: sorted.filter(p =>
+        ['pagado', 'cubierto_por_puja', 'forzado', 'cancelado'].includes(p.estado_pago)
+      ),
       stats
     };
   }, [pagosQuery.data, currentTab]);
@@ -140,7 +144,7 @@ const MisPagos: React.FC = () => {
       id: 'proyecto', label: 'Proyecto / Desarrollo', minWidth: 240,
       render: (row) => (
         <ProjectCell
-          nombre={row.suscripcion?.proyectoAsociado?.nombre_proyecto || 'Proyecto en curso'}
+          nombre={row.suscripcion?.proyectoAsociado?.nombre_proyecto || row.proyectoDirecto?.nombre_proyecto || 'Proyecto en curso'}
           cuotaActual={row.mes}
           totalCuotas={row.suscripcion?.proyectoAsociado?.plazo_inversion}
           cuotasRestantes={row.suscripcion?.meses_a_pagar}

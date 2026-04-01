@@ -1,5 +1,5 @@
 import type { BaseDTO } from "./base.dto";
-import type { SuscripcionDto } from "./suscripcion.dto";
+import type { ProyectoDirectoDTO, SuscripcionDto } from "./suscripcion.dto";
 
 // ==========================================
 // 📤 REQUEST DTOs (Lo que envías)
@@ -54,6 +54,7 @@ export interface PagoDto extends BaseDTO {
   motivo?: string;
   estado_pago: 'pendiente' | 'pagado' | 'vencido' | 'cancelado' | 'cubierto_por_puja' | 'forzado';
   suscripcion?: SuscripcionDto;
+  proyectoDirecto?: ProyectoDirectoDTO
 }
 
 /**

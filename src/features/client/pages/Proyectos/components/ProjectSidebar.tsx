@@ -322,7 +322,7 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({ logic, proyecto,
                   <Button variant="contained" color="warning" fullWidth size="large" onClick={logic.handleClickFirmar} sx={{ color: 'white', fontWeight: 700 }}>
                     Firmar Contrato Digital
                   </Button>
-                  <Button variant="text" size="small" onClick={logic.modales.contrato.open} sx={{ fontWeight: 600 }}>
+                  <Button variant="text" size="small" onClick={logic.modales.contrato.open  } sx={{ fontWeight: 600 }}>
                     Ver borrador del contrato
                   </Button>
                 </Stack>
