@@ -56,7 +56,8 @@ const HighlightsSection = memo(({ perfil }: { perfil: string }) => {
           </Avatar>
           <Box>
             <Typography variant="subtitle1" fontWeight={700}>{isAhorrista ? 'Cuotas Fijas' : 'Alta Rentabilidad'}</Typography>
-            <Typography variant="body2" color="text.secondary">{isAhorrista ? 'En pesos sin interés' : 'Retornos en USD'}</Typography>
+            <Typography variant="body2" color="text.secondary">{isAhorrista ? 'En pesos sin interés' : ''}</Typography> 
+            {/* Retornos en USD cuando se utilicen Dolares */}
           </Box>
         </Box>
         <Box display="flex" alignItems="center" gap={2}>

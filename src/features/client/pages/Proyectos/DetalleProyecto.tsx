@@ -82,11 +82,11 @@ const TabOverview = React.memo(({ proyecto, esMensual, googleMapsUrl }: any) => 
           <Typography variant="h6" fontWeight={800} gutterBottom>Descripción</Typography>
           <Typography variant="body1" color="text.secondary" sx={{ textAlign: 'justify', whiteSpace: 'pre-line' }}>{proyecto.descripcion}</Typography>
         </Box>
-        <Paper variant="outlined" sx={{ p: 3, borderRadius: 3, bgcolor: alpha(theme.palette.secondary.main, 0.05) }}>
-          <Box display="grid" gridTemplateColumns={{ xs: '1fr 1fr', md: 'repeat(4, 1fr)' }} gap={4}>
+        <Paper variant="outlined" sx={{ p: 3, borderRadius: 3, bgcolor: alpha(theme.palette.secondary.main, 0.05), }}>
+          <Box display="grid" gridTemplateColumns={{xs: 'repeat(2, 1fr)',md: 'repeat(auto-fit, minmax(200px, 1fr))'}} gap={4} >
             <DataPoint label="Moneda" value={proyecto.moneda} icon={<MonetizationOn fontSize="small" />} />
             <DataPoint label="Modalidad" value={esMensual ? 'Mensual' : 'Directa'} icon={<CalendarMonth fontSize="small" />} />
-            <DataPoint label="Suscritos" value={proyecto.suscripciones_actuales} icon={<Stars fontSize="small" />} />
+            {esMensual && <DataPoint label="Suscritos" value={proyecto.suscripciones_actuales} icon={<Stars fontSize="small" />} /> }
             <DataPoint label="Estado" value={proyecto.estado_proyecto} icon={<CheckCircle fontSize="small" />} />
           </Box>
         </Paper>

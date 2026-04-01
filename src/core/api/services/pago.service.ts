@@ -15,9 +15,10 @@ const PagoService = {
   // 💳 FLUJO DE PAGO (USUARIO)
   // =================================================
 
-  getMyPayments: async (): Promise<AxiosResponse<PagoDto[]>> => {
-    return await httpService.get(`${BASE_ENDPOINT}/mis_pagos`);
-  },
+  getMyPayments: async (): Promise<PagoDto[]> => {
+  const response = await httpService.get(`${BASE_ENDPOINT}/mis_pagos`);
+  return response.data.data;
+},
 
   iniciarPagoMensual: async (idPago: number): Promise<AxiosResponse<PagoCheckoutResponse>> => {
     return await httpService.post(`${BASE_ENDPOINT}/pagar-mes/${idPago}`);
