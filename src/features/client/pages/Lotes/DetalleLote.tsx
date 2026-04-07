@@ -2,6 +2,7 @@
 
 import {
   BookmarkBorder,
+  EmojiEvents,
   Gavel,
   Timer,
   TokenOutlined,
@@ -9,6 +10,7 @@ import {
 import {
   Alert,
   alpha,
+  Avatar,
   Box,
   Button,
   Card,
@@ -126,19 +128,13 @@ const DetalleLote: React.FC = () => {
 
   const { isLoading: isLoadingImage, hasError, handleLoad, handleError } = useImageLoader();
 
-  // ─── Query: datos del lote ────────────────────────────────────────────────
-  // Devuelve: id_puja_mas_alta (solo el ID), precio_base, imagenes, ganador.
-  // No incluye el monto del líder — para eso usamos mis_pujas.
-
   const { data: lote, isLoading: isLoadingLote } = useQuery({
     queryKey: ['lote', id],
     queryFn: async () => (await LoteService.getByIdActive(Number(id))).data as any,
     refetchInterval: 3000,
   });
 
-  // ─── Query: pujas propias del usuario ─────────────────────────────────────
-  // GET /api/pujas/mis_pujas → incluye monto_puja, id_lote, estado_puja, id.
-  // Fuente de verdad para participación y monto propio.
+
 
   const { data: misPujas = [] } = useQuery({
     queryKey: ['mis-pujas'],
@@ -309,6 +305,7 @@ const preciosInfo = useMemo(() => {
 
   const rawUrl = lote?.imagenes?.[0]?.url;
   const imagenUrl = rawUrl ? ImagenService.resolveImageUrl(rawUrl) : null;
+  const nombreProyecto = lote?.proyecto?.nombre_proyecto || lote?.proyectoLote?.nombre_proyecto;
 
   // ─── Render ───────────────────────────────────────────────────────────────
 
@@ -322,10 +319,9 @@ const preciosInfo = useMemo(() => {
           </Box>
         </Portal>
       )}
-
-      <PageHeader
-        title={lote.nombre_lote}
-        subtitle={`ID #${lote.id} • ${lote.proyecto?.nombre_proyecto}`}
+<PageHeader
+        title="Detalle del lote"
+        subtitle={`Nombre del lote: ${lote.nombre_lote}`}
         action={
           <Stack direction="row" spacing={1.5} alignItems="center">
             <Chip
@@ -343,13 +339,22 @@ const preciosInfo = useMemo(() => {
         }
       />
 
-      {debesPagar && (
+     {debesPagar && (
         <Fade in timeout={500}>
           <Paper sx={{ mb: 4, p: 3, bgcolor: 'success.main', color: 'white', borderRadius: 4 }}>
             <Stack direction="row" justifyContent="space-between" alignItems="center">
-              <Typography variant="h5" fontWeight={900}>
-                ¡GANASTE! Total: {fmt(winInfo.montoFinal)}
-              </Typography>
+              
+              {/* Contenedor izquierdo: Trofeo + Texto */}
+              <Stack direction="row" alignItems="center" spacing={2}>
+                <Avatar sx={{ bgcolor: '#FFFFFF', color: '#efbf04', width: 48, height: 48 }}>
+                  <EmojiEvents />
+                </Avatar>
+                <Typography variant="h5" fontWeight={900}>
+                  ¡GANASTE! Total: {fmt(winInfo.montoFinal)}
+                </Typography>
+              </Stack>
+
+              {/* Contenedor derecho: Botón */}
               <Button
                 variant="contained"
                 color="inherit"
@@ -406,16 +411,37 @@ const preciosInfo = useMemo(() => {
             )}
           </Paper>
 
-          <Card variant="outlined" sx={{ mt: 3, borderRadius: 3 }}>
-            <CardContent>
-              <Typography variant="subtitle2" color="text.secondary">
-                INICIO: {formatFullDate(lote.fecha_inicio)}
-              </Typography>
-              <Typography variant="subtitle2" color="text.secondary">
-                CIERRE: {formatFullDate(lote.fecha_fin)}
-              </Typography>
-            </CardContent>
-          </Card>
+<Card variant="outlined" sx={{ mt: 3, borderRadius: 3 }}>
+  <CardContent>
+    {/* Título principal de la tarjeta */}
+    <Typography variant="subtitle1" fontWeight={800} color="text.primary" sx={{ mb: 1.5 }}>
+      Información de la subasta
+    </Typography>
+    
+    <Divider sx={{ mb: 1.5, borderStyle: 'dashed' }} />
+
+    {/* Fechas ordenadas en filas */}
+    <Stack spacing={1.5}>
+      <Stack direction="row" justifyContent="space-between" alignItems="center">
+        <Typography variant="subtitle2" color="text.secondary" fontWeight={700}>
+          INICIO
+        </Typography>
+        <Typography variant="body2" fontWeight={600} color="text.primary">
+          {formatFullDate(lote.fecha_inicio)}
+        </Typography>
+      </Stack>
+
+      <Stack direction="row" justifyContent="space-between" alignItems="center">
+        <Typography variant="subtitle2" color="text.secondary" fontWeight={700}>
+          CIERRE
+        </Typography>
+        <Typography variant="body2" fontWeight={600} color="text.primary">
+          {formatFullDate(lote.fecha_fin)}
+        </Typography>
+      </Stack>
+    </Stack>
+  </CardContent>
+</Card>   
         </Box>
 
         {/* Columna derecha — card de subasta */}
