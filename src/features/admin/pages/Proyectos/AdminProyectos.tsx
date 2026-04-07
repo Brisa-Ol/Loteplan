@@ -11,7 +11,8 @@ import {
   TrendingUp,
   Undo,
   ViewList,
-  Visibility as VisibilityIcon
+  Visibility as VisibilityIcon,
+  House as HouseIcon,
 } from '@mui/icons-material';
 import {
   alpha,
@@ -96,7 +97,7 @@ const ProjectCard = memo<{
                 width: 48, height: 48,
               }}
             >
-              <ApartmentIcon />
+              <ApartmentIcon/>
             </Avatar>
             <Box flex={1} minWidth={0}>
               <Typography variant="h6" fontWeight={700} noWrap>{proyecto.nombre_proyecto}</Typography>
@@ -270,7 +271,7 @@ const AdminProyectos: React.FC = () => {
             <Stack spacing={0.2}>
               <Typography variant="body2" fontWeight={600}>
                 {/* 👈 4. Aplicamos env.defaultLocale */}
-                {p.moneda} {Number(p.monto_inversion).toLocaleString(env.defaultLocale)}
+                ARS  {Number(p.monto_inversion).toLocaleString(env.defaultLocale)} {/*  {p.moneda} */}
               </Typography>
               {p.tipo_inversion === 'mensual' && cuota && (
                 <Typography variant="caption" color="success.main" fontWeight={700}>

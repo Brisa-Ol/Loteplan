@@ -236,7 +236,7 @@ const preciosInfo = useMemo(() => {
   const debesPagar = winInfo.esGanadorDefinitivo && subastaFinalizada && !yaPago;
 
   const puedePujar = isActiva && estaSuscripto && (tokensDisponibles > 0 || yaParticipa);
-  const puedeCancelar = isActiva && yaParticipa && !winInfo.esLiderActual;
+  const puedeCancelar = isActiva && yaParticipa ;
   const sinTokensParaPujar =
     isActiva && estaSuscripto && tokensDisponibles === 0 && !yaParticipa;
 
@@ -287,12 +287,15 @@ const preciosInfo = useMemo(() => {
     if (winInfo.pujaId) mutationPago.mutate(winInfo.pujaId);
   };
 
-  const handleSolicitarCancelacion = () => {
+  const handleSolicitarCancelacion = async () => {
     confirmDialog.confirm('cancel_puja', { monto: winInfo.montoFinal });
   };
 
-  const handleConfirmarCancelacion = () => {
-    if (winInfo.miPujaId) mutationCancelar.mutate(winInfo.miPujaId);
+  const handleConfirmarCancelacion = async () => {
+    if (winInfo.miPujaId){
+        await mutationCancelar.mutate(winInfo.miPujaId);
+        window.location.reload(); // Recarga para actualizar estado tras cancelación
+    }
   };
 
   // ─── Early returns ────────────────────────────────────────────────────────

@@ -8,6 +8,7 @@ import {
   Fingerprint,
   Gavel,
   HistoryEdu,
+  House,
   Person,
   PieChart as PieChartIcon,
   ViewList
@@ -64,8 +65,8 @@ const ContratosAnalytics = React.memo<{ data: ContratoFirmadoDto[] }>(({ data })
     const otros = data.length - inversiones - suscripciones;
 
     return [
-      { name: 'Inversiones', value: inversiones, color: theme.palette.primary.main },
-      { name: 'Suscripciones', value: suscripciones, color: theme.palette.secondary.main },
+      { name: 'Inversiones', value: inversiones, color: theme.palette.info.main },
+      { name: 'Suscripciones', value: suscripciones, color: theme.palette.primary.main },
       { name: 'Generales', value: otros, color: theme.palette.info.main },
     ].filter(i => i.value > 0);
   }, [data, theme]);
@@ -176,7 +177,13 @@ const AdminContratosFirmados: React.FC = () => {
       minWidth: 200,
       render: (row) => (
         <Stack direction="row" alignItems="center" spacing={1.5}>
-          <Business fontSize="small" color="action" />
+          {row.proyectoAsociado?.tipo_inversion === 'directo' ? (
+            <Business fontSize="small" color="action" />
+          ) : row.proyectoAsociado?.tipo_inversion === 'mensual' ? (
+            <House fontSize="small" color="action" />
+          ) : (
+            <DescriptionIcon fontSize="small" color="action" />
+          )}
           <Box minWidth={0}>
             <Typography variant="body2" fontWeight={700} noWrap>{row.proyectoAsociado?.nombre_proyecto || `ID: ${row.id_proyecto}`}</Typography>
             <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'capitalize' }}>{row.proyectoAsociado?.tipo_inversion || '---'}</Typography>
