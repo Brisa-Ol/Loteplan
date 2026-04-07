@@ -13,7 +13,7 @@ interface Props { passwordHook: ReturnType<typeof usePasswordChange>; }
 const PasswordSection: React.FC<Props> = ({ passwordHook: p }) => {
   const theme = useTheme();
   const [showCurrent, setShowCurrent] = useState(false);
-  const [showNew,     setShowNew]     = useState(false);
+  const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
   const toggleOpen = () => p.isOpen ? p.close() : p.setIsOpen(true);
@@ -22,11 +22,16 @@ const PasswordSection: React.FC<Props> = ({ passwordHook: p }) => {
     <Box sx={{ gridColumn: { md: '1 / -1' } }}>
       <Divider sx={{ mb: 3 }}>
         <Button
-          variant="text" color="warning" size="small"
+          variant="text" size="small"
           startIcon={<Key fontSize="small" />}
           endIcon={p.isOpen ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />}
           onClick={toggleOpen}
-          sx={{ fontWeight: 600, px: 2 }}
+          sx={{
+            fontWeight: 600, px: 2, color: '#fff',
+            borderColor: '#E07A4D',
+            bgcolor: '#E07A4D',
+            borderRadius: 2
+          }}
         >
           {p.isOpen ? 'Cancelar cambio de contraseña' : 'Cambiar contraseña'}
         </Button>
@@ -36,7 +41,7 @@ const PasswordSection: React.FC<Props> = ({ passwordHook: p }) => {
         <Box sx={{
           p: 3, borderRadius: 2,
           bgcolor: alpha(theme.palette.warning.main, 0.03),
-          border: `1px dashed ${alpha(theme.palette.warning.main, 0.3)}`,
+          border: `1px solid ${alpha(theme.palette.warning.main, 0.3)}`,
         }}>
           <Stack spacing={2.5}>
             {p.apiError && (
@@ -51,8 +56,8 @@ const PasswordSection: React.FC<Props> = ({ passwordHook: p }) => {
 
             <Box display="grid" gridTemplateColumns={{ xs: '1fr', md: '1fr 1fr 1fr' }} gap={2}>
               {[
-                { name: 'currentPassword', label: 'Contraseña actual',   show: showCurrent, toggle: () => setShowCurrent(v => !v), helperText: undefined },
-                { name: 'newPassword',     label: 'Nueva contraseña',     show: showNew,     toggle: () => setShowNew(v => !v),     helperText: 'Mín. 8 caracteres, 1 mayúscula y 1 número' },
+                { name: 'currentPassword', label: 'Contraseña actual', show: showCurrent, toggle: () => setShowCurrent(v => !v), helperText: undefined },
+                { name: 'newPassword', label: 'Nueva contraseña', show: showNew, toggle: () => setShowNew(v => !v), helperText: 'Mín. 8 caracteres, 1 mayúscula y 1 número' },
                 { name: 'confirmPassword', label: 'Confirmar contraseña', show: showConfirm, toggle: () => setShowConfirm(v => !v), helperText: undefined },
               ].map(({ name, label, show, toggle, helperText }) => (
                 <TextField
@@ -79,11 +84,25 @@ const PasswordSection: React.FC<Props> = ({ passwordHook: p }) => {
 
             <Box display="flex" justifyContent="flex-end">
               <Button
-                variant="contained" color="warning"
+                variant="contained"
                 disabled={p.isPending || !p.formik.isValid || !p.formik.dirty}
                 startIcon={p.isPending ? <CircularProgress size={18} color="inherit" /> : <SaveIcon />}
                 onClick={() => p.formik.handleSubmit()}
-                sx={{ borderRadius: 2, fontWeight: 700 }}
+                sx={{
+                  borderRadius: 2,
+                  fontWeight: 700,
+                  color: '#ffffff',
+                  bgcolor: '#CC6333',
+                  px: 3,
+                  textTransform: 'none',
+                  '&:hover': {
+                    bgcolor: '#A34D26',
+                  },
+                  //Estilo para cuando el botón está deshabilitado
+                  '& .MuiInputBase-root.Mui-disabled': {
+                    bgcolor: '#ECECEC',
+                  }
+                }}
               >
                 {p.is2FAEnabled ? 'Continuar con 2FA' : 'Guardar contraseña'}
               </Button>

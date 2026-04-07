@@ -374,16 +374,26 @@ const UserDashboard: React.FC = () => {
 
                 {/* ========== LISTA DE INVERSIONES ========== */}
                 {/* ========== LISTA DE INVERSIONES ========== */}
+{/* ========== LISTA DE INVERSIONES ========== */}
 <Stack spacing={3}>
   {resumenes
-    // 👇 NUEVO FILTRO: Cruzamos los datos con la lista de suscripciones
+    // 👇 FILTRO ESTRICTO MEJORADO
     ?.filter((resumen) => {
-      // Buscamos la suscripción original que le corresponde a este resumen
-      const suscripcionAsociada = suscripciones?.find(s => s.id === resumen.id_suscripcion);
+      // 1. Si el resumen pertenece a una suscripción (pago en cuotas):
+      if (resumen.id_suscripcion) {
+        const subActiva = suscripciones?.find(s => s.id === resumen.id_suscripcion);
+        // Si la encuentra y está activa, pasa. Si no la encuentra (porque se canceló), se oculta (false).
+        return subActiva ? subActiva.activo === true : false;
+      }
       
-      // Si la encontramos, verificamos que esté activa. 
-      // Si por alguna razón no la encuentra (ej. es una inversión directa), la deja pasar (true)
-      return suscripcionAsociada ? suscripcionAsociada.activo === true : true;
+      // 2. Si el resumen es de una inversión directa (no tiene id_suscripcion):
+      // Verificamos si el resumen mismo trae la propiedad "activo" de la base de datos
+      if (resumen.hasOwnProperty('activo')) {
+        return resumen.activo === true;
+      }
+      
+      // Fallback para inversiones directas que no tengan la propiedad activo explícita
+      return true; 
     })
     .map((resumen) => {
       const tieneMora = pagos?.some(p => p.id_suscripcion === resumen.id_suscripcion && p.estado_pago === 'pendiente' && new Date(p.fecha_vencimiento) < new Date());
@@ -397,7 +407,6 @@ const UserDashboard: React.FC = () => {
             <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
               <Box>
                 <Typography variant="h6" fontWeight={800}>{resumen.nombre_proyecto}</Typography>
-                {/* Nota: Cambié resumenes[0] por resumen para evitar errores si la lista original se filtra distinto */}
                 <Chip label={`${resumen.cuotas_pagadas}/${resumen.meses_proyecto || 0} cuotas`} size="small" variant="outlined" sx={{ mt: 0.5, fontWeight: 700 }} />
                 {tieneMora && <Chip label="Mora" color="error" size="small" sx={{ ml: 1, fontWeight: 800 }} />}
               </Box>
@@ -406,9 +415,9 @@ const UserDashboard: React.FC = () => {
             <Stack spacing={1}>
               <Stack direction="row" justifyContent="space-between">
                 <Typography variant="body2" fontWeight={700} color="text.secondary">Avance del Plan</Typography>
-                <Typography variant="body2" fontWeight={800} color="primary.main">{resumen.porcentaje_pagado.toFixed(0)}%</Typography>
+                <Typography variant="body2" fontWeight={800} color="primary.main">{Number(resumen.porcentaje_pagado || 0).toFixed(0)}%</Typography>
               </Stack>
-              <LinearProgress variant="determinate" value={resumen.porcentaje_pagado} sx={{ height: 10, borderRadius: 5, bgcolor: alpha(theme.palette.primary.main, 0.1) }} />
+              <LinearProgress variant="determinate" value={Number(resumen.porcentaje_pagado || 0)} sx={{ height: 10, borderRadius: 5, bgcolor: alpha(theme.palette.primary.main, 0.1) }} />
             </Stack>
           </CardContent>
         </Card>
