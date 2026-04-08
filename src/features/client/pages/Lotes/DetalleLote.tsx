@@ -53,6 +53,7 @@ import { useImageLoader } from '../../hooks/useImageLoader';
 import { useVerificarSuscripcion } from '../../hooks/useVerificarSuscripcion';
 import { FavoritoButton } from './components/BotonFavorito';
 import { PujarModal } from './modals/PujarModal';
+import { MapUrlIframe } from '@/features/admin/pages/Proyectos/modals/MapUrlIframe/MapUrlIframe';
 
 // ─── Animaciones ─────────────────────────────────────────────────────────────
 
@@ -604,24 +605,13 @@ const DetalleLote: React.FC = () => {
           {lote?.map_url && (
             <Card variant="outlined" sx={{ mt: 3, borderRadius: 4 }}>
               <CardContent sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Box>
+                
                   <Typography variant="subtitle1" fontWeight={800}>
                     Ubicación del lote
                   </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Ver coordenadas exactas en Google Maps
-                  </Typography>
-                </Box>
-                <Button 
-                  variant="contained" 
-                  color="primary" 
-                  href={lote.map_url} 
-                  target="_blank"
-                  sx={{ borderRadius: 2, fontWeight: 700 }}
-                >
-                  VER EN MAPA
-                </Button>
+                
               </CardContent>
+                  <MapUrlIframe map_url={lote.map_url} type_proyect={false} />
             </Card>
           )}
         </Box>

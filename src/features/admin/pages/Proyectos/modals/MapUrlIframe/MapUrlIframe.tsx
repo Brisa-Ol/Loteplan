@@ -11,13 +11,13 @@ interface IMapUrlIframe {
 export const MapUrlIframe: FC<IMapUrlIframe> = ({ map_url, type_proyect }) => {
 	
 	return (
+
+		//si tpye_proyect es true es una suscripcion, y que no se muestre la ubicacion, pero si es false es un lote o inversion y se muestra la ubicacion, pero si no hay ubicacion se muestra el mensaje de no hay ubicacion disponible
 		<>
-			{map_url ? (
+			{map_url && !type_proyect ? (
 				<iframe 
 					className={styles.mapContainer}
 					src={map_url}
-					width="100%"
-					height="400"
 					style={{ border: 0}}
 					loading="lazy"
 				/>
