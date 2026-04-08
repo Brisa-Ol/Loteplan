@@ -186,7 +186,7 @@ const MisPujas: React.FC = () => {
 
   return (
     <PageContainer maxWidth="lg">
-      <PageHeader title="Mis Ofertas" subtitle="Gestión de pujas y adjudicaciones." />
+      <PageHeader title="Mis Pujas" subtitle="Gestión de pujas y adjudicaciones." />
 
       <Box mb={4} display="grid" gridTemplateColumns={{ xs: '1fr', md: 'repeat(3, 1fr)' }} gap={2}>
         <StatCard title="Capital Ofertado" value={formatCurrency(stats.comprometido)} icon={<MonetizationOn />} color="primary" loading={isLoading} />

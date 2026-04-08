@@ -52,7 +52,7 @@ export const useProyectoHelpers = (proyecto: ProyectoDto) => {
     const formatMoney = (amount: number): string =>
       new Intl.NumberFormat('es-AR', {
         style: 'currency',
-        currency: `ARS`, //Esto para cuando los proyectos se diferencien en monedas //proyecto.moneda === 'USD' ? 'USD' : 'ARS',
+        currency: `ARS`, 
         minimumFractionDigits: 0,
         maximumFractionDigits: 0
       }).format(amount);

@@ -84,10 +84,14 @@ const LoteCard: React.FC<LoteCardProps> = ({
   const isActiva = lote.estado_subasta === 'activa';
   const subastaFinalizada = lote.estado_subasta === 'finalizada';
 
-  const esLiderActual = useMemo(() => {
-    if (!isAuthenticated || !user || !isActiva) return false;
-    return Number(lote.ultima_puja?.id_usuario) === Number(user.id);
-  }, [isActiva, lote.ultima_puja?.id_usuario, isAuthenticated, user]);
+const esLiderActual = useMemo(() => {
+    if (!isAuthenticated || !user || !isActiva || !lote.id_puja_mas_alta) return false;
+    
+    // Verificamos si en el array de pujas de este lote, la puja más alta nos pertenece
+    return Array.isArray(lote.pujas) && lote.pujas.some(
+      (p: any) => Number(p.id_usuario) === Number(user.id) && Number(p.id) === Number(lote.id_puja_mas_alta)
+    );
+  }, [isActiva, lote.id_puja_mas_alta, lote.pujas, isAuthenticated, user]);
 
   const esGanadorDefinitivo = useMemo(() => {
     if (!isAuthenticated || !user || !subastaFinalizada) return false;
@@ -142,13 +146,13 @@ const LoteCard: React.FC<LoteCardProps> = ({
         variant="outlined"
         sx={{
           display: 'flex', flexDirection: 'column', height: '100%',
-          position: 'relative', cursor: 'pointer', overflow: 'hidden', borderRadius: 4,
+          position: 'relative', cursor: 'pointer', overflow: 'hidden', borderRadius: 2.5,
           borderColor: soyGanador ? 'success.main' : (isActiva ? 'primary.light' : 'divider'),
           borderWidth: soyGanador ? 2 : 1,
           transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
           '&:hover': {
-            transform: 'translateY(-8px)',
-            boxShadow: theme.shadows[12],
+            transform: 'translateY(-6x)',
+            boxShadow: theme.shadows[10],
             '& .nav-arrow': { opacity: 1 }
           }
         }}
@@ -157,8 +161,13 @@ const LoteCard: React.FC<LoteCardProps> = ({
         {/* ── SECCIÓN DE IMAGEN ── */}
         <Box position="relative" sx={{ paddingTop: '56.25%', bgcolor: '#ECECEC', overflow: 'hidden' }}>
 
-          <Box position="absolute" top={8} right={8} zIndex={20}
-            sx={{ bgcolor: 'rgba(255,255,255,0.9)', borderRadius: '50%', boxShadow: 2 }}
+          <Box position="absolute" top={10} right={10} zIndex={20}
+            sx={{  bgcolor: '#D4D4D4',
+              backdropFilter: 'blur(6px)',
+              border: '1px solid rgba(255,255,255,0.25)',
+              borderRadius: '50%',
+              width: 32, height: 32,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', }}
           >
             <FavoritoButton loteId={lote.id} size="small" />
           </Box>
@@ -190,49 +199,90 @@ const LoteCard: React.FC<LoteCardProps> = ({
               />
             </>
           )}
-
+{/* ── Flechas carrusel ── */}
           {!hasNoImageRecord && imagenes.length > 1 && (
             <>
               <IconButton className="nav-arrow" onClick={handlePrev} sx={{
                 position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)',
-                bgcolor: 'rgba(0,0,0,0.4)', color: 'white', opacity: 0, zIndex: 10
+                bgcolor: 'rgba(0,0,0,0.3)', // Un fondo un poco más suave por defecto
+                color: 'white', 
+                opacity: 1,                 // <-- CAMBIO PRINCIPAL: Siempre visible
+                zIndex: 10,
+                transition: 'background-color 0.2s ease', // Transición suave
+                '&:hover': { bgcolor: 'rgba(0,0,0,0.7)' } // Se oscurece al pasar el cursor
               }}>
                 <NavigateBefore />
               </IconButton>
               <IconButton className="nav-arrow" onClick={handleNext} sx={{
                 position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
-                bgcolor: 'rgba(0,0,0,0.4)', color: 'white', opacity: 0, zIndex: 10
+                bgcolor: 'rgba(0,0,0,0.3)', 
+                color: 'white', 
+                opacity: 1,                
+                zIndex: 10,
+                transition: 'background-color 0.2s ease',
+                '&:hover': { bgcolor: 'rgba(0,0,0,0.7)' }
               }}>
                 <NavigateNext />
               </IconButton>
             </>
           )}
 
+       {/* ── Gradiente solo hacia abajo ── */}
           <Box sx={{
             position: 'absolute', inset: 0,
-            background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 50%)', zIndex: 3
+            background: 'linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.78) 100%)',
+            zIndex: 3, pointerEvents: 'none'
           }} />
-
-          <Box position="absolute" top={12} left={12} zIndex={4}>
+<Box position="absolute" top={12} left={12} zIndex={4}>
             <Chip
-              label={soyGanador ? "¡VAS GANANDO!" : statusConfig.label}
-              color={soyGanador ? "success" : statusConfig.color as any}
+              label={
+                esGanadorDefinitivo ? "¡GANASTE EL LOTE!" : 
+                esLiderActual ? "¡VAS GANANDO!" : 
+                statusConfig.label
+              }
+              color={soyGanador ? "success" : undefined}
               size="small"
               sx={{
                 fontWeight: 900,
-                color: 'white',
-                ...((isActiva && !soyGanador) && { animation: `${pulse} 2s infinite` }),
+                color: soyGanador ? 'white' : statusConfig.hexColor,
+                backgroundColor: soyGanador ? undefined : statusConfig.bgColor,
+                textShadow: soyGanador ? '0px 1px 2px rgba(0,0,0,0.3)' : statusConfig.textShadow,
+                ...((isActiva && esLiderActual) && { animation: `${pulse} 2s infinite` }),
                 ...(soyGanador && { boxShadow: 4 })
               }}
             />
           </Box>
 
           {/* ✅ Precios sincronizados visualmente */}
-          <Box position="absolute" bottom={12} left={12} zIndex={4}>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)', display: 'block', fontWeight: 700 }}>
+         {/* ✅ Nombre del lote sobre la imagen */}
+          <Box position="absolute" bottom={12} left={12} right={12} zIndex={4}>
+            <Typography 
+              variant="h5" 
+              sx={{ 
+                color: 'white', 
+                fontWeight: 900,
+                textShadow: '0px 2px 4px rgba(0,0,0,0.6)', // Sombra para que destaque sobre cualquier foto
+                display: '-webkit-box',
+                WebkitLineClamp: 2, // Por si el nombre es muy largo, máximo 2 renglones
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden'
+              }}
+            >
+              {lote.nombre_lote}
+            </Typography>
+          </Box>
+          
+        </Box>
+
+        {/* ── SECCIÓN DE CONTENIDO ── */}
+       <CardContent sx={{ flexGrow: 1, p: 2.5 }}>
+      
+          {/* ✅ Precio Base / Oferta Líder movido aquí abajo */}
+          <Box sx={{ mb: 1.5, minHeight: '3em' }}>
+            <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', fontWeight: 700 }}>
               {lote.ultima_puja?.monto ? 'OFERTA ACTUAL LÍDER' : 'PRECIO BASE INICIAL'}
             </Typography>
-            <Typography variant="h5" sx={{ color: 'white', fontWeight: 900 }}>
+            <Typography variant="h5" sx={{ color: 'text.primary', fontWeight: 900 }}>
               {formatCurrency(
                 lote.ultima_puja?.monto
                   ? Number(lote.ultima_puja.monto)
@@ -240,27 +290,6 @@ const LoteCard: React.FC<LoteCardProps> = ({
               )}
             </Typography>
           </Box>
-        </Box>
-
-        {/* ── SECCIÓN DE CONTENIDO ── */}
-        <CardContent sx={{ flexGrow: 1, p: 2.5 }}>
-          <Typography variant="caption" color="primary.main" fontWeight={800}
-            display="block" mb={0.5} sx={{ textTransform: 'uppercase' }}>
-            {lote.proyecto?.nombre_proyecto || 'General'}
-          </Typography>
-
-          <Typography variant="h6" fontWeight={700} sx={{ mb: 1, lineHeight: 1.2, minHeight: '2.4em' }}>
-            {lote.nombre_lote}
-          </Typography>
-
-          {(lote.latitud || lote.longitud) && (
-            <Stack direction="row" spacing={0.5} alignItems="center" color="text.secondary" mb={1.5}>
-              <LocationOn sx={{ fontSize: 16 }} />
-              <Typography variant="body2" noWrap sx={{ fontSize: '0.8rem' }}>
-                {lote.latitud ? `${lote.latitud}, ${lote.longitud}` : 'Ubicación pendiente'}
-              </Typography>
-            </Stack>
-          )}
 
           <Button
             variant="contained"
@@ -269,7 +298,18 @@ const LoteCard: React.FC<LoteCardProps> = ({
             disabled={isLoadingSub}
             startIcon={buttonState.icon}
             color={soyGanador ? 'success' : 'primary'}
-            sx={{ fontWeight: 800, py: 1.2, borderRadius: 2, mt: 1 }}
+            sx={{ 
+              fontWeight: 800, 
+              py: 1.2, 
+              borderRadius: 2, 
+              mt: 1,
+              boxShadow: 'none', // Quitar sombra estática
+              transition: 'transform 0.2s, box-shadow 0.2s',
+              '&:hover': {
+                boxShadow: 4,
+                transform: 'translateY(-2px)' // Se eleva sutilmente
+              }
+            }}
           >
             {buttonState.text}
           </Button>

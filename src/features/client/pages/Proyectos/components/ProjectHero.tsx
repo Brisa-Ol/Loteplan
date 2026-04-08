@@ -1,14 +1,11 @@
 import type { ProyectoDto } from '@/core/types/proyecto.dto';
 import { useProyectoHelpers } from '@/features/client/hooks/useProyectoHelpers';
 import {
-  Favorite,
-  FavoriteBorder,
   KeyboardArrowLeft, KeyboardArrowRight, Share
 } from '@mui/icons-material';
 import {
   alpha,
   Box, Chip,
-  Fade,
   IconButton,
   Stack,
   Tooltip,
@@ -28,7 +25,6 @@ export const ProjectHero: React.FC<ProjectHeroProps> = ({ proyecto }) => {
   // Estados locales
   const [activeStep, setActiveStep] = useState(0);
   const [imageLoaded, setImageLoaded] = useState(false);
-  const [isFavorite, setIsFavorite] = useState(false);
   const [showShareTooltip, setShowShareTooltip] = useState(false);
 
   const maxSteps = helpers.imagenes.length;
@@ -44,7 +40,9 @@ export const ProjectHero: React.FC<ProjectHeroProps> = ({ proyecto }) => {
       img.src = helpers.imagenes[nextStep];
     }
   }, [activeStep, helpers.imagenes, maxSteps]);
-
+  useEffect(() => {
+    setImageLoaded(false);
+  }, [activeStep]);
   // ==========================================
   // 🎯 HANDLERS
   // ==========================================
@@ -76,11 +74,6 @@ export const ProjectHero: React.FC<ProjectHeroProps> = ({ proyecto }) => {
     }
   };
 
-  const handleFavorite = () => {
-    setIsFavorite(!isFavorite);
-    // TODO: Lógica de backend para favoritos
-  };
-
   return (
     <Box sx={{
       position: 'relative',
@@ -96,31 +89,29 @@ export const ProjectHero: React.FC<ProjectHeroProps> = ({ proyecto }) => {
       {/* ==========================================
           🖼️ IMAGEN PRINCIPAL (CAROUSEL)
       ========================================== */}
-      <Fade in={imageLoaded} timeout={600}>
-        <Box
-          component="img"
-          src={helpers.imagenes[activeStep]}
-          onLoad={() => setImageLoaded(true)}
-          onError={(e) => {
-            const img = e.currentTarget;
 
-            if (!img.src.includes('placeholder-proyect.jpg')) {
-              img.src = '/assets/placeholder-proyect.jpg';
-            } else {
-              img.onerror = null;
-            }
+      <Box
+        component="img"
+        key={helpers.imagenes[activeStep]}
+        src={helpers.imagenes[activeStep]}
+        onLoad={() => setImageLoaded(true)}
+        onError={(e) => {
+          const img = e.currentTarget;
+          if (!img.dataset.fallback) {
+            img.dataset.fallback = 'true';
+            img.src = '/assets/placeholder-proyect.jpg';
+          }
+          setImageLoaded(true);
+        }}
+        sx={{
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+          transition: 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+          transform: imageLoaded ? 'scale(1)' : 'scale(1.05)'
+        }}
+      />
 
-            setImageLoaded(true);
-          }}
-          sx={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            transition: 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
-            transform: imageLoaded ? 'scale(1)' : 'scale(1.05)'
-          }}
-        />
-      </Fade>
 
       {/* ==========================================
           🎨 OVERLAYS (GRADIENTES)
@@ -148,11 +139,6 @@ export const ProjectHero: React.FC<ProjectHeroProps> = ({ proyecto }) => {
         sx={{ position: 'absolute', top: 24, right: 24, zIndex: 10 }}
       >
         {[
-          {
-            label: isFavorite ? "Quitar de favoritos" : "Guardar",
-            icon: isFavorite ? <Favorite color="error" /> : <FavoriteBorder />,
-            action: handleFavorite
-          },
           {
             label: showShareTooltip ? "¡Link copiado!" : "Compartir",
             icon: <Share />,
