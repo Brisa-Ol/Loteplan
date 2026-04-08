@@ -191,6 +191,9 @@ export const PujarModal: React.FC<Props> = ({
       );
       handleReset();
       onSuccess?.();
+      setTimeout(() => {
+      window.location.reload(); // Recarga para actualizar estado 
+    }, 1750);
     },
     onError: (err: any) => {
       const mensaje = mapearErrorBackend(err);
@@ -218,6 +221,11 @@ export const PujarModal: React.FC<Props> = ({
     setErrorSubmit(null);
   };
 
+  const handleConfirmPuja = async () => {
+    await mutation.mutate()
+    
+  }
+
   // ─── Validaciones ─────────────────────────────────────────────────────────
 
   const montoNumerico = parseFloat(monto);
@@ -238,7 +246,7 @@ export const PujarModal: React.FC<Props> = ({
       onClose={handleReset}
       title={titulo}
       headerColor={headerColor}
-      onConfirm={() => mutation.mutate()}
+      onConfirm={handleConfirmPuja}
       disableConfirm={!puedeConfirmar}
     >
       <Stack spacing={3}>

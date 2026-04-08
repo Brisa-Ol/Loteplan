@@ -13,8 +13,7 @@ import { calculateFileHash } from '@/shared/utils/fileUtils';
 import { PDFDocument } from 'pdf-lib';
 import { useCallback, useRef, useState } from 'react';
 import { CheckoutStateManager } from '../pages/Proyectos/modals/Checkout persistence';
-import TransaccionService from '@/core/api/services/transaccion.service';
-import { set } from 'date-fns';
+
 import type { ContratoTrackingResponse } from '@/core/types/contrato.dto';
 
 // ===================================================
@@ -69,7 +68,7 @@ export const useCheckoutWizard = ({
   // ===================================================
   const [isProcessing, setIsProcessing] = useState(false);
   const [isVerificandoPago, setIsVerificandoPago] = useState(false);
-  const [pagoExitoso, setPagoExitoso] = useState(false);
+  //const [pagoExitoso, setPagoExitoso] = useState(false);
 
   //probando 3 estados de pago
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>("idle");

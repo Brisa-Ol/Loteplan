@@ -527,7 +527,6 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
     iniciarVerificacionPago,
     setPaymentStatus,
     setTransaccionId,
-    setInversionId,
   } = useCheckoutWizard({
     proyecto,
     tipo,

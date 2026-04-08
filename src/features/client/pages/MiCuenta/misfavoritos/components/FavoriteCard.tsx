@@ -61,7 +61,7 @@ const FavoriteCard: React.FC<Props> = React.memo(({ lote, onRemove, onVerDetalle
                         />
                     </>
                 )}
-                <Chip label={statusConfig.label} color={statusConfig.color} size="small" sx={{ position: 'absolute', top: 12, right: 12, fontWeight: 700, color: 'white' }} />
+                <Chip label={statusConfig.label} color={statusConfig.color === "default" ? "success" : statusConfig.color} size="small" sx={{ position: 'absolute', top: 12, right: 12, fontWeight: 700, color: 'white' }} />
                 <Tooltip title="Dejar de seguir">
                     <IconButton
                         onClick={() => onRemove(lote.id)} disabled={isRemoving} size="small"

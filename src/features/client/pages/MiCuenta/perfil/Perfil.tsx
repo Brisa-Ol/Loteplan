@@ -72,7 +72,7 @@ const Perfil: React.FC = () => {
 
           <Box>
             <SectionLabel label="Verificación" />
-            <KycStatusCard kycStatus={kycStatus} onNavigate={() => navigate('/client/kyc')} />
+            <KycStatusCard kycStatus={kycStatus} onNavigate={() => navigate('/client/verificacion')} />
           </Box>
 
           <Box>

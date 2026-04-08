@@ -331,20 +331,31 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({ logic, proyecto,
                       {/* 5C: Proceso Completado */}
                       {paso2Completo && (
                       <Stack spacing={2}>
-                        <Alert severity="success" icon={<CheckCircle />}>
-                          {cantProyectUser === 1
-                            ? 'Ya tienes una suscripción activa'
-                            : `Tienes ${cantProyectUser} suscripciones activas`}
-                        </Alert>
+                        {isFinalizado ? (
+                          <Alert severity="info">
+                            Esta inversión ya finalizó. No es posible realizar nuevas suscripciones.
+                          </Alert>
+                        ) : (
+                          <Alert severity="success" icon={<CheckCircle />}>
+                            {cantProyectUser === 1
+                              ? 'Ya tienes una suscripción activa'
+                              : `Tienes ${cantProyectUser} suscripciones activas`}
+                          </Alert>
+                        )}
 
                         {/* 🔁 Volver a suscribirse */}
                         <Button
                           variant="contained"
                           fullWidth
                           onClick={handleSubscriptionOrSigning}
+                          disabled={isFinalizado}
                           sx={{ fontWeight: 700 }}
                         >
-                          {puedeFirmar ? 'Firmar contrato' : 'Volver a suscribirse para adquirir otro Token'}
+                          {puedeFirmar
+                            ? 'Firmar contrato'
+                            : isFinalizado
+                              ? 'Inversión finalizada'
+                              : 'Volver a suscribirse para adquirir otro Token'}
                         </Button>
 
                         {/* 📄 Contratos */}

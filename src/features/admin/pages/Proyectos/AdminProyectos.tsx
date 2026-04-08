@@ -236,7 +236,7 @@ const AdminProyectos: React.FC = () => {
         render: (p) => (
           <Stack direction="row" alignItems="center" spacing={1.5}>
             <Avatar variant="rounded" sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main', width: 34, height: 34, flexShrink: 0 }}>
-              <ApartmentIcon fontSize="small" />
+              {p.tipo_inversion === 'mensual' ? <HouseIcon fontSize="small" color='primary' /> : <ApartmentIcon fontSize="small" color='info' />}
             </Avatar>
             <Box minWidth={0}>
               <Typography variant="body2" fontWeight={700} noWrap>{p.nombre_proyecto}</Typography>
@@ -343,7 +343,7 @@ const AdminProyectos: React.FC = () => {
         render: (p) => {
           const isMensual = p.tipo_inversion === 'mensual';
           const canStart = isMensual && p.estado_proyecto === 'En Espera';
-          const isObjetivoAlcanzado = p.suscripciones_actuales >= (p.obj_suscripciones || 1);
+          //const isObjetivoAlcanzado = p.suscripciones_actuales >= (p.obj_suscripciones || 1);
           const hasLotes = p.lotes && p.lotes.length > 0;
           const isReadyToStart = canStart && (!p.pack_de_lotes || hasLotes);
           const isBajoMinimo = p.suscripciones_actuales < (p.suscripciones_minimas || 0);

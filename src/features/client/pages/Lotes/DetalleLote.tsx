@@ -290,7 +290,9 @@ const preciosInfo = useMemo(() => {
   const handleConfirmarCancelacion = async () => {
     if (winInfo.miPujaId){
         await mutationCancelar.mutate(winInfo.miPujaId);
-        window.location.reload(); // Recarga para actualizar estado tras cancelación
+        setTimeout(() => {
+          window.location.reload(); // Recarga para actualizar estado tras cancelación
+        }, 1750);
     }
   };
 
