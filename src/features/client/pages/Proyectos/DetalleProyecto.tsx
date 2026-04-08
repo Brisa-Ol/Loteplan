@@ -1,7 +1,7 @@
 // src/features/client/pages/Proyectos/DetalleProyecto.tsx
 
 import {
-  ArrowBack, AutoGraph, CalendarMonth, CheckCircle,
+  ArrowBack, AutoGraph, Block, CalendarMonth, CheckCircle,
   Gavel, GppGood,
   Info, InsertPhoto, LocationOn, MonetizationOn, Stars, ViewList
 } from '@mui/icons-material';
@@ -29,11 +29,12 @@ import { ProjectHero } from './components/ProjectHero';
 import { ProjectSidebar } from './components/ProjectSidebar';
 import { CheckoutWizardModal } from './modals/CheckoutWizardModal/CheckoutWizardModal';
 
+import ContratoService from '@/core/api/services/contrato.service';
 import SuscripcionService from '@/core/api/services/suscripcion.service';
+import type { ContratoTrackingResponse } from '@/core/types/contrato.dto';
 import { MapUrlIframe } from '@/features/admin/pages/Proyectos/modals/MapUrlIframe/MapUrlIframe';
 import { CheckoutInversionModal } from './modals/CheckoutInversionModal/CheckoutInversionModal';
-import type { ContratoTrackingResponse } from '@/core/types/contrato.dto';
-import ContratoService from '@/core/api/services/contrato.service';
+import type { ProyectoDto } from '@/core/types/proyecto.dto';
 
 // 🚀 LAZY LOADING
 const ProjectGallery = lazy(() => import('./components/ProjectGallery').then(m => ({ default: m.ProjectGallery })));
@@ -65,16 +66,34 @@ const FeatureItem = React.memo(({ icon, title, desc, action }: any) => (
     {action}
   </Stack>
 ));
-
-const TabOverview = React.memo(({ proyecto, esMensual, googleMapsUrl }: any) => {
+interface TabOverviewProps {
+  proyecto: ProyectoDto;
+  esMensual: boolean;
+  googleMapsUrl: string | null;
+}
+const TabOverview = React.memo(({ proyecto, esMensual, googleMapsUrl }: TabOverviewProps) => {
   const theme = useTheme();
+    const mapEmbedUrl = proyecto.map_url
+    ?? (proyecto.latitud && proyecto.longitud
+      ? `https://maps.google.com/maps?q=${proyecto.latitud},${proyecto.longitud}&output=embed&z=15`
+      : null);
   return (
     <Fade in timeout={300}>
       <Stack spacing={4}>
         <Box display="grid" gridTemplateColumns={{ xs: '1fr', sm: '1fr 1fr 1fr' }} gap={3}>
-          <FeatureItem icon={<LocationOn />} title="Ubicación" desc="Zona de alta valorización."
-            action={googleMapsUrl && <Button size="small" variant="text" href={googleMapsUrl} target="_blank" sx={{ fontWeight: 800, justifyContent: 'flex-start', p: 0 }}>Ver en Maps</Button>}
-          />
+         <FeatureItem
+  icon={<LocationOn />}
+  title="Ubicación"
+  desc={googleMapsUrl ? "Zona de alta valorización." : "Ubicación no especificada."}
+  action={
+    googleMapsUrl
+      ? <Button size="small" variant="text" href={googleMapsUrl} target="_blank"
+          sx={{ fontWeight: 800, justifyContent: 'flex-start', p: 0 }}>
+          Ver en Maps
+        </Button>
+      : null
+  }
+/>
           <FeatureItem icon={<AutoGraph />} title="Rendimiento" desc={`Inversión en ${proyecto.moneda}.`} />
           <FeatureItem icon={<GppGood />} title="Seguridad" desc={proyecto.forma_juridica || 'Respaldo legal total.'} />
         </Box>
@@ -83,16 +102,16 @@ const TabOverview = React.memo(({ proyecto, esMensual, googleMapsUrl }: any) => 
           <Typography variant="body1" color="text.secondary" sx={{ textAlign: 'justify', whiteSpace: 'pre-line' }}>{proyecto.descripcion}</Typography>
         </Box>
         <Paper variant="outlined" sx={{ p: 3, borderRadius: 3, bgcolor: alpha(theme.palette.secondary.main, 0.05), }}>
-          <Box display="grid" gridTemplateColumns={{xs: 'repeat(2, 1fr)',md: 'repeat(auto-fit, minmax(200px, 1fr))'}} gap={4} >
+          <Box display="grid" gridTemplateColumns={{ xs: 'repeat(2, 1fr)', md: 'repeat(auto-fit, minmax(200px, 1fr))' }} gap={4} >
             <DataPoint label="Moneda" value={proyecto.moneda} icon={<MonetizationOn fontSize="small" />} />
             <DataPoint label="Modalidad" value={esMensual ? 'Mensual' : 'Directa'} icon={<CalendarMonth fontSize="small" />} />
-            {esMensual && <DataPoint label="Suscritos" value={proyecto.suscripciones_actuales} icon={<Stars fontSize="small" />} /> }
+            {esMensual && <DataPoint label="Suscritos" value={proyecto.suscripciones_actuales} icon={<Stars fontSize="small" />} />}
             <DataPoint label="Estado" value={proyecto.estado_proyecto} icon={<CheckCircle fontSize="small" />} />
           </Box>
         </Paper>
-      <MapUrlIframe map_url={proyecto.map_url} type_proyect={esMensual}></MapUrlIframe>
+          <MapUrlIframe map_url={mapEmbedUrl} type_proyect={esMensual} />
       </Stack>
-      
+
     </Fade>
   );
 });
@@ -118,7 +137,7 @@ const DetalleProyecto: React.FC = () => {
 
   const [cantProyectsUser, setCantProyectsUser] = useState(0)
   const [trackingData, setTrackingData] = useState<ContratoTrackingResponse | null>(null)
-  
+
 
   //fin variables Thomy
 
@@ -144,8 +163,8 @@ const DetalleProyecto: React.FC = () => {
 
     getProyects();
   }, [logic.proyecto?.id]);
-  
-    useEffect(() => {
+
+  useEffect(() => {
     if (!logic.proyecto?.id) return; // 🔥 CLAVE
     const trackingContracts = async () => {
       try {
@@ -157,14 +176,14 @@ const DetalleProyecto: React.FC = () => {
         console.error(err);
       }
     };
-  
+
     trackingContracts();
     console.log(trackingData)
   }, [logic.proyecto?.id]);
-  
-  
-  
-  
+
+
+
+
 
 
 
@@ -190,20 +209,20 @@ const DetalleProyecto: React.FC = () => {
   const { tokensDisponibles } = useVerificarSuscripcion(Number(logic.proyecto?.id));
   const { withSecurityCheck, securityModalProps } = useSecurityGuard();
 
-const handleOpenCheckoutSecurely = useCallback(() => {
-  if (!isAuthenticated) return navigate(ROUTES.LOGIN, { state: { from: location.pathname } });
-  
-  if (logic.proyecto?.tipo_inversion === 'directo') {
-    withSecurityCheck(() => logic.modales.checkoutInversion.open());
-  } else {
-    withSecurityCheck(() => logic.modales.checkoutWizard.open());
-  }
-}, [
-  isAuthenticated, navigate, location.pathname, withSecurityCheck,
-  logic.proyecto?.tipo_inversion,
-  logic.modales.checkoutWizard,
-  logic.modales.checkoutInversion,  
-]);
+  const handleOpenCheckoutSecurely = useCallback(() => {
+    if (!isAuthenticated) return navigate(ROUTES.LOGIN, { state: { from: location.pathname } });
+
+    if (logic.proyecto?.tipo_inversion === 'directo') {
+      withSecurityCheck(() => logic.modales.checkoutInversion.open());
+    } else {
+      withSecurityCheck(() => logic.modales.checkoutWizard.open());
+    }
+  }, [
+    isAuthenticated, navigate, location.pathname, withSecurityCheck,
+    logic.proyecto?.tipo_inversion,
+    logic.modales.checkoutWizard,
+    logic.modales.checkoutInversion,
+  ]);
 
   const secureLogic = useMemo(() => ({
     ...logic,
@@ -246,10 +265,9 @@ const handleOpenCheckoutSecurely = useCallback(() => {
       <Box sx={{ display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, gap: 5, mt: 4 }}>
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Tabs value={currentTab} onChange={handleTabChange} sx={{ mb: 4, borderBottom: 1, borderColor: 'divider', '& .MuiTab-root': { fontWeight: 800 } }}>
-            <Tab icon={<Info fontSize="small" />} iconPosition="start" label="Info" />
-            <Tab icon={<InsertPhoto fontSize="small" />} iconPosition="start" label="Galería" />
-            {/* ✅ CORREGIDO: usa logic.mostrarTabLotes en lugar de esMensual */}
-            {logic.mostrarTabLotes && <Tab icon={<ViewList fontSize="small" />} iconPosition="start" label="Lotes" />}
+            <Tab icon={<Info fontSize="small" />} iconPosition="start" label="Informacion del Proyecto" />
+            <Tab icon={<InsertPhoto fontSize="small" />} iconPosition="start" label="Galería de fotos " />
+            {logic.mostrarTabLotes && <Tab icon={<ViewList fontSize="small" />} iconPosition="start" label="Lotes y Subastas disponibles" />}
           </Tabs>
 
           <Box sx={{ minHeight: 400 }}>
@@ -266,8 +284,15 @@ const handleOpenCheckoutSecurely = useCallback(() => {
               <Box>
                 <Paper variant="outlined" sx={{ mb: 4, p: 3, borderRadius: 3, bgcolor: alpha(theme.palette.warning.main, 0.05), borderStyle: 'dashed' }}>
                   <Stack direction="row" spacing={3} alignItems="center">
-                    <Avatar sx={{ bgcolor: 'warning.main' }}><Gavel /></Avatar>
-                    <Typography variant="body2" color="text.secondary">Tienes <b>{tokensDisponibles} tokens</b> para participar. Las subastas son en tiempo real.</Typography>
+                    <Avatar sx={{ bgcolor: tokensDisponibles > 0 ? 'warning.main' : 'error.main' }}>
+                      {tokensDisponibles > 0 ? <Gavel /> : <Block />}
+                    </Avatar>
+                    <Typography variant="body2" color="text.secondary">
+                      {tokensDisponibles > 0
+                        ? <>Tienes <b>{tokensDisponibles} tokens</b> disponibles para participar en subastas en tiempo real.</>
+                        : <>No tenés tokens disponibles. Te podes <b>VOLVER </b> a suscribir para adquirir un nuevo token y participar en las subastas</>
+                      }
+                    </Typography>
                   </Stack>
                 </Paper>
                 <ListaLotesProyecto idProyecto={Number(logic.proyecto.id)} />
@@ -283,26 +308,26 @@ const handleOpenCheckoutSecurely = useCallback(() => {
 
       <SecurityRequirementModal {...securityModalProps} />
       {isAuthenticated && (
-        (esMensual 
+        (esMensual
           ? <CheckoutWizardModal
-          open={logic.modales.checkoutWizard.isOpen}
-          onClose={logic.modales.checkoutWizard.close}
-          proyecto={logic.proyecto}
-          tipo={'suscripcion'}
-          trackingData={trackingData}
-        />
-      :
-        <CheckoutInversionModal
-          open={logic.modales.checkoutInversion.isOpen}
-          onClose={logic.modales.checkoutInversion.close}
-          proyecto={logic.proyecto}
-          tipo='inversion'
-          trackingData={trackingData}
-        />
-      ))}
-    
+            open={logic.modales.checkoutWizard.isOpen}
+            onClose={logic.modales.checkoutWizard.close}
+            proyecto={logic.proyecto}
+            tipo={'suscripcion'}
+            trackingData={trackingData}
+          />
+          :
+          <CheckoutInversionModal
+            open={logic.modales.checkoutInversion.isOpen}
+            onClose={logic.modales.checkoutInversion.close}
+            proyecto={logic.proyecto}
+            tipo='inversion'
+            trackingData={trackingData}
+          />
+        ))}
 
-      
+
+
     </PageContainer>
   );
 };

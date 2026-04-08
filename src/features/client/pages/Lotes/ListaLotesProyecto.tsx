@@ -10,7 +10,7 @@ import {
   Typography,
 } from '@mui/material';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react'; // <-- Asegúrate de importar useMemo
 import { useNavigate } from 'react-router-dom';
 
 import LoteService from '@/core/api/services/lote.service';
@@ -24,6 +24,7 @@ import LoteCard from './components/LoteCard';
 import { PujarModal } from './modals/PujarModal';
 
 const LoteCardSkeleton = () => (
+  // ... tu código del esqueleto sigue igual ...
   <Box sx={{ borderRadius: 4, overflow: 'hidden', border: '1px solid', borderColor: 'divider' }}>
     <Skeleton variant="rectangular" height={200} />
     <Box sx={{ p: 2.5 }}>
@@ -66,14 +67,12 @@ const ListaLotesProyecto: React.FC<ListaLotesProyectoProps> = ({ idProyecto }) =
     pujarModal.open();
   }, [pujarModal]);
 
-  // ✅ Funciones utilitarias para verificar la participación y liderazgo del lote seleccionado
   const isLider = useCallback((lote: LoteDto) => {
     if (!user) return false;
+    // Adaptado al cambio de pujaMasAlta que vimos antes
     if (lote.id_puja_mas_alta && Array.isArray(lote.pujas)) {
-      const pLider = lote.pujas.find(p => p.id === lote.id_puja_mas_alta);
-      if (pLider) return Number(pLider.id_usuario) === Number(user.id);
+      return lote.pujas.some((p: any) => Number(p.id_usuario) === Number(user.id) && Number(p.id) === Number(lote.id_puja_mas_alta));
     }
-    if (lote.ultima_puja) return Number(lote.ultima_puja.id_usuario) === Number(user.id);
     return false;
   }, [user]);
 
@@ -81,6 +80,50 @@ const ListaLotesProyecto: React.FC<ListaLotesProyectoProps> = ({ idProyecto }) =
     if (!user || !Array.isArray(lote.pujas)) return false;
     return lote.pujas.some((p) => Number(p.id_usuario) === Number(user.id) && p.estado_puja !== 'cancelada');
   }, [user]);
+
+//  Función para saber si el usuario ganó definitivamente este lote
+  const ganadorDefinitivo = useCallback((lote: LoteDto) => {
+    if (!user) return false;
+    return lote.estado_subasta === 'finalizada' && Number(lote.id_ganador) === Number(user.id);
+  }, [user]);
+
+  // Lógica de Ordenamiento
+  const lotesOrdenados = useMemo(() => {
+    if (!lotes) return [];
+
+    return [...lotes].sort((a, b) => {
+      const aGanador = ganadorDefinitivo(a);
+      const bGanador = ganadorDefinitivo(b);
+
+      // 1. PRIORIDAD ABSOLUTA: Lotes que el usuario ya GANÓ
+      if (aGanador && !bGanador) return -1;
+      if (!aGanador && bGanador) return 1;
+
+      const aParticipa = participa(a);
+      const bParticipa = participa(b);
+
+      // 2. Prioridad: Lotes donde el usuario participa actualmente
+      if (aParticipa && !bParticipa) return -1;
+      if (!aParticipa && bParticipa) return 1;
+
+      // 3. Prioridad: Lotes con subasta abierta ('activa')
+      const aActiva = a.estado_subasta === 'activa';
+      const bActiva = b.estado_subasta === 'activa';
+
+      if (aActiva && !bActiva) return -1;
+      if (!aActiva && bActiva) return 1;
+
+      // 4. Prioridad: Lotes 'pendientes' (próximamente) antes que los finalizados que perdió
+      const aPendiente = a.estado_subasta === 'pendiente';
+      const bPendiente = b.estado_subasta === 'pendiente';
+
+      if (aPendiente && !bPendiente) return -1;
+      if (!aPendiente && bPendiente) return 1;
+
+      // Si hay empate en todo lo anterior, mantener el orden original del backend
+      return 0;
+    });
+  }, [lotes, participa, ganadorDefinitivo]); 
 
   if (isLoading) {
     return (
@@ -92,7 +135,8 @@ const ListaLotesProyecto: React.FC<ListaLotesProyectoProps> = ({ idProyecto }) =
 
   if (isError) return <Alert severity="error" sx={{ borderRadius: 3 }}>No se pudieron cargar los lotes.</Alert>;
 
-  if (!lotes || lotes.length === 0) {
+  if (!lotesOrdenados || lotesOrdenados.length === 0) {
+
     return (
       <Stack alignItems="center" justifyContent="center" spacing={2} py={8}>
         <FilterListOff sx={{ fontSize: 56, color: 'text.disabled' }} />
@@ -106,12 +150,14 @@ const ListaLotesProyecto: React.FC<ListaLotesProyectoProps> = ({ idProyecto }) =
     <>
       <Stack direction="row" alignItems="center" spacing={1} mb={3}>
         <Gavel sx={{ color: 'text.secondary', fontSize: 20 }} />
-        <Typography variant="body2" color="text.secondary" fontWeight={700}>{lotes.length} lote{lotes.length !== 1 ? 's' : ''} en subasta</Typography>
+        {/* Cambiar lotes.length a lotesOrdenados.length */}
+        <Typography variant="body2" color="text.secondary" fontWeight={700}>{lotesOrdenados.length} lote{lotesOrdenados.length !== 1 ? 's' : ''} en subasta</Typography>
         {isLoadingSub && <CircularProgress size={14} />}
       </Stack>
 
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', xl: 'repeat(3, 1fr)' }, gap: 3 }}>
-        {lotes.map((lote) => (
+        {/* ✅ MAPEAMOS EL ARRAY ORDENADO EN LUGAR DEL ORIGINAL */}
+        {lotesOrdenados.map((lote) => (
           <LoteCard
             key={lote.id} lote={lote} onNavigate={handleNavigate} onPujar={handlePujar}
             isSubscribed={estaSuscripto} hasTokens={tokensDisponibles > 0}

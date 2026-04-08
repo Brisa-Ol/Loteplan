@@ -85,7 +85,7 @@ export interface ProyectoDto extends BaseDTO {
   obj_suscripciones: number;
   objetivo_notificado: boolean; // ✅ Agregado del modelo
   valor_cuota_referencia?: number; // Este mapea a cuota.valor_mensual_final
-  nombre_cemento_cemento?: string;
+  nombre_cemento?: string;
   valor_cemento?: number;
   // Datos de Tiempo
   fecha_inicio: string;
@@ -93,8 +93,8 @@ export interface ProyectoDto extends BaseDTO {
   fecha_inicio_proceso?: string; // ✅ DATEONLY en Back
   meses_restantes: number;      // ✅ Integer en Back
 
-  // Configuración
-  pack_de_lotes: boolean; // 👈 Tu campo crítico del modelo
+
+  pack_de_lotes: boolean; 
 
   // Ubicación
   latitud?: number;
@@ -103,7 +103,7 @@ export interface ProyectoDto extends BaseDTO {
   // Relaciones (Includes)
   lotes?: LoteDto[];
   imagenes?: ImagenDto[];
-  map_url: string | null
+  map_url?: string | null
 }
 
 // ==========================================
