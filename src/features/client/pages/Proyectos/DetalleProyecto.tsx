@@ -1,12 +1,25 @@
 // src/features/client/pages/Proyectos/DetalleProyecto.tsx
 
+import ContratoService from '@/core/api/services/contrato.service';
+import SuscripcionService from '@/core/api/services/suscripcion.service';
+import { SecurityRequirementModal } from '@/core/auth/guards/SecurityRequirementModal';
+import { useSecurityGuard } from '@/core/auth/hooks/useSecurityGuard';
+import { useAuth } from '@/core/context/AuthContext';
+import type { ContratoTrackingResponse } from '@/core/types/contrato.dto';
+import type { ProyectoDto } from '@/core/types/proyecto.dto';
+import { MapUrlIframe } from '@/features/admin/pages/Proyectos/modals/MapUrlIframe/MapUrlIframe';
+import { ROUTES } from '@/routes';
+import { PageContainer } from '@/shared';
 import {
-  ArrowBack, AutoGraph, Block, CalendarMonth, CheckCircle,
+  ArrowBack,
+  Block, CalendarMonth, CheckCircle,
   Gavel, GppGood,
-  Info, InsertPhoto, LocationOn, MonetizationOn, Stars, ViewList
+  Info, InsertPhoto,
+  MonetizationOn, Stars, ViewList
 } from '@mui/icons-material';
 import {
   Alert, Avatar, Box, Button,
+  Chip,
   CircularProgress,
   Fade,
   LinearProgress,
@@ -15,26 +28,13 @@ import {
 import { useIsFetching } from '@tanstack/react-query';
 import React, { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-
-import { useSecurityGuard } from '@/core/auth/hooks/useSecurityGuard';
-import { useAuth } from '@/core/context/AuthContext';
-import { ROUTES } from '@/routes';
 import { useDetalleProyecto } from '../../hooks/useDetalleProyecto';
 import { useVerificarSuscripcion } from '../../hooks/useVerificarSuscripcion';
-
-import { SecurityRequirementModal } from '@/core/auth/guards/SecurityRequirementModal';
-import { PageContainer } from '@/shared';
 import ListaLotesProyecto from '../Lotes/ListaLotesProyecto';
 import { ProjectHero } from './components/ProjectHero';
 import { ProjectSidebar } from './components/ProjectSidebar';
-import { CheckoutWizardModal } from './modals/CheckoutWizardModal/CheckoutWizardModal';
-
-import ContratoService from '@/core/api/services/contrato.service';
-import SuscripcionService from '@/core/api/services/suscripcion.service';
-import type { ContratoTrackingResponse } from '@/core/types/contrato.dto';
-import { MapUrlIframe } from '@/features/admin/pages/Proyectos/modals/MapUrlIframe/MapUrlIframe';
 import { CheckoutInversionModal } from './modals/CheckoutInversionModal/CheckoutInversionModal';
-import type { ProyectoDto } from '@/core/types/proyecto.dto';
+import { CheckoutWizardModal } from './modals/CheckoutWizardModal/CheckoutWizardModal';
 
 // 🚀 LAZY LOADING
 const ProjectGallery = lazy(() => import('./components/ProjectGallery').then(m => ({ default: m.ProjectGallery })));
@@ -47,25 +47,39 @@ const MemoizedHero = React.memo(ProjectHero);
 const MemoizedSidebar = React.memo(ProjectSidebar);
 
 const DataPoint = React.memo(({ label, value, icon }: any) => (
-  <Stack direction="row" spacing={1.5} alignItems="center">
-    {icon && <Box sx={{ color: 'primary.main', display: 'flex' }}>{icon}</Box>}
+  <Stack
+    direction="row"
+    spacing={1.5}
+    alignItems="center"
+    sx={{
+      // 👇 Reducimos el padding general de 2 a 1.5 (o puedes usar py: 1, px: 2)
+      p: 1,
+      px: 2,
+      py: 1,
+      borderRight: '0.5px solid',
+      borderColor: 'divider',
+      '&:last-child': { borderRight: 'none' }
+    }}
+  >
+    {icon && <Box sx={{ color: 'primary.main', display: 'flex', flexShrink: 0 }}>{icon}</Box>}
     <Box>
-      <Typography variant="caption" color="text.secondary" display="block" fontWeight={700} sx={{ textTransform: 'uppercase' }}>{label}</Typography>
-      <Typography variant="body2" fontWeight={800}>{value}</Typography>
+      <Typography
+        variant="caption"
+        color="text.secondary"
+        display="block"
+        fontWeight={800}
+        sx={{ textTransform: 'uppercase', letterSpacing: '0.06em' }}
+      >
+        {label}
+      </Typography>
+      <Typography variant="body2" fontWeight={500}>
+        {value}
+      </Typography>
     </Box>
   </Stack>
 ));
 
-const FeatureItem = React.memo(({ icon, title, desc, action }: any) => (
-  <Stack spacing={1} sx={{ p: 2.5, bgcolor: 'background.paper', borderRadius: 3, height: '100%', border: '1px solid', borderColor: 'divider' }}>
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-      <Avatar sx={{ bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1), color: 'primary.main', width: 40, height: 40 }}>{icon}</Avatar>
-      <Typography variant="subtitle2" fontWeight={800}>{title}</Typography>
-    </Box>
-    <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.5 }}>{desc}</Typography>
-    {action}
-  </Stack>
-));
+
 interface TabOverviewProps {
   proyecto: ProyectoDto;
   esMensual: boolean;
@@ -73,43 +87,37 @@ interface TabOverviewProps {
 }
 const TabOverview = React.memo(({ proyecto, esMensual, googleMapsUrl }: TabOverviewProps) => {
   const theme = useTheme();
-    const mapEmbedUrl = proyecto.map_url
+  const mapEmbedUrl = proyecto.map_url
     ?? (proyecto.latitud && proyecto.longitud
       ? `https://maps.google.com/maps?q=${proyecto.latitud},${proyecto.longitud}&output=embed&z=15`
       : null);
   return (
     <Fade in timeout={300}>
       <Stack spacing={4}>
-        <Box display="grid" gridTemplateColumns={{ xs: '1fr', sm: '1fr 1fr 1fr' }} gap={3}>
-         <FeatureItem
-  icon={<LocationOn />}
-  title="Ubicación"
-  desc={googleMapsUrl ? "Zona de alta valorización." : "Ubicación no especificada."}
-  action={
-    googleMapsUrl
-      ? <Button size="small" variant="text" href={googleMapsUrl} target="_blank"
-          sx={{ fontWeight: 800, justifyContent: 'flex-start', p: 0 }}>
-          Ver en Maps
-        </Button>
-      : null
-  }
-/>
-          <FeatureItem icon={<AutoGraph />} title="Rendimiento" desc={`Inversión en ${proyecto.moneda}.`} />
-          <FeatureItem icon={<GppGood />} title="Seguridad" desc={proyecto.forma_juridica || 'Respaldo legal total.'} />
-        </Box>
-        <Box>
-          <Typography variant="h6" fontWeight={800} gutterBottom>Descripción</Typography>
-          <Typography variant="body1" color="text.secondary" sx={{ textAlign: 'justify', whiteSpace: 'pre-line' }}>{proyecto.descripcion}</Typography>
-        </Box>
-        <Paper variant="outlined" sx={{ p: 3, borderRadius: 3, bgcolor: alpha(theme.palette.secondary.main, 0.05), }}>
-          <Box display="grid" gridTemplateColumns={{ xs: 'repeat(2, 1fr)', md: 'repeat(auto-fit, minmax(200px, 1fr))' }} gap={4} >
+        <Paper variant="outlined" sx={{
+          p: 0, borderRadius: 3, overflow: 'hidden', width: '100%',
+          mx: 'auto', bgcolor: alpha(theme.palette.primary.main, 0.03)
+        }}>
+          <Box display="grid" gridTemplateColumns={{ xs: 'repeat(2, 1fr)', md: 'repeat(5, 1fr)' }}>
             <DataPoint label="Moneda" value={proyecto.moneda} icon={<MonetizationOn fontSize="small" />} />
             <DataPoint label="Modalidad" value={esMensual ? 'Mensual' : 'Directa'} icon={<CalendarMonth fontSize="small" />} />
-            {esMensual && <DataPoint label="Suscritos" value={proyecto.suscripciones_actuales} icon={<Stars fontSize="small" />} />}
-            <DataPoint label="Estado" value={proyecto.estado_proyecto} icon={<CheckCircle fontSize="small" />} />
+            {esMensual && (
+              <DataPoint
+                label="Suscritos"
+                value={`${proyecto.suscripciones_actuales} de ${proyecto.obj_suscripciones}`}
+                icon={<Stars fontSize="small" />}
+              />
+            )}
+            <DataPoint label="Seguridad" value={proyecto.forma_juridica || '—'} icon={<GppGood fontSize="small" />} />
+            <DataPoint label="Estado" value={<Chip label={proyecto.estado_proyecto} size="small" color="success" />} icon={<CheckCircle fontSize="small" />} />
           </Box>
         </Paper>
-          <MapUrlIframe map_url={mapEmbedUrl} type_proyect={esMensual} />
+        <Box>
+          <Typography variant="h4" fontWeight={700} gutterBottom>Descripción del proyecto</Typography>
+          <Typography variant="body1" color="text.secondary" sx={{ textAlign: 'justify', whiteSpace: 'pre-line' }}>{proyecto.descripcion}</Typography>
+        </Box>
+
+        <MapUrlIframe map_url={mapEmbedUrl} type_proyect={esMensual} />
       </Stack>
 
     </Fade>
