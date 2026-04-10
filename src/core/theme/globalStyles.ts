@@ -6,7 +6,7 @@ export const colors = {
   secondary: { main: "#ECECEC", light: "#F6F6F6", dark: "#D4D4D4", contrastText: "#000000" },
   text: { primary: "#000000", secondary: "#333333", disabled: "#999999" },
   background: { default: "#FFFFFF", paper: "#ECECEC" },
-  success: { main: "#4CAF50", light: "#E8F5E9" },
+  success: { main: "#4CAF50", light: "#E8F5E9", secondary: "#F57C00" },
   error: { main: "#D32F2F", light: "#FFEBEE" },
   warning: { main: "#F57C00", light: "#FFF3E0", secondary: "#ddb833"},
   info: { main: "#0288D1", light: "#E1F5FE" },

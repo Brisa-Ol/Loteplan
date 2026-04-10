@@ -71,47 +71,96 @@ const formatLocalDate = (iso: string) =>
 const getEstadoPagoIcon = (estado: PagoDto['estado_pago']) => {
   switch (estado) {
     case 'pagado':
-      return (
-        <Tooltip title="Pago realizado">
-          <CheckCircle color="success" sx={{ fontSize: 18 }} />
-        </Tooltip>
-      );
-    case 'forzado':
-      return (
-        <Tooltip title="Pago forzado manualmente">
-          <CheckCircle color="warning" sx={{ fontSize: 18 }} />
-        </Tooltip>
-      );
-    case 'cubierto_por_puja':
-      return (
-        <Tooltip title="Cubierto por puja">
-          <Stars color="secondary" sx={{ fontSize: 18 }} />
-        </Tooltip>
-      );
-    case 'pendiente':
-      return (
-        <Tooltip title="Pago pendiente">
-          <Schedule sx={{ fontSize: 18, color: 'info.main' }} />
-        </Tooltip>
-      );
-    case 'vencido':
-      return (
-        <Tooltip title="Pago vencido">
-          <ErrorOutline color="error" sx={{ fontSize: 18 }} />
-        </Tooltip>
-      );
-    case 'cancelado':
-      return (
-        <Tooltip title="Pago cancelado">
-          <Cancel sx={{ fontSize: 18, color: 'text.disabled' }} />
-        </Tooltip>
-      );
-    default:
-      return (
-        <Tooltip title="Estado desconocido">
-          <Schedule sx={{ fontSize: 18, color: 'text.disabled' }} />
-        </Tooltip>
-      );
+			return (
+				<Tooltip title="Pago realizado">
+					<Chip
+						icon={<CheckCircle />}
+						label="Pagado"
+						color="success"
+						size="small"
+						sx={{ fontWeight: 700 }}
+					/>
+				</Tooltip>
+			);
+
+		case 'forzado':
+			return (
+				<Tooltip title="Pago forzado manualmente">
+					<Chip
+						icon={<CheckCircle />}
+						label="Forzado"
+						color="info"
+						size="small"
+						sx={{ fontWeight: 700 }}
+					/>
+				</Tooltip>
+			);
+
+		case 'cubierto_por_puja':
+			return (
+				<Tooltip title="Cubierto por puja">
+					<Chip
+						icon={<Stars />}
+						label="Cubierto por puja"
+						color="success"
+						variant="outlined"
+						size="small"
+						sx={{ fontWeight: 700 }}
+					/>
+				</Tooltip>
+			);
+
+		case 'pendiente':
+			return (
+				<Tooltip title="Pago pendiente">
+					<Chip
+						icon={<Schedule />}
+						label="PendienteE"
+						color="warning"
+						size="small"
+						sx={{ fontWeight: 700 }}
+					/>
+				</Tooltip>
+			);
+
+		case 'cancelado':
+			return (
+				<Tooltip title="Pago vencido">
+					<Chip
+						icon={<ErrorOutline />}
+						label="Cancelado"
+						color="error"
+						size="small"
+						sx={{ fontWeight: 700 }}
+					/>
+				</Tooltip>
+			);
+
+		case 'cancelado':
+			return (
+				<Tooltip title="Pago cancelado">
+					<Chip
+						icon={<Cancel />}
+						label="CANCELADO"
+						variant="outlined"
+						size="small"
+						sx={{ fontWeight: 700, color: 'text.disabled' }}
+					/>
+				</Tooltip>
+			);
+
+		default:
+			return (
+				<Tooltip title="Estado desconocido">
+					<Chip
+						icon={<Schedule />}
+						label="DESCONOCIDO"
+						variant="outlined"
+						size="small"
+						sx={{ fontWeight: 700 }}
+					/>
+				</Tooltip>
+			);
   }
 };
 
@@ -356,7 +405,7 @@ export const HistorialPagosAgrupado: React.FC<HistorialPagosAgrupadoProps> = ({ 
                     }}
                   >
                     <Stack direction="row" spacing={2} alignItems="center">
-                      {getEstadoPagoIcon(pago.estado_pago)}
+                      
                       <Box>
                         <Typography variant="body2" fontWeight={600}>
                           Cuota {pago.mes} de {grupo.totalCuotasProyecto || '--'}
@@ -371,6 +420,7 @@ export const HistorialPagosAgrupado: React.FC<HistorialPagosAgrupadoProps> = ({ 
                             : `Vence el ${formatLocalDate(pago.fecha_vencimiento)}`}
                         </Typography>
                       </Box>
+                      {getEstadoPagoIcon(pago.estado_pago)}
                     </Stack>
 
                     <Box textAlign="right">

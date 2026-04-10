@@ -229,7 +229,8 @@ const AdminLotes: React.FC = () => {
           <Stack spacing={0.5} alignItems="flex-start">
             <Chip label={proyecto?.nombre_proyecto || "S/P"} size="small" variant="outlined" color="primary" />
             <Typography variant="caption" fontWeight={800} color={proyecto?.tipo_inversion === 'directo' ? 'info.main' : 'warning.main'}>
-              {proyecto?.tipo_inversion === 'directo' ? '💼 INVERSIONISTA' : '🔨 SUBASTABLE'}
+              {proyecto?.tipo_inversion === 'directo' ? '💼 INVERSIONISTA' 
+              : (l.estado_subasta === 'activa' ? '🔨 EN SUBASTA' : l.estado_subasta === 'pendiente' ? '🔨 SUBASTABLE' : 'CERRADA')}
             </Typography>
           </Stack>
         );

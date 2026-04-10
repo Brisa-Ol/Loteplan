@@ -55,7 +55,7 @@ export const DetalleCuotaModal: React.FC<Props> = ({ open, onClose, resumen }) =
 
     // 3. 🧮 CÁLCULO INVERSO DE PORCENTAJES
     const baseMensualFull = d.valor_movil / meses_proyecto;
-    const pctAdminCalculado = baseMensualFull > 0 ? (d.carga_administrativa / baseMensualFull) : 0;
+    const pctAdminCalculado = baseMensualFull > 0 ? (d.carga_administrativa / d.valor_movil) : 0;
     const pctIvaCalculado = d.carga_administrativa > 0 ? (d.iva_carga_administrativa / d.carga_administrativa) : 0;
 
     return {

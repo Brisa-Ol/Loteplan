@@ -78,11 +78,16 @@ const formatFullDate = (dateString?: string | null): string => {
 
 // ─── CountdownTimer ───────────────────────────────────────────────────────────
 
-const CountdownTimer = ({ endDate }: { endDate: string }) => {
+const CountdownTimer = ({ endDate }: { endDate: string | null }) => {
   const [timeLeft, setTimeLeft] = useState('');
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
+    if (!endDate) {
+      setTimeLeft('Sin límite');
+      return;
+    }
+
     const tick = () => {
       const diff = new Date(endDate).getTime() - Date.now();
       if (diff <= 0) {
@@ -90,10 +95,17 @@ const CountdownTimer = ({ endDate }: { endDate: string }) => {
         if (timerRef.current) clearInterval(timerRef.current);
         return;
       }
+
+      const d = Math.floor(diff / 86_400_000);
       const h = Math.floor((diff % 86_400_000) / 3_600_000);
       const m = Math.floor((diff % 3_600_000) / 60_000);
       const s = Math.floor((diff % 60_000) / 1_000);
-      setTimeLeft(`${h}h ${m}m ${s}s`);
+
+      if (d > 0) {
+        setTimeLeft(`${d}d ${h}h ${m}m ${s}s`);
+      } else {
+        setTimeLeft(`${h}h ${m}m ${s}s`);
+      }
     };
 
     tick();
@@ -132,13 +144,13 @@ const DetalleLote: React.FC = () => {
   const { data: lote, isLoading: isLoadingLote } = useQuery({
     queryKey: ['lote', id],
     queryFn: async () => (await LoteService.getByIdActive(Number(id))).data as any,
-    refetchInterval: 3000,
+    refetchInterval: 7000,
   });
 
   const { data: misPujas = [] } = useQuery({
     queryKey: ['mis-pujas'],
     queryFn: async () => (await PujaService.getMyPujas()).data,
-    refetchInterval: 3000,
+    refetchInterval: 7000,
     enabled: !!user?.id,
   });
 
@@ -219,7 +231,7 @@ const DetalleLote: React.FC = () => {
   const tiempoAgotado = lote?.fecha_fin ? new Date(lote.fecha_fin).getTime() <= Date.now() : false;
 
   // Flag unificado para saber si la tarjeta debe verse bloqueada como en tu imagen
-  const isCerrada = subastaFinalizada || tiempoAgotado;
+const isCerrada = lote?.estado_subasta === 'finalizada' || lote?.estado_subasta === 'pendiente';
 
   const yaParticipa = !!winInfo.miPujaId;
   const soyGanador = winInfo.esLiderActual || winInfo.esGanadorDefinitivo;
@@ -227,8 +239,8 @@ const DetalleLote: React.FC = () => {
   const yaPago = winInfo.status === 'ganadora_pagada';
   const debesPagar = winInfo.esGanadorDefinitivo && subastaFinalizada && !yaPago;
 
-  const puedePujar = isActiva && !isCerrada && estaSuscripto && (tokensDisponibles > 0 || yaParticipa);
-  const puedeCancelar = isActiva && !isCerrada && yaParticipa && !winInfo.esLiderActual;
+  const puedePujar = isActiva && estaSuscripto && (tokensDisponibles > 0 || yaParticipa);
+  const puedeCancelar = isActiva && yaParticipa 
   const sinTokensParaPujar =
     isActiva && !isCerrada && estaSuscripto && tokensDisponibles === 0 && !yaParticipa;
 
@@ -442,7 +454,10 @@ const DetalleLote: React.FC = () => {
                   sx={{ color: isCerrada ? '#c95b31' : 'primary.main' }}
                 >
                   <Timer fontSize="small" />
-                  <CountdownTimer endDate={lote.fecha_fin} />
+                  {lote.fecha_fin
+                    ? <CountdownTimer endDate={lote.fecha_fin} />
+                    : <Typography variant="h6" fontWeight={900}>Sin fecha límite</Typography>
+                  }
                 </Stack>
               </Box>
 
