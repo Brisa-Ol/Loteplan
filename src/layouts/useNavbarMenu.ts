@@ -269,12 +269,12 @@ export const useNavbarMenu = () => {
                 icon: AccountCircleIcon,
                 description: "Datos personales"
               },
-              {
-                label: "Mis Mensajes",
-                path: ROUTES.CLIENT.CUENTA.MENSAJES,
-                icon: MessageIcon,
-                description: "Centro de notificaciones"
-              },
+              // {
+              //   label: "Mis Mensajes",
+              //   path: ROUTES.CLIENT.CUENTA.MENSAJES,
+              //   icon: MessageIcon,
+              //   description: "Centro de notificaciones"
+              // },
 
               { isDivider: true, label: "" },
 

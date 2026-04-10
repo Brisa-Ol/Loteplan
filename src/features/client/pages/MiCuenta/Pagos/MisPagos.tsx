@@ -56,7 +56,7 @@ const getStatusConfig = (status: string) => {
     case 'vencido':
       return { label: 'VENCIDO', color: 'error' as const, icon: <PriorityHigh fontSize="small" /> };
     case 'cubierto_por_puja':
-      return { label: 'CUBIERTO', color: 'secondary' as const, icon: <Stars fontSize="small" /> };
+      return { label: 'CUBIERTO', icon: <Stars fontSize="small" sx={{ color:'success.secondary' }} /> };
     case 'cancelado':
       return { label: 'CANCELADO', color: 'default' as const, icon: <Warning fontSize="small" /> };
     default:
