@@ -288,20 +288,20 @@ const AuctionAlerts = memo(({ proyectosConSubasta }: { proyectosConSubasta: Proy
             action={
               <Button
                 variant="contained"
-                color="primary" // Usará tu #CC6333
+                color="primary" 
                 size="small"
                 startIcon={<Visibility />}
                 onClick={() => navigate(ROUTES.PROYECTOS.DETALLE.replace(':id', String(proyecto.id)))}
                 sx={{
                   fontWeight: 700,
                   px: 2,
-                  // Forzamos el border radius definido en tu theme (8px)
+                  
                   borderRadius: '8px',
                   textTransform: 'none',
                   whiteSpace: 'nowrap'
                 }}
               >
-                Ver Subasta
+                Ver Proyecto
               </Button>
             }
             sx={{
