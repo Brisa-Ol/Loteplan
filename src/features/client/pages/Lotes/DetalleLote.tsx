@@ -95,10 +95,17 @@ const CountdownTimer = ({ endDate }: { endDate: string | null }) => {
         if (timerRef.current) clearInterval(timerRef.current);
         return;
       }
+
+      const d = Math.floor(diff / 86_400_000);
       const h = Math.floor((diff % 86_400_000) / 3_600_000);
       const m = Math.floor((diff % 3_600_000) / 60_000);
       const s = Math.floor((diff % 60_000) / 1_000);
-      setTimeLeft(`${h}h ${m}m ${s}s`);
+
+      if (d > 0) {
+        setTimeLeft(`${d}d ${h}h ${m}m ${s}s`);
+      } else {
+        setTimeLeft(`${h}h ${m}m ${s}s`);
+      }
     };
 
     tick();
