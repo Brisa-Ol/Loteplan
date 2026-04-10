@@ -174,6 +174,10 @@ const startAuction = useMutation({
     modales.auction.close();
     triggerHighlight(id);
     showSuccess('Subasta iniciada');
+    // Recarga para asegurar que todos los datos relacionados (como pujas) estén actualizados
+    setTimeout(() => {
+        window.location.reload();
+      }, 1750)
   },
   onError: () => showError('Error al iniciar subasta'),
 });
@@ -188,6 +192,11 @@ const endAuction = useMutation({
     modales.auction.close();
     triggerHighlight(id);
     showSuccess('Subasta finalizada');
+    
+    // Recarga para asegurar que todos los datos relacionados (como pujas) estén actualizados
+    setTimeout(() => {
+		window.location.reload();
+	}, 1750);
   },
   onError: (err: any) =>
     showError(err.response?.data?.message || 'Error al finalizar'),

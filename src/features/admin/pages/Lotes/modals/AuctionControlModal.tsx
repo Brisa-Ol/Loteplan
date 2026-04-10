@@ -6,6 +6,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 
 import type { LoteDto } from '@/core/types/lote.dto';
 import { BaseModal } from '@/shared';
+import LoteService from '@/core/api/services/lote.service';
 
 
 
@@ -70,10 +71,12 @@ const AuctionControlModal: React.FC<Props> = ({ open, onClose, lote, onStart, on
     });
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (!lote) return;
     if (isPending) {
+      await LoteService.update(lote.id, formData)
       onStart(lote.id);
+      
     } else if (isActive) {
       onEnd(lote.id);
     }
