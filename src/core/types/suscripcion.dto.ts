@@ -58,6 +58,7 @@ export interface SuscripcionDto extends BaseDTO {
     plazo_inversion: number;
     obj_suscripciones: number;
     suscripciones_actuales: number;
+    
   };
 }
 
