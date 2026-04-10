@@ -8,7 +8,7 @@ export const colors = {
   background: { default: "#FFFFFF", paper: "#ECECEC" },
   success: { main: "#4CAF50", light: "#E8F5E9" },
   error: { main: "#D32F2F", light: "#FFEBEE" },
-  warning: { main: "#F57C00", light: "#FFF3E0" },
+  warning: { main: "#F57C00", light: "#FFF3E0", secondary: "#ddb833"},
   info: { main: "#0288D1", light: "#E1F5FE" },
 } as const;
 
