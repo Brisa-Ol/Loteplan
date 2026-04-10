@@ -1,0 +1,19 @@
+.resumenHeader{
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    width: 50vw;
+}
+
+.saldoAFavor{
+    color: #A34D26;
+    font-weight: 700;
+}
+
+@media (max-width: 1200px) {
+    .resumenHeader{
+        width: 76vw;
+    }
+}

@@ -54,6 +54,7 @@ export interface ResumenCuentaDto extends BaseDTO {
   cuotas_vencidas: number;
   porcentaje_pagado: number;
   detalle_cuota: DetalleCuotaJson;
+  saldo_a_favor: number;
 
   // -------------------------------------------------------------
   // 🔗 RELACIONES (Vienen del método findAll() y getById() del Admin)

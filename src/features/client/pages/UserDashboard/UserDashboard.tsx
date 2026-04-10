@@ -43,6 +43,7 @@ import PagoService from '@/core/api/services/pago.service';
 import PujaService from '@/core/api/services/puja.service';
 import ResumenCuentaService from '@/core/api/services/resumenCuenta.service';
 import SuscripcionService from '@/core/api/services/suscripcion.service';
+import styles from './UserDashboard.module.css';
 
 // 🛠 Utility: Calcular días restantes para vencimientos
 const calculateDaysRemaining = (dateString?: string): number => {
@@ -397,8 +398,9 @@ const UserDashboard: React.FC = () => {
     })
     .map((resumen) => {
       const tieneMora = pagos?.some(p => p.id_suscripcion === resumen.id_suscripcion && p.estado_pago === 'pendiente' && new Date(p.fecha_vencimiento) < new Date());
-
+      const subActiva = suscripciones?.find(s => s.id === resumen.id_suscripcion);
       return (
+        
         <Card key={resumen.id} elevation={0} sx={{
           borderRadius: 3, border: `1px solid ${theme.palette.divider}`, transition: 'all 0.2s',
           '&:hover': { transform: 'translateY(-4px)', borderColor: 'primary.main', boxShadow: theme.shadows[4] }
@@ -406,7 +408,12 @@ const UserDashboard: React.FC = () => {
           <CardContent sx={{ p: 3 }}>
             <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
               <Box>
-                <Typography variant="h6" fontWeight={800}>{resumen.nombre_proyecto}</Typography>
+                <Box className={styles.resumenHeader}>
+                  <Typography variant="h6" fontWeight={800}>{resumen.nombre_proyecto}</Typography>
+                  {subActiva && Number(subActiva.saldo_a_favor) > 0 && (
+                    <Typography className={styles.saldoAFavor} variant="h5">Saldo a favor: ${subActiva.saldo_a_favor}</Typography>
+                  )}
+                </Box>
                 <Chip label={`${resumen.cuotas_pagadas}/${resumen.meses_proyecto || 0} cuotas`} size="small" variant="outlined" sx={{ mt: 0.5, fontWeight: 700 }} />
                 {tieneMora && <Chip label="Mora" color="error" size="small" sx={{ ml: 1, fontWeight: 800 }} />}
               </Box>
@@ -428,7 +435,7 @@ const UserDashboard: React.FC = () => {
 
               {/* ========== SIDEBAR DERECHO ========== */}
               <Stack spacing={3}>
-                {stats.saldoTotalAFavor > 0 && (
+                {/* {stats.saldoTotalAFavor > 0 && (
                   <Card elevation={0} sx={{
                     borderRadius: 2, background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`, color: 'primary.contrastText', boxShadow: `0 8px 24px ${alpha(theme.palette.primary.main, 0.3)}`
                   }}>
@@ -439,7 +446,7 @@ const UserDashboard: React.FC = () => {
                       </Stack>
                     </CardContent>
                   </Card>
-                )}
+                )} */}
                 <Paper
                   elevation={0}
                   sx={{
