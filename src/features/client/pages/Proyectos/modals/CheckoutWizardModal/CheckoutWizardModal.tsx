@@ -59,7 +59,7 @@ import PDFViewerMejorado from '../../../Contratos/components/PDFViewerMejorado';
 import { useCheckoutWizard } from '@/features/client/hooks/Usecheckoutwizard';
 import { useCurrencyFormatter } from '@/features/client/hooks/useCurrencyFormatter';
 import useSnackbar from '@/shared/hooks/useSnackbar';
-import { CheckoutStateManager, type CheckoutPersistedState } from '../Checkout persistence';
+import { CheckoutStateManager } from '../Checkout persistence';
 
 // Types
 import CuotaMensualService from '@/core/api/services/cuotaMensual.service';
@@ -481,8 +481,8 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
   const [location, setLocation] = useState<Location | null>(null);
   const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
   const [signaturePosition, setSignaturePosition] = useState<SignaturePosition | null>(null);
-  const [showRecoveryPrompt, setShowRecoveryPrompt] = useState(false);
-  const [recoveredState, setRecoveredState] = useState<CheckoutPersistedState | null>(null);
+  // const [showRecoveryPrompt, setShowRecoveryPrompt] = useState(false);
+  // const [recoveredState, setRecoveredState] = useState<CheckoutPersistedState | null>(null);
 
   const hasAttemptedRecovery = useRef(false);
 
@@ -543,26 +543,26 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
   const effectiveInversionId = inversionId   || initialInversionId;   // registro de negocio
   const effectivePagoId      = transaccionId || initialPagoId;        // transacción de pago
 
-  // PERSISTENCIA
-  const persistState = useCallback(() => {
-    CheckoutStateManager.saveState({
-      projectId: proyecto.id,
-      tipo,
-      activeStep,
-      transactionId: transaccionId,
-      inversionId: inversionId,
-      paymentSuccess: paymentStatus === 'success',
-      signatureDataUrl,
-      location,
-      timestamp: Date.now()
-    });
-  }, [proyecto.id, tipo, paymentStatus, activeStep, transaccionId, signatureDataUrl, location]);
+  // // PERSISTENCIA
+  // const persistState = useCallback(() => {
+  //   CheckoutStateManager.saveState({
+  //     projectId: proyecto.id,
+  //     tipo,
+  //     activeStep,
+  //     transactionId: transaccionId,
+  //     inversionId: inversionId,
+  //     paymentSuccess: paymentStatus === 'success',
+  //     signatureDataUrl,
+  //     location,
+  //     timestamp: Date.now()
+  //   });
+  // }, [proyecto.id, tipo, paymentStatus, activeStep, transaccionId, signatureDataUrl, location]);
 
-  useEffect(() => {
-    if (open && (paymentStatus === 'success' || activeStep >= 3 || transaccionId)) {
-      persistState();
-    }
-  }, [open, activeStep, transaccionId, persistState]);
+  // useEffect(() => {
+  //   if (open && (paymentStatus === 'success' || activeStep >= 3 || transaccionId)) {
+  //     persistState();
+  //   }
+  // }, [open, activeStep, transaccionId, persistState]);
 
   // ===================================================
   // RECUPERACIÓN DE ESTADO POST-PAGO
@@ -583,144 +583,80 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
   //  tanto de inversiones como de suscripciones.
   // ===================================================
   useEffect(() => {
-    if (!open || hasAttemptedRecovery.current) return;
+  if (!open || hasAttemptedRecovery.current) return;
 
-    if (tipo === 'suscripcion' && trackingData?.puede_firmar) {
-    console.log("🚀 Suscripción: directo a firma por trackingData");
-
+  // 🔥 PRIORIDAD MÁXIMA: trackingData manda sobre todo
+  if (
+    trackingData &&
+    trackingData.tiene_pago &&
+    trackingData.puede_firmar
+  ) {
     setPaymentStatus('success');
     setActiveStep(4);
-
-
     hasAttemptedRecovery.current = true;
     return;
   }
 
-    const savedState = CheckoutStateManager.loadState(proyecto.id);
-
-    const txId2 = savedState?.transactionId || effectivePagoId;
-    // ===================================================
-  // 🔥 CASO PRINCIPAL: SI HAY TX → SIEMPRE VERIFICAR PAGO
-  // ===================================================
-  if (txId2) {
+  // Sin trackingData: verificar por IDs de props si los hay
+  const txId = effectivePagoId || effectiveInversionId;
+  if (txId) {
     (async () => {
       try {
-        setTransaccionId(txId2);
-
-        const res = await MercadoPagoService.getPaymentStatus(txId2, true);
+        setTransaccionId(txId);
+        const res = await MercadoPagoService.getPaymentStatus(txId, true);
 
         if (isPaymentApproved(res.data)) {
           setPaymentStatus('success');
-          CheckoutStateManager.markPaymentSuccess(proyecto.id, txId2);
           setActiveStep(4);
-
           showInfo(
             tipo === 'suscripcion'
               ? '¡Pago confirmado! Firmá el contrato para activar tu suscripción.'
               : '¡Pago confirmado! Firmá el contrato para finalizar tu inversión.'
           );
-
-          hasAttemptedRecovery.current = true;
-          return;
         }
-
-        // 👇 NO pagado → mostrar recovery si había progreso
-        if (savedState!.activeStep >= 3) {
-          setRecoveredState(savedState);
-          setShowRecoveryPrompt(true);
-        } else {
-          setActiveStep(3); // volver a pago
-        }
-
+        // Si no está aprobado, flujo limpio desde paso 0
       } catch (err) {
         console.warn('⚠️ Error verificando pago:', err);
       } finally {
         hasAttemptedRecovery.current = true;
       }
     })();
-
     return;
   }
 
-    // CASO 1: pago ya confirmado en sesión anterior
-    if (savedState?.paymentSuccess && savedState.transactionId) {
-      setTransaccionId(savedState.transactionId);
-      setPaymentStatus('success');
-      setLocation(savedState.location);
-      setCodigo2FAFirma('');
-      setActiveStep(4);
-      showInfo(
-        tipo === 'suscripcion'
-          ? '¡Pago confirmado! Firmá el contrato para activar tu suscripción.'
-          : '¡Pago confirmado! Firmá el contrato para finalizar tu inversión.'
-      );
-      hasAttemptedRecovery.current = true;
-      return;
-    }
+  hasAttemptedRecovery.current = true;
+}, [open, proyecto.id, tipo, trackingData, effectiveInversionId, effectivePagoId,
+    showInfo, setTransaccionId, setPaymentStatus]);
 
-    // CASO 2: proceso interrumpido sin pago confirmado
-   if (savedState && savedState.activeStep >= 3 && savedState.transactionId) {
-      setRecoveredState(savedState);
-      setShowRecoveryPrompt(true);
-      hasAttemptedRecovery.current = true;
-      return;
-    }
+  // const handleRecoverState = useCallback(() => {
+  //   if (!recoveredState) return;
+  //   setTransaccionId(recoveredState.transactionId);
+  //   setPaymentStatus(recoveredState.paymentSuccess ? 'success' : 'processing');
+  //   setSignatureDataUrl(recoveredState.signatureDataUrl);
+  //   setLocation(recoveredState.location);
 
-    // CASO 3: sin estado local pero llega ID por props
-    // Aplica tanto para inversiones (effectiveInversionId) como suscripciones (effectivePagoId)
-    const txId = savedState?.transactionId 
-                || effectiveInversionId 
-                || effectivePagoId;
-    if (txId) {
-      MercadoPagoService.getPaymentStatus(txId, true)
-        .then(res => {
-          if (isPaymentApproved(res.data)) {
-            setTransaccionId(txId);
-            setPaymentStatus('success');
-            CheckoutStateManager.markPaymentSuccess(proyecto.id, txId);
-            setActiveStep(4);
-            showInfo(
-              tipo === 'suscripcion'
-                ? '¡Pago confirmado! Firmá el contrato para activar tu suscripción.'
-                : '¡Pago confirmado! Firmá el contrato para finalizar tu inversión.'
-            );
-          }
-        })
-        .catch(err => console.warn('⚠️ Error verificando pago:', err));
-    }
+  //   if (recoveredState.paymentSuccess) {
+  //     setCodigo2FAFirma('');
+  //     setActiveStep(4);
+  //     showInfo(
+  //       tipo === 'suscripcion'
+  //         ? '¡Pago confirmado! Firmá el contrato para activar tu suscripción.'
+  //         : '¡Pago confirmado! Firmá el contrato para finalizar tu inversión.'
+  //     );
+  //   } else {
+  //     setActiveStep(recoveredState.activeStep);
+  //     if (recoveredState.transactionId && recoveredState.activeStep >= 3) {
+  //       iniciarVerificacionPago(recoveredState.transactionId);
+  //     }
+  //   }
+  //   setShowRecoveryPrompt(false);
+  // }, [recoveredState, tipo, showInfo, iniciarVerificacionPago, setTransaccionId, setPaymentStatus]);
 
-    hasAttemptedRecovery.current = true;
-  }, [open, proyecto.id, tipo, effectiveInversionId, effectivePagoId, showInfo, setTransaccionId, setPaymentStatus]);
-
-  const handleRecoverState = useCallback(() => {
-    if (!recoveredState) return;
-    setTransaccionId(recoveredState.transactionId);
-    setPaymentStatus(recoveredState.paymentSuccess ? 'success' : 'processing');
-    setSignatureDataUrl(recoveredState.signatureDataUrl);
-    setLocation(recoveredState.location);
-
-    if (recoveredState.paymentSuccess) {
-      setCodigo2FAFirma('');
-      setActiveStep(4);
-      showInfo(
-        tipo === 'suscripcion'
-          ? '¡Pago confirmado! Firmá el contrato para activar tu suscripción.'
-          : '¡Pago confirmado! Firmá el contrato para finalizar tu inversión.'
-      );
-    } else {
-      setActiveStep(recoveredState.activeStep);
-      if (recoveredState.transactionId && recoveredState.activeStep >= 3) {
-        iniciarVerificacionPago(recoveredState.transactionId);
-      }
-    }
-    setShowRecoveryPrompt(false);
-  }, [recoveredState, tipo, showInfo, iniciarVerificacionPago, setTransaccionId, setPaymentStatus]);
-
-  const handleDiscardRecovery = useCallback(() => {
-    CheckoutStateManager.clearState();
-    setShowRecoveryPrompt(false);
-    setRecoveredState(null);
-  }, []);
+  // const handleDiscardRecovery = useCallback(() => {
+  //   CheckoutStateManager.clearState();
+  //   setShowRecoveryPrompt(false);
+  //   setRecoveredState(null);
+  // }, []);
 
   // GEOLOCATION
   useEffect(() => {
@@ -791,8 +727,8 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
       setSignaturePosition(null);
       setLocation(null);
       setTransaccionId(null);
-      setShowRecoveryPrompt(false);
-      setRecoveredState(null);
+      // setShowRecoveryPrompt(false);
+      // setRecoveredState(null);
       hasAttemptedRecovery.current = false;
     }, 300);
   }, [isVerificandoPago, isProcessing, onClose, paymentStatus, activeStep, setPaymentStatus, setTransaccionId]);
@@ -815,7 +751,7 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
 
   return (
     <>
-      {showRecoveryPrompt && recoveredState && !recoveredState.paymentSuccess && (
+      {/* {showRecoveryPrompt && recoveredState && !recoveredState.paymentSuccess && (
         <BaseModal
           open={showRecoveryPrompt}
           onClose={handleDiscardRecovery}
@@ -835,10 +771,10 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
             </Button>
           </Stack>
         </BaseModal>
-      )}
+      )} */}
 
       <BaseModal
-        open={open && !showRecoveryPrompt}
+        open={open}
         onClose={handleClose}
         title={tipo === 'suscripcion' ? 'Nueva Suscripción' : 'Nueva Inversión'}
         subtitle={proyecto.nombre_proyecto}
