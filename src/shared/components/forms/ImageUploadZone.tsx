@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useId } from 'react'; // <-- Agregamos useId
 import { Delete as DeleteIcon, Edit as EditIcon, CloudUpload as UploadIcon } from '@mui/icons-material';
 import { Alert, alpha, Box, Chip, IconButton, Paper, Stack, Tooltip, Typography, useTheme } from '@mui/material';
 
@@ -56,6 +56,9 @@ export const ImageUploadZone: React.FC<ImageUploadProps> = (props) => {
     const theme = useTheme();
     const [dragActive, setDragActive] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    
+    // Generador de ID único para esta instancia
+    const uniqueId = useId(); 
 
     // Variables calculadas según el modo
     const images = multiple ? (props as MultipleUploadProps).images || [] : [];
@@ -137,8 +140,9 @@ export const ImageUploadZone: React.FC<ImageUploadProps> = (props) => {
                 <Paper elevation={3} sx={{ position: 'relative', width: '100%', height: 300, borderRadius: 3, border: `1px solid ${theme.palette.divider}`, bgcolor: 'black', overflow: 'hidden' }}>
                     <Box component="img" src={singlePreview} sx={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                     <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, p: 1, background: 'linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, transparent 100%)', display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-                        <input type="file" accept={accept} onChange={(e) => { handleFiles(e.target.files); e.target.value = ''; }} disabled={disabled} style={{ display: 'none' }} id="replace-input" />
-                        <label htmlFor="replace-input">
+                        {/* ID dinámico para reemplazar */}
+                        <input type="file" accept={accept} onChange={(e) => { handleFiles(e.target.files); e.target.value = ''; }} disabled={disabled} style={{ display: 'none' }} id={`${uniqueId}-replace`} />
+                        <label htmlFor={`${uniqueId}-replace`}>
                             <Tooltip title="Cambiar"><IconButton component="span" size="small" sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white', backdropFilter: 'blur(4px)', '&:hover': { bgcolor: 'primary.main' } }}><EditIcon fontSize="small" /></IconButton></Tooltip>
                         </label>
                         <Tooltip title="Eliminar"><IconButton size="small" onClick={() => handleRemove()} sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white', backdropFilter: 'blur(4px)', '&:hover': { bgcolor: 'error.main' } }}><DeleteIcon fontSize="small" /></IconButton></Tooltip>
@@ -153,8 +157,9 @@ export const ImageUploadZone: React.FC<ImageUploadProps> = (props) => {
                         '&:hover': !disabled ? { borderColor: 'primary.main', bgcolor: alpha(theme.palette.primary.main, 0.02) } : {}
                     }}
                 >
-                    <input type="file" accept={accept} multiple={multiple} onChange={(e) => { handleFiles(e.target.files); e.target.value = ''; }} disabled={disabled} style={{ display: 'none' }} id="upload-input" />
-                    <label htmlFor="upload-input" style={{ cursor: 'inherit', width: '100%', display: 'block' }}>
+                    {/* ID dinámico para la subida inicial */}
+                    <input type="file" accept={accept} multiple={multiple} onChange={(e) => { handleFiles(e.target.files); e.target.value = ''; }} disabled={disabled} style={{ display: 'none' }} id={`${uniqueId}-upload`} />
+                    <label htmlFor={`${uniqueId}-upload`} style={{ cursor: 'inherit', width: '100%', display: 'block' }}>
                         <Stack spacing={2} alignItems="center">
                             <Box sx={{ p: 2, borderRadius: '50%', bgcolor: dragActive ? 'primary.main' : 'action.hover', color: dragActive ? 'white' : 'text.secondary' }}><UploadIcon sx={{ fontSize: 32 }} /></Box>
                             <Box>

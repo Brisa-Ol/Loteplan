@@ -207,7 +207,7 @@ export const useConfirmDialog = () => {
         break;
       }
       case 'approve_kyc': {
-        description = `Estás a punto de validar la identidad de ${data.nombre_completo}. Quedará habilitado.`;
+        description = `Estás a punto de validar la identidad de "${data.nombre_completo}"`;
         break;
       }
       case 'force_confirm_transaction': {
