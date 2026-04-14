@@ -37,7 +37,7 @@ export interface UpdateUserAdminDto {
   nombre_usuario?: string;
   numero_telefono?: string;
   rol?: 'cliente' | 'admin';
-  /** Permite activar/desactivar (banear) al usuario. */
+  dni?: string;
   activo?: boolean;
 }
 /**

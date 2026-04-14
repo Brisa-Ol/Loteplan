@@ -9,8 +9,8 @@ import {
   HighlightOff as RejectedIcon,
   Schedule,
 } from '@mui/icons-material';
-import { LinearProgress, Stack, Typography } from '@mui/material';
-import React, { memo, useMemo } from 'react';
+import { Box, CircularProgress, Stack, Typography, alpha, useTheme } from '@mui/material';
+import React, { memo } from 'react';
 import { useAdminKYC } from '../../hooks/usuario/useAdminKYC';
 import KycModalsSection from './components/KycModalsSection';
 import KycTabsBar from './components/KycTabsBar';
@@ -20,7 +20,11 @@ import useKycColumns from './hooks/useKycColumns';
 // COMPONENTE: MÉTRICAS
 // ============================================================================
 const KYCMetrics = memo<{
-  pending: number; approved: number; rejected: number; total: number; isLoading?: boolean;
+  pending: number | string; 
+  approved: number | string; 
+  rejected: number | string; 
+  total: number | string; 
+  isLoading?: boolean;
 }>(({ pending, approved, rejected, total, isLoading }) => (
   <MetricsGrid columns={{ xs: 1, sm: 2, lg: 4 }}>
     <StatCard title="Pendientes" value={pending.toString()} subtitle="Esperando revisión" icon={<Schedule />} color="warning" loading={isLoading} />
@@ -34,50 +38,68 @@ const KYCMetrics = memo<{
 // COMPONENTE PRINCIPAL
 // ============================================================================
 const AdminKYC: React.FC = () => {
+  const theme = useTheme();
   const logic = useAdminKYC();
   const columns = useKycColumns(logic);
 
-  const metrics = useMemo(() => ({
-    pending: logic.currentTab === 'pendiente' ? logic.kycList.length : 0,
-    approved: logic.currentTab === 'aprobada' ? logic.kycList.length : 0,
-    rejected: logic.currentTab === 'rechazada' ? logic.kycList.length : 0,
-    total: logic.currentTab === 'todas' ? logic.kycList.length : 0,
-  }), [logic.kycList, logic.currentTab]);
+  // ❌ ELIMINAMOS el useMemo de métricas local que fallaba al cambiar de tab.
 
   return (
-    <PageContainer maxWidth="xl" sx={{ py: 3 }}>
-      <AdminPageHeader
-        title="Validación de Identidad (KYC)"
-        subtitle="Cumplimiento normativo y seguridad de cuentas"
-        action={
-          (logic.isApproving || logic.isRejecting) && (
-            <Stack direction="row" spacing={2} alignItems="center">
-              <Typography variant="caption" fontWeight={700}>Procesando resolución...</Typography>
-              <LinearProgress sx={{ width: 100, borderRadius: 1 }} />
-            </Stack>
-          )
-        }
-      />
-
-      <KYCMetrics {...metrics} isLoading={logic.isLoading} />
-
-      <KycTabsBar currentTab={logic.currentTab} onChange={logic.setCurrentTab} />
-
-      <QueryHandler isLoading={logic.isLoading} error={logic.error as Error}>
-        <DataTable
-          columns={columns}
-          data={logic.kycList}
-          getRowKey={(row: KycDTO) => row.id}
-          pagination
-          defaultRowsPerPage={env.defaultPageSize}
-          loading={logic.isLoading}
-          onRowClick={(row: KycDTO) => logic.handleOpenDetails(row)}
-          emptyMessage="No se encontraron solicitudes de verificación para este estado."
-          cardTitleColumn="usuario"
+    <PageContainer maxWidth="xl" sx={{ py: { xs: 3, md: 4 } }}>
+      <Stack spacing={4}>
+        
+        <AdminPageHeader
+          title="Validación de Identidad (KYC)"
+          subtitle="Cumplimiento normativo y seguridad de cuentas"
+          action={
+            (logic.isApproving || logic.isRejecting) && (
+              <Box 
+                sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: 1.5,
+                  px: 2, 
+                  py: 1, 
+                  bgcolor: alpha(theme.palette.warning.main, 0.1), 
+                  border: `1px solid ${alpha(theme.palette.warning.main, 0.3)}`,
+                  borderRadius: 50 
+                }}
+              >
+                <CircularProgress size={16} color="warning" thickness={5} />
+                <Typography variant="overline" color="warning.dark" lineHeight={1} sx={{ mt: 0.2 }}>
+                  Procesando...
+                </Typography>
+              </Box>
+            )
+          }
         />
-      </QueryHandler>
 
-      <KycModalsSection logic={logic} />
+        {/* ✅ Ahora las métricas vienen directamente del backend a través de globalMetrics */}
+        <KYCMetrics {...logic.globalMetrics} isLoading={logic.isLoading} />
+
+        <Box>
+          <KycTabsBar currentTab={logic.currentTab} onChange={logic.setCurrentTab} />
+          
+          <Box sx={{ mt: 2 }}>
+            <QueryHandler isLoading={logic.isLoading} error={logic.error as Error}>
+              <DataTable
+                columns={columns}
+                data={logic.kycList}
+                getRowKey={(row: KycDTO) => row.id}
+                pagination
+                defaultRowsPerPage={env.defaultPageSize}
+                loading={logic.isLoading}
+                onRowClick={(row: KycDTO) => logic.handleOpenDetails(row)}
+                emptyMessage="No se encontraron solicitudes de verificación para este estado."
+                cardTitleColumn="usuario"
+              />
+            </QueryHandler>
+          </Box>
+        </Box>
+
+        <KycModalsSection logic={logic} />
+
+      </Stack>
     </PageContainer>
   );
 };
