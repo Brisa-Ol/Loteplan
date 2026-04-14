@@ -15,23 +15,31 @@ import type { KycStatusWithRecord } from '@/core/types/kyc.dto';
 const VerificacionKYC: React.FC = () => {
   const {
     kycStatus, isLoading, error, activeStep, personalData, setPersonalData,
-    files, setFiles, formError, setFormError, uploadMutation, handleNext, handleBack
+    files, setFiles, formError, setFormError, uploadMutation, handleNext, handleBack, stepDataRef 
   } = useKYCLogic();
 
   // 1. Sub-renderizador para los pasos del formulario
-  const renderStep = () => {
-    const commonFileProps = {
-      files,
-      onFileChange: (key: string, val: File | null) => setFiles(prev => ({ ...prev, [key]: val }))
-    };
-
-    switch (activeStep) {
-      case 0: return <StepData data={personalData} onChange={setPersonalData} />;
-      case 1: return <StepFiles {...commonFileProps} />;
-      case 2: return <StepConfirm data={personalData} files={files} />;
-      default: return null;
-    }
+const renderStep = () => {
+  const commonFileProps = {
+    files,
+    onFileChange: (key: string, val: File | null) =>
+      setFiles(prev => ({ ...prev, [key]: val })),
   };
+
+  switch (activeStep) {
+    case 0:
+      return (
+        <StepData
+          ref={stepDataRef}          // ← conecta el ref
+          data={personalData}
+          onChange={setPersonalData}
+        />
+      );
+    case 1: return <StepFiles {...commonFileProps} />;
+    case 2: return <StepConfirm data={personalData} files={files} />;
+    default: return null;
+  }
+};
 
   // 2. Renderizador principal (Aquí resolvemos el error de undefined)
   const renderMainContent = () => {

@@ -1,27 +1,163 @@
+import React, { forwardRef, useImperativeHandle } from 'react';
+import { useFormik } from 'formik';
+import * as Yup from 'yup';
 import { Person } from '@mui/icons-material';
 import { alpha, Avatar, Box, MenuItem, Stack, TextField, Typography, useTheme } from '@mui/material';
+import type { TipoDocumento } from '@/core/types/kyc.dto';
 
-export const StepData = ({ data, onChange }: any) => {
-    const theme = useTheme();
-    return (
-        <Stack spacing={4}>
-            <Box display="flex" alignItems="center" gap={2}>
-                <Avatar variant="rounded" sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}><Person /></Avatar>
-                <Box>
-                    <Typography variant="h6" fontWeight={700}>Información Básica</Typography>
-                    <Typography variant="body2" color="text.secondary">Ingresa tus datos tal cual figuran en tu documento.</Typography>
-                </Box>
-            </Box>
-            <Box display="grid" gridTemplateColumns={{ xs: '1fr', md: '1fr 1fr' }} gap={3}>
-                <TextField select fullWidth label="Tipo Documento" value={data.tipo_documento} onChange={(e) => onChange({ ...data, tipo_documento: e.target.value })}>
-                    {['DNI', 'PASAPORTE', 'LICENCIA'].map(t => <MenuItem key={t} value={t}>{t}</MenuItem>)}
-                </TextField>
-                <TextField fullWidth label="Número Documento" value={data.numero_documento} onChange={(e) => onChange({ ...data, numero_documento: e.target.value })} />
-                <Box sx={{ gridColumn: '1 / -1' }}>
-                    <TextField fullWidth label="Nombre Completo" value={data.nombre_completo} onChange={(e) => onChange({ ...data, nombre_completo: e.target.value })} />
-                </Box>
-                <TextField fullWidth type="date" label="Fecha Nacimiento" value={data.fecha_nacimiento} onChange={(e) => onChange({ ...data, fecha_nacimiento: e.target.value })} InputLabelProps={{ shrink: true }} />
-            </Box>
-        </Stack>
-    );
+// ─── Schema ────────────────────────────────────────────────────────────────
+const maxBirthDate = (() => {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() - 18);
+  return d;
+})();
+
+const schema = Yup.object({
+  tipo_documento: Yup.string().required('Selecciona un tipo de documento'),
+  numero_documento: Yup.string()
+    .required('El número de documento es obligatorio')
+    .min(6, 'Mínimo 6 caracteres'),
+  nombre_completo: Yup.string()
+    .required('El nombre completo es obligatorio')
+    .min(3, 'Mínimo 3 caracteres'),
+  fecha_nacimiento: Yup.date()
+    .typeError('Ingresa una fecha válida')
+    .required('La fecha de nacimiento es obligatoria')
+    .max(maxBirthDate, 'Debes ser mayor de 18 años para continuar'),
+});
+
+// ─── Tipos públicos ─────────────────────────────────────────────────────────
+export interface StepDataValues {
+  tipo_documento: TipoDocumento;
+  numero_documento: string;
+  nombre_completo: string;
+  fecha_nacimiento: string;
+}
+
+export interface StepDataRef {
+  /** Toca todos los campos, muestra errores inline y retorna si el form es válido */
+  validate: () => Promise<boolean>;
+  /** Devuelve los valores actuales del form */
+  getValues: () => StepDataValues;
+}
+
+interface StepDataProps {
+  data: StepDataValues;
+  onChange: (values: StepDataValues) => void;
+}
+
+// ─── Componente ─────────────────────────────────────────────────────────────
+export const StepData = forwardRef<StepDataRef, StepDataProps>(({ data, onChange }, ref) => {
+  const theme = useTheme();
+
+  const formik = useFormik<StepDataValues>({
+    initialValues: data,
+    validationSchema: schema,
+    validateOnChange: false,
+    validateOnBlur: true,
+    onSubmit: () => {},          // el submit real ocurre en el padre
+  });
+
+  // Sincroniza hacia afuera al cambiar valores válidos
+const handleChange = (field: keyof StepDataValues, value: string) => {
+  let filtered = value;
+
+  if (field === 'numero_documento') {
+    filtered = value.replace(/\D/g, '');           // solo dígitos
+  }
+
+  if (field === 'nombre_completo') {
+    filtered = value.replace(/[^a-záéíóúüñA-ZÁÉÍÓÚÜÑ\s]/g, ''); // solo letras y espacios
+  }
+
+  formik.setFieldValue(field, filtered);
+  if (formik.errors[field]) {
+    formik.setFieldError(field, undefined);
+  }
 };
+
+  // API expuesta al padre mediante ref
+  useImperativeHandle(ref, () => ({
+    validate: async () => {
+      // Marca todos los campos como tocados para que aparezcan los errores
+      const allTouched = Object.keys(schema.fields).reduce(
+        (acc, k) => ({ ...acc, [k]: true }),
+        {}
+      );
+      await formik.setTouched(allTouched, true);
+      const errors = await formik.validateForm();
+      return Object.keys(errors).length === 0;
+    },
+    getValues: () => formik.values,
+  }));
+
+  return (
+    <Stack spacing={4}>
+      <Box display="flex" alignItems="center" gap={2}>
+        <Avatar variant="rounded" sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}>
+          <Person />
+        </Avatar>
+        <Box>
+          <Typography variant="h6" fontWeight={700}>Información Básica</Typography>
+          <Typography variant="body2" color="text.secondary">
+            Ingresa tus datos tal cual figuran en tu documento.
+          </Typography>
+        </Box>
+      </Box>
+
+      <Box display="grid" gridTemplateColumns={{ xs: '1fr', md: '1fr 1fr' }} gap={3}>
+        <TextField
+          select fullWidth
+          label="Tipo Documento"
+          value={formik.values.tipo_documento}
+          onChange={(e) => handleChange('tipo_documento', e.target.value)}
+          onBlur={formik.handleBlur('tipo_documento')}
+          error={formik.touched.tipo_documento && Boolean(formik.errors.tipo_documento)}
+          helperText={formik.touched.tipo_documento && formik.errors.tipo_documento}
+        >
+          {(['DNI', 'PASAPORTE', 'LICENCIA'] as TipoDocumento[]).map(t => (
+            <MenuItem key={t} value={t}>{t}</MenuItem>
+          ))}
+        </TextField>
+
+<TextField
+  fullWidth
+  label="Número Documento"
+  value={formik.values.numero_documento}
+  onChange={(e) => handleChange('numero_documento', e.target.value)}
+  onBlur={formik.handleBlur('numero_documento')}
+  error={formik.touched.numero_documento && Boolean(formik.errors.numero_documento)}
+  helperText={formik.touched.numero_documento && formik.errors.numero_documento}
+  inputProps={{ inputMode: 'numeric', maxLength: 15 }}   // ← teclado numérico en móvil
+/>
+
+        <Box sx={{ gridColumn: '1 / -1' }}>
+<TextField
+  fullWidth
+  label="Nombre Completo"
+  value={formik.values.nombre_completo}
+  onChange={(e) => handleChange('nombre_completo', e.target.value)}
+  onBlur={formik.handleBlur('nombre_completo')}
+  error={formik.touched.nombre_completo && Boolean(formik.errors.nombre_completo)}
+  helperText={formik.touched.nombre_completo && formik.errors.nombre_completo}
+  inputProps={{ maxLength: 100 }}
+/>
+        </Box>
+
+        <TextField
+          fullWidth
+          type="date"
+          label="Fecha Nacimiento"
+          value={formik.values.fecha_nacimiento}
+          onChange={(e) => handleChange('fecha_nacimiento', e.target.value)}
+          onBlur={formik.handleBlur('fecha_nacimiento')}
+          error={formik.touched.fecha_nacimiento && Boolean(formik.errors.fecha_nacimiento)}
+          helperText={formik.touched.fecha_nacimiento && formik.errors.fecha_nacimiento}
+          InputLabelProps={{ shrink: true }}
+        />
+      </Box>
+    </Stack>
+  );
+});
+
+StepData.displayName = 'StepData';
