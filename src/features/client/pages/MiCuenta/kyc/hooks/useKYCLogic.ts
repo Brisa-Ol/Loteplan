@@ -64,6 +64,7 @@ export const useKYCLogic = () => {
   });
 
   const handleNext = () => {
+    console.log(personalData);
     if (activeStep === 0 && (!personalData.numero_documento || !personalData.nombre_completo)) 
       return setFormError('Completa los campos obligatorios.');
     if (activeStep === 1 && (!files.frente || !files.selfie)) 
