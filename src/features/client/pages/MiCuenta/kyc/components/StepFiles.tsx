@@ -4,7 +4,6 @@ import { UploadFile } from '@mui/icons-material';
 import { env } from '@/core/config/env';
 import { FileUploadCard } from './FileUploadCard';
 
-
 interface StepFilesProps {
   files: {
     frente: File | null;
@@ -21,23 +20,23 @@ export const StepFiles: React.FC<StepFilesProps> = ({ files, onFileChange }) => 
 
   return (
     <Stack spacing={4}>
-      {/* Header del Paso */}
-      <Box display="flex" alignItems="center" gap={2}>
-        <Avatar 
-          variant="rounded" 
-          sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}
-        >
-          <UploadFile />
-        </Avatar>
-        <Box>
-          <Typography variant="h6" fontWeight={700}>Carga de Documentos</Typography>
-          <Typography variant="body2" color="text.secondary">
-            Sube fotos claras, sin flash y sobre fondo liso.
-          </Typography>
+      {/* HEADER: Adaptado al theme (usando h5 para consistencia con los otros pasos) */}
+      <Box>
+        <Box display="flex" alignItems="center" gap={2} mb={1}>
+          <Avatar 
+            variant="rounded" 
+            sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}
+          >
+            <UploadFile />
+          </Avatar>
+          <Typography variant="h5">Carga de Documentos</Typography>
         </Box>
+        <Typography variant="body2" color="text.secondary">
+          Sube fotos claras, sin flash y sobre fondo liso.
+        </Typography>
       </Box>
 
-      {/* Grid de Carga de Archivos */}
+      {/* Grid de Carga de Archivos: La lógica aquí ya está perfecta */}
       <Box display="grid" gridTemplateColumns={{ xs: '1fr', md: '1fr 1fr' }} gap={3}>
         <FileUploadCard 
           title="Frente DNI *" 

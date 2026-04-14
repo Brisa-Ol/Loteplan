@@ -11,6 +11,7 @@ import {
   Schedule,
   Security,
   TrendingUp,
+  VerifiedUser,
   Warning
 } from '@mui/icons-material';
 import {
@@ -44,6 +45,7 @@ import PujaService from '@/core/api/services/puja.service';
 import ResumenCuentaService from '@/core/api/services/resumenCuenta.service';
 import SuscripcionService from '@/core/api/services/suscripcion.service';
 import styles from './UserDashboard.module.css';
+import kycService from '@/core/api/services/kyc.service';
 
 // 🛠 Utility: Calcular días restantes para vencimientos
 const calculateDaysRemaining = (dateString?: string): number => {
@@ -86,7 +88,12 @@ const UserDashboard: React.FC = () => {
     queryKey: ['misPujasCheck'],
     queryFn: async () => (await PujaService.getMyPujas()).data
   });
+const { data: kycStatus } = useQuery({
+    queryKey: ['kycStatus'],
+    queryFn: kycService.getStatus
+  });
 
+  const estadoKyc = kycStatus?.estado_verificacion; // 'APROBADA', 'RECHAZADA', 'PENDIENTE', 'NO_INICIADO'
   const isLoading = !resumenes || !suscripciones || !inversiones || !pagos;
 
   // ========== 2. LÓGICA DE NEGOCIO ========== 
@@ -150,10 +157,93 @@ const UserDashboard: React.FC = () => {
 
       <Container maxWidth={false} sx={{ maxWidth: '1400px', mt: -6 }}>
         <QueryHandler isLoading={isLoading} error={null}>
+          <Box mb={4}>
+             {/* ========== ALERTA KYC RECHAZADO (VISIBLE PARA TODOS) ========== */}
+             {estadoKyc === 'RECHAZADA' && (
+                <Fade in={true}>
+                  <Box
+                    sx={{
+                      mb: isNewUser ? 4 : 0, // Espaciado dinámico
+                      borderRadius: 3,
+                      border: '1px solid',
+                      borderColor: 'error.main',
+                      bgcolor: '#fdecea',
+                      boxShadow: `0 0 24px ${alpha(theme.palette.error.main, 0.15)}`,
+                      p: { xs: 2, sm: 3 },
+                    }}
+                  >
+                    <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={2}>
+                      <Stack direction="row" spacing={2} alignItems="center">
+                        <Avatar sx={{ bgcolor: '#FFFFFF', color: 'error.main', width: 48, height: 48 }}>
+                          <Warning />
+                        </Avatar>
+                        <Box>
+                          <Typography variant="overline" sx={{ color: 'error.main', fontWeight: 800, letterSpacing: 1.2, lineHeight: 1, display: 'block', mb: 0.5 }}>
+                            ATENCIÓN REQUERIDA
+                          </Typography>
+                          <Typography variant="h5" fontWeight={800} sx={{ color: '#000000' }}>
+                            Tu verificación KYC fue rechazada
+                          </Typography>
+                          <Typography variant="body2" sx={{ color: '#555555', mt: 0.5 }}>
+                            Motivo: {kycStatus?.motivo_rechazo || 'La documentación enviada no es válida o es ilegible.'}
+                          </Typography>
+                        </Box>
+                      </Stack>
+
+                      <Button
+                        variant="contained"
+                        color="error"
+                        onClick={() => navigate('/client/verificacion')}
+                        sx={{ fontWeight: 800, px: 3, borderRadius: 2, textTransform: 'none' }}
+                      >
+                        Corregir Documentación
+                      </Button>
+                    </Stack>
+                  </Box>
+                </Fade>
+              )}
+
+              {/* ========== ALERTA KYC APROBADO (VISIBLE PARA TODOS) ========== */}
+              {estadoKyc === 'APROBADA' && (
+                <Fade in={true}>
+                  <Box
+                    sx={{
+                      mb: isNewUser ? 4 : 0,
+                      borderRadius: 3,
+                      border: '1px solid',
+                      borderColor: 'info.main',
+                      bgcolor: alpha(theme.palette.info.main, 0.05),
+                      p: { xs: 2, sm: 3 },
+                    }}
+                  >
+                    <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={2}>
+                      <Stack direction="row" spacing={2} alignItems="center">
+                        <Avatar sx={{ bgcolor: '#FFFFFF', color: 'info.main', width: 48, height: 48 }}>
+                          <VerifiedUser />
+                        </Avatar>
+                        <Box>
+                          <Typography variant="overline" sx={{ color: 'info.main', fontWeight: 800, letterSpacing: 1.2, lineHeight: 1, display: 'block', mb: 0.5 }}>
+                            IDENTIDAD VERIFICADA
+                          </Typography>
+                          <Typography variant="h5" fontWeight={800} sx={{ color: '#000000' }}>
+                            Tu cuenta está validada al 100%
+                          </Typography>
+                          <Typography variant="body2" sx={{ color: '#555555', mt: 0.5 }}>
+                            Ya puedes invertir y participar en subastas sin restricciones.
+                          </Typography>
+                        </Box>
+                      </Stack>
+                    </Stack>
+                  </Box>
+                </Fade>
+              )}
+          </Box>
+
+          {/* AHORA SÍ, LA CONDICIÓN DE USUARIO NUEVO O EXPERIMENTADO */}
           {isNewUser ? <NewUserWelcome /> : (
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 340px' }, gap: 4, alignItems: 'start' }}>
-
               <Box>
+                
                 {/* ========== ALERTA DE SUBASTA GANADA (DISEÑO PERSONALIZADO DARK) ========== */}
                 {cantidadGanadas > 0 && (
                   <Fade in={true}>

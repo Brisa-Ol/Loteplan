@@ -12,7 +12,6 @@ import React, { useMemo } from 'react';
 import KycDataColumn from './KycDataColumn';
 import KycImagesColumn from './KycImagesColumn';
 
-
 interface KycDetailModalProps {
   open: boolean;
   onClose: () => void;
@@ -39,34 +38,64 @@ const KycDetailModal: React.FC<KycDetailModalProps> = ({ open, onClose, kyc, onA
 
   return (
     <BaseModal
-      open={open} onClose={onClose}
+      open={open}
+      onClose={onClose}
       title={`Verificación KYC #${kyc.id}`}
       subtitle="Revisión de identidad y legitimidad de documentos"
-      icon={<BadgeIcon />} headerColor={statusConfig.color} maxWidth="md"
+      icon={<BadgeIcon />}
+      headerColor={statusConfig.color}
+      maxWidth="md"
       headerExtra={
-        <Chip label={statusConfig.label} color={statusConfig.color}
-          sx={{ fontWeight: 800, borderRadius: 1.5, fontSize: '0.7rem' }}
+        <Chip
+          label={statusConfig.label}
+          color={statusConfig.color}
+          size="small"
+        // El theme ya aplica fontWeight: 600 y borderRadius: 8
         />
       }
       customActions={
         <>
-          <Button onClick={onClose} color="inherit" sx={{ fontWeight: 700, px: 3 }}>Cerrar Expediente</Button>
+          <Button onClick={onClose} color="inherit" sx={{ px: 3 }}>
+            Cerrar Expediente
+          </Button>
           {isPending && (
             <Stack direction="row" spacing={1.5}>
-              <Button variant="outlined" color="error" startIcon={<RejectIcon />}
-                onClick={() => onReject(kyc)} sx={{ borderRadius: 2, px: 3, fontWeight: 800 }}
-              >Rechazar</Button>
-              <Button variant="contained" color="success" startIcon={<CheckCircleIcon />}
-                onClick={() => onApprove(kyc)} sx={{ borderRadius: 2, px: 4, fontWeight: 900, color: 'white' }}
-              >Aprobar Identidad</Button>
+              <Button
+                variant="outlined"
+                color="error"
+                startIcon={<RejectIcon />}
+                onClick={() => onReject(kyc)}
+                sx={{ px: 3 }}
+              >
+                Rechazar
+              </Button>
+              <Button
+                variant="contained"
+                color="success"
+                startIcon={<CheckCircleIcon />}
+                onClick={() => onApprove(kyc)}
+                sx={{ px: 4, color: 'white' }} // Mantenemos el white para asegurar contraste con el verde
+              >
+                Aprobar Identidad
+              </Button>
             </Stack>
           )}
         </>
       }
     >
       <Stack
-        direction={{ xs: 'column', md: 'row' }} spacing={4}
-        divider={<Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', md: 'block' }, opacity: 0.6 }} />}
+        direction={{ xs: 'column', md: 'row' }}
+        spacing={4}
+        divider={
+          <Divider
+            orientation="vertical"
+            flexItem
+            sx={{
+              display: { xs: 'none', md: 'block' },
+              borderColor: 'secondary.main' // Usamos el gris secundario del theme
+            }}
+          />
+        }
       >
         <Box sx={{ flex: 1 }}>
           <KycDataColumn kyc={kyc} isPending={isPending} />
