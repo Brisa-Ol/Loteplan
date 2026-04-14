@@ -23,7 +23,6 @@ export const useAdminKYC = () => {
   const [currentTab, setCurrentTab] = useState<TabValue>('pendiente');
   const [selectedKyc, setSelectedKyc] = useState<KycDTO | null>(null);
   const [kycToReject, setKycToReject] = useState<KycDTO | null>(null);
-  // ❌ ELIMINADO: rejectReason y setRejectReason (Lo manejará el modal localmente)
 
   // --- MODALES ---
   const detailsModal = useModal();
@@ -31,20 +30,36 @@ export const useAdminKYC = () => {
   const confirmDialog = useConfirmDialog();
 
   // --- QUERIES ---
+  // ✅ ELIMINADO el 'enabled'. Ahora React Query hace las 4 peticiones en background
+  // apenas el admin entra a la pantalla. Esto permite tener las métricas listas siempre.
   const queries = {
-    pendiente: useQuery({ queryKey: ['kycPending'], queryFn: kycService.getPendingVerifications, enabled: currentTab === 'pendiente', ...QUERY_CONFIG }),
-    aprobada: useQuery({ queryKey: ['kycApproved'], queryFn: kycService.getApprovedVerifications, enabled: currentTab === 'aprobada', ...QUERY_CONFIG }),
-    rechazada: useQuery({ queryKey: ['kycRejected'], queryFn: kycService.getRejectedVerifications, enabled: currentTab === 'rechazada', ...QUERY_CONFIG }),
-    todas: useQuery({ queryKey: ['kycAll'], queryFn: kycService.getAllProcessedVerifications, enabled: currentTab === 'todas', ...QUERY_CONFIG }),
+    pendiente: useQuery({ queryKey: ['kycPending'], queryFn: kycService.getPendingVerifications, ...QUERY_CONFIG }),
+    aprobada: useQuery({ queryKey: ['kycApproved'], queryFn: kycService.getApprovedVerifications, ...QUERY_CONFIG }),
+    rechazada: useQuery({ queryKey: ['kycRejected'], queryFn: kycService.getRejectedVerifications, ...QUERY_CONFIG }),
+    todas: useQuery({ queryKey: ['kycAll'], queryFn: kycService.getAllProcessedVerifications, ...QUERY_CONFIG }),
   };
 
   const isLoading = Object.values(queries).some(q => q.isLoading);
   const error = Object.values(queries).find(q => q.error)?.error;
 
-  // ✨ SELECCIÓN DE DATA (OPTIMIZADA)
-  // Extraemos solo la data activa para no pasar el objeto entero 'queries' a la dependencia
+  // ✨ MÉTRICAS GLOBALES (NUEVO)
+  // Al tener todas las queries activas, podemos saber el total de cada una sin importar
+  // en qué pestaña estemos parados.
+  const globalMetrics = useMemo(() => ({
+    pending: queries.pendiente.data ? queries.pendiente.data.length : '-',
+    approved: queries.aprobada.data ? queries.aprobada.data.length : '-',
+    rejected: queries.rechazada.data ? queries.rechazada.data.length : '-',
+    total: queries.todas.data ? queries.todas.data.length : '-',
+  }), [
+    queries.pendiente.data, 
+    queries.aprobada.data, 
+    queries.rechazada.data, 
+    queries.todas.data
+  ]);
+
+  // ✨ SELECCIÓN DE DATA PARA LA TABLA
   const activeData = queries[currentTab]?.data;
-  const rawData = useMemo(() => activeData ?? [], [activeData]); // ✅ Ahora sí funciona el memo
+  const rawData = useMemo(() => activeData ?? [], [activeData]);
   const { sortedData: kycList, highlightedId, triggerHighlight } = useSortedData(rawData);
 
   // --- UTILS ---
@@ -52,7 +67,6 @@ export const useAdminKYC = () => {
 
   // --- MUTACIONES ---
   const approveMutation = useMutation({
-    // ... (sin cambios aquí, estaba perfecto)
     mutationFn: (idUsuario: number) => kycService.approveVerification(idUsuario),
     onMutate: async (idUsuario) => {
       await queryClient.cancelQueries({ queryKey: ['kycPending'] });
@@ -74,7 +88,6 @@ export const useAdminKYC = () => {
   });
 
   const rejectMutation = useMutation({
-    // ... (sin cambios aquí)
     mutationFn: ({ idUsuario, motivo }: { idUsuario: number; motivo: string }) =>
       kycService.rejectVerification(idUsuario, { motivo_rechazo: motivo }),
     onMutate: async ({ idUsuario }) => {
@@ -114,7 +127,6 @@ export const useAdminKYC = () => {
     rejectModal.open();
   }, [rejectModal]);
 
-  // ✅ AHORA RECIBE EL MOTIVO POR PARÁMETRO
   const handleConfirmReject = useCallback((motivo: string) => {
     if (!motivo.trim() || !kycToReject) return;
     rejectMutation.mutate({ idUsuario: kycToReject.id_usuario, motivo });
@@ -125,6 +137,7 @@ export const useAdminKYC = () => {
     kycList, highlightedId,
     isLoading, error,
     selectedKyc,
+    globalMetrics, // ✅ Exportamos las métricas para que la pantalla las dibuje
     detailsModal, rejectModal, confirmDialog,
     isApproving: approveMutation.isPending,
     isRejecting: rejectMutation.isPending,
@@ -132,6 +145,6 @@ export const useAdminKYC = () => {
     handleApproveClick: (kyc: KycDTO) => confirmDialog.confirm('approve_kyc', kyc),
     handleConfirmApprove,
     handleOpenRejectInput,
-    handleConfirmReject // Pasamos la función que ahora requiere el parámetro
+    handleConfirmReject
   };
 };

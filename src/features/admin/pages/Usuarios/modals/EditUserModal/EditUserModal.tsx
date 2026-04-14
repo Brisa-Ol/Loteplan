@@ -14,7 +14,6 @@ import SectionTitle from '../components/SectionTitle';
 import PermissionsSection from './PermissionsSection';
 import SecuritySection from './SecuritySection';
 
-
 const INPUT_SX = { '& .MuiOutlinedInput-root': { borderRadius: 2 } };
 
 interface EditUserModalProps {
@@ -28,6 +27,7 @@ interface EditUserModalProps {
 const validationSchema = Yup.object({
   nombre: Yup.string().min(2, "Mínimo 2 caracteres").required("Requerido"),
   apellido: Yup.string().min(2, "Mínimo 2 caracteres").required("Requerido"),
+  dni: Yup.string().matches(/^\d+$/, "Solo números").min(6, "DNI inválido").required("Requerido"), // 👈 Validación DNI
   email: Yup.string().email("Email inválido").required("Requerido"),
   nombre_usuario: Yup.string().min(4, "Mínimo 4 caracteres").required("Requerido"),
   numero_telefono: Yup.string().matches(/^\d+$/, "Solo números").min(10, "Teléfono inválido").required("Requerido"),
@@ -49,7 +49,8 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ open, onClose, user, onSu
   const isBusy = isLoading || preparingReactivation;
 
   const formik = useFormik({
-    initialValues: { nombre: '', apellido: '', email: '', nombre_usuario: '', numero_telefono: '', rol: 'cliente', activo: true },
+    // 👈 Agregado DNI a initialValues
+    initialValues: { nombre: '', apellido: '', dni: '', email: '', nombre_usuario: '', numero_telefono: '', rol: 'cliente', activo: true },
     validationSchema,
     enableReinitialize: true,
     onSubmit: async (values) => {
@@ -84,9 +85,14 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ open, onClose, user, onSu
   useEffect(() => {
     if (user && open) {
       formik.setValues({
-        nombre: user.nombre || '', apellido: user.apellido || '', email: user.email || '',
-        nombre_usuario: user.nombre_usuario || '', numero_telefono: user.numero_telefono || '',
-        rol: user.rol || 'cliente', activo: user.activo ?? true,
+        nombre: user.nombre || '', 
+        apellido: user.apellido || '', 
+        dni: user.dni || '', // 👈 Agregado DNI al setValues
+        email: user.email || '',
+        nombre_usuario: user.nombre_usuario || '', 
+        numero_telefono: user.numero_telefono || '',
+        rol: user.rol || 'cliente', 
+        activo: user.activo ?? true,
       });
     }
   }, [user, open]);
@@ -122,6 +128,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ open, onClose, user, onSu
         headerExtra={
           <Stack direction="row" spacing={1}>
             <Chip label={`ID: ${user.id}`} size="small" variant="outlined" sx={{ fontWeight: 700, borderRadius: 1.5 }} />
+            {/* Seguimos mostrando el DNI original aquí arriba como referencia */}
             {user.dni && <Chip label={`DNI: ${user.dni}`} size="small" variant="outlined" sx={{ fontWeight: 700, borderRadius: 1.5 }} />}
             {isInactiveUser && <Chip label="INACTIVO" size="small" color="warning" sx={{ fontWeight: 700, borderRadius: 1.5 }} />}
             {isSelfEditing && <Chip label="TÚ" size="small" color="primary" sx={{ fontWeight: 700, borderRadius: 1.5 }} />}
@@ -157,11 +164,20 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ open, onClose, user, onSu
                   disabled={isLoading} sx={INPUT_SX}
                 />
               </Stack>
-              <TextField fullWidth label="Teléfono" {...formik.getFieldProps('numero_telefono')}
-                error={formik.touched.numero_telefono && Boolean(formik.errors.numero_telefono)}
-                helperText={formik.touched.numero_telefono && formik.errors.numero_telefono}
-                disabled={isLoading} sx={INPUT_SX}
-              />
+              
+              {/* 👈 Fila 2: DNI y Teléfono */}
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                <TextField fullWidth label="DNI" {...formik.getFieldProps('dni')}
+                  error={formik.touched.dni && Boolean(formik.errors.dni)}
+                  helperText={formik.touched.dni && formik.errors.dni}
+                  disabled={isLoading} sx={INPUT_SX}
+                />
+                <TextField fullWidth label="Teléfono" {...formik.getFieldProps('numero_telefono')}
+                  error={formik.touched.numero_telefono && Boolean(formik.errors.numero_telefono)}
+                  helperText={formik.touched.numero_telefono && formik.errors.numero_telefono}
+                  disabled={isLoading} sx={INPUT_SX}
+                />
+              </Stack>
             </Stack>
           </Box>
 
