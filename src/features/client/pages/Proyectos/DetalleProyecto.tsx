@@ -215,6 +215,7 @@ const DetalleProyecto: React.FC = () => {
   }, [logic.proyecto?.latitud, logic.proyecto?.longitud]);
 
   const { tokensDisponibles } = useVerificarSuscripcion(Number(logic.proyecto?.id));
+  console.log("tokens disponibles", tokensDisponibles);
   const { withSecurityCheck, securityModalProps } = useSecurityGuard();
 
   const handleOpenCheckoutSecurely = useCallback(() => {

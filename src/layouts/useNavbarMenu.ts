@@ -37,7 +37,7 @@ import {
   // Tipo
   type SvgIconComponent
 } from "@mui/icons-material";
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 
 // ════════════════════════════════════════════════════════
@@ -104,11 +104,12 @@ export const useNavbarMenu = () => {
     }
   };
 
-  const config: NavbarConfig = useMemo(() => {
-    const handleLogoutClick = () => {
-      confirmLogout.confirm('logout');
-    };
+  const handleLogoutClick = useCallback(() => {
+    confirmLogout.confirm('logout');
+  }, [confirmLogout]);
 
+  const config: NavbarConfig = useMemo(() => {
+    
     // ----------------------------------------------------------------------
     // A. ADMINISTRADOR
     // ----------------------------------------------------------------------
@@ -255,6 +256,11 @@ export const useNavbarMenu = () => {
             icon: FavoriteIcon,
             description: "Lotes guardados"
           },
+          {
+                label: "Cerrar Sesión",
+                icon: LogoutIcon,
+                action: handleLogoutClick
+          }
         ],
 
         userNavItems: [
@@ -335,7 +341,7 @@ export const useNavbarMenu = () => {
       quickAccess: []
     };
 
-  }, [user, navigate, confirmLogout]);
+  }, [user, navigate, handleLogoutClick]);
 
   return { config, logoutDialogProps };
 };

@@ -373,7 +373,7 @@ const MobileDrawerContent: React.FC<MobileDrawerContentProps> = ({
                   color="warning"
                   size="small"
                   fullWidth
-                  onClick={() => { navigate('/kyc'); onClose(); }}
+                  onClick={() => { navigate('/client/verificacion'); onClose(); }}
                   sx={{ mt: 2, borderRadius: 2, textTransform: 'none' }}
                 >
                   Verificar ahora
@@ -418,7 +418,9 @@ const MobileDrawerContent: React.FC<MobileDrawerContentProps> = ({
           const Icon = item.icon;
           const hasSubmenu = (item.submenu?.length || 0) > 0;
           const isOpen = openMenus.includes(item.label);
-          const active = item.path ? location.pathname.startsWith(item.path) : false;
+          const active = item.path
+                        ? (item.path === '/' ? location.pathname === '/' : location.pathname.startsWith(item.path))
+                        : false;
 
           if (hasSubmenu && !item.path) {
             return (
@@ -466,7 +468,11 @@ const MobileDrawerContent: React.FC<MobileDrawerContentProps> = ({
           return (
             <ListItemButton
               key={idx}
-              onClick={() => { onClose(); item.path && navigate(item.path); }}
+              onClick={() => {
+                        onClose();
+                        if (item.action) item.action();
+                        else if (item.path) navigate(item.path);
+                      }}
               selected={active}
               sx={{
                 px: 3,
@@ -568,9 +574,12 @@ const ClientNavbar: React.FC = () => {
             {/* Desktop Nav Items */}
             {!isMobile && (
               <Stack direction="row" spacing={1} sx={{ flex: 1 }}>
-                {navItems.map((item) => (
-                  <DesktopNavItem key={item.label} item={item} />
-                ))}
+                {navItems
+                  .filter(item => !item.action) // excluye items que solo tienen acción (ej: logout)
+                  .map((item) => (
+                    <DesktopNavItem key={item.label} item={item} />
+                  ))
+                }
               </Stack>
             )}
 

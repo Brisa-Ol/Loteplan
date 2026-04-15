@@ -184,7 +184,7 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({ logic, proyecto,
   const helpers = useProyectoHelpers(proyecto);
 
   const user = logic.user;
-  const paso1Completo = logic.puedeFirmar || logic.yaFirmo || logic.tieneFirmaPendiente;
+  const paso1Completo = puedeFirmar || logic.yaFirmo || logic.tieneFirmaPendiente;
   const paso2Completo = logic.yaFirmo;
 
   // 🧠 LÓGICA MAESTRA DE ESTADOS
@@ -310,7 +310,7 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({ logic, proyecto,
                           )}
 
                           {/* 6B: Pagado, Pendiente de Firma */}
-                          {paso1Completo && !paso2Completo && (
+                          {paso1Completo && !paso2Completo &&(
                             <Stack spacing={2}>
                               <Alert severity="warning" icon={<HistoryEdu />}>
                                 Pago confirmado. Firma tu contrato para asegurar tu lugar.
