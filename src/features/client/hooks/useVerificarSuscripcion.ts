@@ -27,13 +27,19 @@ export const useVerificarSuscripcion = (idProyecto?: number | string): EstadoSus
       // 1. Llamamos al endpoint que YA EXISTE y trae todas las suscripciones del usuario
       const response = await SuscripcionService.getMisSuscripciones();
       const misSuscripciones = response.data;
-
       // 2. Filtramos para encontrar la suscripción activa de este proyecto específico
-      const suscripcionDelProyecto = misSuscripciones.find(
+      const suscripcionDelProyecto = misSuscripciones.filter(
         (sub: any) => Number(sub.id_proyecto) === projectId && sub.activo === true
       );
 
-      return suscripcionDelProyecto || null;
+      if(suscripcionDelProyecto.length === 0) return null;
+
+      const totalTokens = suscripcionDelProyecto.reduce((acc: number, sub: any) => acc +sub.tokens_disponibles || 0, 0)
+      return {
+        suscripciones: suscripcionDelProyecto,
+        primera: suscripcionDelProyecto[0],
+        tokens_disponibles: totalTokens
+      }
     },
     enabled: !!projectId && isAuthenticated,
     staleTime: 1000 * 60 * 2, // 2 minutos de caché (ajusta si necesitas que actualice más rápido al pujar)
@@ -60,7 +66,7 @@ export const useVerificarSuscripcion = (idProyecto?: number | string): EstadoSus
   }
 
   return {
-    suscripcion: suscripcionActiva,
+    suscripcion: suscripcionActiva?.primera || null,
     estaSuscripto,
     tieneTokens,
     tokensDisponibles,
