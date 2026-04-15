@@ -20,7 +20,7 @@ import {
 import {
   Avatar, Box, Card, CardContent, Chip,
   IconButton, Paper, Stack, Tab,
-  Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
+  Table, TableBody, TableCell, TableContainer, TableHead, TablePagination, TableRow,
   Tabs,
   Tooltip, Typography, alpha, useTheme
 } from '@mui/material';
@@ -287,7 +287,7 @@ const RiskDistributionChart = React.memo<{ data: any[]; theme: any }>(({ data, t
 });
 
 // ============================================================================
-// TABLA TOP 3 POSTORES 
+// TABLA TOP 3 POSTORES (CON PAGINACIÓN)
 // ============================================================================
 
 const Top3PostoresTable = React.memo<{
@@ -295,6 +295,24 @@ const Top3PostoresTable = React.memo<{
   pujasPorLote: Record<number, PujaDto[]>;
   theme: any
 }>(({ lotes, pujasPorLote, theme }) => {
+  // Estados para la paginación
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(5);
+
+  const handleChangePage = (_: unknown, newPage: number) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
+  // Cálculo de los lotes visibles
+  const visibleLotes = useMemo(() => {
+    return lotes.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+  }, [lotes, page, rowsPerPage]);
+
   return (
     <Card variant="outlined" sx={{ bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' }}>
       <CardContent sx={{ p: 0 }}>
@@ -306,22 +324,20 @@ const Top3PostoresTable = React.memo<{
           <Chip icon={<Person />} label="Directorio de Contacto" size="small" color="primary" variant="outlined" sx={{ fontWeight: 700 }} />
         </Box>
 
-        <TableContainer sx={{ maxHeight: 400 }}>
+        <TableContainer sx={{ maxHeight: 500 }}>
           <Table stickyHeader size="small">
-            
-            {/* 🛠️ CORRECCIÓN AQUÍ: Fondos sólidos y bordes de color para evitar el solapamiento al scrollear */}
             <TableHead>
               <TableRow>
-                <TableCell sx={{ fontWeight: 800, bgcolor: 'background.paper' }}>
+                <TableCell sx={{ fontWeight: 800, bgcolor: 'background.paper', zIndex: 2 }}>
                   Lote / Proyecto
                 </TableCell>
-                <TableCell sx={{ fontWeight: 800, bgcolor: 'background.paper', color: 'success.main', borderBottom: `2px solid ${theme.palette.success.main}` }}>
+                <TableCell sx={{ fontWeight: 800, bgcolor: 'background.paper', color: 'success.main', borderBottom: `2px solid ${theme.palette.success.main}`, zIndex: 2 }}>
                   1º Puesto (Adjudicado)
                 </TableCell>
-                <TableCell sx={{ fontWeight: 800, bgcolor: 'background.paper', color: 'warning.main', borderBottom: `2px solid ${theme.palette.warning.main}` }}>
+                <TableCell sx={{ fontWeight: 800, bgcolor: 'background.paper', color: 'warning.main', borderBottom: `2px solid ${theme.palette.warning.main}`, zIndex: 2 }}>
                   2º Puesto (Reserva 1)
                 </TableCell>
-                <TableCell sx={{ fontWeight: 800, bgcolor: 'background.paper', color: 'info.main', borderBottom: `2px solid ${theme.palette.info.main}` }}>
+                <TableCell sx={{ fontWeight: 800, bgcolor: 'background.paper', color: 'info.main', borderBottom: `2px solid ${theme.palette.info.main}`, zIndex: 2 }}>
                   3º Puesto (Reserva 2)
                 </TableCell>
               </TableRow>
@@ -335,33 +351,22 @@ const Top3PostoresTable = React.memo<{
                   </TableCell>
                 </TableRow>
               ) : (
-                lotes.map((lote) => {
+                visibleLotes.map((lote) => {
                   const pujas = pujasPorLote[lote.id] || [];
                   const top3 = [pujas[0], pujas[1], pujas[2]];
-
-                  // Buscamos el nombre del proyecto
                   const nombreProyecto = lote.proyecto?.nombre_proyecto || (pujas[0] as any)?.lote?.proyectoLote?.nombre_proyecto;
 
                   return (
                     <TableRow key={lote.id} hover>
-                      <TableCell sx={{ borderRight: '1px solid', borderColor: 'divider', verticalAlign: 'top', pt: 1.5 }}>
+                      <TableCell sx={{ borderRight: '1px solid', borderColor: 'divider', verticalAlign: 'top', pt: 1.5, minWidth: 180 }}>
                         <Typography variant="body2" fontWeight={800}>{lote.nombre_lote}</Typography>
-                        <Typography variant="caption" color="text.disabled" display="block">ID Lote: {lote.id}</Typography>
-
-                        {/* Etiqueta con el nombre del Proyecto */}
+                        <Typography variant="caption" color="text.disabled" display="block">ID: {lote.id}</Typography>
                         {nombreProyecto && (
                           <Chip
                             label={nombreProyecto}
                             size="small"
                             variant="outlined"
-                            sx={{
-                              mt: 1,
-                              fontSize: '0.65rem',
-                              height: 22,
-                              fontWeight: 700,
-                              borderColor: theme.palette.divider,
-                              bgcolor: alpha(theme.palette.primary.main, 0.05)
-                            }}
+                            sx={{ mt: 1, fontSize: '0.65rem', height: 20, fontWeight: 700, bgcolor: alpha(theme.palette.primary.main, 0.05) }}
                           />
                         )}
                       </TableCell>
@@ -369,55 +374,43 @@ const Top3PostoresTable = React.memo<{
                       {top3.map((puja, index) => {
                         if (!puja || !puja.usuario) {
                           return (
-                            <TableCell key={index} sx={{ borderRight: index !== 2 ? '1px solid' : 'none', borderColor: 'divider' }}>
+                            <TableCell key={index} sx={{ borderRight: index !== 2 ? '1px solid' : 'none', borderColor: 'divider', bgcolor: alpha(theme.palette.action.disabledBackground, 0.02) }}>
                               <Typography variant="caption" color="text.disabled" fontStyle="italic">Sin postor</Typography>
                             </TableCell>
                           );
                         }
 
                         const u = puja.usuario;
-
-                        // Color sutil según el estado de la puja
-                        const estadoColor =
-                          puja.estado_puja.includes('ganadora') ? 'warning' : 'default';
+                        const estadoColor = puja.estado_puja.includes('ganadora') ? 'warning' : 'default';
 
                         return (
                           <TableCell key={puja.id} sx={{ borderRight: index !== 2 ? '1px solid' : 'none', borderColor: 'divider' }}>
                             <Box display="flex" flexDirection="column" gap={0.5} py={0.5}>
-
-                              <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
-                                <Typography variant="body2" fontWeight={700} color="text.primary">
+                              <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1}>
+                                <Typography variant="body2" fontWeight={700} color="text.primary" noWrap sx={{ maxWidth: 120 }}>
                                   {u.nombre} {u.apellido}
                                 </Typography>
-                                {/* Estado de la puja */}
                                 <Chip
                                   label={puja.estado_puja.replace('_', ' ').toUpperCase()}
                                   size="small"
                                   color={estadoColor as any}
-                                  sx={{ fontSize: '0.55rem', height: 18, fontWeight: 800 }}
+                                  sx={{ fontSize: '0.55rem', height: 16, fontWeight: 800 }}
                                 />
                               </Stack>
-
-                              {/* Email */}
                               <Box display="flex" alignItems="center" gap={0.5}>
-                                <MailOutline sx={{ fontSize: 14, color: 'text.secondary' }} />
-                                <Typography variant="caption" color="text.secondary" noWrap maxWidth={180}>
+                                <MailOutline sx={{ fontSize: 12, color: 'text.secondary' }} />
+                                <Typography variant="caption" color="text.secondary" noWrap sx={{ maxWidth: 150 }}>
                                   {u.email}
                                 </Typography>
                               </Box>
-
-              
-
-                              {/* Monto y Fecha */}
                               <Stack direction="row" justifyContent="space-between" alignItems="center" mt={0.5} sx={{ borderTop: '1px dashed', borderColor: 'divider', pt: 0.5 }}>
-                                <Typography variant="caption" fontWeight={800} color="primary">
-                                  Oferta: ${Number(puja.monto_puja).toLocaleString(env.defaultLocale)}
+                                <Typography variant="caption" fontWeight={800} color="primary.main">
+                                  ${Number(puja.monto_puja).toLocaleString('es-AR')}
                                 </Typography>
-                                <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.65rem' }}>
+                                <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.6rem' }}>
                                   {new Date(puja.fecha_puja).toLocaleDateString()}
                                 </Typography>
                               </Stack>
-
                             </Box>
                           </TableCell>
                         );
@@ -429,6 +422,20 @@ const Top3PostoresTable = React.memo<{
             </TableBody>
           </Table>
         </TableContainer>
+
+        {/* CONTROL DE PAGINACIÓN */}
+        <TablePagination
+          rowsPerPageOptions={[5, 10, 25]}
+          component="div"
+          count={lotes.length}
+          rowsPerPage={rowsPerPage}
+          page={page}
+          onPageChange={handleChangePage}
+          onRowsPerPageChange={handleChangeRowsPerPage}
+          labelRowsPerPage="Filas:"
+          labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count}`}
+          sx={{ borderTop: '1px solid', borderColor: 'divider' }}
+        />
       </CardContent>
     </Card>
   );

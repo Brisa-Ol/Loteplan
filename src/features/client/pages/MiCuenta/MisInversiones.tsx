@@ -125,31 +125,37 @@ const MisInversiones: React.FC = () => {
             )
         },
         {
-            id: 'acciones',
-            label: 'Gestión',
-            align: 'right',
-            render: (row) => (
-                <Stack direction="row" spacing={1} justifyContent="flex-end">
-                    <Tooltip title="Ver Detalles">
-                        <IconButton size="small" onClick={() => navigate(`/proyectos/${row.id_proyecto}`)}>
-                            <Visibility fontSize="small" />
-                        </IconButton>
-                    </Tooltip>
-                    {row.estado === 'pendiente' && (
-                        <Button
-                            variant="contained"
-                            size="small"
-                            onClick={() => iniciarPago(row.id)}
-                            disabled={isIniciandoPago}
-                            startIcon={<Payment />}
-                            sx={{ fontWeight: 700, borderRadius: 1.5 }}
-                        >
-                            Pagar
-                        </Button>
-                    )}
-                </Stack>
-            )
-        }
+    id: 'acciones',
+    label: 'Gestión',
+    align: 'right',
+    render: (row) => (
+        <Stack direction="row" spacing={1} justifyContent="flex-end">
+            <Tooltip title="Ver Detalles">
+                <IconButton size="small" onClick={() => navigate(`/proyectos/${row.id_proyecto}`)}>
+                    <Visibility fontSize="small" />
+                </IconButton>
+            </Tooltip>
+            
+            {/* CAMBIO AQUÍ: 
+               Antes decía row.estado === 'pendiente'. 
+               Ahora solo permitimos pagar si falló el intento anterior.
+            */}
+            {row.estado === 'fallido' && (
+                <Button
+                    variant="contained"
+                    size="small"
+                    onClick={() => iniciarPago(row.id)}
+                    disabled={isIniciandoPago}
+                    startIcon={<Payment />}
+                    sx={{ fontWeight: 700, borderRadius: 1.5 }}
+                >
+                    Reintentar Pago
+                </Button>
+            )}
+
+        </Stack>
+    )
+}
     ], [navigate, formatCurrency, iniciarPago, isIniciandoPago]);
 
     return (

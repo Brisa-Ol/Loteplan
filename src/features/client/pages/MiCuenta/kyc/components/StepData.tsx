@@ -5,10 +5,7 @@ import { useFormik } from 'formik';
 import { forwardRef, useImperativeHandle, useMemo } from 'react';
 import * as Yup from 'yup';
 
-// 👇 1. Importamos el contexto de autenticación
-import { useAuth } from '@/core/context/AuthContext';
-
-// ─── Tipos públicos ─────────────────────────────────────────────────────────
+// ─── Tipos públicos ───────────────────────────────────────
 export interface StepDataValues {
     tipo_documento: TipoDocumento;
     numero_documento: string;
@@ -32,10 +29,6 @@ interface StepDataProps {
 export const StepData = forwardRef<StepDataRef, StepDataProps>(({ data, onChange }, ref) => {
     const theme = useTheme();
 
-    // 👇 2. Obtenemos los datos del usuario logueado
-    const { user } = useAuth();
-
-    // 👇 3. Movemos el schema adentro del componente y usamos useMemo
     const schema = useMemo(() => {
         const maxBirthDate = new Date();
         maxBirthDate.setFullYear(maxBirthDate.getFullYear() - 18);
@@ -44,16 +37,7 @@ export const StepData = forwardRef<StepDataRef, StepDataProps>(({ data, onChange
             tipo_documento: Yup.string().required('Selecciona un tipo de documento'),
             numero_documento: Yup.string()
                 .required('El número de documento es obligatorio')
-                .min(6, 'Mínimo 6 caracteres')
-                // ✨ AQUÍ OCURRE LA MAGIA: Comparamos con el DNI registrado
-                .test(
-                    'coincide-dni',
-                    'El número debe coincidir con el DNI con el que te registraste',
-                    (value) => {
-                        if (!value || !user?.dni) return true; // Si está vacío lo frena el "required"
-                        return value === user.dni;
-                    }
-                ),
+                .min(6, 'Mínimo 6 caracteres'), // <-- Se eliminó el .test() de validación cruzada
             nombre_completo: Yup.string()
                 .required('El nombre completo es obligatorio')
                 .min(3, 'Mínimo 3 caracteres'),
@@ -62,11 +46,11 @@ export const StepData = forwardRef<StepDataRef, StepDataProps>(({ data, onChange
                 .required('La fecha de nacimiento es obligatoria')
                 .max(maxBirthDate, 'Debes ser mayor de 18 años para continuar'),
         });
-    }, [user?.dni]); // Se recalcula solo si cambia el DNI del usuario (prácticamente nunca)
+    }, []); // <-- Se quitó user?.dni de las dependencias porque ya no se usa
 
     const formik = useFormik<StepDataValues>({
         initialValues: data,
-        validationSchema: schema, // <-- Usamos nuestro esquema dinámico
+        validationSchema: schema,
         validateOnChange: false,
         validateOnBlur: true,
         onSubmit: () => { },          // el submit real ocurre en el padre

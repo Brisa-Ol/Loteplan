@@ -55,6 +55,9 @@ export const useAdminUsuarios = () => {
       setEditingUser(null);
       showSuccess('Usuario actualizado');
       triggerHighlight(variables.id);
+      setTimeout(() => 
+        window.location.reload(), 1000
+      )
     },
     onError: (err: any) => showError(err.response?.data?.message || 'Error al actualizar')
   });

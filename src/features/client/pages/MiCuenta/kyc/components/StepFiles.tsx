@@ -1,7 +1,7 @@
-import React from 'react';
-import { Box, Stack, Avatar, Typography, useTheme, alpha } from '@mui/material';
-import { UploadFile } from '@mui/icons-material';
 import { env } from '@/core/config/env';
+import { UploadFile } from '@mui/icons-material';
+import { alpha, Avatar, Box, Stack, Typography, useTheme } from '@mui/material';
+import React from 'react';
 import { FileUploadCard } from './FileUploadCard';
 
 interface StepFilesProps {
@@ -23,8 +23,8 @@ export const StepFiles: React.FC<StepFilesProps> = ({ files, onFileChange }) => 
       {/* HEADER: Adaptado al theme (usando h5 para consistencia con los otros pasos) */}
       <Box>
         <Box display="flex" alignItems="center" gap={2} mb={1}>
-          <Avatar 
-            variant="rounded" 
+          <Avatar
+            variant="rounded"
             sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}
           >
             <UploadFile />
@@ -38,40 +38,40 @@ export const StepFiles: React.FC<StepFilesProps> = ({ files, onFileChange }) => 
 
       {/* Grid de Carga de Archivos: La lógica aquí ya está perfecta */}
       <Box display="grid" gridTemplateColumns={{ xs: '1fr', md: '1fr 1fr' }} gap={3}>
-        <FileUploadCard 
-          title="Frente DNI *" 
+        <FileUploadCard
+          title="Frente DNI *"
           description="Foto frontal legible del documento"
-          accept={acceptedTypes} 
-          file={files.frente} 
-          onFileSelect={(f) => onFileChange('frente', f)} 
-          onRemove={() => onFileChange('frente', null)} 
+          accept="image/jpeg,image/png,image/jpg"
+          file={files.frente}
+          onFileSelect={(f) => onFileChange('frente', f)}
+          onRemove={() => onFileChange('frente', null)}
         />
-        
-        <FileUploadCard 
-          title="Dorso DNI" 
+
+        <FileUploadCard
+          title="Dorso DNI"
           description="Reverso del documento"
-          accept={acceptedTypes} 
-          file={files.dorso} 
-          onFileSelect={(f) => onFileChange('dorso', f)} 
-          onRemove={() => onFileChange('dorso', null)} 
+          accept="image/jpeg,image/png,image/jpg"
+          file={files.dorso}
+          onFileSelect={(f) => onFileChange('dorso', f)}
+          onRemove={() => onFileChange('dorso', null)}
         />
-        
-        <FileUploadCard 
-          title="Selfie con DNI *" 
+
+        <FileUploadCard
+          title="Selfie con DNI *"
           description="Sostén el DNI junto a tu rostro"
-          accept={acceptedTypes} 
-          file={files.selfie} 
-          onFileSelect={(f) => onFileChange('selfie', f)} 
-          onRemove={() => onFileChange('selfie', null)} 
+          accept="image/jpeg,image/png,image/jpg"
+          file={files.selfie}
+          onFileSelect={(f) => onFileChange('selfie', f)}
+          onRemove={() => onFileChange('selfie', null)}
         />
-        
-        <FileUploadCard 
-          title="Video (Opcional)" 
+
+        <FileUploadCard
+          title="Video (Opcional)"
           description="Pequeña prueba de vida"
-          accept="video/*" 
-          file={files.video} 
-          onFileSelect={(f) => onFileChange('video', f)} 
-          onRemove={() => onFileChange('video', null)} 
+          accept="video/*"
+          file={files.video}
+          onFileSelect={(f) => onFileChange('video', f)}
+          onRemove={() => onFileChange('video', null)}
         />
       </Box>
     </Stack>
