@@ -18,8 +18,7 @@ import {
   Save,
   Security,
   ShoppingCart,
-  Token,
-  VerifiedUser
+  Token
 } from '@mui/icons-material';
 import {
   Alert,
@@ -64,8 +63,8 @@ import { CheckoutStateManager, type CheckoutPersistedState } from '../Checkout p
 // Types
 import CuotaMensualService from '@/core/api/services/cuotaMensual.service';
 import { env } from '@/core/config/env';
-import type { ProyectoDto } from '@/core/types/proyecto.dto';
 import type { ContratoTrackingResponse } from '@/core/types/contrato.dto';
+import type { ProyectoDto } from '@/core/types/proyecto.dto';
 
 // ===================================================
 // CONSTANTS
@@ -73,7 +72,7 @@ import type { ContratoTrackingResponse } from '@/core/types/contrato.dto';
 const CODIGO_2FA_LENGTH = 6;
 
 const STEPS = [
-{ label: 'Seguridad', icon: <Security /> },
+  { label: 'Seguridad', icon: <Security /> },
   { label: 'Resumen', icon: <ShoppingCart /> },
   { label: 'Contrato', icon: <Description /> },
   { label: 'Pago', icon: <Payment /> },
@@ -104,14 +103,7 @@ export interface Location {
   lng: string;
 }
 
-// ===================================================
-// UTILIDAD: detectar pago aprobado en cualquier
-// estructura de respuesta de la API.
-//
-// Suscripciones: { transaccion: { estado: 'pagado' } }
-// Inversiones:   { inversion: { estado: 'pagado' } }
-// Respuesta plana: { estado: 'pagado' }
-// ===================================================
+
 function isPaymentApproved(data: any): boolean {
   const estado =
     data?.transaccion?.estado   // suscripciones / pagos mensuales
@@ -245,7 +237,7 @@ SignatureCanvas.displayName = 'SignatureCanvas';
 // ===================================================
 const StepConfirmacion = React.memo<{
   proyecto: ProyectoDto;
-  tipo:'suscripcion'|'inversion';
+  tipo: 'suscripcion' | 'inversion';
   montoTotalStr: string;
   cuotaActiva?: any;
   formatCurrency: (value: number) => string;
@@ -539,10 +531,8 @@ export const CheckoutInversionModal: React.FC<CheckoutInversionModalProps> = ({
     }
   });
 
-  // IDs efectivos: combinan el estado interno del hook con los props del padre.
-  // Para inversiones usa effectiveInversionId, para suscripciones usa effectivePagoId.
-  const effectiveInversionId = inversionId   || initialInversionId;   // registro de negocio
-  const effectivePagoId      = transaccionId || initialPagoId;        // transacción de pago
+  const effectiveInversionId = inversionId || initialInversionId;   // registro de negocio
+  const effectivePagoId = transaccionId || initialPagoId;        // transacción de pago
 
   // PERSISTENCIA
   const persistState = useCallback(() => {
@@ -565,81 +555,64 @@ export const CheckoutInversionModal: React.FC<CheckoutInversionModalProps> = ({
     }
   }, [open, activeStep, transaccionId, persistState]);
 
-  // ===================================================
-  // RECUPERACIÓN DE ESTADO POST-PAGO
-  //
-  // Misma lógica para suscripciones e inversiones:
-  //
-  //  1. Estado guardado con paymentSuccess=true
-  //     → abrir directo en paso 4 (firma)
-  //
-  //  2. Estado guardado a mitad sin pago confirmado
-  //     → mostrar prompt de recuperación
-  //
-  //  3. Sin estado guardado pero con ID en props
-  //     (el usuario volvió desde MercadoPago)
-  //     → consultar API y, si está pagado, ir al paso 4
-  //
-  //  isPaymentApproved() cubre la estructura de respuesta
-  //  tanto de inversiones como de suscripciones.
-  // ===================================================
+
   useEffect(() => {
     if (!open || hasAttemptedRecovery.current) return;
 
-     // 🔥 PRIORIDAD MÁXIMA: trackingData manda
-  if (
-    trackingData &&
-    trackingData.tiene_pago &&
-    !trackingData.tiene_contrato_firmado &&
-    trackingData.puede_firmar
-  ) {
-    console.log("🚀 Ir directo a firma por trackingData");
+    // 🔥 PRIORIDAD MÁXIMA: trackingData manda
+    if (
+      trackingData &&
+      trackingData.tiene_pago &&
+      !trackingData.tiene_contrato_firmado &&
+      trackingData.puede_firmar
+    ) {
+      console.log("🚀 Ir directo a firma por trackingData");
 
-    setPaymentStatus('success'); // importante para UI
-    setActiveStep(4); // 👉 paso firma
+      setPaymentStatus('success'); // importante para UI
+      setActiveStep(4); // 👉 paso firma
 
-    hasAttemptedRecovery.current = true;
-    return;
-  }
+      hasAttemptedRecovery.current = true;
+      return;
+    }
 
     const savedState = CheckoutStateManager.loadState(proyecto.id);
 
-    const transaccionIdSaved = savedState?.transactionId 
+    const transaccionIdSaved = savedState?.transactionId
 
     const inversionIdSaved = savedState?.inversionId;
 
     // ===================================================
-  // 🔥 CASO PRINCIPAL: SI HAY TX → SIEMPRE VERIFICAR PAGO
-  // ===================================================
-  if (savedState?.activeStep! >= 3 && transaccionIdSaved) {
-  setTransaccionId(transaccionIdSaved);
+    // 🔥 CASO PRINCIPAL: SI HAY TX → SIEMPRE VERIFICAR PAGO
+    // ===================================================
+    if (savedState?.activeStep! >= 3 && transaccionIdSaved) {
+      setTransaccionId(transaccionIdSaved);
 
-  (async () => {
-    try {
-      const res = await MercadoPagoService.getPaymentStatus(transaccionIdSaved, true);
+      (async () => {
+        try {
+          const res = await MercadoPagoService.getPaymentStatus(transaccionIdSaved, true);
 
-      if (isPaymentApproved(res.data)) {
-        setPaymentStatus('success');
-        CheckoutStateManager.markPaymentSuccess(proyecto.id, transaccionIdSaved);
-        setActiveStep(4);
-      } else {
-        // 🔥 ACA ESTÁ LA CLAVE
-        setPaymentStatus('processing');
-        setActiveStep(3); // 👉 IR DIRECTO A PAGO
-      }
+          if (isPaymentApproved(res.data)) {
+            setPaymentStatus('success');
+            CheckoutStateManager.markPaymentSuccess(proyecto.id, transaccionIdSaved);
+            setActiveStep(4);
+          } else {
+            // 🔥 ACA ESTÁ LA CLAVE
+            setPaymentStatus('processing');
+            setActiveStep(3); // 👉 IR DIRECTO A PAGO
+          }
 
-    } catch (err) {
-      console.warn('⚠️ Error verificando pago:', err);
+        } catch (err) {
+          console.warn('⚠️ Error verificando pago:', err);
 
-      // fallback seguro
-      setActiveStep(3);
-    } finally {
-      hasAttemptedRecovery.current = true;
+          // fallback seguro
+          setActiveStep(3);
+        } finally {
+          hasAttemptedRecovery.current = true;
+        }
+      })();
+
+      return;
     }
-  })();
-
-  return;
-}
 
     // CASO 1: pago ya confirmado en sesión anterior
     if (savedState?.paymentSuccess && savedState.transactionId) {
@@ -658,15 +631,10 @@ export const CheckoutInversionModal: React.FC<CheckoutInversionModalProps> = ({
     }
 
     // CASO 2: proceso interrumpido sin pago confirmado
-//    if (savedState && savedState.activeStep >= 3 && savedState.transactionId) {
-//       setRecoveredState(savedState);
-//       setShowRecoveryPrompt(true);
-//       hasAttemptedRecovery.current = true;
-//       return;
-//     }
+
 
     // CASO 3: sin estado local pero llega ID por props
-    // Aplica tanto para inversiones (effectiveInversionId) como suscripciones (effectivePagoId)
+
     const txId = savedState?.transactionId || effectivePagoId;
     if (txId) {
       MercadoPagoService.getPaymentStatus(txId, true)
@@ -730,52 +698,52 @@ export const CheckoutInversionModal: React.FC<CheckoutInversionModalProps> = ({
 
   // ACCIONES POR PASO
   const handleStepAction = useCallback(async () => {
-  switch (activeStep) {
-    case 2: // Seguridad (antes era case 2)
-      if (codigo2FA.length === CODIGO_2FA_LENGTH) {
-        if (paymentStatus === 'success' && transaccionId) {
-          setActiveStep(4);
-        } else {
-          await handleConfirmInvestment(codigo2FA, location); // crea la inversión con el 2FA ya disponible
-          setActiveStep(3);
+    switch (activeStep) {
+      case 2: // Seguridad (antes era case 2)
+        if (codigo2FA.length === CODIGO_2FA_LENGTH) {
+          if (paymentStatus === 'success' && transaccionId) {
+            setActiveStep(4);
+          } else {
+            await handleConfirmInvestment(codigo2FA, location); // crea la inversión con el 2FA ya disponible
+            setActiveStep(3);
+          }
         }
-      }
-      break;
-    case 1: 
-      setActiveStep(2);
-      break;
-    case 0: 
-      setActiveStep(1);
-      break;
-    case 3: // Pago
-      setActiveStep(4);
-      break;
-    case 4: // Firma
-      if (!codigo2FAFirma || codigo2FAFirma.length !== CODIGO_2FA_LENGTH) {
-        showError('Debes ingresar tu código 2FA para firmar el contrato');
-        return;
-      }
-      if (!signaturePosition) {
-        showError('Debes colocar tu firma sobre el contrato antes de continuar');
-        return;
-      }
-      if (signatureDataUrl && location) {
-        await handleSignContract(signatureDataUrl, signaturePosition, location, codigo2FAFirma, trackingData);
-      }
-      break;
-  }
-}, [
-  activeStep, transaccionId, paymentStatus,
-  codigo2FA, codigo2FAFirma, signatureDataUrl, signaturePosition, location,
-  handleConfirmInvestment, handleConfirmarPago2FA, handleSignContract, showError
-]);
+        break;
+      case 1:
+        setActiveStep(2);
+        break;
+      case 0:
+        setActiveStep(1);
+        break;
+      case 3: // Pago
+        setActiveStep(4);
+        break;
+      case 4: // Firma
+        if (!codigo2FAFirma || codigo2FAFirma.length !== CODIGO_2FA_LENGTH) {
+          showError('Debes ingresar tu código 2FA para firmar el contrato');
+          return;
+        }
+        if (!signaturePosition) {
+          showError('Debes colocar tu firma sobre el contrato antes de continuar');
+          return;
+        }
+        if (signatureDataUrl && location) {
+          await handleSignContract(signatureDataUrl, signaturePosition, location, codigo2FAFirma, trackingData);
+        }
+        break;
+    }
+  }, [
+    activeStep, transaccionId, paymentStatus,
+    codigo2FA, codigo2FAFirma, signatureDataUrl, signaturePosition, location,
+    handleConfirmInvestment, handleConfirmarPago2FA, handleSignContract, showError
+  ]);
 
   const handleClose = useCallback(() => {
     if (isVerificandoPago || isProcessing) return;
     onClose();
     setTimeout(() => {
       if (paymentStatus !== 'success' || activeStep === 0) //CheckoutStateManager.clearState();
-      setActiveStep(0);
+        setActiveStep(0);
       setCodigo2FA('');
       setCodigo2FAFirma('');
       setPaymentStatus('idle');
@@ -807,6 +775,7 @@ export const CheckoutInversionModal: React.FC<CheckoutInversionModalProps> = ({
 
   return (
     <>
+      {/* MODAL DE RECUPERACIÓN */}
       {showRecoveryPrompt && recoveredState && !recoveredState.paymentSuccess && (
         <BaseModal
           open={showRecoveryPrompt}
@@ -815,33 +784,53 @@ export const CheckoutInversionModal: React.FC<CheckoutInversionModalProps> = ({
           subtitle="Detectamos un proceso incompleto"
           icon={<Refresh />}
           headerColor="warning"
-          maxWidth="md"
+          maxWidth="sm" // Ajustado a sm para mejor impacto visual en avisos
         >
-          <Stack spacing={3} p={2}>
+          <Stack spacing={3} p={1}>
             <Alert severity="info" icon={<Info />}>
               <Typography variant="body2" fontWeight={600}>Encontramos una sesión anterior</Typography>
               <Typography variant="caption">Podés continuar donde lo dejaste.</Typography>
             </Alert>
-            <Button variant="contained" fullWidth onClick={handleRecoverState} startIcon={<Refresh />} color="primary">
-              Continuar
+            <Button
+              variant="contained"
+              fullWidth
+              onClick={handleRecoverState}
+              startIcon={<Refresh />}
+              color="primary"
+              sx={{ py: 1.5, fontWeight: 800, borderRadius: 2 }}
+            >
+              Continuar proceso
             </Button>
           </Stack>
         </BaseModal>
       )}
 
+      {/* MODAL PRINCIPAL DE CHECKOUT */}
       <BaseModal
         open={open && !showRecoveryPrompt}
         onClose={handleClose}
-        title={'Nueva Inversión'}
+        title={activeStep === 4 ? 'Finalizar Inversión' : 'Nueva Inversión'}
         subtitle={proyecto.nombre_proyecto}
         icon={<Business />}
         headerColor={activeStep === 4 ? 'success' : 'primary'}
-        fullScreen={isMobile}
         maxWidth="md"
         disableClose={isVerificandoPago || isProcessing}
-        PaperProps={{ sx: { height: { xs: '100%', md: '95vh' } } }}
+        // Pasamos props adicionales al Dialog de MUI a través de BaseModal
+        PaperProps={{
+          sx: {
+            height: isMobile ? '100%' : '90vh',
+            display: 'flex',
+            flexDirection: 'column'
+          }
+        }}
         customActions={
-          <Stack direction={{ xs: 'column-reverse', sm: 'row' }} spacing={2} width="100%" justifyContent="space-between">
+          <Stack
+            direction={{ xs: 'column-reverse', sm: 'row' }}
+            spacing={2}
+            width="100%"
+            justifyContent="space-between"
+            alignItems="center"
+          >
             <Button
               onClick={activeStep === 0 ? handleClose : () => {
                 if (activeStep === 4) { setSignatureDataUrl(null); setSignaturePosition(null); }
@@ -851,9 +840,11 @@ export const CheckoutInversionModal: React.FC<CheckoutInversionModalProps> = ({
               startIcon={activeStep === 0 ? <Close /> : <ArrowBack />}
               color="inherit"
               fullWidth={isMobile}
+              sx={{ fontWeight: 700, px: 3 }}
             >
               {activeStep === 0 ? 'Cancelar' : 'Atrás'}
             </Button>
+
             {(activeStep !== 3 || paymentStatus === 'success') && (
               <Button
                 variant="contained"
@@ -866,6 +857,13 @@ export const CheckoutInversionModal: React.FC<CheckoutInversionModalProps> = ({
                     : activeStep === 4 ? <CloudUpload /> : <ArrowForward />
                 }
                 fullWidth={isMobile}
+                sx={{
+                  px: 4,
+                  py: 1.2,
+                  fontWeight: 800,
+                  borderRadius: 2,
+                  minWidth: { sm: 200 }
+                }}
               >
                 {getButtonText()}
               </Button>
@@ -873,18 +871,18 @@ export const CheckoutInversionModal: React.FC<CheckoutInversionModalProps> = ({
           </Stack>
         }
       >
-        <Stack spacing={3} height="100%">
+        <Stack spacing={3} sx={{ height: '100%', minHeight: 0 }}>
+          {/* Stepper: Oculto en móviles para ahorrar espacio vertical */}
           {!isMobile && (
-            <Stepper activeStep={activeStep} alternativeLabel sx={{ pt: 2 }}>
+            <Stepper activeStep={activeStep} alternativeLabel sx={{ pt: 1 }}>
               {STEPS.map((step, index) => (
                 <Step key={step.label}>
                   <StepLabel
-                    className={styles.containerLabel}
                     StepIconProps={{
                       sx: {
                         '&.Mui-active': {
                           color: index === 4 ? theme.palette.success.main : theme.palette.primary.main,
-                          transform: 'scale(1.2)'
+                          transform: 'scale(1.1)'
                         },
                         '&.Mui-completed': { color: theme.palette.success.main }
                       }
@@ -897,7 +895,15 @@ export const CheckoutInversionModal: React.FC<CheckoutInversionModalProps> = ({
             </Stepper>
           )}
 
-          <Box flex={1} overflow="auto" p={{ xs: 2, md: 2 }} display="flex" flexDirection="column">
+          {/* Contenido Dinámico con scroll interno si es necesario */}
+          <Box
+            flex={1}
+            sx={{
+              overflowY: 'auto',
+              overflowX: 'hidden',
+              px: { xs: 0, md: 1 }
+            }}
+          >
             {activeStep === 0 && (
               <StepConfirmacion
                 proyecto={proyecto} tipo={tipo}
@@ -914,50 +920,31 @@ export const CheckoutInversionModal: React.FC<CheckoutInversionModalProps> = ({
             )}
             {activeStep === 3 && <StepPago paymentStatus={paymentStatus} onRetry={() => setActiveStep(0)} />}
 
-            {/* =====================================================
-                PASO 4 — FIRMA DEL CONTRATO
-                Flujo idéntico para inversiones y suscripciones:
-                  1. Banner de pago exitoso
-                  2. Instrucción + código 2FA para autorizar la firma
-                  3. Canvas para dibujar la firma
-                  4. PDF para posicionar la firma
-            ===================================================== */}
             {activeStep === 4 && (
-              <Stack spacing={3} height="100%">
-
-                {/* ✅ Confirmación visual del pago */}
+              <Stack spacing={3}>
                 <PagoExitosoBanner tipo={tipo} />
 
-                {/* ✅ Contexto del paso */}
                 <Alert severity="info" icon={<HistoryEdu />} sx={{ borderRadius: 2 }}>
-                  <Typography variant="body2" fontWeight={600} mb={0.5}>
-                    Paso final: firma digital del contrato
-                  </Typography>
+                  <Typography variant="body2" fontWeight={600}>Paso final: firma digital</Typography>
                   <Typography variant="caption">
-                    Ingresá tu código 2FA, dibujá tu firma y posicionala sobre el contrato para completar el proceso.
+                    Autorizá con tu 2FA y posicioná tu firma en el documento.
                   </Typography>
                 </Alert>
 
-                {/* ✅ 2FA exclusivo para la firma */}
                 <TextField
                   autoFocus
                   label="Código 2FA para firmar"
                   value={codigo2FAFirma}
                   onChange={(e) => setCodigo2FAFirma(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  placeholder="000 000"
                   disabled={isProcessing}
                   fullWidth
-                  inputProps={{ maxLength: 6 }}
-                  sx={{ maxWidth: 400, mx: 'auto' }}
-                  helperText="Ingresá el código de tu aplicación Google Authenticator"
+                  inputProps={{ maxLength: 6, style: { textAlign: 'center', fontSize: '1.2rem', letterSpacing: '0.5rem' } }}
+                  sx={{ maxWidth: 300, mx: 'auto' }}
+                  helperText="Código de Google Authenticator"
                 />
 
-                {/* ✅ Canvas de firma */}
                 <Fade in={!signatureDataUrl} unmountOnExit>
                   <Box>
-                    <Alert severity="warning" icon={<Draw />} sx={{ borderRadius: 2, mb: 3 }}>
-                      <Typography variant="body2">Dibujá tu firma digital en el recuadro de abajo.</Typography>
-                    </Alert>
                     <SignatureCanvas
                       onSave={setSignatureDataUrl}
                       onClear={() => { setSignatureDataUrl(null); setSignaturePosition(null); }}
@@ -966,22 +953,20 @@ export const CheckoutInversionModal: React.FC<CheckoutInversionModalProps> = ({
                   </Box>
                 </Fade>
 
-                {/* ✅ PDF con posicionamiento de la firma */}
                 <Fade in={!!signatureDataUrl} unmountOnExit>
-                  <Box flex={1} display="flex" flexDirection="column" sx={{ minHeight: { xs: '65vh', md: '70vh' }, mt: 2 }}>
-                    <Alert severity="success" variant="outlined" sx={{ borderRadius: 2, mb: 2 }}>
-                      <Typography variant="body2" fontWeight={600}>✓ Firma capturada correctamente</Typography>
-                      {signaturePosition
-                        ? <Typography variant="caption" color="success.main">✓ Firma posicionada en el contrato</Typography>
-                        : <Typography variant="caption" color="warning.main">⚠ Hacé clic en el contrato para colocar tu firma</Typography>
+                  <Box sx={{ minHeight: '500px', display: 'flex', flexDirection: 'column' }}>
+                    <Alert
+                      severity={signaturePosition ? "success" : "warning"}
+                      sx={{ mb: 2, borderRadius: 2 }}
+                      action={
+                        <Button color="inherit" size="small" onClick={() => { setSignatureDataUrl(null); setSignaturePosition(null); }}>
+                          Cambiar
+                        </Button>
                       }
-                      <Button size="small" onClick={() => { setSignatureDataUrl(null); setSignaturePosition(null); }}>
-                        Cambiar Firma
-                      </Button>
+                    >
+                      {signaturePosition ? "Firma posicionada correctamente" : "Hacé clic en el PDF para ubicar tu firma"}
                     </Alert>
-                    <Box flex={1} borderRadius={2} overflow="hidden"
-                      border={`1px solid ${theme.palette.divider}`}
-                      sx={{ display: 'flex', flexDirection: 'column' }}>
+                    <Box sx={{ flex: 1, border: `1px solid ${theme.palette.divider}`, borderRadius: 2, overflow: 'hidden' }}>
                       <PDFViewerMejorado
                         pdfUrl={plantillaActual ? ImagenService.resolveImageUrl(plantillaActual.url_archivo) : ''}
                         signatureDataUrl={signatureDataUrl}
@@ -990,7 +975,6 @@ export const CheckoutInversionModal: React.FC<CheckoutInversionModalProps> = ({
                     </Box>
                   </Box>
                 </Fade>
-
               </Stack>
             )}
           </Box>

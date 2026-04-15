@@ -4,6 +4,7 @@ import {
   Assessment,
   CheckCircle,
   ChevronRight,
+  Close,
   EmojiEvents,
   Gavel,
   MonetizationOn,
@@ -40,12 +41,12 @@ import { useDashboardStats } from '../../hooks/useDashboardStats';
 
 // Servicios
 import InversionService from '@/core/api/services/inversion.service';
+import kycService from '@/core/api/services/kyc.service';
 import PagoService from '@/core/api/services/pago.service';
 import PujaService from '@/core/api/services/puja.service';
 import ResumenCuentaService from '@/core/api/services/resumenCuenta.service';
 import SuscripcionService from '@/core/api/services/suscripcion.service';
 import styles from './UserDashboard.module.css';
-import kycService from '@/core/api/services/kyc.service';
 
 // 🛠 Utility: Calcular días restantes para vencimientos
 const calculateDaysRemaining = (dateString?: string): number => {
@@ -67,6 +68,11 @@ const UserDashboard: React.FC = () => {
   const navigate = useNavigate();
   const theme = useTheme();
 
+  const [showKycAprobado, setShowKycAprobado] = React.useState(() => {
+    // Solo se muestra si NO fue cerrado en esta sesión
+    return localStorage.getItem('kyc_aprobado_visto') !== 'true';
+  });
+
   // ========== 1. DATA FETCHING ==========
   const { data: resumenes } = useQuery({
     queryKey: ['misResumenes'],
@@ -82,13 +88,13 @@ const UserDashboard: React.FC = () => {
   });
   const { data: pagos } = useQuery({
     queryKey: ['misPagosPendientes'],
-    queryFn: async () => (await PagoService.getMyPayments())  
+    queryFn: async () => (await PagoService.getMyPayments())
   });
   const { data: misPujas } = useQuery({
     queryKey: ['misPujasCheck'],
     queryFn: async () => (await PujaService.getMyPujas()).data
   });
-const { data: kycStatus } = useQuery({
+  const { data: kycStatus } = useQuery({
     queryKey: ['kycStatus'],
     queryFn: kycService.getStatus
   });
@@ -158,92 +164,103 @@ const { data: kycStatus } = useQuery({
       <Container maxWidth={false} sx={{ maxWidth: '1400px', mt: -6 }}>
         <QueryHandler isLoading={isLoading} error={null}>
           <Box mb={4}>
-             {/* ========== ALERTA KYC RECHAZADO (VISIBLE PARA TODOS) ========== */}
-             {estadoKyc === 'RECHAZADA' && (
-                <Fade in={true}>
-                  <Box
-                    sx={{
-                      mb: isNewUser ? 4 : 0, // Espaciado dinámico
-                      borderRadius: 3,
-                      border: '1px solid',
-                      borderColor: 'error.main',
-                      bgcolor: '#fdecea',
-                      boxShadow: `0 0 24px ${alpha(theme.palette.error.main, 0.15)}`,
-                      p: { xs: 2, sm: 3 },
-                    }}
-                  >
-                    <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={2}>
-                      <Stack direction="row" spacing={2} alignItems="center">
-                        <Avatar sx={{ bgcolor: '#FFFFFF', color: 'error.main', width: 48, height: 48 }}>
-                          <Warning />
-                        </Avatar>
-                        <Box>
-                          <Typography variant="overline" sx={{ color: 'error.main', fontWeight: 800, letterSpacing: 1.2, lineHeight: 1, display: 'block', mb: 0.5 }}>
-                            ATENCIÓN REQUERIDA
-                          </Typography>
-                          <Typography variant="h5" fontWeight={800} sx={{ color: '#000000' }}>
-                            Tu verificación KYC fue rechazada
-                          </Typography>
-                          <Typography variant="body2" sx={{ color: '#555555', mt: 0.5 }}>
-                            Motivo: {kycStatus?.motivo_rechazo || 'La documentación enviada no es válida o es ilegible.'}
-                          </Typography>
-                        </Box>
-                      </Stack>
-
-                      <Button
-                        variant="contained"
-                        color="error"
-                        onClick={() => navigate('/client/verificacion')}
-                        sx={{ fontWeight: 800, px: 3, borderRadius: 2, textTransform: 'none' }}
-                      >
-                        Corregir Documentación
-                      </Button>
+            {/* ========== ALERTA KYC RECHAZADO (VISIBLE PARA TODOS) ========== */}
+            {estadoKyc === 'RECHAZADA' && (
+              <Fade in={true}>
+                <Box
+                  sx={{
+                    mb: isNewUser ? 4 : 0, // Espaciado dinámico
+                    borderRadius: 3,
+                    border: '1px solid',
+                    borderColor: 'error.main',
+                    bgcolor: '#fdecea',
+                    boxShadow: `0 0 24px ${alpha(theme.palette.error.main, 0.15)}`,
+                    p: { xs: 2, sm: 3 },
+                  }}
+                >
+                  <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={2}>
+                    <Stack direction="row" spacing={2} alignItems="center">
+                      <Avatar sx={{ bgcolor: '#FFFFFF', color: 'error.main', width: 48, height: 48 }}>
+                        <Warning />
+                      </Avatar>
+                      <Box>
+                        <Typography variant="overline" sx={{ color: 'error.main', fontWeight: 800, letterSpacing: 1.2, lineHeight: 1, display: 'block', mb: 0.5 }}>
+                          ATENCIÓN REQUERIDA
+                        </Typography>
+                        <Typography variant="h5" fontWeight={800} sx={{ color: '#000000' }}>
+                          Tu verificación KYC fue rechazada
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: '#555555', mt: 0.5 }}>
+                          Motivo: {kycStatus?.motivo_rechazo || 'La documentación enviada no es válida o es ilegible.'}
+                        </Typography>
+                      </Box>
                     </Stack>
-                  </Box>
-                </Fade>
-              )}
 
-              {/* ========== ALERTA KYC APROBADO (VISIBLE PARA TODOS) ========== */}
-              {estadoKyc === 'APROBADA' && (
-                <Fade in={true}>
-                  <Box
-                    sx={{
-                      mb: isNewUser ? 4 : 0,
-                      borderRadius: 3,
-                      border: '1px solid',
-                      borderColor: 'info.main',
-                      bgcolor: alpha(theme.palette.info.main, 0.05),
-                      p: { xs: 2, sm: 3 },
-                    }}
-                  >
-                    <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={2}>
-                      <Stack direction="row" spacing={2} alignItems="center">
-                        <Avatar sx={{ bgcolor: '#FFFFFF', color: 'info.main', width: 48, height: 48 }}>
-                          <VerifiedUser />
-                        </Avatar>
-                        <Box>
-                          <Typography variant="overline" sx={{ color: 'info.main', fontWeight: 800, letterSpacing: 1.2, lineHeight: 1, display: 'block', mb: 0.5 }}>
-                            IDENTIDAD VERIFICADA
-                          </Typography>
-                          <Typography variant="h5" fontWeight={800} sx={{ color: '#000000' }}>
-                            Tu cuenta está validada al 100%
-                          </Typography>
-                          <Typography variant="body2" sx={{ color: '#555555', mt: 0.5 }}>
-                            Ya puedes invertir y participar en subastas sin restricciones.
-                          </Typography>
-                        </Box>
-                      </Stack>
+                    <Button
+                      variant="contained"
+                      color="error"
+                      onClick={() => navigate('/client/verificacion')}
+                      sx={{ fontWeight: 800, px: 3, borderRadius: 2, textTransform: 'none' }}
+                    >
+                      Corregir Documentación
+                    </Button>
+                  </Stack>
+                </Box>
+              </Fade>
+            )}
+
+            {/* ========== ALERTA KYC APROBADO (VISIBLE PARA TODOS) ========== */}
+            {estadoKyc === 'APROBADA' && showKycAprobado && (
+              <Fade in={true}>
+                <Box
+                  sx={{
+                    mb: isNewUser ? 4 : 0,
+                    borderRadius: 3,
+                    border: '1px solid',
+                    borderColor: 'success.main',
+                    bgcolor: '#a9e9a4',
+                    boxShadow: `0 0 24px ${alpha(theme.palette.success.main, 0.15)}`,
+                    p: { xs: 2, sm: 3 },
+                  }}
+                >
+                  <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={2}>
+                    <Stack direction="row" spacing={2} alignItems="center">
+                      <Avatar sx={{ bgcolor: '#FFFFFF', color: 'success.main', width: 48, height: 48 }}>
+                        <VerifiedUser />
+                      </Avatar>
+                      <Box>
+                        <Typography variant="overline" sx={{ color: 'success.main', fontWeight: 800, letterSpacing: 1.2, lineHeight: 1, display: 'block', mb: 0.5 }}>
+                          IDENTIDAD VERIFICADA
+                        </Typography>
+                        <Typography variant="h5" fontWeight={800} sx={{ color: '#000000' }}>
+                          ¡Tu cuenta fue verificada exitosamente!
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: '#555555', mt: 0.5 }}>
+                          Ya podés invertir y participar en subastas sin restricciones.
+                        </Typography>
+                      </Box>
                     </Stack>
-                  </Box>
-                </Fade>
-              )}
+
+                    <IconButton
+                      onClick={() => {
+                        sessionStorage.setItem('kyc_aprobado_visto', 'true');
+                        setShowKycAprobado(false);
+                      }}
+                      sx={{ color: 'success.dark', alignSelf: { xs: 'flex-end', sm: 'center' } }}
+                    >
+                      <Close />  {/* Importá Close desde @mui/icons-material */}
+                    </IconButton>
+                  </Stack>
+                </Box>
+              </Fade>
+            )}
           </Box>
 
           {/* AHORA SÍ, LA CONDICIÓN DE USUARIO NUEVO O EXPERIMENTADO */}
           {isNewUser ? <NewUserWelcome /> : (
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 340px' }, gap: 4, alignItems: 'start' }}>
               <Box>
-                
+
                 {/* ========== ALERTA DE SUBASTA GANADA (DISEÑO PERSONALIZADO DARK) ========== */}
                 {cantidadGanadas > 0 && (
                   <Fade in={true}>
@@ -465,62 +482,62 @@ const { data: kycStatus } = useQuery({
 
                 {/* ========== LISTA DE INVERSIONES ========== */}
                 {/* ========== LISTA DE INVERSIONES ========== */}
-{/* ========== LISTA DE INVERSIONES ========== */}
-<Stack spacing={3}>
-  {resumenes
-    // 👇 FILTRO ESTRICTO MEJORADO
-    ?.filter((resumen) => {
-      // 1. Si el resumen pertenece a una suscripción (pago en cuotas):
-      if (resumen.id_suscripcion) {
-        const subActiva = suscripciones?.find(s => s.id === resumen.id_suscripcion);
-        // Si la encuentra y está activa, pasa. Si no la encuentra (porque se canceló), se oculta (false).
-        return subActiva ? subActiva.activo === true : false;
-      }
-      
-      // 2. Si el resumen es de una inversión directa (no tiene id_suscripcion):
-      // Verificamos si el resumen mismo trae la propiedad "activo" de la base de datos
-      if (resumen.hasOwnProperty('activo')) {
-        return resumen.activo === true;
-      }
-      
-      // Fallback para inversiones directas que no tengan la propiedad activo explícita
-      return true; 
-    })
-    .map((resumen) => {
-      const tieneMora = pagos?.some(p => p.id_suscripcion === resumen.id_suscripcion && p.estado_pago === 'pendiente' && new Date(p.fecha_vencimiento) < new Date());
-      const subActiva = suscripciones?.find(s => s.id === resumen.id_suscripcion);
-      return (
-        
-        <Card key={resumen.id} elevation={0} sx={{
-          borderRadius: 3, border: `1px solid ${theme.palette.divider}`, transition: 'all 0.2s',
-          '&:hover': { transform: 'translateY(-4px)', borderColor: 'primary.main', boxShadow: theme.shadows[4] }
-        }}>
-          <CardContent sx={{ p: 3 }}>
-            <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
-              <Box>
-                <Box className={styles.resumenHeader}>
-                  <Typography variant="h6" fontWeight={800}>{resumen.nombre_proyecto}</Typography>
-                  {subActiva && Number(subActiva.saldo_a_favor) > 0 && (
-                    <Typography className={styles.saldoAFavor} variant="h5">Saldo a favor: ${subActiva.saldo_a_favor}</Typography>
-                  )}
-                </Box>
-                <Chip label={`${resumen.cuotas_pagadas}/${resumen.meses_proyecto || 0} cuotas`} size="small" variant="outlined" sx={{ mt: 0.5, fontWeight: 700 }} />
-                {tieneMora && <Chip label="Mora" color="error" size="small" sx={{ ml: 1, fontWeight: 800 }} />}
-              </Box>
-              <IconButton onClick={() => navigate('/client/finanzas/resumenes')} sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}><Assessment /></IconButton>
-            </Stack>
-            <Stack spacing={1}>
-              <Stack direction="row" justifyContent="space-between">
-                <Typography variant="body2" fontWeight={700} color="text.secondary">Avance del Plan</Typography>
-                <Typography variant="body2" fontWeight={800} color="primary.main">{Number(resumen.porcentaje_pagado || 0).toFixed(0)}%</Typography>
-              </Stack>
-              <LinearProgress variant="determinate" value={Number(resumen.porcentaje_pagado || 0)} sx={{ height: 10, borderRadius: 5, bgcolor: alpha(theme.palette.primary.main, 0.1) }} />
-            </Stack>
-          </CardContent>
-        </Card>
-      );
-    })}
-</Stack>
+                {/* ========== LISTA DE INVERSIONES ========== */}
+                <Stack spacing={3}>
+                  {resumenes
+                    // 👇 FILTRO ESTRICTO MEJORADO
+                    ?.filter((resumen) => {
+                      // 1. Si el resumen pertenece a una suscripción (pago en cuotas):
+                      if (resumen.id_suscripcion) {
+                        const subActiva = suscripciones?.find(s => s.id === resumen.id_suscripcion);
+                        // Si la encuentra y está activa, pasa. Si no la encuentra (porque se canceló), se oculta (false).
+                        return subActiva ? subActiva.activo === true : false;
+                      }
+
+                      // 2. Si el resumen es de una inversión directa (no tiene id_suscripcion):
+                      // Verificamos si el resumen mismo trae la propiedad "activo" de la base de datos
+                      if (resumen.hasOwnProperty('activo')) {
+                        return resumen.activo === true;
+                      }
+
+                      // Fallback para inversiones directas que no tengan la propiedad activo explícita
+                      return true;
+                    })
+                    .map((resumen) => {
+                      const tieneMora = pagos?.some(p => p.id_suscripcion === resumen.id_suscripcion && p.estado_pago === 'pendiente' && new Date(p.fecha_vencimiento) < new Date());
+                      const subActiva = suscripciones?.find(s => s.id === resumen.id_suscripcion);
+                      return (
+
+                        <Card key={resumen.id} elevation={0} sx={{
+                          borderRadius: 3, border: `1px solid ${theme.palette.divider}`, transition: 'all 0.2s',
+                          '&:hover': { transform: 'translateY(-4px)', borderColor: 'primary.main', boxShadow: theme.shadows[4] }
+                        }}>
+                          <CardContent sx={{ p: 3 }}>
+                            <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
+                              <Box>
+                                <Box className={styles.resumenHeader}>
+                                  <Typography variant="h6" fontWeight={800}>{resumen.nombre_proyecto}</Typography>
+                                  {subActiva && Number(subActiva.saldo_a_favor) > 0 && (
+                                    <Typography className={styles.saldoAFavor} variant="h5">Saldo a favor: ${subActiva.saldo_a_favor}</Typography>
+                                  )}
+                                </Box>
+                                <Chip label={`${resumen.cuotas_pagadas}/${resumen.meses_proyecto || 0} cuotas`} size="small" variant="outlined" sx={{ mt: 0.5, fontWeight: 700 }} />
+                                {tieneMora && <Chip label="Mora" color="error" size="small" sx={{ ml: 1, fontWeight: 800 }} />}
+                              </Box>
+                              <IconButton onClick={() => navigate('/client/finanzas/resumenes')} sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}><Assessment /></IconButton>
+                            </Stack>
+                            <Stack spacing={1}>
+                              <Stack direction="row" justifyContent="space-between">
+                                <Typography variant="body2" fontWeight={700} color="text.secondary">Avance del Plan</Typography>
+                                <Typography variant="body2" fontWeight={800} color="primary.main">{Number(resumen.porcentaje_pagado || 0).toFixed(0)}%</Typography>
+                              </Stack>
+                              <LinearProgress variant="determinate" value={Number(resumen.porcentaje_pagado || 0)} sx={{ height: 10, borderRadius: 5, bgcolor: alpha(theme.palette.primary.main, 0.1) }} />
+                            </Stack>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                </Stack>
               </Box>
 
               {/* ========== SIDEBAR DERECHO ========== */}

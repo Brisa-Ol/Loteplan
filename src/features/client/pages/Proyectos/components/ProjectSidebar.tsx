@@ -1,4 +1,5 @@
 import {
+  AddModerator,
   ArrowForward,
   CalendarMonth,
   CheckCircle, Description,
@@ -17,10 +18,6 @@ import {
   Box,
   Button,
   Card,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   Divider,
   LinearProgress,
   Stack,
@@ -31,6 +28,7 @@ import React, { useState } from 'react';
 import type { ProyectoDto } from '@/core/types/proyecto.dto';
 import { useProyectoHelpers } from '@/features/client/hooks/useProyectoHelpers';
 import { ROUTES } from '@/routes';
+import { BaseModal } from '@/shared';
 import { useNavigate } from 'react-router-dom';
 
 // ==========================================
@@ -329,31 +327,31 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({ logic, proyecto,
                           {/* 5C: Proceso Completado */}
                           {paso2Completo && (
                             <Stack spacing={2}>
-                        {isFinalizado ? (
-                          <Alert severity="info">
-                            Esta inversión ya finalizó. No es posible realizar nuevas suscripciones.
-                          </Alert>
-                        ) : (
+                              {isFinalizado ? (
+                                <Alert severity="info">
+                                  Esta inversión ya finalizó. No es posible realizar nuevas suscripciones.
+                                </Alert>
+                              ) : (
                                 <Alert severity="success" icon={<CheckCircle />}>
                                   {cantProyectUser === 1
                                     ? 'Ya tienes una suscripción activa'
                                     : `Tienes ${cantProyectUser} suscripciones activas`}
                                 </Alert>
-                        )}
+                              )}
 
                               {/* 🔁 Volver a suscribirse */}
                               <Button
                                 variant="contained"
                                 fullWidth
                                 onClick={handleSubscriptionOrSigning}
-                          disabled={isFinalizado}
+                                disabled={isFinalizado}
                                 sx={{ fontWeight: 700 }}
                               >
                                 {puedeFirmar
-                            ? 'Firmar contrato'
-                            : isFinalizado
-                              ? 'Inversión finalizada'
-                              : 'Volver a suscribirse para adquirir otro Token'}
+                                  ? 'Firmar contrato'
+                                  : isFinalizado
+                                    ? 'Inversión finalizada'
+                                    : 'Volver a suscribirse para adquirir otro Token'}
                               </Button>
 
                               {/* 📄 Contratos */}
@@ -397,43 +395,40 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({ logic, proyecto,
         </Stack>
       </Box>
 
-      <Dialog open={openResubModal} onClose={() => setOpenResubModal(false)}>
-        <DialogTitle>Volver a suscribirse</DialogTitle>
+      <BaseModal
+        open={openResubModal}
+        onClose={() => setOpenResubModal(false)}
+        title="Nueva Suscripción"
+        subtitle="Adquirir un Token adicional"
+        icon={<AddModerator />}
+        headerColor="primary"
+        maxWidth="sm"
+        confirmText="Continuar con la suscripción"
+        cancelText="Volver atrás"
+        onConfirm={() => {
+          setOpenResubModal(false);
+          logic.handleMainAction();
+        }}
+      >
+        <Stack spacing={3}>
+          <Alert severity="info" sx={{ borderRadius: 2 }}>
+            <Typography variant="body2" fontWeight={600}>
+              Ya tienes una suscripción activa en este proyecto.
+            </Typography>
+          </Alert>
 
-        <DialogContent>
-          <Typography>
-            Ya tenés una suscripción activa en este proyecto.
+          <Typography variant="body2" color="text.secondary">
+            Al confirmar esta acción, estarás iniciando un nuevo compromiso de suscripcion:
           </Typography>
 
-          <Typography sx={{ mt: 2 }}>
-            Si continuás:
-          </Typography>
-
-          <Box component="ul" sx={{ pl: 2, mt: 1 }}>
-            <li>Se generará una nueva inversión independiente</li>
-            <li>Deberás realizar otro pago mensual</li>
-            <li>Obtendrás un token adicional para tus pujas</li>
+          <Box component="ul" sx={{ pl: 2, m: 0, '& li': { mb: 1, fontSize: '0.875rem' } }}>
+            <li>Se generará una <strong>nueva suscripción independiente</strong>.</li>
+            <li>Deberás realizar el pago de la cuota de ingreso hoy.</li>
+            <li>Obtendrás un <strong>Token adicional</strong> para pujas mensuales.</li>
           </Box>
-        </DialogContent>
-
-        <DialogActions>
-          <Button onClick={() => setOpenResubModal(false)}>
-            Cancelar
-          </Button>
-
-          <Button
-            variant="contained"
-            onClick={() => {
-              setOpenResubModal(false);
-              logic.handleMainAction(); // 👈 recién acá disparás el flujo
-            }}
-          >
-            Continuar
-          </Button>
-        </DialogActions>
-      </Dialog>
+        </Stack>
+      </BaseModal>
     </Card>
   );
 };
-
 export default ProjectSidebar;
