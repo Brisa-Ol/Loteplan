@@ -96,7 +96,7 @@ const PujaService = {
         console.error("Error al solicitar cancelación de puja:", error);
         throw error; // Re-lanzar el error para que el componente pueda manejarlo
       }
-  }
+  },
 
 
   // =================================================
