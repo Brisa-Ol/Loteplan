@@ -20,6 +20,17 @@ export const useAdminLotePagos = () => {
   const confirmDialog = useConfirmDialog();
   const [selectedLote, setSelectedLote] = useState<LoteDto | null>(null);
 
+  // --- NUEVO: ESTADO PARA EL MODAL DE CANCELACIÓN ---
+  const [cancelModalState, setCancelModalState] = useState<{
+    isOpen: boolean;
+    data: PujaDto | null;
+    lote: LoteDto | null;
+  }>({
+    isOpen: false,
+    data: null,
+    lote: null
+  });
+
   // --- DATA FETCHING: LOTES ---
   const { data: lotesRaw = [], isLoading: isLoadingLotes, error: errorLotes } = useQuery({
     queryKey: ['adminLotesPagos'],
@@ -76,7 +87,7 @@ export const useAdminLotePagos = () => {
     };
   }, [lotesPendientesTotal]);
 
-  // --- MUTACIÓN ---
+  // --- MUTACIÓN: SANCIONAR ---
   const sancionarMutation = useMutation({
     mutationFn: async (lote: LoteDto) => {
       if (lote.id_puja_mas_alta) {
@@ -99,6 +110,26 @@ export const useAdminLotePagos = () => {
     },
   });
 
+  // --- NUEVO: MUTACIÓN PARA APROBAR CANCELACIÓN ---
+  const aprobarCancelacionMutation = useMutation({
+    mutationFn: async (pujaId: number) => {
+      return await PujaService.cancelarGanadoraAnticipada(
+        pujaId,
+        'Baja aprobada por administración tras solicitud del usuario.'
+      );
+    },
+    onSuccess: (res) => {
+      const msg = (res.data as any)?.message || 'Baja aprobada correctamente.';
+      showSuccess(msg);
+      queryClient.invalidateQueries({ queryKey: ['adminLotesPagos'] });
+      queryClient.invalidateQueries({ queryKey: ['adminPujasTodas'] });
+      handleCloseCancelModal();
+    },
+    onError: (err: any) => {
+      showError(err.response?.data?.error || 'Error al aprobar la baja.');
+    },
+  });
+
   const handleForceFinish = (lote: LoteDto) => {
     setSelectedLote(lote);
     confirmDialog.confirm('force_finish', lote);
@@ -110,16 +141,35 @@ export const useAdminLotePagos = () => {
     }
   };
 
+  // --- NUEVO: HANDLERS PARA EL MODAL DE CANCELACIÓN ---
+  const handleOpenCancelModal = (puja: PujaDto, lote: LoteDto) => {
+    setCancelModalState({ isOpen: true, data: puja, lote });
+  };
+
+  const handleCloseCancelModal = () => {
+    setCancelModalState({ isOpen: false, data: null, lote: null });
+  };
+
+  const aprobarCancelacion = (pujaId?: number) => {
+    if (pujaId) aprobarCancelacionMutation.mutate(pujaId);
+  };
+
   return {
     theme,
     lotesPendientesTotal,
     pujasPorLote, 
     analytics,
     isLoading: isLoadingLotes || isLoadingPujas,
+    isMutating: sancionarMutation.isPending || aprobarCancelacionMutation.isPending, // Se unificó el estado de carga
     error: errorLotes,
-    isMutating: sancionarMutation.isPending,
     handleForceFinish,
     handleConfirmAction,
-    modales: { confirm: confirmDialog },
+    handleOpenCancelModal,
+    handleCloseCancelModal,
+    aprobarCancelacion,
+    modales: { 
+      confirm: confirmDialog,
+      cancelRequest: cancelModalState // Se expone el estado al componente
+    },
   };
 };

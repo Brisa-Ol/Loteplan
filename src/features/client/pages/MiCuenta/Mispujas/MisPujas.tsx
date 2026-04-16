@@ -25,8 +25,10 @@ import {
 import { useMutation, useQuery } from '@tanstack/react-query';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import useSnackbar from '../../../../shared/hooks/useSnackbar';
-import { useCurrencyFormatter } from '../../hooks/useCurrencyFormatter';
+import useSnackbar from '../../../../../shared/hooks/useSnackbar';
+import { useCurrencyFormatter } from '../../../hooks/useCurrencyFormatter';
+import CancelacionModal from './components/CancelacionModal';
+
 
 const MisPujas: React.FC = () => {
   const navigate = useNavigate();
@@ -39,6 +41,7 @@ const MisPujas: React.FC = () => {
   const twoFaModal = useModal();
   const checkoutModal = useModal();
   const successPaymentModal = useModal();
+  const cancelModal = useModal(); // Modal de cancelación
 
   const [selectedPuja, setSelectedPuja] = useState<PujaDto | null>(null);
   const [twoFAError, setTwoFAError] = useState<string | null>(null);
@@ -115,6 +118,22 @@ const MisPujas: React.FC = () => {
     onError: (err: any) => setTwoFAError(err.response?.data?.message || "Código incorrecto")
   });
 
+  // --- MUTACIÓN PARA CANCELAR ---
+  const solicitarCancelacionMutation = useMutation({
+    mutationFn: (motivo: string) => 
+      PujaService.requestCancellation(selectedPuja!.id, motivo),
+    onSuccess: () => {
+      cancelModal.close();
+      refetch(); // Refrescamos la tabla (esto ya es suficiente feedback visual)
+    },
+    onError: (err: any) => showError(err.response?.data?.message || 'Error al solicitar cancelación')
+  });
+
+  const handleOpenCancel = (puja: PujaDto) => {
+    setSelectedPuja(puja);
+    cancelModal.open();
+  };
+
   const columns = useMemo<DataTableColumn<PujaDto>[]>(() => [
     {
       id: 'proyecto',
@@ -154,7 +173,17 @@ const MisPujas: React.FC = () => {
           perdedora: { label: 'SUPERADA', color: 'default', icon: <Cancel fontSize="small" /> },
         };
         const config = configs[puja.estado_puja] || { label: puja.estado_puja.toUpperCase(), color: 'default' };
-        return <Chip label={config.label} color={config.color} size="small" icon={config.icon} variant={config.variant || 'outlined'} sx={{ fontWeight: 700, fontSize: '0.65rem' }} />;
+  
+        return (
+          <Stack spacing={0.5}>
+            <Chip label={config.label} color={config.color} size="small" icon={config.icon} variant={config.variant || 'outlined'} sx={{ fontWeight: 700, fontSize: '0.65rem' }} />
+            {puja.solicitud_cancelacion && (
+              <Typography variant="caption" color="error.main" sx={{ fontSize: '0.6rem', fontWeight: 700 }}>
+                ⚠️ CANCELACIÓN PENDIENTE
+              </Typography>
+            )}
+          </Stack>
+        );
       }
     },
     {
@@ -173,6 +202,18 @@ const MisPujas: React.FC = () => {
             >
               PAGAR
             </Button>
+          )}
+          {/* NUEVO: Botón de Cancelación (Solo si no ha sido solicitada ya) */}
+          {!puja.solicitud_cancelacion && puja.estado_puja === 'ganadora_pendiente' && (
+            <Tooltip title="Solicitar Cancelación">
+              <IconButton 
+                color="error" 
+                size="small" 
+                onClick={() => handleOpenCancel(puja)}
+              >
+                <Cancel fontSize="small" />
+              </IconButton>
+            </Tooltip>
           )}
           <Tooltip title="Ir al Lote">
             <IconButton size="small" onClick={() => navigate(ROUTES.CLIENT.LOTES.DETALLE.replace(':id', String(puja.id_lote)))}>
@@ -285,6 +326,16 @@ const MisPujas: React.FC = () => {
           </Button>
         </Stack>
       </BaseModal>
+
+      {/* NUEVO MODAL DE SOLICITUD DE CANCELACIÓN EXTRAÍDO */}
+      <CancelacionModal
+        open={cancelModal.isOpen}
+        puja={selectedPuja}
+        isLoading={solicitarCancelacionMutation.isPending}
+        onClose={cancelModal.close}
+        onConfirm={(motivo) => solicitarCancelacionMutation.mutate(motivo)}
+        formatCurrency={formatCurrency}
+      />
 
       <TwoFactorAuthModal
         open={twoFaModal.isOpen}

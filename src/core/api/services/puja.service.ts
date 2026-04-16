@@ -1,9 +1,9 @@
 // src/core/api/services/puja.service.ts
 
+import type { GenericResponseDto } from "@/core/types/auth.dto";
 import type { ConfirmarPuja2faDto, CreatePujaDto, PujaCheckoutResponse, PujaDto } from "@/core/types/puja.dto";
 import type { AxiosResponse } from "axios";
 import httpService from "../httpService";
-import type { GenericResponseDto } from "@/core/types/auth.dto";
 
 const BASE_ENDPOINT = '/pujas';
 
@@ -111,15 +111,15 @@ const PujaService = {
   },
 
   manageAuctionEnd: async (idLote: number, idGanador: number | null): Promise<AxiosResponse<GenericResponseDto>> => {
-    return await httpService.post(`${BASE_ENDPOINT}/gestionar_finalizacion`, { 
+    return await httpService.post(`${BASE_ENDPOINT}/gestionar_finalizacion`, {
       id_lote: idLote,
-      id_ganador: idGanador 
+      id_ganador: idGanador
     });
   },
 
   cancelarGanadoraAnticipada: async (id: number, motivo: string): Promise<AxiosResponse<GenericResponseDto>> => {
-    return await httpService.post(`${BASE_ENDPOINT}/cancelar_puja_ganadora/${id}`, { 
-        motivo_cancelacion: motivo 
+    return await httpService.post(`${BASE_ENDPOINT}/cancelar_puja_ganadora/${id}`, {
+      motivo_cancelacion: motivo
     });
   },
 
