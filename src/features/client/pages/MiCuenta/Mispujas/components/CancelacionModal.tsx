@@ -47,8 +47,11 @@ const CancelacionModal: React.FC<CancelModalProps> = ({
   };
 
   const handleConfirm = () => {
-    console.log(motivo)
+    console.log("estado local motivo", JSON.stringify(motivo))
+    console.log('2. Largo:', motivo.length);
     onConfirm(motivo);
+
+
   };
 
   const nombreProyecto =

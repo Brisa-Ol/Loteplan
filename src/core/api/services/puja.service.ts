@@ -86,16 +86,13 @@ const PujaService = {
   // =================================================
 
     requestCancellation: async (id: number, motivo: string): Promise<AxiosResponse<{ success: boolean; message: string }>> => {
-      try{
-        const res = await httpService.post(`${BASE_ENDPOINT}/mis_pujas/${id}/solicitar-cancelacion`, { 
-        motivo_cancelacion: motivo 
-    });
-        return res
-      }catch(error){
-        console.error("Error al solicitar cancelación de puja:", error);
-        throw error; // Re-lanzar el error para que el componente pueda manejarlo
-      }
-  },
+      console.log('4. Motivo en service:', JSON.stringify(motivo));
+      console.log('5. Body a enviar:', { motivo: motivo });
+      const res = await httpService.post(`${BASE_ENDPOINT}/mis_pujas/${id}/solicitar-cancelacion`, {
+        motivo: motivo})
+        console.log(res)
+      return res
+      },
 
 
   // =================================================

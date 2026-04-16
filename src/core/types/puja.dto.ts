@@ -81,7 +81,7 @@ export interface PujaDto extends BaseDTO {
 
   //Detalles de solicitud de Rechazo de puja (si aplica)
   solicitud_cancelacion: boolean
-  motivo_cancelacion: string | null
+  motivo: string | null
 }
 
 /**

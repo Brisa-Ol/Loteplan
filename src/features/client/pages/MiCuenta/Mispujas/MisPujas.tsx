@@ -333,7 +333,10 @@ const MisPujas: React.FC = () => {
         puja={selectedPuja}
         isLoading={solicitarCancelacionMutation.isPending}
         onClose={cancelModal.close}
-        onConfirm={(motivo) => solicitarCancelacionMutation.mutate(motivo)}
+        onConfirm={(motivo) => {
+          console.log('3. Motivo recibido en MisPujas:', JSON.stringify(motivo));
+          solicitarCancelacionMutation.mutate(motivo);
+        }}
         formatCurrency={formatCurrency}
       />
 
