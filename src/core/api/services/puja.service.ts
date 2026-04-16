@@ -4,6 +4,7 @@ import type { ConfirmarPuja2faDto, CreatePujaDto, PujaCheckoutResponse, PujaDto 
 import type { AxiosResponse } from "axios";
 import httpService from "../httpService";
 import type { GenericResponseDto } from "@/core/types/auth.dto";
+import { request } from "http";
 
 const BASE_ENDPOINT = '/pujas';
 
@@ -80,6 +81,23 @@ const PujaService = {
   confirmPayment2FA: async (data: ConfirmarPuja2faDto): Promise<AxiosResponse<PujaCheckoutResponse>> => {
     return await httpService.post(`${BASE_ENDPOINT}/confirmar-2fa`, data);
   },
+
+  // =================================================
+  // 💳 Solicitud de baja de Pago
+  // =================================================
+
+    requestCancellation: async (id: number, motivo: string): Promise<AxiosResponse<PujaDto>> => {
+      try{
+        const res = await httpService.post(`${BASE_ENDPOINT}/mis_pujas/${id}/solicitar-cancelacion`, { 
+        motivo_cancelacion: motivo 
+    });
+        return res.data
+      }catch(error){
+        console.error("Error al solicitar cancelación de puja:", error);
+        throw error; // Re-lanzar el error para que el componente pueda manejarlo
+      }
+  }
+
 
   // =================================================
   // 👮 GESTIÓN ADMINISTRATIVA (ADMIN)
