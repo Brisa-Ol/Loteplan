@@ -70,7 +70,7 @@ const UserDashboard: React.FC = () => {
 
   const [showKycAprobado, setShowKycAprobado] = React.useState(() => {
     // Solo se muestra si NO fue cerrado en esta sesión
-    return localStorage.getItem('kyc_aprobado_visto') !== 'true';
+    return sessionStorage.getItem('kyc_aprobado_visto') !== 'true';
   });
 
   // ========== 1. DATA FETCHING ==========

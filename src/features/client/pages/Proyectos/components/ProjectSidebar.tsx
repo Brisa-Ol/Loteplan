@@ -6,6 +6,7 @@ import {
   Download,
   GppGood,
   HistoryEdu,
+  Info,
   InfoOutlined,
   Lock,
   MonetizationOn,
@@ -18,6 +19,7 @@ import {
   Box,
   Button,
   Card,
+  CircularProgress,
   Divider,
   LinearProgress,
   Stack,
@@ -30,6 +32,9 @@ import { useProyectoHelpers } from '@/features/client/hooks/useProyectoHelpers';
 import { ROUTES } from '@/routes';
 import { BaseModal } from '@/shared';
 import { useNavigate } from 'react-router-dom';
+import ContratoPlantillaService from '@/core/api/services/contrato-plantilla.service';
+import ImagenService from '@/core/api/services/imagen.service';
+import { useQuery } from '@tanstack/react-query';
 
 // ==========================================
 // 1. INTERFACES
@@ -158,6 +163,16 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({ logic, proyecto,
   const [openResubModal, setOpenResubModal] = useState(false)
   const navigate = useNavigate()
 
+  //Para plantilla contrato
+  const [openContratoModal, setOpenContratoModal] = useState(false)
+
+  const { data: plantillas, isLoading: loadingPlantilla } = useQuery({
+  queryKey: ['plantillaContrato', proyecto.id],
+  queryFn: async () => (await ContratoPlantillaService.findByProject(proyecto.id)).data,
+  enabled: openContratoModal,
+  staleTime: 5 * 60 * 1000,
+});
+  const plantillaActual = plantillas?.[0] ?? null;
   //fin variables Thomy
 
   //Funciones Thomy
@@ -318,8 +333,12 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({ logic, proyecto,
                               <Button variant="contained" color="warning" fullWidth size="large" onClick={logic.handleClickFirmar} sx={{ color: 'white', fontWeight: 700 }}>
                                 Firmar Contrato Digital
                               </Button>
-                              <Button variant="text" size="small" onClick={logic.modales.contrato.open} sx={{ fontWeight: 600 }}>
-                                Ver borrador del contrato
+                              <Button 
+                                variant="text" 
+                                size="small" 
+                                onClick={() => setOpenContratoModal(true)} 
+                                sx={{ fontWeight: 600 }}>
+                                  Ver borrador del contrato
                               </Button>
                             </Stack>
                           )}
@@ -344,15 +363,25 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({ logic, proyecto,
                                 variant="contained"
                                 fullWidth
                                 onClick={handleSubscriptionOrSigning}
-                                disabled={isFinalizado}
+                                disabled={isFinalizado || (isLleno && !puedeFirmar)}
                                 sx={{ fontWeight: 700 }}
                               >
-                                {puedeFirmar
+                                {puedeFirmar 
                                   ? 'Firmar contrato'
                                   : isFinalizado
                                     ? 'Inversión finalizada'
-                                    : 'Volver a suscribirse para adquirir otro Token'}
+                                    : isLleno
+                                      ? 'Proyecto sin cupos disponibles'
+                                      :'Volver a suscribirse para adquirir otro Token'}
                               </Button>
+
+                              {/* Proyecto lleno */}
+                              {isLleno && (
+                                <Alert severity="error" icon={<Info />}>
+                                  Este proyecto está lleno. No es posible realizar nuevas suscripciones.
+                                </Alert>
+                              )}
+
 
                               {/* 📄 Contratos */}
                               <Button
@@ -427,6 +456,58 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({ logic, proyecto,
             <li>Obtendrás un <strong>Token adicional</strong> para pujas mensuales.</li>
           </Box>
         </Stack>
+      </BaseModal>
+      <BaseModal
+        open={openContratoModal}
+        onClose={() => setOpenContratoModal(false)}
+        title="Borrador del Contrato"
+        subtitle={proyecto.nombre_proyecto}
+        icon={<Description />}
+        headerColor="primary"
+        maxWidth="md"
+        cancelText="Cerrar"
+        PaperProps={{ 
+          sx: { 
+            height: '90vh', 
+            maxHeight: '90vh',
+            display: 'flex', 
+            flexDirection: 'column' 
+          } 
+        }}
+      >
+        {loadingPlantilla ? (
+          <Box display="flex" justifyContent="center" alignItems="center" minHeight={400}>
+            <CircularProgress />
+          </Box>
+        ) : !plantillaActual ? (
+          <Alert severity="warning">
+            El borrador del contrato no está disponible aún.
+          </Alert>
+        ) : (
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: 'column',
+            flex: 1,
+            height: '100%',
+            minHeight: 0,   
+            borderRadius: 2, 
+            overflow: 'hidden',
+            border: '1px solid #e0e0e0'
+          }}>
+            <iframe
+              src={ImagenService.resolveImageUrl(plantillaActual.url_archivo)}
+              title="Borrador del contrato"
+              style={{ 
+                flex: 1,
+                width: '100%', 
+                height: '100%',
+                minHeight: 0,
+                border: 'none', 
+                display: 'block' 
+              }}
+            />
+          </Box>
+        )}
       </BaseModal>
     </Card>
   );

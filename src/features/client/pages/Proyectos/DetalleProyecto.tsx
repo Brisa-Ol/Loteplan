@@ -85,7 +85,7 @@ interface TabOverviewProps {
   esMensual: boolean;
   googleMapsUrl: string | null;
 }
-const TabOverview = React.memo(({ proyecto, esMensual, googleMapsUrl }: TabOverviewProps) => {
+const TabOverview = React.memo(({ proyecto, esMensual }: TabOverviewProps) => {
   const theme = useTheme();
   const mapEmbedUrl = proyecto.map_url
     ?? (proyecto.latitud && proyecto.longitud
@@ -158,7 +158,6 @@ const DetalleProyecto: React.FC = () => {
 
       const data = proyectsFetched.data;
 
-      console.log(data);
 
       const cantidadSuscripciones = data.filter(
         (p) => p.id_proyecto === logic.proyecto?.id
@@ -166,7 +165,6 @@ const DetalleProyecto: React.FC = () => {
 
       setCantProyectsUser(cantidadSuscripciones);
 
-      console.log(cantidadSuscripciones);
     };
 
     getProyects();
@@ -176,9 +174,7 @@ const DetalleProyecto: React.FC = () => {
     if (!logic.proyecto?.id) return; // 🔥 CLAVE
     const trackingContracts = async () => {
       try {
-        console.log(`Id proyecto: ${logic.proyecto?.id}`)
         const res = await ContratoService.trackPaymentAndContract(Number(logic.proyecto?.id));
-        console.log(res)
         setTrackingData(res);
       } catch (err) {
         console.error(err);
@@ -215,7 +211,6 @@ const DetalleProyecto: React.FC = () => {
   }, [logic.proyecto?.latitud, logic.proyecto?.longitud]);
 
   const { tokensDisponibles } = useVerificarSuscripcion(Number(logic.proyecto?.id));
-  console.log("tokens disponibles", tokensDisponibles);
   const { withSecurityCheck, securityModalProps } = useSecurityGuard();
 
   const handleOpenCheckoutSecurely = useCallback(() => {
