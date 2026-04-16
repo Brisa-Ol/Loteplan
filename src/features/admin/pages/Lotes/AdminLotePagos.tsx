@@ -1,28 +1,26 @@
 // src/features/admin/pages/Cobranzas/AdminLotePagos.tsx
 
 import {
-  AssignmentInd,
-  AttachMoney, 
-  Block, 
-  CancelScheduleSend, 
-  CheckCircle,
+  AttachMoney,
+  Block,
+  CancelScheduleSend,
   Dashboard as DashboardIcon,
   ErrorOutline,
   History as HistoryIcon,
   Image as ImageIcon,
   ListAlt as ListIcon,
   MailOutline,
-  Person, 
-  Phone,
+  Person,
   Timeline,
-  TrendingUp
+  TrendingUp,
+  WarningAmber // <-- Importado
 } from '@mui/icons-material';
 import {
   Avatar, Box, Card, CardContent, Chip,
   IconButton, Paper, Stack, Tab,
   Table, TableBody, TableCell, TableContainer, TableHead, TablePagination, TableRow,
-  Tabs,
-  Tooltip, Typography, alpha, useTheme
+  Tabs, Tooltip, Typography, alpha, useTheme,
+  Dialog, DialogTitle, DialogContent, DialogActions, Button // <-- Importados
 } from '@mui/material';
 import React, { useMemo, useState } from 'react';
 import {
@@ -161,8 +159,26 @@ const AdminLotePagos: React.FC = () => {
       align: 'right',
       render: (l) => {
         const isPaid = checkIsPaid(l);
+        // ✅ VARIABLES DECLARADAS CORRECTAMENTE
+        const pujaGanadora = logic.pujasPorLote[l.id]?.[0]; 
+        const solicitaCancelacion = pujaGanadora?.solicitud_cancelacion;
+
         return (
           <Stack direction="row" spacing={1} justifyContent="flex-end">
+            
+            {/* NUEVO: Alerta de cancelación */}
+            {solicitaCancelacion && !isPaid && (
+              <Tooltip title="Evaluar solicitud de baja">
+                <IconButton 
+                  size="small" 
+                  sx={{ color: 'warning.main', bgcolor: alpha(theme.palette.warning.main, 0.1) }}
+                  onClick={() => logic.handleOpenCancelModal(pujaGanadora, l)}
+                >
+                  <WarningAmber fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
+
             {isPaid ? (
               <Tooltip title="Ver detalles de pago">
                 <IconButton size="small" sx={{ color: 'success.main', bgcolor: alpha(theme.palette.success.main, 0.05) }}>
@@ -217,35 +233,66 @@ const AdminLotePagos: React.FC = () => {
       <QueryHandler isLoading={logic.isLoading} error={logic.error as Error}>
         {tabIndex === 0 ? (
           <Box>
-            {/* PESTAÑA 0: DASHBOARD */}
             <Box sx={{ height: 320, mb: 5 }}>
               <RiskDistributionChart data={logic.analytics.chartData} theme={theme} />
             </Box>
-
-            {/* Nueva tabla Top 3 debajo del gráfico */}
             <Box sx={{ mb: 5 }}>
-              <Top3PostoresTable
-                lotes={logic.lotesPendientesTotal}
-                pujasPorLote={logic.pujasPorLote}
-                theme={theme}
-              />
+              <Top3PostoresTable lotes={logic.lotesPendientesTotal} pujasPorLote={logic.pujasPorLote} theme={theme} />
             </Box>
           </Box>
         ) : (
-          <>
-            {/* PESTAÑA 1: COBROS Y SEGUIMIENTOS */}
-            <DataTable
-              columns={columnsCobros}
-              data={logic.lotesPendientesTotal}
-              getRowKey={row => row.id}
-              showInactiveToggle={false}
-              pagination
-            />
-          </>
+          <DataTable
+            columns={columnsCobros}
+            data={logic.lotesPendientesTotal}
+            getRowKey={row => row.id}
+            showInactiveToggle={false}
+            pagination
+          />
         )}
       </QueryHandler>
 
       <ConfirmDialog controller={logic.modales.confirm} onConfirm={logic.handleConfirmAction} isLoading={logic.isMutating} />
+
+      {/* ✅ NUEVO MODAL: LECTURA Y APROBACIÓN DE BAJA */}
+      {logic.modales?.cancelRequest && (
+        <Dialog open={logic.modales.cancelRequest.isOpen} onClose={logic.handleCloseCancelModal} maxWidth="sm" fullWidth>
+          <DialogTitle sx={{ color: 'warning.main', display: 'flex', alignItems: 'center', gap: 1 }}>
+            <WarningAmber /> Solicitud de Baja de Puja
+          </DialogTitle>
+          <DialogContent dividers>
+            <Typography variant="body2" mb={2}>
+              El usuario <strong>{logic.modales.cancelRequest.data?.usuario?.nombre} {logic.modales.cancelRequest.data?.usuario?.apellido}</strong> ha solicitado cancelar su adjudicación para el lote <strong>{logic.modales.cancelRequest.lote?.nombre_lote}</strong>.
+            </Typography>
+            
+            <Paper variant="outlined" sx={{ p: 2, bgcolor: alpha(theme.palette.warning.main, 0.05), borderColor: 'warning.light' }}>
+              <Typography variant="caption" color="text.secondary" fontWeight={700}>
+                MOTIVO INDICADO POR EL USUARIO:
+              </Typography>
+              <Typography variant="body1" sx={{ mt: 1, fontStyle: 'italic', fontWeight: 500, color: 'text.primary' }}>
+                "{logic.modales.cancelRequest.data?.motivo_cancelacion || 'No especificó ningún motivo.'}"
+              </Typography>
+            </Paper>
+
+            <Typography variant="body2" color="error.main" sx={{ mt: 2, fontWeight: 600 }}>
+              Al aprobar esta baja, se cancelará la puja actual y el lote avanzará automáticamente al siguiente postor.
+            </Typography>
+          </DialogContent>
+          <DialogActions sx={{ p: 2 }}>
+            <Button onClick={logic.handleCloseCancelModal} color="inherit" disabled={logic.isMutating}>
+              Cerrar
+            </Button>
+            <Button 
+              onClick={() => logic.aprobarCancelacion(logic.modales.cancelRequest.data?.id)} 
+              color="warning" 
+              variant="contained"
+              disabled={logic.isMutating}
+            >
+              Aprobar Baja
+            </Button>
+          </DialogActions>
+        </Dialog>
+      )}
+
     </PageContainer>
   );
 };
@@ -295,7 +342,6 @@ const Top3PostoresTable = React.memo<{
   pujasPorLote: Record<number, PujaDto[]>;
   theme: any
 }>(({ lotes, pujasPorLote, theme }) => {
-  // Estados para la paginación
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
 
@@ -308,7 +354,6 @@ const Top3PostoresTable = React.memo<{
     setPage(0);
   };
 
-  // Cálculo de los lotes visibles
   const visibleLotes = useMemo(() => {
     return lotes.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
   }, [lotes, page, rowsPerPage]);
@@ -423,7 +468,6 @@ const Top3PostoresTable = React.memo<{
           </Table>
         </TableContainer>
 
-        {/* CONTROL DE PAGINACIÓN */}
         <TablePagination
           rowsPerPageOptions={[5, 10, 25]}
           component="div"

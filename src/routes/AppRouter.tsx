@@ -36,7 +36,7 @@ const UserDashboard = lazy(() => import('@/features/client/pages/UserDashboard/U
 const MisPagos = lazy(() => import('@/features/client/pages/MiCuenta/pagos/MisPagos'));
 const MisInversiones = lazy(() => import('@/features/client/pages/MiCuenta/MisInversiones'));
 const MisSuscripciones = lazy(() => import('@/features/client/pages/MiCuenta/MisSuscripciones'));
-const MisPujas = lazy(() => import('@/features/client/pages/MiCuenta/MisPujas'));
+const MisPujas = lazy(() => import('@/features/client/pages/MiCuenta/Mispujas/MisPujas'));
 const MisTransacciones = lazy(() => import('@/features/client/pages/MiCuenta/pagos/MisTransacciones'));
 const MisResumenes = lazy(() => import('@/features/client/pages/MiCuenta/MisResumenes'));
 const PagoResult = lazy(() => import('@/features/client/pages/MiCuenta/pagos/PagoResult'));
