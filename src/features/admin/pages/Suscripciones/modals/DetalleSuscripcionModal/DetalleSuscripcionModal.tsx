@@ -12,6 +12,8 @@ import FinancialSummary from './FinancialSummary';
 import IdentityCards from './IdentityCards';
 import PendingPaymentsSection from './PendingPaymentsSection';
 import { AdvancePaymentsControl, AuditFooter } from './AdvancePaymentsControl';
+import { TokenDevolutionSection } from './TokenDevolutionSection';
+import { PujasSection } from './PujasSection';
 
 
 
@@ -115,6 +117,15 @@ const DetalleSuscripcionModal: React.FC<Props> = ({ open, onClose, suscripcion }
                         cantidadMeses={cantidadMeses}
                         setCantidadMeses={setCantidadMeses}
                         generateMutation={generatePaymentsMutation}
+                    />
+                )}
+
+                <PujasSection idSuscripcion={suscripcion.id} />
+
+                {suscripcion.tokens_disponibles === 0 && (
+                    <TokenDevolutionSection 
+                        suscripcion={suscripcion}
+                        onSuccess={() => setFeedback({ type: 'success', message: '✅ Token devuelto correctamente.' })}
                     />
                 )}
 

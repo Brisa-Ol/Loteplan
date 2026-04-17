@@ -99,6 +99,16 @@ const PujaService = {
   // 👮 GESTIÓN ADMINISTRATIVA (ADMIN)
   // =================================================
 
+  getFilteredPujasByEstado: (idSuscripcion: number, estado?: string, estado2?: string): Promise<AxiosResponse<PujaDto[]>> => {
+    if (estado && estado2) {
+      return httpService.get(`${BASE_ENDPOINT}/suscripcion/${idSuscripcion}?estado_puja=${estado},${estado2}`);
+    }else if (estado) {
+      return httpService.get(`${BASE_ENDPOINT}/suscripcion/${idSuscripcion}?estado_puja=${estado}`);
+    }else {
+      return httpService.get(`${BASE_ENDPOINT}/suscripcion/${idSuscripcion}`);
+    }
+  },
+
   getHighestBid: async (loteId: number): Promise<AxiosResponse<PujaDto>> => {
     return await httpService.get(`${BASE_ENDPOINT}/lote/${loteId}/highest`);
   },

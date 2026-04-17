@@ -103,6 +103,13 @@ const TransaccionService = {
   findById: async (id: number): Promise<AxiosResponse<TransaccionDto>> => {
     return await httpService.get(`${BASE_ENDPOINT}/${id}`);
   },
+
+
+  /* Busca una transacción por el ID de la puja asociada */
+  getTransaccionByPujaId: async (id_puja: number): Promise<AxiosResponse<{transaccion_id:number}>> => {
+    return await httpService.get(`${BASE_ENDPOINT}/por-puja/${id_puja}/transaccion-id`);
+  },
+
   /**
    * Crea una nueva transacción manualmente (solo administradores).
    * 

@@ -65,6 +65,10 @@ const SuscripcionService = {
     return await httpService.get(`${BASE_PROYECTO}/metrics/cancelacion`);
   },
 
+  updateSuscription: async (id: number, data: SuscripcionDto): Promise<AxiosResponse<SuscripcionDto>> => {
+    return await httpService.patch(`${BASE_PROYECTO}/${id}`, data);
+  },
+
   // =================================================
   // 🛑 HISTORIAL DE CANCELACIONES (suscripcion.routes.js)
   // =================================================

@@ -61,6 +61,12 @@ export interface LoteDto extends BaseDTO {
   proyecto?: ProyectoMinimalDto; // 👈 Ahora contiene la lógica del Back
   ganador?: UsuarioMinimalDto;
   pujas?: any[];
+  proyectoLote?: {
+              id: number,
+              nombre_proyecto: string,
+              tipo_inversion: string,
+              estado_proyecto: string,
+          }
 }
 
 // ==========================================

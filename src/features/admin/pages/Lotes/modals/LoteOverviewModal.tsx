@@ -28,6 +28,7 @@ import imagenService from '@/core/api/services/imagen.service';
 import type { LoteDto } from '@/core/types/lote.dto';
 import type { ProyectoDto } from '@/core/types/proyecto.dto';
 import { BaseModal } from '@/shared';
+import { formatDateTime } from '@/shared/utils/FormatDateTime';
 
 // ============================================================================
 // INTERFACES
@@ -254,6 +255,36 @@ const LoteOverviewModal: React.FC<LoteOverviewModalProps> = ({ open, onClose, lo
               </Stack>
             </Paper>
           )}
+
+          {/* Fehcas de inicio y fin */}
+          <Paper elevation={0} sx={{
+              p: 2.5, borderRadius: 3,
+              border: '1px solid',
+              borderColor: alpha(theme.palette.primary.main, 0.2),
+              bgcolor: alpha(theme.palette.primary.main, 0.03)
+            }}>
+            <Stack>
+              {lote.fecha_fin && lote.fecha_inicio ?(
+                <>
+                  <Typography variant="body2" color="text.secondary">
+                    <strong>Fecha Inicio Subasta:</strong> {formatDateTime(lote.fecha_inicio)}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    <strong>Fecha Fin Subasta:</strong> {formatDateTime(lote.fecha_fin)}
+                  </Typography>
+                </>
+              )
+            
+              :(
+                <Typography variant="body2" color="text.disabled" fontWeight={600}>Fechas de subasta no registradas</Typography>
+              )
+              
+              }
+                
+
+            </Stack>
+
+          </Paper>
 
           {/* Ubicación GPS */}
           {lote.latitud && (
