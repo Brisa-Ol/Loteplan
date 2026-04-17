@@ -78,33 +78,35 @@ const AdminLotePagos: React.FC = () => {
     if (!logic.lotesPendientesTotal) return [];
 
     return logic.lotesPendientesTotal.filter((l) => {
-      // Obtenemos la puja principal asociada a este lote
       const pujaPrincipal = logic.pujasPorLote?.[l.id]?.[0];
 
-      // 1. FILTRO POR TEXTO (Buscador)
-      const term = searchTerm.toLowerCase();
+      // 1. FILTRO POR TEXTO (Buscador blindado contra nulos)
+      const term = (typeof searchTerm === 'string' ? searchTerm : '').toLowerCase();
       const loteName = (l.nombre_lote || '').toLowerCase();
-
-      // Intentamos sacar el ganador del lote o de la puja principal (según cómo arme el DTO el backend)
       const ganador = l.ganador || pujaPrincipal?.usuario;
       const userName = ganador ? `${ganador.nombre} ${ganador.apellido}`.toLowerCase() : '';
       const userAlias = (ganador?.nombre_usuario || '').toLowerCase();
 
       const matchesSearch = !term || loteName.includes(term) || userName.includes(term) || userAlias.includes(term);
 
-      // 2. FILTRO POR ESTADO (Exacto al backend)
+      // 2. FILTRO POR ESTADO (Simplificado: Pagado vs No Pagado)
       let matchesStatus = true;
       if (filterStatus !== 'all') {
-        // Leemos el estado_puja real que viene de la API
-        const estadoBackend = pujaPrincipal?.estado_puja;
+        // Usamos tu propia función checkIsPaid o verificamos directamente la puja
+        const isPagado = checkIsPaid(l) || pujaPrincipal?.estado_puja === 'ganadora_pagada';
 
-        // Si el estado en la base de datos coincide con el seleccionado en el dropdown
-        matchesStatus = estadoBackend === filterStatus;
+        if (filterStatus === 'pagado') {
+          matchesStatus = isPagado;
+        } else if (filterStatus === 'no_pagado') {
+          matchesStatus = !isPagado; // Si no está pagado, es mora, pendiente, incumplimiento, etc.
+        }
       }
 
       return matchesSearch && matchesStatus;
     });
   }, [logic.lotesPendientesTotal, logic.pujasPorLote, searchTerm, filterStatus]);
+
+
   const columnsCobros = useMemo<DataTableColumn<LoteDto>[]>(() => [
     {
       id: 'lote',
@@ -301,15 +303,17 @@ const AdminLotePagos: React.FC = () => {
                   <FilterSearch
                     placeholder="Buscar por Lote o Adjudicado..."
                     value={searchTerm}
-                    /* Nota: Dependiendo de cómo esté construido tu FilterSearch, 
-                       puede ser onSearch={setSearchTerm} o onChange={(e) => setSearchTerm(e.target.value)} */
-                    onChange={(e: any) => setSearchTerm(e.target?.value || e)}
+                   
+                    onChange={(e: any) => {
+                      const val = typeof e === 'string' ? e : e?.target?.value ?? '';
+                      setSearchTerm(val);
+                    }}
                   />
                 </Box>
                 {/* Selector de Estado */}
                 <Box sx={{ display: 'flex', gap: 1.5, width: { xs: '100%', sm: 'auto' }, justifyContent: { xs: 'center', lg: 'flex-end' } }}>
                   <FilterSelect
-                    label="Estado de la Puja"
+                    label="Estado del Pago"
                     value={filterStatus}
                     onChange={(e: any) => setFilterStatus(e.target.value)}
                     sx={{ flex: 1, minWidth: 240 }}
@@ -317,14 +321,11 @@ const AdminLotePagos: React.FC = () => {
                     <MenuItem value="all">
                       <strong>Todos los Estados</strong>
                     </MenuItem>
-
-                    <MenuItem value="ganadora_pendiente">Ganadora - Pendiente de pago</MenuItem>
-                    <MenuItem value="ganadora_pagada">Ganadora - Pagada</MenuItem>
-
-                    {/* Filtro específico para incumplimiento */}
-                    <MenuItem value="ganadora_incumplimiento">Ganadora - En Incumplimiento</MenuItem>
+                    <MenuItem value="pagado">Pagado</MenuItem>
+                    <MenuItem value="no_pagado">No Pagado</MenuItem>
                   </FilterSelect>
                 </Box>
+
               </Box>
             </FilterBar>
 
@@ -505,9 +506,12 @@ const Top3PostoresTable = React.memo<{
                       </TableCell>
 
                       {top3.map((puja, index) => {
+                        // SOLUCIÓN: Creamos una key combinada que SIEMPRE será única en todo el DOM
+                        const cellKey = `cell-${lote.id}-${puja?.id || `empty-${index}`}`;
+
                         if (!puja || !puja.usuario) {
                           return (
-                            <TableCell key={index} sx={{ borderRight: index !== 2 ? '1px solid' : 'none', borderColor: 'divider', bgcolor: alpha(theme.palette.action.disabledBackground, 0.02) }}>
+                            <TableCell key={cellKey} sx={{ borderRight: index !== 2 ? '1px solid' : 'none', borderColor: 'divider', bgcolor: alpha(theme.palette.action.disabledBackground, 0.02) }}>
                               <Typography variant="caption" color="text.disabled" fontStyle="italic">Sin postor</Typography>
                             </TableCell>
                           );
@@ -517,7 +521,7 @@ const Top3PostoresTable = React.memo<{
                         const estadoColor = puja.estado_puja.includes('ganadora') ? 'warning' : 'default';
 
                         return (
-                          <TableCell key={puja.id} sx={{ borderRight: index !== 2 ? '1px solid' : 'none', borderColor: 'divider' }}>
+                          <TableCell key={cellKey} sx={{ borderRight: index !== 2 ? '1px solid' : 'none', borderColor: 'divider' }}>
                             <Box display="flex" flexDirection="column" gap={0.5} py={0.5}>
                               <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1}>
                                 <Typography variant="body2" fontWeight={700} color="text.primary" noWrap sx={{ maxWidth: 120 }}>
