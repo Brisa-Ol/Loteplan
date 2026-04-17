@@ -84,7 +84,7 @@ const Register: React.FC = () => {
           }}>
             <PersonAdd fontSize="large" />
           </Box>
-          <Typography variant="h5" fontWeight={700} gutterBottom>Regístrate</Typography>
+          <Typography variant="h4" fontWeight={700} gutterBottom>Regístrate</Typography>
         </Box>
 
         {status.error && (
@@ -145,13 +145,13 @@ const Register: React.FC = () => {
         </form>
 
         <Box textAlign="center" mt={4}>
-          <Typography variant="body2" color="text.secondary">
-            ¿Ya tienes cuenta?{' '}
+          <Typography variant="subtitle1" color="text.secondary">
+            ¿Ya tenes cuenta?{' '}
             <Link
-              component="button" variant="body2" fontWeight={700} color="primary" underline="hover"
+              component="button" variant="body1" fontWeight={800} color="primary" underline="hover"
               onClick={actions.navigateToLogin}
             >
-              Inicia sesión aquí
+              INICIA SESION
             </Link>
           </Typography>
         </Box>

@@ -112,7 +112,7 @@ const LoginPage: React.FC = () => {
           }}>
             <LockOpen fontSize="large" />
           </Box>
-          <Typography variant="h5" fontWeight={700}>Iniciar Sesión</Typography>
+          <Typography variant="h4" fontWeight={700}>Iniciar Sesión</Typography>
         </Box>
 
         {/* Zona de Alertas */}
@@ -161,19 +161,19 @@ const LoginPage: React.FC = () => {
         {/* Footer Links */}
         <Box textAlign="center" mt={4} display="flex" flexDirection="column" gap={1.5}>
           <Link
-            component="button" variant="body2" color="text.secondary" underline="hover"
+            component="button" variant="h6" color="text.secondary" underline="hover"
             onClick={() => navigate(ROUTES.FORGOT_PASSWORD)}
           >
             ¿Olvidaste tu contraseña?
           </Link>
 
-          <Typography variant="body2" color="text.secondary">
-            ¿No tienes cuenta?{' '}
+          <Typography variant="subtitle1" color="text.secondary">
+            ¿No tenes cuenta?{' '}
             <Link
-              component="button" variant="body2" fontWeight={700} underline="hover"
+              component="button" variant="body1" fontWeight={800} underline="hover"
               onClick={() => navigate(ROUTES.REGISTER)}
             >
-              Regístrate
+              REGISTRATE
             </Link>
           </Typography>
         </Box>

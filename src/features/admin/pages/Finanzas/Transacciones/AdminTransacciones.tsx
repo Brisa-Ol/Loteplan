@@ -316,11 +316,8 @@ const AdminTransacciones: React.FC = () => {
           loading={logic.isLoading}
         />
       </MetricsGrid>
-
       {/* 4. CONTROLES Y FILTROS */}
       <Stack spacing={2} mb={3}>
-
-        {/* Toggle de Vista */}
         <Stack direction="row" justifyContent="flex-end">
           <ViewModeToggle
             value={viewMode}
@@ -332,73 +329,101 @@ const AdminTransacciones: React.FC = () => {
           />
         </Stack>
 
-        {/* Contenedor de Filtros */}
-        <FilterBar
-          sx={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: 2,
-            alignItems: 'center'
-          }}
-        >
-          {/* Búsqueda de texto */}
-          <FilterSearch
-            placeholder="Buscar por cliente o proyecto..."
-            value={logic.searchTerm}
-            onSearch={logic.setSearchTerm}
-            sx={{ flex: 1, minWidth: { xs: '100%', sm: '390px' } }}
-          />
-
-          {/* Filtro por Rango de Fechas */}
-          <Stack direction="row" spacing={1} alignItems="center" sx={{ width: { xs: '100%', sm: 'auto' } }}>
-            <TextField
-              label="Desde"
-              type="date"
-              size="small"
-              InputLabelProps={{ shrink: true }}
-              value={logic.dateFrom}
-              onChange={(e) => logic.setDateFrom(e.target.value)}
-              sx={dateInputStyles}
-            />
-            <Typography color="text.secondary">-</Typography>
-            <TextField
-              label="Hasta"
-              type="date"
-              size="small"
-              InputLabelProps={{ shrink: true }}
-              value={logic.dateTo}
-              onChange={(e) => logic.setDateTo(e.target.value)}
-              sx={dateInputStyles}
-            />
-          </Stack>
-
-          {/* Filtro Tipo */}
-          <FilterSelect
-            label="Tipo"
-            value={logic.filterType}
-            onChange={(e) => logic.setFilterType(e.target.value)}
-            sx={{ minWidth: 150, flex: { xs: 1, sm: 'none' } }}
+        <FilterBar sx={{ p: 2 }}>
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: { xs: 'column', lg: 'row' },
+              gap: 2,
+              alignItems: { xs: 'stretch', lg: 'center' },
+              width: '100%',
+            }}
           >
-            <MenuItem value="all">Todos</MenuItem>
-            <MenuItem value="directo">Inversión Directa</MenuItem>
-            <MenuItem value="pago_suscripcion_inicial">Suscripción Inicial</MenuItem>
-            <MenuItem value="mensual">Cuota Mensual</MenuItem>
-            <MenuItem value="Puja">Subasta</MenuItem>
-          </FilterSelect>
+            {/* Buscador */}
+            <Box sx={{ flex: 2, minWidth: { xs: '100%', lg: 300 } }}>
+              <FilterSearch
+                placeholder="Buscar por cliente o proyecto..."
+                value={logic.searchTerm}
+                onSearch={logic.setSearchTerm}
+                fullWidth
+              />
+            </Box>
 
-          {/* Filtro Estado */}
-          <FilterSelect
-            label="Estado"
-            value={logic.filterStatus}
-            onChange={(e) => logic.setFilterStatus(e.target.value)}
-            sx={{ minWidth: 150, flex: { xs: 1, sm: 'none' } }}
-          >
-            <MenuItem value="all">Todos</MenuItem>
-            <MenuItem value="pagado">Completados</MenuItem>
-            <MenuItem value="pendiente">Pendientes</MenuItem>
-            <MenuItem value="fallido">Fallidos / Rechazados</MenuItem>
-          </FilterSelect>
+            {/* Filtros secundarios */}
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: { xs: 'column', sm: 'row' },
+                gap: 2,
+                flexWrap: 'wrap',
+                alignItems: { xs: 'stretch', sm: 'center' },
+                flex: 1,
+              }}
+            >
+              {/* Fechas */}
+              <Stack
+                direction="row"
+                spacing={1}
+                alignItems="center"
+                sx={{ width: { xs: '100%', sm: 'auto' } }}
+              >
+                <TextField
+                  label="Desde"
+                  type="date"
+                  size="small"
+                  InputLabelProps={{ shrink: true }}
+                  value={logic.dateFrom}
+                  onChange={(e) => logic.setDateFrom(e.target.value)}
+                  sx={dateInputStyles}
+                />
+                <Typography color="text.secondary">-</Typography>
+                <TextField
+                  label="Hasta"
+                  type="date"
+                  size="small"
+                  InputLabelProps={{ shrink: true }}
+                  value={logic.dateTo}
+                  onChange={(e) => logic.setDateTo(e.target.value)}
+                  sx={dateInputStyles}
+                />
+              </Stack>
 
+              {/* Selects */}
+              <Box
+                sx={{
+                  display: 'flex',
+                  flexDirection: { xs: 'column', sm: 'row' },
+                  gap: 2,
+                  width: { xs: '100%', sm: 'auto' },
+                }}
+              >
+                <FilterSelect
+                  label="Tipo"
+                  value={logic.filterType}
+                  onChange={(e) => logic.setFilterType(e.target.value)}
+                  sx={{ flex: 1, minWidth: { xs: '100%', sm: 150 } }}
+                >
+                  <MenuItem value="all">Todos</MenuItem>
+                  <MenuItem value="directo">Inversión Directa</MenuItem>
+                  <MenuItem value="pago_suscripcion_inicial">Suscripción Inicial</MenuItem>
+                  <MenuItem value="mensual">Cuota Mensual</MenuItem>
+                  <MenuItem value="Puja">Subasta</MenuItem>
+                </FilterSelect>
+
+                <FilterSelect
+                  label="Estado"
+                  value={logic.filterStatus}
+                  onChange={(e) => logic.setFilterStatus(e.target.value)}
+                  sx={{ flex: 1, minWidth: { xs: '100%', sm: 150 } }}
+                >
+                  <MenuItem value="all">Todos</MenuItem>
+                  <MenuItem value="pagado">Completados</MenuItem>
+                  <MenuItem value="pendiente">Pendientes</MenuItem>
+                  <MenuItem value="fallido">Fallidos / Rechazados</MenuItem>
+                </FilterSelect>
+              </Box>
+            </Box>
+          </Box>
         </FilterBar>
       </Stack>
 

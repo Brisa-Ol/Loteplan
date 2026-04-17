@@ -13,14 +13,21 @@ import {
   Person,
   Timeline,
   TrendingUp,
-  WarningAmber // <-- Importado
+  WarningAmber
 } from '@mui/icons-material';
 import {
-  Avatar, Box, Card, CardContent, Chip,
-  IconButton, Paper, Stack, Tab,
+  Avatar, Box,
+  Button,
+  Card, CardContent, Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  IconButton, // <-- Importados
+  MenuItem,
+  Paper, Stack, Tab,
   Table, TableBody, TableCell, TableContainer, TableHead, TablePagination, TableRow,
-  Tabs, Tooltip, Typography, alpha, useTheme,
-  Dialog, DialogTitle, DialogContent, DialogActions, Button // <-- Importados
+  Tabs, Tooltip, Typography, alpha, useTheme
 } from '@mui/material';
 import React, { useMemo, useState } from 'react';
 import {
@@ -35,6 +42,7 @@ import { env } from '@/core/config/env';
 import type { LoteDto } from '@/core/types/lote.dto';
 import type { PujaDto } from '@/core/types/puja.dto';
 
+import { FilterBar, FilterSearch, FilterSelect } from '@/shared';
 import { AdminPageHeader } from '@/shared/components/admin/Adminpageheader';
 import { DataTable, type DataTableColumn } from '@/shared/components/data-grid/DataTable';
 import { QueryHandler } from '@/shared/components/data-grid/QueryHandler';
@@ -56,6 +64,48 @@ const AdminLotePagos: React.FC = () => {
   const logic = useAdminLotePagos();
   const theme = useTheme();
   const [tabIndex, setTabIndex] = useState(0);
+
+  // ============================================================================
+  // ESTADOS PARA FILTROS
+  // ============================================================================
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
+
+  // ============================================================================
+  // LÓGICA DE FILTRADO
+  // ============================================================================
+  const filteredLotes = useMemo(() => {
+    if (!logic.lotesPendientesTotal) return [];
+
+    return logic.lotesPendientesTotal.filter((l) => {
+      const pujaPrincipal = logic.pujasPorLote?.[l.id]?.[0];
+
+      // 1. FILTRO POR TEXTO (Buscador blindado contra nulos)
+      const term = (typeof searchTerm === 'string' ? searchTerm : '').toLowerCase();
+      const loteName = (l.nombre_lote || '').toLowerCase();
+      const ganador = l.ganador || pujaPrincipal?.usuario;
+      const userName = ganador ? `${ganador.nombre} ${ganador.apellido}`.toLowerCase() : '';
+      const userAlias = (ganador?.nombre_usuario || '').toLowerCase();
+
+      const matchesSearch = !term || loteName.includes(term) || userName.includes(term) || userAlias.includes(term);
+
+      // 2. FILTRO POR ESTADO (Simplificado: Pagado vs No Pagado)
+      let matchesStatus = true;
+      if (filterStatus !== 'all') {
+        // Usamos tu propia función checkIsPaid o verificamos directamente la puja
+        const isPagado = checkIsPaid(l) || pujaPrincipal?.estado_puja === 'ganadora_pagada';
+
+        if (filterStatus === 'pagado') {
+          matchesStatus = isPagado;
+        } else if (filterStatus === 'no_pagado') {
+          matchesStatus = !isPagado; // Si no está pagado, es mora, pendiente, incumplimiento, etc.
+        }
+      }
+
+      return matchesSearch && matchesStatus;
+    });
+  }, [logic.lotesPendientesTotal, logic.pujasPorLote, searchTerm, filterStatus]);
+
 
   const columnsCobros = useMemo<DataTableColumn<LoteDto>[]>(() => [
     {
@@ -160,17 +210,17 @@ const AdminLotePagos: React.FC = () => {
       render: (l) => {
         const isPaid = checkIsPaid(l);
         // ✅ VARIABLES DECLARADAS CORRECTAMENTE
-        const pujaGanadora = logic.pujasPorLote[l.id]?.[0]; 
+        const pujaGanadora = logic.pujasPorLote[l.id]?.[0];
         const solicitaCancelacion = pujaGanadora?.solicitud_cancelacion;
 
         return (
           <Stack direction="row" spacing={1} justifyContent="flex-end">
-            
+
             {/* NUEVO: Alerta de cancelación */}
             {solicitaCancelacion && !isPaid && (
               <Tooltip title="Evaluar solicitud de baja">
-                <IconButton 
-                  size="small" 
+                <IconButton
+                  size="small"
                   sx={{ color: 'warning.main', bgcolor: alpha(theme.palette.warning.main, 0.1) }}
                   onClick={() => logic.handleOpenCancelModal(pujaGanadora, l)}
                 >
@@ -241,16 +291,55 @@ const AdminLotePagos: React.FC = () => {
             </Box>
           </Box>
         ) : (
-          <DataTable
-            columns={columnsCobros}
-            data={logic.lotesPendientesTotal}
-            getRowKey={row => row.id}
-            showInactiveToggle={false}
-            pagination
-          />
+          <Box>
+            {/* ============================================================================ */}
+            {/* BARRA DE FILTROS RESPONSIVE */}
+            {/* ============================================================================ */}
+            <FilterBar sx={{ mb: 3, p: 2 }}>
+              <Box sx={{ display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, gap: 2, alignItems: { xs: 'stretch', lg: 'center' }, width: '100%' }}>
+
+                {/* Buscador */}
+                <Box sx={{ flex: 1, minWidth: { xs: '100%', lg: 300 } }}>
+                  <FilterSearch
+                    placeholder="Buscar por Lote o Adjudicado..."
+                    value={searchTerm}
+                   
+                    onChange={(e: any) => {
+                      const val = typeof e === 'string' ? e : e?.target?.value ?? '';
+                      setSearchTerm(val);
+                    }}
+                  />
+                </Box>
+                {/* Selector de Estado */}
+                <Box sx={{ display: 'flex', gap: 1.5, width: { xs: '100%', sm: 'auto' }, justifyContent: { xs: 'center', lg: 'flex-end' } }}>
+                  <FilterSelect
+                    label="Estado del Pago"
+                    value={filterStatus}
+                    onChange={(e: any) => setFilterStatus(e.target.value)}
+                    sx={{ flex: 1, minWidth: 240 }}
+                  >
+                    <MenuItem value="all">
+                      <strong>Todos los Estados</strong>
+                    </MenuItem>
+                    <MenuItem value="pagado">Pagado</MenuItem>
+                    <MenuItem value="no_pagado">No Pagado</MenuItem>
+                  </FilterSelect>
+                </Box>
+
+              </Box>
+            </FilterBar>
+
+            {/* TABLA USANDO LOS DATOS FILTRADOS */}
+            <DataTable
+              columns={columnsCobros}
+              data={filteredLotes} // <-- Usamos el array filtrado aquí
+              getRowKey={row => row.id}
+              showInactiveToggle={false}
+              pagination
+            />
+          </Box>
         )}
       </QueryHandler>
-
       <ConfirmDialog controller={logic.modales.confirm} onConfirm={logic.handleConfirmAction} isLoading={logic.isMutating} />
 
       {/* ✅ NUEVO MODAL: LECTURA Y APROBACIÓN DE BAJA */}
@@ -263,13 +352,13 @@ const AdminLotePagos: React.FC = () => {
             <Typography variant="body2" mb={2}>
               El usuario <strong>{logic.modales.cancelRequest.data?.usuario?.nombre} {logic.modales.cancelRequest.data?.usuario?.apellido}</strong> ha solicitado cancelar su adjudicación para el lote <strong>{logic.modales.cancelRequest.lote?.nombre_lote}</strong>.
             </Typography>
-            
+
             <Paper variant="outlined" sx={{ p: 2, bgcolor: alpha(theme.palette.warning.main, 0.05), borderColor: 'warning.light' }}>
               <Typography variant="caption" color="text.secondary" fontWeight={700}>
                 MOTIVO INDICADO POR EL USUARIO:
               </Typography>
               <Typography variant="body1" sx={{ mt: 1, fontStyle: 'italic', fontWeight: 500, color: 'text.primary' }}>
-                "{logic.modales.cancelRequest.data?.motivo_cancelacion || 'No especificó ningún motivo.'}"
+                "{logic.modales.cancelRequest.data?.motivo || 'No especificó ningún motivo.'}"
               </Typography>
             </Paper>
 
@@ -281,9 +370,9 @@ const AdminLotePagos: React.FC = () => {
             <Button onClick={logic.handleCloseCancelModal} color="inherit" disabled={logic.isMutating}>
               Cerrar
             </Button>
-            <Button 
-              onClick={() => logic.aprobarCancelacion(logic.modales.cancelRequest.data?.id)} 
-              color="warning" 
+            <Button
+              onClick={() => logic.aprobarCancelacion(logic.modales.cancelRequest.data?.id)}
+              color="warning"
               variant="contained"
               disabled={logic.isMutating}
             >
@@ -417,9 +506,12 @@ const Top3PostoresTable = React.memo<{
                       </TableCell>
 
                       {top3.map((puja, index) => {
+                        // SOLUCIÓN: Creamos una key combinada que SIEMPRE será única en todo el DOM
+                        const cellKey = `cell-${lote.id}-${puja?.id || `empty-${index}`}`;
+
                         if (!puja || !puja.usuario) {
                           return (
-                            <TableCell key={index} sx={{ borderRight: index !== 2 ? '1px solid' : 'none', borderColor: 'divider', bgcolor: alpha(theme.palette.action.disabledBackground, 0.02) }}>
+                            <TableCell key={cellKey} sx={{ borderRight: index !== 2 ? '1px solid' : 'none', borderColor: 'divider', bgcolor: alpha(theme.palette.action.disabledBackground, 0.02) }}>
                               <Typography variant="caption" color="text.disabled" fontStyle="italic">Sin postor</Typography>
                             </TableCell>
                           );
@@ -429,7 +521,7 @@ const Top3PostoresTable = React.memo<{
                         const estadoColor = puja.estado_puja.includes('ganadora') ? 'warning' : 'default';
 
                         return (
-                          <TableCell key={puja.id} sx={{ borderRight: index !== 2 ? '1px solid' : 'none', borderColor: 'divider' }}>
+                          <TableCell key={cellKey} sx={{ borderRight: index !== 2 ? '1px solid' : 'none', borderColor: 'divider' }}>
                             <Box display="flex" flexDirection="column" gap={0.5} py={0.5}>
                               <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1}>
                                 <Typography variant="body2" fontWeight={700} color="text.primary" noWrap sx={{ maxWidth: 120 }}>
