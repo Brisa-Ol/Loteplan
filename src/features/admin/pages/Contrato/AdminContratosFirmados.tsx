@@ -279,18 +279,79 @@ const AdminContratosFirmados: React.FC = () => {
           />
         </Stack>
 
-        <FilterBar sx={{ width: '100%', flexWrap: 'wrap', gap: 2 }}>
-          <FilterSearch placeholder="Inversor, email, proyecto o Hash..." value={logic.searchTerm} onSearch={logic.setSearchTerm} sx={{ flexGrow: 1, minWidth: { xs: '100%', md: 400 } }} />
-          <FilterSelect label="Clasificación" value={logic.filterTipo} onChange={(e) => logic.setFilterTipo(e.target.value as string)} sx={{ minWidth: { xs: '100%', sm: 180 } }}>
-            <MenuItem value="all">Todas</MenuItem>
-            <Divider />
-            <MenuItem value="inversion">Inversiones</MenuItem>
-            <MenuItem value="suscripcion">Suscripciones</MenuItem>
-          </FilterSelect>
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ width: { xs: '100%', md: 'auto' } }}>
-            <TextField label="Desde" type="date" size="small" value={logic.startDate} onChange={(e) => logic.setStartDate(e.target.value)} InputLabelProps={{ shrink: true }} sx={dateInputStyles} />
-            <TextField label="Hasta" type="date" size="small" value={logic.endDate} onChange={(e) => logic.setEndDate(e.target.value)} InputLabelProps={{ shrink: true }} sx={dateInputStyles} />
-          </Stack>
+        <FilterBar sx={{ p: 2 }}>
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: { xs: 'column', lg: 'row' },
+              gap: 2,
+              alignItems: { xs: 'stretch', lg: 'center' },
+              width: '100%',
+            }}
+          >
+            {/* Buscador */}
+            <Box sx={{ flex: 2, minWidth: { xs: '100%', lg: 300 } }}>
+              <FilterSearch
+                placeholder="Inversor, email, proyecto o Hash..."
+                value={logic.searchTerm}
+                onSearch={logic.setSearchTerm}
+                fullWidth
+              />
+            </Box>
+
+            {/* Filtros secundarios */}
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: { xs: 'column', sm: 'row' },
+                gap: 2,
+                flexWrap: 'wrap',
+                alignItems: { xs: 'stretch', sm: 'center' },
+                flex: 1,
+              }}
+            >
+              {/* Select clasificación */}
+              <FilterSelect
+                label="Clasificación"
+                value={logic.filterTipo}
+                onChange={(e) => logic.setFilterTipo(e.target.value as string)}
+                sx={{ flex: 1, minWidth: { xs: '100%', sm: 160 } }}
+              >
+                <MenuItem value="all">Todas</MenuItem>
+                <Divider />
+                <MenuItem value="inversion">Inversiones</MenuItem>
+                <MenuItem value="suscripcion">Suscripciones</MenuItem>
+              </FilterSelect>
+
+              {/* Fechas */}
+              <Stack
+                direction="row"
+                spacing={1}
+                alignItems="center"
+                sx={{ width: { xs: '100%', sm: 'auto' } }}
+              >
+                <TextField
+                  label="Desde"
+                  type="date"
+                  size="small"
+                  value={logic.startDate}
+                  onChange={(e) => logic.setStartDate(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  sx={dateInputStyles}
+                />
+                <Typography color="text.secondary">-</Typography>
+                <TextField
+                  label="Hasta"
+                  type="date"
+                  size="small"
+                  value={logic.endDate}
+                  onChange={(e) => logic.setEndDate(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  sx={dateInputStyles}
+                />
+              </Stack>
+            </Box>
+          </Box>
         </FilterBar>
       </Stack>
 

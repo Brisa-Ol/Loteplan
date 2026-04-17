@@ -9,13 +9,13 @@ import {
   Divider, Drawer, Fade, IconButton, InputAdornment, List,
   ListItemButton, ListItemIcon, ListItemText, Menu, MenuItem,
   Skeleton, Stack, TextField, Toolbar, Typography,
-  useMediaQuery, useTheme
+  useMediaQuery, useTheme,
 } from '@mui/material';
 
 // --- Iconos ---
 import {
   CheckCircle, Clear, Close, ExpandLess, ExpandMore,
-  Menu as MenuIcon, Search as SearchIcon, VerifiedUser, Warning
+  Menu as MenuIcon, Search as SearchIcon, VerifiedUser, Warning,
 } from '@mui/icons-material';
 
 // --- Hooks & Types ---
@@ -23,6 +23,9 @@ import { useAuth } from '@/core/context/AuthContext';
 import type { UserDto } from '@/core/types/auth.dto';
 import { ConfirmDialog } from '@/shared';
 import { NAVBAR_HEIGHT, useNavbarMenu, type NavItem } from '../useNavbarMenu';
+
+// Ancho del drawer móvil — valor único para no duplicarlo
+const MOBILE_DRAWER_WIDTH = 300;
 
 // =================================================================
 // 1. DESKTOP NAV ITEM (Dropdown o Botón Simple)
@@ -36,10 +39,13 @@ const DesktopNavItem: React.FC<{ item: NavItem }> = ({ item }) => {
   const open = Boolean(anchorEl);
 
   const isActive = item.path
-    ? (item.path === '/' ? location.pathname === '/' : location.pathname.startsWith(item.path))
+    ? item.path === '/'
+      ? location.pathname === '/'
+      : location.pathname.startsWith(item.path)
     : false;
+
   const isChildActive = item.submenu?.some(
-    sub => sub.path && location.pathname.startsWith(sub.path)
+    (sub) => sub.path && location.pathname.startsWith(sub.path)
   );
   const isHighlighted = isActive || isChildActive;
 
@@ -57,15 +63,25 @@ const DesktopNavItem: React.FC<{ item: NavItem }> = ({ item }) => {
           bgcolor: isCTA ? alpha(theme.palette.primary.main, 0.08) : 'transparent',
           position: 'relative',
           '&::after': {
-            content: '""', position: 'absolute', bottom: 0, left: '50%',
-            transform: isHighlighted ? 'translateX(-50%) scaleX(1)' : 'translateX(-50%) scaleX(0)',
-            width: '60%', height: 3, bgcolor: 'primary.main', borderRadius: '4px 4px 0 0',
-            transition: 'transform 0.2s ease'
+            content: '""',
+            position: 'absolute',
+            bottom: 0,
+            left: '50%',
+            transform: isHighlighted
+              ? 'translateX(-50%) scaleX(1)'
+              : 'translateX(-50%) scaleX(0)',
+            width: '60%',
+            height: 3,
+            bgcolor: 'primary.main',
+            borderRadius: '4px 4px 0 0',
+            transition: 'transform 0.2s ease',
           },
           '&:hover': {
-            bgcolor: isCTA ? alpha(theme.palette.primary.main, 0.15) : 'transparent',
-            color: 'primary.main'
-          }
+            bgcolor: isCTA
+              ? alpha(theme.palette.primary.main, 0.15)
+              : 'transparent',
+            color: 'primary.main',
+          },
         }}
       >
         {item.label}
@@ -78,21 +94,27 @@ const DesktopNavItem: React.FC<{ item: NavItem }> = ({ item }) => {
       <Button
         onClick={(e) => setAnchorEl(e.currentTarget)}
         endIcon={
-          <ExpandMore sx={{
-            transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
-            transition: '0.2s'
-          }} />
+          <ExpandMore
+            sx={{
+              transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
+              transition: '0.2s',
+            }}
+          />
         }
         sx={{
           color: isChildActive ? 'primary.main' : 'text.secondary',
           fontWeight: isChildActive ? 700 : 500,
           textTransform: 'none',
           fontSize: '0.95rem',
-          '&:hover': { color: 'primary.main', bgcolor: alpha(theme.palette.primary.main, 0.04) }
+          '&:hover': {
+            color: 'primary.main',
+            bgcolor: alpha(theme.palette.primary.main, 0.04),
+          },
         }}
       >
         {item.label}
       </Button>
+
       <Menu
         anchorEl={anchorEl}
         open={open}
@@ -101,9 +123,12 @@ const DesktopNavItem: React.FC<{ item: NavItem }> = ({ item }) => {
         PaperProps={{
           elevation: 4,
           sx: {
-            mt: 1.5, minWidth: 260, borderRadius: 3,
-            border: `1px solid ${theme.palette.divider}`, p: 1
-          }
+            mt: 1.5,
+            minWidth: 260,
+            borderRadius: 3,
+            border: `1px solid ${theme.palette.divider}`,
+            p: 1,
+          },
         }}
       >
         {item.submenu.map((sub, idx) => {
@@ -118,8 +143,11 @@ const DesktopNavItem: React.FC<{ item: NavItem }> = ({ item }) => {
                 setAnchorEl(null);
               }}
               sx={{
-                py: 1.5, borderRadius: 2, mb: 0.5, alignItems: 'flex-start',
-                '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.04) }
+                py: 1.5,
+                borderRadius: 2,
+                mb: 0.5,
+                alignItems: 'flex-start',
+                '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.04) },
               }}
             >
               {Icon && (
@@ -132,8 +160,11 @@ const DesktopNavItem: React.FC<{ item: NavItem }> = ({ item }) => {
                   {sub.label}
                 </Typography>
                 {sub.description && (
-                  <Typography variant="caption" color="text.secondary"
-                    sx={{ display: 'block', lineHeight: 1.3, mt: 0.5 }}>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ display: 'block', lineHeight: 1.3, mt: 0.5 }}
+                  >
                     {sub.description}
                   </Typography>
                 )}
@@ -151,13 +182,16 @@ const DesktopNavItem: React.FC<{ item: NavItem }> = ({ item }) => {
 // =================================================================
 
 interface UserAccountMenuProps {
-  // ✅ Fix: reemplazado user: any por el tipo correcto
   user: UserDto | null;
   isLoading: boolean;
   userNavItems: NavItem[];
 }
 
-const UserAccountMenu: React.FC<UserAccountMenuProps> = ({ user, isLoading, userNavItems }) => {
+const UserAccountMenu: React.FC<UserAccountMenuProps> = ({
+  user,
+  isLoading,
+  userNavItems,
+}) => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const theme = useTheme();
   const navigate = useNavigate();
@@ -179,21 +213,32 @@ const UserAccountMenu: React.FC<UserAccountMenuProps> = ({ user, isLoading, user
       <Button
         onClick={(e) => setAnchorEl(e.currentTarget)}
         sx={{
-          textTransform: 'none', color: 'text.primary',
+          textTransform: 'none',
+          color: 'text.primary',
           border: `1px solid ${theme.palette.divider}`,
-          borderRadius: 8, pl: 0.5, pr: 1.5, ml: 1, py: 0.5,
+          borderRadius: 8,
+          pl: 0.5,
+          pr: 1.5,
+          ml: 1,
+          py: 0.5,
           transition: 'all 0.2s',
           '&:hover': {
             bgcolor: alpha(theme.palette.primary.main, 0.04),
             borderColor: 'primary.main',
-            boxShadow: theme.shadows[2]
-          }
+            boxShadow: theme.shadows[2],
+          },
         }}
       >
-        <Avatar sx={{
-          width: 32, height: 32, bgcolor: 'primary.main',
-          mr: 1, fontSize: '0.9rem', fontWeight: 700
-        }}>
+        <Avatar
+          sx={{
+            width: 32,
+            height: 32,
+            bgcolor: 'primary.main',
+            mr: 1,
+            fontSize: '0.9rem',
+            fontWeight: 700,
+          }}
+        >
           {user?.nombre?.charAt(0)}
         </Avatar>
         <Box textAlign="left" sx={{ mr: 1 }}>
@@ -212,13 +257,23 @@ const UserAccountMenu: React.FC<UserAccountMenuProps> = ({ user, isLoading, user
         PaperProps={{
           elevation: 8,
           sx: {
-            mt: 1.5, minWidth: 240, borderRadius: 3,
-            border: `1px solid ${theme.palette.divider}`
-          }
+            mt: 1.5,
+            minWidth: 240,
+            borderRadius: 3,
+            border: `1px solid ${theme.palette.divider}`,
+          },
         }}
       >
-        <Box sx={{ px: 2, py: 1.5, bgcolor: alpha(theme.palette.primary.main, 0.04) }}>
-          <Typography variant="subtitle2" fontWeight={700}>Mi Cuenta</Typography>
+        <Box
+          sx={{
+            px: 2,
+            py: 1.5,
+            bgcolor: alpha(theme.palette.primary.main, 0.04),
+          }}
+        >
+          <Typography variant="subtitle2" fontWeight={700}>
+            Mi Cuenta
+          </Typography>
           <Typography variant="caption" color="text.secondary" noWrap>
             {user?.email}
           </Typography>
@@ -241,8 +296,11 @@ const UserAccountMenu: React.FC<UserAccountMenuProps> = ({ user, isLoading, user
                 item.action ? item.action() : item.path && navigate(item.path);
               }}
               sx={{
-                py: 1.5, mx: 1, mb: 0.5, borderRadius: 2,
-                '&:hover': { bgcolor: alpha(finalColor, 0.08) }
+                py: 1.5,
+                mx: 1,
+                mb: 0.5,
+                borderRadius: 2,
+                '&:hover': { bgcolor: alpha(finalColor, 0.08) },
               }}
             >
               {Icon && (
@@ -275,7 +333,6 @@ const UserAccountMenu: React.FC<UserAccountMenuProps> = ({ user, isLoading, user
 interface MobileDrawerContentProps {
   navItems: NavItem[];
   actionButtons: NavItem[];
-  // ✅ Fix: reemplazado user: any por el tipo correcto
   user: UserDto | null;
   isAuthenticated: boolean;
   isLoading: boolean;
@@ -283,7 +340,12 @@ interface MobileDrawerContentProps {
 }
 
 const MobileDrawerContent: React.FC<MobileDrawerContentProps> = ({
-  navItems, actionButtons, user, isAuthenticated, isLoading, onClose
+  navItems,
+  actionButtons,
+  user,
+  isAuthenticated,
+  isLoading,
+  onClose,
 }) => {
   const theme = useTheme();
   const navigate = useNavigate();
@@ -291,81 +353,141 @@ const MobileDrawerContent: React.FC<MobileDrawerContentProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [openMenus, setOpenMenus] = useState<string[]>([]);
 
-  const isVerified = user?.estado_kyc === 'APROBADA' && user?.is_2fa_enabled;
+  const isVerified =
+    user?.estado_kyc === 'APROBADA' && user?.is_2fa_enabled;
 
   const handleToggleMenu = (label: string) => {
-    setOpenMenus(prev =>
-      prev.includes(label) ? prev.filter(m => m !== label) : [...prev, label]
+    setOpenMenus((prev) =>
+      prev.includes(label) ? prev.filter((m) => m !== label) : [...prev, label]
     );
   };
 
   const filteredNavItems = useMemo(() => {
     if (!searchQuery.trim()) return navItems;
     const query = searchQuery.toLowerCase();
-    return navItems.map(item => {
-      const parentMatch = item.label.toLowerCase().includes(query);
-      const filteredSubmenu = item.submenu?.filter(
-        sub => !sub.isDivider && sub.label.toLowerCase().includes(query)
-      );
-      if (parentMatch || (filteredSubmenu && filteredSubmenu.length > 0)) {
-        return { ...item, submenu: parentMatch ? item.submenu : filteredSubmenu };
-      }
-      return null;
-    }).filter(Boolean) as NavItem[];
+    return navItems
+      .map((item) => {
+        const parentMatch = item.label.toLowerCase().includes(query);
+        const filteredSubmenu = item.submenu?.filter(
+          (sub) => !sub.isDivider && sub.label.toLowerCase().includes(query)
+        );
+        if (parentMatch || (filteredSubmenu && filteredSubmenu.length > 0)) {
+          return {
+            ...item,
+            submenu: parentMatch ? item.submenu : filteredSubmenu,
+          };
+        }
+        return null;
+      })
+      .filter(Boolean) as NavItem[];
   }, [navItems, searchQuery]);
 
   return (
-    <Box sx={{
-      width: 280, height: '100%', display: 'flex',
-      flexDirection: 'column', bgcolor: 'background.paper'
-    }}>
+    <Box
+      sx={{
+        width: MOBILE_DRAWER_WIDTH,
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        bgcolor: 'background.paper',
+        overflow: 'hidden',
+      }}
+    >
       {/* Header */}
-      <Box sx={{
-        p: 2, display: 'flex', alignItems: 'center',
-        justifyContent: 'space-between',
-        borderBottom: `1px solid ${theme.palette.divider}`
-      }}>
-        <Box component="img" src="/navbar/nav.png" alt="Logo"
-          sx={{ height: 32, objectFit: 'contain' }} />
-        <IconButton onClick={onClose}><Close /></IconButton>
+      <Box
+        sx={{
+          px: 2,
+          height: NAVBAR_HEIGHT.mobile,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexShrink: 0,
+          borderBottom: `1px solid ${theme.palette.divider}`,
+        }}
+      >
+        <Box
+          component="img"
+          src="/navbar/nav.png"
+          alt="Logo"
+          sx={{ height: 30, objectFit: 'contain' }}
+        />
+        <IconButton
+          onClick={onClose}
+          size="small"
+          aria-label="Cerrar menú"
+          sx={{ color: 'text.secondary' }}
+        >
+          <Close fontSize="small" />
+        </IconButton>
       </Box>
 
       {/* Perfil de usuario */}
       {isAuthenticated && (
-        <Box sx={{ p: 3, bgcolor: alpha(theme.palette.primary.main, 0.04) }}>
+        <Box
+          sx={{
+            px: 2.5,
+            py: 2,
+            bgcolor: alpha(theme.palette.primary.main, 0.04),
+            flexShrink: 0,
+          }}
+        >
           {isLoading ? (
             <Stack direction="row" spacing={2} alignItems="center">
               <Skeleton variant="circular" width={40} height={40} />
-              <Box>
-                <Skeleton variant="text" width={100} />
-                <Skeleton variant="text" width={140} height={12} />
+              <Box sx={{ flex: 1 }}>
+                <Skeleton variant="text" width="60%" />
+                <Skeleton variant="text" width="80%" height={12} />
               </Box>
             </Stack>
           ) : (
             <>
-              <Stack direction="row" spacing={2} alignItems="center">
+              <Stack direction="row" spacing={1.5} alignItems="center">
                 <Badge
                   overlap="circular"
                   anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
                   badgeContent={
-                    isVerified
-                      ? <CheckCircle color="success" sx={{ bgcolor: 'white', borderRadius: '50%', fontSize: 16 }} />
-                      : <Warning color="warning" sx={{ bgcolor: 'white', borderRadius: '50%', fontSize: 16 }} />
+                    isVerified ? (
+                      <CheckCircle
+                        color="success"
+                        sx={{
+                          bgcolor: 'white',
+                          borderRadius: '50%',
+                          fontSize: 15,
+                        }}
+                      />
+                    ) : (
+                      <Warning
+                        color="warning"
+                        sx={{
+                          bgcolor: 'white',
+                          borderRadius: '50%',
+                          fontSize: 15,
+                        }}
+                      />
+                    )
                   }
                 >
-                  <Avatar sx={{ bgcolor: 'primary.main', fontWeight: 700 }}>
+                  <Avatar
+                    sx={{ bgcolor: 'primary.main', fontWeight: 700, width: 38, height: 38 }}
+                  >
                     {user?.nombre?.charAt(0)}
                   </Avatar>
                 </Badge>
-                <Box sx={{ overflow: 'hidden' }}>
+                <Box sx={{ overflow: 'hidden', minWidth: 0 }}>
                   <Typography variant="subtitle2" fontWeight={700} noWrap>
                     {user?.nombre}
                   </Typography>
-                  <Typography variant="caption" color="text.secondary" noWrap display="block">
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    noWrap
+                    display="block"
+                  >
                     {user?.email}
                   </Typography>
                 </Box>
               </Stack>
+
               {!isVerified && (
                 <Button
                   startIcon={<VerifiedUser />}
@@ -373,8 +495,11 @@ const MobileDrawerContent: React.FC<MobileDrawerContentProps> = ({
                   color="warning"
                   size="small"
                   fullWidth
-                  onClick={() => { navigate('/client/verificacion'); onClose(); }}
-                  sx={{ mt: 2, borderRadius: 2, textTransform: 'none' }}
+                  onClick={() => {
+                    navigate('/client/verificacion');
+                    onClose();
+                  }}
+                  sx={{ mt: 1.5, borderRadius: 2, textTransform: 'none' }}
                 >
                   Verificar ahora
                 </Button>
@@ -386,7 +511,7 @@ const MobileDrawerContent: React.FC<MobileDrawerContentProps> = ({
 
       {/* Buscador */}
       {isAuthenticated && (
-        <Box sx={{ px: 2, pt: 2 }}>
+        <Box sx={{ px: 2, pt: 1.5, pb: 0.5, flexShrink: 0 }}>
           <TextField
             size="small"
             placeholder="Buscar sección..."
@@ -396,36 +521,45 @@ const MobileDrawerContent: React.FC<MobileDrawerContentProps> = ({
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <SearchIcon color="action" fontSize="small" />
+                  <SearchIcon color="action" sx={{ fontSize: '1rem' }} />
                 </InputAdornment>
               ),
-              endAdornment: searchQuery && (
+              endAdornment: searchQuery ? (
                 <InputAdornment position="end">
                   <IconButton size="small" onClick={() => setSearchQuery('')}>
-                    <Clear fontSize="small" />
+                    <Clear sx={{ fontSize: '1rem' }} />
                   </IconButton>
                 </InputAdornment>
-              ),
-              sx: { borderRadius: 2, bgcolor: 'background.default' }
+              ) : null,
+              sx: {
+                borderRadius: 2,
+                bgcolor: 'background.default',
+                fontSize: '0.85rem',
+              },
             }}
           />
         </Box>
       )}
 
-      {/* Lista de navegación */}
-      <List sx={{ flex: 1, overflowY: 'auto', px: 0 }}>
+      {/* Lista de navegación — scrolleable */}
+      <List sx={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', px: 0, py: 0.5 }}>
         {filteredNavItems.map((item, idx) => {
           const Icon = item.icon;
           const hasSubmenu = (item.submenu?.length || 0) > 0;
           const isOpen = openMenus.includes(item.label);
           const active = item.path
-                        ? (item.path === '/' ? location.pathname === '/' : location.pathname.startsWith(item.path))
-                        : false;
+            ? item.path === '/'
+              ? location.pathname === '/'
+              : location.pathname.startsWith(item.path)
+            : false;
 
           if (hasSubmenu && !item.path) {
             return (
               <React.Fragment key={idx}>
-                <ListItemButton onClick={() => handleToggleMenu(item.label)} sx={{ px: 3 }}>
+                <ListItemButton
+                  onClick={() => handleToggleMenu(item.label)}
+                  sx={{ px: 2.5, minHeight: 44 }}
+                >
                   {Icon && (
                     <ListItemIcon sx={{ minWidth: 36, color: 'text.secondary' }}>
                       <Icon />
@@ -433,10 +567,15 @@ const MobileDrawerContent: React.FC<MobileDrawerContentProps> = ({
                   )}
                   <ListItemText
                     primary={item.label}
-                    primaryTypographyProps={{ fontWeight: 600 }}
+                    primaryTypographyProps={{ fontWeight: 600, fontSize: '0.9rem' }}
                   />
-                  {isOpen ? <ExpandLess color="action" /> : <ExpandMore color="action" />}
+                  {isOpen ? (
+                    <ExpandLess color="action" sx={{ fontSize: '1.1rem' }} />
+                  ) : (
+                    <ExpandMore color="action" sx={{ fontSize: '1.1rem' }} />
+                  )}
                 </ListItemButton>
+
                 <Collapse in={isOpen} timeout="auto" unmountOnExit>
                   <List disablePadding>
                     {item.submenu?.map((sub, sIdx) => {
@@ -446,15 +585,24 @@ const MobileDrawerContent: React.FC<MobileDrawerContentProps> = ({
                           key={sIdx}
                           onClick={() => {
                             onClose();
-                            sub.action ? sub.action() : sub.path && navigate(sub.path);
+                            sub.action
+                              ? sub.action()
+                              : sub.path && navigate(sub.path);
                           }}
-                          sx={{ pl: 7 }}
+                          sx={{ pl: 6, minHeight: 38 }}
                         >
                           <ListItemText
                             primary={sub.label}
                             secondary={sub.description}
-                            secondaryTypographyProps={{ fontSize: '0.75rem', noWrap: true }}
-                            primaryTypographyProps={{ fontSize: '0.9rem', fontWeight: 500 }}
+                            secondaryTypographyProps={{
+                              fontSize: '0.72rem',
+                              noWrap: true,
+                            }}
+                            primaryTypographyProps={{
+                              fontSize: '0.875rem',
+                              fontWeight: 500,
+                              noWrap: true,
+                            }}
                           />
                         </ListItemButton>
                       );
@@ -469,20 +617,30 @@ const MobileDrawerContent: React.FC<MobileDrawerContentProps> = ({
             <ListItemButton
               key={idx}
               onClick={() => {
-                        onClose();
-                        if (item.action) item.action();
-                        else if (item.path) navigate(item.path);
-                      }}
+                onClose();
+                if (item.action) item.action();
+                else if (item.path) navigate(item.path);
+              }}
               selected={active}
               sx={{
-                px: 3,
+                px: 2.5,
+                minHeight: 44,
                 borderLeft: active
                   ? `4px solid ${theme.palette.primary.main}`
-                  : '4px solid transparent'
+                  : '4px solid transparent',
+                transition: 'border-color 0.15s ease',
+                '&.Mui-selected': {
+                  bgcolor: alpha(theme.palette.primary.main, 0.06),
+                },
               }}
             >
               {Icon && (
-                <ListItemIcon sx={{ minWidth: 36, color: active ? 'primary.main' : 'text.secondary' }}>
+                <ListItemIcon
+                  sx={{
+                    minWidth: 36,
+                    color: active ? 'primary.main' : 'text.secondary',
+                  }}
+                >
                   <Icon />
                 </ListItemIcon>
               )}
@@ -490,7 +648,9 @@ const MobileDrawerContent: React.FC<MobileDrawerContentProps> = ({
                 primary={item.label}
                 primaryTypographyProps={{
                   fontWeight: active ? 700 : 500,
-                  color: active ? 'primary.main' : 'text.primary'
+                  color: active ? 'primary.main' : 'text.primary',
+                  fontSize: '0.9rem',
+                  noWrap: true,
                 }}
               />
             </ListItemButton>
@@ -500,14 +660,23 @@ const MobileDrawerContent: React.FC<MobileDrawerContentProps> = ({
 
       {/* Botones de acción (usuario no autenticado) */}
       {!isAuthenticated && (
-        <Box sx={{ p: 2, borderTop: `1px solid ${theme.palette.divider}` }}>
-          <Stack spacing={2}>
+        <Box
+          sx={{
+            p: 2,
+            flexShrink: 0,
+            borderTop: `1px solid ${theme.palette.divider}`,
+          }}
+        >
+          <Stack spacing={1.5}>
             {actionButtons.map((btn, idx) => (
               <Button
                 key={idx}
                 variant={btn.variant || 'outlined'}
                 fullWidth
-                onClick={() => { onClose(); navigate(btn.path || ''); }}
+                onClick={() => {
+                  onClose();
+                  navigate(btn.path || '');
+                }}
               >
                 {btn.label}
               </Button>
@@ -525,18 +694,21 @@ const MobileDrawerContent: React.FC<MobileDrawerContentProps> = ({
 
 const ClientNavbar: React.FC = () => {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isMobile = useMediaQuery(theme.breakpoints.down('lg'));
   const navigate = useNavigate();
 
   const { user, isAuthenticated, isLoading: isLoadingAuth } = useAuth();
-  const { config: { navItems, userNavItems, actionButtons }, logoutDialogProps } = useNavbarMenu();
+  const {
+    config: { navItems, userNavItems, actionButtons },
+    logoutDialogProps,
+  } = useNavbarMenu();
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 10);
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
@@ -549,48 +721,67 @@ const ClientNavbar: React.FC = () => {
         sx={{
           bgcolor: 'background.paper',
           borderBottom: `1px solid ${theme.palette.divider}`,
-          transition: 'all 0.3s ease'
+          transition: 'box-shadow 0.3s ease',
+          zIndex: theme.zIndex.appBar,
         }}
       >
-        <Container maxWidth="xl">
-          <Toolbar disableGutters sx={{
-            minHeight: { xs: NAVBAR_HEIGHT.mobile, md: NAVBAR_HEIGHT.desktop }
-          }}>
-
+        <Container maxWidth="xl" disableGutters={isMobile} sx={{ px: { xs: 1.5, sm: 2, md: 3 } }}>
+          <Toolbar
+            disableGutters
+            sx={{
+              minHeight: {
+                xs: `${NAVBAR_HEIGHT.mobile}px !important`,
+                md: `${NAVBAR_HEIGHT.desktop}px !important`,
+              },
+              gap: { xs: 1, md: 1 },
+            }}
+          >
             {/* Logo */}
             <Box
               component={RouterLink}
               to="/"
-              sx={{ display: 'flex', alignItems: 'center', mr: 4, textDecoration: 'none' }}
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                mr: { xs: 1, md: 4 },
+                textDecoration: 'none',
+                flexShrink: 0,
+              }}
             >
               <Box
                 component="img"
                 src="/navbar/nav.png"
                 alt="Logo"
-                sx={{ height: { xs: 28, md: 36 }, objectFit: 'contain' }}
+                sx={{
+                  height: { xs: 28, sm: 30, md: 36 },
+                  objectFit: 'contain',
+                }}
               />
             </Box>
 
             {/* Desktop Nav Items */}
             {!isMobile && (
-              <Stack direction="row" spacing={1} sx={{ flex: 1 }}>
+              <Stack direction="row" spacing={0.5} sx={{ flex: 1 , overflow: 'hidden' }}>
                 {navItems
-                  .filter(item => !item.action) // excluye items que solo tienen acción (ej: logout)
+                  .filter((item) => !item.action)
                   .map((item) => (
                     <DesktopNavItem key={item.label} item={item} />
-                  ))
-                }
+                  ))}
               </Stack>
             )}
 
+            {/* Espaciador móvil */}
             {isMobile && <Box sx={{ flex: 1 }} />}
 
             {/* Right Side */}
-            <Stack direction="row" spacing={0.5} alignItems="center">
+            <Stack direction="row" spacing={0.5} alignItems="center" flexShrink={0}>
               {isAuthenticated && !isMobile && (
                 <>
-                  <Divider orientation="vertical" flexItem
-                    sx={{ mx: 1, height: 24, alignSelf: 'center' }} />
+                  <Divider
+                    orientation="vertical"
+                    flexItem
+                    sx={{ mx: 1, height: 24, alignSelf: 'center' }}
+                  />
                   <UserAccountMenu
                     user={user}
                     isLoading={isLoadingAuth}
@@ -616,7 +807,13 @@ const ClientNavbar: React.FC = () => {
               )}
 
               {isMobile && (
-                <IconButton onClick={() => setMobileOpen(true)} color="primary">
+                <IconButton
+                  onClick={() => setMobileOpen(true)}
+                  color="primary"
+                  aria-label="Abrir menú"
+                  size="small"
+                  sx={{ p: 1 }}
+                >
                   <MenuIcon />
                 </IconButton>
               )}
@@ -625,12 +822,18 @@ const ClientNavbar: React.FC = () => {
         </Container>
       </AppBar>
 
-      {/* Mobile Drawer */}
+      {/* Mobile Drawer — desde la derecha */}
       <Drawer
         anchor="right"
         open={mobileOpen}
         onClose={() => setMobileOpen(false)}
         ModalProps={{ keepMounted: true }}
+        sx={{
+          '& .MuiDrawer-paper': {
+            width: MOBILE_DRAWER_WIDTH,
+            maxWidth: '85vw',
+          },
+        }}
       >
         <MobileDrawerContent
           navItems={navItems}
