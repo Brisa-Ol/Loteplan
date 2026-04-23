@@ -29,7 +29,7 @@ const Nosotros = lazy(() => import('@/features/public/Nosotros'));
 
 // Proyectos
 const RoleSelection = lazy(() => import('@/features/client/pages/Proyectos/RoleSelection'));
-const DetalleProyecto = lazy(() => import('@/features/client/pages/Proyectos/DetalleProyecto'));
+const DetalleProyecto = lazy(() => import('@/features/client/pages/Proyectos/DetalleProyecto/DetalleProyecto'));
 
 // Client Dashboard & Features
 const UserDashboard = lazy(() => import('@/features/client/pages/UserDashboard/UserDashboard'));

@@ -1,0 +1,22 @@
+.opcionTabs {
+  /* Evita que los tabs desborden en pantallas chicas */
+  overflow-x: auto;
+  scrollbar-width: none; /* Firefox */
+}
+
+.opcionTabs::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+
+@media (max-width: 600px) {
+  .opcionTabs :global(.MuiTab-root) {
+    min-width: 0;
+    flex: 1;
+    padding: 8px 4px;
+  }
+
+  /* Ícono más chico en mobile */
+  .opcionTabs :global(.MuiTab-root svg) {
+    font-size: 1.1rem;
+  }
+}

@@ -73,7 +73,7 @@ export const useAdminLotes = () => {
     refetchOnWindowFocus: false,
   });
 
-  const { data: proyectos = [] } = useQuery({
+  const { data: proyectos = [], isLoading: loadingProyectos } = useQuery({
     queryKey: ['adminProyectosSelect'],
     queryFn: async () => (await ProyectoService.getAllAdmin()).data,
     staleTime: 60000, // Diccionario estático
@@ -235,6 +235,7 @@ const endAuction = useMutation({
     stats,
     highlightedId,
     loadingLotes,
+    loadingProyectos,
     error,
     isToggling: toggleActiveMutation.isPending,
     isSaving: saveMutation.isPending,

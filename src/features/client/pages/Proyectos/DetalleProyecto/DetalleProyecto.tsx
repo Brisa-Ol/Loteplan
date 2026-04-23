@@ -28,16 +28,18 @@ import {
 import { useIsFetching } from '@tanstack/react-query';
 import React, { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { useDetalleProyecto } from '../../hooks/useDetalleProyecto';
-import { useVerificarSuscripcion } from '../../hooks/useVerificarSuscripcion';
-import ListaLotesProyecto from '../Lotes/ListaLotesProyecto';
-import { ProjectHero } from './components/ProjectHero';
-import { ProjectSidebar } from './components/ProjectSidebar';
-import { CheckoutInversionModal } from './modals/CheckoutInversionModal/CheckoutInversionModal';
-import { CheckoutWizardModal } from './modals/CheckoutWizardModal/CheckoutWizardModal';
+import { useDetalleProyecto } from '../../../hooks/useDetalleProyecto';
+import { useVerificarSuscripcion } from '../../../hooks/useVerificarSuscripcion';
+import ListaLotesProyecto from '../../Lotes/ListaLotesProyecto';
+import { ProjectHero } from '../components/ProjectHero';
+import { ProjectSidebar } from '../components/ProjectSidebar';
+import { CheckoutInversionModal } from '../modals/CheckoutInversionModal/CheckoutInversionModal';
+import { CheckoutWizardModal } from '../modals/CheckoutWizardModal/CheckoutWizardModal';
+
+import styles from './DetalleProyecto.module.css'
 
 // 🚀 LAZY LOADING
-const ProjectGallery = lazy(() => import('./components/ProjectGallery').then(m => ({ default: m.ProjectGallery })));
+const ProjectGallery = lazy(() => import('../components/ProjectGallery').then(m => ({ default: m.ProjectGallery })));
 
 // ===================================================
 // SUB-COMPONENTES MEMOIZADOS
@@ -176,13 +178,13 @@ const DetalleProyecto: React.FC = () => {
       try {
         const res = await ContratoService.trackPaymentAndContract(Number(logic.proyecto?.id));
         setTrackingData(res);
+        console.log(res)
       } catch (err) {
         console.error(err);
       }
     };
 
     trackingContracts();
-    console.log(trackingData)
   }, [logic.proyecto?.id]);
 
 
@@ -268,7 +270,7 @@ const DetalleProyecto: React.FC = () => {
 
       <Box sx={{ display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, gap: 5, mt: 4 }}>
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Tabs value={currentTab} onChange={handleTabChange} sx={{ mb: 4, borderBottom: 1, borderColor: 'divider', '& .MuiTab-root': { fontWeight: 800 } }}>
+          <Tabs className={styles.opcionTabs} value={currentTab} onChange={handleTabChange} sx={{ mb: 4, borderBottom: 1, borderColor: 'divider', '& .MuiTab-root': { fontWeight: 800 } }}>
             <Tab icon={<Info fontSize="small" />} iconPosition="start" label="Informacion del Proyecto" />
             <Tab icon={<InsertPhoto fontSize="small" />} iconPosition="start" label="Galería de fotos " />
             {logic.mostrarTabLotes && <Tab icon={<ViewList fontSize="small" />} iconPosition="start" label="Lotes y Subastas disponibles" />}

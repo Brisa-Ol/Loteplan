@@ -422,7 +422,7 @@ const AdminLotes: React.FC = () => {
   </Box>
 </Box>
 
-      <QueryHandler isLoading={Loteslogic.loadingLotes} error={Loteslogic.error as Error}>
+      <QueryHandler isLoading={Loteslogic.loadingLotes || Loteslogic.loadingProyectos} error={Loteslogic.error as Error}>
         {Loteslogic.viewMode === 'grid' ? (
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' }, gap: 3 }}>
             {Loteslogic.filteredLotes.map((lote) => (

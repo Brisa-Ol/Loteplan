@@ -11,6 +11,7 @@ import { AuthProvider } from './core/context/AuthContext';
 import { SnackbarProvider } from './core/context/SnackbarContext';
 import theme from './core/theme/globalStyles';
 import AppRouter from './routes/AppRouter';
+import ScrollToTop from './shared/utils/scrollToTop';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -28,6 +29,7 @@ const App: React.FC = () => {
       <CssBaseline />
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
+          <ScrollToTop />
           <SnackbarProvider>
             <AuthProvider>
               <AppRouter />
