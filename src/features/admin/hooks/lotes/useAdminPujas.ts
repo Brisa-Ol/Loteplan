@@ -32,14 +32,16 @@ export const useAdminPujas = () => {
   const { showSuccess, showError } = useSnackbar();
 
   // ─── Modales ───────────────────────────────────────────────────────────────
-
+const auctionControlModal = useModal();
   const detallePujaModal = useModal();
   const confirmDialog = useConfirmDialog();
 
-  const modales = useMemo(() => ({
-    detallePuja: detallePujaModal,
-    confirmDialog,
-  }), [detallePujaModal, confirmDialog]);
+const modales = useMemo(() => ({
+  detallePuja: detallePujaModal,
+  auctionControl: auctionControlModal,  // 👈
+  confirmDialog,
+}), [detallePujaModal, auctionControlModal, confirmDialog]);
+
 
   // ─── Estados UI ───────────────────────────────────────────────────────────
 
@@ -49,6 +51,7 @@ export const useAdminPujas = () => {
   const [pujaSeleccionada, setPujaSeleccionada] = useState<PujaDto | null>(null);
 
   const debouncedFilterLote = useDebouncedValue(filterLoteNombre, 300);
+  const [loteSeleccionado, setLoteSeleccionado] = useState<LoteDto | null>(null);
 
   // ─── Queries ──────────────────────────────────────────────────────────────
 
@@ -163,18 +166,23 @@ export const useAdminPujas = () => {
 const endAuctionMutation = useMutation({
   mutationFn: (id: number) => LoteService.endAuction(id),
   onSuccess: (_, id) => {
-    // 👇 Igual que arriba
     queryClient.refetchQueries({ queryKey: ['adminLotes'] });
     queryClient.refetchQueries({ queryKey: ['adminPujas'] });
     showSuccess('Subasta finalizada correctamente');
-    modales.confirmDialog.close();
+    modales.auctionControl.close();   // 👈 era confirmDialog
+    setLoteSeleccionado(null);         // 👈 limpiar lote
     triggerHighlight(id);
   },
   onError: () => {
     showError('Error al finalizar la subasta');
-    modales.confirmDialog.close();
+    modales.auctionControl.close();   // 👈 era confirmDialog
   },
 });
+
+const handleCloseAuctionControl = useCallback(() => {
+  modales.auctionControl.close();
+  setTimeout(() => setLoteSeleccionado(null), 300); // delay para animación
+}, [modales.auctionControl]);
 
   const forceFinishMutation = useMutation({
     mutationFn: ({ idLote, idGanador }: { idLote: number; idGanador: number | null }) =>
@@ -238,10 +246,13 @@ const endAuctionMutation = useMutation({
     setTimeout(() => setPujaSeleccionada(null), 300);
   }, [modales.detallePuja]);
 
-  const handleFinalizarSubasta = useCallback((idLote: number) => {
-  modales.confirmDialog.confirm('end_auction', { id: idLote });
-}, [modales.confirmDialog]);
-
+const handleFinalizarSubasta = useCallback((lote: LoteDto) => {
+  setLoteSeleccionado(lote);
+  modales.auctionControl.open();
+}, [modales.auctionControl]);
+const handleConfirmEndAuction = useCallback((id: number) => {
+  endAuctionMutation.mutate(id);
+}, [endAuctionMutation]);
   const handleForceFinish = useCallback((lote: LoteDto) => {
     modales.confirmDialog.confirm('force_finish', {
       idLote: lote.id,
@@ -299,7 +310,7 @@ const endAuctionMutation = useMutation({
     tabValue, setTabValue,
     filterLoteNombre, setFilterLoteNombre,
     filterUserId, setFilterUserId,
-
+handleCloseAuctionControl,
     // UX
     highlightedId,
 
@@ -333,7 +344,8 @@ const endAuctionMutation = useMutation({
     handleRevertirPago,
     handleForceFinish,
     handleConfirmAction,
-
+loteSeleccionado,
+  handleConfirmEndAuction,
     // Mutations (por si se necesitan individualmente)
     endAuctionMutation,
     forceFinishMutation,

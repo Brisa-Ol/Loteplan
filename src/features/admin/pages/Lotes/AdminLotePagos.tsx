@@ -303,7 +303,7 @@ const AdminLotePagos: React.FC = () => {
                   <FilterSearch
                     placeholder="Buscar por Lote o Adjudicado..."
                     value={searchTerm}
-                   
+
                     onChange={(e: any) => {
                       const val = typeof e === 'string' ? e : e?.target?.value ?? '';
                       setSearchTerm(val);
