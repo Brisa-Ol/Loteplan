@@ -81,5 +81,53 @@ export interface ContratoFirmadoDto extends BaseDTO {
     estado_proyecto: string;
   };
 }
+// ==========================================
+// 🔎 TRACKING DTO (Verificación de Elegibilidad)
+// ==========================================
 
+export interface EntidadPagadoraTrackDto {
+  tipo: 'inversion' | 'suscripcion';
+  id: number;
+  monto?: number | string;
+  fecha?: string;
+  estado?: string;
+  adhesion_id?: number;
+  adhesion_estado?: string;
+  cuotas_pagadas?: number;
+  cuotas_totales?: number;
+}
+
+export interface SuscripcionDetalleTrackDto {
+  suscripcion_id: number;
+  adhesion_id: number | null;
+  tiene_pago_adhesion: boolean;
+  cuotas_pagadas: number;
+  cuotas_totales: number;
+  adhesion_estado: string | null;
+  tiene_contrato_firmado: boolean;
+  puede_firmar: boolean;
+  contrato_firmado: {
+    id: number;
+    nombre_archivo: string;
+    url_archivo: string;
+    fecha_firma: string;
+    estado_firma: string;
+    id_contrato_plantilla: number;
+  } | null;
+}
+
+export interface TrackPaymentAndContractResponseDto {
+  tiene_pago: boolean;
+  tiene_contrato_firmado: boolean;
+  puede_firmar: boolean;
+  entidad_pagadora: EntidadPagadoraTrackDto | null;
+  contrato_firmado: any | null; // Puedes usar un Pick<ContratoFirmadoDto, ...> si prefieres
+  proyecto: {
+    id: number;
+    nombre: string;
+    tipo_inversion: string;
+  };
+  mensaje: string;
+  suscripciones_detalle?: SuscripcionDetalleTrackDto[]; // Solo viene si es un proyecto mensual
+}
 export type ContratoFirmadoListDto = ContratoFirmadoDto[];

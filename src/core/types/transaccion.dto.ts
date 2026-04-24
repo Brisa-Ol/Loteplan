@@ -4,7 +4,8 @@ export type TipoTransaccion =
   | 'directo'
   | 'Puja'
   | 'pago_suscripcion_inicial'
-  | 'mensual';
+  | 'mensual'
+  | 'adhesion';
 
 export type EstadoTransaccion =
   | 'pendiente'
@@ -84,6 +85,7 @@ export interface TransaccionDto extends BaseDTO {
   id_inversion?: number | null;
   id_puja?: number | null;
   id_suscripcion?: number | null;
+  id_pago_adhesion?: number | null;
 
   estado_transaccion: EstadoTransaccion;
   error_detalle?: string | null;
@@ -105,6 +107,7 @@ export interface CreateTransaccionDto {
   id_inversion?: number;
   id_puja?: number;
   id_suscripcion?: number;
+  id_pago_adhesion?: number;
   id_pago_mensual?: number;
 }
 

@@ -1,12 +1,13 @@
-import type { 
-  ContratoFirmadoDto, 
-  ContratoFirmadoResponseDto, 
-  RegistrarFirmaRequestDto 
+import type {
+  ContratoFirmadoDto,
+  ContratoFirmadoResponseDto,
+  RegistrarFirmaRequestDto,
+  TrackPaymentAndContractResponseDto
 } from "@/core/types/contrato-firmado.dto";
 import type { AxiosResponse } from "axios";
 import httpService from "../httpService";
 
-const BASE_ENDPOINT = '/contratos'; 
+const BASE_ENDPOINT = '/contratos';
 
 const ContratoFirmadoService = {
 
@@ -20,19 +21,19 @@ const ContratoFirmadoService = {
    */
   registrarFirma: async (data: RegistrarFirmaRequestDto): Promise<AxiosResponse<ContratoFirmadoResponseDto>> => {
     const formData = new FormData();
-    
+
     // 🚨 IMPORTANTE: Tu backend (multer) espera el campo 'pdfFile'
-    formData.append('pdfFile', data.file); 
-    
+    formData.append('pdfFile', data.file);
+
     // IDs Contextuales
     formData.append('id_contrato_plantilla', data.id_contrato_plantilla.toString());
     formData.append('id_proyecto', data.id_proyecto.toString());
     formData.append('id_usuario_firmante', data.id_usuario_firmante.toString());
-    
+
     // Seguridad (Hash calculado en el front y TOTP)
     formData.append('hash_archivo_firmado', data.hash_archivo_firmado);
     formData.append('codigo_2fa', data.codigo_2fa);
-    
+
     // Auditoría Geo (Opcionales)
     if (data.latitud_verificacion) formData.append('latitud_verificacion', data.latitud_verificacion);
     if (data.longitud_verificacion) formData.append('longitud_verificacion', data.longitud_verificacion);
@@ -83,17 +84,29 @@ const ContratoFirmadoService = {
   getDownloadUrl: (id: number): string => {
     return `${BASE_ENDPOINT}/descargar/${id}`;
   },
+  // =================================================
+  // 🔎 SEGUIMIENTO Y ELEGIBILIDAD
+  // =================================================
 
+  /**
+   * Verifica si el usuario tiene pagos confirmados (inversión o cuota de adhesión)
+   * y si ya firmó el contrato para un proyecto específico.
+   * Útil para habilitar/deshabilitar el botón de "Firmar Contrato" en el front.
+   */
+  trackPaymentAndContract: async (proyectoId: number): Promise<AxiosResponse<TrackPaymentAndContractResponseDto>> => {
+    // ⚠️ Asegúrate de que esta ruta coincida con lo que pusiste en contrato.routes.js
+    return await httpService.get(`${BASE_ENDPOINT}/track/${proyectoId}`);
+  },
   /**
    * Obtiene la posición actual del navegador (Helper para el modal de firma).
    */
   getCurrentPosition: (): Promise<{ lat: string, lng: string } | null> => {
     return new Promise((resolve) => {
-       if (!navigator.geolocation) { resolve(null); return; }
-       navigator.geolocation.getCurrentPosition(
-         (pos) => resolve({ lat: pos.coords.latitude.toString(), lng: pos.coords.longitude.toString() }),
-         () => resolve(null)
-       );
+      if (!navigator.geolocation) { resolve(null); return; }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => resolve({ lat: pos.coords.latitude.toString(), lng: pos.coords.longitude.toString() }),
+        () => resolve(null)
+      );
     });
   }
 };

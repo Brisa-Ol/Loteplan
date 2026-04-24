@@ -41,6 +41,7 @@ export interface SuscripcionDto extends BaseDTO {
   meses_a_pagar: number;
   saldo_a_favor: string;
   monto_total_pagado: string;
+  adhesion_completada: boolean;
   createdAt: string;
   updatedAt: string;
   usuario?: {

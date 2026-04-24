@@ -1,11 +1,13 @@
 // src/features/client/pages/Lotes/DetalleLote.tsx
 
 import {
-  BookmarkBorder,
+  AddCircleOutline, // <-- Agregado
+  BookmarkBorder, // <-- Agregado
   EmojiEvents,
   Gavel,
+  ReplayCircleFilled, // <-- Agregado
   Timer,
-  TokenOutlined,
+  TokenOutlined
 } from '@mui/icons-material';
 import {
   Alert,
@@ -20,6 +22,10 @@ import {
   Fade,
   keyframes,
   LinearProgress,
+  List, // <-- Agregado
+  ListItem, // <-- Agregado
+  ListItemIcon, // <-- Agregado
+  ListItemText, // <-- Agregado
   Paper,
   Portal,
   Skeleton,
@@ -47,13 +53,13 @@ import {
 import TwoFactorAuthModal from '@/shared/components/domain/modals/TwoFactorAuthModal';
 
 // Hooks Locales
+import { MapUrlIframe } from '@/features/admin/pages/Proyectos/modals/MapUrlIframe/MapUrlIframe';
 import { useAuctionStatus } from '../../hooks';
 import { useCurrencyFormatter } from '../../hooks/useCurrencyFormatter';
 import { useImageLoader } from '../../hooks/useImageLoader';
 import { useVerificarSuscripcion } from '../../hooks/useVerificarSuscripcion';
 import { FavoritoButton } from './components/BotonFavorito';
 import { PujarModal } from './modals/PujarModal';
-import { MapUrlIframe } from '@/features/admin/pages/Proyectos/modals/MapUrlIframe/MapUrlIframe';
 
 // ─── Animaciones ─────────────────────────────────────────────────────────────
 
@@ -230,8 +236,8 @@ const DetalleLote: React.FC = () => {
   const subastaFinalizada = lote?.estado_subasta === 'finalizada';
   const tiempoAgotado = lote?.fecha_fin ? new Date(lote.fecha_fin).getTime() <= Date.now() : false;
 
-  // Flag unificado para saber si la tarjeta debe verse bloqueada como en tu imagen
-const isCerrada = lote?.estado_subasta === 'finalizada' || lote?.estado_subasta === 'pendiente';
+  // Flag unificado para saber si la tarjeta debe verse bloqueada
+  const isCerrada = lote?.estado_subasta === 'finalizada' || lote?.estado_subasta === 'pendiente';
 
   const yaParticipa = !!winInfo.miPujaId;
   const soyGanador = winInfo.esLiderActual || winInfo.esGanadorDefinitivo;
@@ -240,7 +246,7 @@ const isCerrada = lote?.estado_subasta === 'finalizada' || lote?.estado_subasta 
   const debesPagar = winInfo.esGanadorDefinitivo && subastaFinalizada && !yaPago;
 
   const puedePujar = isActiva && estaSuscripto && (tokensDisponibles > 0 || yaParticipa);
-  const puedeCancelar = isActiva && yaParticipa 
+  const puedeCancelar = isActiva && yaParticipa;
   const sinTokensParaPujar =
     isActiva && !isCerrada && estaSuscripto && tokensDisponibles === 0 && !yaParticipa;
 
@@ -296,11 +302,11 @@ const isCerrada = lote?.estado_subasta === 'finalizada' || lote?.estado_subasta 
   };
 
   const handleConfirmarCancelacion = async () => {
-    if (winInfo.miPujaId){
-        await mutationCancelar.mutate(winInfo.miPujaId);
-        setTimeout(() => {
-          window.location.reload(); // Recarga para actualizar estado tras cancelación
-        }, 1750);
+    if (winInfo.miPujaId) {
+      await mutationCancelar.mutate(winInfo.miPujaId);
+      setTimeout(() => {
+        window.location.reload(); // Recarga para actualizar estado tras cancelación
+      }, 1750);
     }
   };
 
@@ -337,7 +343,7 @@ const isCerrada = lote?.estado_subasta === 'finalizada' || lote?.estado_subasta 
         subtitle={`Nombre del lote: ${lote.nombre_lote}`}
         action={
           <Stack direction="row" spacing={1.5} alignItems="center">
-<Chip
+            <Chip
               label={winInfo.esGanadorDefinitivo ? '¡GANASTE EL LOTE!' : winInfo.esLiderActual ? '¡VAS GANANDO!' : statusConfig.label}
 
               color={soyGanador ? 'success' : undefined}
@@ -391,8 +397,8 @@ const isCerrada = lote?.estado_subasta === 'finalizada' || lote?.estado_subasta 
           alignItems: 'flex-start',
         }}
       >
-        {/* ─── COLUMNA IZQUIERDA — IMAGEN ─── */}
-        <Box>
+        {/* ─── COLUMNA IZQUIERDA — IMAGEN E INFO TOKENS ─── */}
+        <Stack spacing={4}>
           <Paper
             variant="outlined"
             sx={{
@@ -431,7 +437,101 @@ const isCerrada = lote?.estado_subasta === 'finalizada' || lote?.estado_subasta 
               </>
             )}
           </Paper>
-        </Box>
+
+          {/* 👇 NUEVO: SECCIÓN DE INFORMACIÓN DE TOKENS DEBAJO DE LA IMAGEN */}
+          <Card variant="outlined" sx={{ borderRadius: 4 }}>
+            <CardContent>
+              <Typography variant="h6" fontWeight={800} gutterBottom color="primary.main">
+                ¿Cómo funcionan las pujas y tokens?
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                Para mantener un proceso justo y ordenado, utilizamos un sistema de tokens para participar en las subastas.
+              </Typography>
+
+              <List sx={{ gap: 2, display: 'flex', flexDirection: 'column', p: 0 }}>
+                {/* Item 1: Uso del Token */}
+                <ListItem
+                  sx={{
+                    bgcolor: alpha(theme.palette.primary.main, 0.05),
+                    borderRadius: 2,
+                    alignItems: 'flex-start',
+                    p: 2,
+                  }}
+                >
+                  <ListItemIcon sx={{ minWidth: 40, mt: 0.5 }}>
+                    <TokenOutlined color="primary" />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={<Typography fontWeight={800}>1. Tu primera oferta</Typography>}
+                    secondary="Necesitás 1 token disponible para realizar tu primera oferta en cualquier lote. Al confirmar, el token quedará reservado en esa puja."
+                  />
+                </ListItem>
+
+                {/* Item 2: Defender la oferta */}
+                <ListItem
+                  sx={{
+                    bgcolor: alpha(theme.palette.warning.main, 0.05),
+                    borderRadius: 2,
+                    alignItems: 'flex-start',
+                    p: 2,
+                  }}
+                >
+                  <ListItemIcon sx={{ minWidth: 40, mt: 0.5 }}>
+                    <Gavel color="warning" />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={<Typography fontWeight={800}>2. Mejorar tu oferta es gratis</Typography>}
+                    secondary="Si alguien supera tu monto, podés volver a ofertar en ese mismo lote para recuperar el liderazgo sin necesidad de gastar tokens adicionales."
+                  />
+                </ListItem>
+
+                {/* Item 3: Devolución */}
+                <ListItem
+                  sx={{
+                    bgcolor: alpha(theme.palette.success.main, 0.05),
+                    borderRadius: 2,
+                    alignItems: 'flex-start',
+                    p: 2,
+                  }}
+                >
+                  <ListItemIcon sx={{ minWidth: 40, mt: 0.5 }}>
+                    <ReplayCircleFilled color="success" />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={<Typography fontWeight={800}>3. Devolución garantizada</Typography>}
+                    secondary="Si retirás tu puja o la subasta finaliza y no resultás ganador, tu token se devuelve automáticamente para que puedas usarlo en otro lote del proyecto."
+                  />
+                </ListItem>
+
+                {/* Item 4: Múltiples suscripciones */}
+                <ListItem
+                  sx={{
+                    bgcolor: alpha(theme.palette.info.main, 0.05),
+                    borderRadius: 2,
+                    alignItems: 'flex-start',
+                    p: 2,
+                  }}
+                >
+                  <ListItemIcon sx={{ minWidth: 40, mt: 0.5 }}>
+                    <AddCircleOutline color="info" />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={<Typography fontWeight={800}>4. Ofertar en múltiples lotes</Typography>}
+                    secondary={
+                      <React.Fragment>
+                        Si deseás participar por más de un lote a la vez, podés volver a suscribirte al proyecto para obtener un nuevo token.
+                        <Typography component="span" variant="body2" fontWeight={700} display="block" sx={{ mt: 0.5 }}>
+                          Importante: Esto generará una nueva suscripción en paralelo, por lo que tendrás dos suscripciones activas al mismo tiempo.
+                        </Typography>
+                      </React.Fragment>
+                    }
+                  />
+                </ListItem>
+
+              </List>
+            </CardContent>
+          </Card>
+        </Stack>
 
         {/* ─── COLUMNA DERECHA — TARJETAS NORMALES ─── */}
         <Box>
@@ -616,45 +716,45 @@ const isCerrada = lote?.estado_subasta === 'finalizada' || lote?.estado_subasta 
             </Card>
 
           </Stack>
-       {/* 👇 NUEVO: SECCIÓN DE UBICACIÓN */}
+          {/* SECCIÓN DE UBICACIÓN */}
           {lote?.map_url && (
             <Card variant="outlined" sx={{ mt: 3, borderRadius: 4 }}>
               <CardContent sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                
-                  <Typography variant="subtitle1" fontWeight={800}>
-                    Ubicación del lote
-                  </Typography>
-                
+
+                <Typography variant="subtitle1" fontWeight={800}>
+                  Ubicación del lote
+                </Typography>
+
               </CardContent>
-                  <MapUrlIframe map_url={lote.map_url} type_proyect={false} />
+              <MapUrlIframe map_url={lote.map_url} type_proyect={false} />
             </Card>
           )}
         </Box>
 
-      {/* Modales */}
-      <TwoFactorAuthModal
-        open={twoFaModal.isOpen}
-        onClose={twoFaModal.close}
-        onSubmit={(c) => confirmar2FA.mutate(c)}
-        isLoading={confirmar2FA.isPending}
-        error={twoFAError}
-      />
-      <PujarModal
-        {...pujarModal.modalProps}
-        lote={lote}
-        montoLiderConocido={preciosInfo.montoLiderConocido}
-        montoLider={preciosInfo.montoLider}
-        miMontoActual={preciosInfo.miMonto > 0 ? preciosInfo.miMonto : undefined}
-        yaParticipa={yaParticipa}
-        soyGanador={winInfo.esLiderActual}
-        onSuccess={invalidarTodo}
-      />
-      <ConfirmDialog
-        controller={confirmDialog}
-        onConfirm={handleConfirmarCancelacion}
-        isLoading={mutationCancelar.isPending}
-      />
-    </Box>
+        {/* Modales */}
+        <TwoFactorAuthModal
+          open={twoFaModal.isOpen}
+          onClose={twoFaModal.close}
+          onSubmit={(c) => confirmar2FA.mutate(c)}
+          isLoading={confirmar2FA.isPending}
+          error={twoFAError}
+        />
+        <PujarModal
+          {...pujarModal.modalProps}
+          lote={lote}
+          montoLiderConocido={preciosInfo.montoLiderConocido}
+          montoLider={preciosInfo.montoLider}
+          miMontoActual={preciosInfo.miMonto > 0 ? preciosInfo.miMonto : undefined}
+          yaParticipa={yaParticipa}
+          soyGanador={winInfo.esLiderActual}
+          onSuccess={invalidarTodo}
+        />
+        <ConfirmDialog
+          controller={confirmDialog}
+          onConfirm={handleConfirmarCancelacion}
+          isLoading={mutationCancelar.isPending}
+        />
+      </Box>
     </Box>
   );
 };

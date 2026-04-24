@@ -36,7 +36,7 @@ import { ProjectSidebar } from '../components/ProjectSidebar';
 import { CheckoutInversionModal } from '../modals/CheckoutInversionModal/CheckoutInversionModal';
 import { CheckoutWizardModal } from '../modals/CheckoutWizardModal/CheckoutWizardModal';
 
-import styles from './DetalleProyecto.module.css'
+import styles from './DetalleProyecto.module.css';
 
 // 🚀 LAZY LOADING
 const ProjectGallery = lazy(() => import('../components/ProjectGallery').then(m => ({ default: m.ProjectGallery })));
