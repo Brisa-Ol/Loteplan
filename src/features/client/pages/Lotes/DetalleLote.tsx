@@ -520,7 +520,7 @@ const isCerrada = lote?.estado_subasta === 'finalizada' || lote?.estado_subasta 
                       {isCerrada ? 'SUBASTA FINALIZADA' : 'SUBASTA EN CURSO'}
                     </Typography>
                     <Typography variant="h3" fontWeight={900} color={isCerrada ? "text.disabled" : "warning.main"} sx={{ mb: 3 }}>
-                      {isCerrada ? 'Lote vendido' : 'Hay ofertas'}
+                      {isCerrada ? 'Lote adjudicado' : 'Hay ofertas'}
                     </Typography>
                   </>
                 )}

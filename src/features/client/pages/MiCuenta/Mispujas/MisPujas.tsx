@@ -168,7 +168,7 @@ const MisPujas: React.FC = () => {
       render: (puja) => {
         const configs: Record<string, any> = {
           activa: { label: 'ACTIVA', color: 'info', icon: <Gavel fontSize="small" /> },
-          ganadora_pendiente: { label: 'GANASTE (PAGAR)', color: 'warning', icon: <EmojiEvents fontSize="small" />, variant: 'filled' },
+          ganadora_pendiente: { label: 'GANASTE', color: 'warning', icon: <EmojiEvents fontSize="small" />, variant: 'filled' },
           ganadora_pagada: { label: 'ADJUDICADO', color: 'success', icon: <CheckCircle fontSize="small" />, variant: 'filled' },
           perdedora: { label: 'SUPERADA', color: 'default', icon: <Cancel fontSize="small" /> },
         };

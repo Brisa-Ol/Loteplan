@@ -79,7 +79,7 @@ const ProjectSection = React.memo(({ value, proyectos, isLoading, onChange, hand
   </Box>
 ));
 
-const FinanceSection = React.memo(({ precio, lat, lng, touched, error, onChange, handleBlur, maps }: any) => (
+const FinanceSection = React.memo(({ precio, lat, lng, touched, error, onChange, handleBlur, maps, touchedMap, errorMap }: any) => (
   <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
     <Box flex={1}>
       <Typography sx={SECTION_TITLE_SX}><MonetizationIcon fontSize="inherit" /> Valor de Salida</Typography>
@@ -96,7 +96,7 @@ const FinanceSection = React.memo(({ precio, lat, lng, touched, error, onChange,
     <Box flex={1}>
       <Typography sx={SECTION_TITLE_SX}><LocationOn fontSize="inherit" /> Georreferencia (GPS)</Typography>
       <Stack direction="row" spacing={1}>
-        <TextField fullWidth label="Maps" size="small" name="map_url" value={maps} onChange={onChange} onBlur={handleBlur} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
+        <TextField fullWidth label="Maps" size="small" name="map_url" value={maps} onChange={onChange} onBlur={handleBlur} error={touchedMap && Boolean(errorMap)} helperText={touchedMap && (errorMap as string)} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
         <TextField fullWidth label="Latitud" size="small" name="latitud" value={lat} onChange={onChange} onBlur={handleBlur} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
         <TextField fullWidth label="Longitud" size="small" name="longitud" value={lng} onChange={onChange} onBlur={handleBlur} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} />
       </Stack>
@@ -234,9 +234,19 @@ const CreateLoteModal: React.FC<CreateLoteModalProps> = ({ open, onClose, onSubm
           </Stack>
 
           <FinanceSection
-            precio={formik.values.precio_base} lat={formik.values.latitud} lng={formik.values.longitud}
-            touched={formik.touched.precio_base} error={formik.errors.precio_base} maps={formik.values.map_url}
-            onChange={formik.handleChange} handleBlur={formik.handleBlur}
+            precio={formik.values.precio_base} 
+            lat={formik.values.latitud} 
+            lng={formik.values.longitud}
+            maps={formik.values.map_url}
+
+            touched={formik.touched.precio_base} 
+            error={formik.errors.precio_base} 
+
+            touchedMap={formik.touched.map_url}
+            errorMap={formik.errors.map_url}
+            
+            onChange={formik.handleChange} 
+            handleBlur={formik.handleBlur}
           />
 
 

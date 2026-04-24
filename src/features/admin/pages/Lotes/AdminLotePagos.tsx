@@ -358,7 +358,7 @@ const AdminLotePagos: React.FC = () => {
                 MOTIVO INDICADO POR EL USUARIO:
               </Typography>
               <Typography variant="body1" sx={{ mt: 1, fontStyle: 'italic', fontWeight: 500, color: 'text.primary' }}>
-                "{logic.modales.cancelRequest.data?.motivo || 'No especificó ningún motivo.'}"
+                "{logic.modales.cancelRequest.data?.motivo_cancelacion || 'No especificó ningún motivo.'}"
               </Typography>
             </Paper>
 
