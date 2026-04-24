@@ -749,34 +749,6 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
 
   return (
     <>
-      {/* {showRecoveryPrompt && recoveredState && !recoveredState.paymentSuccess && (
-        <BaseModal
-          open={showRecoveryPrompt}
-          onClose={handleDiscardRecovery}
-          title="Sesión Interrumpida"
-          subtitle="Detectamos un proceso incompleto"
-          icon={<Refresh />}
-          headerColor="warning"
-          maxWidth="sm"
-        >
-          <Stack spacing={3} p={1}>
-            <Alert severity="info" icon={<Info />}>
-              <Typography variant="body2" fontWeight={600}>Encontramos una sesión anterior</Typography>
-              <Typography variant="caption">Podés continuar donde lo dejaste.</Typography>
-            </Alert>
-            <Button
-              variant="contained"
-              fullWidth
-              onClick={handleRecoverState}
-              startIcon={<Refresh />}
-              color="primary"
-              sx={{ py: 1.5, fontWeight: 800, borderRadius: 2 }}
-            >
-              Continuar proceso
-            </Button>
-          </Stack>
-        </BaseModal>
-      )} */}
 
       {/* MODAL PRINCIPAL */}
       <BaseModal

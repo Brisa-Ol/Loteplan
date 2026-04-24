@@ -26,6 +26,7 @@ export type ConfirmAction =
   | 'force_finish'
   | 'revert_payment'
   | 'revert_project_process'
+  | 'return_token'
   | null;
 
 export interface ConfirmConfig {
@@ -58,7 +59,11 @@ const BASE_CONFIGS: Record<string, Partial<ConfirmConfig>> = {
   remove_favorite: { title: '¿Quitar de favoritos?', confirmText: 'Sí, quitar', severity: 'warning' },
   cancel_puja: { title: '¿Cancelar puja?', confirmText: 'Sí, cancelar puja', severity: 'warning' },
   revert_payment: { title: '¿Revertir Pago?', confirmText: 'Sí, revertir a pendiente', severity: 'warning' },
-
+  return_token: {
+    title: '¿Devolver Token?',
+    confirmText: 'Sí, devolver token',
+    severity: 'warning'
+  },
   // Toggles (Warning)
   toggle_project_visibility: { severity: 'warning' },
   toggle_user_status: { severity: 'warning' },
@@ -162,6 +167,10 @@ export const useConfirmDialog = () => {
       }
       case 'pay_quota': {
         description = `Estás por pagar la cuota del proyecto "${data.nombreProyecto}". Tras confirmar, deberás validar tu identidad con el código 2FA.`;
+        break;
+      }
+      case 'return_token': {
+        description = `Estás a punto de devolver 1 token manualmente a este suscriptor. Esta acción actualizará su saldo disponible.`;
         break;
       }
       // ✅ Fix: bloque con llaves para evitar lexical declaration en case clause
