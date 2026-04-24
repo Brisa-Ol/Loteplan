@@ -29,7 +29,7 @@ import {
   Table, TableBody, TableCell, TableContainer, TableHead, TablePagination, TableRow,
   Tabs, Tooltip, Typography, alpha, useTheme
 } from '@mui/material';
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Bar, BarChart, CartesianGrid, Cell,
   Tooltip as RechartsTooltip,
@@ -50,6 +50,7 @@ import { StatCard, StatusBadge } from '@/shared/components/domain/cards/StatCard
 import { ConfirmDialog } from '@/shared/components/domain/modals/ConfirmDialog';
 import { PageContainer } from '@/shared/components/layout/PageContainer';
 import { useAdminLotePagos } from '../../hooks/lotes/useAdminLotePagos';
+import { ModalViewDetailsPujaPayment } from './modals/ModalViewDetailsPujaPayment';
 
 // ============================================================================
 // HELPERS
@@ -64,6 +65,21 @@ const AdminLotePagos: React.FC = () => {
   const logic = useAdminLotePagos();
   const theme = useTheme();
   const [tabIndex, setTabIndex] = useState(0);
+
+  //Estados y Funciones Thomy
+  const [auctionDetailModal, setAuctionDetailModal] = useState<{ open: boolean; lote: LoteDto | null }>({
+    open: false,
+    lote: null,
+  });
+
+  const handleOpenAuctionDetail = useCallback((lote: LoteDto) => {
+    setAuctionDetailModal({ open: true, lote });
+  }, []);
+
+  const handleCloseAuctionDetail = useCallback(() => {
+    setAuctionDetailModal({ open: false, lote: null });
+  }, []);
+
 
   // ============================================================================
   // ESTADOS PARA FILTROS
@@ -230,8 +246,8 @@ const AdminLotePagos: React.FC = () => {
             )}
 
             {isPaid ? (
-              <Tooltip title="Ver detalles de pago">
-                <IconButton size="small" sx={{ color: 'success.main', bgcolor: alpha(theme.palette.success.main, 0.05) }}>
+              <Tooltip title="Ver detalles de subasta y pago">
+                <IconButton size="small" sx={{ color: 'success.main', bgcolor: alpha(theme.palette.success.main, 0.05) }} onClick={() => handleOpenAuctionDetail(l)}>
                   <HistoryIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
@@ -382,6 +398,14 @@ const AdminLotePagos: React.FC = () => {
         </Dialog>
       )}
 
+      {/* MODAL DE DETALLES DE SUBASTA Y PAGO */}
+      <ModalViewDetailsPujaPayment
+        open={auctionDetailModal.open}
+        onClose={handleCloseAuctionDetail}
+        lote={auctionDetailModal.lote}
+        pujas={auctionDetailModal.lote ? (logic.pujasPorLote[auctionDetailModal.lote.id] || []) : []}
+      />
+
     </PageContainer>
   );
 };
@@ -425,37 +449,109 @@ const RiskDistributionChart = React.memo<{ data: any[]; theme: any }>(({ data, t
 // ============================================================================
 // TABLA TOP 3 POSTORES (CON PAGINACIÓN)
 // ============================================================================
-
 const Top3PostoresTable = React.memo<{
   lotes: LoteDto[];
   pujasPorLote: Record<number, PujaDto[]>;
-  theme: any
+  theme: any;
 }>(({ lotes, pujasPorLote, theme }) => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterProyecto, setFilterProyecto] = useState('all');
+  
+  // Proyectos únicos presentes en los lotes
+  const proyectosUnicos = useMemo(() => {
+  const map = new Map<string, string>();
 
-  const handleChangePage = (_: unknown, newPage: number) => {
-    setPage(newPage);
-  };
+  lotes.forEach((l) => {
+    // Misma lógica de fallback que usás en el render de filas
+    const pujas = pujasPorLote[l.id] || [];
+    const nombre =
+      l.proyecto?.nombre_proyecto ||
+      l.proyectoLote?.nombre_proyecto ||
+      (pujas[0] as any)?.lote?.proyectoLote?.nombre_proyecto ||
+      (pujas[0] as any)?.lote?.proyecto?.nombre_proyecto;
 
-  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
-  };
+    const id = String(l.id_proyecto);
 
+    if (nombre && id !== 'undefined' && id !== 'null') {
+      map.set(id, nombre);
+    }
+  });
+
+  return Array.from(map.entries())
+    .map(([id, nombre]) => ({ id, nombre }))
+    .sort((a, b) => a.nombre.localeCompare(b.nombre)); // opcional: orden alfabético
+}, [lotes, pujasPorLote]); // <-- agregar pujasPorLote como dependencia
+  
+  const filteredAndSorted = useMemo(() => {
+    const term = searchTerm.toLowerCase();
+    
+    return lotes
+    // Excluir pagados
+    .filter((l) => l.pujaMasAlta?.estado_puja !== 'ganadora_pagada')
+    // Filtro por búsqueda
+    .filter((l) => {
+      if (!term) return true;
+      return l.nombre_lote.toLowerCase().includes(term) ||
+      String(l.id).includes(term);
+    })
+    // Filtro por proyecto
+    .filter((l) => {
+      if (filterProyecto === 'all') return true;
+      return String(l.id_proyecto) === filterProyecto;
+    })
+    // Ordenar: finalizadas recientes primero
+    .sort((a, b) => {
+      const aFin = a.fecha_fin ? new Date(a.fecha_fin).getTime() : 0;
+      const bFin = b.fecha_fin ? new Date(b.fecha_fin).getTime() : 0;
+      return bFin - aFin; // más reciente primero
+    });
+  }, [lotes, searchTerm, filterProyecto]);
+  
   const visibleLotes = useMemo(() => {
-    return lotes.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
-  }, [lotes, page, rowsPerPage]);
+    return filteredAndSorted.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+  }, [filteredAndSorted, page, rowsPerPage]);
+  
+  
+  // Reset page cuando cambian filtros
+  useEffect(() => { 
+    setPage(0); 
+  }, [searchTerm, filterProyecto]);
 
   return (
     <Card variant="outlined" sx={{ bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' }}>
       <CardContent sx={{ p: 0 }}>
+        {/* Header */}
         <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Box>
             <Typography variant="h6" color="text.primary" fontWeight={700}>Top 3 Postores</Typography>
-            <Typography variant="caption" color="text.secondary">Información de contacto en caso de incumplimiento del ganador principal</Typography>
+            <Typography variant="caption" color="text.secondary">
+              Sin pagados · ordenado por subasta más reciente
+            </Typography>
           </Box>
           <Chip icon={<Person />} label="Directorio de Contacto" size="small" color="primary" variant="outlined" sx={{ fontWeight: 700 }} />
+        </Box>
+
+        {/* Filtros */}
+        <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 1.5 }}>
+          <FilterSearch
+            placeholder="Buscar por lote o ID..."
+            value={searchTerm}
+            onChange={(e: any) => setSearchTerm(e?.target?.value ?? '')}
+            sx={{ flex: 1 }}
+          />
+          <FilterSelect
+            label="Proyecto"
+            value={filterProyecto}
+            onChange={(e: any) => setFilterProyecto(e.target.value)}
+            sx={{ minWidth: 200 }}
+          >
+            <MenuItem value="all">Todos los proyectos</MenuItem>
+            {proyectosUnicos.map(({ id, nombre }) => (
+              <MenuItem key={id} value={id}>{nombre}</MenuItem>
+            ))}
+          </FilterSelect>
         </Box>
 
         <TableContainer sx={{ maxHeight: 500 }}>
@@ -478,10 +574,14 @@ const Top3PostoresTable = React.memo<{
             </TableHead>
 
             <TableBody>
-              {lotes.length === 0 ? (
+              {filteredAndSorted.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
-                    <Typography variant="caption" color="text.secondary">No hay lotes en mora para mostrar</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {searchTerm || filterProyecto !== 'all'
+                        ? 'Sin resultados para los filtros aplicados'
+                        : 'No hay lotes pendientes para mostrar'}
+                    </Typography>
                   </TableCell>
                 </TableRow>
               ) : (
@@ -489,12 +589,16 @@ const Top3PostoresTable = React.memo<{
                   const pujas = pujasPorLote[lote.id] || [];
                   const top3 = [pujas[0], pujas[1], pujas[2]];
                   const nombreProyecto = lote.proyecto?.nombre_proyecto || (pujas[0] as any)?.lote?.proyectoLote?.nombre_proyecto;
-
                   return (
                     <TableRow key={lote.id} hover>
                       <TableCell sx={{ borderRight: '1px solid', borderColor: 'divider', verticalAlign: 'top', pt: 1.5, minWidth: 180 }}>
                         <Typography variant="body2" fontWeight={800}>{lote.nombre_lote}</Typography>
                         <Typography variant="caption" color="text.disabled" display="block">ID: {lote.id}</Typography>
+                        {lote.fecha_fin && (
+                          <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
+                            Fin: {new Date(lote.fecha_fin).toLocaleDateString('es-AR')}
+                          </Typography>
+                        )}
                         {nombreProyecto && (
                           <Chip
                             label={nombreProyecto}
@@ -506,9 +610,7 @@ const Top3PostoresTable = React.memo<{
                       </TableCell>
 
                       {top3.map((puja, index) => {
-                        // SOLUCIÓN: Creamos una key combinada que SIEMPRE será única en todo el DOM
                         const cellKey = `cell-${lote.id}-${puja?.id || `empty-${index}`}`;
-
                         if (!puja || !puja.usuario) {
                           return (
                             <TableCell key={cellKey} sx={{ borderRight: index !== 2 ? '1px solid' : 'none', borderColor: 'divider', bgcolor: alpha(theme.palette.action.disabledBackground, 0.02) }}>
@@ -536,9 +638,7 @@ const Top3PostoresTable = React.memo<{
                               </Stack>
                               <Box display="flex" alignItems="center" gap={0.5}>
                                 <MailOutline sx={{ fontSize: 12, color: 'text.secondary' }} />
-                                <Typography variant="caption" color="text.secondary" noWrap sx={{ maxWidth: 150 }}>
-                                  {u.email}
-                                </Typography>
+                                <Typography variant="caption" color="text.secondary" noWrap sx={{ maxWidth: 150 }}>{u.email}</Typography>
                               </Box>
                               <Stack direction="row" justifyContent="space-between" alignItems="center" mt={0.5} sx={{ borderTop: '1px dashed', borderColor: 'divider', pt: 0.5 }}>
                                 <Typography variant="caption" fontWeight={800} color="primary.main">
@@ -563,11 +663,11 @@ const Top3PostoresTable = React.memo<{
         <TablePagination
           rowsPerPageOptions={[5, 10, 25]}
           component="div"
-          count={lotes.length}
+          count={filteredAndSorted.length}  // ← sobre los filtrados, no el total
           rowsPerPage={rowsPerPage}
           page={page}
-          onPageChange={handleChangePage}
-          onRowsPerPageChange={handleChangeRowsPerPage}
+          onPageChange={(_, p) => setPage(p)}
+          onRowsPerPageChange={(e) => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0); }}
           labelRowsPerPage="Filas:"
           labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count}`}
           sx={{ borderTop: '1px solid', borderColor: 'divider' }}
@@ -575,6 +675,6 @@ const Top3PostoresTable = React.memo<{
       </CardContent>
     </Card>
   );
-});
+});;
 
 export default AdminLotePagos;

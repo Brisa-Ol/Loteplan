@@ -177,7 +177,7 @@ const MisPujas: React.FC = () => {
         return (
           <Stack spacing={0.5}>
             <Chip label={config.label} color={config.color} size="small" icon={config.icon} variant={config.variant || 'outlined'} sx={{ fontWeight: 700, fontSize: '0.65rem' }} />
-            {puja.solicitud_cancelacion && (
+            {puja.solicitud_cancelacion && puja.estado_puja === 'ganadora_pendiente' && (
               <Typography variant="caption" color="error.main" sx={{ fontSize: '0.6rem', fontWeight: 700 }}>
                 ⚠️ CANCELACIÓN PENDIENTE
               </Typography>
