@@ -11,59 +11,69 @@ import httpService from '../httpService';
 
 const BASE_ENDPOINT = '/adhesion';
 
-const AdhesionService = {
+
 
   // =================================================
   // 👤 RUTAS DE USUARIO
   // =================================================
-
-  crearAdhesion: async (data: CrearAdhesionDto): Promise<AxiosResponse<{ success: boolean, data: AdhesionDto }>> => {
+  
+  // Crear una nueva adhesión (plan de pago)
+  export const createAdhesion = async (data: CrearAdhesionDto): Promise<AxiosResponse<{ success: boolean, data: AdhesionDto }>> => {
     return await httpService.post(`${BASE_ENDPOINT}/`, data);
-  },
+  }
 
-  obtenerAdhesion: async (id: number): Promise<AxiosResponse<{ success: boolean, data: AdhesionDto }>> => {
+  // Obtener una adhesión específica por su ID (solo si pertenece al usuario)
+  export const getAdhesionById = async (id: number): Promise<AxiosResponse<{ success: boolean, data: AdhesionDto }>> => {
     return await httpService.get(`${BASE_ENDPOINT}/${id}`);
-  },
+  }
 
-  listarAdhesionesUsuario: async (): Promise<AxiosResponse<{ success: boolean, data: AdhesionDto[] }>> => {
+  // Listar todas las adhesiones del usuario autenticado
+  export const getAllAdhesionsByUser = async (): Promise<AxiosResponse<{ success: boolean, data: AdhesionDto[] }>> => {
     return await httpService.get(`${BASE_ENDPOINT}/usuario`);
-  },
+  }
 
-  obtenerAdhesionPorSuscripcion: async (suscripcionId: number): Promise<AxiosResponse<{ success: boolean, data: AdhesionDto }>> => {
+  // Obtener la adhesión asociada a una suscripción (útil desde el perfil de suscripción)
+  export const getAdhesionBySubscriptionId = async (suscripcionId: number): Promise<AxiosResponse<{ success: boolean, data: AdhesionDto }>> => {
     return await httpService.get(`${BASE_ENDPOINT}/suscripcion/${suscripcionId}`);
-  },
+  }
 
-  pagarCuotaAdhesion: async (data: PagarCuotaAdhesionDto): Promise<AxiosResponse<{ success: boolean, redirectUrl: string }>> => {
+  // Iniciar el pago de una cuota de adhesión (redirige a pasarela)
+  export const pagarCuotaAdhesion = async (data: PagarCuotaAdhesionDto): Promise<AxiosResponse<{ success: boolean, redirectUrl: string }>> => {
     return await httpService.post(`${BASE_ENDPOINT}/pagar-cuota`, data);
-  },
+  }
 
-  cancelarAdhesion: async (id: number, motivo?: string): Promise<AxiosResponse<{ success: boolean, message: string }>> => {
+  // Cancelar una adhesión (usuario dueño o admin)
+  export const cancelarAdhesion = async (id: number, motivo?: string): Promise<AxiosResponse<{ success: boolean, message: string }>> => {
     return await httpService.delete(`${BASE_ENDPOINT}/${id}`, { data: { motivo } });
-  },
+  }
 
   // =================================================
   // 👮 RUTAS DE ADMINISTRADOR
   // =================================================
 
-  forzarPagoCuota: async (data: ForzarPagoCuotaDto): Promise<AxiosResponse<{ success: boolean, message: string, adhesionId: number, completada: boolean }>> => {
+  // Forzar el pago de una cuota de adhesión (admin)
+  export const forzarPagoCuota = async (data: ForzarPagoCuotaDto): Promise<AxiosResponse<{ success: boolean, message: string, adhesionId: number, completada: boolean }>> => {
     return await httpService.post(`${BASE_ENDPOINT}/admin/forzar-pago`, data);
-  },
-
-  listarTodasAdhesiones: async (): Promise<AxiosResponse<{ success: boolean, total: number, data: AdhesionDto[] }>> => {
-    return await httpService.get(`${BASE_ENDPOINT}/admin/all`);
-  },
-
-  getAdhesionMetrics: async (): Promise<AxiosResponse<{ success: boolean, data: AdhesionMetricsDto }>> => {
-    return await httpService.get(`${BASE_ENDPOINT}/admin/metrics`);
-  },
-
-  getOverdueAdhesionPayments: async (): Promise<AxiosResponse<{ success: boolean, data: PagoAdhesionDto[] }>> => {
-    return await httpService.get(`${BASE_ENDPOINT}/admin/overdue`);
-  },
-
-  getPaymentHistory: async (adhesionId: number): Promise<AxiosResponse<{ success: boolean, data: AdhesionDto }>> => {
-    return await httpService.get(`${BASE_ENDPOINT}/admin/payment-history/${adhesionId}`);
   }
-};
 
-export default AdhesionService;
+  // Listar todas las adhesiones del sistema (auditoría)
+  export const getAllAdhesiones = async (): Promise<AxiosResponse<{ success: boolean, total: number, data: AdhesionDto[] }>> => {
+    return await httpService.get(`${BASE_ENDPOINT}/admin/all`);
+  }
+
+  // 📊 MÉTRICAS Y AUDITORÍA PARA ADMINISTRADORES
+
+  // Obtener métricas generales de adhesiones (recaudación, morosidad, etc.)
+  export const getAdhesionMetrics = async (): Promise<AxiosResponse<{ success: boolean, data: AdhesionMetricsDto }>> => {
+    return await httpService.get(`${BASE_ENDPOINT}/admin/metrics`);
+  }
+
+  // Obtener lista de cuotas de adhesión vencidas (con datos de usuario y proyecto)
+  export const getOverdueAdhesionPayments = async (): Promise<AxiosResponse<{ success: boolean, data: PagoAdhesionDto[] }>> => {
+    return await httpService.get(`${BASE_ENDPOINT}/admin/overdue`);
+  }
+
+  // Obtener historial completo de pagos de una adhesión específica (para auditoría)
+  export const getAdhesionHistory = async (adhesionId: number): Promise<AxiosResponse<{ success: boolean, data: AdhesionDto }>> => {
+    return await httpService.get(`${BASE_ENDPOINT}/admin/payment-history/${adhesionId}`);
+  };
