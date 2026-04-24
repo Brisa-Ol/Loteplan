@@ -253,6 +253,29 @@ const LoteOverviewModal: React.FC<LoteOverviewModalProps> = ({ open, onClose, lo
                   )}
                 </Box>
               </Stack>
+              {/* 👇 Monto ganador — con fallback a pujaMasAlta */}
+{(lote.monto_ganador_lote || lote.pujaMasAlta?.monto_puja) && (
+  <Box
+    sx={{
+      mt: 2,
+      p: 1.5,
+      borderRadius: 2,
+      bgcolor: alpha(theme.palette.success.main, 0.08),
+      border: '1px solid',
+      borderColor: alpha(theme.palette.success.main, 0.2),
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    }}
+  >
+    <Typography variant="caption" fontWeight={800} color="success.dark" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>
+      Monto Adjudicado
+    </Typography>
+    <Typography variant="h6" fontWeight={900} color="success.main" sx={{ fontFamily: 'monospace' }}>
+      ${Number(lote.monto_ganador_lote ?? lote.pujaMasAlta?.monto_puja).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+    </Typography>
+  </Box>
+)}
             </Paper>
           )}
 

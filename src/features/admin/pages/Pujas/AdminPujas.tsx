@@ -48,6 +48,7 @@ import {
   type ViewMode,
 } from '@/shared';
 import { useAdminPujas } from '../../hooks/lotes/useAdminPujas';
+import AuctionControlModal from '../Lotes/modals/AuctionControlModal';
 import DetallePujaModal from './modal/DetallePujaModal';
 
 // ─── Top3List ─────────────────────────────────────────────────────────────────
@@ -169,11 +170,12 @@ Top3List.displayName = 'Top3List';
 
 // ─── LiveAuctionCard ──────────────────────────────────────────────────────────
 
+
 interface LiveCardProps {
   lote: LoteDto;
   pujas: PujaDto[];
   getUserName: (id: number) => string;
-  onFinish: (l: number) => void;
+  onFinish: (l: LoteDto) => void;   // 👈 LoteDto, no number
   onPujaClick: (puja: PujaDto) => void;
 }
 
@@ -273,7 +275,7 @@ const LiveAuctionCard = React.memo<LiveCardProps>(({
           color="error"
           size="small"
           startIcon={<StopCircle />}
-          onClick={() => onFinish(lote.id)}
+          onClick={() => onFinish(lote)}
           sx={{ fontWeight: 700 }}
         >
           Finalizar Subasta
@@ -447,7 +449,7 @@ const AdminPujas: React.FC = () => {
                         <Button
                           size="small"
                           variant="outlined"
-                          onClick={() => logic.handleOpenDetallePuja(topPuja)}
+                          onClick={() => logic.handleFinalizarSubasta(l)}
                           sx={{ fontWeight: 700 }}
                         >
                           Ver líder
@@ -457,7 +459,7 @@ const AdminPujas: React.FC = () => {
                         size="small"
                         variant="contained"
                         color="error"
-                        onClick={() => logic.handleFinalizarSubasta(l.id)}
+                        onClick={() => logic.handleFinalizarSubasta(l)}
                         startIcon={<StopCircle fontSize="small" />}
                         sx={{ fontWeight: 700 }}
                       >
@@ -501,7 +503,14 @@ const AdminPujas: React.FC = () => {
             : undefined
         }
       />
-
+      <AuctionControlModal
+        open={logic.modales.auctionControl.isOpen}
+        onClose={logic.handleCloseAuctionControl}
+        lote={logic.loteSeleccionado}
+        onStart={() => { }}               // nunca se llama: aquí solo hay lotes activos
+        onEnd={logic.handleConfirmEndAuction}
+        isLoading={logic.endAuctionMutation.isPending}
+      />
       <ConfirmDialog
         controller={logic.modales.confirmDialog}
         onConfirm={logic.handleConfirmAction}

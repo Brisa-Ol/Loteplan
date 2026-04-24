@@ -4,9 +4,9 @@ import { AccessTime, CalendarMonth, Gavel, PlayCircleFilled, StopCircle } from '
 import { Alert, alpha, Box, Chip, Stack, TextField, Typography, useTheme } from '@mui/material';
 import React, { useEffect, useMemo, useState } from 'react';
 
+import LoteService from '@/core/api/services/lote.service';
 import type { LoteDto } from '@/core/types/lote.dto';
 import { BaseModal } from '@/shared';
-import LoteService from '@/core/api/services/lote.service';
 
 
 
@@ -76,7 +76,7 @@ const AuctionControlModal: React.FC<Props> = ({ open, onClose, lote, onStart, on
     if (isPending) {
       await LoteService.update(lote.id, formData)
       onStart(lote.id);
-      
+
     } else if (isActive) {
       onEnd(lote.id);
     }
@@ -187,7 +187,7 @@ const AuctionControlModal: React.FC<Props> = ({ open, onClose, lote, onStart, on
                 variant="outlined"
               />
               <Chip
-                icon={<AccessTime sx={{  fontSize: '1rem !important' }} />}
+                icon={<AccessTime sx={{ fontSize: '1rem !important' }} />}
                 label="1 Semana"
                 onClick={() => setQuickDuration(7)}
                 clickable
@@ -212,14 +212,16 @@ const AuctionControlModal: React.FC<Props> = ({ open, onClose, lote, onStart, on
                     <CalendarMonth sx={{ color: 'primary.main' }} />
                   ),
                 }}
-                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 }, '& input[type="datetime-local"]::-webkit-calendar-picker-indicator': {
-                  opacity: 0, // ocultar nativo
-                  position: 'absolute',
-                  right: 0,
-                  width: '100%',
-                  height: '100%',
-                  cursor: 'pointer',
-                }, }}
+                sx={{
+                  '& .MuiOutlinedInput-root': { borderRadius: 2 }, '& input[type="datetime-local"]::-webkit-calendar-picker-indicator': {
+                    opacity: 0, // ocultar nativo
+                    position: 'absolute',
+                    right: 0,
+                    width: '100%',
+                    height: '100%',
+                    cursor: 'pointer',
+                  },
+                }}
               />
               <TextField
                 label="Fin de Subasta"
@@ -236,14 +238,16 @@ const AuctionControlModal: React.FC<Props> = ({ open, onClose, lote, onStart, on
                     <CalendarMonth sx={{ color: 'primary.main' }} />
                   ),
                 }}
-                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 }, '& input[type="datetime-local"]::-webkit-calendar-picker-indicator': {
-                  opacity: 0, // ocultar nativo
-                  position: 'absolute',
-                  right: 0,
-                  width: '100%',
-                  height: '100%',
-                  cursor: 'pointer',
-                }, }}
+                sx={{
+                  '& .MuiOutlinedInput-root': { borderRadius: 2 }, '& input[type="datetime-local"]::-webkit-calendar-picker-indicator': {
+                    opacity: 0, // ocultar nativo
+                    position: 'absolute',
+                    right: 0,
+                    width: '100%',
+                    height: '100%',
+                    cursor: 'pointer',
+                  },
+                }}
               />
             </Stack>
           </Box>
