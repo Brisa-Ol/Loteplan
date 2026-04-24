@@ -93,7 +93,7 @@ export const useAdminLotePagos = () => {
       if (lote.id_puja_mas_alta) {
         return await PujaService.cancelarGanadoraAnticipada(
           lote.id_puja_mas_alta,
-          'Incumplimiento de pago — sanción administrativa'
+          'Incumplimiento de pago — baja administrativa'
         );
       }
       return await PujaService.manageAuctionEnd(lote.id, null);
@@ -106,7 +106,7 @@ export const useAdminLotePagos = () => {
       confirmDialog.close();
     },
     onError: (err: any) => {
-      showError(err.response?.data?.error || 'Error al procesar la sanción.');
+      showError(err.response?.data?.error || 'Error al procesar la baja.');
     },
   });
 

@@ -51,7 +51,7 @@ const BASE_CONFIGS: Record<string, Partial<ConfirmConfig>> = {
   delete_bulk_images: { title: '¿Eliminar imágenes?', confirmText: 'Sí, eliminar', severity: 'error' },
   delete_single_image: { title: '¿Eliminar imagen?', confirmText: 'Sí, eliminar', severity: 'error' },
   cancel_subscription: { title: '¿Cancelar suscripción?', confirmText: 'Sí, cancelar definitivamente', severity: 'error' },
-  force_finish: { title: '¿Sancionar y Cerrar?', confirmText: 'Sí, ejecutar sanción', severity: 'error' },
+  force_finish: { title: 'Baja de Postor', confirmText: 'Confirmar', severity: 'error' },
 
   // Advertencias / Decisiones (Naranja/Warning)
   close_with_unsaved_changes: { title: '¿Cerrar sin guardar?', confirmText: 'Sí, cerrar', severity: 'warning' },
@@ -154,7 +154,7 @@ export const useConfirmDialog = () => {
         break;
       }
       case 'force_finish': {
-        description = `Se finalizará el ciclo del Lote ID ${data.idLote}. Si el ganador no pagó, el lote quedará libre y se podrá aplicar una sanción.`;
+        description = `Desea darle de baja a este usuario y pasar al siguiente mejor postor? Esta acción es irreversible. Recorda que si no hay mas postores el lote quedará desierto.`;
         break;
       }
       case 'revert_payment': {

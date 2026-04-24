@@ -196,7 +196,7 @@ const AdminLotePagos: React.FC = () => {
         if (checkIsPaid(l)) return <StatusBadge status="completed" customLabel="PAGADO" />;
 
         const intentos = l.intentos_fallidos_pago || 0;
-        if (intentos >= 3) return <StatusBadge status="failed" customLabel="SANCIONABLE" />;
+        if (intentos >= 3) return <StatusBadge status="failed" customLabel="Ultimo Postor" />;
         if (intentos > 0) return <StatusBadge status="warning" customLabel={`${intentos}/3 FALLOS`} />;
         return (
           <Chip
@@ -359,7 +359,7 @@ const AdminLotePagos: React.FC = () => {
       <ConfirmDialog controller={logic.modales.confirm} onConfirm={logic.handleConfirmAction} isLoading={logic.isMutating} />
 
       {/* ✅ NUEVO MODAL: LECTURA Y APROBACIÓN DE BAJA */}
-      {logic.modales?.cancelRequest && (
+      {logic.modales?.cancelRequest?.isOpen && (
         <Dialog open={logic.modales.cancelRequest.isOpen} onClose={logic.handleCloseCancelModal} maxWidth="sm" fullWidth>
           <DialogTitle sx={{ color: 'warning.main', display: 'flex', alignItems: 'center', gap: 1 }}>
             <WarningAmber /> Solicitud de Baja de Puja
@@ -458,65 +458,65 @@ const Top3PostoresTable = React.memo<{
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterProyecto, setFilterProyecto] = useState('all');
-  
+
   // Proyectos únicos presentes en los lotes
   const proyectosUnicos = useMemo(() => {
-  const map = new Map<string, string>();
+    const map = new Map<string, string>();
 
-  lotes.forEach((l) => {
-    // Misma lógica de fallback que usás en el render de filas
-    const pujas = pujasPorLote[l.id] || [];
-    const nombre =
-      l.proyecto?.nombre_proyecto ||
-      l.proyectoLote?.nombre_proyecto ||
-      (pujas[0] as any)?.lote?.proyectoLote?.nombre_proyecto ||
-      (pujas[0] as any)?.lote?.proyecto?.nombre_proyecto;
+    lotes.forEach((l) => {
+      // Misma lógica de fallback que usás en el render de filas
+      const pujas = pujasPorLote[l.id] || [];
+      const nombre =
+        l.proyecto?.nombre_proyecto ||
+        l.proyectoLote?.nombre_proyecto ||
+        (pujas[0] as any)?.lote?.proyectoLote?.nombre_proyecto ||
+        (pujas[0] as any)?.lote?.proyecto?.nombre_proyecto;
 
-    const id = String(l.id_proyecto);
+      const id = String(l.id_proyecto);
 
-    if (nombre && id !== 'undefined' && id !== 'null') {
-      map.set(id, nombre);
-    }
-  });
+      if (nombre && id !== 'undefined' && id !== 'null') {
+        map.set(id, nombre);
+      }
+    });
 
-  return Array.from(map.entries())
-    .map(([id, nombre]) => ({ id, nombre }))
-    .sort((a, b) => a.nombre.localeCompare(b.nombre)); // opcional: orden alfabético
-}, [lotes, pujasPorLote]); // <-- agregar pujasPorLote como dependencia
-  
+    return Array.from(map.entries())
+      .map(([id, nombre]) => ({ id, nombre }))
+      .sort((a, b) => a.nombre.localeCompare(b.nombre)); // opcional: orden alfabético
+  }, [lotes, pujasPorLote]); // <-- agregar pujasPorLote como dependencia
+
   const filteredAndSorted = useMemo(() => {
     const term = searchTerm.toLowerCase();
-    
+
     return lotes
-    // Excluir pagados
-    .filter((l) => l.pujaMasAlta?.estado_puja !== 'ganadora_pagada')
-    // Filtro por búsqueda
-    .filter((l) => {
-      if (!term) return true;
-      return l.nombre_lote.toLowerCase().includes(term) ||
-      String(l.id).includes(term);
-    })
-    // Filtro por proyecto
-    .filter((l) => {
-      if (filterProyecto === 'all') return true;
-      return String(l.id_proyecto) === filterProyecto;
-    })
-    // Ordenar: finalizadas recientes primero
-    .sort((a, b) => {
-      const aFin = a.fecha_fin ? new Date(a.fecha_fin).getTime() : 0;
-      const bFin = b.fecha_fin ? new Date(b.fecha_fin).getTime() : 0;
-      return bFin - aFin; // más reciente primero
-    });
+      // Excluir pagados
+      .filter((l) => l.pujaMasAlta?.estado_puja !== 'ganadora_pagada')
+      // Filtro por búsqueda
+      .filter((l) => {
+        if (!term) return true;
+        return l.nombre_lote.toLowerCase().includes(term) ||
+          String(l.id).includes(term);
+      })
+      // Filtro por proyecto
+      .filter((l) => {
+        if (filterProyecto === 'all') return true;
+        return String(l.id_proyecto) === filterProyecto;
+      })
+      // Ordenar: finalizadas recientes primero
+      .sort((a, b) => {
+        const aFin = a.fecha_fin ? new Date(a.fecha_fin).getTime() : 0;
+        const bFin = b.fecha_fin ? new Date(b.fecha_fin).getTime() : 0;
+        return bFin - aFin; // más reciente primero
+      });
   }, [lotes, searchTerm, filterProyecto]);
-  
+
   const visibleLotes = useMemo(() => {
     return filteredAndSorted.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
   }, [filteredAndSorted, page, rowsPerPage]);
-  
-  
+
+
   // Reset page cuando cambian filtros
-  useEffect(() => { 
-    setPage(0); 
+  useEffect(() => {
+    setPage(0);
   }, [searchTerm, filterProyecto]);
 
   return (
