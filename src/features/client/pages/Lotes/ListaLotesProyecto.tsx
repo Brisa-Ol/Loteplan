@@ -1,12 +1,14 @@
 // src/features/client/pages/Lotes/ListaLotesProyecto.tsx
 
-import { FilterListOff, Gavel } from '@mui/icons-material';
+import { FilterListOff, Gavel, InfoOutlined } from '@mui/icons-material';
 import {
   Alert,
   Box,
+  Button,
   CircularProgress,
   Skeleton,
   Stack,
+  Tooltip,
   Typography,
 } from '@mui/material';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -22,6 +24,7 @@ import { useModal } from '@/shared/hooks/useModal';
 import { useVerificarSuscripcion } from '../../hooks/useVerificarSuscripcion';
 import LoteCard from './components/LoteCard';
 import { PujarModal } from './modals/PujarModal';
+import { InfoTokensModal } from './modals/InfoTokensModal';
 
 const LoteCardSkeleton = () => (
   // ... tu código del esqueleto sigue igual ...
@@ -44,7 +47,7 @@ const ListaLotesProyecto: React.FC<ListaLotesProyectoProps> = ({ idProyecto }) =
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
   const queryClient = useQueryClient();
-
+const infoTokensModal = useModal();
   const pujarModal = useModal();
   const [loteSeleccionado, setLoteSeleccionado] = useState<LoteDto | null>(null);
 
@@ -148,15 +151,32 @@ const ListaLotesProyecto: React.FC<ListaLotesProyectoProps> = ({ idProyecto }) =
 
   return (
     <>
-      <Stack direction="row" alignItems="center" spacing={1} mb={3}>
-        <Gavel sx={{ color: 'text.secondary', fontSize: 20 }} />
-        {/* Cambiar lotes.length a lotesOrdenados.length */}
-        <Typography variant="body2" color="text.secondary" fontWeight={700}>{lotesOrdenados.length} lote{lotesOrdenados.length !== 1 ? 's' : ''} en subasta</Typography>
-        {isLoadingSub && <CircularProgress size={14} />}
+<Stack direction="row" alignItems="center" spacing={1} mb={3} justifyContent="space-between">
+        <Stack direction="row" alignItems="center" spacing={1}>
+          <Gavel sx={{ color: 'text.secondary', fontSize: 20 }} />
+          <Typography variant="body2" color="text.secondary" fontWeight={700}>
+            {lotesOrdenados.length} lote{lotesOrdenados.length !== 1 ? 's' : ''} en subasta
+          </Typography>
+          {isLoadingSub && <CircularProgress size={14} />}
+        </Stack>
+
+        {/* 3. Botón para disparar el modal explicativo (solo visible si está logueado o suscrito, según prefieras) */}
+        {estaSuscripto && (
+          <Tooltip title="¿Cómo funcionan los tokens?">
+            <Button 
+              size="small" 
+              variant="text" 
+              startIcon={<InfoOutlined />}
+              onClick={infoTokensModal.open}
+              sx={{ fontWeight: 700, borderRadius: 2 }}
+            >
+              ¿Cómo funcionan los tokens y subastas?
+            </Button>
+          </Tooltip>
+        )}
       </Stack>
 
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', xl: 'repeat(3, 1fr)' }, gap: 3 }}>
-        {/* ✅ MAPEAMOS EL ARRAY ORDENADO EN LUGAR DEL ORIGINAL */}
         {lotesOrdenados.map((lote) => (
           <LoteCard
             key={lote.id} lote={lote} onNavigate={handleNavigate} onPujar={handlePujar}
@@ -175,6 +195,10 @@ const ListaLotesProyecto: React.FC<ListaLotesProyectoProps> = ({ idProyecto }) =
           onSuccess={() => queryClient.invalidateQueries({ queryKey: ['lotes', 'proyecto', idProyecto] })}
         />
       )}
+      <InfoTokensModal 
+        open={infoTokensModal.isOpen} 
+        onClose={infoTokensModal.close} 
+      />
     </>
   );
 };
