@@ -11,10 +11,11 @@ import kycService from '@/core/api/services/kyc.service';
 import proyectoService from '@/core/api/services/proyecto.service';
 import pujaService from '@/core/api/services/puja.service';
 import suscripcionService from '@/core/api/services/suscripcion.service';
+// ✅ 1. Importamos el servicio de métricas de adhesiones
+import { getAdhesionMetrics } from '@/core/api/services/adhesion.service';
 
-import { env } from '@/core/config/env'; // 👈 1. Importamos la configuración
+import { env } from '@/core/config/env';
 
-// 👈 2. Definimos la constante para no repetir el código en cada línea
 const DEFAULT_STALE_TIME = env.queryStaleTime || 30000;
 
 export const useAdminDashboard = () => {
@@ -23,7 +24,6 @@ export const useAdminDashboard = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [selectedPopularidadProject, setSelectedPopularidadProject] = useState<number | null>(null);
 
-  // 👈 3. Aplicamos el staleTime a todas las queries del dashboard
   const results = useQueries({
     queries: [
       { queryKey: ['pendingKYC'], queryFn: kycService.getPendingVerifications, staleTime: DEFAULT_STALE_TIME },
@@ -35,7 +35,9 @@ export const useAdminDashboard = () => {
       { queryKey: ['cancelacion'], queryFn: async () => (await suscripcionService.getCancellationMetrics()).data, staleTime: DEFAULT_STALE_TIME },
       { queryKey: ['proyectosActivos'], queryFn: async () => (await proyectoService.getAllActive()).data, staleTime: DEFAULT_STALE_TIME },
       { queryKey: ['adminAllPujas'], queryFn: async () => (await pujaService.getAllAdmin()).data, staleTime: DEFAULT_STALE_TIME },
-      { queryKey: ['allProyectosAdmin'], queryFn: async () => (await proyectoService.getAllAdmin()).data, staleTime: DEFAULT_STALE_TIME }
+      { queryKey: ['allProyectosAdmin'], queryFn: async () => (await proyectoService.getAllAdmin()).data, staleTime: DEFAULT_STALE_TIME },
+      // ✅ 2. Agregamos la query de Métricas de Adhesión al pool
+      { queryKey: ['adhesionMetrics'], queryFn: async () => (await getAdhesionMetrics()).data.data, staleTime: DEFAULT_STALE_TIME }
     ]
   });
 
@@ -49,12 +51,13 @@ export const useAdminDashboard = () => {
     { data: cancelacion },
     { data: proyectosActivos = [] },
     { data: allPujas = [] },
-    { data: allProyectosAdmin = [] }
+    { data: allProyectosAdmin = [] },
+    // ✅ 3. Extraemos la data
+    { data: adhesionMetrics } 
   ] = results;
 
   const isLoading = results.some(result => result.isLoading);
 
-  // 👈 4. Aplicamos el staleTime a la query individual también
   const { data: popularidadLotes = [], isLoading: loadingPopularidad } = useQuery({
     queryKey: ['popularidadLotes', selectedPopularidadProject],
     queryFn: () => favoritoService.getPopularidadLotes(selectedPopularidadProject!),
@@ -86,8 +89,14 @@ export const useAdminDashboard = () => {
     totalFinalizados: completionRate?.total_finalizados ?? 0,
     subastasActivas: allPujas.filter((p: any) => p.estado_puja === 'activa').length,
     cobrosPendientes: allPujas.filter((p: any) => p.estado_puja === 'ganadora_pendiente').length,
-    proyectosListosParaIniciar: proyectosLlenosPendientes
-  }), [pendingKYC, liquidityRate, monthlyProgress, completionRate, allPujas, proyectosLlenosPendientes]);
+    proyectosListosParaIniciar: proyectosLlenosPendientes,
+    
+    // ✅ 4. Agregamos las estadísticas de adhesión (Deuda y Próximos Vencimientos)
+    adhesionesPendienteCobro: adhesionMetrics?.montos?.monto_pendiente ?? '0',
+    adhesionesVencidas: adhesionMetrics?.montos?.monto_vencido ?? '0',
+    adhesionesTasaCobranza: adhesionMetrics?.tasa_cobranza ?? '0',
+
+  }), [pendingKYC, liquidityRate, monthlyProgress, completionRate, allPujas, proyectosLlenosPendientes, adhesionMetrics]);
 
   const chartDataSuscripciones = useMemo(() =>
     monthlyProgress.map((p: any) => ({
@@ -135,6 +144,7 @@ export const useAdminDashboard = () => {
     topLotes,
     estadosData,
     RECHART_COLORS,
-    navigate
+    navigate,
+    adhesionMetrics // ✅ Exportamos el objeto completo por si necesitas pintar un gráfico específico de adhesiones
   };
 };

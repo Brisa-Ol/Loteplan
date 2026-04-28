@@ -60,7 +60,8 @@ const TransactionAnalytics = React.memo<{ data: TransaccionDto[] }>(({ data }) =
       pago_suscripcion_inicial: 'Suscripción',
       directo: 'Inversión',
       mensual: 'Cuota Mensual',
-      Puja: 'Subasta'
+      Puja: 'Subasta',
+      adhesion: 'Adhesión'
     };
 
     return Object.values(grouped).map((item: any) => ({
@@ -161,7 +162,8 @@ const AdminTransacciones: React.FC = () => {
           pago_suscripcion_inicial: 'Suscripción Inicial',
           directo: 'Inversión Directa',
           mensual: 'Cuota Mensual',
-          Puja: 'Subasta'
+          Puja: 'Subasta',
+          adhesion: 'Cuota de Adhesión'
         };
         return (
           <Box minWidth={0}>
@@ -397,18 +399,19 @@ const AdminTransacciones: React.FC = () => {
                   width: { xs: '100%', sm: 'auto' },
                 }}
               >
-                <FilterSelect
-                  label="Tipo"
-                  value={logic.filterType}
-                  onChange={(e) => logic.setFilterType(e.target.value)}
-                  sx={{ flex: 1, minWidth: { xs: '100%', sm: 150 } }}
-                >
-                  <MenuItem value="all">Todos</MenuItem>
-                  <MenuItem value="directo">Inversión Directa</MenuItem>
-                  <MenuItem value="pago_suscripcion_inicial">Suscripción Inicial</MenuItem>
-                  <MenuItem value="mensual">Cuota Mensual</MenuItem>
-                  <MenuItem value="Puja">Subasta</MenuItem>
-                </FilterSelect>
+<FilterSelect
+  label="Tipo"
+  value={logic.filterType}
+  onChange={(e) => logic.setFilterType(e.target.value)}
+  sx={{ flex: 1, minWidth: { xs: '100%', sm: 150 } }}
+>
+  <MenuItem value="all">Todos</MenuItem>
+  <MenuItem value="directo">Inversión Directa</MenuItem>
+  <MenuItem value="pago_suscripcion_inicial">Suscripción Inicial</MenuItem>
+  <MenuItem value="mensual">Cuota Mensual</MenuItem>
+  <MenuItem value="adhesion">Cuota de Adhesión</MenuItem> {/* ✅ Agregado */}
+  <MenuItem value="Puja">Subasta</MenuItem>
+</FilterSelect>
 
                 <FilterSelect
                   label="Estado"

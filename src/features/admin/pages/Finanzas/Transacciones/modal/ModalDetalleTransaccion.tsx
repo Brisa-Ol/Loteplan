@@ -158,10 +158,13 @@ const ModalDetalleTransaccion: React.FC<Props> = ({
                   <Typography variant="caption" fontWeight={800} color="text.secondary">TIPO DE OPERACIÓN</Typography>
                 </Stack>
                 <Typography variant="body1" fontWeight={700} sx={{ pl: 3.5 }}>
-                  {transaccion.tipo_transaccion === 'pago_suscripcion_inicial' ? 'Suscripción Inicial' :
-                    transaccion.tipo_transaccion === 'directo' ? 'Inversión Directa' :
-                      transaccion.tipo_transaccion === 'mensual' ? 'Cuota Mensual' :
-                        transaccion.tipo_transaccion.toUpperCase()}
+                  {
+                    transaccion.tipo_transaccion === 'pago_suscripcion_inicial' ? 'Suscripción Inicial' :
+                      transaccion.tipo_transaccion === 'directo' ? 'Inversión Directa' :
+                        transaccion.tipo_transaccion === 'mensual' ? 'Cuota Mensual' :
+                          transaccion.tipo_transaccion === 'adhesion' ? 'Cuota de Adhesión' : // ✅ Agregada traducción
+                            transaccion.tipo_transaccion.toUpperCase()
+                  }
                 </Typography>
               </Paper>
 
@@ -212,7 +215,23 @@ const ModalDetalleTransaccion: React.FC<Props> = ({
                   {transaccion.id_inversion && <Chip label={`Inversión #${transaccion.id_inversion}`} size="small" variant="outlined" sx={{ fontWeight: 600 }} />}
                   {transaccion.id_suscripcion && <Chip label={`Suscripción #${transaccion.id_suscripcion}`} size="small" variant="outlined" sx={{ fontWeight: 600 }} />}
                   {transaccion.id_pago_mensual && <Chip label={`Cuota #${transaccion.id_pago_mensual}`} size="small" variant="outlined" sx={{ fontWeight: 600 }} />}
+                  {transaccion.id_puja && <Chip label={`Puja #${transaccion.id_puja}`} size="small" variant="outlined" sx={{ fontWeight: 600 }} />}
+
+                  {/* ✅ Agregada la referencia a la cuota de adhesión */}
+                  {transaccion.id_pago_adhesion && (
+                    <Chip
+                      label={`Adhesión Cuota #${transaccion.id_pago_adhesion}`}
+                      size="small"
+                      color="primary"
+                      variant="outlined"
+                      sx={{ fontWeight: 700, bgcolor: alpha(theme.palette.primary.main, 0.05) }}
+                    />
+                  )}
                 </Stack>
+                {/* Fallback si no hay ningún documento */}
+                {!transaccion.id_inversion && !transaccion.id_suscripcion && !transaccion.id_pago_mensual && !transaccion.id_puja && !transaccion.id_pago_adhesion && (
+                  <Typography variant="caption" color="text.disabled">No hay documentos enlazados.</Typography>
+                )}
               </Box>
             </Stack>
           </Box>
