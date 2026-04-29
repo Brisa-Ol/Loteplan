@@ -132,7 +132,7 @@ export const StepConfirmacion: FC<IStepConfirmacionProps> = ({
 											Porcentaje del plan
 										</Typography>
 										<Typography variant="body2" fontWeight={500}>
-											× {Number(cuotaActiva.porcentaje_plan) * 100}%
+											× {Number(cuotaActiva.porcentaje_plan)}%
 										</Typography>
 									</Stack>
 									<Box
@@ -195,8 +195,7 @@ export const StepConfirmacion: FC<IStepConfirmacionProps> = ({
 												Gastos Administrativos
 											</Typography>
 											<Typography variant="caption" color="text.disabled">
-												({Number(cuotaActiva.porcentaje_administrativo) * 100}% sobre Cuota
-												Pura)
+												({Number(cuotaActiva.porcentaje_administrativo) * 100}% sobre Valor Movil)
 											</Typography>
 										</Box>
 										<Typography variant="body2" color="text.secondary">

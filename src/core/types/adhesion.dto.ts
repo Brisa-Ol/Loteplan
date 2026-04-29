@@ -1,6 +1,6 @@
 import type { BaseDTO } from "./base.dto";
 
-export type PlanPagoAdhesion = 'contado' | '6_cuotas' | '12_cuotas';
+export type PlanPagoAdhesion = 'contado' | '3_cuotas' | '6_cuotas';
 export type EstadoAdhesion = 'pendiente' | 'en_curso' | 'completada' | 'cancelada';
 export type EstadoPagoAdhesion = 'pendiente' | 'pagado' | 'vencido' | 'cancelado' | 'forzado';
 
