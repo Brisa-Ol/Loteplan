@@ -25,7 +25,21 @@ interface SuscripcionMinima {
   adhesion_completada: boolean;
   tokens_disponibles: number;
 }
+export interface ConfirmarPagoCuotaDto {
+  pagoAdhesionId: number;
+  codigo_2fa: string;
+}
 
+// Respuesta del Paso 1 cuando el usuario tiene 2FA activo (HTTP 202)
+export interface IniciarPagoCuotaResponse {
+  success?: boolean;
+  redirectUrl?: string;       // presente si NO requiere 2FA
+  requires2FA?: boolean;      // presente si SÍ requiere 2FA
+  message?: string;
+  pagoAdhesionId?: number;    // id de la cuota, necesario para el Paso 2
+  adhesionId?: number;
+  numeroCuota?: number;
+}
 export interface PagoAdhesionDto extends BaseDTO {
   id_adhesion: number;
   numero_cuota: number;
