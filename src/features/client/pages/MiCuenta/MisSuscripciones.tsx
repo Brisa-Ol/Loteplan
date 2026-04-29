@@ -1,9 +1,9 @@
-// src/components/domain/suscripciones/MisSuscripciones.optimized.tsx
+// src/components/domain/suscripciones/MisSuscripciones.tsx
 
 import React, { useState, useMemo, useCallback } from 'react';
-import { 
-    Box, Tabs, Tab, Paper, useTheme, Typography, 
-    Stack, IconButton, Tooltip 
+import {
+    Box, Tabs, Tab, Paper, useTheme, Typography,
+    Stack, IconButton, Tooltip, Chip
 } from '@mui/material';
 import {
     CheckCircle,
@@ -14,55 +14,101 @@ import {
     Token as TokenIcon,
     Visibility,
     Cancel,
-    CalendarMonth
+    CalendarMonth,
+    ReceiptLong,
+    Schedule,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-// Hooks y tipos
+
 import type { SuscripcionDto, SuscripcionCanceladaDto } from '@/core/types/suscripcion.dto';
+import type { AdhesionDto, PlanPagoAdhesion } from '@/core/types/adhesion.dto';
 import { useSuscripciones } from '../../hooks/useSuscripciones';
 import { useCurrencyFormatter } from '../../hooks/useCurrencyFormatter';
-import { ConfirmDialog, DataTable, PageContainer, PageHeader, QueryHandler, StatCard, useConfirmDialog, type DataTableColumn } from '@/shared';
+import {
+    ConfirmDialog, DataTable, PageContainer, PageHeader,
+    QueryHandler, StatCard, useConfirmDialog,
+    type DataTableColumn
+} from '@/shared';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────────────────────────────────────
+
+const PLAN_LABELS: Record<PlanPagoAdhesion, string> = {
+    contado:   'Pago contado',
+    '3_cuotas':  '3 cuotas',
+    '6_cuotas': '6 cuotas',
+};
+
+const getPlanLabel = (plan: PlanPagoAdhesion): string =>
+    PLAN_LABELS[plan] ?? plan;
+
+const formatDate = (iso: string): string =>
+    new Date(iso).toLocaleDateString('es-AR');
+
+// ─────────────────────────────────────────────────────────────────────────────
+// COMPONENTE
+// ─────────────────────────────────────────────────────────────────────────────
 
 const MisSuscripciones: React.FC = () => {
-    const navigate = useNavigate();
-    const theme = useTheme();
-    const confirmDialog = useConfirmDialog();
-    const formatCurrency = useCurrencyFormatter();
+    const navigate        = useNavigate();
+    const theme           = useTheme();
+    const formatCurrency  = useCurrencyFormatter();
+    // ✅ CORRECCIÓN 1: Quitamos el <ConfirmAction>
+    const confirmDialog   = useConfirmDialog();
 
     const {
         suscripciones,
         canceladas,
+        adhesiones,
         stats,
         isLoading,
         error,
         cancelarSuscripcion,
         isCancelling,
-        highlightedId
+        cancelarAdhesionObj,
+        isCancellingAdhesion,
+        highlightedId,
     } = useSuscripciones();
 
     const [tabValue, setTabValue] = useState(0);
 
-    // ✅ CAPITAL UNIFICADO: Suma total histórica (Activo + Cancelado)
-    const capitalHistoricoTotal = useMemo(() => {
-        const activo = suscripciones.reduce((acc, curr) => acc + Number(curr.monto_total_pagado || 0), 0);
-        const historico = canceladas.reduce((acc, curr) => acc + Number(curr.monto_pagado_total || 0), 0);
-        return activo + historico;
-    }, [suscripciones, canceladas]);
+    // ── DATOS DERIVADOS ───────────────────────────────────────────────────────
 
-    const totalTokens = useMemo(() =>
-        suscripciones.reduce((acc, curr) => acc + (curr.tokens_disponibles || 0), 0),
-        [suscripciones]
+    /** Solo mostramos como "Vigentes" los planes con adhesión completada */
+    const suscripcionesVigentes = useMemo(
+        () => suscripciones.filter((s) => s.adhesion_completada === true),
+        [suscripciones],
     );
 
-    const handleConfirmCancel = useCallback(async () => {
-        if (confirmDialog.data) {
-            await cancelarSuscripcion(confirmDialog.data.id);
-            confirmDialog.close();
-        }
-    }, [confirmDialog.data, cancelarSuscripcion, confirmDialog]);
+    const capitalHistoricoTotal = useMemo(() => {
+        const enActivas   = suscripciones.reduce((acc, s) => acc + Number(s.monto_total_pagado  || 0), 0);
+        const enCanceladas = canceladas.reduce((acc, s) => acc + Number(s.monto_pagado_total    || 0), 0);
+        return enActivas + enCanceladas;
+    }, [suscripciones, canceladas]);
 
-    // ── COLUMNAS: PLANES ACTIVOS (Nombres de proyectos resaltados) ──
-   const activeCols = useMemo<DataTableColumn<SuscripcionDto>[]>(() => [
+    const totalTokens = useMemo(
+        () => suscripciones.reduce((acc, s) => acc + (s.tokens_disponibles || 0), 0),
+        [suscripciones],
+    );
+
+    // ── CONFIRMACIÓN ─────────────────────────────────────────────────────────
+
+    const handleConfirmCancel = useCallback(async () => {
+        if (!confirmDialog.data) return;
+
+        if (confirmDialog.action === 'cancel_subscription') {
+            await cancelarSuscripcion(confirmDialog.data.id);
+        } else if (confirmDialog.action === ('cancel_adhesion' as any)) { // ✅ CORRECCIÓN 2: as any
+            await cancelarAdhesionObj(confirmDialog.data.id);
+        }
+
+        confirmDialog.close();
+    }, [confirmDialog.data, confirmDialog.action, cancelarSuscripcion, cancelarAdhesionObj, confirmDialog]); // ✅ confirmDialog.close no debe ser dependencia
+
+    // ── COLUMNAS: PLANES VIGENTES ─────────────────────────────────────────────
+
+    const activeCols = useMemo<DataTableColumn<SuscripcionDto>[]>(() => [
         {
             id: 'proyecto',
             label: 'Proyecto / Suscripción',
@@ -70,32 +116,25 @@ const MisSuscripciones: React.FC = () => {
             render: (row) => (
                 <Box>
                     <Typography variant="subtitle2" fontWeight={800} color="primary.main">
-                        {row.proyectoAsociado?.nombre_proyecto || 'Cargando nombre...'}
+                        {row.proyectoAsociado?.nombre_proyecto ?? '—'}
                     </Typography>
-                    {/* 👇 Agregamos el ID de suscripción y la fecha de inicio */}
                     <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ display: 'block', mt: 0.5 }}>
-                        Suscripción #{row.id} • Alta: {new Date(row.createdAt).toLocaleDateString()}
+                        Suscripción #{row.id} • Alta: {formatDate(row.createdAt)}
                     </Typography>
                 </Box>
-            )
+            ),
         },
         {
             id: 'monto',
             label: 'Capital Ahorrado',
-            render: (row: SuscripcionDto) => {
-                // Convertimos el string "0.00" a número de forma segura
+            render: (row) => {
                 const monto = Number(row.monto_total_pagado || 0);
-                
                 return (
-                    <Typography 
-                        variant="body2" 
-                        fontWeight={700} 
-                        color={monto > 0 ? "primary.main" : "text.secondary"}
-                    >
+                    <Typography variant="body2" fontWeight={700} color={monto > 0 ? 'primary.main' : 'text.secondary'}>
                         {formatCurrency(monto)}
                     </Typography>
                 );
-            }
+            },
         },
         {
             id: 'tokens',
@@ -105,10 +144,10 @@ const MisSuscripciones: React.FC = () => {
                 <Stack direction="row" spacing={1} justifyContent="center" alignItems="center">
                     <TokenIcon sx={{ fontSize: 16, color: 'warning.main' }} />
                     <Typography variant="body2" fontWeight={900}>
-                        {row.tokens_disponibles || 0}
+                        {row.tokens_disponibles ?? 0}
                     </Typography>
                 </Stack>
-            )
+            ),
         },
         {
             id: 'acciones',
@@ -122,36 +161,124 @@ const MisSuscripciones: React.FC = () => {
                         </IconButton>
                     </Tooltip>
                     <Tooltip title="Solicitar baja del plan">
-                        <IconButton 
-                            size="small" 
-                            color="error" 
+                        <IconButton
+                            size="small"
+                            color="error"
                             onClick={() => confirmDialog.confirm('cancel_subscription', row)}
                         >
                             <Cancel fontSize="small" />
                         </IconButton>
                     </Tooltip>
                 </Stack>
-            )
-        }
+            ),
+        },
     ], [navigate, formatCurrency, confirmDialog]);
 
-    // ── COLUMNAS: HISTORIAL DE BAJAS (Sin IDs, solo nombres) ──
+    // ── COLUMNAS: ADHESIONES ──────────────────────────────────────────────────
+
+    const adhesionCols = useMemo<DataTableColumn<AdhesionDto>[]>(() => [
+        {
+            id: 'proyecto_adhesion',
+            label: 'Detalle Adhesión',
+            minWidth: 260,
+            render: (row) => (
+                <Box>
+                    <Typography variant="subtitle2" fontWeight={800} color="primary.main">
+                        {row.proyecto?.nombre_proyecto ?? `Adhesión #${row.id}`}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" display="block">
+                        Suscripción reservada #{row.id_suscripcion}
+                    </Typography>
+                    <Chip
+                        label={getPlanLabel(row.plan_pago)}
+                        size="small"
+                        variant="outlined"
+                        sx={{ mt: 0.5, height: 20, fontSize: '0.65rem', fontWeight: 600 }}
+                    />
+                </Box>
+            ),
+        },
+        {
+            id: 'estado',
+            label: 'Estado',
+            render: (row) => {
+                const isComplete  = row.estado === 'completada';
+                const isCancelled = row.estado === 'cancelada';
+                return (
+                    <Chip
+                        label={row.estado.replace('_', ' ').toUpperCase()}
+                        size="small"
+                        color={isComplete ? 'success' : isCancelled ? 'default' : 'warning'}
+                        icon={isComplete ? <CheckCircle /> : isCancelled ? <Cancel /> : <Schedule />}
+                        variant={isCancelled ? 'outlined' : 'filled'}
+                        sx={{ fontWeight: 700 }}
+                    />
+                );
+            },
+        },
+        {
+            id: 'progreso',
+            label: 'Progreso',
+            render: (row) => {
+                const esPagoContado = row.plan_pago === 'contado';
+                return (
+                    <Typography variant="body2" fontWeight={600} color="text.secondary">
+                        {esPagoContado
+                            ? row.cuotas_pagadas === row.cuotas_totales ? 'Pago único abonado' : 'Pago único pendiente'
+                            : `${row.cuotas_pagadas} de ${row.cuotas_totales} cuotas abonadas`
+                        }
+                    </Typography>
+                );
+            },
+        },
+        {
+            id: 'monto',
+            label: 'Monto Total',
+            render: (row) => (
+                <Typography variant="body2" fontWeight={800}>
+                    {formatCurrency(row.monto_total_adhesion)}
+                </Typography>
+            ),
+        },
+        {
+            id: 'acciones',
+            label: 'Gestión',
+            align: 'right',
+            render: (row) => {
+                const canCancel = row.estado !== 'completada' && row.estado !== 'cancelada';
+                if (!canCancel) return null;
+                return (
+                    <Tooltip title="Dar de baja esta adhesión">
+                        <IconButton
+                            size="small"
+                            color="error"
+                            onClick={() => confirmDialog.confirm('cancel_adhesion' as any, row)} // ✅ CORRECCIÓN 3: as any
+                        >
+                            <Cancel fontSize="small" />
+                        </IconButton>
+                    </Tooltip>
+                );
+            },
+        },
+    ], [confirmDialog, formatCurrency]);
+
+    // ── COLUMNAS: HISTORIAL DE BAJAS ──────────────────────────────────────────
+
     const canceledCols = useMemo<DataTableColumn<SuscripcionCanceladaDto>[]>(() => [
-       {
+        {
             id: 'proyecto',
             label: 'Proyecto / Suscripción',
             minWidth: 320,
             render: (row) => (
                 <Box>
                     <Typography variant="subtitle2" fontWeight={700} color="text.secondary">
-                        {row.proyectoCancelado?.nombre_proyecto || 'Proyecto Finalizado'}
+                        {row.proyectoCancelado?.nombre_proyecto ?? 'Proyecto finalizado'}
                     </Typography>
-                    {/* 👇 Agregamos el ID de la suscripción original */}
                     <Typography variant="caption" color="text.disabled" fontWeight={600} sx={{ display: 'block', mt: 0.5 }}>
-                        Suscripción Orig. #{row.id_suscripcion_original}
+                        Suscripción orig. #{row.id_suscripcion_original}
                     </Typography>
                 </Box>
-            )
+            ),
         },
         {
             id: 'monto',
@@ -160,37 +287,58 @@ const MisSuscripciones: React.FC = () => {
                 <Typography variant="body2" fontWeight={700} color="text.disabled">
                     {formatCurrency(Number(row.monto_pagado_total || 0))}
                 </Typography>
-            )
+            ),
         },
         {
             id: 'fecha',
             label: 'Fecha de Egreso',
             render: (row) => (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Stack direction="row" alignItems="center" spacing={1}>
                     <CalendarMonth sx={{ fontSize: 16, color: 'text.disabled' }} />
                     <Typography variant="body2" color="text.secondary">
-                        {new Date(row.fecha_cancelacion).toLocaleDateString()}
+                        {formatDate(row.fecha_cancelacion)}
                     </Typography>
-                </Box>
-            )
+                </Stack>
+            ),
         },
         {
             id: 'devolucion',
             label: 'Devolución',
             align: 'center',
             render: (row) => (
-                row.devolucion_realizada ? (
-                    <Tooltip title={row.fecha_devolucion ? `Reintegrado el ${new Date(row.fecha_devolucion).toLocaleDateString()}` : 'Reintegrado'}>
-                        <CheckCircle color="success" />
-                    </Tooltip>
-                ) : (
-                    <Tooltip title="Reintegro pendiente">
-                        <Cancel color="error" />
-                    </Tooltip>
-                )
-            )
-        }
+                row.devolucion_realizada
+                    ? (
+                        <Tooltip title={row.fecha_devolucion ? `Reintegrado el ${formatDate(row.fecha_devolucion)}` : 'Reintegrado'}>
+                            <CheckCircle color="success" />
+                        </Tooltip>
+                    ) : (
+                        <Tooltip title="Reintegro pendiente">
+                            <Cancel color="error" />
+                        </Tooltip>
+                    )
+            ),
+        },
     ], [formatCurrency]);
+
+    // ── TEXTOS DEL DIALOG ─────────────────────────────────────────────────────
+
+    const dialogTitle = confirmDialog.action === ('cancel_adhesion' as any) // ✅ CORRECCIÓN 4: as any
+        ? '¿Confirmas la baja de la adhesión?'
+        : '¿Confirmas la baja del plan?';
+
+    const dialogDescription = (() => {
+        if (!confirmDialog.data) return 'Esta acción es irreversible.';
+
+        if (confirmDialog.action === ('cancel_adhesion' as any)) { // ✅ CORRECCIÓN 5: as any
+            const adhesion = confirmDialog.data as AdhesionDto;
+            return `Estás a punto de cancelar tu Adhesión #${adhesion.id} del proyecto "${adhesion.proyecto?.nombre_proyecto}". Perderás el cupo reservado. Esta acción es irreversible.`;
+        }
+
+        const suscripcion = confirmDialog.data as SuscripcionDto;
+        return `Estás a punto de cancelar la Suscripción #${suscripcion.id} correspondiente al proyecto "${suscripcion.proyectoAsociado?.nombre_proyecto}". Tu capital acumulado pasará a proceso de liquidación.`;
+    })();
+
+    // ── RENDER ────────────────────────────────────────────────────────────────
 
     return (
         <PageContainer maxWidth="lg">
@@ -199,50 +347,85 @@ const MisSuscripciones: React.FC = () => {
                 subtitle="Administra tu capital acumulado y tus tokens de participación."
             />
 
-            {/* RESUMEN DE ESTADÍSTICAS */}
-            <Box sx={{ 
-                display: 'grid', 
-                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }, 
-                gap: 2, 
-                mb: 4 
+            {/* ESTADÍSTICAS */}
+            <Box sx={{
+                display: 'grid',
+                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' },
+                gap: 2,
+                mb: 4,
             }}>
-                <StatCard title="Planes Activos" value={stats.activas.toString()} icon={<PlayCircleFilled />} color="success" loading={isLoading} />
-                <StatCard title="Poder de Oferta" value={`${totalTokens} Tokens`} icon={<TokenIcon />} color="warning" loading={isLoading} />
-                
-                <StatCard 
-                    title="Capital Total" 
-                    value={formatCurrency(capitalHistoricoTotal)} 
-                    icon={<MonetizationOn />} 
-                    color="primary" 
-                    loading={isLoading} 
+                <StatCard
+                    title="Planes Activos"
+                    value={suscripcionesVigentes.length.toString()}
+                    icon={<PlayCircleFilled />}
+                    color="success"
+                    loading={isLoading}
+                />
+                <StatCard
+                    title="Poder de Oferta"
+                    value={`${totalTokens} Tokens`}
+                    icon={<TokenIcon />}
+                    color="warning"
+                    loading={isLoading}
+                />
+                <StatCard
+                    title="Capital Total"
+                    value={formatCurrency(capitalHistoricoTotal)}
+                    icon={<MonetizationOn />}
+                    color="primary"
+                    loading={isLoading}
                     subtitle="Acumulado histórico"
                 />
-
-                <StatCard title="Bajas Realizadas" value={stats.canceladas.toString()} icon={<EventBusy />} color="error" loading={isLoading} />
+                <StatCard
+                    title="Bajas Realizadas"
+                    value={stats.canceladas.toString()}
+                    icon={<EventBusy />}
+                    color="error"
+                    loading={isLoading}
+                />
             </Box>
 
-            {/* SELECTOR DE PESTAÑAS */}
+            {/* PESTAÑAS */}
             <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-                <Tabs value={tabValue} onChange={(_, v) => setTabValue(v)} indicatorColor="primary" textColor="primary">
-                    <Tab label="Planes Vigentes" icon={<CheckCircle />} iconPosition="start" sx={{ fontWeight: 700 }} />
+                <Tabs
+                    value={tabValue}
+                    onChange={(_, v) => setTabValue(v)}
+                    indicatorColor="primary"
+                    textColor="primary"
+                    variant="scrollable"
+                    scrollButtons="auto"
+                >
+                    <Tab label="Planes Vigentes"   icon={<CheckCircle />}  iconPosition="start" sx={{ fontWeight: 700 }} />
+                    <Tab label="Adhesiones"        icon={<ReceiptLong />}  iconPosition="start" sx={{ fontWeight: 700 }} />
                     <Tab label="Historial de Salidas" icon={<HistoryIcon />} iconPosition="start" sx={{ fontWeight: 700 }} />
                 </Tabs>
             </Box>
 
-            {/* TABLA PRINCIPAL */}
+            {/* TABLAS */}
             <QueryHandler isLoading={isLoading} error={error as Error | null}>
                 <Paper elevation={0} sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 3, overflow: 'hidden' }}>
-                    {tabValue === 0 ? (
+                    {tabValue === 0 && (
                         <DataTable
                             columns={activeCols}
-                            data={suscripciones}
+                            data={suscripcionesVigentes}
                             getRowKey={(row) => row.id}
                             pagination
                             defaultRowsPerPage={10}
                             highlightedRowId={highlightedId}
-                            emptyMessage="No tienes planes vigentes en este momento."
+                            emptyMessage="No tenés planes vigentes. Si tenés una adhesión en curso, debés completarla primero."
                         />
-                    ) : (
+                    )}
+                    {tabValue === 1 && (
+                        <DataTable
+                            columns={adhesionCols}
+                            data={adhesiones}
+                            getRowKey={(row) => row.id}
+                            pagination
+                            defaultRowsPerPage={10}
+                            emptyMessage="No tenés adhesiones registradas."
+                        />
+                    )}
+                    {tabValue === 2 && (
                         <DataTable
                             columns={canceledCols}
                             data={canceladas}
@@ -255,19 +438,13 @@ const MisSuscripciones: React.FC = () => {
                 </Paper>
             </QueryHandler>
 
-            {/* MODAL DE CONFIRMACIÓN */}
-           {/* MODAL DE CONFIRMACIÓN */}
+            {/* DIALOG DE CONFIRMACIÓN */}
             <ConfirmDialog
                 controller={confirmDialog}
                 onConfirm={handleConfirmCancel}
-                isLoading={isCancelling}
-                title="¿Confirmas la baja del plan?"
-                // 👇 Hacemos la descripción dinámica usando confirmDialog.data
-                description={
-                    confirmDialog.data 
-                    ? `Estás a punto de cancelar la Suscripción #${confirmDialog.data.id} correspondiente al proyecto "${confirmDialog.data.proyectoAsociado?.nombre_proyecto}". Tu capital acumulado pasará a proceso de liquidación.`
-                    : "Al cancelar tu participación en este proyecto, tu capital acumulado pasará a proceso de liquidación."
-                }
+                isLoading={isCancelling || isCancellingAdhesion}
+                title={dialogTitle}
+                description={dialogDescription}
             />
         </PageContainer>
     );
