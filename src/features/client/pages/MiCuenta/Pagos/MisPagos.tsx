@@ -1,7 +1,7 @@
 // src/features/client/pages/Pagos/MisPagos.tsx
 
 import PagoService from '@/core/api/services/pago.service';
-import { getAllAdhesionsByUser, pagarCuotaAdhesion } from '@/core/api/services/adhesion.service';
+import { getAllAdhesionsByUser } from '@/core/api/services/adhesion.service';
 import type { AdhesionDto, PagoAdhesionDto } from '@/core/types/adhesion.dto';
 import type { PagoDto } from '@/core/types/pago.dto';
 import { useCurrencyFormatter } from '@/features/client/hooks/useCurrencyFormatter';

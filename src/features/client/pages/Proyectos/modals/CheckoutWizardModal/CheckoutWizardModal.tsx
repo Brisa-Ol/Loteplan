@@ -52,9 +52,8 @@ import { StepFirma } from '../StepsModal/StepFirma';
 import { StepPago } from '../StepsModal/StepPago';
 import { StepSeguridad } from '../StepsModal/StepSeguridad';
 import { PagoExitosoBanner } from '../StepsModal/PagoExitosoBanner';
-import { set } from 'date-fns';
-import type { PlanPagoAdhesion } from '@/core/types/adhesion.dto';
-import { createAdhesion, pagarCuotaAdhesion } from '@/core/api/services/adhesion.service';
+import type { IniciarPagoCuotaResponse, PlanPagoAdhesion } from '@/core/types/adhesion.dto';
+import { confirmarPagoCuota, createAdhesion, iniciarPagoCuota } from '@/core/api/services/adhesion.service';
 import { StepAdhesion } from '../StepsModal/StepAdhesion';
 
 // ============================================================================
@@ -151,6 +150,7 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
   const [signaturePosition, setSignaturePosition] = useState<SignaturePosition | null>(null);
   const [planPago, setPlanPago] = useState<PlanPagoAdhesion>('contado');
   const [adhesionId, setAdhesionId] = useState<number | null>(null);
+  const [startPaymentCuotaAdhesion, setStartPaymentCuotaAdhesion] = useState<IniciarPagoCuotaResponse | null>(null);
 
   const hasAttemptedRecovery = useRef(false);
 
@@ -180,6 +180,13 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
     const valor = cuotaActiva?.valor_mensual_final || proyecto.valor_cuota_referencia || 0;
     return `$ ${valor}`;
   }, [formatCurrency, proyecto, tipo, cuotaActiva, loadingCuota]);
+
+
+  const startPaymentAdhesion = async () => {
+
+    const resp = await iniciarPagoCuota({ adhesionId: adhesionId!, numeroCuota: 1 })
+    setStartPaymentCuotaAdhesion(resp.data)
+  }
 
   // ── CHECKOUT WIZARD HOOK ───────────────────────────────────────────────────
   const {
@@ -295,6 +302,7 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
 }
 
       case 'Contrato':
+        startPaymentAdhesion()
         setActiveStep('Seguridad');
         break;
 
@@ -309,9 +317,10 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
       // Si hay adhesionId, iniciar pago de la primera cuota (redirige a MP)
       if (adhesionId) {
         try {
-          const res = await pagarCuotaAdhesion({
-            adhesionId,
-            numeroCuota: 1,
+          const pagoAdhesionId = startPaymentCuotaAdhesion?.pagoAdhesionId
+          const res = await confirmarPagoCuota({
+            pagoAdhesionId: pagoAdhesionId!,
+            codigo_2fa: codigo2FA,
           });
           if (res.data.redirectUrl) {
             window.location.href = res.data.redirectUrl;
