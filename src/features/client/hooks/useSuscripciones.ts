@@ -61,6 +61,9 @@ export const useSuscripciones = () => {
         },
         onSuccess: (_, id) => {
             queryClient.invalidateQueries({ queryKey: ['misSuscripcionesFull'] });
+            // ✅ Forzamos a que se recargue la lista de proyectos y se actualice el cupo
+            queryClient.invalidateQueries({ queryKey: ['proyectos'] }); 
+            
             showSuccess('Plan de ahorro detenido correctamente.');
             setHighlightedId(id);
             setTimeout(() => setHighlightedId(null), 2500);
@@ -81,13 +84,15 @@ export const useSuscripciones = () => {
     });
 
     // ✅ 5. Mutación CONFIRMAR Cancelación Adhesión (Paso 2)
-    const confirmarCancelAdhesionMutation = useMutation({
+const confirmarCancelAdhesionMutation = useMutation({
         mutationFn: (payload: { adhesionId: number, codigo_2fa: string }) => confirmarCancelacionAdhesion(payload),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['misSuscripcionesFull'] });
+            // ✅ Forzamos a que se recargue la lista de proyectos aquí también
+            queryClient.invalidateQueries({ queryKey: ['proyectos'] }); 
+
             showSuccess('Adhesión cancelada de forma segura.');
         }
-        // El onError lo manejaremos directamente en la vista para mostrarlo en el modal
     });
 
     return {
