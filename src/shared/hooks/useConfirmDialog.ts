@@ -27,6 +27,9 @@ export type ConfirmAction =
   | 'revert_payment'
   | 'revert_project_process'
   | 'return_token'
+  | 'pay_quota_adhesion'
+  | 'admin_force_adhesion_payment'
+  | 'admin_cancel_adhesion'
   | null;
 
 export interface ConfirmConfig {
@@ -52,7 +55,9 @@ const BASE_CONFIGS: Record<string, Partial<ConfirmConfig>> = {
   delete_single_image: { title: '¿Eliminar imagen?', confirmText: 'Sí, eliminar', severity: 'error' },
   cancel_subscription: { title: '¿Cancelar suscripción?', confirmText: 'Sí, cancelar definitivamente', severity: 'error' },
   force_finish: { title: 'Baja de Postor', confirmText: 'Confirmar', severity: 'error' },
-
+// ✅ Adhesiones - Acciones de Error/Destructivas
+  admin_force_adhesion_payment: { title: '¿Forzar pago de adhesión?', confirmText: 'Sí, forzar pago', severity: 'error' },
+  admin_cancel_adhesion: { title: '¿Cancelar adhesión?', confirmText: 'Sí, cancelar adhesión', severity: 'error' },
   // Advertencias / Decisiones (Naranja/Warning)
   close_with_unsaved_changes: { title: '¿Cerrar sin guardar?', confirmText: 'Sí, cerrar', severity: 'warning' },
   logout: { title: '¿Cerrar sesión?', confirmText: 'Sí, salir', severity: 'info' },
@@ -85,6 +90,7 @@ const BASE_CONFIGS: Record<string, Partial<ConfirmConfig>> = {
     confirmText: 'Sí, proceder al pago',
     severity: 'info'
   },
+  pay_quota_adhesion: { title: '¿Confirmar Pago de Adhesión?', confirmText: 'Sí, proceder al pago', severity: 'info' },
 };
 
 

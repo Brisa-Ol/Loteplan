@@ -3,6 +3,7 @@ import {
   Assessment,
   AssignmentTurnedIn,
   AttachMoney,
+  CheckCircle,
   Gavel,
   Handyman, Landscape,
   Person,
@@ -11,10 +12,13 @@ import {
   RocketLaunch
   ,
 
+  Schedule,
+
   Security,
   Speed,
   Star,
-  Timeline
+  Timeline,
+  Warning
 } from '@mui/icons-material';
 import {
   alpha,
@@ -203,6 +207,27 @@ const AdminDashboard: React.FC = () => {
             <StatCard title="Tasa de Cobro" value={`${toNumber(logic.stats.tasaLiquidez)}%`} subtitle={`${formatearMoneda(logic.stats.totalPagado)} recaudados`} icon={<AccountBalance />} color="primary" />
             <StatCard title="Éxito de Proyectos" value={`${toNumber(logic.completionRate?.tasa_culminacion)}%`} subtitle="Tasa de finalización" icon={<AssignmentTurnedIn />} color="info" />
             <StatCard title="Subastas Activas" value={logic.stats.subastasActivas} icon={<Gavel />} color="warning" />
+            <StatCard
+  title="Adhesiones a Cobrar"
+  subtitle="Próximos vencimientos"
+  value={`$${Number(logic.stats.adhesionesPendienteCobro).toLocaleString('es-AR')}`}
+  icon={<Schedule />}
+  color="info"
+/>
+<StatCard
+  title="Adhesiones Vencidas"
+  subtitle="Deuda atrasada"
+  value={`$${Number(logic.stats.adhesionesVencidas).toLocaleString('es-AR')}`}
+  icon={<Warning />}
+  color="error"
+/>
+<StatCard
+  title="Tasa de Cobranza (Adhesiones)"
+  subtitle="Efectividad de pago"
+  value={`${logic.stats.adhesionesTasaCobranza}%`}
+  icon={<CheckCircle />}
+  color="success"
+/>
           </Box>
 
           {/* 5. TABS DE ANÁLISIS DETALLADO */}

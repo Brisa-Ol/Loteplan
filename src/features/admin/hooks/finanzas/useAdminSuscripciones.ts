@@ -1,5 +1,3 @@
-// src/features/admin/pages/Suscripciones/hooks/finanzas/useAdminSuscripciones.ts
-
 import { useConfirmDialog } from '@/shared/hooks/useConfirmDialog';
 import { useModal } from '@/shared/hooks/useModal';
 import useSnackbar from '@/shared/hooks/useSnackbar';

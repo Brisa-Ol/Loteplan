@@ -6,6 +6,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useAdminSuscripciones } from '../../hooks/finanzas/useAdminSuscripciones';
 import CancelacionesTab from './components/CancelacionesTab';
 import SuscripcionesActiveTab from './components/SuscripcionesActiveTab';
+import AdhesionesTab from './components/AdhesionesTab';
 
 const AdminSuscripciones: React.FC = () => {
   const logic = useAdminSuscripciones();
@@ -62,10 +63,11 @@ const AdminSuscripciones: React.FC = () => {
     }];
   }, [logic]);
 
-  const TABS = [
-    { label: 'Suscripciones Activas', index: 0 },
-    { label: 'Historial de Bajas', index: 1 },
-  ];
+const TABS = [
+  { label: 'Suscripciones Activas', index: 0 },
+  { label: 'Adhesiones',            index: 1 }, // 🆕
+  { label: 'Historial de Bajas',    index: 2 }, // era index 1
+];
 
   return (
     <PageContainer maxWidth="xl" sx={{ py: 3 }}>
@@ -91,17 +93,17 @@ const AdminSuscripciones: React.FC = () => {
       </Box>
 
       {/* Le inyectamos la data filtrada correcta (filteredSuscripciones) y los estados de fecha */}
-      {logic.tabIndex === 0 ? (
-        <SuscripcionesActiveTab 
-          logic={{ ...logic, filteredSuscripciones: dataConFiltroFechas }} 
-          startDate={startDate}
-          setStartDate={setStartDate}
-          endDate={endDate}
-          setEndDate={setEndDate}
-        />
-      ) : (
-        <CancelacionesTab />
-      )}
+      {logic.tabIndex === 0 && (
+  <SuscripcionesActiveTab
+    logic={{ ...logic, filteredSuscripciones: dataConFiltroFechas }}
+    startDate={startDate}
+    setStartDate={setStartDate}
+    endDate={endDate}
+    setEndDate={setEndDate}
+  />
+)}
+{logic.tabIndex === 1 && <AdhesionesTab />}        {/* 🆕 */}
+{logic.tabIndex === 2 && <CancelacionesTab />}     {/* era 1 */}
     </PageContainer>
   );
 };

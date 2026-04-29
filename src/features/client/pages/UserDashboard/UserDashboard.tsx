@@ -32,7 +32,7 @@ import {
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import { useQuery } from '@tanstack/react-query';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { useAuth } from '@/core/context/AuthContext';
@@ -40,6 +40,7 @@ import { QueryHandler } from '../../../../shared/components/data-grid/QueryHandl
 import { useDashboardStats } from '../../hooks/useDashboardStats';
 
 // Servicios
+import { getAllAdhesionsByUser } from '@/core/api/services/adhesion.service';
 import InversionService from '@/core/api/services/inversion.service';
 import kycService from '@/core/api/services/kyc.service';
 import PagoService from '@/core/api/services/pago.service';
@@ -59,7 +60,6 @@ const calculateDaysRemaining = (dateString?: string): number => {
   const diffTime = dueDate.getTime() - today.getTime();
   const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-  // Evitamos números negativos si la fecha ya pasó
   return Math.max(0, days);
 };
 
@@ -69,26 +69,29 @@ const UserDashboard: React.FC = () => {
   const theme = useTheme();
 
   const [showKycAprobado, setShowKycAprobado] = React.useState(() => {
-    // Solo se muestra si NO fue cerrado en esta sesión
     return sessionStorage.getItem('kyc_aprobado_visto') !== 'true';
   });
 
   // ========== 1. DATA FETCHING ==========
-  const { data: resumenes } = useQuery({
+  const { data: resumenes, isLoading: loadingResumenes } = useQuery({
     queryKey: ['misResumenes'],
     queryFn: async () => (await ResumenCuentaService.getMyAccountSummaries()).data
   });
-  const { data: suscripciones } = useQuery({
+  const { data: suscripciones, isLoading: loadingSuscripciones } = useQuery({
     queryKey: ['misSuscripciones'],
     queryFn: async () => (await SuscripcionService.getMisSuscripciones()).data
   });
-  const { data: inversiones } = useQuery({
+  const { data: inversiones, isLoading: loadingInversiones } = useQuery({
     queryKey: ['misInversiones'],
     queryFn: async () => (await InversionService.getMisInversiones()).data
   });
-  const { data: pagos } = useQuery({
+  const { data: pagos, isLoading: loadingPagos } = useQuery({
     queryKey: ['misPagosPendientes'],
     queryFn: async () => (await PagoService.getMyPayments())
+  });
+  const { data: adhesiones, isLoading: loadingAdhesiones } = useQuery({
+    queryKey: ['misAdhesionesDashboard'],
+    queryFn: async () => (await getAllAdhesionsByUser()).data.data
   });
   const { data: misPujas } = useQuery({
     queryKey: ['misPujasCheck'],
@@ -99,18 +102,38 @@ const UserDashboard: React.FC = () => {
     queryFn: kycService.getStatus
   });
 
-  const estadoKyc = kycStatus?.estado_verificacion; // 'APROBADA', 'RECHAZADA', 'PENDIENTE', 'NO_INICIADO'
-  const isLoading = !resumenes || !suscripciones || !inversiones || !pagos;
+  const estadoKyc = kycStatus?.estado_verificacion;
+  const isLoading = loadingResumenes || loadingSuscripciones || loadingInversiones || loadingPagos || loadingAdhesiones;
 
   // ========== 2. LÓGICA DE NEGOCIO ========== 
   const stats = useDashboardStats({ resumenes, suscripciones, inversiones, pagos });
 
-  // Lógica de Pagos
+  // Lógica de Pagos Normales
   const proximoPagoReal = pagos?.filter(p =>
     p.estado_pago === 'pendiente' && new Date(p.fecha_vencimiento) >= new Date()
   ).sort((a, b) => new Date(a.fecha_vencimiento).getTime() - new Date(b.fecha_vencimiento).getTime())[0];
 
-  const totalDeudaVencida = stats.pagosVencidos.reduce((acc, p) => acc + Number(p.monto), 0);
+  // Lógica de Adhesiones
+  const proximaAdhesionReal = useMemo(() => {
+    if (!adhesiones) return null;
+    const pendientes = adhesiones.flatMap(a =>
+      (a.pagos || []).filter(p => p.estado === 'pendiente' && new Date(p.fecha_vencimiento) >= new Date())
+    );
+    if (pendientes.length === 0) return null;
+    return pendientes.sort((a, b) => new Date(a.fecha_vencimiento).getTime() - new Date(b.fecha_vencimiento).getTime())[0];
+  }, [adhesiones]);
+
+  // Consolidación de Mora (Suma mensualidades + adhesiones vencidas)
+  const adhesionesVencidas = useMemo(() => {
+    if (!adhesiones) return [];
+    return adhesiones.flatMap(a => (a.pagos || []).filter(p => p.estado === 'vencido'));
+  }, [adhesiones]);
+
+  const cantidadTotalMora = stats.cantidadPagosVencidos + adhesionesVencidas.length;
+  const totalDeudaVencida =
+    stats.pagosVencidos.reduce((acc, p) => acc + Number(p.monto), 0) +
+    adhesionesVencidas.reduce((acc, p) => acc + Number(p.monto), 0);
+
   const isNewUser = !isLoading && resumenes?.length === 0 && suscripciones?.length === 0;
 
   // Lógica de Pujas Ganadas
@@ -164,12 +187,12 @@ const UserDashboard: React.FC = () => {
       <Container maxWidth={false} sx={{ maxWidth: '1400px', mt: -6 }}>
         <QueryHandler isLoading={isLoading} error={null}>
           <Box mb={4}>
-            {/* ========== ALERTA KYC RECHAZADO (VISIBLE PARA TODOS) ========== */}
+            {/* ========== ALERTA KYC RECHAZADO ========== */}
             {estadoKyc === 'RECHAZADA' && (
               <Fade in={true}>
                 <Box
                   sx={{
-                    mb: isNewUser ? 4 : 0, // Espaciado dinámico
+                    mb: isNewUser ? 4 : 0,
                     borderRadius: 3,
                     border: '1px solid',
                     borderColor: 'error.main',
@@ -195,7 +218,6 @@ const UserDashboard: React.FC = () => {
                         </Typography>
                       </Box>
                     </Stack>
-
                     <Button
                       variant="contained"
                       color="error"
@@ -209,7 +231,7 @@ const UserDashboard: React.FC = () => {
               </Fade>
             )}
 
-            {/* ========== ALERTA KYC APROBADO (VISIBLE PARA TODOS) ========== */}
+            {/* ========== ALERTA KYC APROBADO ========== */}
             {estadoKyc === 'APROBADA' && showKycAprobado && (
               <Fade in={true}>
                 <Box
@@ -240,7 +262,6 @@ const UserDashboard: React.FC = () => {
                         </Typography>
                       </Box>
                     </Stack>
-
                     <IconButton
                       onClick={() => {
                         sessionStorage.setItem('kyc_aprobado_visto', 'true');
@@ -248,7 +269,7 @@ const UserDashboard: React.FC = () => {
                       }}
                       sx={{ color: 'success.dark', alignSelf: { xs: 'flex-end', sm: 'center' } }}
                     >
-                      <Close />  {/* Importá Close desde @mui/icons-material */}
+                      <Close />
                     </IconButton>
                   </Stack>
                 </Box>
@@ -261,7 +282,7 @@ const UserDashboard: React.FC = () => {
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 340px' }, gap: 4, alignItems: 'start' }}>
               <Box>
 
-                {/* ========== ALERTA DE SUBASTA GANADA (DISEÑO PERSONALIZADO DARK) ========== */}
+                {/* ========== ALERTA DE SUBASTA GANADA ========== */}
                 {cantidadGanadas > 0 && (
                   <Fade in={true}>
                     <Box
@@ -269,13 +290,12 @@ const UserDashboard: React.FC = () => {
                         mb: 4,
                         borderRadius: 3,
                         border: '1px solid',
-                        borderColor: 'success.main', // Borde verde brillante
-                        bgcolor: '#a9e9a4', // Fondo oscuro del cartel
-                        boxShadow: `0 0 24px ${alpha(theme.palette.success.main, 0.20)}`, // Brillo verde suave
+                        borderColor: 'success.main',
+                        bgcolor: '#a9e9a4',
+                        boxShadow: `0 0 24px ${alpha(theme.palette.success.main, 0.20)}`,
                         p: { xs: 2, sm: 3 },
                       }}
                     >
-                      {/* --- Encabezado --- */}
                       <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={2} mb={3}>
                         <Stack direction="row" spacing={2} alignItems="center">
                           <Avatar sx={{ bgcolor: '#FFFFFF', color: '#efbf04 ', width: 48, height: 48 }}>
@@ -290,61 +310,34 @@ const UserDashboard: React.FC = () => {
                             </Typography>
                           </Box>
                         </Stack>
-
                         <Button
                           variant="outlined"
                           onClick={() => navigate('/client/finanzas/pujas')}
                           sx={{
-                            color: '#fff',
-                            borderColor: '#E07A4D',
-                            bgcolor: '#E07A4D', // Botón gris oscuro
-                            fontWeight: 800,
-                            px: 3,
-                            borderRadius: 2,
-                            textTransform: 'none',
-                            '&:hover': {
-                              bgcolor: '#A34D26',
-                              borderColor: 'success.main'
-                            }
+                            color: '#fff', borderColor: '#E07A4D', bgcolor: '#E07A4D',
+                            fontWeight: 800, px: 3, borderRadius: 2, textTransform: 'none',
+                            '&:hover': { bgcolor: '#A34D26', borderColor: 'success.main' }
                           }}
                         >
                           Gestionar pago
                         </Button>
                       </Stack>
-
-                      {/* --- Lista de lotes --- */}
-                      <Stack
-                        spacing={0}
-                        sx={{
-                          bgcolor: '#ECECEC', // Fondo gris verdoso claro
-                          borderRadius: 2,
-                          overflow: 'hidden'
-                        }}
-                      >
+                      <Stack spacing={0} sx={{ bgcolor: '#ECECEC', borderRadius: 2, overflow: 'hidden' }}>
                         {pujasConDiasRestantes.map((puja, index) => {
                           const isExpired = puja.diasRestantes <= 0;
-                          // Regla de color: Si quedan 14 días o menos, se vuelve naranja
                           const isUrgent = puja.diasRestantes > 0 && puja.diasRestantes <= 14;
-
-                          // Colores para la fila
                           const colorMain = isExpired ? theme.palette.error.main : (isUrgent ? '#E65100' : theme.palette.success.main);
                           const chipBg = alpha(colorMain, 0.1);
 
                           return (
                             <Stack
                               key={puja.id || index}
-                              direction="row"
-                              alignItems="center"
-                              justifyContent="space-between"
-                              flexWrap="wrap"
-                              gap={2}
+                              direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={2}
                               sx={{
-                                px: { xs: 2, sm: 3 },
-                                py: 1.5,
+                                px: { xs: 2, sm: 3 }, py: 1.5,
                                 borderBottom: index < pujasConDiasRestantes.length - 1 ? '1px solid rgba(0,0,0,0.06)' : 'none',
                               }}
                             >
-                              {/* Información del Lote */}
                               <Stack direction="row" alignItems="center" spacing={1.5}>
                                 <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: colorMain }} />
                                 <Typography variant="body1" sx={{ color: '#000000', fontWeight: 800 }}>
@@ -354,21 +347,12 @@ const UserDashboard: React.FC = () => {
                                   Monto a Pagar: <Box component="span" sx={{ color: '#111111', fontWeight: 800 }}>${Number(puja.monto_puja || 0).toLocaleString('es-AR')}</Box>
                                 </Typography>
                               </Stack>
-
-                              {/* Chip de estado (Verde o Naranja) */}
                               <Chip
-                                label={
-                                  isExpired
-                                    ? "Plazo vencido"
-                                    : `${puja.diasRestantes} días restantes`
-                                }
+                                label={isExpired ? "Plazo vencido" : `${puja.diasRestantes} días restantes`}
                                 size="small"
                                 icon={<Schedule style={{ fontSize: 16 }} />}
                                 sx={{
-                                  fontWeight: 800,
-                                  bgcolor: chipBg,
-                                  color: colorMain,
-                                  border: `1px solid ${colorMain}`,
+                                  fontWeight: 800, bgcolor: chipBg, color: colorMain, border: `1px solid ${colorMain}`,
                                   '& .MuiChip-icon': { color: colorMain },
                                 }}
                               />
@@ -380,61 +364,53 @@ const UserDashboard: React.FC = () => {
                   </Fade>
                 )}
 
-                {/* ========== GRID DE ESTADO FINANCIERO (Mejorado) ========== */}
-                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 3, mb: 5 }}>
+                {/* ========== GRID DE ESTADO FINANCIERO (3 COLUMNAS) ========== */}
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 3, mb: 5 }}>
 
-                  {/* --- TARJETA 1: Estado de Cuenta --- */}
+                  {/* --- TARJETA 1: Estado de Cuenta (MORA) --- */}
                   <Card elevation={0} sx={{
-                    height: '100%',
-                    borderRadius: 3,
-                    border: '1px solid',
-                    borderColor: stats.cantidadPagosVencidos > 0 ? 'error.main' : 'success.main',
-                    bgcolor: stats.cantidadPagosVencidos > 0 ? 'error.light' : 'success.light',
+                    height: '100%', borderRadius: 3, border: '1px solid',
+                    borderColor: cantidadTotalMora > 0 ? 'error.main' : 'success.main',
+                    bgcolor: cantidadTotalMora > 0 ? 'error.light' : 'success.light',
                   }}>
-                    <CardContent sx={{ p: 3 }}>
-                      <Stack spacing={2}>
+                    <CardContent sx={{ p: 3, height: '100%' }}>
+                      <Stack spacing={2} sx={{ height: '100%', justifyContent: 'space-between' }}>
                         <Stack direction="row" justifyContent="space-between" alignItems="center">
-                          <Avatar sx={{
-                            bgcolor: stats.cantidadPagosVencidos > 0 ? 'error.main' : 'success.main',
-                            color: 'white'
-                          }}>
-                            {stats.cantidadPagosVencidos > 0 ? <Warning /> : <CheckCircle />}
+                          <Avatar sx={{ bgcolor: cantidadTotalMora > 0 ? 'error.main' : 'success.main', color: 'white' }}>
+                            {cantidadTotalMora > 0 ? <Warning /> : <CheckCircle />}
                           </Avatar>
                           <Chip
-                            label={stats.cantidadPagosVencidos > 0 ? "EN MORA" : "AL DÍA"}
-                            color={stats.cantidadPagosVencidos > 0 ? "error" : "success"}
+                            label={cantidadTotalMora > 0 ? "EN MORA" : "AL DÍA"}
+                            color={cantidadTotalMora > 0 ? "error" : "success"}
                             size="small"
                             sx={{ fontWeight: 800 }}
                           />
                         </Stack>
                         <Box>
                           <Typography variant="overline" color="text.secondary" fontWeight={700}>Total Vencido</Typography>
-                          <Typography variant="h3" fontWeight={800} color={stats.cantidadPagosVencidos > 0 ? "error.main" : "success.main"}>
+                          <Typography variant="h3" fontWeight={800} color={cantidadTotalMora > 0 ? "error.main" : "success.main"}>
                             ${totalDeudaVencida.toLocaleString('es-AR')}
                           </Typography>
                         </Box>
                         <Button
                           variant="contained"
-                          color={stats.cantidadPagosVencidos > 0 ? "error" : "success"}
+                          color={cantidadTotalMora > 0 ? "error" : "success"}
                           fullWidth
                           onClick={() => navigate('/client/finanzas/pagos', {
-                            state: { activeTab: stats.cantidadPagosVencidos > 0 ? 1 : 2 }
+                            state: { activeTab: cantidadTotalMora > 0 ? 1 : 2 }
                           })}
                           sx={{ fontWeight: 700, borderRadius: 2 }}
                         >
-                          {stats.cantidadPagosVencidos > 0 ? "Regularizar Deuda" : "Historial de Pagos"}
+                          {cantidadTotalMora > 0 ? "Regularizar Deuda" : "Historial de Pagos"}
                         </Button>
                       </Stack>
                     </CardContent>
                   </Card>
 
-                  {/* --- TARJETA 2: Próximo Pago --- */}
+                  {/* --- TARJETA 2: Próximo Pago Proyecto --- */}
                   <Card elevation={0} sx={{
-                    height: '100%',
-                    borderRadius: 3,
-                    border: '1px solid',
-                    borderColor: 'primary.main',
-                    bgcolor: 'background.default'
+                    height: '100%', borderRadius: 3, border: '1px solid',
+                    borderColor: 'primary.main', bgcolor: 'background.default'
                   }}>
                     <CardContent sx={{ p: 3, height: '100%' }}>
                       <Stack spacing={2} sx={{ height: '100%', justifyContent: 'space-between' }}>
@@ -445,11 +421,42 @@ const UserDashboard: React.FC = () => {
                         {proximoPagoReal ? (
                           <Box>
                             <Typography variant="h3" fontWeight={800}>${Number(proximoPagoReal.monto).toLocaleString('es-AR')}</Typography>
-                            <Chip label={`VENCE EL ${new Date(proximoPagoReal.fecha_vencimiento).toLocaleDateString('es-AR')}`} color="primary" variant="outlined" sx={{ mt: 1, fontWeight: 800 }} />
+                            <Stack direction="row" justifyContent="space-between" alignItems="center" mt={1}>
+                              <Chip label={`VENCE EL ${new Date(proximoPagoReal.fecha_vencimiento).toLocaleDateString('es-AR')}`} color="primary" variant="outlined" sx={{ fontWeight: 800, borderRadius: 2 }} />
+                              <Button size="small" color="primary" onClick={() => navigate('/client/finanzas/pagos')} sx={{ fontWeight: 800 }}>Pagar</Button>
+                            </Stack>
                           </Box>
                         ) : (
                           <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center' }}>
                             <Typography variant="h5" fontWeight={700} color="text.disabled">Sin pagos próximos</Typography>
+                          </Box>
+                        )}
+                      </Stack>
+                    </CardContent>
+                  </Card>
+
+                  {/* --- TARJETA 3: Próxima Adhesión --- */}
+                  <Card elevation={0} sx={{
+                    height: '100%', borderRadius: 3, border: '1px solid',
+                    borderColor: 'info.main', bgcolor: 'background.default'
+                  }}>
+                    <CardContent sx={{ p: 3, height: '100%' }}>
+                      <Stack spacing={2} sx={{ height: '100%', justifyContent: 'space-between' }}>
+                        <Stack direction="row" alignItems="center" spacing={1.5}>
+                          <Avatar sx={{ bgcolor: alpha(theme.palette.info.main, 0.1), color: 'info.main' }}><ReceiptLong /></Avatar>
+                          <Typography variant="overline" color="text.secondary" sx={{ fontWeight: 800 }}>Cuota de Adhesión</Typography>
+                        </Stack>
+                        {proximaAdhesionReal ? (
+                          <Box>
+                            <Typography variant="h3" fontWeight={800}>${Number(proximaAdhesionReal.monto).toLocaleString('es-AR')}</Typography>
+                            <Stack direction="row" justifyContent="space-between" alignItems="center" mt={1}>
+                              <Chip label={`VENCE EL ${new Date(proximaAdhesionReal.fecha_vencimiento).toLocaleDateString('es-AR')}`} color="info" variant="outlined" sx={{ fontWeight: 800, borderRadius: 2 }} />
+                              <Button size="small" color="info" onClick={() => navigate('/client/finanzas/pagos')} sx={{ fontWeight: 800 }}>Pagar</Button>
+                            </Stack>
+                          </Box>
+                        ) : (
+                          <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center' }}>
+                            <Typography variant="h5" fontWeight={700} color="text.disabled">Sin cuotas próximas</Typography>
                           </Box>
                         )}
                       </Stack>
@@ -481,33 +488,22 @@ const UserDashboard: React.FC = () => {
                 </Stack>
 
                 {/* ========== LISTA DE INVERSIONES ========== */}
-                {/* ========== LISTA DE INVERSIONES ========== */}
-                {/* ========== LISTA DE INVERSIONES ========== */}
                 <Stack spacing={3}>
                   {resumenes
-                    // 👇 FILTRO ESTRICTO MEJORADO
                     ?.filter((resumen) => {
-                      // 1. Si el resumen pertenece a una suscripción (pago en cuotas):
                       if (resumen.id_suscripcion) {
                         const subActiva = suscripciones?.find(s => s.id === resumen.id_suscripcion);
-                        // Si la encuentra y está activa, pasa. Si no la encuentra (porque se canceló), se oculta (false).
                         return subActiva ? subActiva.activo === true : false;
                       }
-
-                      // 2. Si el resumen es de una inversión directa (no tiene id_suscripcion):
-                      // Verificamos si el resumen mismo trae la propiedad "activo" de la base de datos
                       if (resumen.hasOwnProperty('activo')) {
                         return resumen.activo === true;
                       }
-
-                      // Fallback para inversiones directas que no tengan la propiedad activo explícita
                       return true;
                     })
                     .map((resumen) => {
                       const tieneMora = pagos?.some(p => p.id_suscripcion === resumen.id_suscripcion && p.estado_pago === 'pendiente' && new Date(p.fecha_vencimiento) < new Date());
                       const subActiva = suscripciones?.find(s => s.id === resumen.id_suscripcion);
                       return (
-
                         <Card key={resumen.id} elevation={0} sx={{
                           borderRadius: 3, border: `1px solid ${theme.palette.divider}`, transition: 'all 0.2s',
                           '&:hover': { transform: 'translateY(-4px)', borderColor: 'primary.main', boxShadow: theme.shadows[4] }
@@ -542,66 +538,31 @@ const UserDashboard: React.FC = () => {
 
               {/* ========== SIDEBAR DERECHO ========== */}
               <Stack spacing={3}>
-                {/* {stats.saldoTotalAFavor > 0 && (
-                  <Card elevation={0} sx={{
-                    borderRadius: 2, background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`, color: 'primary.contrastText', boxShadow: `0 8px 24px ${alpha(theme.palette.primary.main, 0.3)}`
-                  }}>
-                    <CardContent sx={{ p: 3 }}>
-                      <Stack spacing={2}>
-                        <Stack direction="row" alignItems="center" spacing={2}><Avatar sx={{ bgcolor: alpha('#fff', 0.2), color: '#fff' }}><AccountBalanceWallet /></Avatar><Typography variant="overline" fontWeight={800}>Saldo a Favor</Typography></Stack>
-                        <Box><Typography variant="h3" fontWeight={800}>${stats.saldoTotalAFavor.toLocaleString('es-AR')}</Typography><Typography variant="caption" sx={{ opacity: 0.8, mt: 1, display: 'block' }}>Disponible para tus próximas cuotas.</Typography></Box>
-                      </Stack>
-                    </CardContent>
-                  </Card>
-                )} */}
                 <Paper
                   elevation={0}
                   sx={{
-                    p: 3,
-                    border: '1px solid',
-                    borderColor: 'primary.main',
-                    borderRadius: 4,
-                    bgcolor: 'background.default'
+                    p: 3, border: '1px solid', borderColor: 'primary.main',
+                    borderRadius: 4, bgcolor: 'background.default'
                   }}
                 >
-                  <Typography variant="h5" mb={3}>
-                    Gestión Rápida
-                  </Typography>
-
+                  <Typography variant="h5" mb={3}>Gestión Rápida</Typography>
                   <Stack spacing={2}>
-                    {/* Acción Primaria: Fondo Sólido */}
                     <Button
-                      variant="contained"
-                      color="primary"
-                      fullWidth
-                      size="large"
-                      startIcon={<AccountBalanceWallet />}
+                      variant="contained" color="primary" fullWidth size="large" startIcon={<AccountBalanceWallet />}
                       onClick={() => navigate('/client/finanzas/pagos')}
                       sx={{ borderRadius: 50, fontWeight: 800, textTransform: 'none', py: 1 }}
                     >
                       Pagar Cuotas
                     </Button>
-
-                    {/* Acción Secundaria: Outlined */}
                     <Button
-                      variant="outlined"
-                      color="primary"
-                      fullWidth
-                      size="large"
-                      startIcon={<Gavel />}
+                      variant="outlined" color="primary" fullWidth size="large" startIcon={<Gavel />}
                       onClick={() => navigate('/client/finanzas/pujas')}
                       sx={{ borderRadius: 50, fontWeight: 800, textTransform: 'none', py: 1, borderWidth: 2, '&:hover': { borderWidth: 2 } }}
                     >
                       Mis Subastas
                     </Button>
-
-                    {/* Acción Secundaria: Outlined */}
                     <Button
-                      variant="outlined"
-                      color="primary"
-                      fullWidth
-                      size="large"
-                      startIcon={<ReceiptLong />}
+                      variant="outlined" color="primary" fullWidth size="large" startIcon={<ReceiptLong />}
                       onClick={() => navigate('/client/finanzas/transacciones')}
                       sx={{ borderRadius: 50, fontWeight: 800, textTransform: 'none', py: 1, borderWidth: 2, '&:hover': { borderWidth: 2 } }}
                     >
@@ -610,18 +571,7 @@ const UserDashboard: React.FC = () => {
                   </Stack>
                 </Paper>
 
-                {/* SEGURIDAD Y 2FA */}
-                <Card
-                  elevation={0}
-                  sx={{
-                    bgcolor: '#FFFFFF',
-                    border: '1px solid',
-                    borderColor: '#CC6333',
-                    borderRadius: 4,
-                    p: 3,
-                    textAlign: 'center'
-                  }}
-                >
+                <Card elevation={0} sx={{ bgcolor: '#FFFFFF', border: '1px solid', borderColor: '#CC6333', borderRadius: 4, p: 3, textAlign: 'center' }}>
                   <Stack spacing={2} alignItems="center">
                     <Stack direction="row" alignItems="center" spacing={1.5} justifyContent="center">
                       <Avatar sx={{ bgcolor: user?.is_2fa_enabled ? 'primary.main' : 'warning.main', width: 30, height: 30 }}>
@@ -629,40 +579,19 @@ const UserDashboard: React.FC = () => {
                       </Avatar>
                       <Typography variant="h5">Seguridad de Cuenta</Typography>
                     </Stack>
-
-
                     <Stack direction="row" spacing={1} alignItems="center">
                       <Typography variant="body2" color="text.secondary">Estado:</Typography>
-                      <Chip
-                        label={user?.is_2fa_enabled ? 'ACTIVO' : 'INACTIVO'}
-                        color={user?.is_2fa_enabled ? 'success' : 'warning'}
-                        size="small"
-                        variant="filled"
-                        sx={{ fontWeight: 800 }}
-                      />
+                      <Chip label={user?.is_2fa_enabled ? 'ACTIVO' : 'INACTIVO'} color={user?.is_2fa_enabled ? 'success' : 'warning'} size="small" variant="filled" sx={{ fontWeight: 800 }} />
                     </Stack>
-
                     <Typography variant="caption" color="text.secondary">
-                      {user?.is_2fa_enabled
-                        ? 'Tu cuenta está protegida con 2FA.'
-                        : 'Recomendamos activar esta protección.'}
+                      {user?.is_2fa_enabled ? 'Tu cuenta está protegida con 2FA.' : 'Recomendamos activar esta protección.'}
                     </Typography>
-
                     <Button
-                      variant="outlined" // Usamos outlined para que tome en cuenta el borderColor
+                      variant="outlined"
                       onClick={() => navigate('/client/seguridad')}
                       sx={{
-                        color: '#fff',
-                        borderColor: '#E07A4D',
-                        bgcolor: '#E07A4D',
-                        fontWeight: 800,
-                        px: 3,
-                        borderRadius: 50,
-                        textTransform: 'none',
-                        '&:hover': {
-                          bgcolor: '#A34D26',
-                          borderColor: 'success.main'
-                        }
+                        color: '#fff', borderColor: '#E07A4D', bgcolor: '#E07A4D', fontWeight: 800, px: 3, borderRadius: 50, textTransform: 'none',
+                        '&:hover': { bgcolor: '#A34D26', borderColor: 'success.main' }
                       }}
                     >
                       {user?.is_2fa_enabled ? 'Administrar 2FA' : 'Configurar 2FA'}
@@ -670,7 +599,6 @@ const UserDashboard: React.FC = () => {
                   </Stack>
                 </Card>
               </Stack>
-
             </Box>
           )}
         </QueryHandler>
