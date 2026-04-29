@@ -36,8 +36,8 @@ import {
 
 const PLAN_LABELS: Record<PlanPagoAdhesion, string> = {
     contado:   'Pago contado',
-    '6_cuotas':  '6 cuotas',
-    '12_cuotas': '12 cuotas',
+    '3_cuotas':  '3 cuotas',
+    '6_cuotas': '6 cuotas',
 };
 
 const getPlanLabel = (plan: PlanPagoAdhesion): string =>
