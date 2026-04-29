@@ -1,8 +1,10 @@
 import type {
   AdhesionDto,
   AdhesionMetricsDto,
+  ConfirmarPagoCuotaDto,
   CrearAdhesionDto,
   ForzarPagoCuotaDto,
+  IniciarPagoCuotaResponse,
   PagarCuotaAdhesionDto,
   PagoAdhesionDto
 } from '@/core/types/adhesion.dto';
@@ -37,16 +39,30 @@ const BASE_ENDPOINT = '/adhesion';
     return await httpService.get(`${BASE_ENDPOINT}/suscripcion/${suscripcionId}`);
   }
 
-  // Iniciar el pago de una cuota de adhesión (redirige a pasarela)
-  export const pagarCuotaAdhesion = async (data: PagarCuotaAdhesionDto): Promise<AxiosResponse<{ success: boolean, redirectUrl: string }>> => {
-    return await httpService.post(`${BASE_ENDPOINT}/pagar-cuota`, data);
-  }
+export const iniciarCancelacionAdhesion = async (id: number): Promise<AxiosResponse<any>> => {
+  // ✅ Le pasamos un objeto como segundo parámetro para que req.body exista en el backend
+  return await httpService.post(`${BASE_ENDPOINT}/${id}/iniciar-cancelacion`, {
+    motivo: "Baja solicitada por el usuario"
+  });
+}
+// Confirmar cancelación de adhesión (Paso 2 - Valida código 2FA)
+export const confirmarCancelacionAdhesion = async (data: { adhesionId: number, codigo_2fa: string }): Promise<AxiosResponse<any>> => {
+  return await httpService.post(`${BASE_ENDPOINT}/confirmar-cancelacion`, data);
+}
 
-  // Cancelar una adhesión (usuario dueño o admin)
-  export const cancelarAdhesion = async (id: number, motivo?: string): Promise<AxiosResponse<{ success: boolean, message: string }>> => {
-    return await httpService.delete(`${BASE_ENDPOINT}/${id}`, { data: { motivo } });
-  }
+// Paso 1: Iniciar pago de cuota (sin 2FA → redirige directo; con 2FA → devuelve 202)
+export const iniciarPagoCuota = async (
+  data: PagarCuotaAdhesionDto
+): Promise<AxiosResponse<IniciarPagoCuotaResponse>> => {
+  return await httpService.post(`${BASE_ENDPOINT}/iniciar-pago-cuota`, data);
+};
 
+// Paso 2: Confirmar pago de cuota con código 2FA
+export const confirmarPagoCuota = async (
+  data: ConfirmarPagoCuotaDto
+): Promise<AxiosResponse<{ success: boolean; redirectUrl: string }>> => {
+  return await httpService.post(`${BASE_ENDPOINT}/confirmar-pago-cuota`, data);
+};
   // =================================================
   // 👮 RUTAS DE ADMINISTRADOR
   // =================================================

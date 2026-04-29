@@ -26,17 +26,19 @@ import { useSuscripciones } from '../../hooks/useSuscripciones';
 import { useCurrencyFormatter } from '../../hooks/useCurrencyFormatter';
 import {
     ConfirmDialog, DataTable, PageContainer, PageHeader,
-    QueryHandler, StatCard, useConfirmDialog,
+    QueryHandler, StatCard, useConfirmDialog, useModal,
     type DataTableColumn
 } from '@/shared';
+// ✅ Importamos el Modal de 2FA
+import TwoFactorAuthModal from '@/shared/components/domain/modals/TwoFactorAuthModal';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HELPERS
 // ─────────────────────────────────────────────────────────────────────────────
 
 const PLAN_LABELS: Record<PlanPagoAdhesion, string> = {
-    contado:   'Pago contado',
-    '3_cuotas':  '3 cuotas',
+    contado: 'Pago contado',
+    '3_cuotas': '3 cuotas',
     '6_cuotas': '6 cuotas',
 };
 
@@ -51,11 +53,15 @@ const formatDate = (iso: string): string =>
 // ─────────────────────────────────────────────────────────────────────────────
 
 const MisSuscripciones: React.FC = () => {
-    const navigate        = useNavigate();
-    const theme           = useTheme();
-    const formatCurrency  = useCurrencyFormatter();
-    // ✅ CORRECCIÓN 1: Quitamos el <ConfirmAction>
-    const confirmDialog   = useConfirmDialog();
+    const navigate = useNavigate();
+    const theme = useTheme();
+    const formatCurrency = useCurrencyFormatter();
+    const confirmDialog = useConfirmDialog();
+    
+    // ✅ Modales y Estados para 2FA
+    const twoFaModal = useModal();
+    const [selectedCancelId, setSelectedCancelId] = useState<number | null>(null);
+    const [twoFAError, setTwoFAError] = useState<string | null>(null);
 
     const {
         suscripciones,
@@ -66,8 +72,10 @@ const MisSuscripciones: React.FC = () => {
         error,
         cancelarSuscripcion,
         isCancelling,
-        cancelarAdhesionObj,
-        isCancellingAdhesion,
+        iniciarCancelAdhesion,
+        isInitiatingCancel,
+        confirmarCancelAdhesion,
+        isConfirmingCancel,
         highlightedId,
     } = useSuscripciones();
 
@@ -75,15 +83,14 @@ const MisSuscripciones: React.FC = () => {
 
     // ── DATOS DERIVADOS ───────────────────────────────────────────────────────
 
-    /** Solo mostramos como "Vigentes" los planes con adhesión completada */
     const suscripcionesVigentes = useMemo(
         () => suscripciones.filter((s) => s.adhesion_completada === true),
         [suscripciones],
     );
 
     const capitalHistoricoTotal = useMemo(() => {
-        const enActivas   = suscripciones.reduce((acc, s) => acc + Number(s.monto_total_pagado  || 0), 0);
-        const enCanceladas = canceladas.reduce((acc, s) => acc + Number(s.monto_pagado_total    || 0), 0);
+        const enActivas = suscripciones.reduce((acc, s) => acc + Number(s.monto_total_pagado || 0), 0);
+        const enCanceladas = canceladas.reduce((acc, s) => acc + Number(s.monto_pagado_total || 0), 0);
         return enActivas + enCanceladas;
     }, [suscripciones, canceladas]);
 
@@ -92,19 +99,37 @@ const MisSuscripciones: React.FC = () => {
         [suscripciones],
     );
 
-    // ── CONFIRMACIÓN ─────────────────────────────────────────────────────────
+    // ── CONFIRMACIÓN (FLUJO SEGURO) ──────────────────────────────────────────
 
-    const handleConfirmCancel = useCallback(async () => {
+    const handleConfirmCancel = useCallback(() => {
         if (!confirmDialog.data) return;
 
         if (confirmDialog.action === 'cancel_subscription') {
-            await cancelarSuscripcion(confirmDialog.data.id);
-        } else if (confirmDialog.action === ('cancel_adhesion' as any)) { // ✅ CORRECCIÓN 2: as any
-            await cancelarAdhesionObj(confirmDialog.data.id);
+            cancelarSuscripcion(confirmDialog.data.id, {
+                onSettled: () => confirmDialog.close()
+            });
+        } else if (confirmDialog.action === ('cancel_adhesion' as any)) { 
+            const adhesionId = confirmDialog.data.id;
+            
+            // ✅ Paso 1: Iniciamos el flujo para ver si requiere 2FA
+            iniciarCancelAdhesion(adhesionId, {
+                onSuccess: (res) => {
+                    confirmDialog.close();
+                    
+                    // Si el backend devuelve 202 o una bandera de seguridad, abrimos el modal TOTP
+                    if (res.status === 202 || res.data?.is2FARequired || res.data?.requiere2FA) {
+                        setSelectedCancelId(adhesionId);
+                        setTwoFAError(null);
+                        twoFaModal.open();
+                    } else {
+                        // Si el usuario no tenía el 2FA activado, ya se canceló con éxito
+                        setSelectedCancelId(null);
+                    }
+                },
+                onError: () => confirmDialog.close()
+            });
         }
-
-        confirmDialog.close();
-    }, [confirmDialog.data, confirmDialog.action, cancelarSuscripcion, cancelarAdhesionObj, confirmDialog]); // ✅ confirmDialog.close no debe ser dependencia
+    }, [confirmDialog.data, confirmDialog.action, cancelarSuscripcion, iniciarCancelAdhesion, confirmDialog, twoFaModal]);
 
     // ── COLUMNAS: PLANES VIGENTES ─────────────────────────────────────────────
 
@@ -252,7 +277,7 @@ const MisSuscripciones: React.FC = () => {
                         <IconButton
                             size="small"
                             color="error"
-                            onClick={() => confirmDialog.confirm('cancel_adhesion' as any, row)} // ✅ CORRECCIÓN 3: as any
+                            onClick={() => confirmDialog.confirm('cancel_adhesion' as any, row)}
                         >
                             <Cancel fontSize="small" />
                         </IconButton>
@@ -322,14 +347,14 @@ const MisSuscripciones: React.FC = () => {
 
     // ── TEXTOS DEL DIALOG ─────────────────────────────────────────────────────
 
-    const dialogTitle = confirmDialog.action === ('cancel_adhesion' as any) // ✅ CORRECCIÓN 4: as any
+    const dialogTitle = confirmDialog.action === ('cancel_adhesion' as any)
         ? '¿Confirmas la baja de la adhesión?'
         : '¿Confirmas la baja del plan?';
 
     const dialogDescription = (() => {
         if (!confirmDialog.data) return 'Esta acción es irreversible.';
 
-        if (confirmDialog.action === ('cancel_adhesion' as any)) { // ✅ CORRECCIÓN 5: as any
+        if (confirmDialog.action === ('cancel_adhesion' as any)) {
             const adhesion = confirmDialog.data as AdhesionDto;
             return `Estás a punto de cancelar tu Adhesión #${adhesion.id} del proyecto "${adhesion.proyecto?.nombre_proyecto}". Perderás el cupo reservado. Esta acción es irreversible.`;
         }
@@ -348,53 +373,16 @@ const MisSuscripciones: React.FC = () => {
             />
 
             {/* ESTADÍSTICAS */}
-            <Box sx={{
-                display: 'grid',
-                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' },
-                gap: 2,
-                mb: 4,
-            }}>
-                <StatCard
-                    title="Planes Activos"
-                    value={suscripcionesVigentes.length.toString()}
-                    icon={<PlayCircleFilled />}
-                    color="success"
-                    loading={isLoading}
-                />
-                <StatCard
-                    title="Poder de Oferta"
-                    value={`${totalTokens} Tokens`}
-                    icon={<TokenIcon />}
-                    color="warning"
-                    loading={isLoading}
-                />
-                <StatCard
-                    title="Capital Total"
-                    value={formatCurrency(capitalHistoricoTotal)}
-                    icon={<MonetizationOn />}
-                    color="primary"
-                    loading={isLoading}
-                    subtitle="Acumulado histórico"
-                />
-                <StatCard
-                    title="Bajas Realizadas"
-                    value={stats.canceladas.toString()}
-                    icon={<EventBusy />}
-                    color="error"
-                    loading={isLoading}
-                />
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }, gap: 2, mb: 4 }}>
+                <StatCard title="Planes Activos" value={suscripcionesVigentes.length.toString()} icon={<PlayCircleFilled />} color="success" loading={isLoading} />
+                <StatCard title="Poder de Oferta" value={`${totalTokens} Tokens`} icon={<TokenIcon />} color="warning" loading={isLoading} />
+                <StatCard title="Capital Total" value={formatCurrency(capitalHistoricoTotal)} icon={<MonetizationOn />} color="primary" loading={isLoading} subtitle="Acumulado histórico" />
+                <StatCard title="Bajas Realizadas" value={stats.canceladas.toString()} icon={<EventBusy />} color="error" loading={isLoading} />
             </Box>
 
             {/* PESTAÑAS */}
             <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-                <Tabs
-                    value={tabValue}
-                    onChange={(_, v) => setTabValue(v)}
-                    indicatorColor="primary"
-                    textColor="primary"
-                    variant="scrollable"
-                    scrollButtons="auto"
-                >
+                <Tabs value={tabValue} onChange={(_, v) => setTabValue(v)} indicatorColor="primary" textColor="primary" variant="scrollable" scrollButtons="auto">
                     <Tab label="Planes Vigentes"   icon={<CheckCircle />}  iconPosition="start" sx={{ fontWeight: 700 }} />
                     <Tab label="Adhesiones"        icon={<ReceiptLong />}  iconPosition="start" sx={{ fontWeight: 700 }} />
                     <Tab label="Historial de Salidas" icon={<HistoryIcon />} iconPosition="start" sx={{ fontWeight: 700 }} />
@@ -438,13 +426,38 @@ const MisSuscripciones: React.FC = () => {
                 </Paper>
             </QueryHandler>
 
-            {/* DIALOG DE CONFIRMACIÓN */}
+            {/* DIALOG DE CONFIRMACIÓN PRIMARIA */}
             <ConfirmDialog
                 controller={confirmDialog}
                 onConfirm={handleConfirmCancel}
-                isLoading={isCancelling || isCancellingAdhesion}
+                isLoading={isCancelling || isInitiatingCancel}
                 title={dialogTitle}
                 description={dialogDescription}
+            />
+
+            {/* ✅ MODAL DE 2FA (Paso 2) */}
+            <TwoFactorAuthModal
+                open={twoFaModal.isOpen}
+                onClose={() => {
+                    twoFaModal.close();
+                    setSelectedCancelId(null);
+                    setTwoFAError(null);
+                }}
+                onSubmit={(code) => {
+                    confirmarCancelAdhesion({ adhesionId: selectedCancelId!, codigo_2fa: code }, {
+                        onSuccess: () => {
+                            twoFaModal.close();
+                            setSelectedCancelId(null);
+                        },
+                        onError: (err: any) => {
+                            setTwoFAError(err.response?.data?.message || 'Código de seguridad inválido');
+                        }
+                    });
+                }}
+                isLoading={isConfirmingCancel}
+                error={twoFAError}
+                title="Confirmar Baja Segura"
+                description="Ingresa el código de 6 dígitos de tu aplicación autenticadora para autorizar la cancelación de esta adhesión."
             />
         </PageContainer>
     );

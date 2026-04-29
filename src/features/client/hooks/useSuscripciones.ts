@@ -1,10 +1,11 @@
 // src/pages/User/Suscripciones/hooks/useSuscripciones.ts
 import type { ApiError } from '@/core/api/httpService';
+// ✅ Importamos las nuevas funciones del servicio
+import { iniciarCancelacionAdhesion, confirmarCancelacionAdhesion, getAllAdhesionsByUser } from '@/core/api/services/adhesion.service';
 import SuscripcionService from '@/core/api/services/suscripcion.service';
-import { cancelarAdhesion, getAllAdhesionsByUser } from '@/core/api/services/adhesion.service'; // ✅ Importados
 import { useAuth } from '@/core/context';
+import type { AdhesionDto } from '@/core/types/adhesion.dto';
 import type { SuscripcionCanceladaDto, SuscripcionDto } from '@/core/types/suscripcion.dto';
-import type { AdhesionDto } from '@/core/types/adhesion.dto'; // ✅ Importado
 import useSnackbar from '@/shared/hooks/useSnackbar';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
@@ -16,20 +17,20 @@ export const useSuscripciones = () => {
 
     const { isAuthenticated } = useAuth();
 
-    // 1. Carga de Datos (Combina Activas, Canceladas y Adhesiones)
+    // 1. Carga de Datos
     const { data, isLoading, error } = useQuery({
         queryKey: ['misSuscripcionesFull'],
         queryFn: async () => {
             const [resActivas, resCanceladas, resAdhesiones] = await Promise.all([
                 SuscripcionService.getMisSuscripciones(),
                 SuscripcionService.getMisCanceladas(),
-                getAllAdhesionsByUser() // ✅ Fetch de adhesiones
+                getAllAdhesionsByUser()
             ]);
 
             return {
                 activas: (resActivas.data as any).data || resActivas.data || [],
                 canceladas: (resCanceladas.data as any).data || resCanceladas.data || [],
-                adhesiones: resAdhesiones.data.data || [] // ✅ Guardamos adhesiones
+                adhesiones: resAdhesiones.data.data || []
             };
         },
         enabled: isAuthenticated,
@@ -38,19 +39,12 @@ export const useSuscripciones = () => {
 
     const suscripciones = (data?.activas as SuscripcionDto[]) || [];
     const canceladas = (data?.canceladas as SuscripcionCanceladaDto[]) || [];
-    const adhesiones = (data?.adhesiones as AdhesionDto[]) || []; // ✅ Extraemos adhesiones
+    const adhesiones = (data?.adhesiones as AdhesionDto[]) || [];
 
     // 2. Stats Calculados
     const stats = useMemo(() => {
-        const totalActivasMonto = suscripciones.reduce(
-            (acc, s) => acc + Number(s.monto_total_pagado || 0),
-            0
-        );
-
-        const totalCanceladasMonto = canceladas.reduce(
-            (acc, c) => acc + Number(c.monto_pagado_total || 0),
-            0
-        );
+        const totalActivasMonto = suscripciones.reduce((acc, s) => acc + Number(s.monto_total_pagado || 0), 0);
+        const totalCanceladasMonto = canceladas.reduce((acc, c) => acc + Number(c.monto_pagado_total || 0), 0);
 
         return {
             activas: suscripciones.length,
@@ -77,33 +71,41 @@ export const useSuscripciones = () => {
         }
     });
 
-    // ✅ 4. Mutación Cancelar Adhesión
-    const cancelAdhesionMutation = useMutation({
-        mutationFn: async (id: number) => {
-            const response = await cancelarAdhesion(id);
-            return response.data;
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['misSuscripcionesFull'] });
-            showSuccess('Adhesión cancelada correctamente.');
-        },
+    // ✅ 4. Mutación INICIAR Cancelación Adhesión (Paso 1)
+    const iniciarCancelAdhesionMutation = useMutation({
+        mutationFn: (id: number) => iniciarCancelacionAdhesion(id),
         onError: (err: unknown) => {
             const apiError = err as ApiError;
-            showError(apiError.message || 'Error al cancelar la adhesión.');
+            showError(apiError.message || 'Error al procesar la solicitud de baja.');
         }
+    });
+
+    // ✅ 5. Mutación CONFIRMAR Cancelación Adhesión (Paso 2)
+    const confirmarCancelAdhesionMutation = useMutation({
+        mutationFn: (payload: { adhesionId: number, codigo_2fa: string }) => confirmarCancelacionAdhesion(payload),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['misSuscripcionesFull'] });
+            showSuccess('Adhesión cancelada de forma segura.');
+        }
+        // El onError lo manejaremos directamente en la vista para mostrarlo en el modal
     });
 
     return {
         suscripciones,
         canceladas,
-        adhesiones, // ✅ Expuesto
+        adhesiones,
         stats,
         isLoading: isAuthenticated ? isLoading : false,
         error,
-        cancelarSuscripcion: cancelMutation.mutateAsync,
+        cancelarSuscripcion: cancelMutation.mutate,
         isCancelling: cancelMutation.isPending,
-        cancelarAdhesionObj: cancelAdhesionMutation.mutateAsync, // ✅ Expuesto
-        isCancellingAdhesion: cancelAdhesionMutation.isPending, // ✅ Expuesto
+        
+        // ✅ Exportamos el nuevo flujo de 2 pasos
+        iniciarCancelAdhesion: iniciarCancelAdhesionMutation.mutate,
+        isInitiatingCancel: iniciarCancelAdhesionMutation.isPending,
+        confirmarCancelAdhesion: confirmarCancelAdhesionMutation.mutate,
+        isConfirmingCancel: confirmarCancelAdhesionMutation.isPending,
+        
         highlightedId
     };
 };
