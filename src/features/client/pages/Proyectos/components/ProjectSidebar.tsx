@@ -309,7 +309,7 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({ logic, proyecto,
                                 endIcon={!logic.handleInversion.isPending && <ArrowForward />}
                                 sx={{ fontWeight: 700 }}
                               >
-                                {logic.handleInversion.isPending ? 'Procesando...' : helpers.esMensual ? 'Pagar Cuota de Ingreso' : 'Invertir en el Pack'}
+                                {logic.handleInversion.isPending ? 'Procesando...' : helpers.esMensual ? 'Suscribirse' : 'Invertir en el Pack'}
                               </Button>
 
                               {helpers.esMensual && helpers.progreso && (

@@ -101,7 +101,7 @@ const ConfigCuotasModal: React.FC<ConfigCuotasModalProps> = ({ open, onClose, pr
             createMutation.mutate({
                 ...values,
                 id_proyecto: proyecto.id,
-                porcentaje_plan: values.porcentaje_plan,
+                porcentaje_plan: values.porcentaje_plan / 100,
                 porcentaje_administrativo: values.porcentaje_administrativo / 100,
                 porcentaje_iva: values.porcentaje_iva / 100,
             });
@@ -138,13 +138,13 @@ const ConfigCuotasModal: React.FC<ConfigCuotasModalProps> = ({ open, onClose, pr
 
         const valorMovil = unidades * precio;
 
-        const totalDelPlan = valorMovil * Number(formik.values.porcentaje_plan);
+        const totalDelPlan = valorMovil * Number(formik.values.porcentaje_plan / 100);
         const valorMensual = totalDelPlan / plazo;
 
         // 2. Carga Administrativa
 
         const cargaAdminTotal = valorMovil * (Number(formik.values.porcentaje_administrativo) / 100);
-        const cargaAdmin = cargaAdminTotal / plazo;
+        const cargaAdmin = cargaAdminTotal;
 
         // 3. IVA Administrativo
 
@@ -153,7 +153,7 @@ const ConfigCuotasModal: React.FC<ConfigCuotasModalProps> = ({ open, onClose, pr
         // 4. Valor Final Redondeado
         const valorFinal = roundTo2(valorMensual + cargaAdmin + ivaCarga);
 
-        return { valorMensual, cargaAdmin, ivaCarga, valorFinal };
+        return { valorMensual, cargaAdmin, ivaCarga, valorFinal, valorMovil };
     }, [formik.values, proyecto]);
 
     const cronograma = useMemo(() => {
@@ -231,6 +231,8 @@ const ConfigCuotasModal: React.FC<ConfigCuotasModalProps> = ({ open, onClose, pr
                             <Skeleton variant="rectangular" height={260} sx={{ borderRadius: 3 }} />
                         ) : (
                             <Stack spacing={3}>
+                                <Typography>Plan de {proyecto?.plazo_inversion} meses</Typography>
+                                
                                 <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '2fr 1fr 1fr' }, gap: 2 }}>
                                     <TextField fullWidth label="Insumo de Referencia" sx={styles.input} {...formik.getFieldProps('nombre_cemento_cemento')} />
                                     <TextField fullWidth label="Unidades" type="number" sx={styles.input} {...formik.getFieldProps('valor_cemento_unidades')} onKeyDown={blockInvalidChar} />
@@ -247,7 +249,7 @@ const ConfigCuotasModal: React.FC<ConfigCuotasModalProps> = ({ open, onClose, pr
                                     <Box>
                                         <Typography variant="subtitle2" sx={{ fontWeight: 800, opacity: 0.9, letterSpacing: 0.5 }}>CUOTA MENSUAL ESTIMADA</Typography>
                                         <Typography variant="caption" sx={{ opacity: 0.8, fontWeight: 600 }}>
-                                            Pura: ${calculos.valorMensual.toFixed(2)} + Gastos: ${(calculos.cargaAdmin + calculos.ivaCarga).toFixed(2)}
+                                            Valor movil: ${calculos.valorMovil.toFixed(2)} | Pura: ${calculos.valorMensual.toFixed(2)} + Gastos: ${(calculos.cargaAdmin + calculos.ivaCarga).toFixed(2)}
                                         </Typography>
                                     </Box>
                                     <Typography variant="h3" fontWeight={900}>
