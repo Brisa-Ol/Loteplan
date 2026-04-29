@@ -111,23 +111,23 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, onClick, susc
   const imagenFinal = imageState.current.error ? '/assets/placeholder-project.jpg' : helpers.imagenPrincipal;
   const tooltipFecha = isPrelanzamiento ? `Apertura programada: ${helpers.fechas.inicio}` : `Fecha límite: ${helpers.fechas.cierre}`;
 
-// =========================================================================
+  // =========================================================================
   // ✅ MOTOR DE ESTADOS DE PARTICIPACIÓN (Filtra Cancelados)
   // =========================================================================
   let participacion: any = null;
 
   // 1. Verificamos si tiene una suscripción ACTIVA
   const tieneSuscripcionActiva = suscripcionUsuario && suscripcionUsuario.activo;
-  
+
   // 2. Verificamos si tiene una adhesión NO CANCELADA
   const tieneAdhesionActiva = adhesionUsuario && adhesionUsuario.estado !== 'cancelada';
 
   // Si tiene al menos una de las dos cosas activas, evaluamos el estado
   if (tieneSuscripcionActiva || tieneAdhesionActiva) {
-    
+
     // Si la adhesión está completada O la suscripción marca adhesion_completada
     const completada = (adhesionUsuario?.estado === 'completada') || (suscripcionUsuario?.adhesion_completada === true);
-    
+
     // ✅ Verificamos si ya empezó a pagar la suscripción mensual
     const empezoAPagarSuscripcion = Number(suscripcionUsuario?.monto_total_pagado || 0) > 0;
 
@@ -153,8 +153,8 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, onClick, susc
       if (project.estado_proyecto === 'En proceso') {
         participacion = {
           colorTheme: "warning",
-          chipLabel: "EN PROCESO",
-          bannerLabel: "Abonando Adhesión + Suscripción",
+          chipLabel: "NUEVA ADHESION EN PROCESO",
+          bannerLabel: "Abonando Adhesión + Suscripción mensual",
           icon: PendingActions
         };
       } else {
@@ -221,7 +221,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, onClick, susc
           <Typography variant="body2" color="text.secondary" sx={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', minHeight: 40 }}>{project.descripcion}</Typography>
         </Box>
 
-{helpers.esMensual && helpers.progreso && !isPrelanzamiento && (
+        {helpers.esMensual && helpers.progreso && !isPrelanzamiento && (
           <Box sx={{ mb: participacion ? 1.5 : 3, p: 1.5, bgcolor: alpha(theme.palette.primary.main, 0.04), borderRadius: 2 }}>
             <Stack direction="row" justifyContent="space-between" mb={1}>
               {/* ✅ Cambiamos "CUPO DISPONIBLE" por "CUPOS OCUPADOS" para que el número tenga sentido */}

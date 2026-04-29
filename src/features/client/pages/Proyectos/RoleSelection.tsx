@@ -41,7 +41,7 @@ const useProyectosData = () => {
   const [itemsVisibles, setItemsVisibles] = useState(env.defaultPageSize);
   const [filtros] = useState({ search: '', status: 'todos' });
   const { isAuthenticated } = useAuth();
-  
+
   useEffect(() => {
     const savedPerfil = sessionStorage.getItem('proyectosPerfil');
     if (savedPerfil === 'ahorrista' || savedPerfil === 'inversionista') {
@@ -69,7 +69,7 @@ const useProyectosData = () => {
     staleTime: env.queryStaleTime,
     enabled: isAuthenticated,
   });
-  
+
   // ✅ NUEVO: Fetch de adhesiones para poder mandarlo a la ProjectCard
   const { data: misAdhesionesRaw, isLoading: loadingAdh } = useQuery({
     queryKey: ['misAdhesiones'],
@@ -178,7 +178,7 @@ const useProyectosData = () => {
     misSuscripciones, // ✅ Exportamos para uso de las cards
     misAdhesiones,    // ✅ Exportamos para uso de las cards
     hayMasProyectos: proyectosFiltrados.length > itemsVisibles,
-    alertasSubasta, 
+    alertasSubasta,
     handleCambioPerfil,
     loadMore
   };
@@ -304,7 +304,7 @@ const AuctionAlerts = memo(({ proyectosConSubasta }: { proyectosConSubasta: Proy
             action={
               <Button
                 variant="contained"
-                color="primary" 
+                color="primary"
                 size="small"
                 startIcon={<Visibility />}
                 onClick={() => navigate(ROUTES.PROYECTOS.DETALLE.replace(':id', String(proyecto.id)))}
@@ -395,24 +395,24 @@ const ProyectosUnificados: React.FC = () => {
                 gap: 4
               }}>
                 {proyectosVisibles.map((project: ProyectoDto) => {
-                  
+
                   // ✅ 1. Buscamos la SUSCRIPCIÓN priorizando la que esté ACTIVA
-                  const suscripcionDelUsuario = 
-                    misSuscripciones.find((s: any) => s.id_proyecto === project.id && s.activo) || 
+                  const suscripcionDelUsuario =
+                    misSuscripciones.find((s: any) => s.id_proyecto === project.id && s.activo) ||
                     misSuscripciones.find((s: any) => s.id_proyecto === project.id);
 
                   // ✅ 2. Buscamos la ADHESIÓN priorizando la que NO esté CANCELADA
-                  const adhesionDelUsuario = 
-                    misAdhesiones.find((a: any) => a.id_proyecto === project.id && a.estado !== 'cancelada') || 
+                  const adhesionDelUsuario =
+                    misAdhesiones.find((a: any) => a.id_proyecto === project.id && a.estado !== 'cancelada') ||
                     misAdhesiones.find((a: any) => a.id_proyecto === project.id);
 
                   return (
                     <Fade in key={project.id} timeout={400}>
                       <Box>
-                        <ProjectCard 
-                          project={project} 
-                          onClick={() => handleProjectClick(project.id)} 
-                        
+                        <ProjectCard
+                          project={project}
+                          onClick={() => handleProjectClick(project.id)}
+
                           suscripcionUsuario={suscripcionDelUsuario}
                           adhesionUsuario={adhesionDelUsuario}
                         />

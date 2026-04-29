@@ -34,6 +34,7 @@ const getStatusConfig = (estado: string): { label: string; color: ChipColor; ico
     fallido: { label: 'Fallido', color: 'error', icon: <ErrorOutline fontSize="small" /> },
     expirado: { label: 'Expirado', color: 'default', icon: <TimerOff fontSize="small" /> },
     reembolsado: { label: 'Reembolsado', color: 'info', icon: <Refresh fontSize="small" /> },
+    revertido: { label: 'Revertido', color: 'error', icon: <Refresh fontSize="small" /> }, // ✅ AGREGADO
     rechazado_proyecto_cerrado: { label: 'Proy. Cerrado', color: 'error', icon: <Block fontSize="small" /> },
     rechazado_por_capacidad: { label: 'Cupo Lleno', color: 'error', icon: <Block fontSize="small" /> },
   };
@@ -47,6 +48,7 @@ const getTipoLabel = (tipo: string) => {
     case 'directo': return 'INVERSIÓN DIRECTA';
     case 'pago_suscripcion_inicial': return 'SUSCRIPCIÓN INICIAL';
     case 'Puja': return 'PUJA / SUBASTA';
+    case 'adhesion': return 'CUOTA DE ADHESIÓN'; // ✅ AGREGADO
     default: return tipo.replace('_', ' ').toUpperCase();
   }
 };

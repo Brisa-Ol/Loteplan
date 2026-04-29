@@ -51,10 +51,12 @@ interface PagoMensualRelacionado {
 
 interface SuscripcionRelacionada {
   id: number;
-  monto_suscripcion: number | string;
-  estado: string;
+  monto_total_pagado: number | string; 
   meses_a_pagar: number;
-  meses_pagados: number;
+  tokens_disponibles: number;          
+  saldo_a_favor: string | number;      
+  id_usuario: number;                  
+  id_proyecto: number;                 
 }
 
 interface PujaRelacionada {
