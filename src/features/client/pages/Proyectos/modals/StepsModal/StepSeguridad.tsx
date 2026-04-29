@@ -1,5 +1,5 @@
 import { Lock } from "@mui/icons-material";
-import { Alert, Avatar, Box, Stack, TextField, Typography } from "@mui/material";
+import { Alert, Avatar, Box, CircularProgress, Stack, TextField, Typography } from "@mui/material";
 import type { FC } from "react";
 
 interface IStepSeguridadProps {
@@ -20,7 +20,19 @@ export const StepSeguridad: FC<IStepSeguridadProps> = ({codigo2FA, setCodigo2FA,
             <Typography variant="h5" fontWeight={700}>Verificación 2FA</Typography>
             <Typography variant="body2" color="text.secondary">Ingresa el código de Google Authenticator.</Typography>
             </Box>
-            {!location && <Alert severity="warning" sx={{ width: '100%' }}>Acceso a Ubicación Requerido</Alert>}
+            {!location && 
+                <>
+                    
+                    <Stack alignItems="center" spacing={1}>
+                        <Alert severity="warning" sx={{ width: '100%' }}>Acceso a Ubicación Requerido</Alert>
+                        <CircularProgress size={28} />
+                        <Typography variant="caption" color="text.secondary">
+                            Obteniendo ubicación...
+                        </Typography>
+                    </Stack>
+    
+                </>
+            }
             <TextField
             autoFocus value={codigo2FA}
             onChange={(e) => setCodigo2FA(e.target.value.replace(/\D/g, '').slice(0, 6))}
