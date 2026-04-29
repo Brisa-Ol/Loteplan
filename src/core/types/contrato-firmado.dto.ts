@@ -1,4 +1,5 @@
 import type { BaseDTO } from "./base.dto";
+import type { SuscripcionDetalleTrackDto } from "./suscripcion.dto";
 
 // ==========================================
 // 📤 REQUEST DTO (Lo que envías al firmar)
@@ -97,31 +98,14 @@ export interface EntidadPagadoraTrackDto {
   cuotas_totales?: number;
 }
 
-export interface SuscripcionDetalleTrackDto {
-  suscripcion_id: number;
-  adhesion_id: number | null;
-  tiene_pago_adhesion: boolean;
-  cuotas_pagadas: number;
-  cuotas_totales: number;
-  adhesion_estado: string | null;
-  tiene_contrato_firmado: boolean;
-  puede_firmar: boolean;
-  contrato_firmado: {
-    id: number;
-    nombre_archivo: string;
-    url_archivo: string;
-    fecha_firma: string;
-    estado_firma: string;
-    id_contrato_plantilla: number;
-  } | null;
-}
+
 
 export interface TrackPaymentAndContractResponseDto {
   tiene_pago: boolean;
   tiene_contrato_firmado: boolean;
   puede_firmar: boolean;
   entidad_pagadora: EntidadPagadoraTrackDto | null;
-  contrato_firmado: any | null; // Puedes usar un Pick<ContratoFirmadoDto, ...> si prefieres
+  contrato_firmado: ContratoFirmadoResponseDto | null; // Puedes usar un Pick<ContratoFirmadoDto, ...> si prefieres
   proyecto: {
     id: number;
     nombre: string;
