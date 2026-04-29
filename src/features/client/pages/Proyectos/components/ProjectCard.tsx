@@ -111,25 +111,29 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, onClick, susc
   const imagenFinal = imageState.current.error ? '/assets/placeholder-project.jpg' : helpers.imagenPrincipal;
   const tooltipFecha = isPrelanzamiento ? `Apertura programada: ${helpers.fechas.inicio}` : `Fecha límite: ${helpers.fechas.cierre}`;
 
-  // =========================================================================
+// =========================================================================
   // ✅ MOTOR DE ESTADOS DE PARTICIPACIÓN (Filtra Cancelados)
   // =========================================================================
   let participacion: any = null;
 
   // 1. Verificamos si tiene una suscripción ACTIVA
   const tieneSuscripcionActiva = suscripcionUsuario && suscripcionUsuario.activo;
-
+  
   // 2. Verificamos si tiene una adhesión NO CANCELADA
   const tieneAdhesionActiva = adhesionUsuario && adhesionUsuario.estado !== 'cancelada';
 
   // Si tiene al menos una de las dos cosas activas, evaluamos el estado
   if (tieneSuscripcionActiva || tieneAdhesionActiva) {
-
+    
     // Si la adhesión está completada O la suscripción marca adhesion_completada
     const completada = (adhesionUsuario?.estado === 'completada') || (suscripcionUsuario?.adhesion_completada === true);
+    
+    // ✅ Verificamos si ya empezó a pagar la suscripción mensual
+    const empezoAPagarSuscripcion = Number(suscripcionUsuario?.monto_total_pagado || 0) > 0;
 
     if (completada) {
-      if (project.estado_proyecto === 'En Espera') {
+      // Si está en espera Y aún no empezó a pagar cuotas de suscripción
+      if (project.estado_proyecto === 'En Espera' && !empezoAPagarSuscripcion) {
         participacion = {
           colorTheme: "info",
           chipLabel: "ADHESIÓN COMPLETA",
@@ -137,6 +141,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, onClick, susc
           icon: EventAvailable
         };
       } else {
+        // Si el proyecto ya está "En Proceso" O ya empezó a pagar cuotas
         participacion = {
           colorTheme: "success",
           chipLabel: "SUSCRIPTO",

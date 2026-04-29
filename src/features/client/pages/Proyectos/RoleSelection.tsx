@@ -20,12 +20,13 @@ import { Business, FilterListOff, Home as HomeIcon, Savings, TrendingUp, Visibil
 import InversionService from "@/core/api/services/inversion.service";
 import proyectoService from "@/core/api/services/proyecto.service";
 import SuscripcionService from "@/core/api/services/suscripcion.service";
+// ✅ IMPORTAR SERVICIO DE ADHESIONES
+import { getAllAdhesionsByUser } from '@/core/api/services/adhesion.service';
 import { env } from '@/core/config/env';
 
 // Componentes
 import PujaService from '@/core/api/services/puja.service';
 import { useAuth } from '@/core/context';
-import theme from '@/core/theme/globalStyles';
 import type { ProyectoDto } from '@/core/types/proyecto.dto';
 import { ROUTES } from '@/routes';
 import { QueryHandler } from "../../../../shared/components/data-grid/QueryHandler";
@@ -40,7 +41,7 @@ const useProyectosData = () => {
   const [itemsVisibles, setItemsVisibles] = useState(env.defaultPageSize);
   const [filtros] = useState({ search: '', status: 'todos' });
   const { isAuthenticated } = useAuth();
-  // Recuperar perfil guardado
+  
   useEffect(() => {
     const savedPerfil = sessionStorage.getItem('proyectosPerfil');
     if (savedPerfil === 'ahorrista' || savedPerfil === 'inversionista') {
@@ -61,18 +62,37 @@ const useProyectosData = () => {
     staleTime: env.queryStaleTime,
   });
 
-  // --- QUERIES DE USUARIO (Tus nuevas adiciones) ---
-  const { data: misSuscripciones, isLoading: loadingSusc } = useQuery({
+  // --- QUERIES DE USUARIO ---
+  const { data: misSuscripcionesRaw, isLoading: loadingSusc } = useQuery({
     queryKey: ['misSuscripciones'],
     queryFn: async () => (await SuscripcionService.getMisSuscripciones()).data,
     staleTime: env.queryStaleTime,
     enabled: isAuthenticated,
   });
+  
+  // ✅ NUEVO: Fetch de adhesiones para poder mandarlo a la ProjectCard
+  const { data: misAdhesionesRaw, isLoading: loadingAdh } = useQuery({
+    queryKey: ['misAdhesiones'],
+    queryFn: async () => (await getAllAdhesionsByUser()).data,
+    staleTime: env.queryStaleTime,
+    enabled: isAuthenticated,
+  });
+
+  const misSuscripciones = useMemo(() => {
+    if (!misSuscripcionesRaw) return [];
+    const rawData = (misSuscripcionesRaw as any).data || misSuscripcionesRaw;
+    return Array.isArray(rawData) ? rawData : [];
+  }, [misSuscripcionesRaw]);
+
+  const misAdhesiones = useMemo(() => {
+    if (!misAdhesionesRaw) return [];
+    const rawData = (misAdhesionesRaw as any).data || misAdhesionesRaw;
+    return Array.isArray(rawData) ? rawData : [];
+  }, [misAdhesionesRaw]);
+
   const idsSuscritos = useMemo(() => {
-    if (!isAuthenticated || !misSuscripciones) return new Set<number>();
-    const rawData = (misSuscripciones as any).data || misSuscripciones;
-    const dataArray = Array.isArray(rawData) ? rawData : [];
-    return new Set(dataArray.map((s: any) => Number(s.id_proyecto)));
+    if (!isAuthenticated) return new Set<number>();
+    return new Set(misSuscripciones.map((s: any) => Number(s.id_proyecto)));
   }, [isAuthenticated, misSuscripciones]);
 
   const { data: misInversiones, isLoading: loadingInvUsr } = useQuery({
@@ -81,16 +101,16 @@ const useProyectosData = () => {
     staleTime: env.queryStaleTime,
     enabled: isAuthenticated,
   });
-  // ✅ NUEVO: Traemos el historial de pujas del usuario
+
   const { data: misPujas, isLoading: loadingPujas } = useQuery({
     queryKey: ['misPujas'],
     queryFn: async () => (await PujaService.getMyPujas()).data,
     staleTime: env.queryStaleTime,
     enabled: isAuthenticated,
   });
-  // El loading global ahora espera también por los datos del usuario
-  const isLoading = loadingInv || loadingAho || loadingSusc || loadingInvUsr;
-  // ✅ NUEVO: Detectar proyectos suscritos que tienen lotes en subasta activa
+
+  const isLoading = loadingInv || loadingAho || loadingSusc || loadingAdh || loadingInvUsr || loadingPujas;
+
   const alertasSubasta = useMemo(() => {
     if (!misSuscripciones || perfilSeleccionado !== 'ahorrista') return [];
 
@@ -113,7 +133,6 @@ const useProyectosData = () => {
         : (misSuscripciones || []).map(s => s.id_proyecto)
     );
 
-    // Identificamos en qué proyectos el usuario ha ganado una puja
     const idsProyectosGanados = new Set(
       (misPujas || [])
         .filter(puja => puja.estado_puja.includes('ganadora'))
@@ -128,10 +147,6 @@ const useProyectosData = () => {
     });
 
     return [...filtrados].sort((a, b) => {
-      // Sistema de pesos para el ordenamiento:
-      // Peso 2: Proyectos donde el usuario ganó la subasta de un lote (Van primero siempre)
-      // Peso 1: Proyectos donde el usuario está suscrito/invertido
-      // Peso 0: Resto de los proyectos
       const getPeso = (id: number) => {
         if (idsProyectosGanados.has(id)) return 2;
         if (idsVinculados.has(id)) return 1;
@@ -160,9 +175,10 @@ const useProyectosData = () => {
     perfilSeleccionado,
     isLoading,
     proyectosVisibles,
-    idsSuscritos,
+    misSuscripciones, // ✅ Exportamos para uso de las cards
+    misAdhesiones,    // ✅ Exportamos para uso de las cards
     hayMasProyectos: proyectosFiltrados.length > itemsVisibles,
-    alertasSubasta, // Exportamos las alertas para dibujarlas en la UI
+    alertasSubasta, 
     handleCambioPerfil,
     loadMore
   };
@@ -274,6 +290,7 @@ const EmptyState = memo(() => (
 
 const AuctionAlerts = memo(({ proyectosConSubasta }: { proyectosConSubasta: ProyectoDto[] }) => {
   const navigate = useNavigate();
+  const theme = useTheme(); // Agregado para arreglar theme undefined
 
   if (!proyectosConSubasta || proyectosConSubasta.length === 0) return null;
 
@@ -283,7 +300,6 @@ const AuctionAlerts = memo(({ proyectosConSubasta }: { proyectosConSubasta: Proy
         <Fade in key={`alert-${proyecto.id}`}>
           <Alert
             severity="info"
-            // Cambiamos el icono para que use tu color primario naranja/tierra
             icon={<GavelIcon sx={{ color: theme.palette.primary.main, width: 28, height: 28 }} />}
             action={
               <Button
@@ -295,7 +311,6 @@ const AuctionAlerts = memo(({ proyectosConSubasta }: { proyectosConSubasta: Proy
                 sx={{
                   fontWeight: 700,
                   px: 2,
-                  
                   borderRadius: '8px',
                   textTransform: 'none',
                   whiteSpace: 'nowrap'
@@ -329,6 +344,7 @@ const AuctionAlerts = memo(({ proyectosConSubasta }: { proyectosConSubasta: Proy
     </Stack>
   );
 });
+
 // ===================================================
 // 3. 🏗️ COMPONENTE PRINCIPAL (Orquestador)
 // ===================================================
@@ -342,8 +358,9 @@ const ProyectosUnificados: React.FC = () => {
     isLoading,
     proyectosVisibles,
     hayMasProyectos,
-    idsSuscritos,
     alertasSubasta,
+    misSuscripciones,
+    misAdhesiones,
     handleCambioPerfil,
     loadMore
   } = useProyectosData();
@@ -377,13 +394,32 @@ const ProyectosUnificados: React.FC = () => {
                 gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", md: "repeat(3, 1fr)" },
                 gap: 4
               }}>
-                {proyectosVisibles.map((project: ProyectoDto) => (
-                  <Fade in key={project.id} timeout={400}>
-                    <Box>
-                      <ProjectCard project={project} onClick={() => handleProjectClick(project.id)} estaSuscrito={idsSuscritos.has(project.id)} />
-                    </Box>
-                  </Fade>
-                ))}
+                {proyectosVisibles.map((project: ProyectoDto) => {
+                  
+                  // ✅ 1. Buscamos la SUSCRIPCIÓN priorizando la que esté ACTIVA
+                  const suscripcionDelUsuario = 
+                    misSuscripciones.find((s: any) => s.id_proyecto === project.id && s.activo) || 
+                    misSuscripciones.find((s: any) => s.id_proyecto === project.id);
+
+                  // ✅ 2. Buscamos la ADHESIÓN priorizando la que NO esté CANCELADA
+                  const adhesionDelUsuario = 
+                    misAdhesiones.find((a: any) => a.id_proyecto === project.id && a.estado !== 'cancelada') || 
+                    misAdhesiones.find((a: any) => a.id_proyecto === project.id);
+
+                  return (
+                    <Fade in key={project.id} timeout={400}>
+                      <Box>
+                        <ProjectCard 
+                          project={project} 
+                          onClick={() => handleProjectClick(project.id)} 
+                        
+                          suscripcionUsuario={suscripcionDelUsuario}
+                          adhesionUsuario={adhesionDelUsuario}
+                        />
+                      </Box>
+                    </Fade>
+                  );
+                })}
               </Box>
 
               {/* Botón Cargar Más */}
