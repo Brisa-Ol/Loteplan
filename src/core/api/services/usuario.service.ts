@@ -118,6 +118,15 @@ adminResetPassword: async (userId: number, newPassword: string): Promise<AxiosRe
     return await httpService.post(`${ENDPOINT}/me`, payload);
   },
 
+  // Paso 1: Iniciar cancelación de cuenta
+  startCancelacionCuenta: async (): Promise<AxiosResponse<{message: string, requires2FA: boolean}>> => {
+    return await httpService.post(`${ENDPOINT}/me/iniciar-cancelacion`);
+  },
+
+  confirmCancelacionCuenta: async (twofaCode: string): Promise<AxiosResponse<{message: string, success: boolean}>> => {
+    return await httpService.post(`${ENDPOINT}/me/confirmar-cancelacion`, { twofaCode });
+  },
+
   // ===========================================
   // 3. GESTIÓN POR ID (Admin)
   // ===========================================

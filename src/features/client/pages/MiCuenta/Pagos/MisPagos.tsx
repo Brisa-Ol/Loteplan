@@ -46,6 +46,7 @@ import {
 import { useMutation, useQuery } from '@tanstack/react-query';
 import React, { useCallback, useMemo, useState } from 'react';
 import { HistorialPagosAgrupado } from './HistorialAgrupado/HistorialAgrupado';
+import { DetalleCuotaAdhesionModal } from './Modals/DetalleCuotaAdhesionModal';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -155,6 +156,7 @@ const MisPagos: React.FC = () => {
   const [adhesionPagoId, setAdhesionPagoId] = useState<number | null>(null); // id del PagoAdhesion (no de la Adhesion)
   const [twoFAErrorAdhesion, setTwoFAErrorAdhesion] = useState<string | null>(null);
   const twoFaAdhesionModal = useModal();
+  const [adhesionDetalle, setAdhesionDetalle] = useState<AdhesionDto | null>(null);
 
   // 1. Query de Pagos Normales
   const pagosQuery = useQuery<PagoDto[]>({
@@ -489,41 +491,39 @@ const confirmarPagoAdhesionMutation = useMutation({
       },
       {
         id: 'fechas',
-        label: 'Fechas y Cuotas',
-        minWidth: 260,
+        label: 'Progreso',
+        minWidth: 160,
         render: (row) => {
-          // Si es "contado" y no tiene arreglo de pagos (o ya está completada vacía)
           if (!row.pagos || row.pagos.length === 0) {
             if (row.estado === 'completada') {
               return (
                 <Typography variant="body2" color="success.main" fontWeight={700}>
-                  Abonado el {row.fecha_completada ? new Date(row.fecha_completada).toLocaleDateString('es-AR') : '-'}
+                  Completada {row.fecha_completada ? new Date(row.fecha_completada).toLocaleDateString('es-AR') : ''}
                 </Typography>
               );
             }
             return <Typography variant="body2" color="text.disabled">-</Typography>;
           }
-
-          // Si tiene pagos (sea contado o en cuotas), armamos la lista interna scrolleable
+      
+          const nextPago = row.pagos.find(p => ['pendiente', 'vencido'].includes(p.estado));
+          const cuotasPagadas = row.pagos.filter(p => ['pagado', 'forzado', 'cubierto_por_puja'].includes(p.estado)).length;
+          const isVencida = nextPago?.estado === 'vencido';
+      
           return (
-            <Stack spacing={0.5} sx={{ maxHeight: 110, overflowY: 'auto', pr: 1, '&::-webkit-scrollbar': { width: 4 }, '&::-webkit-scrollbar-thumb': { bgcolor: 'divider', borderRadius: 2 } }}>
-              {row.pagos.map((p) => {
-                const isOverdue = p.estado === 'vencido';
-                const isPaid = ['pagado', 'forzado', 'cubierto_por_puja'].includes(p.estado);
-                return (
-                  <Stack key={p.id} direction="row" justifyContent="space-between" alignItems="center" gap={2}>
-                    <Typography variant="caption" fontWeight={600} color={isPaid ? 'text.secondary' : isOverdue ? 'error.main' : 'text.primary'}>
-                      Cuota #{p.numero_cuota}
-                    </Typography>
-                    <Typography variant="caption" fontWeight={600} color={isPaid ? 'success.main' : isOverdue ? 'error.main' : 'text.secondary'}>
-                      {isPaid && p.fecha_pago 
-                        ? `Pagado: ${new Date(p.fecha_pago).toLocaleDateString('es-AR')}` 
-                        : `Vence: ${new Date(p.fecha_vencimiento).toLocaleDateString('es-AR')}`}
-                    </Typography>
-                  </Stack>
-                )
-              })}
-            </Stack>
+            <Box>
+              <Typography variant="caption" color="text.secondary" display="block">
+                {cuotasPagadas} de {row.pagos.length} cuotas abonadas
+              </Typography>
+              {nextPago && (
+                <Typography
+                  variant="caption"
+                  fontWeight={600}
+                  color={isVencida ? 'error.main' : 'text.primary'}
+                >
+                  {isVencida ? '⚠ Vencida' : 'Próxima'}: {new Date(nextPago.fecha_vencimiento).toLocaleDateString('es-AR')}
+                </Typography>
+              )}
+            </Box>
           );
         },
       },
@@ -563,30 +563,25 @@ const confirmarPagoAdhesionMutation = useMutation({
         label: 'Acción',
         align: 'right',
         render: (row) => {
-          // Buscamos la primera cuota pendiente o vencida
+          if (row.estado === 'cancelada') return null;
+      
           const nextPago = (row.pagos || []).find(p => ['pendiente', 'vencido'].includes(p.estado));
-
-          if (row.estado === 'completada' || row.estado === 'cancelada') return null;
-
-          if (nextPago) {
-            return (
-              <Button
-                variant="contained"
-                color={nextPago.estado === 'vencido' ? 'error' : 'primary'}
-                size="small"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleAdhesionPayRequest(row, nextPago); // Pasamos la Adhesión y la Cuota
-                }}
-                disabled={isPaymentPending}
-                startIcon={<Lock fontSize="small" />}
-                sx={{ borderRadius: 2, minWidth: 110, fontWeight: 800 }}
-              >
-                {isPaymentPending ? '...' : `Pagar #${nextPago.numero_cuota}`}
-              </Button>
-            );
-          }
-          return null;
+          const isVencida = nextPago?.estado === 'vencido';
+      
+          return (
+            <Button
+              variant={isVencida ? 'contained' : 'outlined'}
+              color={isVencida ? 'error' : 'primary'}
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                setAdhesionDetalle(row);
+              }}
+              sx={{ borderRadius: 2, minWidth: 110, fontWeight: 800 }}
+            >
+              Ver detalle
+            </Button>
+          );
         },
       },
     ],
@@ -763,6 +758,17 @@ const confirmarPagoAdhesionMutation = useMutation({
         error={twoFAErrorAdhesion}
         title="Confirmar Pago de Adhesión"
         description="Ingresá el código 2FA para autorizar el pago de la cuota de adhesión."
+      />
+      <DetalleCuotaAdhesionModal
+        open={adhesionDetalle !== null}
+        onClose={() => setAdhesionDetalle(null)}
+        adhesion={adhesionDetalle}
+        formatCurrency={formatCurrency}
+        isPaymentPending={isPaymentPending}
+        onPagar={(adhesion, cuota) => {
+          setAdhesionDetalle(null);
+          handleAdhesionPayRequest(adhesion, cuota);
+        }}
       />
     </PageContainer>
   );
