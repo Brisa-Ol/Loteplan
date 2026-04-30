@@ -30,9 +30,21 @@ const SuscripcionService = {
   },
 
   /** 🛑 Cancela la propia suscripción del cliente */
+  //obsoleto: se reemplaza por un proceso de cancelación en dos pasos para mayor seguridad (startCancelationSuscription + confirmCancelationSuscription)
   cancelarMiSuscripcion: async (id: number): Promise<AxiosResponse<{ mensaje: string }>> => {
     return await httpService.delete(`${BASE_PROYECTO}/mis_suscripciones/${id}`);
   },
+
+  // Paso 1: Iniciar cancelación de suscripción
+  startCancelationSuscription : async (id: number, motivo: string): Promise<AxiosResponse<{ mensaje: string ,requires2FA: boolean,
+        suscripcionId: number }>> => {
+    return await httpService.post(`${BASE_PROYECTO}/mis_suscripciones/${id}/iniciar-cancelacion`, { motivo });
+  },
+
+  confirmCancelationSuscription: async (data: { suscripcionId: number; codigo_2fa: string }): Promise<AxiosResponse<{ mensaje: string }>> => {
+    return await httpService.post(`${BASE_PROYECTO}/mis_suscripciones/confirmar-cancelacion`, data);
+  },
+
 
   // =================================================
   // 👮 GESTIÓN ADMIN (suscripcion_proyecto.routes.js)

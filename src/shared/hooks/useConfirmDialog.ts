@@ -53,8 +53,7 @@ const BASE_CONFIGS: Record<string, Partial<ConfirmConfig>> = {
   cancel_ganadora_anticipada: { title: '¿Anular adjudicación?', confirmText: 'Sí, Anular', severity: 'error', requireInput: true, inputLabel: 'Motivo de cancelación', inputPlaceholder: 'Ej: Falta de fondos...' },
   delete_bulk_images: { title: '¿Eliminar imágenes?', confirmText: 'Sí, eliminar', severity: 'error' },
   delete_single_image: { title: '¿Eliminar imagen?', confirmText: 'Sí, eliminar', severity: 'error' },
-  cancel_subscription: { title: '¿Cancelar suscripción?', confirmText: 'Sí, cancelar definitivamente', severity: 'error' },
-  force_finish: { title: 'Baja de Postor', confirmText: 'Confirmar', severity: 'error' },
+  cancel_subscription: { title: '¿Cancelar suscripción?', confirmText: 'Sí, cancelar definitivamente', severity: 'error', requireInput: true, inputLabel: 'Motivo de cancelación', inputPlaceholder: 'Ej: Ya no me interesa el proyecto...', }, force_finish: { title: 'Baja de Postor', confirmText: 'Confirmar', severity: 'error' },
 // ✅ Adhesiones - Acciones de Error/Destructivas
   admin_force_adhesion_payment: { title: '¿Forzar pago de adhesión?', confirmText: 'Sí, forzar pago', severity: 'error' },
   admin_cancel_adhesion: { title: '¿Cancelar adhesión?', confirmText: 'Sí, cancelar adhesión', severity: 'error' },
@@ -149,10 +148,12 @@ export const useConfirmDialog = () => {
         description = 'Se eliminarán todos tus datos permanentemente. Esta acción NO se puede deshacer.';
         break;
       }
-      case 'cancel_subscription': {
-        description = 'Perderás tu progreso de antigüedad y tokens. Esta acción es irreversible.';
-        break;
-      }
+        case 'cancel_subscription': {
+          description = `Estás a punto de cancelar la Suscripción del proyecto "${
+            (state.data as any)?.proyectoAsociado?.nombre_proyecto ?? 'este proyecto'
+          }". Tu capital acumulado pasará a proceso de liquidación. Ingresá un motivo para continuar.`;
+          break;
+        }
       // ✅ Fix: bloque con llaves para evitar lexical declaration en case clause
       case 'cancel_puja': {
         const monto = data.monto_puja ? `$${data.monto_puja}` : 'tu monto';

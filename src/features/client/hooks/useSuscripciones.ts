@@ -74,6 +74,31 @@ export const useSuscripciones = () => {
         }
     });
 
+    const iniciarCancelSuscripcionMutation = useMutation({
+        mutationFn: async (payload: { id: number, motivo: string }) => {
+            const response = await SuscripcionService.startCancelationSuscription(payload.id, payload.motivo);
+            return response;
+        },
+        onError: (err: unknown) => {
+            const apiError = err as ApiError;
+            showError(apiError.message || 'Error al procesar la solicitud de baja.');
+        }
+    });
+
+    const confirmarCancelSuscripcionMutation = useMutation({
+        mutationFn: async (payload: { suscripcionId: number; codigo_2fa: string, motivo?: string }) => {
+            const response = await SuscripcionService.confirmCancelationSuscription(payload);
+            return response;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['misSuscripcionesFull'] });
+            // ✅ Forzamos a que se recargue la lista de proyectos aquí también
+            queryClient.invalidateQueries({ queryKey: ['proyectos'] }); 
+
+            showSuccess('Suscripcion cancelada de forma segura.');
+        }
+    })
+
     // ✅ 4. Mutación INICIAR Cancelación Adhesión (Paso 1)
     const iniciarCancelAdhesionMutation = useMutation({
         mutationFn: (id: number) => iniciarCancelacionAdhesion(id),
@@ -104,7 +129,12 @@ const confirmarCancelAdhesionMutation = useMutation({
         error,
         cancelarSuscripcion: cancelMutation.mutate,
         isCancelling: cancelMutation.isPending,
-        
+
+        iniciarCancelSuscripcion: iniciarCancelSuscripcionMutation.mutate,
+        isInitiatingCancelSuscription: iniciarCancelSuscripcionMutation.isPending,
+        confirmarCancelSuscripcion: confirmarCancelSuscripcionMutation.mutate,
+        isConfirmingCancelSuscripcion: confirmarCancelSuscripcionMutation.isPending,
+
         // ✅ Exportamos el nuevo flujo de 2 pasos
         iniciarCancelAdhesion: iniciarCancelAdhesionMutation.mutate,
         isInitiatingCancel: iniciarCancelAdhesionMutation.isPending,

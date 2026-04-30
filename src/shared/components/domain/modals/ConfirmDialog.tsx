@@ -15,6 +15,7 @@ interface Props {
   isLoading?: boolean;
   title?: string;
   description?: string;
+  
 }
 
 type ThemeColor = 'primary' | 'secondary' | 'error' | 'warning' | 'info' | 'success';
