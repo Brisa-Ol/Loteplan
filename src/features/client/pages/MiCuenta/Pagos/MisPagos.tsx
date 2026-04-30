@@ -1,8 +1,8 @@
 // src/features/client/pages/Pagos/MisPagos.tsx
 
 import PagoService from '@/core/api/services/pago.service';
-import { getAllAdhesionsByUser } from '@/core/api/services/adhesion.service';
-import type { AdhesionDto, PagoAdhesionDto } from '@/core/types/adhesion.dto';
+import { confirmarPagoCuota, getAllAdhesionsByUser, iniciarPagoCuota } from '@/core/api/services/adhesion.service';
+import type { AdhesionDto, IniciarPagoCuotaResponse, PagoAdhesionDto } from '@/core/types/adhesion.dto';
 import type { PagoDto } from '@/core/types/pago.dto';
 import { useCurrencyFormatter } from '@/features/client/hooks/useCurrencyFormatter';
 import {
@@ -152,6 +152,9 @@ const MisPagos: React.FC = () => {
   const [twoFAError, setTwoFAError] = useState<string | null>(null);
   const [currentTab, setCurrentTab] = useState(0);
   const [selectedProyectoId, setSelectedProyectoId] = useState<string | 'todos'>('todos');
+  const [adhesionPagoId, setAdhesionPagoId] = useState<number | null>(null); // id del PagoAdhesion (no de la Adhesion)
+  const [twoFAErrorAdhesion, setTwoFAErrorAdhesion] = useState<string | null>(null);
+  const twoFaAdhesionModal = useModal();
 
   // 1. Query de Pagos Normales
   const pagosQuery = useQuery<PagoDto[]>({
@@ -266,17 +269,39 @@ const MisPagos: React.FC = () => {
     onError: () => setSelectedPagoId(null),
   });
 
+
   // Mutación para iniciar pago de ADHESIÓN
   const iniciarPagoAdhesionMutation = useMutation({
-    mutationFn: (payload: { adhesionId: number, numeroCuota: number }) => {
-      return pagarCuotaAdhesion({ adhesionId: payload.adhesionId, numeroCuota: payload.numeroCuota });
-    },
-    onSuccess: (res) => {
-      if (res.data.success && res.data.redirectUrl) {
-        window.location.href = res.data.redirectUrl;
-      }
+  mutationFn: ({ adhesionId, numeroCuota }: { adhesionId: number; numeroCuota: number }) =>
+    iniciarPagoCuota({ adhesionId, numeroCuota }),
+  onSuccess: (res) => {
+    // Guardar el id del pago para usarlo en la confirmación 2FA
+    setAdhesionPagoId(res.data.pagoAdhesionId!);
+    setTwoFAErrorAdhesion(null);
+    twoFaAdhesionModal.open();
+    confirmDialog.close();
+  },
+  onError: () => {
+    console.error('Error al iniciar el pago de adhesión. Intenta nuevamente.');
+  },
+});
+ 
+/**
+ * Paso 2: confirma el 2FA → el backend genera la preferencia MP y devuelve redirectUrl
+ */
+const confirmarPagoAdhesionMutation = useMutation({
+  mutationFn: (codigo: string) =>
+    confirmarPagoCuota({ pagoAdhesionId: adhesionPagoId!, codigo_2fa: codigo }),
+  onSuccess: (res) => {
+    if (res.data.redirectUrl) {
+      window.location.href = res.data.redirectUrl;
     }
-  });
+    twoFaAdhesionModal.close();
+  },
+  onError: (err: any) => {
+    setTwoFAErrorAdhesion(err.response?.data?.message || 'Código inválido');
+  },
+});
 
   // Mutación para 2FA (Pagos normales)
   const confirmar2FAMutation = useMutation({
@@ -290,17 +315,18 @@ const MisPagos: React.FC = () => {
   });
 
   const handleConfirmIntent = useCallback(() => {
-    if (confirmDialog.data?.esAdhesion) {
-      iniciarPagoAdhesionMutation.mutate({
-        adhesionId: confirmDialog.data.adhesionId,
-        numeroCuota: confirmDialog.data.numeroCuota
-      });
-      confirmDialog.close();
-    } else if (confirmDialog.data?.id) {
-      iniciarPagoMutation.mutate(confirmDialog.data.id);
-      confirmDialog.close();
-    }
-  }, [confirmDialog, iniciarPagoMutation, iniciarPagoAdhesionMutation]);
+  if (confirmDialog.data?.esAdhesion) {
+    // Dispara paso 1: inicia el pago y solicita el 2FA
+    iniciarPagoAdhesionMutation.mutate({
+      adhesionId: confirmDialog.data.adhesionId,
+      numeroCuota: confirmDialog.data.numeroCuota,
+    });
+    // NO cerrar el dialog aquí — se cierra en onSuccess de la mutación
+  } else if (confirmDialog.data?.id) {
+    iniciarPagoMutation.mutate(confirmDialog.data.id);
+    confirmDialog.close();
+  }
+}, [confirmDialog, iniciarPagoMutation, iniciarPagoAdhesionMutation]);
 
   // Handler para Pagos Normales
   const handlePayRequest = useCallback(
@@ -329,13 +355,16 @@ const MisPagos: React.FC = () => {
         nombreProyecto,
         montoFormateado: formatCurrency(cuota.monto),
         fechaVencimiento: new Date(cuota.fecha_vencimiento).toLocaleDateString('es-AR'),
-        esAdhesion: true
+        esAdhesion: true,
       });
     },
-    [confirmDialog, formatCurrency]
+    [confirmDialog, formatCurrency],
   );
 
-  const isPaymentPending = iniciarPagoMutation.isPending || iniciarPagoAdhesionMutation.isPending;
+  const isPaymentPending =
+  iniciarPagoMutation.isPending ||
+  iniciarPagoAdhesionMutation.isPending ||
+  confirmarPagoAdhesionMutation.isPending;
 
   // Columnas para Pagos Normales
   const columns = useMemo<DataTableColumn<PagoDto>[]>(
@@ -721,6 +750,19 @@ const MisPagos: React.FC = () => {
         error={twoFAError}
         title="Confirmar Pago Seguro"
         description="Ingresa el código 2FA para autorizar la transacción."
+      />
+      <TwoFactorAuthModal
+        open={twoFaAdhesionModal.isOpen}
+        onClose={() => {
+          twoFaAdhesionModal.close();
+          setAdhesionPagoId(null);
+          setTwoFAErrorAdhesion(null);
+        }}
+        onSubmit={(code) => confirmarPagoAdhesionMutation.mutate(code)}
+        isLoading={confirmarPagoAdhesionMutation.isPending}
+        error={twoFAErrorAdhesion}
+        title="Confirmar Pago de Adhesión"
+        description="Ingresá el código 2FA para autorizar el pago de la cuota de adhesión."
       />
     </PageContainer>
   );

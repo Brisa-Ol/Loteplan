@@ -285,20 +285,21 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
       }
 
       case 'Adhesion':{
-  try {
-    // Crear la adhesión con el plan elegido
-    const res = await createAdhesion({
-      proyectoId: proyecto.id,
-      planPago,
-    });
-    console.log(res);
-    const nuevaAdhesion = res.data.data;
-    setAdhesionId(nuevaAdhesion.id);
-    setActiveStep('Contrato');
-  } catch (err) {
-    showError('Error al crear la adhesión. Intenta nuevamente.');
-  }
-  break;
+      try {
+        
+        // Crear la adhesión con el plan elegido
+        const res = await createAdhesion({
+          proyectoId: proyecto.id,
+          planPago,
+        });
+        console.log(res);
+        const nuevaAdhesion = res.data.data;
+        setAdhesionId(nuevaAdhesion.id);
+        setActiveStep('Contrato');
+      } catch (err) {
+        showError('Error al crear la adhesión. Intenta nuevamente.');
+      }
+      break;
 }
 
       case 'Contrato':
