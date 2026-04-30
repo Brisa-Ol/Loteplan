@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import * as Yup from "yup";
 
-type LocalErrorType = 'invalid_credentials' | 'account_not_activated' | 'session_expired' | 'generic' |'rate_limited';
+type LocalErrorType = 'invalid_credentials' | 'account_not_activated' | 'session_expired' | 'generic' | 'rate_limited';
 
 export const useLogin = () => {
   const navigate = useNavigate();
@@ -37,7 +37,7 @@ export const useLogin = () => {
       setIsSessionExpired(true);
       sessionStorage.removeItem('session_expired'); // 👈 Limpiar para que no persista
     }
-  }, [state]);
+  }, []);
 
   // 2. Limpieza de errores al desmontar
   const clearErrorRef = useRef(clearError);
@@ -57,35 +57,35 @@ export const useLogin = () => {
     }
   }, [isInitializing, isAuthenticated, user, requires2FA, navigate, from]);
 
- // 2. Agregar el caso 429 en parseError — ANTES del resto de checks
-const parseError = (err: any) => {
-  console.error("Login Error:", err);
+  // 2. Agregar el caso 429 en parseError — ANTES del resto de checks
+  const parseError = (err: any) => {
+    console.error("Login Error:", err);
 
-  // ✅ Chequear status HTTP primero, antes de parsear el mensaje
-  const status = err?.response?.status;
-  if (status === 429) {
-    setLocalError({ 
-      type: 'rate_limited', 
-      msg: 'Demasiados intentos. Esperá unos minutos antes de intentar nuevamente.' 
-    });
-    return;
-  }
+    // ✅ Chequear status HTTP primero, antes de parsear el mensaje
+    const status = err?.response?.status;
+    if (status === 429) {
+      setLocalError({
+        type: 'rate_limited',
+        msg: 'Demasiados intentos. Esperá unos minutos antes de intentar nuevamente.'
+      });
+      return;
+    }
 
-  let rawMsg = typeof err === 'string' 
-    ? err 
-    : err?.response?.data?.message || err?.message || "Error inesperado.";
-  const msgLower = rawMsg.toLowerCase();
+    let rawMsg = typeof err === 'string'
+      ? err
+      : err?.response?.data?.message || err?.message || "Error inesperado.";
+    const msgLower = rawMsg.toLowerCase();
 
-  if (msgLower.includes('credenciales') || msgLower.includes('401')) {
-    setLocalError({ type: 'invalid_credentials', msg: "Credenciales incorrectas." });
-  } else if (msgLower.includes('no activada') || msgLower.includes('verificar')) {
-    setLocalError({ type: 'account_not_activated', msg: "Cuenta no activada." });
-  } else if (msgLower.includes('sesión') || msgLower.includes('token')) {
-    setLocalError({ type: 'session_expired', msg: "Sesión expirada." });
-  } else {
-    setLocalError({ type: 'generic', msg: rawMsg });
-  }
-};
+    if (msgLower.includes('credenciales') || msgLower.includes('401')) {
+      setLocalError({ type: 'invalid_credentials', msg: "Credenciales incorrectas." });
+    } else if (msgLower.includes('no activada') || msgLower.includes('verificar')) {
+      setLocalError({ type: 'account_not_activated', msg: "Cuenta no activada." });
+    } else if (msgLower.includes('sesión') || msgLower.includes('token')) {
+      setLocalError({ type: 'session_expired', msg: "Sesión expirada." });
+    } else {
+      setLocalError({ type: 'generic', msg: rawMsg });
+    }
+  };
 
   // Formulario
   const formik = useFormik({

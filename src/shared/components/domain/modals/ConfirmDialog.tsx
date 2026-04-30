@@ -5,7 +5,9 @@ import { CheckCircle, ErrorOutline, Help, WarningAmber } from '@mui/icons-materi
 import { alpha, Stack, TextField, Typography, useTheme } from '@mui/material';
 import React, { useEffect, useState } from 'react';
 import BaseModal from './BaseModal';
+
 type ConfirmDialogController = ReturnType<typeof useConfirmDialog>;
+
 // ============================================================================
 // INTERFAZ
 // ============================================================================
@@ -15,7 +17,7 @@ interface Props {
   isLoading?: boolean;
   title?: string;
   description?: string;
-  
+  extraContent?: React.ReactNode; // ✅ Agregado para soportar contenido extra
 }
 
 type ThemeColor = 'primary' | 'secondary' | 'error' | 'warning' | 'info' | 'success';
@@ -24,7 +26,7 @@ type ThemeColor = 'primary' | 'secondary' | 'error' | 'warning' | 'info' | 'succ
 // COMPONENTE
 // ============================================================================
 export const ConfirmDialog: React.FC<Props> = ({
-  controller, onConfirm, isLoading, title, description
+  controller, onConfirm, isLoading, title, description, extraContent
 }) => {
   const theme = useTheme();
   const { open, close, config } = controller;
@@ -114,6 +116,10 @@ export const ConfirmDialog: React.FC<Props> = ({
             }}
           />
         )}
+
+        {/* ✅ Renderizar el contenido extra (TextField del hook, etc) */}
+        {extraContent}
+        
       </Stack>
     </BaseModal>
   );

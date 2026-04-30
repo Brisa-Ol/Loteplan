@@ -1,7 +1,7 @@
 // src/features/admin/hooks/finanzas/useAdminAdhesiones.ts
 
 import {
-  cancelarAdhesion,
+  iniciarCancelacionAdhesion,
   forzarPagoCuota,
   getAdhesionMetrics,
   getAllAdhesiones,
@@ -32,6 +32,7 @@ export const useAdminAdhesiones = () => {
   const [filterEstado, setFilterEstado] = useState<AdhesionEstadoFilter>('todas');
   const [filterPlan, setFilterPlan] = useState<AdhesionPlanFilter>('todos'); // ✅ Nuevo estado de filtro
   const [selectedAdhesion, setSelectedAdhesion] = useState<AdhesionDto | null>(null);
+  const [motivoAccion, setMotivoAccion] = useState('');
 
   // ── Queries ──────────────────────────────────────────────────────────────
 
@@ -106,7 +107,7 @@ export const useAdminAdhesiones = () => {
 
   const cancelarMutation = useMutation({
     mutationFn: (data: { id: number; motivo?: string }) =>
-      cancelarAdhesion(data.id, data.motivo),
+      iniciarCancelacionAdhesion(data.id, data.motivo),
     onSuccess: () => {
       invalidateAll();
       showSuccess('Adhesión cancelada correctamente.');
@@ -123,6 +124,7 @@ export const useAdminAdhesiones = () => {
 
   const handleForzarPago = useCallback(
     (adhesion: AdhesionDto, numeroCuota: number) => {
+      setMotivoAccion('');
       confirmDialog.confirm('admin_force_adhesion_payment', {
         adhesionId: adhesion.id,
         numeroCuota,
@@ -135,6 +137,7 @@ export const useAdminAdhesiones = () => {
 
   const handleCancelar = useCallback(
     (adhesion: AdhesionDto) => {
+      setMotivoAccion('');
       confirmDialog.confirm('admin_cancel_adhesion', adhesion);
     },
     [confirmDialog]
@@ -145,15 +148,15 @@ export const useAdminAdhesiones = () => {
       forzarPagoMutation.mutate({
         adhesionId: confirmDialog.data.adhesionId,
         numeroCuota: confirmDialog.data.numeroCuota,
-        motivo: `Forzado por administrador`,
+        motivo: motivoAccion.trim() || 'Forzado por administrador',
       });
     } else if (confirmDialog.action === 'admin_cancel_adhesion' && confirmDialog.data) {
       cancelarMutation.mutate({
         id: confirmDialog.data.id,
-        motivo: 'Cancelación administrativa',
+        motivo: motivoAccion.trim() || 'Cancelación administrativa',
       });
     }
-  }, [confirmDialog, forzarPagoMutation, cancelarMutation]);
+  }, [confirmDialog, forzarPagoMutation, cancelarMutation, motivoAccion]);
 
   return {
     // Data
@@ -185,5 +188,9 @@ export const useAdminAdhesiones = () => {
     // Actions
     handleForzarPago,
     handleCancelar,
+
+    // Estado Motivo
+    motivoAccion,
+    setMotivoAccion,
   };
 };

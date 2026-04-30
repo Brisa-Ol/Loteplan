@@ -96,18 +96,24 @@ httpService.interceptors.response.use(
     const isLoginEndpoint = url.includes('/auth/login') || url.includes('/auth/2fa/verify');
     const msg = data.error || data.message || 'Error inesperado';
 
-    // 2. ERROR 401: Sesión Expirada o no autorizada
+    // En el bloque del ERROR 401
     if (status === 401) {
       if (isLoginEndpoint) {
         return Promise.reject({ status: 401, message: msg, type: 'AUTH_ERROR' } as ApiError);
       }
 
-      // Evitar bucles de redirección
       if (!window.location.pathname.includes('/login') && !isRedirectingToLogin) {
         isRedirectingToLogin = true;
+
+        // ✅ Leer ANTES de borrar: solo hay sesión expirada si existía un token activo.
+        // Sin este guard, loadUser() con token vencido escribe el flag aunque el usuario
+        // nunca haya tenido sesión en esta pestaña.
+        const hadActiveToken = !!secureStorage.getToken();
         secureStorage.clearToken();
 
-
+        if (hadActiveToken) {
+          sessionStorage.setItem(env.sessionExpiredKey, 'true'); // ← usa la key de env
+        }
 
         setTimeout(() => {
           isRedirectingToLogin = false;

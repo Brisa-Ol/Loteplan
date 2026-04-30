@@ -65,13 +65,6 @@ export const useAuthCore = (): UseAuthCoreReturn => {
       secureStorage.clearToken();
       setUser(null);
       queryClient.clear();
-
-      // 👈 2. Podrías centralizar el nombre de la key de sesión si estuviera en env.ts, 
-      // pero aquí lo más importante es mantener consistencia en la redirección.
-      if (!window.location.pathname.includes('/login')) {
-        sessionStorage.setItem('session_expired', 'true');
-        window.location.href = '/login';
-      }
     } finally {
       setIsInitializing(false);
     }
@@ -113,18 +106,12 @@ export const useAuthCore = (): UseAuthCoreReturn => {
   }, []);
 
   const logout = useCallback(() => {
-    // 👈 3. Intentamos un logout limpio. 
-    // Algunas apps usan env.apiBaseUrl aquí si necesitan hacer un beacon o similar.
     AuthService.logout().catch(console.error);
-
     secureStorage.clearToken();
 
-    const sessionExpiredFlag = sessionStorage.getItem('session_expired');
+    // ✅ Limpiar TODO sessionStorage sin re-preservar session_expired.
+    // Si el usuario hace logout voluntariamente, no debe ver la alerta de sesión expirada.
     sessionStorage.clear();
-
-    if (sessionExpiredFlag) {
-      sessionStorage.setItem('session_expired', sessionExpiredFlag);
-    }
 
     queryClient.clear();
     setUser(null);
