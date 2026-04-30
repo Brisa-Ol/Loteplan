@@ -39,10 +39,13 @@ const BASE_ENDPOINT = '/adhesion';
     return await httpService.get(`${BASE_ENDPOINT}/suscripcion/${suscripcionId}`);
   }
 
-export const iniciarCancelacionAdhesion = async (id: number): Promise<AxiosResponse<any>> => {
-  // ✅ Le pasamos un objeto como segundo parámetro para que req.body exista en el backend
+// adhesion.service.ts
+export const iniciarCancelacionAdhesion = async (
+  id: number,
+  motivo?: string
+): Promise<AxiosResponse<any>> => {
   return await httpService.post(`${BASE_ENDPOINT}/${id}/iniciar-cancelacion`, {
-    motivo: "Baja solicitada por el usuario"
+    motivo: motivo ?? "Baja solicitada por el usuario"
   });
 }
 // Confirmar cancelación de adhesión (Paso 2 - Valida código 2FA)

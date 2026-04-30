@@ -32,6 +32,10 @@ import {
   Button,
   Chip,
   Collapse,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   IconButton,
   MenuItem,
   Paper,
@@ -43,6 +47,7 @@ import {
   TableHead,
   TablePagination,
   TableRow,
+  TextField,
   Tooltip,
   Typography,
   useTheme,
@@ -52,10 +57,10 @@ import React, { useState, useMemo } from 'react';
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const ESTADO_ADHESION_CONFIG: Record<string, { label: string; color: 'default' | 'info' | 'warning' | 'success' | 'error' }> = {
-  pendiente:   { label: 'Pendiente',   color: 'info' },
-  en_curso:    { label: 'En Curso',    color: 'warning' },
-  completada:  { label: 'Completada',  color: 'success' },
-  cancelada:   { label: 'Cancelada',   color: 'default' },
+  pendiente:   { label: 'Pendiente',  color: 'info' },
+  en_curso:    { label: 'En Curso',   color: 'warning' },
+  completada:  { label: 'Completada', color: 'success' },
+  cancelada:   { label: 'Cancelada',  color: 'default' },
 };
 
 const ESTADO_CUOTA_CONFIG: Record<string, { label: string; color: 'default' | 'info' | 'warning' | 'success' | 'error' }> = {
@@ -80,8 +85,8 @@ const FILTER_ESTADO_OPTIONS: { value: AdhesionEstadoFilter; label: string }[] = 
 const FILTER_PLAN_OPTIONS: { value: AdhesionPlanFilter; label: string }[] = [
   { value: 'todos',     label: 'Todos los planes' },
   { value: 'contado',   label: 'Contado (1 Cuota)' },
+  { value: '3_cuotas',  label: '3 Cuotas' },
   { value: '6_cuotas',  label: '6 Cuotas' },
-  { value: '12_cuotas', label: '12 Cuotas' },
 ];
 
 // ─── Sub: Cuotas expandibles ─────────────────────────────────────────────────
@@ -89,8 +94,9 @@ const FILTER_PLAN_OPTIONS: { value: AdhesionPlanFilter; label: string }[] = [
 const CuotasDetalle: React.FC<{
   adhesion: AdhesionDto;
   onForzarPago: (adhesion: AdhesionDto, numeroCuota: number) => void;
+  onVerMotivo: (motivo: string) => void;
   isMutating: boolean;
-}> = ({ adhesion, onForzarPago, isMutating }) => {
+}> = ({ adhesion, onForzarPago, onVerMotivo, isMutating }) => {
   const theme = useTheme();
   const pagos = adhesion.pagos || [];
 
@@ -143,6 +149,28 @@ const CuotasDetalle: React.FC<{
                     variant={pago.estado === 'vencido' ? 'filled' : 'outlined'}
                     sx={{ fontWeight: 600 }}
                   />
+                  {pago.estado === 'forzado' &&  (
+                    <Tooltip title="Ver motivo del pago forzado">
+                      <Typography
+                        variant="caption"
+                        color="warning.main"
+                        display="block"
+                       onClick={() => onVerMotivo(pago.motivo || 'Pago forzado por administrador (sin motivo detallado)')}
+        sx={{
+          mt: 0.5,
+          maxWidth: 160,
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+          cursor: 'pointer',
+          textDecoration: 'underline dotted',
+          '&:hover': { color: 'warning.dark' },
+        }}
+      >
+                        Ver motivo
+                      </Typography>
+                    </Tooltip>
+                  )}
                 </TableCell>
                 <TableCell align="right">
                   {puedeForce && adhesion.estado !== 'cancelada' && (
@@ -175,8 +203,9 @@ const AdhesionRow: React.FC<{
   adhesion: AdhesionDto;
   onForzarPago: (adhesion: AdhesionDto, numeroCuota: number) => void;
   onCancelar: (adhesion: AdhesionDto) => void;
+  onVerMotivo: (motivo: string) => void;
   isMutating: boolean;
-}> = ({ adhesion, onForzarPago, onCancelar, isMutating }) => {
+}> = ({ adhesion, onForzarPago, onCancelar, onVerMotivo, isMutating }) => {
   const [expanded, setExpanded] = useState(false);
   const estadoCfg = ESTADO_ADHESION_CONFIG[adhesion.estado] ?? { label: adhesion.estado, color: 'default' };
   
@@ -285,6 +314,7 @@ const AdhesionRow: React.FC<{
             <CuotasDetalle
               adhesion={adhesion}
               onForzarPago={onForzarPago}
+              onVerMotivo={onVerMotivo}
               isMutating={isMutating}
             />
           </Collapse>
@@ -356,6 +386,7 @@ const AdhesionesTab: React.FC = () => {
   // ✅ Estado y lógica para paginación
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [motivoModal, setMotivoModal] = useState<string | null>(null);
 
   const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage);
@@ -464,6 +495,7 @@ const AdhesionesTab: React.FC = () => {
                       adhesion={adhesion}
                       onForzarPago={logic.handleForzarPago}
                       onCancelar={logic.handleCancelar}
+                      onVerMotivo={setMotivoModal}
                       isMutating={logic.isMutating}
                     />
                   ))}
@@ -493,10 +525,59 @@ const AdhesionesTab: React.FC = () => {
         </Paper>
       </QueryHandler>
 
+      {/* 🆕 Modal de motivo */}
+      <Dialog
+        open={motivoModal !== null}
+        onClose={() => setMotivoModal(null)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle sx={{ fontWeight: 700, pb: 1 }}>
+          Motivo del pago forzado
+        </DialogTitle>
+        <DialogContent>
+          <Paper
+            elevation={0}
+            sx={{
+              p: 2,
+              bgcolor: (t) => alpha(t.palette.warning.main, 0.07),
+              border: (t) => `1px solid ${t.palette.warning.light}`,
+              borderRadius: 2,
+            }}
+          >
+            <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+              {motivoModal}
+            </Typography>
+          </Paper>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button variant="contained" onClick={() => setMotivoModal(null)}>
+            Cerrar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <ConfirmDialog
         controller={logic.confirmDialog}
         onConfirm={logic.handleConfirmAction}
         isLoading={logic.isMutating}
+        extraContent={
+          <TextField
+            label="Motivo (opcional)"
+            value={logic.motivoAccion}
+            onChange={(e) => logic.setMotivoAccion(e.target.value)}
+            fullWidth
+            size="small"
+            multiline
+            rows={2}
+            placeholder={
+              logic.confirmDialog.action === 'admin_force_adhesion_payment'
+                ? 'Ej: Acuerdo extrabancario confirmado'
+                : 'Ej: Solicitud del socio por email'
+            }
+            sx={{ mt: 2 }}
+          />
+        }
       />
     </Box>
   );
