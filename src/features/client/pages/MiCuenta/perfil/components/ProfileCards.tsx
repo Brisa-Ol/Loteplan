@@ -32,15 +32,12 @@ import {
   StepLabel,
   Typography,
   useTheme,
-  Tooltip,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions
+  Tooltip
 } from '@mui/material';
 import React, { useState } from 'react';
 import SecuritySettings from '../../SecuritySettings/SecuritySettings';
-import { BaseModal, useConfirmDialog } from '@/shared';
+import DeleteAccountModal from '../modal/DeleteAccountModal';
+
 
 // ─────────────────────────────────────────────
 // KycStatusCard — con mini stepper de progreso
@@ -270,18 +267,15 @@ interface DangerProps {
   showBlock: boolean;
   blockMessage: string | null;
   isChecking: boolean;
-  onDelete: () => void;
-  onGoToFinanzas: () => void;
+  is2FAEnabled: boolean; // ✅ Nuevo prop para saber si 2FA está activo
 }
 
 export const DangerZoneCard: React.FC<DangerProps> = ({
-  showBlock, blockMessage, isChecking, onDelete, onGoToFinanzas,
+  showBlock, blockMessage, isChecking, is2FAEnabled
 }) => {
   const theme = useTheme();
   const [isExpanded, setIsExpanded] = useState(false);
-  
-  // Hook centralizado
-  const { open, config, confirm, close } = useConfirmDialog();
+  const [isModalOpen, setIsModalOpen] = useState(false); // ✅ Estado para el nuevo modal
 
   return (
     <>
@@ -377,15 +371,6 @@ export const DangerZoneCard: React.FC<DangerProps> = ({
                   >
                     <AlertTitle fontWeight={700}>Acción Bloqueada</AlertTitle>
                     <Typography variant="body2" paragraph>{blockMessage}</Typography>
-                    <Button
-                      size="small"
-                      color="warning"
-                      variant="contained"
-                      onClick={onGoToFinanzas}
-                      sx={{ fontWeight: 700, borderRadius: 2 }}
-                    >
-                      Ir a Mis Suscripciones
-                    </Button>
                   </Alert>
                 )}
 
@@ -407,7 +392,7 @@ export const DangerZoneCard: React.FC<DangerProps> = ({
                             ? <CircularProgress size={18} color="inherit" /> 
                             : <DeleteIcon />
                         }
-                        onClick={() => confirm('delete_account')}
+                        onClick={() => setIsModalOpen(true)} // ✅ Abre el nuevo modal
                         disabled={isChecking || showBlock}
                         sx={{ borderRadius: 2, fontWeight: 700 }}
                       >
@@ -435,27 +420,12 @@ export const DangerZoneCard: React.FC<DangerProps> = ({
         </CardContent>
       </Card>
 
-      {/* ── Integración de tu BaseModal con el config del hook ── */}
-      <BaseModal
-        open={open}
-        onClose={close}
-        title={config?.title || 'Confirmar Acción'}
-        icon={<Warning />} // Ícono que recibe tu BaseModal en el header
-        headerColor={config?.severity === 'error' ? 'error' : config?.severity === 'warning' ? 'warning' : 'primary'}
-        confirmText={config?.confirmText}
-        confirmButtonColor={config?.severity === 'error' ? 'error' : 'primary'}
-        cancelText="Cancelar"
-        isLoading={isChecking}
-        maxWidth="xs" // Para que no quede gigante en una simple confirmación
-        onConfirm={() => {
-          close();
-          onDelete(); 
-        }}
-      >
-        <Typography variant="body1" color="text.secondary">
-          {config?.description}
-        </Typography>
-      </BaseModal>
+      {/* ✅ Nuevo modal con soporte 2FA integrado */}
+      <DeleteAccountModal
+        open={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        is2FAEnabled={is2FAEnabled}
+      />
     </>
   );
 };

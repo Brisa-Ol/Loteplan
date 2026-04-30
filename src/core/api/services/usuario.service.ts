@@ -1,7 +1,7 @@
+import type { GenericResponseDto } from "@/core/types/auth.dto";
 import type { AdminDisable2FADto, ChangePasswordDto, CreateUsuarioDto, UpdateUserAdminDto, UpdateUserMeDto, UsuarioDto, ValidateDeactivationResponseDto } from "@/core/types/usuario.dto";
 import type { AxiosResponse } from "axios";
 import httpService from "../httpService";
-import type { GenericResponseDto } from "@/core/types/auth.dto";
 
 
 const ENDPOINT = '/usuarios';
@@ -39,14 +39,14 @@ const UsuarioService = {
   findAllActivos: async (): Promise<AxiosResponse<UsuarioDto[]>> => {
     return await httpService.get(`${ENDPOINT}/activos`);
   },
-/**
- * Cambia la contraseña del usuario autenticado.
- * Si el usuario tiene 2FA activo, requiere el código TOTP en `twofaCode`.
- * Backend: PATCH /usuarios/me/change-password
- */
-changePassword: async (data: ChangePasswordDto): Promise<AxiosResponse<GenericResponseDto>> => {
-  return await httpService.patch(`${ENDPOINT}/me/change-password`, data);
-},
+  /**
+   * Cambia la contraseña del usuario autenticado.
+   * Si el usuario tiene 2FA activo, requiere el código TOTP en `twofaCode`.
+   * Backend: PATCH /usuarios/me/change-password
+   */
+  changePassword: async (data: ChangePasswordDto): Promise<AxiosResponse<GenericResponseDto>> => {
+    return await httpService.patch(`${ENDPOINT}/me/change-password`, data);
+  },
   /**
    * Obtiene el listado de administradores activos.
    * Backend: GET /usuarios/admins
@@ -54,13 +54,13 @@ changePassword: async (data: ChangePasswordDto): Promise<AxiosResponse<GenericRe
   findAllAdmins: async (): Promise<AxiosResponse<UsuarioDto[]>> => {
     return await httpService.get(`${ENDPOINT}/admins`);
   },
-/**
- * Permite a un admin establecer una nueva contraseña para un usuario.
- * Backend: PATCH /usuarios/:id/reset-password
- */
-adminResetPassword: async (userId: number, newPassword: string): Promise<AxiosResponse<GenericResponseDto>> => {
-  return await httpService.patch(`${ENDPOINT}/${userId}/reset-password`, { newPassword });
-},
+  /**
+   * Permite a un admin establecer una nueva contraseña para un usuario.
+   * Backend: PATCH /usuarios/:id/reset-password
+   */
+  adminResetPassword: async (userId: number, newPassword: string): Promise<AxiosResponse<GenericResponseDto>> => {
+    return await httpService.patch(`${ENDPOINT}/${userId}/reset-password`, { newPassword });
+  },
   /**
    * Busca usuarios por nombre de usuario o email (coincidencia parcial).
    * Backend: GET /usuarios/search?q=term
@@ -119,12 +119,12 @@ adminResetPassword: async (userId: number, newPassword: string): Promise<AxiosRe
   },
 
   // Paso 1: Iniciar cancelación de cuenta
-  startCancelacionCuenta: async (): Promise<AxiosResponse<{message: string, requires2FA: boolean}>> => {
+  startCancelacionCuenta: async (): Promise<AxiosResponse<{ message: string, requires2FA: boolean }>> => {
     return await httpService.post(`${ENDPOINT}/me/iniciar-cancelacion`);
   },
 
-  confirmCancelacionCuenta: async (twofaCode: string): Promise<AxiosResponse<{message: string, success: boolean}>> => {
-    return await httpService.post(`${ENDPOINT}/me/confirmar-cancelacion`, { twofaCode });
+  confirmCancelacionCuenta: async (twofaCode: string): Promise<AxiosResponse<{ message: string, success: boolean }>> => {
+    return await httpService.post(`${ENDPOINT}/me/confirmar-cancelacion`, { codigo_2fa: twofaCode });
   },
 
   // ===========================================

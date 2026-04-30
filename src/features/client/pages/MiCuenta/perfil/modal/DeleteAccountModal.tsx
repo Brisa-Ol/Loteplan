@@ -1,7 +1,8 @@
 // src/pages/client/MiCuenta/components/DeleteAccountModal.tsx
 
 import { useAuth } from '@/core/context/AuthContext';
-import { BaseModal } from '@/shared/components/domain/modals/BaseModal'; // ✅ Importación ajustada
+import { BaseModal } from '@/shared/components/domain/modals/BaseModal';
+import UsuarioService from '@/core/api/services/usuario.service';
 import { Lock, Warning } from '@mui/icons-material';
 import {
   Alert,
@@ -26,25 +27,44 @@ interface Props {
 const DeleteAccountModal: React.FC<Props> = ({
   open,
   onClose,
-  is2FAEnabled,
+  is2FAEnabled, // Lo que dice el frontend
   title = "¿Desactivar Cuenta?",
   description
 }) => {
   const theme = useTheme();
-  const { deleteAccount } = useAuth();
+  const { logout } = useAuth();
 
   const [twoFaCode, setTwoFaCode] = useState('');
   const [localError, setLocalError] = useState<string | null>(null);
+  
+  // ✅ Nuevo estado: Por si el backend exige 2FA aunque el frontend no lo sabía
+  const [serverRequires2FA, setServerRequires2FA] = useState(false);
+
+  // La verdad absoluta: si el frontend dice que sí, o si el backend nos corrigió y dijo que sí.
+  const actual2FA = is2FAEnabled || serverRequires2FA;
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
-      // Pasamos el código solo si 2FA está habilitado
-      await deleteAccount(is2FAEnabled ? twoFaCode : undefined);
+      if (actual2FA) {
+        const response = await UsuarioService.confirmCancelacionCuenta(twoFaCode);
+        return response.data;
+      } else {
+        const response = await UsuarioService.startCancelacionCuenta();
+        // Axios procesa el 202 Accepted como éxito, así que lo devolvemos para evaluarlo en onSuccess
+        return response.data; 
+      }
     },
-    onSuccess: () => {
-      // El logout y redirección suelen manejarse dentro de deleteAccount o AuthContext
-      // Aquí solo cerramos el modal
+    onSuccess: (data: any) => {
+      // ✅ Si la API nos responde que necesita 2FA (Paso 1)
+      if (data && data.requires2FA) {
+        setServerRequires2FA(true); // Forzamos a mostrar el input
+        setLocalError('Por seguridad, el servidor requiere que ingreses tu código 2FA.');
+        return; // Cortamos la ejecución para que el usuario ponga el código
+      }
+
+      // ✅ Si todo salió bien y se borró
       handleClose();
+      if (logout) logout();
     },
     onError: (err: any) => {
       const msg = err.response?.data?.error || err.message || 'Error al procesar la solicitud.';
@@ -53,7 +73,7 @@ const DeleteAccountModal: React.FC<Props> = ({
   });
 
   const handleConfirm = () => {
-    if (is2FAEnabled) {
+    if (actual2FA) {
       if (!twoFaCode || twoFaCode.length !== 6) {
         setLocalError('El código debe tener 6 dígitos.');
         return;
@@ -67,6 +87,7 @@ const DeleteAccountModal: React.FC<Props> = ({
     if (deleteMutation.isPending) return;
     setTwoFaCode('');
     setLocalError(null);
+    setServerRequires2FA(false); // Reseteamos el estado de fallback
     onClose();
   }, [deleteMutation.isPending, onClose]);
 
@@ -90,11 +111,10 @@ const DeleteAccountModal: React.FC<Props> = ({
       confirmButtonColor="error"
       onConfirm={handleConfirm}
       isLoading={deleteMutation.isPending}
-      disableConfirm={(is2FAEnabled && twoFaCode.length !== 6) || deleteMutation.isPending}
+      disableConfirm={(actual2FA && twoFaCode.length !== 6) || deleteMutation.isPending}
     >
       <Stack spacing={3}>
 
-        {/* Descripción / Advertencia */}
         <Box textAlign="center">
           {description ? (
             <Typography color="text.secondary">{description}</Typography>
@@ -116,7 +136,8 @@ const DeleteAccountModal: React.FC<Props> = ({
           </Alert>
         )}
 
-        {is2FAEnabled && (
+        {/* ✅ Usamos actual2FA para renderizar el input dinámicamente */}
+        {actual2FA && (
           <Box
             sx={{
               bgcolor: alpha(theme.palette.primary.main, 0.05),
