@@ -58,9 +58,18 @@ export const StepAdhesion: FC<IStepAdhesionProps> = ({
 
 	return (
 		<Stack spacing={3} maxWidth="sm" mx="auto">
-			<Alert severity="info" variant="outlined" sx={{ borderRadius: 2 }}>
-				La adhesión es un aporte inicial para activar tu suscripción. Elegí cómo
-				querés pagarlo.
+			<Alert
+				severity="success"
+				icon={<CheckCircle />}
+				sx={{ borderRadius: 2 }}
+			>
+				<Typography variant="body2" fontWeight={700} mb={0.5}>
+					¿Para qué sirve la adhesión?
+				</Typography>
+				<Typography variant="caption">
+					Es el aporte inicial requerido para activar tu suscripción al plan de ahorro.
+					Una vez abonada la primera cuota, podrás <strong>firmar</strong> tu contrato. Abonada la totalidad de la adhesión, tu <strong>Suscripcion</strong> quedará activa y podrás participar en subastas de lotes con tus <strong>Tokens</strong>.
+				</Typography>
 			</Alert>
 
 			<Paper variant="outlined" sx={{ overflow: "hidden", borderRadius: 2 }}>
@@ -262,19 +271,7 @@ export const StepAdhesion: FC<IStepAdhesionProps> = ({
 				</Stack>
 			</Paper>
 
-			<Alert
-				severity="success"
-				icon={<CheckCircle />}
-				sx={{ borderRadius: 2 }}
-			>
-				<Typography variant="body2" fontWeight={700} mb={0.5}>
-					¿Para qué sirve la adhesión?
-				</Typography>
-				<Typography variant="caption">
-					Es el aporte inicial requerido para activar tu suscripción al plan de ahorro.
-					Una vez abonada la primera cuota, podrás <strong>firmar</strong> tu contrato. Abonada la totalidad de la adhesión, tu <strong>Suscripcion</strong> quedará activa y podrás participar en subastas de lotes con tus <strong>Tokens</strong>.
-				</Typography>
-			</Alert>
+			
 		</Stack>
 	);
 };

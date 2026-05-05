@@ -20,6 +20,7 @@ export interface RegistrarFirmaRequestDto {
   // 📍 Auditoría
   latitud_verificacion?: string;
   longitud_verificacion?: string;
+  id_suscripcion?: number;
 }
 
 // ==========================================

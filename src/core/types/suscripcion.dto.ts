@@ -97,13 +97,16 @@ export interface SuscripcionCanceladaDto extends BaseDTO {
 
 export interface SuscripcionDetalleTrackDto {
   suscripcion_id: number;
+
   adhesion_id: number | null;
-  tiene_pago_adhesion: boolean;
+  adhesion_estado: string | null;
   cuotas_pagadas: number;
   cuotas_totales: number;
-  adhesion_estado: string | null;
-  tiene_contrato_firmado: boolean;
   puede_firmar: boolean;
+  
+  tiene_contrato_firmado: boolean;
+  tiene_pago_adhesion: boolean;
+
   contrato_firmado: {
     id: number;
     nombre_archivo: string;

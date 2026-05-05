@@ -15,6 +15,7 @@ import { useCallback, useRef, useState } from 'react';
 import { CheckoutStateManager } from '../pages/Proyectos/modals/Checkout persistence';
 
 import type { ContratoTrackingResponse } from '@/core/types/contrato.dto';
+import type { TrackPaymentAndContractResponseDto } from '@/core/types/contrato-firmado.dto';
 
 // ===================================================
 // TYPES
@@ -76,6 +77,7 @@ export const useCheckoutWizard = ({
   const [transaccionId, setTransaccionId] = useState<number | null>(null);
   const [inversionId, setInversionId]   = useState<number | null>(null); 
   const [error2FA, setError2FA] = useState<string | null>(null);
+
 
   const isVerifyingRef = useRef(false);
 
@@ -289,8 +291,19 @@ export const useCheckoutWizard = ({
     signaturePosition: SignaturePosition | null,
     location: Location | null,
     codigo2FA: string, // ✅ Código 2FA FRESCO para la firma
-    trackingData?: ContratoTrackingResponse | null
+    id_suscripcion?: number,
+    trackingData?: ContratoTrackingResponse | TrackPaymentAndContractResponseDto | null,
   ) => {
+    // Prioridad: parámetro explícito > transaccionId > inversionId
+    const idAUsar = id_suscripcion ?? transaccionId ?? inversionId ?? undefined;
+
+    console.log('🔍 Firmando con id_suscripcion_asociada:', idAUsar);  // ← útil para debug
+
+    if (!idAUsar) {
+      showError('No se pudo identificar la suscripción a firmar. Cerrá y volvé a intentarlo.');
+      return;
+    }
+    
     if (!plantillaContrato) {
       showError('No hay plantilla de contrato disponible');
       return;
@@ -395,6 +408,7 @@ export const useCheckoutWizard = ({
         codigo_2fa: codigo2FA,
         latitud_verificacion: location?.lat,
         longitud_verificacion: location?.lng,
+        id_suscripcion: idAUsar,
       });
 
       console.log('✅ Contrato firmado registrado:', response.data);
@@ -415,7 +429,7 @@ export const useCheckoutWizard = ({
     } finally {
       setIsProcessing(false);
     }
-  }, [plantillaContrato, transaccionId, proyecto, user, showSuccess, showError, onSuccess]); // ✅ Dependencia "user" agregada
+  }, [plantillaContrato, transaccionId, inversionId, proyecto, user, showSuccess, showError, onSuccess]); // ✅ Dependencia "user" agregada
 
   // ===================================================
   // RETURN

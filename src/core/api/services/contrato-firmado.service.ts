@@ -20,29 +20,27 @@ const ContratoFirmadoService = {
    * Envía el PDF, los metadatos, el hash calculado y el código 2FA.
    */
   registrarFirma: async (data: RegistrarFirmaRequestDto): Promise<AxiosResponse<ContratoFirmadoResponseDto>> => {
-    const formData = new FormData();
-
-    // 🚨 IMPORTANTE: Tu backend (multer) espera el campo 'pdfFile'
-    formData.append('pdfFile', data.file);
-
-    // IDs Contextuales
-    formData.append('id_contrato_plantilla', data.id_contrato_plantilla.toString());
-    formData.append('id_proyecto', data.id_proyecto.toString());
-    formData.append('id_usuario_firmante', data.id_usuario_firmante.toString());
-
-    // Seguridad (Hash calculado en el front y TOTP)
-    formData.append('hash_archivo_firmado', data.hash_archivo_firmado);
-    formData.append('codigo_2fa', data.codigo_2fa);
-
-    // Auditoría Geo (Opcionales)
-    if (data.latitud_verificacion) formData.append('latitud_verificacion', data.latitud_verificacion);
-    if (data.longitud_verificacion) formData.append('longitud_verificacion', data.longitud_verificacion);
-
-    // POST a /api/contratos/firmar
-    return await httpService.post(`${BASE_ENDPOINT}/firmar`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
-  },
+  const formData = new FormData();
+ 
+  formData.append('pdfFile', data.file);
+  formData.append('id_contrato_plantilla', data.id_contrato_plantilla.toString());
+  formData.append('id_proyecto', data.id_proyecto.toString());
+  formData.append('id_usuario_firmante', data.id_usuario_firmante.toString());
+  formData.append('hash_archivo_firmado', data.hash_archivo_firmado);
+  formData.append('codigo_2fa', data.codigo_2fa);
+ 
+  if (data.latitud_verificacion) formData.append('latitud_verificacion', data.latitud_verificacion);
+  if (data.longitud_verificacion) formData.append('longitud_verificacion', data.longitud_verificacion);
+ 
+  // ← ESTE ERA EL CAMPO QUE FALTABA — sin él el backend no sabe qué suscripción firmar
+  if (data.id_suscripcion) {
+    formData.append('id_suscripcion', data.id_suscripcion.toString());
+  }
+ 
+  return await httpService.post(`${BASE_ENDPOINT}/firmar`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
+},
 
   // =================================================
   // 🔍 CONSULTAS

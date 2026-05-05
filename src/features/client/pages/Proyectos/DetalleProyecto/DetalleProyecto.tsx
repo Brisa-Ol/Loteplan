@@ -37,6 +37,7 @@ import { CheckoutInversionModal } from '../modals/CheckoutInversionModal/Checkou
 import { CheckoutWizardModal } from '../modals/CheckoutWizardModal/CheckoutWizardModal';
 
 import styles from './DetalleProyecto.module.css'
+import type { TrackPaymentAndContractResponseDto } from '@/core/types/contrato-firmado.dto';
 
 // 🚀 LAZY LOADING
 const ProjectGallery = lazy(() => import('../components/ProjectGallery').then(m => ({ default: m.ProjectGallery })));
@@ -146,7 +147,7 @@ const DetalleProyecto: React.FC = () => {
   //variable Thomy
 
   const [cantProyectsUser, setCantProyectsUser] = useState(0)
-  const [trackingData, setTrackingData] = useState<ContratoTrackingResponse | null>(null)
+  const [trackingData, setTrackingData] = useState<ContratoTrackingResponse | TrackPaymentAndContractResponseDto | null>(null)
 
 
   //fin variables Thomy

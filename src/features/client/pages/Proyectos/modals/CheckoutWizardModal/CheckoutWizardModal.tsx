@@ -55,15 +55,16 @@ import { PagoExitosoBanner } from '../StepsModal/PagoExitosoBanner';
 import type { IniciarPagoCuotaResponse, PlanPagoAdhesion } from '@/core/types/adhesion.dto';
 import { confirmarPagoCuota, createAdhesion, iniciarPagoCuota } from '@/core/api/services/adhesion.service';
 import { StepAdhesion } from '../StepsModal/StepAdhesion';
+import type { TrackPaymentAndContractResponseDto } from '@/core/types/contrato-firmado.dto';
 
 // ============================================================================
 // STEP SYSTEM
 // ============================================================================
 
-type CheckoutStep = 'Resumen' | 'Adhesion' | 'Contrato' | 'Seguridad' | 'Pago' | 'Firma';
+type CheckoutStep = 'Resumen' | 'Contrato' | 'Adhesion' | 'Seguridad' | 'Pago' | 'Firma';
 
 // Fuente de verdad del orden. Para añadir un paso: agregar aquí y en el switch de renderStep.
-const STEP_ORDER: CheckoutStep[] = ['Resumen', 'Adhesion', 'Contrato', 'Seguridad', 'Pago', 'Firma'];
+const STEP_ORDER: CheckoutStep[] = ['Resumen', 'Contrato', 'Adhesion', 'Seguridad', 'Pago', 'Firma'];
 
 const STEP_ICONS: Record<CheckoutStep, React.ReactNode> = {
   Resumen:  <ShoppingCart />,
@@ -94,7 +95,7 @@ export interface CheckoutWizardModalProps {
   tipo: 'suscripcion' | 'inversion';
   inversionId?: number;
   pagoId?: number;
-  trackingData?: ContratoTrackingResponse | null;
+  trackingData?: ContratoTrackingResponse | TrackPaymentAndContractResponseDto | null;
 }
 
 interface SignaturePosition {
@@ -151,6 +152,9 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
   const [planPago, setPlanPago] = useState<PlanPagoAdhesion>('contado');
   const [adhesionId, setAdhesionId] = useState<number | null>(null);
   const [startPaymentCuotaAdhesion, setStartPaymentCuotaAdhesion] = useState<IniciarPagoCuotaResponse | null>(null);
+  const [isCreatingAdhesion, setIsCreatingAdhesion] = useState(false);
+  const [targetSuscripcionId, setTargetSuscripcionId] = useState<number | null>(null);
+
 
   const hasAttemptedRecovery = useRef(false);
 
@@ -182,11 +186,7 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
   }, [formatCurrency, proyecto, tipo, cuotaActiva, loadingCuota]);
 
 
-  const startPaymentAdhesion = async () => {
 
-    const resp = await iniciarPagoCuota({ adhesionId: adhesionId!, numeroCuota: 1 })
-    setStartPaymentCuotaAdhesion(resp.data)
-  }
 
   // ── CHECKOUT WIZARD HOOK ───────────────────────────────────────────────────
   const {
@@ -220,44 +220,59 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
 
   // ── RECOVERY EFFECT ────────────────────────────────────────────────────────
   useEffect(() => {
-    if (!open || hasAttemptedRecovery.current) return;
-
-    if (trackingData?.tiene_pago && trackingData?.puede_firmar) {
+  if (!open || hasAttemptedRecovery.current) return;
+ 
+  if (trackingData?.tiene_pago && trackingData?.puede_firmar) {
+    const suscripciones = (trackingData as any).suscripciones_detalle ?? [];
+ 
+    // Buscar la suscripción que tiene pago de adhesión PERO aún NO tiene contrato firmado
+    const pendienteDeFirma = suscripciones.find(
+      (s: any) => s.tiene_pago_adhesion === true && !s.contrato_firmado
+    );
+ 
+    if (pendienteDeFirma) {
+      setTargetSuscripcionId(pendienteDeFirma.suscripcion_id);
       setPaymentStatus('success');
       setActiveStep('Firma');
       hasAttemptedRecovery.current = true;
       return;
     }
-
-    const txId = effectivePagoId || effectiveInversionId;
-    if (txId) {
-      (async () => {
-        try {
-          setTransaccionId(txId);
-          const res = await MercadoPagoService.getPaymentStatus(txId, true);
-          if (isPaymentApproved(res.data)) {
-            setPaymentStatus('success');
-            setActiveStep('Firma');
-            showInfo(
-              tipo === 'suscripcion'
-                ? '¡Pago confirmado! Firmá el contrato para activar tu suscripción.'
-                : '¡Pago confirmado! Firmá el contrato para finalizar tu inversión.',
-            );
-          }
-        } catch (err) {
-          console.warn('⚠️ Error verificando pago:', err);
-        } finally {
-          hasAttemptedRecovery.current = true;
-        }
-      })();
-      return;
-    }
-
+ 
+    // Si todas ya tienen contrato firmado, no hay nada que firmar → no abrir en Firma
+    // (puede_firmar=true pero ya está todo firmado — edge case del backend)
     hasAttemptedRecovery.current = true;
-  }, [
-    open, proyecto.id, tipo, trackingData, effectiveInversionId, effectivePagoId,
-    showInfo, setTransaccionId, setPaymentStatus,
-  ]);
+    return;
+  }
+ 
+  const txId = effectivePagoId || effectiveInversionId;
+  if (txId) {
+    (async () => {
+      try {
+        setTransaccionId(txId);
+        const res = await MercadoPagoService.getPaymentStatus(txId, true);
+        if (isPaymentApproved(res.data)) {
+          setPaymentStatus('success');
+          setActiveStep('Firma');
+          showInfo(
+            tipo === 'suscripcion'
+              ? '¡Pago confirmado! Firmá el contrato para activar tu suscripción.'
+              : '¡Pago confirmado! Firmá el contrato para finalizar tu inversión.',
+          );
+        }
+      } catch (err) {
+        console.warn('⚠️ Error verificando pago:', err);
+      } finally {
+        hasAttemptedRecovery.current = true;
+      }
+    })();
+    return;
+  }
+ 
+  hasAttemptedRecovery.current = true;
+}, [
+  open, proyecto.id, tipo, trackingData, effectiveInversionId, effectivePagoId,
+  showInfo, setTransaccionId, setPaymentStatus,
+]);
 
   // ── GEOLOCATION EFFECT ─────────────────────────────────────────────────────
   useEffect(() => {
@@ -280,31 +295,39 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
 
         if (yaIniciado) { setActiveStep('Firma'); return; }
         await handleConfirmInvestment();
-        setActiveStep('Adhesion');
+        setActiveStep('Contrato');
         break;
       }
 
       case 'Adhesion':{
-      try {
-        
-        // Crear la adhesión con el plan elegido
+        try {
+        setIsCreatingAdhesion(true); // ← activar
+
         const res = await createAdhesion({
           proyectoId: proyecto.id,
           planPago,
         });
-        console.log(res);
         const nuevaAdhesion = res.data.data;
         setAdhesionId(nuevaAdhesion.id);
-        setActiveStep('Contrato');
+
+        // ✅ Usar el id local directamente, no adhesionId del estado
+        const pagoResp = await iniciarPagoCuota({ 
+          adhesionId: nuevaAdhesion.id, 
+          numeroCuota: 1 
+        });
+        setStartPaymentCuotaAdhesion(pagoResp.data);
+
+        setActiveStep('Seguridad');
       } catch (err) {
         showError('Error al crear la adhesión. Intenta nuevamente.');
+      }finally{
+        setIsCreatingAdhesion(false)
       }
       break;
 }
 
       case 'Contrato':
-        startPaymentAdhesion()
-        setActiveStep('Seguridad');
+        setActiveStep('Adhesion');
         break;
 
       case 'Seguridad':
@@ -313,24 +336,25 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
             setActiveStep('Firma');
           } else {
             // Primero validar el 2FA, luego pagar la cuota de adhesión
-      await handleConfirmarPago2FA(codigo2FA);
+            
+            await handleConfirmarPago2FA(codigo2FA);
  
-      // Si hay adhesionId, iniciar pago de la primera cuota (redirige a MP)
-      if (adhesionId) {
-        try {
-          const pagoAdhesionId = startPaymentCuotaAdhesion?.pagoAdhesionId
-          const res = await confirmarPagoCuota({
-            pagoAdhesionId: pagoAdhesionId!,
-            codigo_2fa: codigo2FA,
-          });
-          if (res.data.redirectUrl) {
-            window.location.href = res.data.redirectUrl;
-            return; // detener — el usuario sale a MP
+        // Si hay adhesionId, iniciar pago de la primera cuota (redirige a MP)
+        if (adhesionId) {
+          try {
+            const pagoAdhesionId = startPaymentCuotaAdhesion?.pagoAdhesionId
+            const res = await confirmarPagoCuota({
+              pagoAdhesionId: pagoAdhesionId!,
+              codigo_2fa: codigo2FA,
+            });
+            if (res.data.redirectUrl) {
+              window.location.href = res.data.redirectUrl;
+              return; // detener — el usuario sale a MP
+            }
+          } catch (err) {
+            showError('Error al iniciar el pago. Intenta nuevamente.');
           }
-        } catch (err) {
-          showError('Error al iniciar el pago. Intenta nuevamente.');
         }
-      }
     }
   }
     
@@ -350,7 +374,13 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
           return;
         }
         if (signatureDataUrl && location) {
-          await handleSignContract(signatureDataUrl, signaturePosition, location, codigo2FAFirma);
+          await handleSignContract(
+            signatureDataUrl, 
+            signaturePosition, 
+            location, 
+            codigo2FAFirma,
+            targetSuscripcionId ?? undefined  // ← pasar el id específico
+          );
         }
         break;
     }
@@ -375,6 +405,7 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
       setSignaturePosition(null);
       setLocation(null);
       setTransaccionId(null);
+      setTargetSuscripcionId(null);
       hasAttemptedRecovery.current = false;
     }, 300);
   }, [isVerificandoPago, isProcessing, onClose, paymentStatus, activeStep, setPaymentStatus, setTransaccionId]);
@@ -389,6 +420,7 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
   }, [activeStep, codigo2FA, codigo2FAFirma, location, signatureDataUrl, signaturePosition]);
 
   const getButtonText = () => {
+    if (isCreatingAdhesion) return 'Procesando...'
     if (isProcessing) return 'Procesando...';
     if (activeStep === 'Firma') return 'Firmar Contrato';
     if (activeStep === 'Seguridad' && paymentStatus === 'success') return 'Continuar a Firma';
@@ -505,9 +537,9 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
               variant="contained"
               color={activeStep === 'Firma' ? 'success' : 'primary'}
               onClick={handleStepAction}
-              disabled={!isStepValid || isProcessing}
+              disabled={!isStepValid || isProcessing || isCreatingAdhesion}
               endIcon={
-                isProcessing
+                isProcessing || isCreatingAdhesion
                   ? <CircularProgress size={20} color="inherit" />
                   : activeStep === 'Firma'
                   ? <CloudUpload />

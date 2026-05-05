@@ -30,7 +30,17 @@ const getEstadoCuotaConfig = (estado: string) => {
 				icon: <Schedule fontSize="small" />,
 			};
 		case "pagado":
+			return {
+				label: "Pagado",
+				color: "success" as const,
+				icon: <CheckCircle fontSize="small" />,
+			};
 		case "forzado":
+			return {
+				label: "Forzado",
+				color: "warning" as const,
+				icon: <CheckCircle fontSize="small" />,
+			};
 		case "cubierto_por_puja":
 			return {
 				label: "Pagado",
@@ -69,15 +79,28 @@ export const DetalleCuotaAdhesionModal: React.FC<Props> = ({
 		adhesion.proyecto?.nombre_proyecto || `Adhesión #${adhesion.id}`;
 
 	// Próxima cuota pendiente o vencida
-	const nextPago = (adhesion.pagos || []).find((p) =>
-		["pendiente", "vencido"].includes(p.estado),
-	);
+	const nextPago = [...(adhesion.pagos || [])]
+		.sort((a, b) => a.numero_cuota - b.numero_cuota)
+		.find((p) => ["pendiente", "vencido"].includes(p.estado));
 
 	const cuotasPagadas = (adhesion.pagos || []).filter((p) =>
 		["pagado", "forzado", "cubierto_por_puja"].includes(p.estado),
 	).length;
 
 	const cuotasTotales = adhesion.pagos?.length || 0;
+
+	const pagosOrdenados = [...(adhesion.pagos || [])].sort((a, b) => {
+		const isPaidA = ["pagado", "forzado", "cubierto_por_puja"].includes(a.estado);
+		const isPaidB = ["pagado", "forzado", "cubierto_por_puja"].includes(b.estado);
+
+		// Primero las NO pagadas
+		if (isPaidA !== isPaidB) {
+			return isPaidA ? 1 : -1;
+		}
+
+		// Dentro del mismo grupo → ordenar por número de cuota
+		return a.numero_cuota - b.numero_cuota;
+	});
 
 	return (
 		<BaseModal
@@ -145,7 +168,7 @@ export const DetalleCuotaAdhesionModal: React.FC<Props> = ({
 						</Typography>
 					) : (
 						<Stack spacing={1.5}>
-							{adhesion.pagos.map((cuota) => {
+							{pagosOrdenados.map((cuota) => {
 								const { label, color, icon } = getEstadoCuotaConfig(cuota.estado);
 								const isPaid = ["pagado", "forzado", "cubierto_por_puja"].includes(
 									cuota.estado,
@@ -196,7 +219,10 @@ export const DetalleCuotaAdhesionModal: React.FC<Props> = ({
 
 											{isPaid && cuota.fecha_pago ? (
 												<Typography variant="caption" color="success.main" fontWeight={600}>
-													Pagado el {new Date(cuota.fecha_pago).toLocaleDateString("es-AR")}
+													Pagado el{" "}
+													{new Date(cuota.fecha_pago).toLocaleDateString("es-AR", {
+														timeZone: "UTC",
+													})}
 												</Typography>
 											) : (
 												<Typography
@@ -205,7 +231,9 @@ export const DetalleCuotaAdhesionModal: React.FC<Props> = ({
 													fontWeight={isVencida ? 700 : 400}
 												>
 													Vence:{" "}
-													{new Date(cuota.fecha_vencimiento).toLocaleDateString("es-AR")}
+													{new Date(cuota.fecha_vencimiento).toLocaleDateString("es-AR", {
+														timeZone: "UTC",
+													})}
 												</Typography>
 											)}
 										</Box>

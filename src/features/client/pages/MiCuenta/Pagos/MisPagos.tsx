@@ -227,27 +227,32 @@ const MisPagos: React.FC = () => {
 
   // ✅ Procesamiento de Adhesiones (Evaluamos la Adhesión entera, no aplanamos)
   const { adhesionFilteredData, adhesionCounts } = useMemo(() => {
-    const adhesiones = adhesionesQuery.data || [];
-    
-    let pendientes = 0;
-    let vencidas = 0;
-
-    adhesiones.forEach(adh => {
-      const pagosPendientes = (adh.pagos || []).filter(p => p.estado === 'pendiente').length;
-      const pagosVencidos = (adh.pagos || []).filter(p => p.estado === 'vencido').length;
-      pendientes += pagosPendientes;
-      vencidas += pagosVencidos;
-    });
-
-    return {
-      adhesionFilteredData: adhesiones, // Retornamos la Adhesión completa para listarla
-      adhesionCounts: {
-        totalActivas: pendientes + vencidas, // Usado en el badge del tab
-        pendientes,
-        vencidas
-      }
-    };
-  }, [adhesionesQuery.data]);
+    const raw = adhesionesQuery.data;
+  const adhesiones: AdhesionDto[] = Array.isArray(raw)
+    ? raw
+    : Array.isArray((raw as any)?.data)
+    ? (raw as any).data
+    : [];
+ 
+  let pendientes = 0;
+  let vencidas = 0;
+ 
+  adhesiones.forEach(adh => {
+    const pagosPendientes = (adh.pagos || []).filter(p => p.estado === 'pendiente').length;
+    const pagosVencidos = (adh.pagos || []).filter(p => p.estado === 'vencido').length;
+    pendientes += pagosPendientes;
+    vencidas += pagosVencidos;
+  });
+ 
+  return {
+    adhesionFilteredData: adhesiones,
+    adhesionCounts: {
+      totalActivas: pendientes + vencidas,
+      pendientes,
+      vencidas
+    }
+  };
+}, [adhesionesQuery.data]);
 
   const handleProyectoChange = (event: SelectChangeEvent) => {
     setSelectedProyectoId(event.target.value);

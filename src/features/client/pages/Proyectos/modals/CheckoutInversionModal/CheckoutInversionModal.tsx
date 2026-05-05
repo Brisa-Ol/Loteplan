@@ -65,6 +65,7 @@ import CuotaMensualService from '@/core/api/services/cuotaMensual.service';
 import { env } from '@/core/config/env';
 import type { ContratoTrackingResponse } from '@/core/types/contrato.dto';
 import type { ProyectoDto } from '@/core/types/proyecto.dto';
+import type { TrackPaymentAndContractResponseDto } from '@/core/types/contrato-firmado.dto';
 
 // ===================================================
 // CONSTANTS
@@ -72,9 +73,9 @@ import type { ProyectoDto } from '@/core/types/proyecto.dto';
 const CODIGO_2FA_LENGTH = 6;
 
 const STEPS = [
-  { label: 'Seguridad', icon: <Security /> },
   { label: 'Resumen', icon: <ShoppingCart /> },
   { label: 'Contrato', icon: <Description /> },
+  { label: 'Seguridad', icon: <Security /> },
   { label: 'Pago', icon: <Payment /> },
   { label: 'Firma', icon: <Draw /> },
 ] as const;
@@ -89,7 +90,7 @@ export interface CheckoutInversionModalProps {
   tipo: 'suscripcion' | 'inversion';
   inversionId?: number;
   pagoId?: number;
-  trackingData?: ContratoTrackingResponse | null
+  trackingData?: ContratoTrackingResponse | TrackPaymentAndContractResponseDto | null
 }
 
 interface SignaturePosition {
@@ -579,7 +580,6 @@ export const CheckoutInversionModal: React.FC<CheckoutInversionModalProps> = ({
 
     const transaccionIdSaved = savedState?.transactionId
 
-    const inversionIdSaved = savedState?.inversionId;
 
     // ===================================================
     // 🔥 CASO PRINCIPAL: SI HAY TX → SIEMPRE VERIFICAR PAGO
