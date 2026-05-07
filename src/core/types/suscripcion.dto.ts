@@ -29,7 +29,7 @@ export interface MorosidadDTO {
 export interface CancelacionDTO {
   tasa_cancelacion: number;
   total_canceladas: number;
-  total_suscripciones: number; // ❌ faltaba este campo
+  total_suscripciones: number; 
 
 }
 
@@ -42,6 +42,8 @@ export interface SuscripcionDto extends BaseDTO {
   saldo_a_favor: string;
   monto_total_pagado: string;
   adhesion_completada: boolean;
+  standby_active?: boolean;
+  standby_end_date?: string | null;
   createdAt: string;
   updatedAt: string;
   usuario?: {

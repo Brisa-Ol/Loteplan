@@ -13,7 +13,8 @@ import {
   Security,
   TrendingUp,
   VerifiedUser,
-  Warning
+  Warning,
+  PauseCircleOutline // 🆕 Importamos el ícono de pausa
 } from '@mui/icons-material';
 import {
   Avatar,
@@ -503,6 +504,7 @@ const UserDashboard: React.FC = () => {
                     .map((resumen) => {
                       const tieneMora = pagos?.some(p => p.id_suscripcion === resumen.id_suscripcion && p.estado_pago === 'pendiente' && new Date(p.fecha_vencimiento) < new Date());
                       const subActiva = suscripciones?.find(s => s.id === resumen.id_suscripcion);
+                      
                       return (
                         <Card key={resumen.id} elevation={0} sx={{
                           borderRadius: 3, border: `1px solid ${theme.palette.divider}`, transition: 'all 0.2s',
@@ -517,8 +519,21 @@ const UserDashboard: React.FC = () => {
                                     <Typography className={styles.saldoAFavor} variant="h5">Saldo a favor: ${subActiva.saldo_a_favor}</Typography>
                                   )}
                                 </Box>
-                                <Chip label={`${resumen.cuotas_pagadas}/${resumen.meses_proyecto || 0} cuotas`} size="small" variant="outlined" sx={{ mt: 0.5, fontWeight: 700 }} />
-                                {tieneMora && <Chip label="Mora" color="error" size="small" sx={{ ml: 1, fontWeight: 800 }} />}
+                                {/* 🆕 Agrupamos las etiquetas para que se vean alineadas, incluyendo la de pausa */}
+                                <Stack direction="row" spacing={1} sx={{ mt: 1 }} flexWrap="wrap" useFlexGap>
+                                  <Chip label={`${resumen.cuotas_pagadas}/${resumen.meses_proyecto || 0} cuotas`} size="small" variant="outlined" sx={{ fontWeight: 700 }} />
+                                  {tieneMora && <Chip label="Mora" color="error" size="small" sx={{ fontWeight: 800 }} />}
+                                  {subActiva?.standby_active && (
+                                    <Chip
+                                      icon={<PauseCircleOutline sx={{ fontSize: '14px !important' }} />}
+                                      label={subActiva.standby_end_date ? `PAUSADO HASTA ${new Date(subActiva.standby_end_date + 'T00:00:00').toLocaleDateString('es-AR')}` : 'EN PAUSA'}
+                                      color="warning"
+                                      size="small"
+                                      variant="outlined"
+                                      sx={{ fontWeight: 800 }}
+                                    />
+                                  )}
+                                </Stack>
                               </Box>
                               <IconButton onClick={() => navigate('/client/finanzas/resumenes')} sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}><Assessment /></IconButton>
                             </Stack>
