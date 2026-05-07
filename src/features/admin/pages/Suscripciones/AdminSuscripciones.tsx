@@ -3,6 +3,7 @@
 import { AdminPageHeader, AlertBanner, PageContainer } from '@/shared';
 import { Box, Chip, Stack } from '@mui/material';
 import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom'; // 🆕 IMPORTAR USENAVIGATE
 import { useAdminSuscripciones } from '../../hooks/finanzas/useAdminSuscripciones';
 import CancelacionesTab from './components/CancelacionesTab';
 import SuscripcionesActiveTab from './components/SuscripcionesActiveTab';
@@ -10,6 +11,7 @@ import AdhesionesTab from './components/AdhesionesTab';
 
 const AdminSuscripciones: React.FC = () => {
   const logic = useAdminSuscripciones();
+  const navigate = useNavigate(); // 🆕 INICIALIZAR NAVEGACIÓN
 
   // Estados para el filtro de fechas
   const [startDate, setStartDate] = useState('');
@@ -17,7 +19,6 @@ const AdminSuscripciones: React.FC = () => {
 
   // Lógica de filtrado interceptando la fecha 'createdAt'
   const dataConFiltroFechas = useMemo(() => {
-    // Aquí el hook original nos devuelve "filteredSuscripciones"
     const baseData = logic.filteredSuscripciones || []; 
     
     return baseData.filter((item: any) => {
@@ -53,21 +54,28 @@ const AdminSuscripciones: React.FC = () => {
     sessionStorage.setItem('adminSuscripcionesTab', index.toString());
   };
 
+  // 🆕 BLOQUE ACTUALIZADO PARA NAVEGAR A RESÚMENES CON FILTRO
   const criticalAlerts = useMemo(() => {
     if (logic.stats.tasaMorosidad <= 15) return [];
     return [{
       severity: 'error' as const,
       title: 'Morosidad Crítica',
       message: `La tasa de morosidad es del ${logic.stats.tasaMorosidad}% ($${Number(logic.stats.totalEnRiesgo).toLocaleString()} en riesgo).`,
-      action: { label: 'Ver Morosos', onClick: () => logic.setTabIndex(1) },
+      action: { 
+        label: 'Ver Morosos', 
+        onClick: () => {
+          sessionStorage.setItem('resumenesFilter', 'overdue');
+          navigate('/admin/resumenes'); // ⚠️ Asegúrate de que esta sea la ruta correcta en tu AppRouter
+        } 
+      },
     }];
-  }, [logic]);
+  }, [logic, navigate]);
 
-const TABS = [
-  { label: 'Suscripciones Activas', index: 0 },
-  { label: 'Adhesiones',            index: 1 }, // 🆕
-  { label: 'Historial de Bajas',    index: 2 }, // era index 1
-];
+  const TABS = [
+    { label: 'Suscripciones Activas', index: 0 },
+    { label: 'Adhesiones',            index: 1 },
+    { label: 'Historial de Bajas',    index: 2 }, 
+  ];
 
   return (
     <PageContainer maxWidth="xl" sx={{ py: 3 }}>
@@ -92,18 +100,17 @@ const TABS = [
         </Stack>
       </Box>
 
-      {/* Le inyectamos la data filtrada correcta (filteredSuscripciones) y los estados de fecha */}
       {logic.tabIndex === 0 && (
-  <SuscripcionesActiveTab
-    logic={{ ...logic, filteredSuscripciones: dataConFiltroFechas }}
-    startDate={startDate}
-    setStartDate={setStartDate}
-    endDate={endDate}
-    setEndDate={setEndDate}
-  />
-)}
-{logic.tabIndex === 1 && <AdhesionesTab />}        {/* 🆕 */}
-{logic.tabIndex === 2 && <CancelacionesTab />}     {/* era 1 */}
+        <SuscripcionesActiveTab
+          logic={{ ...logic, filteredSuscripciones: dataConFiltroFechas }}
+          startDate={startDate}
+          setStartDate={setStartDate}
+          endDate={endDate}
+          setEndDate={setEndDate}
+        />
+      )}
+      {logic.tabIndex === 1 && <AdhesionesTab />}        
+      {logic.tabIndex === 2 && <CancelacionesTab />}    
     </PageContainer>
   );
 };
