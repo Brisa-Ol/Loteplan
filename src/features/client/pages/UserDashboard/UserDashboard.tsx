@@ -1,9 +1,7 @@
 import {
   AccountBalanceWallet,
   ArrowForward,
-  Assessment,
   CheckCircle,
-  ChevronRight,
   Close,
   EmojiEvents,
   Gavel,
@@ -24,7 +22,6 @@ import {
   Container,
   Fade,
   IconButton,
-  LinearProgress,
   Paper,
   Stack,
   Typography,
@@ -47,7 +44,7 @@ import PagoService from '@/core/api/services/pago.service';
 import PujaService from '@/core/api/services/puja.service';
 import ResumenCuentaService from '@/core/api/services/resumenCuenta.service';
 import SuscripcionService from '@/core/api/services/suscripcion.service';
-import styles from './UserDashboard.module.css';
+import { MiInversions } from './MiInversions/MiInversions';
 
 // 🛠 Utility: Calcular días restantes para vencimientos
 const calculateDaysRemaining = (dateString?: string): number => {
@@ -482,58 +479,10 @@ const UserDashboard: React.FC = () => {
                   ))}
                 </Box>
 
-                <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
-                  <Typography variant="h5" fontWeight={800}>Mis Inversiones Activas</Typography>
-                  <Button endIcon={<ChevronRight />} onClick={() => navigate('/client/finanzas/suscripciones')} sx={{ fontWeight: 700 }}>Ver Todas</Button>
-                </Stack>
-
-                {/* ========== LISTA DE INVERSIONES ========== */}
-                <Stack spacing={3}>
-                  {resumenes
-                    ?.filter((resumen) => {
-                      if (resumen.id_suscripcion) {
-                        const subActiva = suscripciones?.find(s => s.id === resumen.id_suscripcion);
-                        return subActiva ? subActiva.activo === true : false;
-                      }
-                      if (resumen.hasOwnProperty('activo')) {
-                        return resumen.activo === true;
-                      }
-                      return true;
-                    })
-                    .map((resumen) => {
-                      const tieneMora = pagos?.some(p => p.id_suscripcion === resumen.id_suscripcion && p.estado_pago === 'pendiente' && new Date(p.fecha_vencimiento) < new Date());
-                      const subActiva = suscripciones?.find(s => s.id === resumen.id_suscripcion);
-                      return (
-                        <Card key={resumen.id} elevation={0} sx={{
-                          borderRadius: 3, border: `1px solid ${theme.palette.divider}`, transition: 'all 0.2s',
-                          '&:hover': { transform: 'translateY(-4px)', borderColor: 'primary.main', boxShadow: theme.shadows[4] }
-                        }}>
-                          <CardContent sx={{ p: 3 }}>
-                            <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
-                              <Box>
-                                <Box className={styles.resumenHeader}>
-                                  <Typography variant="h6" fontWeight={800}>{resumen.nombre_proyecto}</Typography>
-                                  {subActiva && Number(subActiva.saldo_a_favor) > 0 && (
-                                    <Typography className={styles.saldoAFavor} variant="h5">Saldo a favor: ${subActiva.saldo_a_favor}</Typography>
-                                  )}
-                                </Box>
-                                <Chip label={`${resumen.cuotas_pagadas}/${resumen.meses_proyecto || 0} cuotas`} size="small" variant="outlined" sx={{ mt: 0.5, fontWeight: 700 }} />
-                                {tieneMora && <Chip label="Mora" color="error" size="small" sx={{ ml: 1, fontWeight: 800 }} />}
-                              </Box>
-                              <IconButton onClick={() => navigate('/client/finanzas/resumenes')} sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}><Assessment /></IconButton>
-                            </Stack>
-                            <Stack spacing={1}>
-                              <Stack direction="row" justifyContent="space-between">
-                                <Typography variant="body2" fontWeight={700} color="text.secondary">Avance del Plan</Typography>
-                                <Typography variant="body2" fontWeight={800} color="primary.main">{Number(resumen.porcentaje_pagado || 0).toFixed(0)}%</Typography>
-                              </Stack>
-                              <LinearProgress variant="determinate" value={Number(resumen.porcentaje_pagado || 0)} sx={{ height: 10, borderRadius: 5, bgcolor: alpha(theme.palette.primary.main, 0.1) }} />
-                            </Stack>
-                          </CardContent>
-                        </Card>
-                      );
-                    })}
-                </Stack>
+                <MiInversions
+                  resumenes={resumenes} 
+                  suscripciones={suscripciones} 
+                  pagos={pagos} />
               </Box>
 
               {/* ========== SIDEBAR DERECHO ========== */}
