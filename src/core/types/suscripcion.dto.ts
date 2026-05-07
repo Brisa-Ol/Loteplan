@@ -1,5 +1,4 @@
 import type { BaseDTO } from "./base.dto";
-import type { ContratoFirmadoResponseDto } from "./contrato-firmado.dto";
 
 // --- DTOs de Entrada (Payloads) ---
 export interface IniciarSuscripcionDto {
@@ -60,13 +59,13 @@ export interface SuscripcionDto extends BaseDTO {
     plazo_inversion: number;
     obj_suscripciones: number;
     suscripciones_actuales: number;
-    
+
   };
 }
 
 export interface ProyectoDirectoDTO {
-    id: number,
-    nombre_proyecto: string
+  id: number,
+  nombre_proyecto: string
 }
 
 export interface SuscripcionCanceladaDto extends BaseDTO {
@@ -103,7 +102,7 @@ export interface SuscripcionDetalleTrackDto {
   cuotas_pagadas: number;
   cuotas_totales: number;
   puede_firmar: boolean;
-  
+
   tiene_contrato_firmado: boolean;
   tiene_pago_adhesion: boolean;
 
