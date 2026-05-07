@@ -34,6 +34,9 @@ export const ROUTES = {
       TRANSACCIONES: '/client/finanzas/transacciones',
       RESUMENES: '/client/finanzas/resumenes',
       PAGO_ESTADO: '/client/finanzas/pago-estado', // Callback MP
+      PAGO_EXITO:    '/pago/exito/:id',
+      PAGO_FALLO:    '/pago/fallo/:id',
+      PAGO_PENDIENTE: '/pago/pendiente/:id',
     },
 
     // Sub-sección Cuenta

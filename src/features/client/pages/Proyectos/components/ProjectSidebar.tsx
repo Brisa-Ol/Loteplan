@@ -451,8 +451,8 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({ logic, proyecto,
           </Typography>
 
           <Box component="ul" sx={{ pl: 2, m: 0, '& li': { mb: 1, fontSize: '0.875rem' } }}>
+            <li>Deberás realizar un nuevo pago de Adhesion.</li>
             <li>Se generará una <strong>nueva suscripción independiente</strong>.</li>
-            <li>Deberás realizar el pago de la cuota de ingreso hoy.</li>
             <li>Obtendrás un <strong>Token adicional</strong> para pujas mensuales.</li>
           </Box>
         </Stack>

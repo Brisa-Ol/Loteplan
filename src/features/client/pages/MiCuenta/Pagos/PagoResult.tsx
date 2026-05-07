@@ -9,6 +9,7 @@ import {
   Refresh
 } from '@mui/icons-material';
 import {
+  Alert,
   alpha,
   Avatar,
   Box,
@@ -22,18 +23,27 @@ import {
 } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import React from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import MercadoPagoService from '@/core/api/services/pagoMercado.service';
 import { env } from '@/core/config/env';
 import { PageContainer } from '../../../../../shared/components/layout/PageContainer';
 
-const PagoResult: React.FC = () => {
+interface PagoResultProps {
+initialStatus?: 'success' | 'failed' | 'pending';
+}
+
+
+const PagoResult: React.FC<PagoResultProps> = ({ initialStatus }) => {
   const theme = useTheme();
+  const { id: paramId } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
+  const queryId = searchParams.get('transaccion');  
   const navigate = useNavigate();
 
-  const transaccionId = searchParams.get('transaccion');
+  const transaccionId =  paramId ?? queryId;
+
+  
 
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['paymentStatus', transaccionId],
@@ -59,8 +69,15 @@ const PagoResult: React.FC = () => {
     const estadoTx = data?.transaccion?.estado;
     const estadoPasarela = data?.pagoPasarela?.estado;
 
+    const estadoEfectivo = estadoTx ?? (
+      initialStatus === 'success' ? 'pagado' :
+      initialStatus === 'failed'  ? 'fallido' :
+      'pendiente'
+    );
+
+
     // 1. ÉXITO
-    if (estadoTx === 'pagado') {
+    if (estadoEfectivo === 'pagado') {
       return {
         icon: <CheckCircle sx={{ fontSize: 64 }} />,
         title: '¡Pago Confirmado!',
@@ -71,7 +88,7 @@ const PagoResult: React.FC = () => {
     }
 
     // 2. FALLO
-    if (['fallido', 'reembolsado', 'rechazado_por_capacidad', 'rechazado_proyecto_cerrado', 'expirado'].includes(estadoTx || '')) {
+    if (['fallido', 'reembolsado', 'rechazado_por_capacidad', 'rechazado_proyecto_cerrado', 'expirado'].includes(estadoEfectivo || '')) {
       const detalle = estadoPasarela === 'rechazado'
         ? 'El método de pago fue rechazado por la entidad financiera.'
         : 'Hubo un problema al procesar tu solicitud.';
@@ -257,6 +274,23 @@ const PagoResult: React.FC = () => {
             Ver Movimientos
           </Button>
         </Stack>
+        {data?.transaccion?.estado === "pagado" && (
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} padding={1} justifyContent="center" >
+            <Alert
+                    severity="success"
+                    icon={<CheckCircle />}
+                    sx={{ borderRadius: 2 }}
+                  >
+                    <Typography variant="body2" fontWeight={700} mb={0.5}>
+                      Recuerda Firmar
+                    </Typography>
+                    <Typography variant="caption">
+                      En caso de que hayas pagado tu primer Adhesion es necesario que regreses al proyecto y firmes el contrato para completar tu proceso de inversión.
+                    </Typography>
+                  </Alert>
+
+          </Stack>
+        )}
       </Card>
 
     </PageContainer>

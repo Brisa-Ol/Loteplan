@@ -116,6 +116,9 @@ const AppRouter = () => {
           <Route path={ROUTES.CLIENT.FINANZAS.TRANSACCIONES} element={<ProtectedRoute><MisTransacciones /></ProtectedRoute>} />
           <Route path={ROUTES.CLIENT.FINANZAS.RESUMENES} element={<ProtectedRoute><MisResumenes /></ProtectedRoute>} />
           <Route path={ROUTES.CLIENT.FINANZAS.PAGO_ESTADO} element={<ProtectedRoute><PagoResult /></ProtectedRoute>} />
+          <Route path="/pago/exito/:id"     element={<PagoResult initialStatus="success" />} />
+          <Route path="/pago/fallo/:id"     element={<PagoResult initialStatus="failed" />} />
+          <Route path="/pago/pendiente/:id" element={<PagoResult initialStatus="pending" />} />
 
           {/* Lotes */}
           <Route path={ROUTES.CLIENT.LOTES.DETALLE} element={<ProtectedRoute><DetalleLote /></ProtectedRoute>} />
