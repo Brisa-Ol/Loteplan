@@ -317,11 +317,7 @@ const AdminDashboard: React.FC = () => {
                         size="small"
                         sx={{ mt: 1, borderRadius: 2, fontWeight: 'bold' }}
                         onClick={() => {
-                          // 1. Forzamos que la próxima vez que cargue la vista de suscripciones, abra la pestaña 2
                           sessionStorage.setItem('adminSuscripcionesTab', '2');
-
-                          // 2. Navegamos a la pantalla "Gestión de Planes de Ahorro"
-                          // ⚠️ IMPORTANTE: Cambia esta ruta por la URL real que uses en tu proyecto
                           navigate('/admin/suscripciones');
                         }}
                       >

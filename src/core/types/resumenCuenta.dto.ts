@@ -62,7 +62,8 @@ export interface ResumenCuentaDto extends BaseDTO {
   suscripcion?: {
     id: number;
     id_usuario: number;
-    meses_a_pagar?: number; // 🆕
+    meses_a_pagar?: number; // 
+    activo: boolean;
     usuario?: {
       id: number;
       nombre: string;

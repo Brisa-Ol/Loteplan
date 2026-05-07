@@ -3,12 +3,11 @@
 import type { ResumenCuentaDto } from '@/core/types/resumenCuenta.dto';
 import BaseModal from '@/shared/components/domain/modals/BaseModal';
 import { AccountBalance, AddCircleOutline, AttachMoney } from '@mui/icons-material';
-import { alpha, Box, Button, Chip, CircularProgress, Divider, LinearProgress, Paper, Stack, TextField, Typography, useTheme } from '@mui/material';
+import { alpha, Box, Button, Chip, CircularProgress, Divider, LinearProgress, Paper, Stack, TextField, Typography, useTheme, Alert } from '@mui/material'; // 👈 Se agregó Alert
 import React from 'react';
 import { useDetalleResumenModal } from './hooks/useDetalleResumenModal';
 import { HistorialPagosPanel } from './SeccionPagos';
 import { PendingPaymentsPanel } from './Seccionpagospendientes';
-
 
 interface Props {
   open: boolean;
@@ -22,6 +21,9 @@ const DetalleResumenModal: React.FC<Props> = ({ open, onClose, resumen }) => {
 
   if (!resumen) return null;
 
+  // 🆕 Detectamos si la suscripción está inactiva
+  const estaInactiva = resumen.suscripcion?.activo === false;
+
   return (
     <>
       <BaseModal
@@ -32,6 +34,13 @@ const DetalleResumenModal: React.FC<Props> = ({ open, onClose, resumen }) => {
       >
         <Stack spacing={4}>
 
+          {/* 🆕 ALERTA: Si el plan está inactivo, lo avisamos claramente */}
+          {estaInactiva && (
+            <Alert severity="error" variant="filled" sx={{ borderRadius: 2, fontWeight: 700 }}>
+              Esta suscripción se encuentra dada de baja (Inactiva). No es posible generar nuevas cuotas ni adelantos.
+            </Alert>
+          )}
+
           {/* 1. PROGRESO */}
           <Box>
             <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
@@ -39,14 +48,15 @@ const DetalleResumenModal: React.FC<Props> = ({ open, onClose, resumen }) => {
                 Avance del Plan: {resumen.porcentaje_pagado}%
               </Typography>
               <Chip
-                label={h.isCompleted ? 'PLAN FINALIZADO' : h.hasOverdue ? 'DEUDA PENDIENTE' : 'PLAN AL DÍA'}
-                color={h.isCompleted ? 'success' : h.hasOverdue ? 'error' : 'info'}
+                // 🆕 Cambiamos el texto del Chip si está inactiva
+                label={estaInactiva ? 'PLAN INACTIVO' : h.isCompleted ? 'PLAN FINALIZADO' : h.hasOverdue ? 'DEUDA PENDIENTE' : 'PLAN AL DÍA'}
+                color={estaInactiva ? 'error' : h.isCompleted ? 'success' : h.hasOverdue ? 'error' : 'info'}
                 size="small" sx={{ fontWeight: 800, borderRadius: 1.5 }}
               />
             </Stack>
             <LinearProgress variant="determinate" value={Math.min(resumen.porcentaje_pagado, 100)}
               sx={{ height: 12, borderRadius: 6, mb: 2 }}
-              color={h.isCompleted ? 'success' : h.hasOverdue ? 'warning' : 'primary'}
+              color={estaInactiva ? 'error' : h.isCompleted ? 'success' : h.hasOverdue ? 'warning' : 'primary'}
             />
             <Stack direction="row" spacing={2}>
               <StatusCard label="PAGADAS" value={resumen.cuotas_pagadas} color="success" />
@@ -56,8 +66,8 @@ const DetalleResumenModal: React.FC<Props> = ({ open, onClose, resumen }) => {
             </Stack>
           </Box>
 
-          {/* 2. ADELANTOS */}
-          {h.puedeAdelantar && (
+          {/* 2. ADELANTOS - 🆕 Agregamos !estaInactiva a la condición para ocultarlo */}
+          {h.puedeAdelantar && !estaInactiva && (
             <Box sx={{ p: 2.5, border: '1px dashed', borderColor: 'primary.main', borderRadius: 4 }}>
               <Typography variant="caption" fontWeight={900} color="primary.main"
                 sx={{ display: 'block', mb: 2, textTransform: 'uppercase', letterSpacing: 1 }}>

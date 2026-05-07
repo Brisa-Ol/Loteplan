@@ -63,6 +63,10 @@ export const getResumenesColumns = (
             id: 'estado',
             label: 'Estado',
             render: (resumen) => {
+                // 🆕 1. Verificamos primero si la suscripción está inactiva
+                if (resumen.suscripcion?.activo === false) {
+                    return <StatusBadge status="failed" customLabel="INACTIVO" />;
+                }
                 if (resumen.porcentaje_pagado >= 100) return <StatusBadge status="completed" customLabel="FINALIZADO" />;
                 if (resumen.cuotas_vencidas > 0) return <StatusBadge status="failed" customLabel="CON DEUDA" />;
                 return <StatusBadge status="in_progress" customLabel="EN CURSO" />;
@@ -86,7 +90,6 @@ export const getResumenesColumns = (
         },
     ];
 
-    // Agregamos la columna de proyecto solo si NO es móvil
     if (!isMobile) {
         baseColumns.splice(1, 0, {
             id: 'proyecto',
