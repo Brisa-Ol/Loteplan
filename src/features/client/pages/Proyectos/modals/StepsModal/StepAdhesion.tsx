@@ -13,31 +13,31 @@ import {
 	Typography,
 	useTheme,
 } from "@mui/material";
-import { CalendarMonth, CheckCircle, Payments, Token } from "@mui/icons-material";
+import { CalendarMonth, CheckCircle} from "@mui/icons-material";
 import { type FC, useMemo } from "react";
 
 import type { PlanPagoAdhesion } from "@/core/types/adhesion.dto";
+import type { IPlan } from "../CheckoutWizardModal/CheckoutWizardModal";
 
 interface IStepAdhesionProps {
 	valorMovil: number;
 	planPago: PlanPagoAdhesion;
 	setPlanPago: (plan: PlanPagoAdhesion) => void;
 	formatCurrency: (value: number) => string;
+	PLANES: IPlan[];
 }
+
 
 const PORCENTAJE_ADHESION = 4.0;
 
-const PLANES: { value: PlanPagoAdhesion; label: string; cuotas: number; badge?: string }[] = [
-	{ value: "contado", label: "Contado", cuotas: 1, badge: "Sin recargo" },
-	{ value: "3_cuotas", label: "3 cuotas", cuotas: 3 },
-	{ value: "6_cuotas", label: "6 cuotas", cuotas: 6 },
-];
+
 
 export const StepAdhesion: FC<IStepAdhesionProps> = ({
 	valorMovil,
 	planPago,
 	setPlanPago,
 	formatCurrency,
+	PLANES
 }) => {
 	const theme = useTheme();
 

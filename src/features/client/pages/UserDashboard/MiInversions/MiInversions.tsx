@@ -1,7 +1,11 @@
 import type { PagoDto } from "@/core/types/pago.dto";
 import type { ResumenCuentaDto } from "@/core/types/resumenCuenta.dto";
 import type { SuscripcionDto } from "@/core/types/suscripcion.dto";
-import { Assessment, ChevronRight } from "@mui/icons-material";
+import {
+	Assessment,
+	ChevronRight,
+	PauseCircleOutline,
+} from "@mui/icons-material";
 import {
 	alpha,
 	Box,
@@ -35,24 +39,6 @@ export const MiInversions: FC<MiInversionsProps> = ({
 
 	return (
 		<>
-			<Stack
-				direction="row"
-				justifyContent="space-between"
-				alignItems="center"
-				mb={3}
-			>
-				<Typography variant="h5" fontWeight={800}>
-					Mis Inversiones Activas
-				</Typography>
-				<Button
-					endIcon={<ChevronRight />}
-					onClick={() => navigate("/client/finanzas/suscripciones")}
-					sx={{ fontWeight: 700 }}
-				>
-					Ver Todas
-				</Button>
-			</Stack>
-			{/* ========== LISTA DE INVERSIONES ========== */}
 			<Stack spacing={3}>
 				{resumenes
 					?.filter((resumen) => {
@@ -77,6 +63,7 @@ export const MiInversions: FC<MiInversionsProps> = ({
 						const subActiva = suscripciones?.find(
 							(s) => s.id === resumen.id_suscripcion,
 						);
+
 						return (
 							<Card
 								key={resumen.id}
@@ -110,20 +97,43 @@ export const MiInversions: FC<MiInversionsProps> = ({
 													</Typography>
 												)}
 											</Box>
-											<Chip
-												label={`${resumen.cuotas_pagadas}/${resumen.meses_proyecto || 0} cuotas`}
-												size="small"
-												variant="outlined"
-												sx={{ mt: 0.5, fontWeight: 700 }}
-											/>
-											{tieneMora && (
+											{/* 🆕 Agrupamos las etiquetas para que se vean alineadas, incluyendo la de pausa */}
+											<Stack
+												direction="row"
+												spacing={1}
+												sx={{ mt: 1 }}
+												flexWrap="wrap"
+												useFlexGap
+											>
 												<Chip
-													label="Mora"
-													color="error"
+													label={`${resumen.cuotas_pagadas}/${resumen.meses_proyecto || 0} cuotas`}
 													size="small"
-													sx={{ ml: 1, fontWeight: 800 }}
+													variant="outlined"
+													sx={{ fontWeight: 700 }}
 												/>
-											)}
+												{tieneMora && (
+													<Chip
+														label="Mora"
+														color="error"
+														size="small"
+														sx={{ fontWeight: 800 }}
+													/>
+												)}
+												{subActiva?.standby_active && (
+													<Chip
+														icon={<PauseCircleOutline sx={{ fontSize: "14px !important" }} />}
+														label={
+															subActiva.standby_end_date
+																? `PAUSADO HASTA ${new Date(subActiva.standby_end_date + "T00:00:00").toLocaleDateString("es-AR")}`
+																: "EN PAUSA"
+														}
+														color="warning"
+														size="small"
+														variant="outlined"
+														sx={{ fontWeight: 800 }}
+													/>
+												)}
+											</Stack>
 										</Box>
 										<IconButton
 											onClick={() => navigate("/client/finanzas/resumenes")}
