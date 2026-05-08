@@ -80,7 +80,12 @@ const SuscripcionService = {
   updateSuscription: async (id: number, data: SuscripcionDto): Promise<AxiosResponse<SuscripcionDto>> => {
     return await httpService.patch(`${BASE_PROYECTO}/${id}`, data);
   },
-
+activateStandby: async (id: number): Promise<AxiosResponse<{ message: string; suscripcion: SuscripcionDto }>> => {
+    return await httpService.post(`${BASE_PROYECTO}/${id}/standby/activate`);
+  },
+  deactivateStandby: async (id: number): Promise<AxiosResponse<{ message: string; suscripcion: SuscripcionDto }>> => {
+    return await httpService.delete(`${BASE_PROYECTO}/${id}/standby/deactivate`);
+  },
   // =================================================
   // 🛑 HISTORIAL DE CANCELACIONES (suscripcion.routes.js)
   // =================================================

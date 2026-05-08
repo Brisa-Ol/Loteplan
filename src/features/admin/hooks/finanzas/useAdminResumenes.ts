@@ -1,16 +1,12 @@
 // src/features/admin/hooks/finanzas/useAdminResumenes.ts
-
 import { useCallback, useMemo, useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { ResumenCuentaDto } from '@/core/types/resumenCuenta.dto';
 import ResumenCuentaService from '@/core/api/services/resumenCuenta.service';
 import { useModal } from '@/shared/hooks/useModal';
 import { useSortedData } from '../useSortedData';
-import { env } from '@/core/config/env'; // 👈 1. Importamos env
+import { env } from '@/core/config/env';
 
-// ============================================================================
-// DEBOUNCE HELPER
-// ============================================================================
 function useDebouncedValue<T>(value: T, delay: number = 300): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
   useEffect(() => {
@@ -20,57 +16,49 @@ function useDebouncedValue<T>(value: T, delay: number = 300): T {
   return debouncedValue;
 }
 
-// ============================================================================
-// HOOK PRINCIPAL
-// ============================================================================
 export const useAdminResumenes = () => {
-  // --- MODALES (Nivel Superior) ---
   const detalleModal = useModal();
 
-  // --- ESTADOS DE FILTRO ---
   const [searchTerm, setSearchTerm] = useState('');
-  // 🆕 Añadido 'pending' como opción de filtro
-  const [filterState, setFilterState] = useState<'all' | 'active' | 'completed' | 'overdue' | 'pending'>('all');
+  // 🆕 Agregamos 'inactive' a los tipos permitidos
+  const [filterState, setFilterState] = useState<'all' | 'active' | 'completed' | 'overdue' | 'pending' | 'inactive'>('all');
   const [selectedResumen, setSelectedResumen] = useState<ResumenCuentaDto | null>(null);
 
-  // ✨ Debounce
   const debouncedSearchTerm = useDebouncedValue(searchTerm, 300);
 
-  // --- QUERY OPTIMIZADA ---
   const { data: resumenesRaw = [], isLoading, error } = useQuery({
     queryKey: ['adminResumenes'],
     queryFn: async () => (await ResumenCuentaService.findAll()).data,
-    staleTime: env.queryStaleTime || 30000, // 👈 2. Aplicamos la variable global
+    staleTime: env.queryStaleTime || 30000,
     gcTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
 
-  // ✨ 1. ORDENAMIENTO + HIGHLIGHT
   const { sortedData: resumenesOrdenados, highlightedId } = useSortedData(resumenesRaw);
 
-  // --- FILTRADO (Memoizado + Debounce) ---
   const filteredResumenes = useMemo(() => {
     const term = debouncedSearchTerm.toLowerCase();
 
     return resumenesOrdenados.filter(resumen => {
-      // 1. Filtro de Estado
       let matchesState = true;
+      const esActiva = resumen.suscripcion?.activo !== false; // Considera true si es undefined por seguridad
 
+      // 🆕 2. Filtramos considerando el estado inactivo
       if (filterState === 'active') {
-        matchesState = resumen.porcentaje_pagado < 100 && resumen.cuotas_vencidas === 0;
+        matchesState = esActiva && resumen.porcentaje_pagado < 100 && resumen.cuotas_vencidas === 0;
       } else if (filterState === 'completed') {
         matchesState = resumen.porcentaje_pagado >= 100;
       } else if (filterState === 'overdue') {
-        matchesState = resumen.cuotas_vencidas > 0;
+        matchesState = esActiva && resumen.cuotas_vencidas > 0;
       } else if (filterState === 'pending') {
-        // 🆕 Filtro: cuotas generadas adelantadas pendientes de cobro
         const cuotasPendientes = resumen.meses_proyecto - resumen.cuotas_pagadas - resumen.cuotas_vencidas;
-        matchesState = cuotasPendientes > 0 && resumen.porcentaje_pagado < 100 && resumen.cuotas_vencidas === 0;
+        matchesState = esActiva && cuotasPendientes > 0 && resumen.porcentaje_pagado < 100 && resumen.cuotas_vencidas === 0;
+      } else if (filterState === 'inactive') {
+        matchesState = !esActiva; // Solo los que tienen activo === false
       }
 
       if (!matchesState) return false;
 
-      // 2. Filtro de Texto
       if (!term) return true;
 
       const nombreProyecto = (resumen.suscripcion?.proyectoAsociado?.nombre_proyecto || resumen.nombre_proyecto).toLowerCase();
@@ -89,7 +77,6 @@ export const useAdminResumenes = () => {
     });
   }, [resumenesOrdenados, debouncedSearchTerm, filterState]);
 
-  // --- HANDLERS ---
   const handleVerDetalle = useCallback((resumen: ResumenCuentaDto) => {
     setSelectedResumen(resumen);
     detalleModal.open();
@@ -101,23 +88,14 @@ export const useAdminResumenes = () => {
   }, [detalleModal]);
 
   return {
-    // State
     searchTerm, setSearchTerm,
     filterState, setFilterState,
     selectedResumen,
-
-    // UX
     highlightedId,
-
-    // Data
     filteredResumenes,
     isLoading,
     error,
-
-    // Modales
     detalleModal,
-
-    // Handlers
     handleVerDetalle,
     handleCloseModal
   };

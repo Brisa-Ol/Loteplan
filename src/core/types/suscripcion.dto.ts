@@ -1,5 +1,4 @@
 import type { BaseDTO } from "./base.dto";
-import type { ContratoFirmadoResponseDto } from "./contrato-firmado.dto";
 
 // --- DTOs de Entrada (Payloads) ---
 export interface IniciarSuscripcionDto {
@@ -30,7 +29,7 @@ export interface MorosidadDTO {
 export interface CancelacionDTO {
   tasa_cancelacion: number;
   total_canceladas: number;
-  total_suscripciones: number; // ❌ faltaba este campo
+  total_suscripciones: number; 
 
 }
 
@@ -43,6 +42,8 @@ export interface SuscripcionDto extends BaseDTO {
   saldo_a_favor: string;
   monto_total_pagado: string;
   adhesion_completada: boolean;
+  standby_active?: boolean;
+  standby_end_date?: string | null;
   createdAt: string;
   updatedAt: string;
   usuario?: {
@@ -60,13 +61,13 @@ export interface SuscripcionDto extends BaseDTO {
     plazo_inversion: number;
     obj_suscripciones: number;
     suscripciones_actuales: number;
-    
+
   };
 }
 
 export interface ProyectoDirectoDTO {
-    id: number,
-    nombre_proyecto: string
+  id: number,
+  nombre_proyecto: string
 }
 
 export interface SuscripcionCanceladaDto extends BaseDTO {
@@ -103,7 +104,7 @@ export interface SuscripcionDetalleTrackDto {
   cuotas_pagadas: number;
   cuotas_totales: number;
   puede_firmar: boolean;
-  
+
   tiene_contrato_firmado: boolean;
   tiene_pago_adhesion: boolean;
 

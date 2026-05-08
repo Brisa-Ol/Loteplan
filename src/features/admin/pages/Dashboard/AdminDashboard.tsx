@@ -9,11 +9,8 @@ import {
   Person,
   QueryStats,
   ReceiptLong,
-  RocketLaunch
-  ,
-
+  RocketLaunch,
   Schedule,
-
   Security,
   Speed,
   Star,
@@ -40,6 +37,7 @@ import { AdminPageHeader } from '@/shared/components/admin/Adminpageheader';
 import { QueryHandler } from '@/shared/components/data-grid/QueryHandler';
 import { StatCard } from '@/shared/components/domain/cards/StatCard';
 import { PageContainer } from '@/shared/components/layout/PageContainer';
+import { useNavigate } from 'react-router-dom';
 import { useAdminDashboard } from '../../hooks/useAdminDashboard';
 
 // ===========================================================================
@@ -119,7 +117,7 @@ const AlertaPrioritaria = React.memo<AlertaPrioritariaProps>(({
 const AdminDashboard: React.FC = () => {
   const logic = useAdminDashboard();
   const theme = useTheme();
-
+  const navigate = useNavigate();
   const accionesRapidas = useMemo(() => [
     { label: 'Usuarios', icon: <Person fontSize="small" />, path: '/admin/usuarios' },
     { label: 'Proyectos', icon: <Handyman fontSize="small" />, path: '/admin/proyectos' },
@@ -208,26 +206,26 @@ const AdminDashboard: React.FC = () => {
             <StatCard title="Éxito de Proyectos" value={`${toNumber(logic.completionRate?.tasa_culminacion)}%`} subtitle="Tasa de finalización" icon={<AssignmentTurnedIn />} color="info" />
             <StatCard title="Subastas Activas" value={logic.stats.subastasActivas} icon={<Gavel />} color="warning" />
             <StatCard
-  title="Adhesiones a Cobrar"
-  subtitle="Próximos vencimientos"
-  value={`$${Number(logic.stats.adhesionesPendienteCobro).toLocaleString('es-AR')}`}
-  icon={<Schedule />}
-  color="info"
-/>
-<StatCard
-  title="Adhesiones Vencidas"
-  subtitle="Deuda atrasada"
-  value={`$${Number(logic.stats.adhesionesVencidas).toLocaleString('es-AR')}`}
-  icon={<Warning />}
-  color="error"
-/>
-<StatCard
-  title="Tasa de Cobranza (Adhesiones)"
-  subtitle="Efectividad de pago"
-  value={`${logic.stats.adhesionesTasaCobranza}%`}
-  icon={<CheckCircle />}
-  color="success"
-/>
+              title="Adhesiones a Cobrar"
+              subtitle="Próximos vencimientos"
+              value={`$${Number(logic.stats.adhesionesPendienteCobro).toLocaleString('es-AR')}`}
+              icon={<Schedule />}
+              color="info"
+            />
+            <StatCard
+              title="Adhesiones Vencidas"
+              subtitle="Deuda atrasada"
+              value={`$${Number(logic.stats.adhesionesVencidas).toLocaleString('es-AR')}`}
+              icon={<Warning />}
+              color="error"
+            />
+            <StatCard
+              title="Tasa de Cobranza (Adhesiones)"
+              subtitle="Efectividad de pago"
+              value={`${logic.stats.adhesionesTasaCobranza}%`}
+              icon={<CheckCircle />}
+              color="success"
+            />
           </Box>
 
           {/* 5. TABS DE ANÁLISIS DETALLADO */}
@@ -275,17 +273,56 @@ const AdminDashboard: React.FC = () => {
               {logic.activeTab === 1 && (
                 <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
                   <Paper variant="outlined" sx={{ p: 4, borderRadius: 3, border: '2px solid', borderColor: 'warning.main', bgcolor: alpha(theme.palette.warning.main, 0.04) }}>
-                    <Stack spacing={2}>
-                      <Typography variant="h3" color="warning.dark">{toNumber(logic.morosidad?.tasa_morosidad)}%</Typography>
+                    <Stack spacing={2} alignItems="center"> {/* Opcional: agregué alignItems="center" para que quede centrado como el otro */}
+                      <Typography variant="h3" color="warning.dark">
+                        {toNumber(logic.morosidad?.tasa_morosidad)}%
+                      </Typography>
                       <Typography variant="h6">Tasa de Morosidad</Typography>
-                      <Typography variant="body2" color="text.secondary">Representa {formatearMoneda(logic.morosidad?.total_en_riesgo)} en cuotas vencidas actuales.</Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Representa {formatearMoneda(logic.morosidad?.total_en_riesgo)} en cuotas vencidas actuales.
+                      </Typography>
+
+                      {/* NUEVO BOTÓN PARA VER MOROSOS */}
+                      <Button
+                        variant="outlined"
+                        color="warning"
+                        size="small"
+                        sx={{ mt: 1, borderRadius: 2, fontWeight: 'bold' }}
+                        onClick={() => {
+                          // 1. Guardamos el filtro de morosos (Con Deuda)
+                          sessionStorage.setItem('resumenesFilter', 'overdue');
+
+                          // 2. Navegamos a Resúmenes de Cuenta
+                          navigate('/admin/resumenes');
+                        }}
+                      >
+                        Ver Morosos
+                      </Button>
                     </Stack>
                   </Paper>
                   <Paper variant="outlined" sx={{ p: 4, borderRadius: 3, border: '2px solid', borderColor: 'error.main', bgcolor: alpha(theme.palette.error.main, 0.04) }}>
-                    <Stack spacing={2}>
-                      <Typography variant="h3" color="error.dark">{toNumber(logic.cancelacion?.tasa_cancelacion)}%</Typography>
-                      <Typography variant="h6">Tasa de Cancelación (Churn)</Typography>
-                      <Typography variant="body2" color="text.secondary">Total de {logic.cancelacion?.total_canceladas ?? 0} suscripciones dadas de baja.</Typography>
+                    <Stack spacing={1} alignItems="center">
+                      <Typography variant="h3" color="error.dark">
+                        {toNumber(logic.cancelacion?.tasa_cancelacion)}%
+                      </Typography>
+                      <Typography variant="h6">Tasa de Cancelación</Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Total de {logic.cancelacion?.total_canceladas ?? 0} suscripciones dadas de baja.
+                      </Typography>
+
+                      {/* BOTÓN ACTUALIZADO */}
+                      <Button
+                        variant="outlined"
+                        color="error"
+                        size="small"
+                        sx={{ mt: 1, borderRadius: 2, fontWeight: 'bold' }}
+                        onClick={() => {
+                          sessionStorage.setItem('adminSuscripcionesTab', '2');
+                          navigate('/admin/suscripciones');
+                        }}
+                      >
+                        Ver Canceladas
+                      </Button>
                     </Stack>
                   </Paper>
                 </Box>

@@ -11,7 +11,8 @@ import {
   Security,
   TrendingUp,
   VerifiedUser,
-  Warning
+  Warning,
+  PauseCircleOutline // 🆕 Importamos el ícono de pausa
 } from '@mui/icons-material';
 import {
   Avatar,
