@@ -107,8 +107,11 @@ const ProyectoService = {
   // 📊 MÉTRICAS (KPIs) - ADMIN
   // =================================================
 
-  getCompletionRate: async (): Promise<CompletionRateDTO> => {
-    const { data } = await httpService.get<{ mensaje: string, data: CompletionRateDTO }>(`${BASE_ENDPOINT}/metricas/culminacion`);
+  getCompletionRate: async (fechaInicio?: string, fechaFin?: string): Promise<CompletionRateDTO> => {
+    // Volvemos a usar /metricas/culminacion
+    const { data } = await httpService.get<{ mensaje: string, data: CompletionRateDTO }>(`${BASE_ENDPOINT}/metricas/culminacion`, {
+      params: { fechaInicio, fechaFin }
+    });
     return data.data;
   },
 

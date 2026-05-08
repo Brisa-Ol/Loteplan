@@ -198,11 +198,11 @@ const CancelacionesTab: React.FC = () => {
 
             <FilterBar sx={{ mb: 3, p: 2 }}>
                 <Box sx={{ display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, gap: 2, alignItems: { xs: 'stretch', lg: 'center' }, width: '100%' }}>
-                    
+
                     <Box sx={{ flex: 1, minWidth: { xs: '100%', lg: 300 } }}>
                         <FilterSearch
                             placeholder="Buscar por ex-titular, proyecto o ID..."
-                            value={searchTerm} 
+                            value={searchTerm}
                             onSearch={setSearchTerm}
                             fullWidth
                         />
@@ -210,34 +210,34 @@ const CancelacionesTab: React.FC = () => {
 
                     <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2, flexWrap: 'wrap', alignItems: 'center', justifyContent: { xs: 'center', lg: 'flex-end' } }}>
                         <Stack direction="row" spacing={1} sx={{ width: { xs: '100%', sm: 'auto' } }}>
-                            <TextField 
-                                label="Desde" 
-                                type="date" 
-                                size="small" 
+                            <TextField
+                                label="Desde"
+                                type="date"
+                                size="small"
                                 InputLabelProps={{ shrink: true }}
-                                value={startDate} 
+                                value={startDate}
                                 onChange={(e) => setStartDate(e.target.value)}
                                 sx={dateInputStyles}
                             />
-                            <TextField 
-                                label="Hasta" 
-                                type="date" 
-                                size="small" 
+                            <TextField
+                                label="Hasta"
+                                type="date"
+                                size="small"
                                 InputLabelProps={{ shrink: true }}
-                                value={endDate} 
+                                value={endDate}
                                 onChange={(e) => setEndDate(e.target.value)}
-                                inputProps={{ min: startDate }} 
+                                inputProps={{ min: startDate }}
                                 sx={dateInputStyles}
                             />
                         </Stack>
 
                         <Tooltip title="Limpiar filtros">
-                            <IconButton 
-                                onClick={() => { setStartDate(''); setEndDate(''); setSearchTerm(''); }} 
-                                size="small" 
-                                sx={{ 
-                                    bgcolor: alpha(theme.palette.error.main, 0.08), 
-                                    color: 'error.main', 
+                            <IconButton
+                                onClick={() => { setStartDate(''); setEndDate(''); setSearchTerm(''); }}
+                                size="small"
+                                sx={{
+                                    bgcolor: alpha(theme.palette.error.main, 0.08),
+                                    color: 'error.main',
                                     '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.15) },
                                     height: 40, width: 40
                                 }}

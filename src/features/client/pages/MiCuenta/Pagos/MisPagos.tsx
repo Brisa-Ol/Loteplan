@@ -1,8 +1,8 @@
 // src/features/client/pages/Pagos/MisPagos.tsx
 
-import PagoService from '@/core/api/services/pago.service';
 import { confirmarPagoCuota, getAllAdhesionsByUser, iniciarPagoCuota } from '@/core/api/services/adhesion.service';
-import type { AdhesionDto, IniciarPagoCuotaResponse, PagoAdhesionDto } from '@/core/types/adhesion.dto';
+import PagoService from '@/core/api/services/pago.service';
+import type { AdhesionDto, PagoAdhesionDto } from '@/core/types/adhesion.dto';
 import type { PagoDto } from '@/core/types/pago.dto';
 import { useCurrencyFormatter } from '@/features/client/hooks/useCurrencyFormatter';
 import {
@@ -228,31 +228,31 @@ const MisPagos: React.FC = () => {
   // ✅ Procesamiento de Adhesiones (Evaluamos la Adhesión entera, no aplanamos)
   const { adhesionFilteredData, adhesionCounts } = useMemo(() => {
     const raw = adhesionesQuery.data;
-  const adhesiones: AdhesionDto[] = Array.isArray(raw)
-    ? raw
-    : Array.isArray((raw as any)?.data)
-    ? (raw as any).data
-    : [];
- 
-  let pendientes = 0;
-  let vencidas = 0;
- 
-  adhesiones.forEach(adh => {
-    const pagosPendientes = (adh.pagos || []).filter(p => p.estado === 'pendiente').length;
-    const pagosVencidos = (adh.pagos || []).filter(p => p.estado === 'vencido').length;
-    pendientes += pagosPendientes;
-    vencidas += pagosVencidos;
-  });
- 
-  return {
-    adhesionFilteredData: adhesiones,
-    adhesionCounts: {
-      totalActivas: pendientes + vencidas,
-      pendientes,
-      vencidas
-    }
-  };
-}, [adhesionesQuery.data]);
+    const adhesiones: AdhesionDto[] = Array.isArray(raw)
+      ? raw
+      : Array.isArray((raw as any)?.data)
+        ? (raw as any).data
+        : [];
+
+    let pendientes = 0;
+    let vencidas = 0;
+
+    adhesiones.forEach(adh => {
+      const pagosPendientes = (adh.pagos || []).filter(p => p.estado === 'pendiente').length;
+      const pagosVencidos = (adh.pagos || []).filter(p => p.estado === 'vencido').length;
+      pendientes += pagosPendientes;
+      vencidas += pagosVencidos;
+    });
+
+    return {
+      adhesionFilteredData: adhesiones,
+      adhesionCounts: {
+        totalActivas: pendientes + vencidas,
+        pendientes,
+        vencidas
+      }
+    };
+  }, [adhesionesQuery.data]);
 
   const handleProyectoChange = (event: SelectChangeEvent) => {
     setSelectedProyectoId(event.target.value);
@@ -279,36 +279,36 @@ const MisPagos: React.FC = () => {
 
   // Mutación para iniciar pago de ADHESIÓN
   const iniciarPagoAdhesionMutation = useMutation({
-  mutationFn: ({ adhesionId, numeroCuota }: { adhesionId: number; numeroCuota: number }) =>
-    iniciarPagoCuota({ adhesionId, numeroCuota }),
-  onSuccess: (res) => {
-    // Guardar el id del pago para usarlo en la confirmación 2FA
-    setAdhesionPagoId(res.data.pagoAdhesionId!);
-    setTwoFAErrorAdhesion(null);
-    twoFaAdhesionModal.open();
-    confirmDialog.close();
-  },
-  onError: () => {
-    console.error('Error al iniciar el pago de adhesión. Intenta nuevamente.');
-  },
-});
- 
-/**
- * Paso 2: confirma el 2FA → el backend genera la preferencia MP y devuelve redirectUrl
- */
-const confirmarPagoAdhesionMutation = useMutation({
-  mutationFn: (codigo: string) =>
-    confirmarPagoCuota({ pagoAdhesionId: adhesionPagoId!, codigo_2fa: codigo }),
-  onSuccess: (res) => {
-    if (res.data.redirectUrl) {
-      window.location.href = res.data.redirectUrl;
-    }
-    twoFaAdhesionModal.close();
-  },
-  onError: (err: any) => {
-    setTwoFAErrorAdhesion(err.response?.data?.message || 'Código inválido');
-  },
-});
+    mutationFn: ({ adhesionId, numeroCuota }: { adhesionId: number; numeroCuota: number }) =>
+      iniciarPagoCuota({ adhesionId, numeroCuota }),
+    onSuccess: (res) => {
+      // Guardar el id del pago para usarlo en la confirmación 2FA
+      setAdhesionPagoId(res.data.pagoAdhesionId!);
+      setTwoFAErrorAdhesion(null);
+      twoFaAdhesionModal.open();
+      confirmDialog.close();
+    },
+    onError: () => {
+      console.error('Error al iniciar el pago de adhesión. Intenta nuevamente.');
+    },
+  });
+
+  /**
+   * Paso 2: confirma el 2FA → el backend genera la preferencia MP y devuelve redirectUrl
+   */
+  const confirmarPagoAdhesionMutation = useMutation({
+    mutationFn: (codigo: string) =>
+      confirmarPagoCuota({ pagoAdhesionId: adhesionPagoId!, codigo_2fa: codigo }),
+    onSuccess: (res) => {
+      if (res.data.redirectUrl) {
+        window.location.href = res.data.redirectUrl;
+      }
+      twoFaAdhesionModal.close();
+    },
+    onError: (err: any) => {
+      setTwoFAErrorAdhesion(err.response?.data?.message || 'Código inválido');
+    },
+  });
 
   // Mutación para 2FA (Pagos normales)
   const confirmar2FAMutation = useMutation({
@@ -322,18 +322,18 @@ const confirmarPagoAdhesionMutation = useMutation({
   });
 
   const handleConfirmIntent = useCallback(() => {
-  if (confirmDialog.data?.esAdhesion) {
-    // Dispara paso 1: inicia el pago y solicita el 2FA
-    iniciarPagoAdhesionMutation.mutate({
-      adhesionId: confirmDialog.data.adhesionId,
-      numeroCuota: confirmDialog.data.numeroCuota,
-    });
-    // NO cerrar el dialog aquí — se cierra en onSuccess de la mutación
-  } else if (confirmDialog.data?.id) {
-    iniciarPagoMutation.mutate(confirmDialog.data.id);
-    confirmDialog.close();
-  }
-}, [confirmDialog, iniciarPagoMutation, iniciarPagoAdhesionMutation]);
+    if (confirmDialog.data?.esAdhesion) {
+      // Dispara paso 1: inicia el pago y solicita el 2FA
+      iniciarPagoAdhesionMutation.mutate({
+        adhesionId: confirmDialog.data.adhesionId,
+        numeroCuota: confirmDialog.data.numeroCuota,
+      });
+      // NO cerrar el dialog aquí — se cierra en onSuccess de la mutación
+    } else if (confirmDialog.data?.id) {
+      iniciarPagoMutation.mutate(confirmDialog.data.id);
+      confirmDialog.close();
+    }
+  }, [confirmDialog, iniciarPagoMutation, iniciarPagoAdhesionMutation]);
 
   // Handler para Pagos Normales
   const handlePayRequest = useCallback(
@@ -369,9 +369,9 @@ const confirmarPagoAdhesionMutation = useMutation({
   );
 
   const isPaymentPending =
-  iniciarPagoMutation.isPending ||
-  iniciarPagoAdhesionMutation.isPending ||
-  confirmarPagoAdhesionMutation.isPending;
+    iniciarPagoMutation.isPending ||
+    iniciarPagoAdhesionMutation.isPending ||
+    confirmarPagoAdhesionMutation.isPending;
 
   // Columnas para Pagos Normales
   const columns = useMemo<DataTableColumn<PagoDto>[]>(
@@ -509,11 +509,11 @@ const confirmarPagoAdhesionMutation = useMutation({
             }
             return <Typography variant="body2" color="text.disabled">-</Typography>;
           }
-      
+
           const nextPago = row.pagos.find(p => ['pendiente', 'vencido'].includes(p.estado));
           const cuotasPagadas = row.pagos.filter(p => ['pagado', 'forzado', 'cubierto_por_puja'].includes(p.estado)).length;
           const isVencida = nextPago?.estado === 'vencido';
-      
+
           return (
             <Box>
               <Typography variant="caption" color="text.secondary" display="block">
@@ -541,12 +541,12 @@ const confirmarPagoAdhesionMutation = useMutation({
           </Typography>
         ),
       },
-{
+      {
         id: 'estado_adhesion',
         label: 'Estado General',
         render: (row) => {
           const { label, color, icon } = getStatusConfig(row.estado);
-          
+
           // ✅ Buscamos si el plan tiene alguna cuota vencida por dentro
           const tieneCuotaVencida = (row.pagos || []).some(p => p.estado === 'vencido');
 
@@ -569,10 +569,10 @@ const confirmarPagoAdhesionMutation = useMutation({
         align: 'right',
         render: (row) => {
           if (row.estado === 'cancelada') return null;
-      
+
           const nextPago = (row.pagos || []).find(p => ['pendiente', 'vencido'].includes(p.estado));
           const isVencida = nextPago?.estado === 'vencido';
-      
+
           return (
             <Button
               variant={isVencida ? 'contained' : 'outlined'}

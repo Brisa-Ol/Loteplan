@@ -1,19 +1,18 @@
 // src/features/client/pages/Proyectos/StepsModal/StepAdhesion.tsx
 
+import { CalendarMonth, CheckCircle } from "@mui/icons-material";
 import {
 	Alert,
 	alpha,
 	Box,
-	Chip,
 	Divider,
 	Paper,
 	Stack,
 	ToggleButton,
 	ToggleButtonGroup,
 	Typography,
-	useTheme,
+	useTheme
 } from "@mui/material";
-import { CalendarMonth, CheckCircle} from "@mui/icons-material";
 import { type FC, useMemo } from "react";
 
 import type { PlanPagoAdhesion } from "@/core/types/adhesion.dto";
@@ -179,7 +178,7 @@ export const StepAdhesion: FC<IStepAdhesionProps> = ({
 										{formatCurrency(montoTotal / plan.cuotas)}
 										{plan.cuotas > 1 ? " / cuota" : " único"}
 									</Typography>
-									
+
 								</ToggleButton>
 							))}
 						</ToggleButtonGroup>
@@ -231,7 +230,7 @@ export const StepAdhesion: FC<IStepAdhesionProps> = ({
 										<Typography variant="subtitle2" fontWeight={800} color="text.primary">
 											{cuotasPlan === 1 ? "Monto a pagar hoy" : `${cuotasPlan} cuotas a pagar de`}
 										</Typography>
-										
+
 									</Box>
 									<Typography variant="subtitle2" fontWeight={800} color="text.primary">
 										= {formatCurrency(montoPorCuota)}
@@ -271,7 +270,7 @@ export const StepAdhesion: FC<IStepAdhesionProps> = ({
 				</Stack>
 			</Paper>
 
-			
+
 		</Stack>
 	);
 };

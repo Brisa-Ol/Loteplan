@@ -11,8 +11,7 @@ import {
   Security,
   TrendingUp,
   VerifiedUser,
-  Warning,
-  PauseCircleOutline // 🆕 Importamos el ícono de pausa
+  Warning
 } from '@mui/icons-material';
 import {
   Avatar,
@@ -481,8 +480,8 @@ const UserDashboard: React.FC = () => {
                 </Box>
 
                 <MiInversions
-                  resumenes={resumenes} 
-                  suscripciones={suscripciones} 
+                  resumenes={resumenes}
+                  suscripciones={suscripciones}
                   pagos={pagos} />
               </Box>
 

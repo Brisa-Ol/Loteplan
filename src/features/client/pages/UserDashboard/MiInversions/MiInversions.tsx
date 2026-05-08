@@ -3,13 +3,11 @@ import type { ResumenCuentaDto } from "@/core/types/resumenCuenta.dto";
 import type { SuscripcionDto } from "@/core/types/suscripcion.dto";
 import {
 	Assessment,
-	ChevronRight,
-	PauseCircleOutline,
+	PauseCircleOutline
 } from "@mui/icons-material";
 import {
 	alpha,
 	Box,
-	Button,
 	Card,
 	CardContent,
 	Chip,
@@ -17,7 +15,7 @@ import {
 	LinearProgress,
 	Stack,
 	Typography,
-	useTheme,
+	useTheme
 } from "@mui/material";
 import type { FC } from "react";
 import { useNavigate } from "react-router-dom";

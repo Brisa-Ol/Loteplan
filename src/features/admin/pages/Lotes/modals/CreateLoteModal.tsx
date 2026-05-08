@@ -2,7 +2,6 @@
 
 import {
   Add as AddIcon,
-  CalendarMonth as CalendarIcon,
   LocationOn,
   MonetizationOn as MonetizationIcon,
   Business as ProjectIcon
@@ -234,18 +233,18 @@ const CreateLoteModal: React.FC<CreateLoteModalProps> = ({ open, onClose, onSubm
           </Stack>
 
           <FinanceSection
-            precio={formik.values.precio_base} 
-            lat={formik.values.latitud} 
+            precio={formik.values.precio_base}
+            lat={formik.values.latitud}
             lng={formik.values.longitud}
             maps={formik.values.map_url}
 
-            touched={formik.touched.precio_base} 
-            error={formik.errors.precio_base} 
+            touched={formik.touched.precio_base}
+            error={formik.errors.precio_base}
 
             touchedMap={formik.touched.map_url}
             errorMap={formik.errors.map_url}
-            
-            onChange={formik.handleChange} 
+
+            onChange={formik.handleChange}
             handleBlur={formik.handleBlur}
           />
 
