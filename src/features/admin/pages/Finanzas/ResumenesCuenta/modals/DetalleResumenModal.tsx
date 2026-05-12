@@ -2,8 +2,8 @@
 
 import type { ResumenCuentaDto } from '@/core/types/resumenCuenta.dto';
 import BaseModal from '@/shared/components/domain/modals/BaseModal';
-import { AccountBalance, AddCircleOutline, AttachMoney } from '@mui/icons-material';
-import { Alert, alpha, Box, Button, Chip, CircularProgress, Divider, LinearProgress, Paper, Stack, TextField, Typography, useTheme } from '@mui/material'; // 👈 Se agregó Alert
+import { AccountBalance, AddCircleOutline, AttachMoney, Edit as EditIcon } from '@mui/icons-material';
+import { Alert, alpha, Box, Button, Chip, CircularProgress, Divider, LinearProgress, Paper, Stack, TextField, Typography, useTheme } from '@mui/material'; 
 import React from 'react';
 import { useDetalleResumenModal } from './hooks/useDetalleResumenModal';
 import { HistorialPagosPanel } from './SeccionPagos';
@@ -21,7 +21,6 @@ const DetalleResumenModal: React.FC<Props> = ({ open, onClose, resumen }) => {
 
   if (!resumen) return null;
 
-  // 🆕 Detectamos si la suscripción está inactiva
   const estaInactiva = resumen.suscripcion?.activo === false;
 
   return (
@@ -34,7 +33,6 @@ const DetalleResumenModal: React.FC<Props> = ({ open, onClose, resumen }) => {
       >
         <Stack spacing={4}>
 
-          {/* 🆕 ALERTA: Si el plan está inactivo, lo avisamos claramente */}
           {estaInactiva && (
             <Alert severity="error" variant="filled" sx={{ borderRadius: 2, fontWeight: 700 }}>
               Esta suscripción se encuentra dada de baja (Inactiva). No es posible generar nuevas cuotas ni adelantos.
@@ -48,7 +46,6 @@ const DetalleResumenModal: React.FC<Props> = ({ open, onClose, resumen }) => {
                 Avance del Plan: {resumen.porcentaje_pagado}%
               </Typography>
               <Chip
-                // 🆕 Cambiamos el texto del Chip si está inactiva
                 label={estaInactiva ? 'PLAN INACTIVO' : h.isCompleted ? 'PLAN FINALIZADO' : h.hasOverdue ? 'DEUDA PENDIENTE' : 'PLAN AL DÍA'}
                 color={estaInactiva ? 'error' : h.isCompleted ? 'success' : h.hasOverdue ? 'error' : 'info'}
                 size="small" sx={{ fontWeight: 800, borderRadius: 1.5 }}
@@ -66,7 +63,7 @@ const DetalleResumenModal: React.FC<Props> = ({ open, onClose, resumen }) => {
             </Stack>
           </Box>
 
-          {/* 2. ADELANTOS - 🆕 Agregamos !estaInactiva a la condición para ocultarlo */}
+          {/* 2. ADELANTOS */}
           {h.puedeAdelantar && !estaInactiva && (
             <Box sx={{ p: 2.5, border: '1px dashed', borderColor: 'primary.main', borderRadius: 4 }}>
               <Typography variant="caption" fontWeight={900} color="primary.main"
@@ -106,7 +103,8 @@ const DetalleResumenModal: React.FC<Props> = ({ open, onClose, resumen }) => {
             isLoading={h.loadingPagos} pagos={h.pagosPendientes}
             editingPaymentId={h.editingPaymentId} newMonto={h.newMonto}
             setNewMonto={h.setNewMonto} setEditingPaymentId={h.setEditingPaymentId}
-            updateMontoMutation={h.updateMontoMutation} onForcePayment={h.handleOpenForceModal}
+            onForcePayment={h.handleOpenForceModal}
+            onSaveMontoClick={() => h.setEditModalOpen(true)} 
           />
 
           {/* 4. HISTORIAL */}
@@ -139,6 +137,27 @@ const DetalleResumenModal: React.FC<Props> = ({ open, onClose, resumen }) => {
             value={h.forceMotivo} onChange={(e) => h.setForceMotivo(e.target.value)}
             placeholder="Ej: Pago recibido en efectivo en oficina central"
             helperText="Indica el motivo por el cual estás forzando el pago."
+          />
+        </Box>
+      </BaseModal>
+
+      {/* ✅ NUEVO MODAL: EDITAR MONTO */}
+      <BaseModal
+        open={h.editModalOpen} onClose={() => { h.setEditModalOpen(false); h.setEditMotivo(''); }}
+        title="Modificar Monto de Cuota" icon={<EditIcon />}
+        headerColor="primary" maxWidth="sm"
+        confirmText="Guardar Cambios" onConfirm={h.handleSubmitEditMonto}
+        isLoading={h.updateMontoMutation.isPending}
+        disableConfirm={!h.editMotivo.trim()} confirmButtonColor="primary"
+      >
+        <Box>
+          <Typography variant="body2" mb={3} color="text.secondary">
+            Estás a punto de modificar el monto de la cuota seleccionada a <b>${Number(h.newMonto).toLocaleString('es-AR')}</b>.
+          </Typography>
+          <TextField autoFocus fullWidth multiline rows={3} label="Motivo de la modificación (Obligatorio)"
+            value={h.editMotivo} onChange={(e) => h.setEditMotivo(e.target.value)}
+            placeholder="Ej: Ajuste manual por bonificación especial aprobada."
+            helperText="Indica el motivo por el cual estás cambiando el monto de esta cuota."
           />
         </Box>
       </BaseModal>

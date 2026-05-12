@@ -30,6 +30,7 @@ export interface GenerateAdvancePaymentsDto {
 export interface UpdatePaymentAmountDto {
   monto: number;
   motivo_cambio: string
+  
 }
 
 // 🆕 DTO para actualizar el estado general de un pago

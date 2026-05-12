@@ -15,11 +15,17 @@ export const useDetalleResumenModal = (resumen: ResumenCuentaDto | null, open: b
   const [showHistory, setShowHistory] = useState(false);
   const [showAdvanceForm, setShowAdvanceForm] = useState(false);
   const [cantidadMeses, setCantidadMeses] = useState(1);
+  
   const [forcePaymentModalOpen, setForcePaymentModalOpen] = useState(false);
   const [selectedPagoToForce, setSelectedPagoToForce] = useState<PagoDto | null>(null);
   const [forceMotivo, setForceMotivo] = useState('');
+  
   const [editingPaymentId, setEditingPaymentId] = useState<number | null>(null);
   const [newMonto, setNewMonto] = useState(0);
+
+  // ✅ NUEVOS ESTADOS PARA EL MODAL DE EDITAR MONTO
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editMotivo, setEditMotivo] = useState('');
 
   const invalidateAndRefetch = () => {
     queryClient.invalidateQueries({ queryKey: ['resumenesCuenta'] });
@@ -59,16 +65,34 @@ export const useDetalleResumenModal = (resumen: ResumenCuentaDto | null, open: b
     onError: (err: any) => showError(err.response?.data?.error || 'No se pudo forzar el pago'),
   });
 
+  // ✅ MUTACIÓN ACTUALIZADA CON EL DTO CORRECTO (motivo_cambio)
   const updateMontoMutation = useMutation({
     mutationFn: ({ pagoId, monto, motivo_cambio }: { pagoId: number; monto: number; motivo_cambio: string }) =>
-      PagoService.updatePaymentAmount(pagoId, { monto, motivo_cambio }),
-    onSuccess: () => { showSuccess('Monto actualizado.'); setEditingPaymentId(null); invalidateAndRefetch(); },
+      PagoService.updatePaymentAmount(pagoId, { monto, motivo_cambio: motivo_cambio }),
+    onSuccess: () => { 
+      showSuccess('Monto actualizado.'); 
+      setEditingPaymentId(null); 
+      setEditModalOpen(false); // Cerramos el modal
+      setEditMotivo(''); // Limpiamos el motivo
+      invalidateAndRefetch(); 
+    },
     onError: (err: any) => showError(err.response?.data?.error || 'Error al actualizar el monto'),
   });
 
   const handleOpenForceModal = (pago: PagoDto) => { setSelectedPagoToForce(pago); setForceMotivo(''); setForcePaymentModalOpen(true); };
   const handleCloseForceModal = () => { setForcePaymentModalOpen(false); setSelectedPagoToForce(null); setForceMotivo(''); };
   const handleSubmitForce = () => { if (selectedPagoToForce && forceMotivo.trim()) forcePaymentMutation.mutate({ idPago: selectedPagoToForce.id, motivo: forceMotivo }); };
+
+  // ✅ NUEVA FUNCIÓN PARA ENVIAR LA EDICIÓN DEL MONTO
+  const handleSubmitEditMonto = () => {
+    if (editingPaymentId && editMotivo.trim()) {
+      updateMontoMutation.mutate({
+        pagoId: editingPaymentId,
+        monto: newMonto,
+        motivo_cambio: editMotivo
+      });
+    }
+  };
 
   const handleClose = (onClose: () => void) => {
     setShowAdvanceForm(false); setShowPendingPayments(false);
@@ -90,9 +114,10 @@ export const useDetalleResumenModal = (resumen: ResumenCuentaDto | null, open: b
     cantidadMeses, setCantidadMeses,
     editingPaymentId, setEditingPaymentId,
     newMonto, setNewMonto,
-    // Force modal
+    // Modales
     forcePaymentModalOpen, selectedPagoToForce, forceMotivo, setForceMotivo,
     handleOpenForceModal, handleCloseForceModal, handleSubmitForce,
+    editModalOpen, setEditModalOpen, editMotivo, setEditMotivo, handleSubmitEditMonto, // 👈 Exportados
     // Data
     pagosPendientes, loadingPagos,
     historialPagos, loadingHistorial,

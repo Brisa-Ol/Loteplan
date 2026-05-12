@@ -1,11 +1,11 @@
-// modals/sections/PendingPaymentsPanel.tsx
+// modals/sections/Seccionpagospendientes.tsx
 
 import type { PagoDto } from '@/core/types/pago.dto';
 import { AttachMoney, Check as CheckIcon, Close as CloseIcon, Edit as EditIcon, ExpandLess, ExpandMore, FastForward, Schedule } from '@mui/icons-material';
 import { alpha, Badge, Box, Chip, CircularProgress, Collapse, IconButton, Paper, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography, useTheme } from '@mui/material';
-import type { UseMutationResult } from '@tanstack/react-query';
 import React from 'react';
 
+// ✅ 1. AQUÍ ESTÁ LA CORRECCIÓN: Agregamos onSaveMontoClick y quitamos updateMontoMutation
 interface Props {
   show: boolean;
   onToggle: () => void;
@@ -15,14 +15,14 @@ interface Props {
   newMonto: number;
   setNewMonto: (v: number) => void;
   setEditingPaymentId: (id: number | null) => void;
-  updateMontoMutation: UseMutationResult<any, any, { pagoId: number; monto: number }>;
   onForcePayment: (pago: PagoDto) => void;
+  onSaveMontoClick: () => void; // 👈 Propiedad agregada para que TypeScript no se queje
 }
 
 export const PendingPaymentsPanel: React.FC<Props> = ({
   show, onToggle, isLoading, pagos,
   editingPaymentId, newMonto, setNewMonto, setEditingPaymentId,
-  updateMontoMutation, onForcePayment,
+  onForcePayment, onSaveMontoClick, // 👈 La recibimos aquí
 }) => {
   const theme = useTheme();
 
@@ -95,8 +95,13 @@ export const PendingPaymentsPanel: React.FC<Props> = ({
                       <TableCell align="right">
                         {isEditing ? (
                           <Stack direction="row" spacing={0.5} justifyContent="flex-end">
-                            <IconButton size="small" color="success" onClick={() => updateMontoMutation.mutate({ pagoId: pago.id, monto: newMonto })}><CheckIcon fontSize="small" /></IconButton>
-                            <IconButton size="small" color="error" onClick={() => setEditingPaymentId(null)}><CloseIcon fontSize="small" /></IconButton>
+                            {/* ✅ 2. EL BOTÓN AHORA LLAMA A onSaveMontoClick */}
+                            <IconButton size="small" color="success" onClick={onSaveMontoClick}>
+                              <CheckIcon fontSize="small" />
+                            </IconButton>
+                            <IconButton size="small" color="error" onClick={() => setEditingPaymentId(null)}>
+                              <CloseIcon fontSize="small" />
+                            </IconButton>
                           </Stack>
                         ) : isPagable ? (
                           <Stack direction="row" spacing={0.5} justifyContent="flex-end">
