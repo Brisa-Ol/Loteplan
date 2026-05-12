@@ -1,17 +1,18 @@
 // src/features/admin/pages/Suscripciones/AdminSuscripciones.tsx
 
 import { AdminPageHeader, AlertBanner, PageContainer } from '@/shared';
-import { Box, Chip, Stack } from '@mui/material';
+import { History as HistoryIcon, PlayCircleOutline, Receipt } from '@mui/icons-material';
+import { Box, Card, Tab, Tabs } from '@mui/material';
 import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom'; // 🆕 IMPORTAR USENAVIGATE
+import { useNavigate } from 'react-router-dom';
 import { useAdminSuscripciones } from '../../hooks/finanzas/useAdminSuscripciones';
+import AdhesionesTab from './components/AdhesionesTab';
 import CancelacionesTab from './components/CancelacionesTab';
 import SuscripcionesActiveTab from './components/SuscripcionesActiveTab';
-import AdhesionesTab from './components/AdhesionesTab';
 
 const AdminSuscripciones: React.FC = () => {
   const logic = useAdminSuscripciones();
-  const navigate = useNavigate(); // 🆕 INICIALIZAR NAVEGACIÓN
+  const navigate = useNavigate();
 
   // Estados para el filtro de fechas
   const [startDate, setStartDate] = useState('');
@@ -49,12 +50,11 @@ const AdminSuscripciones: React.FC = () => {
   }, []);
 
   // Guardar la pestaña en sessionStorage cuando se hace clic
-  const handleTabChange = (index: number) => {
-    logic.setTabIndex(index);
-    sessionStorage.setItem('adminSuscripcionesTab', index.toString());
+  const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
+    logic.setTabIndex(newValue);
+    sessionStorage.setItem('adminSuscripcionesTab', newValue.toString());
   };
 
-  // 🆕 BLOQUE ACTUALIZADO PARA NAVEGAR A RESÚMENES CON FILTRO
   const criticalAlerts = useMemo(() => {
     if (logic.stats.tasaMorosidad <= 15) return [];
     return [{
@@ -65,17 +65,11 @@ const AdminSuscripciones: React.FC = () => {
         label: 'Ver Morosos', 
         onClick: () => {
           sessionStorage.setItem('resumenesFilter', 'overdue');
-          navigate('/admin/resumenes'); // ⚠️ Asegúrate de que esta sea la ruta correcta en tu AppRouter
+          navigate('/admin/resumenes');
         } 
       },
     }];
   }, [logic, navigate]);
-
-  const TABS = [
-    { label: 'Suscripciones Activas', index: 0 },
-    { label: 'Adhesiones',            index: 1 },
-    { label: 'Historial de Bajas',    index: 2 }, 
-  ];
 
   return (
     <PageContainer maxWidth="xl" sx={{ py: 3 }}>
@@ -86,31 +80,71 @@ const AdminSuscripciones: React.FC = () => {
 
       {criticalAlerts.map((alert, i) => <AlertBanner key={i} {...alert} />)}
 
-      <Box sx={{ mb: 4, mt: 2 }}>
-        <Stack direction="row" spacing={1}>
-          {TABS.map(({ label, index }) => (
-            <Chip
-              key={index} label={label}
-              onClick={() => handleTabChange(index)}
-              color={logic.tabIndex === index ? 'primary' : 'default'}
-              variant={logic.tabIndex === index ? 'filled' : 'outlined'}
-              sx={{ fontWeight: 700, px: 1 }}
-            />
-          ))}
-        </Stack>
-      </Box>
+      {/* 🆕 BARRA DE PESTAÑAS ADAPTADA AL TEMA GLOBAL */}
+      <Card 
+        elevation={0} 
+        sx={{ 
+          mb: 4, 
+          mt: 2, 
+          bgcolor: 'background.paper', // Utiliza el #ECECEC de tu tema
+          border: '1px solid',
+          borderColor: 'divider',
+          borderRadius: '12px' // Respeta la forma global definida en theme.components
+        }}
+      >
+        <Tabs
+          value={logic.tabIndex}
+          onChange={handleTabChange}
+          variant="scrollable"
+          scrollButtons="auto"
+          textColor="primary"
+          indicatorColor="primary"
+          sx={{
+            minHeight: 56,
+            '& .MuiTab-root': {
+              textTransform: 'none',
+              fontWeight: 600,
+              fontSize: '0.95rem',
+              minHeight: 56,
+              color: 'text.secondary', // Texto gris oscuro cuando está inactivo
+              px: 3, // Mayor espaciado horizontal para que respire
+              '&.Mui-selected': {
+                color: 'primary.main', // Naranja/Óxido cuando está activo
+              }
+            }
+          }}
+        >
+          <Tab 
+            icon={<PlayCircleOutline fontSize="small" />} 
+            iconPosition="start" 
+            label="Suscripciones Activas" 
+          />
+          <Tab 
+            icon={<Receipt fontSize="small" />} 
+            iconPosition="start" 
+            label="Adhesiones" 
+          />
+          <Tab 
+            icon={<HistoryIcon fontSize="small" />} 
+            iconPosition="start" 
+            label="Historial de Bajas" 
+          />
+        </Tabs>
+      </Card>
 
-      {logic.tabIndex === 0 && (
-        <SuscripcionesActiveTab
-          logic={{ ...logic, filteredSuscripciones: dataConFiltroFechas }}
-          startDate={startDate}
-          setStartDate={setStartDate}
-          endDate={endDate}
-          setEndDate={setEndDate}
-        />
-      )}
-      {logic.tabIndex === 1 && <AdhesionesTab />}        
-      {logic.tabIndex === 2 && <CancelacionesTab />}    
+      <Box>
+        {logic.tabIndex === 0 && (
+          <SuscripcionesActiveTab
+            logic={{ ...logic, filteredSuscripciones: dataConFiltroFechas }}
+            startDate={startDate}
+            setStartDate={setStartDate}
+            endDate={endDate}
+            setEndDate={setEndDate}
+          />
+        )}
+        {logic.tabIndex === 1 && <AdhesionesTab />}        
+        {logic.tabIndex === 2 && <CancelacionesTab />}    
+      </Box>
     </PageContainer>
   );
 };

@@ -1,4 +1,4 @@
-import type { ConfirmarPago2faDto, CreatePagoManualDto, GenerateAdvancePaymentsDto, MonthlyMetricsDto, OnTimeMetricsDto, PagoCheckoutResponse, PagoDto, UpdatePaymentAmountDto, UpdatePaymentStatusDto } from '@/core/types/pago.dto';
+import type { ConfirmarPago2faDto, CreatePagoManualDto, DateRangeMetricsDto, GenerateAdvancePaymentsDto, MonthlyMetricsDto, OnTimeMetricsDto, PagoCheckoutResponse, PagoDto, UpdatePaymentAmountDto, UpdatePaymentStatusDto } from '@/core/types/pago.dto';
 import type { AxiosResponse } from 'axios';
 import httpService from '../httpService';
 import type { GenericResponseDto } from '@/core/types/auth.dto';
@@ -91,11 +91,11 @@ const PagoService = {
       motivo: 'Cobro manual administrativo (Efectivo/Oficina)' 
     });
   },
-getMetricsByDateRange: async (fechaInicio: string, fechaFin: string): Promise<AxiosResponse<{ success: boolean, data: any }>> => {
+getMetricsByDateRange: async (fechaInicio: string, fechaFin: string): Promise<AxiosResponse<{ success: boolean, data: DateRangeMetricsDto }>> => {
     return await httpService.get(`${BASE_ENDPOINT}/metricas/range`, {
         params: { fechaInicio, fechaFin }
     });
-},
+  },
   // 🆕 Permite actualizar a cualquier estado válido y agregar un motivo (PATCH /:id/estado)
   updatePaymentStatus: async (idPago: number, data: UpdatePaymentStatusDto): Promise<AxiosResponse<{ message: string, pago: PagoDto }>> => {
     return await httpService.patch(`${BASE_ENDPOINT}/${idPago}/estado`, data);

@@ -23,7 +23,7 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  IconButton, // <-- Importados
+  IconButton,
   MenuItem,
   Paper, Stack, Tab,
   Table, TableBody, TableCell, TableContainer, TableHead, TablePagination, TableRow,
@@ -108,13 +108,12 @@ const AdminLotePagos: React.FC = () => {
       // 2. FILTRO POR ESTADO (Simplificado: Pagado vs No Pagado)
       let matchesStatus = true;
       if (filterStatus !== 'all') {
-        // Usamos tu propia función checkIsPaid o verificamos directamente la puja
         const isPagado = checkIsPaid(l) || pujaPrincipal?.estado_puja === 'ganadora_pagada';
 
         if (filterStatus === 'pagado') {
           matchesStatus = isPagado;
         } else if (filterStatus === 'no_pagado') {
-          matchesStatus = !isPagado; // Si no está pagado, es mora, pendiente, incumplimiento, etc.
+          matchesStatus = !isPagado; 
         }
       }
 
@@ -225,14 +224,11 @@ const AdminLotePagos: React.FC = () => {
       align: 'right',
       render: (l) => {
         const isPaid = checkIsPaid(l);
-        // ✅ VARIABLES DECLARADAS CORRECTAMENTE
         const pujaGanadora = logic.pujasPorLote[l.id]?.[0];
         const solicitaCancelacion = pujaGanadora?.solicitud_cancelacion;
 
         return (
           <Stack direction="row" spacing={1} justifyContent="flex-end">
-
-            {/* NUEVO: Alerta de cancelación */}
             {solicitaCancelacion && !isPaid && (
               <Tooltip title="Evaluar solicitud de baja">
                 <IconButton
@@ -266,7 +262,7 @@ const AdminLotePagos: React.FC = () => {
         );
       }
     }
-  ], [theme, logic]);
+  ], [theme, logic, handleOpenAuctionDetail]);
 
   return (
     <PageContainer maxWidth="xl" sx={{ py: 4, bgcolor: 'background.default' }}>
@@ -287,14 +283,51 @@ const AdminLotePagos: React.FC = () => {
         />
       </Box>
 
-      <Stack direction="row" justifyContent="space-between" mb={4}>
-        <Paper elevation={0} sx={{ p: 0.5, bgcolor: 'secondary.main', borderRadius: 2 }}>
-          <Tabs value={tabIndex} onChange={(_, v) => setTabIndex(v)}>
-            <Tab label="Dashboard" icon={<DashboardIcon sx={{ fontSize: 18 }} />} iconPosition="start" sx={{ fontWeight: 700 }} />
-            <Tab label="Cobros y Seguimiento" icon={<ListIcon sx={{ fontSize: 18 }} />} iconPosition="start" sx={{ fontWeight: 700 }} />
-          </Tabs>
-        </Paper>
-      </Stack>
+      {/* 🆕 BARRA DE PESTAÑAS ADAPTADA AL TEMA GLOBAL */}
+      <Card 
+        elevation={0} 
+        sx={{ 
+          mb: 4, 
+          bgcolor: 'background.paper', // Fondo gris de tu tema
+          border: '1px solid',
+          borderColor: 'divider',
+          borderRadius: '12px' 
+        }}
+      >
+        <Tabs
+          value={tabIndex}
+          onChange={(_, v) => setTabIndex(v)}
+          variant="scrollable"
+          scrollButtons="auto"
+          textColor="primary"
+          indicatorColor="primary"
+          sx={{
+            minHeight: 56,
+            '& .MuiTab-root': {
+              textTransform: 'none',
+              fontWeight: 600,
+              fontSize: '0.95rem',
+              minHeight: 56,
+              color: 'text.secondary', 
+              px: 3, 
+              '&.Mui-selected': {
+                color: 'primary.main', 
+              }
+            }
+          }}
+        >
+          <Tab 
+            label="Dashboard" 
+            icon={<DashboardIcon fontSize="small" />} 
+            iconPosition="start" 
+          />
+          <Tab 
+            label="Cobros y Seguimiento" 
+            icon={<ListIcon fontSize="small" />} 
+            iconPosition="start" 
+          />
+        </Tabs>
+      </Card>
 
       <QueryHandler isLoading={logic.isLoading} error={logic.error as Error}>
         {tabIndex === 0 ? (
@@ -348,7 +381,7 @@ const AdminLotePagos: React.FC = () => {
             {/* TABLA USANDO LOS DATOS FILTRADOS */}
             <DataTable
               columns={columnsCobros}
-              data={filteredLotes} // <-- Usamos el array filtrado aquí
+              data={filteredLotes}
               getRowKey={row => row.id}
               showInactiveToggle={false}
               pagination
@@ -464,7 +497,6 @@ const Top3PostoresTable = React.memo<{
     const map = new Map<string, string>();
 
     lotes.forEach((l) => {
-      // Misma lógica de fallback que usás en el render de filas
       const pujas = pujasPorLote[l.id] || [];
       const nombre =
         l.proyecto?.nombre_proyecto ||
@@ -481,8 +513,8 @@ const Top3PostoresTable = React.memo<{
 
     return Array.from(map.entries())
       .map(([id, nombre]) => ({ id, nombre }))
-      .sort((a, b) => a.nombre.localeCompare(b.nombre)); // opcional: orden alfabético
-  }, [lotes, pujasPorLote]); // <-- agregar pujasPorLote como dependencia
+      .sort((a, b) => a.nombre.localeCompare(b.nombre)); 
+  }, [lotes, pujasPorLote]); 
 
   const filteredAndSorted = useMemo(() => {
     const term = searchTerm.toLowerCase();
@@ -505,7 +537,7 @@ const Top3PostoresTable = React.memo<{
       .sort((a, b) => {
         const aFin = a.fecha_fin ? new Date(a.fecha_fin).getTime() : 0;
         const bFin = b.fecha_fin ? new Date(b.fecha_fin).getTime() : 0;
-        return bFin - aFin; // más reciente primero
+        return bFin - aFin; 
       });
   }, [lotes, searchTerm, filterProyecto]);
 
@@ -663,7 +695,7 @@ const Top3PostoresTable = React.memo<{
         <TablePagination
           rowsPerPageOptions={[5, 10, 25]}
           component="div"
-          count={filteredAndSorted.length}  // ← sobre los filtrados, no el total
+          count={filteredAndSorted.length}  
           rowsPerPage={rowsPerPage}
           page={page}
           onPageChange={(_, p) => setPage(p)}
@@ -675,6 +707,6 @@ const Top3PostoresTable = React.memo<{
       </CardContent>
     </Card>
   );
-});;
+});
 
 export default AdminLotePagos;

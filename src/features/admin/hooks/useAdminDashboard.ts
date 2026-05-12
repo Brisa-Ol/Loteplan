@@ -115,7 +115,8 @@ export const useAdminDashboard = () => {
   ] = results;
 
   const isLoading = results.some(result => result.isLoading);
-
+const hasError = results.some(result => result.isError);
+  const error = hasError ? new Error("Error al cargar las métricas del panel.") : null;
   const { data: popularidadLotes = [], isLoading: loadingPopularidad } = useQuery({
     queryKey: ['popularidadLotes', selectedPopularidadProject],
     queryFn: () => favoritoService.getPopularidadLotes(selectedPopularidadProject!),
@@ -206,6 +207,7 @@ export const useAdminDashboard = () => {
     chartDataSuscripciones,
     topLotes,
     estadosData,
+    error,
     RECHART_COLORS,
     navigate,
     adhesionMetrics 

@@ -42,7 +42,7 @@ import {
 import type { ContratoFirmadoDto } from '@/core/types/contrato-firmado.dto';
 
 // Componentes Compartidos
-import { AdminPageHeader } from '@/shared/components/admin/Adminpageheader'; // ✅ Aplicado
+import { AdminPageHeader } from '@/shared/components/admin/Adminpageheader'; 
 import MetricsGrid from '@/shared/components/admin/Metricsgrid';
 import { ViewModeToggle, type ViewMode } from '@/shared/components/admin/Viewmodetoggle';
 import { DataTable, type DataTableColumn } from '@/shared/components/data-grid/DataTable';
@@ -138,7 +138,7 @@ const AdminContratosFirmados: React.FC = () => {
     {
       id: 'id',
       label: 'Nombre del Archivo',
-      minWidth: 200,
+      minWidth: 160,
       render: (row) => (
         <Stack direction="row" spacing={1.5} alignItems="center">
           <Avatar sx={{ width: 32, height: 32, bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}>
@@ -146,7 +146,7 @@ const AdminContratosFirmados: React.FC = () => {
           </Avatar>
           <Box minWidth={0}>
             <Tooltip title={row.nombre_archivo}>
-              <Typography variant="body2" fontWeight={800} sx={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <Typography variant="body2" fontWeight={800} sx={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 140 }}>
                 {row.nombre_archivo}
               </Typography>
             </Tooltip>
@@ -158,15 +158,19 @@ const AdminContratosFirmados: React.FC = () => {
     {
       id: 'usuario',
       label: 'Firmante',
-      minWidth: 220,
+      minWidth: 180,
       render: (row) => (
         <Stack direction="row" alignItems="center" spacing={1.5}>
           <Avatar sx={{ width: 36, height: 36, bgcolor: alpha(theme.palette.secondary.main, 0.1), color: theme.palette.secondary.dark, fontSize: 15, fontWeight: 800 }}>
             {row.usuarioFirmante?.nombre.charAt(0).toUpperCase() || <Person fontSize="small" />}
           </Avatar>
           <Box minWidth={0}>
-            <Typography variant="body2" fontWeight={800} noWrap>{row.usuarioFirmante ? `${row.usuarioFirmante.nombre} ${row.usuarioFirmante.apellido}` : `ID: ${row.id_usuario_firmante}`}</Typography>
-            <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>{row.usuarioFirmante?.email}</Typography>
+            <Typography variant="body2" fontWeight={800} sx={{ maxWidth: 150 }} noWrap>
+              {row.usuarioFirmante ? `${row.usuarioFirmante.nombre} ${row.usuarioFirmante.apellido}` : `ID: ${row.id_usuario_firmante}`}
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', maxWidth: 150 }} noWrap>
+              {row.usuarioFirmante?.email}
+            </Typography>
           </Box>
         </Stack>
       )
@@ -174,7 +178,7 @@ const AdminContratosFirmados: React.FC = () => {
     {
       id: 'proyecto',
       label: 'Proyecto Asociado',
-      minWidth: 200,
+      minWidth: 160,
       render: (row) => (
         <Stack direction="row" alignItems="center" spacing={1.5}>
           {row.proyectoAsociado?.tipo_inversion === 'directo' ? (
@@ -185,8 +189,12 @@ const AdminContratosFirmados: React.FC = () => {
             <DescriptionIcon fontSize="small" color="action" />
           )}
           <Box minWidth={0}>
-            <Typography variant="body2" fontWeight={700} noWrap>{row.proyectoAsociado?.nombre_proyecto || `ID: ${row.id_proyecto}`}</Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'capitalize' }}>{row.proyectoAsociado?.tipo_inversion || '---'}</Typography>
+            <Typography variant="body2" fontWeight={700} sx={{ maxWidth: 130 }} noWrap>
+              {row.proyectoAsociado?.nombre_proyecto || `ID: ${row.id_proyecto}`}
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'capitalize' }}>
+              {row.proyectoAsociado?.tipo_inversion || '---'}
+            </Typography>
           </Box>
         </Stack>
       )
@@ -237,10 +245,9 @@ const AdminContratosFirmados: React.FC = () => {
     }
   ], [theme, logic]);
 
-  // Estilos compartidos para los inputs de fecha (con el ícono del calendario en naranja)
+  // Se quitó bgcolor para heredar el gris del contenedor padre
   const dateInputStyles = {
     width: { xs: '100%', sm: 150 },
-    bgcolor: 'background.paper',
     borderRadius: 1,
     '& input::-webkit-calendar-picker-indicator': {
       cursor: 'pointer',
@@ -250,7 +257,6 @@ const AdminContratosFirmados: React.FC = () => {
 
   return (
     <PageContainer maxWidth="xl" sx={{ py: 3 }}>
-      {/* ✅ APLICACIÓN DEL HEADER ESTANDARIZADO */}
       <AdminPageHeader
         title="Auditoría de Contratos"
         subtitle="Registro histórico de acuerdos legales y contratos digitalizados con respaldo criptográfico."
@@ -268,7 +274,7 @@ const AdminContratosFirmados: React.FC = () => {
       </MetricsGrid>
 
       <Stack direction="column" spacing={2} mb={3}>
-        <Stack direction="row" justifyContent={{ xs: 'center', sm: 'flex-end' }}>
+        <Stack direction="row" justifyContent="flex-end">
           <ViewModeToggle
             value={viewMode}
             onChange={setViewMode}
@@ -279,18 +285,12 @@ const AdminContratosFirmados: React.FC = () => {
           />
         </Stack>
 
-        <FilterBar sx={{ p: 2 }}>
-          <Box
-            sx={{
-              display: 'flex',
-              flexDirection: { xs: 'column', lg: 'row' },
-              gap: 2,
-              alignItems: { xs: 'stretch', lg: 'center' },
-              width: '100%',
-            }}
-          >
-            {/* Buscador */}
-            <Box sx={{ flex: 2, minWidth: { xs: '100%', lg: 300 } }}>
+        {/* ✅ ESTRUCTURA FLEXBOX FLAT */}
+        <FilterBar sx={{ p: 2, bgcolor: 'background.paper', borderRadius: '12px', border: '1px solid', borderColor: 'divider' }}>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center', width: '100%' }}>
+            
+            {/* Buscador: Toma el espacio restante */}
+            <Box sx={{ flex: 1, minWidth: { xs: '100%', md: 280 } }}>
               <FilterSearch
                 placeholder="Inversor, email, proyecto o Hash..."
                 value={logic.searchTerm}
@@ -299,37 +299,11 @@ const AdminContratosFirmados: React.FC = () => {
               />
             </Box>
 
-            {/* Filtros secundarios */}
-            <Box
-              sx={{
-                display: 'flex',
-                flexDirection: { xs: 'column', sm: 'row' },
-                gap: 2,
-                flexWrap: 'wrap',
-                alignItems: { xs: 'stretch', sm: 'center' },
-                flex: 1,
-              }}
-            >
-              {/* Select clasificación */}
-              <FilterSelect
-                label="Clasificación"
-                value={logic.filterTipo}
-                onChange={(e) => logic.setFilterTipo(e.target.value as string)}
-                sx={{ flex: 1, minWidth: { xs: '100%', sm: 160 } }}
-              >
-                <MenuItem value="all">Todas</MenuItem>
-                <Divider />
-                <MenuItem value="inversion">Inversiones</MenuItem>
-                <MenuItem value="suscripcion">Suscripciones</MenuItem>
-              </FilterSelect>
-
+            {/* Controles Derecha: Fechas y Selects */}
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center', width: { xs: '100%', xl: 'auto' } }}>
+              
               {/* Fechas */}
-              <Stack
-                direction="row"
-                spacing={1}
-                alignItems="center"
-                sx={{ width: { xs: '100%', sm: 'auto' } }}
-              >
+              <Stack direction="row" spacing={1} alignItems="center" sx={{ width: { xs: '100%', sm: 'auto' } }}>
                 <TextField
                   label="Desde"
                   type="date"
@@ -350,6 +324,20 @@ const AdminContratosFirmados: React.FC = () => {
                   sx={dateInputStyles}
                 />
               </Stack>
+
+              {/* Select clasificación */}
+              <FilterSelect
+                label="Clasificación"
+                value={logic.filterTipo}
+                onChange={(e) => logic.setFilterTipo(e.target.value as string)}
+                sx={{ minWidth: 160, flex: { xs: 1, sm: 'none' } }}
+              >
+                <MenuItem value="all">Todas</MenuItem>
+                <Divider />
+                <MenuItem value="inversion">Inversiones</MenuItem>
+                <MenuItem value="suscripcion">Suscripciones</MenuItem>
+              </FilterSelect>
+
             </Box>
           </Box>
         </FilterBar>

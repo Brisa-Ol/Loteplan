@@ -331,64 +331,71 @@ const AdminPlantillas: React.FC = () => {
         <StatCard title="Por Proyecto" value={stats.assigned} icon={<FolderShared />} color="primary" loading={logic.isLoading} />
       </MetricsGrid>
 
-      <Stack
-        direction={{ xs: 'column', lg: 'row' }}
-        justifyContent="space-between"
-        alignItems={{ xs: 'stretch', lg: 'center' }}
-        mb={3}
-        spacing={2}
-      >
-        <ViewModeToggle
-          value={viewMode}
-          onChange={setViewMode}
-          options={[
-            { value: 'table', label: 'Vista de Lista', icon: <ViewList fontSize="small" /> },
-            { value: 'analytics', label: 'Estadísticas', icon: <BarChartIcon fontSize="small" /> }
-          ]}
-        />
-
-        <FilterBar sx={{ flex: 1, maxWidth: { lg: 800 } }}>
-          <FilterSearch
-            placeholder="Filtrar por nombre de archivo..."
-            value={logic.searchTerm}
-            onSearch={logic.setSearchTerm}
-            sx={{ flexGrow: 1 }}
+      {/* ✅ CONTROLES Y FILTROS ESTANDARIZADOS */}
+      <Stack spacing={2} mb={3} mt={3}>
+        <Stack direction="row" justifyContent="flex-end">
+          <ViewModeToggle
+            value={viewMode}
+            onChange={setViewMode}
+            options={[
+              { value: 'table', label: 'Vista de Lista', icon: <ViewList fontSize="small" /> },
+              { value: 'analytics', label: 'Estadísticas', icon: <BarChartIcon fontSize="small" /> }
+            ]}
           />
+        </Stack>
 
-          <FilterSelect
-            label="Proyecto"
-            value={logic.filterProject}
-            onChange={(e: any) => logic.setFilterProject(e.target.value)}
-            sx={{ minWidth: 240 }}
-            SelectProps={{ MenuProps: proyectoMenuProps }}
-          >
-            <MenuItem value="all">Todos los Proyectos</MenuItem>
-            <MenuItem value="global" sx={{ fontWeight: 700, color: 'info.main' }}>
-              <Stack direction="row" alignItems="center" spacing={1}>
-                <Public fontSize="inherit" />
-                <Typography variant="inherit">Documentos Globales</Typography>
-              </Stack>
-            </MenuItem>
-            <Divider />
-            {logic.proyectos.map(p => (
-              <MenuItem key={p.id} value={p.id}>
-                <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between" width="100%">
-                  <Typography variant="body2">{p.nombre_proyecto}</Typography>
-                  <Chip
-                    label={p.tipo_inversion === 'directo' ? 'DIRECTO' : 'MENSUAL'}
-                    size="small"
-                    sx={{
-                      fontSize: '0.6rem',
-                      height: 18,
-                      fontWeight: 900,
-                      bgcolor: p.tipo_inversion === 'directo' ? alpha(theme.palette.info.main, 0.1) : alpha(theme.palette.warning.main, 0.1),
-                      color: p.tipo_inversion === 'directo' ? 'info.main' : 'warning.main'
-                    }}
-                  />
-                </Stack>
-              </MenuItem>
-            ))}
-          </FilterSelect>
+        <FilterBar sx={{ p: 2, bgcolor: 'background.paper', borderRadius: '12px', border: '1px solid', borderColor: 'divider' }}>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center', width: '100%' }}>
+            
+            {/* Buscador: Toma el espacio restante */}
+            <Box sx={{ flex: 1, minWidth: { xs: '100%', md: 280 } }}>
+              <FilterSearch
+                placeholder="Filtrar por nombre de archivo..."
+                value={logic.searchTerm}
+                onSearch={logic.setSearchTerm}
+                fullWidth
+              />
+            </Box>
+
+            {/* Selects: Alineados a la derecha */}
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center', width: { xs: '100%', sm: 'auto' } }}>
+              <FilterSelect
+                label="Proyecto"
+                value={logic.filterProject}
+                onChange={(e: any) => logic.setFilterProject(e.target.value)}
+                sx={{ minWidth: 240, flex: { xs: 1, sm: 'none' } }}
+                SelectProps={{ MenuProps: proyectoMenuProps }}
+              >
+                <MenuItem value="all">Todos los Proyectos</MenuItem>
+                <MenuItem value="global" sx={{ fontWeight: 700, color: 'info.main' }}>
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    <Public fontSize="inherit" />
+                    <Typography variant="inherit">Documentos Globales</Typography>
+                  </Stack>
+                </MenuItem>
+                <Divider />
+                {logic.proyectos.map(p => (
+                  <MenuItem key={p.id} value={p.id}>
+                    <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between" width="100%">
+                      <Typography variant="body2">{p.nombre_proyecto}</Typography>
+                      <Chip
+                        label={p.tipo_inversion === 'directo' ? 'DIRECTO' : 'MENSUAL'}
+                        size="small"
+                        sx={{
+                          fontSize: '0.6rem',
+                          height: 18,
+                          fontWeight: 900,
+                          bgcolor: p.tipo_inversion === 'directo' ? alpha(theme.palette.info.main, 0.1) : alpha(theme.palette.warning.main, 0.1),
+                          color: p.tipo_inversion === 'directo' ? 'info.main' : 'warning.main'
+                        }}
+                      />
+                    </Stack>
+                  </MenuItem>
+                ))}
+              </FilterSelect>
+            </Box>
+
+          </Box>
         </FilterBar>
       </Stack>
 

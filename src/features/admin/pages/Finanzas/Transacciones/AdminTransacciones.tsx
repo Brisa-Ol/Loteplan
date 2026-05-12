@@ -34,7 +34,7 @@ import { FilterBar, FilterSearch, FilterSelect } from '@/shared/components/forms
 import { PageContainer } from '@/shared/components/layout/PageContainer';
 
 import { useAdminTransacciones } from '@/features/admin/hooks/finanzas/useAdminTransacciones';
-import { AdminPageHeader } from '@/shared/components/admin/Adminpageheader'; // ✅ Header estandarizado
+import { AdminPageHeader } from '@/shared/components/admin/Adminpageheader';
 import MetricsGrid from '@/shared/components/admin/Metricsgrid';
 import { ViewModeToggle, type ViewMode } from '@/shared/components/admin/Viewmodetoggle';
 import { ConfirmDialog } from '@/shared/components/domain/modals/ConfirmDialog';
@@ -71,7 +71,7 @@ const TransactionAnalytics = React.memo<{ data: TransaccionDto[] }>(({ data }) =
   }, [data]);
 
   return (
-    <Box sx={{ bgcolor: alpha(theme.palette.background.paper, 0.5), p: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
+    <Box sx={{ bgcolor: 'background.paper', p: 3, borderRadius: '12px', border: '1px solid', borderColor: 'divider' }}>
       <Typography variant="h6" fontWeight={800} mb={3}>Distribución de Volumen por Tipo</Typography>
       <ResponsiveContainer width="100%" height={350}>
         <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
@@ -255,10 +255,10 @@ const AdminTransacciones: React.FC = () => {
     }
   ], [logic, theme]);
 
-  // Estilos compartidos para los inputs de fecha (con el ícono del calendario en naranja)
+  // Estilos compartidos para los inputs de fecha (fondo blanco para resaltar sobre la barra gris)
   const dateInputStyles = {
     width: { xs: '50%', sm: 140 },
-    bgcolor: 'background.paper',
+    bgcolor: 'background.paper', // ✅ Fondo blanco
     borderRadius: 1,
     '& input::-webkit-calendar-picker-indicator': {
       cursor: 'pointer',
@@ -318,6 +318,7 @@ const AdminTransacciones: React.FC = () => {
           loading={logic.isLoading}
         />
       </MetricsGrid>
+
       {/* 4. CONTROLES Y FILTROS */}
       <Stack spacing={2} mb={3}>
         <Stack direction="row" justifyContent="flex-end">
@@ -331,18 +332,12 @@ const AdminTransacciones: React.FC = () => {
           />
         </Stack>
 
-        <FilterBar sx={{ p: 2 }}>
-          <Box
-            sx={{
-              display: 'flex',
-              flexDirection: { xs: 'column', lg: 'row' },
-              gap: 2,
-              alignItems: { xs: 'stretch', lg: 'center' },
-              width: '100%',
-            }}
-          >
-            {/* Buscador */}
-            <Box sx={{ flex: 2, minWidth: { xs: '100%', lg: 300 } }}>
+        <FilterBar sx={{ p: 2, bgcolor: 'background.paper', borderRadius: '12px', border: '1px solid', borderColor: 'divider' }}>
+          {/* ✅ NUEVA ESTRUCTURA FLEXBOX FLAT */}
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center', width: '100%' }}>
+            
+            {/* Buscador: Toma el espacio restante */}
+            <Box sx={{ flex: 1, minWidth: { xs: '100%', md: 280 } }}>
               <FilterSearch
                 placeholder="Buscar por cliente o proyecto..."
                 value={logic.searchTerm}
@@ -351,24 +346,11 @@ const AdminTransacciones: React.FC = () => {
               />
             </Box>
 
-            {/* Filtros secundarios */}
-            <Box
-              sx={{
-                display: 'flex',
-                flexDirection: { xs: 'column', sm: 'row' },
-                gap: 2,
-                flexWrap: 'wrap',
-                alignItems: { xs: 'stretch', sm: 'center' },
-                flex: 1,
-              }}
-            >
+            {/* Controles Derecha: Fechas y Selects */}
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center', width: { xs: '100%', xl: 'auto' } }}>
+              
               {/* Fechas */}
-              <Stack
-                direction="row"
-                spacing={1}
-                alignItems="center"
-                sx={{ width: { xs: '100%', sm: 'auto' } }}
-              >
+              <Stack direction="row" spacing={1} alignItems="center" sx={{ width: { xs: '100%', sm: 'auto' } }}>
                 <TextField
                   label="Desde"
                   type="date"
@@ -390,41 +372,33 @@ const AdminTransacciones: React.FC = () => {
                 />
               </Stack>
 
-              {/* Selects */}
-              <Box
-                sx={{
-                  display: 'flex',
-                  flexDirection: { xs: 'column', sm: 'row' },
-                  gap: 2,
-                  width: { xs: '100%', sm: 'auto' },
-                }}
+              {/* Selects: También con fondo blanco */}
+              <FilterSelect
+                label="Tipo"
+                value={logic.filterType}
+                onChange={(e) => logic.setFilterType(e.target.value)}
+                sx={{ minWidth: 160, flex: { xs: 1, sm: 'none' }, bgcolor: 'background.paper' }}
               >
-<FilterSelect
-  label="Tipo"
-  value={logic.filterType}
-  onChange={(e) => logic.setFilterType(e.target.value)}
-  sx={{ flex: 1, minWidth: { xs: '100%', sm: 150 } }}
->
-  <MenuItem value="all">Todos</MenuItem>
-  <MenuItem value="directo">Inversión Directa</MenuItem>
-  <MenuItem value="pago_suscripcion_inicial">Suscripción Inicial</MenuItem>
-  <MenuItem value="mensual">Cuota Mensual</MenuItem>
-  <MenuItem value="adhesion">Cuota de Adhesión</MenuItem> {/* ✅ Agregado */}
-  <MenuItem value="Puja">Subasta</MenuItem>
-</FilterSelect>
+                <MenuItem value="all">Todos</MenuItem>
+                <MenuItem value="directo">Inversión Directa</MenuItem>
+                <MenuItem value="pago_suscripcion_inicial">Suscripción Inicial</MenuItem>
+                <MenuItem value="mensual">Cuota Mensual</MenuItem>
+                <MenuItem value="adhesion">Cuota de Adhesión</MenuItem>
+                <MenuItem value="Puja">Subasta</MenuItem>
+              </FilterSelect>
 
-                <FilterSelect
-                  label="Estado"
-                  value={logic.filterStatus}
-                  onChange={(e) => logic.setFilterStatus(e.target.value)}
-                  sx={{ flex: 1, minWidth: { xs: '100%', sm: 150 } }}
-                >
-                  <MenuItem value="all">Todos</MenuItem>
-                  <MenuItem value="pagado">Completados</MenuItem>
-                  <MenuItem value="pendiente">Pendientes</MenuItem>
-                  <MenuItem value="fallido">Fallidos / Rechazados</MenuItem>
-                </FilterSelect>
-              </Box>
+              <FilterSelect
+                label="Estado"
+                value={logic.filterStatus}
+                onChange={(e) => logic.setFilterStatus(e.target.value)}
+                sx={{ minWidth: 160, flex: { xs: 1, sm: 'none' }, bgcolor: 'background.paper' }}
+              >
+                <MenuItem value="all">Todos</MenuItem>
+                <MenuItem value="pagado">Completados</MenuItem>
+                <MenuItem value="pendiente">Pendientes</MenuItem>
+                <MenuItem value="fallido">Fallidos / Rechazados</MenuItem>
+              </FilterSelect>
+              
             </Box>
           </Box>
         </FilterBar>

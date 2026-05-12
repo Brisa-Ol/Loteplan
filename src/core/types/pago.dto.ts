@@ -81,12 +81,12 @@ export interface PagoCheckoutResponse {
 // Interfaz cruda que viene del backend
 export interface RecaudoMensualDTO {
   mes: string; // "MM/YYYY"
-  total_recaudado: number;
+  total_recaudado: string | number;
   anio: number;
   total_pagos_generados: number;
-  total_pagos_pendiente?: string; // A veces sequelize retorna strings en counts complejos
+  total_pagos_pendiente?: string | number;
   total_pagos_vencidos: number;
-  tasa_morosidad: number; // %
+  tasa_morosidad: string | number;
   total_pagos_pagados: number;
 }
 
@@ -94,9 +94,17 @@ export interface TasaPagosATiempoDTO {
   total_pagados: number;
   pagos_a_tiempo: number;
   anio: number;
-  tasa_pagos_a_tiempo: number; // %
+  tasa_pagos_a_tiempo: string | number;
 }
-
+export interface DateRangeMetricsDto {
+  fecha_desde: string; // ISO Date "2026-05-01T00:00:00.000Z"
+  fecha_hasta: string;
+  total_recaudado: string | number;
+  total_pagos_generados: number;
+  total_pagos_vencidos: number;
+  total_pagos_pagados: number;
+  tasa_morosidad: string | number;
+}
 // ✅ ALIAS: Para que coincidan con tu Service
 export type MonthlyMetricsDto = RecaudoMensualDTO;
 export type OnTimeMetricsDto = TasaPagosATiempoDTO;
