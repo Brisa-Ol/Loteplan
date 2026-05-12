@@ -87,6 +87,11 @@ export const ROUTES = {
       PAGOS: '/admin/pagos',
       TRANSACCIONES: '/admin/transacciones',
       RESUMENES: '/admin/resumenes',
+    },
+
+    METRICAS: {
+      ADMIN: '/admin/metricas/admin',
+      CLIENTES: '/admin/metricas/clientes',
     }
   }
 };

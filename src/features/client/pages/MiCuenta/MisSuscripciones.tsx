@@ -642,6 +642,10 @@ const MisSuscripciones: React.FC = () => {
                                     twoFaModal.close();
                                     setSelectedCancelId(null);
                                     setCancelType(null);
+                                    setTimeout(() => {
+
+                                        window.location.reload(); // Recargamos para reflejar el cambio en adhesiones
+                                    }, 2550)
                                 },
                                 onError: (err: any) => {
                                     setTwoFAError(
