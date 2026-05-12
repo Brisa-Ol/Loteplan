@@ -60,8 +60,8 @@ export const useDetalleResumenModal = (resumen: ResumenCuentaDto | null, open: b
   });
 
   const updateMontoMutation = useMutation({
-    mutationFn: ({ pagoId, monto }: { pagoId: number; monto: number }) =>
-      PagoService.updatePaymentAmount(pagoId, { monto }),
+    mutationFn: ({ pagoId, monto, motivo_cambio }: { pagoId: number; monto: number; motivo_cambio: string }) =>
+      PagoService.updatePaymentAmount(pagoId, { monto, motivo_cambio }),
     onSuccess: () => { showSuccess('Monto actualizado.'); setEditingPaymentId(null); invalidateAndRefetch(); },
     onError: (err: any) => showError(err.response?.data?.error || 'Error al actualizar el monto'),
   });

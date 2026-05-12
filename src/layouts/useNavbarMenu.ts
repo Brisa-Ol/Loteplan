@@ -34,6 +34,10 @@ import {
   Terrain as TerrainIcon,
   // Estados / Feedback
   VerifiedUser as VerifiedUserIcon,
+  //Metricas
+  BarChart as BarChartIcon,
+  QueryStats as QueryStatsIcon,
+  DonutSmall as DonutSmallIcon,
   // Tipo
   type SvgIconComponent
 } from "@mui/icons-material";
@@ -164,6 +168,14 @@ export const useNavbarMenu = () => {
             submenu: [
               { label: "Plantillas", path: ROUTES.ADMIN.CONTRATOS.PLANTILLAS, icon: DescriptionIcon },
               { label: "Firmados", path: ROUTES.ADMIN.CONTRATOS.FIRMADOS, icon: AssignmentIcon },
+            ]
+          },
+          {
+            label: "Métricas",
+            icon : BarChartIcon,
+            submenu: [
+              { label: "Admin", path: ROUTES.ADMIN.METRICAS.ADMIN, icon: DonutSmallIcon },
+              { label: "Clientes", path: ROUTES.ADMIN.METRICAS.CLIENTES, icon: QueryStatsIcon },
             ]
           }
         ],

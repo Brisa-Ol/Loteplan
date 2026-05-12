@@ -7,6 +7,8 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { ROUTES } from '.';
 import ProtectedRoute from '../core/auth/guards/ProtectedRoute';
 import SecuritySettings from '@/features/client/pages/MiCuenta/SecuritySettings/SecuritySettings';
+import { AdminMetrics } from '@/features/admin/pages/Metricas/AdminMetrics/AdminMetrics';
+import { UserMetrics } from '@/features/admin/pages/Metricas/UserMetrics/UserMetrics';
 
 // ============ LAZY LOADING ============
 
@@ -148,6 +150,8 @@ const AppRouter = () => {
 
           <Route path="transacciones" element={<AdminTransacciones />} />
           <Route path="resumenes" element={<AdminResumenesCuenta />} />
+          <Route path="metricas/admin" element={<AdminMetrics />} />
+          <Route path="metricas/clientes" element={<UserMetrics />} />
         </Route>
 
         {/* Fallback */}

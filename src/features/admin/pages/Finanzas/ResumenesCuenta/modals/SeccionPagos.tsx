@@ -66,12 +66,12 @@ export const HistorialPagosPanel: React.FC<Props> = ({ show, onToggle, isLoading
                       </TableCell>
                       <TableCell>
                         <Typography variant="caption" color="text.secondary" fontWeight={600}>
-                          {pago.fecha_vencimiento ? new Date(pago.fecha_vencimiento).toLocaleDateString('es-AR') : '—'}
+                          {pago.fecha_vencimiento ? new Date(pago.fecha_vencimiento).toLocaleDateString('es-AR', {timeZone: "UTC",}) : '—'}
                         </Typography>
                       </TableCell>
                       <TableCell>
                         <Typography variant="caption" color="text.primary" fontWeight={800}>
-                          {pago.fecha_pago ? new Date(pago.fecha_pago).toLocaleDateString('es-AR') : '—'}
+                          {pago.fecha_pago ? new Date(pago.fecha_pago).toLocaleDateString('es-AR', {timeZone: "UTC",}) : '—'}
                         </Typography>
                       </TableCell>
 
