@@ -3,7 +3,7 @@
 import type { ResumenCuentaDto } from '@/core/types/resumenCuenta.dto';
 import BaseModal from '@/shared/components/domain/modals/BaseModal';
 import { AccountBalance, AddCircleOutline, AttachMoney } from '@mui/icons-material';
-import { alpha, Box, Button, Chip, CircularProgress, Divider, LinearProgress, Paper, Stack, TextField, Typography, useTheme, Alert } from '@mui/material'; // 👈 Se agregó Alert
+import { Alert, alpha, Box, Button, Chip, CircularProgress, Divider, LinearProgress, Paper, Stack, TextField, Typography, useTheme } from '@mui/material'; // 👈 Se agregó Alert
 import React from 'react';
 import { useDetalleResumenModal } from './hooks/useDetalleResumenModal';
 import { HistorialPagosPanel } from './SeccionPagos';

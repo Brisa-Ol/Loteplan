@@ -18,19 +18,19 @@ export interface SuscripcionInitResponse {
   checkoutUrl?: string;
   mensaje?: string;
   transaccionId: number
+  pagoId?: number;
 }
 
 export interface MorosidadDTO {
-  tasa_morosidad: number;
-  total_pagos_generados: number;
-  total_en_riesgo: number;
+  tasa_morosidad: string; 
+  total_pagos_generados: string;
+  total_en_riesgo: string;
 }
 
 export interface CancelacionDTO {
-  tasa_cancelacion: number;
+  tasa_cancelacion: string; 
   total_canceladas: number;
   total_suscripciones: number; 
-
 }
 
 export interface SuscripcionDto extends BaseDTO {

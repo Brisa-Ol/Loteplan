@@ -68,15 +68,18 @@ const SuscripcionService = {
     return await httpService.delete(`${BASE_PROYECTO}/${id}`);
   },
 
-  // 📊 Métricas Administrativas
-  getMorosityMetrics: async (): Promise<AxiosResponse<MorosidadDTO>> => {
-    return await httpService.get(`${BASE_PROYECTO}/metrics/morosidad`);
+// 📊 Métricas Administrativas
+  getMorosityMetrics: async (fechaInicio?: string, fechaFin?: string): Promise<AxiosResponse<MorosidadDTO>> => {
+    return await httpService.get(`${BASE_PROYECTO}/metrics/morosidad`, {
+      params: { fechaInicio, fechaFin }
+    });
   },
 
-  getCancellationMetrics: async (): Promise<AxiosResponse<CancelacionDTO>> => {
-    return await httpService.get(`${BASE_PROYECTO}/metrics/cancelacion`);
+  getCancellationMetrics: async (fechaInicio?: string, fechaFin?: string): Promise<AxiosResponse<CancelacionDTO>> => {
+    return await httpService.get(`${BASE_PROYECTO}/metrics/cancelacion`, {
+      params: { fechaInicio, fechaFin }
+    });
   },
-
   updateSuscription: async (id: number, data: SuscripcionDto): Promise<AxiosResponse<SuscripcionDto>> => {
     return await httpService.patch(`${BASE_PROYECTO}/${id}`, data);
   },

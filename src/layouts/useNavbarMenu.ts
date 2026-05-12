@@ -25,7 +25,6 @@ import {
   Lock as LockIcon,
   LockOpen as LockOpenIcon,
   Logout as LogoutIcon,
-  Message as MessageIcon,
   Person as PersonIcon,
   Receipt as ReceiptIcon,
   Settings as SettingsIcon,
@@ -113,7 +112,7 @@ export const useNavbarMenu = () => {
   }, [confirmLogout]);
 
   const config: NavbarConfig = useMemo(() => {
-    
+
     // ----------------------------------------------------------------------
     // A. ADMINISTRADOR
     // ----------------------------------------------------------------------
@@ -269,9 +268,9 @@ export const useNavbarMenu = () => {
             description: "Lotes guardados"
           },
           {
-                label: "Cerrar Sesión",
-                icon: LogoutIcon,
-                action: handleLogoutClick
+            label: "Cerrar Sesión",
+            icon: LogoutIcon,
+            action: handleLogoutClick
           }
         ],
 

@@ -1,17 +1,14 @@
 // src/features/admin/components/modals/CancelacionPujaModal.tsx
 
 import {
-  AccountCircle,
-  AttachMoney,
   Cancel,
   CheckCircle,
   ErrorOutline,
   Gavel,
   MailOutline,
-  Person,
   ReportProblem,
   SwapHoriz,
-  Warning,
+  Warning
 } from '@mui/icons-material';
 import {
   Alert,

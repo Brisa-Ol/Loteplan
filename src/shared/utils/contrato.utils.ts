@@ -1,5 +1,6 @@
-// src/utils/contractUtils.ts
-import type { ContratoFirmadoDto, ContratoPlantillaDto } from "@/core/types/dto";
+import type { ContratoFirmadoDto } from "@/core/types/contrato-firmado.dto";
+import type { ContratoPlantillaDto } from "@/core/types/contrato-plantilla.dto";
+
 
 /**
  * Formatea la fecha de un contrato para mostrar en la UI.

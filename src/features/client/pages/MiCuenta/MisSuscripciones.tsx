@@ -1,41 +1,39 @@
 // src/components/domain/suscripciones/MisSuscripciones.tsx
 
-import React, { useState, useMemo, useCallback } from "react";
 import {
-    Box,
-    Tabs,
-    Tab,
-    Paper,
-    useTheme,
-    Typography,
-    Stack,
-    IconButton,
-    Tooltip,
-    Chip,
-} from "@mui/material";
-import {
+    CalendarMonth,
+    Cancel,
     CheckCircle,
+    EventBusy,
     History as HistoryIcon,
     MonetizationOn,
-    EventBusy,
+    PauseCircleOutline,
     PlayCircleFilled,
-    Token as TokenIcon,
-    Visibility,
-    Cancel,
-    CalendarMonth,
     ReceiptLong,
     Schedule,
-    PauseCircleOutline, // 🆕 Importamos el ícono de pausa
+    Token as TokenIcon,
+    Visibility,
 } from "@mui/icons-material";
+import {
+    Box,
+    Chip,
+    IconButton,
+    Paper,
+    Stack,
+    Tab,
+    Tabs,
+    Tooltip,
+    Typography,
+    useTheme,
+} from "@mui/material";
+import React, { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import type {
-    SuscripcionDto,
-    SuscripcionCanceladaDto,
-} from "@/core/types/suscripcion.dto";
 import type { AdhesionDto, PlanPagoAdhesion } from "@/core/types/adhesion.dto";
-import { useSuscripciones } from "../../hooks/useSuscripciones";
-import { useCurrencyFormatter } from "../../hooks/useCurrencyFormatter";
+import type {
+    SuscripcionCanceladaDto,
+    SuscripcionDto,
+} from "@/core/types/suscripcion.dto";
 import {
     ConfirmDialog,
     DataTable,
@@ -47,9 +45,10 @@ import {
     useModal,
     type DataTableColumn,
 } from "@/shared";
+import { useCurrencyFormatter } from "../../hooks/useCurrencyFormatter";
+import { useSuscripciones } from "../../hooks/useSuscripciones";
 // ✅ Importamos el Modal de 2FA
 import TwoFactorAuthModal from "@/shared/components/domain/modals/TwoFactorAuthModal";
-import SuscripcionService from "@/core/api/services/suscripcion.service";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HELPERS
@@ -148,7 +147,7 @@ const MisSuscripciones: React.FC = () => {
                     confirmDialog.close();
                     if (res.status === 202 || res.data?.requires2FA || res.data?.requires2FA) {
                         setSelectedCancelId(suscripcionId);
-                        setCancelType("subscription"); 
+                        setCancelType("subscription");
                         setMotivoBaja(inputValue ?? '')
                         setTwoFAError(null);
                         twoFaModal.open();
@@ -168,7 +167,7 @@ const MisSuscripciones: React.FC = () => {
                         res.data?.requiere2FA
                     ) {
                         setSelectedCancelId(adhesionId);
-                        setCancelType("adhesion"); 
+                        setCancelType("adhesion");
                         setTwoFAError(null);
                         twoFaModal.open();
                     }
@@ -204,7 +203,7 @@ const MisSuscripciones: React.FC = () => {
                         >
                             Suscripción #{row.id} • Alta: {formatDate(row.createdAt)}
                         </Typography>
-                        
+
                         {/* 🆕 VISUALIZACIÓN DEL ESTADO STANDBY PARA EL CLIENTE */}
                         {row.standby_active && row.standby_end_date && (
                             <Chip
@@ -461,9 +460,9 @@ const MisSuscripciones: React.FC = () => {
         if (confirmDialog.action === ("cancel_adhesion" as any)) {
             const adhesion = confirmDialog.data as AdhesionDto;
             return `Estás a punto de cancelar tu Adhesión #${adhesion.id} del proyecto "${adhesion.proyecto?.nombre_proyecto}". Perderás el cupo reservado. Esta acción es irreversible.`;
-        }else{
+        } else {
             const suscripcion = confirmDialog.data as SuscripcionDto;
-            
+
             return `Estás a punto de cancelar la Suscripción #${suscripcion.id} correspondiente al proyecto "${suscripcion.proyectoAsociado?.nombre_proyecto}". Tu capital acumulado pasará a proceso de liquidación.`;
         }
 

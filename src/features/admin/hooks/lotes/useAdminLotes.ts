@@ -8,13 +8,11 @@ import { useSearchParams } from 'react-router-dom';
 import ImagenService from '@/core/api/services/imagen.service';
 import LoteService from '@/core/api/services/lote.service';
 import ProyectoService from '@/core/api/services/proyecto.service';
-import PujaService from '@/core/api/services/puja.service';
-import { env } from '@/core/config/env'; 
+import { env } from '@/core/config/env';
 
 import type { CreateLoteDto, LoteDto, UpdateLoteDto } from '@/core/types/lote.dto';
 import { useConfirmDialog, useModal, useSnackbar } from '@/shared';
 import { useSortedData } from '../useSortedData';
-import { finalizarSubasta } from '@/shared/utils/pujaUtils';
 
 function useDebouncedValue<T>(value: T, delay: number = 300): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
@@ -164,43 +162,43 @@ export const useAdminLotes = () => {
     onError: (err: any) => { showError(err.response?.data?.error || 'Error'); modales.confirm.close(); }
   });
 
-const startAuction = useMutation({
-  mutationFn: (id: number) => LoteService.startAuction(id),
-  onSuccess: (_, id) => {
-    // Actualiza el cache directamente sin esperar un GET
-    queryClient.setQueryData<LoteDto[]>(['adminLotes'], (old = []) =>
-      old.map(l => l.id === id ? { ...l, estado_subasta: 'activa' } : l)
-    );
-    modales.auction.close();
-    triggerHighlight(id);
-    showSuccess('Subasta iniciada');
-    // Recarga para asegurar que todos los datos relacionados (como pujas) estén actualizados
-    setTimeout(() => {
+  const startAuction = useMutation({
+    mutationFn: (id: number) => LoteService.startAuction(id),
+    onSuccess: (_, id) => {
+      // Actualiza el cache directamente sin esperar un GET
+      queryClient.setQueryData<LoteDto[]>(['adminLotes'], (old = []) =>
+        old.map(l => l.id === id ? { ...l, estado_subasta: 'activa' } : l)
+      );
+      modales.auction.close();
+      triggerHighlight(id);
+      showSuccess('Subasta iniciada');
+      // Recarga para asegurar que todos los datos relacionados (como pujas) estén actualizados
+      setTimeout(() => {
         window.location.reload();
       }, 1750)
-  },
-  onError: () => showError('Error al iniciar subasta'),
-});
+    },
+    onError: () => showError('Error al iniciar subasta'),
+  });
 
-const endAuction = useMutation({
-  mutationFn: (id: number) => LoteService.endAuction(id),
-  onSuccess: (_, id) => {
-    // Actualiza el cache directamente sin esperar un GET
-    queryClient.setQueryData<LoteDto[]>(['adminLotes'], (old = []) =>
-      old.map(l => l.id === id ? { ...l, estado_subasta: 'finalizada' } : l)
-    );
-    modales.auction.close();
-    triggerHighlight(id);
-    showSuccess('Subasta finalizada');
-    
-    // Recarga para asegurar que todos los datos relacionados (como pujas) estén actualizados
-    setTimeout(() => {
-		window.location.reload();
-	}, 1750);
-  },
-  onError: (err: any) =>
-    showError(err.response?.data?.message || 'Error al finalizar'),
-});
+  const endAuction = useMutation({
+    mutationFn: (id: number) => LoteService.endAuction(id),
+    onSuccess: (_, id) => {
+      // Actualiza el cache directamente sin esperar un GET
+      queryClient.setQueryData<LoteDto[]>(['adminLotes'], (old = []) =>
+        old.map(l => l.id === id ? { ...l, estado_subasta: 'finalizada' } : l)
+      );
+      modales.auction.close();
+      triggerHighlight(id);
+      showSuccess('Subasta finalizada');
+
+      // Recarga para asegurar que todos los datos relacionados (como pujas) estén actualizados
+      setTimeout(() => {
+        window.location.reload();
+      }, 1750);
+    },
+    onError: (err: any) =>
+      showError(err.response?.data?.message || 'Error al finalizar'),
+  });
 
 
   // --- HANDLERS ---
