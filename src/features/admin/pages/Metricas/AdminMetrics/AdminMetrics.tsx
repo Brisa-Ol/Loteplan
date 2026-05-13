@@ -29,13 +29,14 @@ import {
 	BarChart,
 	CartesianGrid,
 	Cell,
-	ResponsiveContainer,
 	Tooltip as RechartsTooltip,
+	ResponsiveContainer,
 	XAxis,
 	YAxis,
 } from "recharts";
 
 import type { AuditLog } from "@/core/types/auditLog.dto";
+import { useAdminMetrics } from "@/features/admin/hooks/metricas/useAdminMetrics";
 import { AdminPageHeader } from "@/shared/components/admin/Adminpageheader";
 import MetricsGrid from "@/shared/components/admin/Metricsgrid";
 import {
@@ -55,7 +56,6 @@ import {
 } from "@/shared/components/forms/FilterBar";
 import { PageContainer } from "@/shared/components/layout/PageContainer";
 import AlertBanner from "@/shared/components/ui/Alertbanner";
-import { useAdminMetrics } from "@/features/admin/hooks/metricas/useAdminMetrics";
 import ModalDetalleAuditLog from "../ModalDetalleAuditLog/ModalDetalleAuditLog";
 
 // ============================================================================
@@ -226,18 +226,18 @@ export const AdminMetrics: React.FC = () => {
 		filters,
 		handleFilterChange,
 		stats,
-		accionOptions,
-		entidadOptions,
+		accionOptions,  // <-- DESCOMENTADO
+		entidadOptions, // <-- DESCOMENTADO
 	} = useAdminMetrics();
 
 	const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
 	const [modalOpen, setModalOpen] = useState(false);
 
 	const handleViewDetail = (log: AuditLog) => {
-	setSelectedLog(log);
-	setModalOpen(true);
+		setSelectedLog(log);
+		setModalOpen(true);
 	};
- 	const handleCloseModal = () => setModalOpen(false);
+	const handleCloseModal = () => setModalOpen(false);
 
 	const [viewMode, setViewMode] = useState<ViewMode>("table");
 
@@ -374,13 +374,13 @@ export const AdminMetrics: React.FC = () => {
 				id: "acciones", label: "Ver Detalles", minWidth: 60, align: "right",
 				render: (row) => (
 					<Box>
-					<IconButton
-						size="small"
-						onClick={() => handleViewDetail(row)}
-						sx={{ color: "primary.main", bgcolor: alpha(theme.palette.primary.main, 0.05), "&:hover": { bgcolor: alpha(theme.palette.primary.main, 0.15) } }}
-					>
-						<Visibility fontSize="small" />
-					</IconButton>
+						<IconButton
+							size="small"
+							onClick={() => handleViewDetail(row)}
+							sx={{ color: "primary.main", bgcolor: alpha(theme.palette.primary.main, 0.05), "&:hover": { bgcolor: alpha(theme.palette.primary.main, 0.15) } }}
+						>
+							<Visibility fontSize="small" />
+						</IconButton>
 					</Box>
 				),
 			},
@@ -461,45 +461,30 @@ export const AdminMetrics: React.FC = () => {
 					/>
 				</Stack>
 
-				<FilterBar sx={{ p: 2 }}>
-					<Box
-						sx={{
-							display: "flex",
-							flexDirection: { xs: "column", lg: "row" },
-							gap: 2,
-							alignItems: { xs: "stretch", lg: "center" },
-							width: "100%",
-						}}
-					>
-						{/* Search */}
-						<Box sx={{ flex: 2, minWidth: { xs: "100%", lg: 300 } }}>
+				<FilterBar sx={{ p: 2, bgcolor: 'background.paper', borderRadius: '12px', border: '1px solid', borderColor: 'divider' }}>
+					<Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center', width: '100%' }}>
+
+						{/* Buscador: Toma el espacio restante */}
+						<Box sx={{ flex: 1, minWidth: { xs: '100%', md: 280 } }}>
 							<FilterSearch
 								placeholder="Buscar por acción, entidad, motivo..."
-								value={filters.searchTerm}
-								onSearch={(v) => handleFilterChange("searchTerm", v)}
+								value={filters.searchTerm || ""}
+								onSearch={(value) => handleFilterChange("searchTerm", value)}
 								fullWidth
 							/>
 						</Box>
 
-						{/* Filtros secundarios */}
-						<Box
-							sx={{
-								display: "flex",
-								flexDirection: { xs: "column", sm: "row" },
-								gap: 2,
-								flexWrap: "wrap",
-								alignItems: { xs: "stretch", sm: "center" },
-								flex: 1,
-							}}
-						>
+						{/* Controles Derecha: Fechas y Selects */}
+						<Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center', width: { xs: '100%', xl: 'auto' } }}>
+
 							{/* Fechas */}
-							<Stack direction="row" spacing={1} alignItems="center">
+							<Stack direction="row" spacing={1} alignItems="center" sx={{ width: { xs: '100%', sm: 'auto' } }}>
 								<TextField
 									label="Desde"
 									type="date"
 									size="small"
 									InputLabelProps={{ shrink: true }}
-									value={filters.dateFrom}
+									value={filters.dateFrom || ""}
 									onChange={(e) => handleFilterChange("dateFrom", e.target.value)}
 									sx={dateInputStyles}
 								/>
@@ -509,42 +494,41 @@ export const AdminMetrics: React.FC = () => {
 									type="date"
 									size="small"
 									InputLabelProps={{ shrink: true }}
-									value={filters.dateTo}
+									value={filters.dateTo || ""}
 									onChange={(e) => handleFilterChange("dateTo", e.target.value)}
 									sx={dateInputStyles}
 								/>
 							</Stack>
 
-							{/* Selects dinámicos */}
-							<Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
-								<FilterSelect
-									label="Acción"
-									value={filters.accion}
-									onChange={(e) => handleFilterChange("accion", e.target.value)}
-									sx={{ minWidth: 160 }}
-								>
-									<MenuItem value="all">Todas</MenuItem>
-									{accionOptions.map((a) => (
-										<MenuItem key={a} value={a}>
-											{a.replace(/_/g, " ")}
-										</MenuItem>
-									))}
-								</FilterSelect>
+							{/* Selects: Dinámicos con fondo blanco */}
+							<FilterSelect
+								label="Acción"
+								value={filters.accion || "all"}
+								onChange={(e) => handleFilterChange("accion", e.target.value)}
+								sx={{ minWidth: 160, flex: { xs: 1, sm: 'none' }, bgcolor: 'background.paper' }}
+							>
+								<MenuItem value="all">Todas</MenuItem>
+								{accionOptions.map((a) => (
+									<MenuItem key={a} value={a}>
+										{a.replace(/_/g, " ")}
+									</MenuItem>
+								))}
+							</FilterSelect>
 
-								<FilterSelect
-									label="Entidad"
-									value={filters.entidadTipo}
-									onChange={(e) => handleFilterChange("entidadTipo", e.target.value)}
-									sx={{ minWidth: 160 }}
-								>
-									<MenuItem value="all">Todas</MenuItem>
-									{entidadOptions.map((e) => (
-										<MenuItem key={e} value={e}>
-											{e}
-										</MenuItem>
-									))}
-								</FilterSelect>
-							</Box>
+							<FilterSelect
+								label="Entidad"
+								value={filters.entidadTipo || "all"}
+								onChange={(e) => handleFilterChange("entidadTipo", e.target.value)}
+								sx={{ minWidth: 160, flex: { xs: 1, sm: 'none' }, bgcolor: 'background.paper' }}
+							>
+								<MenuItem value="all">Todas</MenuItem>
+								{entidadOptions.map((e) => (
+									<MenuItem key={e} value={e}>
+										{e}
+									</MenuItem>
+								))}
+							</FilterSelect>
+
 						</Box>
 					</Box>
 				</FilterBar>
@@ -585,9 +569,9 @@ export const AdminMetrics: React.FC = () => {
 				</Stack>
 			)}
 
-			<ModalDetalleAuditLog 
-				open={modalOpen} 
-				log={selectedLog} 
+			<ModalDetalleAuditLog
+				open={modalOpen}
+				log={selectedLog}
 				onClose={handleCloseModal}
 			/>
 		</PageContainer>

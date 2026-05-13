@@ -61,11 +61,11 @@ export const useAdminMetrics = () => {
 				...(filters.dateTo && { fechaHasta: filters.dateTo }),
 			};
 			const res = await getAuditLogs(params);
-            
-            console.log("Respuesta completa del servicio:", res);
-            console.log("res.data:", res.data);
-            console.log("res.data.data:", res.data?.data);
-            console.log("pagination:", res.data?.pagination);
+
+			console.log("Respuesta completa del servicio:", res);
+			console.log("res.data:", res.data);
+			console.log("res.data.data:", res.data?.data);
+			console.log("pagination:", res.data?.pagination);
 			setLogs(res.data.data);
 			setTotal(res.data.pagination.total);
 			setTotalPages(res.data.pagination.totalPages);
@@ -146,16 +146,25 @@ export const useAdminMetrics = () => {
 
 	// --------------------------------------------------------------------------
 	// Opciones únicas para los selects (derivadas de los datos cargados)
-	// --------------------------------------------------------------------------
-	const accionOptions = useMemo(
-		() => [...new Set(logs.map((l) => l.accion))].sort(),
-		[logs],
-	);
+	// NUEVO CÓDIGO
+	const [accionOptions, setAccionOptions] = useState<string[]>([]);
+	const [entidadOptions, setEntidadOptions] = useState<string[]>([]);
 
-	const entidadOptions = useMemo(
-		() => [...new Set(logs.map((l) => l.entidad_tipo))].sort(),
-		[logs],
-	);
+	// Este effect acumula las opciones nuevas sin borrar las viejas
+	useEffect(() => {
+		if (logs.length > 0) {
+			setAccionOptions((prev) => {
+				const nuevasAcciones = logs.map((l) => l.accion);
+				// Combina las anteriores con las nuevas y quita duplicados
+				return Array.from(new Set([...prev, ...nuevasAcciones])).sort();
+			});
+
+			setEntidadOptions((prev) => {
+				const nuevasEntidades = logs.map((l) => l.entidad_tipo);
+				return Array.from(new Set([...prev, ...nuevasEntidades])).sort();
+			});
+		}
+	}, [logs]);
 
 	return {
 		// datos
