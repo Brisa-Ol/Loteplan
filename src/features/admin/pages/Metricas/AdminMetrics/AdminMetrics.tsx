@@ -57,6 +57,7 @@ import { PageContainer } from "@/shared/components/layout/PageContainer";
 import AlertBanner from "@/shared/components/ui/Alertbanner";
 import { useAdminMetrics } from "@/features/admin/hooks/metricas/useAdminMetrics";
 import ModalDetalleAuditLog from "../ModalDetalleAuditLog/ModalDetalleAuditLog";
+import { colors } from "@/core/theme/globalStyles";
 
 // ============================================================================
 // SUB-COMPONENTE: ANALYTICS
@@ -67,6 +68,7 @@ const AuditAnalytics = React.memo<{
 	entidadCount: Record<string, number>;
 }>(({ accionCount, entidadCount }) => {
 	const theme = useTheme();
+	const colores = colors
 
 	const accionData = Object.entries(accionCount)
 		.map(([name, cantidad]) => ({ name, cantidad }))
@@ -79,8 +81,10 @@ const AuditAnalytics = React.memo<{
 
 	const BAR_COLORS = [
 		theme.palette.primary.main,
-		theme.palette.secondary.main,
+		colores.success.main,
 		theme.palette.warning.main,
+		theme.palette.primary.light,
+		theme.palette.primary.dark,
 		theme.palette.error.main,
 		theme.palette.info.main,
 	];
