@@ -52,8 +52,15 @@ import {
 	Typography,
 	useTheme,
 } from "@mui/material";
-import React, { useState, useMemo } from "react";
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
+import React, { useMemo, useState } from "react";
 
+const safeFormatDate = (dateStr?: string | null) => {
+	if (!dateStr) return '---';
+	const safeString = dateStr.length === 10 ? `${dateStr}T00:00:00` : dateStr;
+	return format(new Date(safeString), 'dd/MM/yyyy', { locale: es });
+};
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const ESTADO_ADHESION_CONFIG: Record<
@@ -157,16 +164,14 @@ const CuotasDetalle: React.FC<{
 								</TableCell>
 								<TableCell>
 									<Typography variant="body2">
-										{new Date(pago.fecha_vencimiento).toLocaleDateString("es-AR", {
-											timeZone: "UTC",
-										})}
+
+										{safeFormatDate(pago.fecha_vencimiento)}
 									</Typography>
 									{pago.fecha_pago && (
 										<Typography variant="caption" color="success.main" display="block">
 											Pagado:{" "}
-											{new Date(pago.fecha_pago).toLocaleDateString("es-AR", {
-												timeZone: "UTC",
-											})}
+
+											{safeFormatDate(pago.fecha_pago)}
 										</Typography>
 									)}
 								</TableCell>
@@ -192,7 +197,7 @@ const CuotasDetalle: React.FC<{
 												onClick={() =>
 													onVerMotivo(
 														pago.motivo ||
-															"Pago forzado por administrador (sin motivo detallado)",
+														"Pago forzado por administrador (sin motivo detallado)",
 													)
 												}
 												sx={{
@@ -261,7 +266,7 @@ const AdhesionRow: React.FC<{
 
 	if (adhesion.estado === "completada") {
 		textoFecha = adhesion.fecha_completada
-			? `Completada: ${new Date(adhesion.fecha_completada).toLocaleDateString("es-AR")}`
+			? `Completada: ${safeFormatDate(adhesion.fecha_completada)}` // ✅ Corregido
 			: "Completada";
 		colorFecha = "success.main";
 		fontWeightFecha = 700;
@@ -274,7 +279,7 @@ const AdhesionRow: React.FC<{
 		);
 		if (cuotaActual) {
 			const isVencido = cuotaActual.estado === "vencido";
-			textoFecha = `${isVencido ? "Venció" : "Vence"}: ${new Date(cuotaActual.fecha_vencimiento).toLocaleDateString("es-AR")}`;
+			textoFecha = `${isVencido ? "Venció" : "Vence"}: ${safeFormatDate(cuotaActual.fecha_vencimiento)}`; // ✅ Corregido
 			colorFecha = isVencido ? "error.main" : "text.primary";
 			fontWeightFecha = isVencido ? 700 : 500;
 		}
@@ -442,7 +447,7 @@ const OverduePanel: React.FC<{
 								{formatCurrency(p.monto)}
 							</Typography>
 							<Typography variant="caption" color="text.secondary">
-								venció {new Date(p.fecha_vencimiento).toLocaleDateString("es-AR")}
+								venció {safeFormatDate(p.fecha_vencimiento)} {/* ✅ Corregido */}
 							</Typography>
 						</Stack>
 					</Stack>

@@ -1,6 +1,5 @@
 // src/features/admin/pages/Usuarios/modals/sections/KycDataColumn.tsx
 
-import { env } from '@/core/config/env';
 import type { KycDTO } from '@/core/types/kyc.dto';
 import {
     AccountCircle,
@@ -19,8 +18,9 @@ import {
     WarningAmber
 } from '@mui/icons-material';
 import { Alert, alpha, Avatar, Box, Button, Divider, Paper, Stack, Typography, useTheme } from '@mui/material';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 import React from 'react';
-
 // --- Mini componentes reutilizables (Más compactos) ---
 
 const LabelCaption = ({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) => (
@@ -108,7 +108,7 @@ const KycDataColumn: React.FC<Props> = ({ kyc, isPending }) => {
                         <UserDataField
                             icon={<BirthdayIcon />}
                             label="Nacimiento"
-                            value={kyc.fecha_nacimiento ? new Date(kyc.fecha_nacimiento).toLocaleDateString(env.defaultLocale) : 'No declarada'}
+                            value={kyc.fecha_nacimiento ? format(new Date(kyc.fecha_nacimiento), 'dd/MM/yyyy', { locale: es }) : 'No declarada'}
                         />
                     </Box>
                 </Paper>
@@ -210,8 +210,7 @@ const KycDataColumn: React.FC<Props> = ({ kyc, isPending }) => {
                                 <Box>
                                     <LabelCaption icon={<DateIcon />}>Fecha Resolución</LabelCaption>
                                     <Typography variant="body2" fontWeight={600} color="text.primary">
-                                        {new Date(kyc.fecha_verificacion).toLocaleDateString(env.defaultLocale)} a las{' '}
-                                        {new Date(kyc.fecha_verificacion).toLocaleTimeString(env.defaultLocale, { hour: '2-digit', minute: '2-digit' })}
+                                        {format(new Date(kyc.fecha_verificacion), "dd 'de' MMM, yyyy - HH:mm 'hs'", { locale: es })}
                                     </Typography>
                                 </Box>
                             </>

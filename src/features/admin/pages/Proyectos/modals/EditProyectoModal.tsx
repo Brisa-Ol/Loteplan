@@ -3,6 +3,7 @@
 import type { ProyectoDto, UpdateProyectoDto } from '@/core/types/proyecto.dto';
 import { BaseModal } from '@/shared';
 import { extractAndValidateMapUrl } from '@/shared/utils/extractAndValidateMapUrl';
+import { formatForDateInput } from '@/shared/utils/FormatDateTime';
 import {
     CalendarMonth as CalendarIcon,
     Description as DescriptionIcon,
@@ -73,16 +74,16 @@ const getValidationSchema = (tipo_inversion?: string) => Yup.object({
     latitud: Yup.number().nullable().min(-90, 'Latitud inválida').max(90, 'Latitud inválida'),
     longitud: Yup.number().nullable().min(-180, 'Longitud inválida').max(180, 'Longitud inválida'),
     map_url: Yup.string().nullable()
-    .test("valid-map-url", "URL de mapa inválida o no embebible", function (value) {
-		if (!value) return true;
+        .test("valid-map-url", "URL de mapa inválida o no embebible", function (value) {
+            if (!value) return true;
 
-		try {
-			extractAndValidateMapUrl(value);
-			return true;
-		} catch (e: any) {
-			return this.createError({ message: e.message });
-		}
-	}),
+            try {
+                extractAndValidateMapUrl(value);
+                return true;
+            } catch (e: any) {
+                return this.createError({ message: e.message });
+            }
+        }),
     // 2. Solo exigimos validar plazos y cupos si es un Plan Mensual
     ...(tipo_inversion === 'mensual' ? {
         obj_suscripciones: Yup.number().typeError('Requerido').required('Requerido').min(1, 'Mínimo 1'),
@@ -287,6 +288,7 @@ const EditProyectoModal: React.FC<EditProyectoModalProps> = ({
                         <TextField
                             fullWidth label="Fecha de Inicio" type="date" InputLabelProps={{ shrink: true }}
                             {...formik.getFieldProps('fecha_inicio')}
+                            value={formatForDateInput(formik.values.fecha_inicio)}
                             error={formik.touched.fecha_inicio && !!formik.errors.fecha_inicio}
                             helperText={formik.touched.fecha_inicio && formik.errors.fecha_inicio}
                             InputProps={{ endAdornment: <InputAdornment position="end"><CalendarIcon color="action" /></InputAdornment> }}
@@ -295,7 +297,8 @@ const EditProyectoModal: React.FC<EditProyectoModalProps> = ({
                         <TextField
                             fullWidth label="Fecha de Cierre" type="date" InputLabelProps={{ shrink: true }}
                             {...formik.getFieldProps('fecha_cierre')}
-                            inputProps={{ min: formik.values.fecha_inicio }}
+                            value={formatForDateInput(formik.values.fecha_cierre)}
+                            inputProps={{ min: formatForDateInput(formik.values.fecha_inicio) }}
                             error={formik.touched.fecha_cierre && !!formik.errors.fecha_cierre}
                             helperText={formik.touched.fecha_cierre && formik.errors.fecha_cierre}
                             InputProps={{ endAdornment: <InputAdornment position="end"><CalendarIcon color="action" /></InputAdornment> }}
@@ -373,7 +376,7 @@ const EditProyectoModal: React.FC<EditProyectoModalProps> = ({
                                     helperText={formik.touched.map_url && formik.errors.map_url}
                                     InputProps={{ startAdornment: <InputAdornment position="start"><WorldIcon fontSize='small' color="action" /></InputAdornment> }}
                                     sx={commonInputSx}
-                                    
+
                                 />
                                 <TextField
                                     fullWidth label="Latitud" type="number"
@@ -391,7 +394,7 @@ const EditProyectoModal: React.FC<EditProyectoModalProps> = ({
                                     InputProps={{ startAdornment: <InputAdornment position="start"><WorldIcon fontSize='small' color="action" /></InputAdornment> }}
                                     sx={commonInputSx}
                                 />
-                                
+
                             </Stack>
                         </Box>
 

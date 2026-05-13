@@ -6,11 +6,12 @@ import { BaseModal, DataTable, FilterBar, FilterSearch, QueryHandler, StatCard, 
 import { Cancel, CheckCircle, Clear as ClearIcon, MoneyOff, ReportProblem, TrendingDown, Visibility } from '@mui/icons-material';
 import { alpha, Box, Button, Chip, IconButton, Paper, Stack, TextField, Tooltip, Typography, useTheme } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 import React, { useCallback, useMemo, useState } from 'react';
 import useCancelacionesColumns from '../hooks/useCancelacionesColumns';
 import DetalleCancelacionModal from '../modals/DetalleCancelacionModal/DetalleCancelacionModal';
 
-// Estilos compartidos para los inputs de fecha (ícono del calendario en naranja #CC6333)
 const dateInputStyles = {
     width: { xs: '50%', sm: 140 },
     bgcolor: 'background.paper',
@@ -19,6 +20,11 @@ const dateInputStyles = {
         cursor: 'pointer',
         filter: 'brightness(0) saturate(100%) invert(46%) sepia(50%) saturate(1637%) hue-rotate(345deg) brightness(90%) contrast(85%)'
     }
+};
+const safeFormatDate = (dateStr?: string | null) => {
+    if (!dateStr) return '---';
+    const safeString = dateStr.length === 10 ? `${dateStr}T00:00:00` : dateStr;
+    return format(new Date(safeString), 'dd/MM/yyyy', { locale: es });
 };
 
 const CancelacionesTab: React.FC = () => {
@@ -118,15 +124,15 @@ const CancelacionesTab: React.FC = () => {
                     if (!row.fecha_cancelacion) {
                         return <Typography variant="body2" color="text.secondary">---</Typography>;
                     }
-                    const dateObj = new Date(row.fecha_cancelacion);
+                    const safeString = row.fecha_cancelacion.length === 10 ? `${row.fecha_cancelacion}T00:00:00` : row.fecha_cancelacion;
+                    const dateObj = new Date(safeString);
                     return (
                         <Box>
-                            {/* 👇 Aquí le quitamos el fontWeight 800 para que se vea normal */}
                             <Typography variant="body2" color="text.primary" fontWeight={500}>
-                                {dateObj.toLocaleDateString('es-AR')}
+                                {format(dateObj, 'dd/MM/yyyy', { locale: es })}
                             </Typography>
                             <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: '0.8rem' }}>
-                                {dateObj.toLocaleTimeString('es-AR', { hour: 'numeric', minute: '2-digit', hour12: true })}
+                                {format(dateObj, 'HH:mm', { locale: es })} hs
                             </Typography>
                         </Box>
                     );

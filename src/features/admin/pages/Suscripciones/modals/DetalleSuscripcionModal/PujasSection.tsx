@@ -20,8 +20,14 @@ import {
 } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
-
+const safeFormatDate = (dateStr?: string | null) => {
+    if (!dateStr) return '---';
+    const safeString = dateStr.length === 10 ? `${dateStr}T00:00:00` : dateStr;
+    return format(new Date(safeString), 'dd/MM/yyyy', { locale: es });
+};
 
 const ESTADO_OPTIONS: { value: EstadoPuja; label: string; color: 'success' | 'error' | 'warning' | 'default' | 'info' }[] = [
     { value: 'activa', label: 'Activa', color: 'info' },
@@ -180,7 +186,7 @@ export const PujasSection = ({ idSuscripcion }: Props) => {
                                         </TableCell>
                                         <TableCell>
                                             <Typography variant="body2" color="text.secondary">
-                                                {new Date(puja.fecha_puja).toLocaleDateString()}
+                                                {safeFormatDate(puja.fecha_puja)}
                                             </Typography>
                                         </TableCell>
                                         <TableCell>

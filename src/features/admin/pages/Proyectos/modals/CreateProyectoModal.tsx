@@ -35,6 +35,7 @@ import React, { useCallback, useMemo, useRef, useState } from 'react';
 import * as Yup from 'yup';
 
 import { env } from '@/core/config/env';
+import { formatForDateInput } from '@/shared/utils/FormatDateTime';
 
 // --- FUNCIONES AUXILIARES ---
 const blockInvalidChar = (e: React.KeyboardEvent) =>
@@ -234,14 +235,16 @@ const ScheduleSection = React.memo(({ inicio, fin, touchedInicio, errorInicio, t
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
         <FastTextField
           fullWidth type="date" label="Apertura" InputLabelProps={{ shrink: true }}
-          formikValue={inicio} onCommit={onCommitInicio} onMouseDown={handlePicker}
-          inputProps={{ min: minDate }} error={touchedInicio && Boolean(errorInicio)} helperText={touchedInicio && (errorInicio as string)}
+          formikValue={formatForDateInput(inicio)} onCommit={onCommitInicio} onMouseDown={handlePicker}
+          inputProps={{ min: formatForDateInput(minDate) }} 
+          error={touchedInicio && Boolean(errorInicio)} helperText={touchedInicio && (errorInicio as string)}
           sx={dateInputStyles}
         />
         <FastTextField
           fullWidth type="date" label="Cierre" InputLabelProps={{ shrink: true }}
-          formikValue={fin} onCommit={onCommitFin} onMouseDown={handlePicker}
-          inputProps={{ min: inicio || minDate }} error={touchedFin && Boolean(errorFin)} helperText={touchedFin && (errorFin as string)}
+          formikValue={formatForDateInput(fin)} onCommit={onCommitFin} onMouseDown={handlePicker}
+          inputProps={{ min: formatForDateInput(inicio) || formatForDateInput(minDate) }} 
+          error={touchedFin && Boolean(errorFin)} helperText={touchedFin && (errorFin as string)}
           sx={dateInputStyles}
         />
       </Stack>

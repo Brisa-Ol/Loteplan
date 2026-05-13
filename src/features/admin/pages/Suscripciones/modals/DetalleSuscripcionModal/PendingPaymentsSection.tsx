@@ -4,8 +4,15 @@ import type { PagoDto } from '@/core/types/pago.dto';
 import { AttachMoney, Check as CheckIcon, Close as CloseIcon, Edit as EditIcon, ExpandLess, ExpandMore, FastForward, Schedule } from '@mui/icons-material';
 import { alpha, Badge, Box, Chip, CircularProgress, Collapse, IconButton, Paper, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography, useTheme } from '@mui/material';
 import React from 'react';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
-// ✅ 1. INTERFAZ ACTUALIZADA (Agregamos onSaveMontoClick y quitamos updateMontoMutation)
+const safeFormatDate = (dateStr?: string | null) => {
+    if (!dateStr) return '—';
+    const safeString = dateStr.length === 10 ? `${dateStr}T00:00:00` : dateStr;
+    return format(new Date(safeString), 'dd/MM/yyyy', { locale: es });
+};
+
 interface Props {
   show: boolean;
   onToggle: () => void;
@@ -74,9 +81,9 @@ export const PendingPaymentsPanel: React.FC<Props> = ({
                           </Typography>
                         )}
                       </TableCell>
-                      <TableCell>
+                     <TableCell>
                         <Typography variant="caption" color="text.secondary" fontWeight={600}>
-                          {pago.fecha_vencimiento ? new Date(pago.fecha_vencimiento).toLocaleDateString('es-AR', {timeZone: "UTC",}) : '—'}
+                          {safeFormatDate(pago.fecha_vencimiento)}
                         </Typography>
                       </TableCell>
                       <TableCell>

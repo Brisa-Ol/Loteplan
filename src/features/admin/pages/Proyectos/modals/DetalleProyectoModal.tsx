@@ -41,7 +41,8 @@ import PdfPreviewModal from '@/features/admin/pages/Contrato/modals/PdfPreviewMo
 import { BaseModal } from '@/shared/components/domain';
 import ContratoPlantillaService from '../../../../../core/api/services/contrato-plantilla.service';
 import ImagenService from '../../../../../core/api/services/imagen.service';
-
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 interface DetalleProyectoModalProps {
   open: boolean;
   onClose: () => void;
@@ -83,6 +84,13 @@ const DetalleProyectoModal: React.FC<DetalleProyectoModalProps> = ({ open, onClo
 
   if (!proyecto) return null;
 
+  const safeFormatDate = (dateStr?: string | null) => {
+    if (!dateStr) return 'No asignada';
+    // Si la fecha viene como "YYYY-MM-DD" sin hora, le agregamos "T00:00:00" 
+    // Esto obliga a JavaScript a leerla en horario LOCAL y evita que te reste un día.
+    const safeString = dateStr.length === 10 ? `${dateStr}T00:00:00` : dateStr;
+    return format(new Date(safeString), 'dd/MM/yyyy', { locale: es });
+  };
   // --- Handlers ---
   const handleGestionarContrato = () => { navigate(`/admin/plantillas?proyecto=${proyecto.id}`); onClose(); };
   const handleGestionarLotes = () => { navigate(`/admin/lotes?proyecto=${proyecto.id}`); onClose(); };
@@ -241,7 +249,7 @@ const DetalleProyectoModal: React.FC<DetalleProyectoModalProps> = ({ open, onClo
               </Paper>
             </Box>
 
-            {/* 📅 CRONOGRAMA Y TIEMPOS */}
+           {/* 📅 CRONOGRAMA Y TIEMPOS */}
             <Paper
               elevation={0}
               variant="outlined"
@@ -260,7 +268,7 @@ const DetalleProyectoModal: React.FC<DetalleProyectoModalProps> = ({ open, onClo
                   <Typography variant="caption" fontWeight={900} color="text.secondary">FECHA INICIO</Typography>
                 </Stack>
                 <Typography variant="body2" fontWeight={800}>
-                  {new Date(proyecto.fecha_inicio).toLocaleDateString(env.defaultLocale)}
+                  {safeFormatDate(proyecto.fecha_inicio)}
                 </Typography>
               </Box>
 
@@ -270,7 +278,7 @@ const DetalleProyectoModal: React.FC<DetalleProyectoModalProps> = ({ open, onClo
                   <Typography variant="caption" fontWeight={900} color="text.secondary">FECHA CIERRE</Typography>
                 </Stack>
                 <Typography variant="body2" fontWeight={800}>
-                  {new Date(proyecto.fecha_cierre).toLocaleDateString(env.defaultLocale)}
+                  {safeFormatDate(proyecto.fecha_cierre)}
                 </Typography>
               </Box>
 
@@ -280,9 +288,7 @@ const DetalleProyectoModal: React.FC<DetalleProyectoModalProps> = ({ open, onClo
                   <Typography variant="caption" fontWeight={900} color="text.secondary">INICIO PROCESO</Typography>
                 </Stack>
                 <Typography variant="body2" fontWeight={800}>
-                  {proyecto.fecha_inicio_proceso
-                    ? new Date(proyecto.fecha_inicio_proceso).toLocaleDateString(env.defaultLocale)
-                    : 'No asignada'}
+                  {safeFormatDate(proyecto.fecha_inicio_proceso)}
                 </Typography>
               </Box>
 
