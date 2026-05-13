@@ -76,7 +76,7 @@ export const PendingPaymentsPanel: React.FC<Props> = ({
                       </TableCell>
                       <TableCell>
                         <Typography variant="caption" color="text.secondary" fontWeight={600}>
-                          {pago.fecha_vencimiento ? new Date(pago.fecha_vencimiento).toLocaleDateString('es-AR') : '—'}
+                          {pago.fecha_vencimiento ? new Date(pago.fecha_vencimiento).toLocaleDateString('es-AR', {timeZone: "UTC",}) : '—'}
                         </Typography>
                       </TableCell>
                       <TableCell>
