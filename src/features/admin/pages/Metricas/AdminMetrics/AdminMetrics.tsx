@@ -432,11 +432,12 @@ export const AdminMetrics: React.FC = () => {
 				/>
 				<StatCard
 					title="Acción más frecuente"
-					value={stats.accionMasFrecuente}
+					value={stats.accionMasFrecuente.toLowerCase().replace(/_/g, " ")}
 					subtitle="En el período filtrado"
 					icon={<PersonSearch />}
 					color="warning"
 					loading={isLoading}
+					compact
 				/>
 				<StatCard
 					title="Entidad más afectada"
