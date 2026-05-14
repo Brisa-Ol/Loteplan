@@ -151,7 +151,7 @@ const AppRouter = () => {
           <Route path="transacciones" element={<AdminTransacciones />} />
           <Route path="resumenes" element={<AdminResumenesCuenta />} />
           <Route path="metricas/admin" element={<AdminMetrics />} />
-          <Route path="metricas/clientes" element={<UserMetrics />} />
+          {/* <Route path="metricas/clientes" element={<UserMetrics />} /> */}
         </Route>
 
         {/* Fallback */}

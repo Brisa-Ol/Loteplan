@@ -174,7 +174,7 @@ export const useNavbarMenu = () => {
             icon : BarChartIcon,
             submenu: [
               { label: "Admin", path: ROUTES.ADMIN.METRICAS.ADMIN, icon: DonutSmallIcon },
-              { label: "Clientes", path: ROUTES.ADMIN.METRICAS.CLIENTES, icon: QueryStatsIcon },
+              //{ label: "Clientes", path: ROUTES.ADMIN.METRICAS.CLIENTES, icon: QueryStatsIcon },
             ]
           }
         ],
