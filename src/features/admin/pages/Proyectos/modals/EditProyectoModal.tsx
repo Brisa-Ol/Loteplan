@@ -68,6 +68,7 @@ const getValidationSchema = (tipo_inversion?: string) => Yup.object({
     forma_juridica: Yup.string().required('Requerido'),
     estado_proyecto: Yup.string().required('Requerido'),
     fecha_inicio: Yup.date().required('Requerido'),
+
     fecha_cierre: Yup.date()
         .required('Requerido')
         .min(Yup.ref('fecha_inicio'), 'Debe ser posterior al inicio'),
@@ -84,6 +85,12 @@ const getValidationSchema = (tipo_inversion?: string) => Yup.object({
                 return this.createError({ message: e.message });
             }
         }),
+    ...(tipo_inversion === 'directo' ? {
+        monto_inversion: Yup.number()
+            .typeError('Debe ser un número')
+            .required('Requerido')
+            .min(1, 'El monto debe ser mayor a 0'),
+    } : {}),
     // 2. Solo exigimos validar plazos y cupos si es un Plan Mensual
     ...(tipo_inversion === 'mensual' ? {
         obj_suscripciones: Yup.number().typeError('Requerido').required('Requerido').min(1, 'Mínimo 1'),
@@ -109,6 +116,7 @@ const EditProyectoModal: React.FC<EditProyectoModalProps> = ({
             return {
                 nombre_proyecto: '',
                 descripcion: '',
+                monto_inversion: '' as string | number,
                 forma_juridica: '',
                 fecha_inicio: '',
                 fecha_cierre: '',
@@ -125,6 +133,7 @@ const EditProyectoModal: React.FC<EditProyectoModalProps> = ({
 
         return {
             nombre_proyecto: proyecto.nombre_proyecto || '',
+            monto_inversion: proyecto.monto_inversion ?? '',
             descripcion: proyecto.descripcion || '',
             forma_juridica: proyecto.forma_juridica || '',
             fecha_inicio: proyecto.fecha_inicio ? proyecto.fecha_inicio.split('T')[0] : '',
@@ -171,7 +180,8 @@ const EditProyectoModal: React.FC<EditProyectoModalProps> = ({
                     }
 
                     // Conversión numérica para campos específicos
-                    if (['latitud', 'longitud', 'obj_suscripciones', 'suscripciones_minimas', 'plazo_inversion'].includes(key)) {
+                    // Conversión numérica para campos específicos
+                    if (['latitud', 'longitud', 'obj_suscripciones', 'suscripciones_minimas', 'plazo_inversion', 'monto_inversion'].includes(key)) {
                         return [key, val !== null ? Number(val) : null];
                     }
                     return [key, val];
@@ -314,9 +324,24 @@ const EditProyectoModal: React.FC<EditProyectoModalProps> = ({
                     </Typography>
 
                     {proyecto.tipo_inversion === 'directo' ? (
-                        <Alert severity="info" variant="outlined" sx={{ borderRadius: 2 }}>
-                            Este es un proyecto de <b>Inversión Directa</b>. El cupo y los mínimos están fijados en 1 y no pueden ser modificados.
-                        </Alert>
+                        <Stack spacing={2}>
+                            <Alert severity="info" variant="outlined" sx={{ borderRadius: 2 }}>
+                                Este es un proyecto de <b>Inversión Directa</b>. El cupo y los mínimos están fijados en 1 y no pueden ser modificados.
+                            </Alert>
+
+                            {/* ✅ NUEVO: Campo de monto visible solo para inversión directa */}
+                            <TextField
+                                fullWidth
+                                label="Monto Total de Inversión"
+                                type="number"
+                                onKeyDown={blockInvalidChar}
+                                {...formik.getFieldProps('monto_inversion')}
+                                error={formik.touched.monto_inversion && !!formik.errors.monto_inversion}
+                                helperText={formik.touched.monto_inversion && formik.errors.monto_inversion as string}
+                                InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }}
+                                sx={commonInputSx}
+                            />
+                        </Stack>
                     ) : (
                         <Paper
                             elevation={0}
