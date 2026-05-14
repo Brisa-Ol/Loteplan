@@ -1,5 +1,9 @@
 // src/features/client/pages/Transacciones/MisTransacciones.tsx
 
+import TransaccionService from '@/core/api/services/transaccion.service';
+import type { TransaccionDto } from '@/core/types/transaccion.dto';
+import { useCurrencyFormatter } from '@/features/client/hooks/useCurrencyFormatter';
+import { DataTable, PageContainer, PageHeader, QueryHandler, StatCard, type DataTableColumn } from '@/shared';
 import {
   Block,
   CheckCircle, ErrorOutline, HelpOutline, HourglassEmpty,
@@ -12,14 +16,24 @@ import {
   Stack, Tab, Tabs, TextField, Tooltip, Typography, useTheme
 } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 import React, { useMemo, useState, type JSX } from 'react';
-// Hooks y Servicios
-import TransaccionService from '@/core/api/services/transaccion.service';
-import { env } from '@/core/config/env';
-import type { TransaccionDto } from '@/core/types/transaccion.dto';
-import { useCurrencyFormatter } from '@/features/client/hooks/useCurrencyFormatter';
-import { DataTable, PageContainer, PageHeader, QueryHandler, StatCard, type DataTableColumn } from '@/shared';
+const safeFormatDate = (dateStr?: string | null) => {
+  if (!dateStr) return '—';
+  const safeString = dateStr.length === 10 ? `${dateStr}T00:00:00` : dateStr;
+  const date = new Date(safeString);
+  if (isNaN(date.getTime())) return 'Fecha inválida';
+  return format(date, 'dd/MM/yyyy', { locale: es });
+};
 
+const safeFormatTime = (dateStr?: string | null) => {
+  if (!dateStr) return '';
+  if (dateStr.length === 10) return '';
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return '';
+  return format(date, 'HH:mm', { locale: es });
+};
 // =====================================================
 // CONFIGURACIÓN DE ESTADOS
 // =====================================================
@@ -106,10 +120,12 @@ const MisTransacciones: React.FC = () => {
       render: (row) => (
         <Box>
           <Typography variant="body2" fontWeight={700}>
-            {new Date(row.fecha_transaccion).toLocaleDateString(env.defaultLocale)}
+            {/* ✅ Fecha estandarizada */}
+            {safeFormatDate(row.fecha_transaccion)}
           </Typography>
           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: -0.5 }}>
-            {new Date(row.fecha_transaccion).toLocaleTimeString(env.defaultLocale, { hour: '2-digit', minute: '2-digit' })}
+            {/* ✅ Hora estandarizada */}
+            {safeFormatTime(row.fecha_transaccion)} {safeFormatTime(row.fecha_transaccion) ? 'hs' : ''}
           </Typography>
           <Typography variant="caption" sx={{ color: 'primary.main', fontWeight: 600 }}>
             Operación: #{row.id}

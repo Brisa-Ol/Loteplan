@@ -1,3 +1,4 @@
+import { useAuth } from '@/core/context/AuthContext';
 import {
   AccountBalanceWallet,
   ArrowForward,
@@ -29,10 +30,10 @@ import {
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import { useQuery } from '@tanstack/react-query';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-
-import { useAuth } from '@/core/context/AuthContext';
 import { QueryHandler } from '../../../../shared/components/data-grid/QueryHandler';
 import { useDashboardStats } from '../../hooks/useDashboardStats';
 
@@ -46,12 +47,27 @@ import ResumenCuentaService from '@/core/api/services/resumenCuenta.service';
 import SuscripcionService from '@/core/api/services/suscripcion.service';
 import { MiInversions } from './MiInversions/MiInversions';
 
-// 🛠 Utility: Calcular días restantes para vencimientos
+// 🛠 Utility: Parseo seguro para evitar saltos de zona horaria UTC
+const safeParseDate = (dateStr?: string | null): Date => {
+  if (!dateStr) return new Date(NaN);
+  const safeString = dateStr.length === 10 ? `${dateStr}T00:00:00` : dateStr;
+  return new Date(safeString);
+};
+
+// 🛠 Utility: Formateo visual seguro
+const safeFormatDate = (dateStr?: string | null) => {
+  const date = safeParseDate(dateStr);
+  if (isNaN(date.getTime())) return '—';
+  return format(date, 'dd/MM/yyyy', { locale: es });
+};
+
+// 🛠 Utility: Calcular días restantes para vencimientos (Corregido)
 const calculateDaysRemaining = (dateString?: string): number => {
   if (!dateString) return 90;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const dueDate = new Date(dateString);
+
+  const dueDate = safeParseDate(dateString); // ✅ Parseo seguro
   dueDate.setHours(0, 0, 0, 0);
 
   const diffTime = dueDate.getTime() - today.getTime();
@@ -107,17 +123,17 @@ const UserDashboard: React.FC = () => {
 
   // Lógica de Pagos Normales
   const proximoPagoReal = pagos?.filter(p =>
-    p.estado_pago === 'pendiente' && new Date(p.fecha_vencimiento) >= new Date()
-  ).sort((a, b) => new Date(a.fecha_vencimiento).getTime() - new Date(b.fecha_vencimiento).getTime())[0];
+    p.estado_pago === 'pendiente' && safeParseDate(p.fecha_vencimiento) >= new Date()
+  ).sort((a, b) => safeParseDate(a.fecha_vencimiento).getTime() - safeParseDate(b.fecha_vencimiento).getTime())[0];
 
   // Lógica de Adhesiones
   const proximaAdhesionReal = useMemo(() => {
     if (!adhesiones) return null;
     const pendientes = adhesiones.flatMap(a =>
-      (a.pagos || []).filter(p => p.estado === 'pendiente' && new Date(p.fecha_vencimiento) >= new Date())
+      (a.pagos || []).filter(p => p.estado === 'pendiente' && safeParseDate(p.fecha_vencimiento) >= new Date())
     );
     if (pendientes.length === 0) return null;
-    return pendientes.sort((a, b) => new Date(a.fecha_vencimiento).getTime() - new Date(b.fecha_vencimiento).getTime())[0];
+    return pendientes.sort((a, b) => safeParseDate(a.fecha_vencimiento).getTime() - safeParseDate(b.fecha_vencimiento).getTime())[0];
   }, [adhesiones]);
 
   // Consolidación de Mora (Suma mensualidades + adhesiones vencidas)
@@ -419,7 +435,7 @@ const UserDashboard: React.FC = () => {
                           <Box>
                             <Typography variant="h3" fontWeight={800}>${Number(proximoPagoReal.monto).toLocaleString('es-AR')}</Typography>
                             <Stack direction="row" justifyContent="space-between" alignItems="center" mt={1}>
-                              <Chip label={`VENCE EL ${new Date(proximoPagoReal.fecha_vencimiento).toLocaleDateString('es-AR')}`} color="primary" variant="outlined" sx={{ fontWeight: 800, borderRadius: 2 }} />
+                              <Chip label={`VENCE EL ${safeFormatDate(proximoPagoReal.fecha_vencimiento)}`} color="primary" variant="outlined" sx={{ fontWeight: 800, borderRadius: 2 }} />
                               <Button size="small" color="primary" onClick={() => navigate('/client/finanzas/pagos')} sx={{ fontWeight: 800 }}>Pagar</Button>
                             </Stack>
                           </Box>
@@ -447,7 +463,7 @@ const UserDashboard: React.FC = () => {
                           <Box>
                             <Typography variant="h3" fontWeight={800}>${Number(proximaAdhesionReal.monto).toLocaleString('es-AR')}</Typography>
                             <Stack direction="row" justifyContent="space-between" alignItems="center" mt={1}>
-                              <Chip label={`VENCE EL ${new Date(proximaAdhesionReal.fecha_vencimiento).toLocaleDateString('es-AR')}`} color="info" variant="outlined" sx={{ fontWeight: 800, borderRadius: 2 }} />
+                              <Chip label={`VENCE EL ${safeFormatDate(proximaAdhesionReal.fecha_vencimiento)}`} color="info" variant="outlined" sx={{ fontWeight: 800, borderRadius: 2 }} />
                               <Button size="small" color="info" onClick={() => navigate('/client/finanzas/pagos')} sx={{ fontWeight: 800 }}>Pagar</Button>
                             </Stack>
                           </Box>

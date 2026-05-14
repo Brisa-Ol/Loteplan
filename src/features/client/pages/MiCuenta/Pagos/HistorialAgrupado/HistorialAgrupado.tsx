@@ -28,8 +28,16 @@ import {
   Typography,
   useTheme,
 } from '@mui/material';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 import React, { useMemo, useState } from 'react';
-
+const safeFormatDate = (dateStr?: string | null) => {
+  if (!dateStr) return '—';
+  const safeString = dateStr.length === 10 ? `${dateStr}T00:00:00` : dateStr;
+  const date = new Date(safeString);
+  if (isNaN(date.getTime())) return 'Fecha inválida';
+  return format(date, 'dd/MM/yyyy', { locale: es });
+};
 interface HistorialPagosAgrupadoProps {
   pagos: PagoDto[];
 }
@@ -280,7 +288,7 @@ export const HistorialPagosAgrupado: React.FC<HistorialPagosAgrupadoProps> = ({ 
         // Rango de fechas del proyecto
         const rangoFechas =
           grupo.fechaInicio && grupo.fechaCierre
-            ? `${formatLocalDate(grupo.fechaInicio)} – ${formatLocalDate(grupo.fechaCierre)}`
+            ? `${safeFormatDate(grupo.fechaInicio)} – ${safeFormatDate(grupo.fechaCierre)}`
             : null;
 
         return (
@@ -416,8 +424,8 @@ export const HistorialPagosAgrupado: React.FC<HistorialPagosAgrupadoProps> = ({ 
                           sx={{ display: 'block' }}
                         >
                           {['pagado', 'forzado', 'cubierto_por_puja'].includes(pago.estado_pago)
-                            ? `Pagado el ${pago.fecha_pago ? formatLocalDate(pago.fecha_pago) : 'Fecha no registrada'}`
-                            : `Vence el ${formatLocalDate(pago.fecha_vencimiento)}`}
+                            ? `Pagado el ${pago.fecha_pago ? safeFormatDate(pago.fecha_pago) : 'Fecha no registrada'}`
+                            : `Vence el ${safeFormatDate(pago.fecha_vencimiento)}`}
                         </Typography>
                       </Box>
                       {getEstadoPagoIcon(pago.estado_pago)}

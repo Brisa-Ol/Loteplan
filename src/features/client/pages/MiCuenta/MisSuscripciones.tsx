@@ -1,5 +1,21 @@
 // src/components/domain/suscripciones/MisSuscripciones.tsx
 
+import type { AdhesionDto, PlanPagoAdhesion } from "@/core/types/adhesion.dto";
+import type {
+    SuscripcionCanceladaDto,
+    SuscripcionDto,
+} from "@/core/types/suscripcion.dto";
+import {
+    ConfirmDialog,
+    DataTable,
+    PageContainer,
+    PageHeader,
+    QueryHandler,
+    StatCard,
+    useConfirmDialog,
+    useModal,
+    type DataTableColumn,
+} from "@/shared";
 import {
     CalendarMonth,
     Cancel,
@@ -26,25 +42,10 @@ import {
     Typography,
     useTheme,
 } from "@mui/material";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 import React, { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-
-import type { AdhesionDto, PlanPagoAdhesion } from "@/core/types/adhesion.dto";
-import type {
-    SuscripcionCanceladaDto,
-    SuscripcionDto,
-} from "@/core/types/suscripcion.dto";
-import {
-    ConfirmDialog,
-    DataTable,
-    PageContainer,
-    PageHeader,
-    QueryHandler,
-    StatCard,
-    useConfirmDialog,
-    useModal,
-    type DataTableColumn,
-} from "@/shared";
 import { useCurrencyFormatter } from "../../hooks/useCurrencyFormatter";
 import { useSuscripciones } from "../../hooks/useSuscripciones";
 // ✅ Importamos el Modal de 2FA
@@ -63,10 +64,15 @@ const PLAN_LABELS: Record<PlanPagoAdhesion, string> = {
 const getPlanLabel = (plan: PlanPagoAdhesion): string =>
     PLAN_LABELS[plan] ?? plan;
 
-const formatDate = (iso: string): string => {
-    // Si viene solo YYYY-MM-DD, le agregamos T00:00:00 para evitar desfasajes de zona horaria
+const formatDate = (iso?: string | null): string => {
+    if (!iso) return "—";
+    // Mantenemos tu excelente lógica para forzar la zona horaria
     const dateStr = iso.includes('T') ? iso : `${iso}T00:00:00`;
-    return new Date(dateStr).toLocaleDateString("es-AR");
+    const date = new Date(dateStr);
+
+    if (isNaN(date.getTime())) return 'Fecha inválida';
+
+    return format(date, 'dd/MM/yyyy', { locale: es });
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
