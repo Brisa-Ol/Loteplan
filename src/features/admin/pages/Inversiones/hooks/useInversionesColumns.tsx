@@ -8,6 +8,9 @@ import { StatusBadge, type StatusType } from '@/shared/components/domain/cards/S
 import { CalendarMonth as DateIcon, Search } from '@mui/icons-material';
 import { alpha, Avatar, Box, IconButton, Stack, Tooltip, Typography, useTheme } from '@mui/material';
 import { useMemo } from 'react';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
+
 
 const STATUS_MAP: Record<InversionDto['estado'], StatusType> = {
   pagado:      'success',
@@ -15,7 +18,17 @@ const STATUS_MAP: Record<InversionDto['estado'], StatusType> = {
   fallido:     'failed',
   reembolsado: 'info',
 };
+const safeFormatDate = (dateStr?: string | null) => {
+    if (!dateStr) return '—';
+    const safeString = dateStr.length === 10 ? `${dateStr}T00:00:00` : dateStr;
+    return format(new Date(safeString), 'dd/MM/yyyy', { locale: es });
+};
 
+const safeFormatTime = (dateStr?: string | null) => {
+    if (!dateStr) return '';
+    if (dateStr.length === 10) return ''; 
+    return format(new Date(dateStr), 'HH:mm', { locale: es });
+};
 const useInversionesColumns = (
   logic: ReturnType<typeof useAdminInversiones>
 ): DataTableColumn<InversionDto>[] => {
@@ -64,16 +77,24 @@ const useInversionesColumns = (
         <StatusBadge status={STATUS_MAP[inv.estado]} customLabel={inv.estado.toUpperCase()} />
       ),
     },
-    {
+{
       id: 'fecha', label: 'Fecha Operación', minWidth: 180,
       render: (inv) => {
-        const date = new Date(inv.fecha_inversion || inv.createdAt);
+        const dateRaw = inv.fecha_inversion || inv.createdAt;
+        const timeString = safeFormatTime(dateRaw);
+        
         return (
           <Stack direction="row" spacing={1} alignItems="center">
             <DateIcon sx={{ fontSize: 14, color: 'text.disabled' }} />
             <Box>
-              <Typography variant="caption" fontWeight={700} display="block">{date.toLocaleDateString(env.defaultLocale)}</Typography>
-              <Typography variant="caption" color="text.disabled">{date.toLocaleTimeString(env.defaultLocale, { hour: '2-digit', minute: '2-digit' })}</Typography>
+              <Typography variant="caption" fontWeight={700} display="block">
+                {safeFormatDate(dateRaw)}
+              </Typography>
+              {timeString && (
+                  <Typography variant="caption" color="text.disabled">
+                    {timeString} hs
+                  </Typography>
+              )}
             </Box>
           </Stack>
         );

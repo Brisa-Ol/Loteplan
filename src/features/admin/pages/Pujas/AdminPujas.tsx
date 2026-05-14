@@ -1,5 +1,23 @@
 // src/features/admin/pages/Pujas/AdminPujas.tsx
 
+import imagenService from '@/core/api/services/imagen.service';
+import { env } from '@/core/config/env';
+import type { LoteDto } from '@/core/types/lote.dto';
+import type { PujaDto } from '@/core/types/puja.dto';
+import {
+  AdminPageHeader,
+  AlertBanner,
+  ConfirmDialog,
+  DataTable,
+  FilterBar,
+  FilterSearch,
+  MetricsGrid,
+  PageContainer,
+  QueryHandler,
+  StatCard,
+  ViewModeToggle,
+  type ViewMode,
+} from '@/shared';
 import {
   EmojiEvents,
   Gavel,
@@ -27,30 +45,17 @@ import {
   Typography,
   useTheme,
 } from '@mui/material';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 import React, { useMemo, useState } from 'react';
-
-import imagenService from '@/core/api/services/imagen.service';
-import { env } from '@/core/config/env';
-import type { LoteDto } from '@/core/types/lote.dto';
-import type { PujaDto } from '@/core/types/puja.dto';
-import {
-  AdminPageHeader,
-  AlertBanner,
-  ConfirmDialog,
-  DataTable,
-  FilterBar,
-  FilterSearch,
-  MetricsGrid,
-  PageContainer,
-  QueryHandler,
-  StatCard,
-  ViewModeToggle,
-  type ViewMode,
-} from '@/shared';
 import { useAdminPujas } from '../../hooks/lotes/useAdminPujas';
 import AuctionControlModal from '../Lotes/modals/AuctionControlModal';
 import DetallePujaModal from './modal/DetallePujaModal';
-
+const safeFormatDate = (dateStr?: string | null) => {
+  if (!dateStr) return '---';
+  const safeString = dateStr.length === 10 ? `${dateStr}T00:00:00` : dateStr;
+  return format(new Date(safeString), 'dd/MM/yyyy', { locale: es });
+};
 // ─── Top3List ─────────────────────────────────────────────────────────────────
 
 interface Top3Props {

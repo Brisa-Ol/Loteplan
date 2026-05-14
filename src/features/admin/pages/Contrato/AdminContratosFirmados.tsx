@@ -42,7 +42,7 @@ import {
 import type { ContratoFirmadoDto } from '@/core/types/contrato-firmado.dto';
 
 // Componentes Compartidos
-import { AdminPageHeader } from '@/shared/components/admin/Adminpageheader'; 
+import { AdminPageHeader } from '@/shared/components/admin/Adminpageheader';
 import MetricsGrid from '@/shared/components/admin/Metricsgrid';
 import { ViewModeToggle, type ViewMode } from '@/shared/components/admin/Viewmodetoggle';
 import { DataTable, type DataTableColumn } from '@/shared/components/data-grid/DataTable';
@@ -51,8 +51,25 @@ import { StatCard, StatusBadge } from '@/shared/components/domain/cards/StatCard
 import { FilterBar, FilterSearch, FilterSelect } from '@/shared/components/forms/FilterBar';
 import { PageContainer } from '@/shared/components/layout/PageContainer';
 import AlertBanner from '@/shared/components/ui/Alertbanner';
+import { es } from 'date-fns/locale';
 import { useAdminContratosFirmados } from '../../hooks/contrato/useAdminContratosFirmados';
+const safeFormatDate = (dateStr?: string | null) => {
+  if (!dateStr) return '-';
+  const safeString = dateStr.length === 10 ? `${dateStr}T00:00:00` : dateStr;
+  return format(new Date(safeString), 'dd/MM/yyyy', { locale: es });
+};
 
+const safeFormatTime = (dateStr?: string | null) => {
+  if (!dateStr) return '';
+  if (dateStr.length === 10) return '';
+  return format(new Date(dateStr), 'HH:mm', { locale: es });
+};
+
+// Y si no lo tienes importado de tus utils, agrega este también para los inputs:
+const formatForDateInput = (dateStr?: string | null) => {
+  if (!dateStr) return '';
+  return dateStr.length > 10 ? dateStr.substring(0, 10) : dateStr;
+};
 // ============================================================================
 // SUB-COMPONENTE: ANALYTICS
 // ============================================================================
@@ -213,8 +230,12 @@ const AdminContratosFirmados: React.FC = () => {
       label: 'Fecha de Firma',
       render: (row) => (
         <Box>
-          <Typography variant="body2" fontWeight={600}>{row.fecha_firma ? format(new Date(row.fecha_firma), 'dd/MM/yyyy') : '-'}</Typography>
-          <Typography variant="caption" color="text.secondary">{row.fecha_firma ? format(new Date(row.fecha_firma), 'HH:mm') + ' hs' : ''}</Typography>
+          <Typography variant="body2" fontWeight={600}>
+            {safeFormatDate(row.fecha_firma)}
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            {safeFormatTime(row.fecha_firma)} {safeFormatTime(row.fecha_firma) ? 'hs' : ''}
+          </Typography>
         </Box>
       )
     },
@@ -288,7 +309,7 @@ const AdminContratosFirmados: React.FC = () => {
         {/* ✅ ESTRUCTURA FLEXBOX FLAT */}
         <FilterBar sx={{ p: 2, bgcolor: 'background.paper', borderRadius: '12px', border: '1px solid', borderColor: 'divider' }}>
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center', width: '100%' }}>
-            
+
             {/* Buscador: Toma el espacio restante */}
             <Box sx={{ flex: 1, minWidth: { xs: '100%', md: 280 } }}>
               <FilterSearch
@@ -301,14 +322,14 @@ const AdminContratosFirmados: React.FC = () => {
 
             {/* Controles Derecha: Fechas y Selects */}
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center', width: { xs: '100%', xl: 'auto' } }}>
-              
+
               {/* Fechas */}
               <Stack direction="row" spacing={1} alignItems="center" sx={{ width: { xs: '100%', sm: 'auto' } }}>
                 <TextField
                   label="Desde"
                   type="date"
                   size="small"
-                  value={logic.startDate}
+                  value={formatForDateInput(logic.startDate)} // ✅ Protegido
                   onChange={(e) => logic.setStartDate(e.target.value)}
                   InputLabelProps={{ shrink: true }}
                   sx={dateInputStyles}
@@ -318,9 +339,10 @@ const AdminContratosFirmados: React.FC = () => {
                   label="Hasta"
                   type="date"
                   size="small"
-                  value={logic.endDate}
+                  value={formatForDateInput(logic.endDate)} // ✅ Protegido
                   onChange={(e) => logic.setEndDate(e.target.value)}
                   InputLabelProps={{ shrink: true }}
+                  inputProps={{ min: formatForDateInput(logic.startDate) }} // ✅ Min protegido
                   sx={dateInputStyles}
                 />
               </Stack>

@@ -30,9 +30,14 @@ import type { LoteDto, UpdateLoteDto } from '@/core/types/lote.dto';
 import type { ProyectoDto } from '@/core/types/proyecto.dto';
 import { BaseModal } from '@/shared';
 import { extractAndValidateMapUrl } from '@/shared/utils/extractAndValidateMapUrl';
-;
+import { format } from 'date-fns';
 
-
+const formatForDateTimeInput = (isoString?: string | null) => {
+  if (!isoString) return '';
+  const date = new Date(isoString); // Al pasarle el string completo con la "Z", JS ajusta a tu zona horaria (Argentina)
+  if (isNaN(date.getTime())) return '';
+  return format(date, "yyyy-MM-dd'T'HH:mm"); // Lo formatea para el input
+};
 // ============================================================================
 // CONSTANTES Y ESTILOS (Memoizados)
 // ============================================================================
@@ -217,8 +222,9 @@ const EditLoteModal: React.FC<EditLoteModalProps> = ({ open, onClose, onSubmit, 
         nombre_lote: lote.nombre_lote || '',
         precio_base: lote.precio_base ? String(lote.precio_base) : '',
         id_proyecto: lote.id_proyecto !== null ? String(lote.id_proyecto) : '',
-        fecha_inicio: lote.fecha_inicio ? lote.fecha_inicio.substring(0, 16) : '',
-        fecha_fin: lote.fecha_fin ? lote.fecha_fin.substring(0, 16) : '',
+        // ✅ AQUÍ APLICAMOS LA PROTECCIÓN
+        fecha_inicio: formatForDateTimeInput(lote.fecha_inicio),
+        fecha_fin: formatForDateTimeInput(lote.fecha_fin),
         latitud: lote.latitud !== null ? String(lote.latitud) : '',
         longitud: lote.longitud !== null ? String(lote.longitud) : '',
         map_url: lote.map_url !== null ? String(lote.map_url) : ''
