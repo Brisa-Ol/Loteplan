@@ -2,11 +2,12 @@ import type { ApiError } from '@/core/api/httpService';
 import AuthService from '@/core/api/services/auth.service';
 import { useFormik } from 'formik';
 import { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import * as Yup from 'yup';
 
 export const useResetPassword = () => {
-  const { token } = useParams<{ token: string }>();
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get('token');
   const navigate = useNavigate();
 
   // Estados de UI
@@ -29,6 +30,7 @@ export const useResetPassword = () => {
         .required('Confirma tu contraseña'),
     }),
     onSubmit: async (values) => {
+      console.log(token)
       if (!token) {
         setErrorMessage('Token no válido o expirado.');
         setStatus('error');
