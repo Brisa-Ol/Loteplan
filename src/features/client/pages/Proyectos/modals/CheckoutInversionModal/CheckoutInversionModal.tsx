@@ -475,7 +475,7 @@ export const CheckoutInversionModal: React.FC<CheckoutInversionModalProps> = ({
               variant="contained"
               color={activeStep === 'Firma' ? 'success' : 'primary'}
               onClick={handleStepAction}
-              disabled={!isStepValid || isProcessing}
+              disabled={!isStepValid || isProcessing || !plantillaActual}
               endIcon={
                 isProcessing
                   ? <CircularProgress size={20} color="inherit" />

@@ -610,7 +610,7 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
             variant="contained"
             color={activeStep === 'Firma' ? 'success' : 'primary'}
             onClick={handleStepAction}
-            disabled={!isStepValid || isProcessing || isCreatingAdhesion}
+            disabled={!isStepValid || isProcessing || isCreatingAdhesion || !plantillaActual}
             endIcon={
               isProcessing || isCreatingAdhesion
                 ? <CircularProgress size={20} color="inherit" />
