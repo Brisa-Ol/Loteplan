@@ -77,6 +77,7 @@ export const useCheckoutWizard = ({
   const [transaccionId, setTransaccionId] = useState<number | null>(null);
   const [inversionId, setInversionId]   = useState<number | null>(null); 
   const [error2FA, setError2FA] = useState<string | null>(null);
+  
 
 
   const isVerifyingRef = useRef(false);
@@ -152,23 +153,23 @@ export const useCheckoutWizard = ({
       }
 
     } else {
+      showSuccess('Proceso Iniciado');
       // SUSCRIPCIÓN (ya viene todo junto)
-      const response = await SuscripcionService.iniciar({
-        id_proyecto: proyecto.id,
-      });
+      // const response = await SuscripcionService.iniciar({
+      //   id_proyecto: proyecto.id,
+      // });
 
-      txId = response.data.transaccionId;
+      // txId = response.data.transaccionId;
     }
 
     // ===================================================
     // VALIDACIÓN FINAL
     // ===================================================
-    if (txId) {
-      setTransaccionId(txId);
-      showSuccess('Registro creado. Procede con el pago.');
-    } else {
-      throw new Error('No se recibió ID de transacción');
-    }
+    // if (txId) {
+    //   setTransaccionId(txId);
+    // } else {
+    //   throw new Error('No se recibió ID de transacción');
+    // }
 
   } catch (error: any) {
     const msg = error.response?.data?.message || error.message || 'Error al crear el registro';
@@ -294,9 +295,16 @@ export const useCheckoutWizard = ({
     id_suscripcion?: number,
     trackingData?: ContratoTrackingResponse | TrackPaymentAndContractResponseDto | null,
   ) => {
+    const esMensual = proyecto.tipo_inversion === "mensual";
     // Prioridad: parámetro explícito > transaccionId > inversionId
-    const idAUsar = id_suscripcion ?? transaccionId ?? inversionId ?? undefined;
-
+    let idAUsar 
+    console.log("tracking", trackingData)
+    if(esMensual){
+      idAUsar = id_suscripcion
+    }else{
+      idAUsar = trackingData?.entidad_pagadora?.id
+    }
+    console.log("idsusc",id_suscripcion)
     console.log('🔍 Firmando con id_suscripcion_asociada:', idAUsar);  // ← útil para debug
 
     if (!idAUsar) {
@@ -399,7 +407,30 @@ export const useCheckoutWizard = ({
       // ===================================================
 
       // Enviamos el objeto normal (el Service internamente lo convierte a FormData)
-      const response = await ContratoFirmadoService.registrarFirma({
+      if(esMensual){
+        const response = await ContratoFirmadoService.registrarFirma({
+          file: signedFile,
+          id_contrato_plantilla: plantillaContrato.id,
+          id_proyecto: proyecto.id,
+          id_usuario_firmante: user.id,
+          hash_archivo_firmado: hash,
+          codigo_2fa: codigo2FA,
+          latitud_verificacion: location?.lat,
+          longitud_verificacion: location?.lng,
+          id_suscripcion: idAUsar
+        });
+  
+        console.log('✅ Contrato firmado registrado:', response.data);
+  
+        showSuccess('¡Contrato firmado exitosamente!');
+  
+        if (onSuccess) {
+          onSuccess();
+        }
+  
+        return response.data;
+      }else{
+        const response = await ContratoFirmadoService.registrarFirma({
         file: signedFile,
         id_contrato_plantilla: plantillaContrato.id,
         id_proyecto: proyecto.id,
@@ -408,7 +439,7 @@ export const useCheckoutWizard = ({
         codigo_2fa: codigo2FA,
         latitud_verificacion: location?.lat,
         longitud_verificacion: location?.lng,
-        id_suscripcion: idAUsar,
+        id_inversion: idAUsar!,
       });
 
       console.log('✅ Contrato firmado registrado:', response.data);
@@ -420,6 +451,7 @@ export const useCheckoutWizard = ({
       }
 
       return response.data;
+      }
 
     } catch (error: any) {
       console.error('❌ Error firmando contrato:', error);

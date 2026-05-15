@@ -251,6 +251,7 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
       );
 
       if (pendienteDeFirma) {
+        console.log("seteando id", pendienteDeFirma.suscripcion_id);
         setTargetSuscripcionId(pendienteDeFirma.suscripcion_id);
         setPaymentStatus('success');
         setActiveStep('Firma');
@@ -442,7 +443,8 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
             signaturePosition,
             location,
             codigo2FAFirma,
-            targetSuscripcionId ?? undefined  // ← pasar el id específico
+            targetSuscripcionId ?? undefined,  // ← pasar el id específico
+            trackingData ? trackingData : undefined  // ← pasar el trackingData completo si existe
           );
         }
         break;

@@ -13,6 +13,8 @@ import Disable2FADialog from '../components/Disable2FADialog';
 import SectionTitle from '../components/SectionTitle';
 import PermissionsSection from './PermissionsSection';
 import SecuritySection from './SecuritySection';
+import { Block, CheckCircle, Edit } from '@mui/icons-material';
+import { ModalMotivoAdmin } from '../../../Suscripciones/modals/ModalMotivoAdmin/ModalMotivoAdmin';
 
 const INPUT_SX = { '& .MuiOutlinedInput-root': { borderRadius: 2 } };
 
@@ -24,10 +26,18 @@ interface EditUserModalProps {
   isLoading?: boolean;
 }
 
+// ─── Campos que requieren justificación al ser modificados ───
+interface SensitiveChange {
+  field: string;
+  label: string;
+  from: string;
+  to: string;
+}
+
 const validationSchema = Yup.object({
   nombre: Yup.string().min(2, "Mínimo 2 caracteres").required("Requerido"),
   apellido: Yup.string().min(2, "Mínimo 2 caracteres").required("Requerido"),
-  dni: Yup.string().matches(/^\d+$/, "Solo números").min(6, "DNI inválido").required("Requerido"), // 👈 Validación DNI
+  dni: Yup.string().matches(/^\d+$/, "Solo números").min(6, "DNI inválido").required("Requerido"),
   email: Yup.string().email("Email inválido").required("Requerido"),
   nombre_usuario: Yup.string().min(4, "Mínimo 4 caracteres").required("Requerido"),
   numero_telefono: Yup.string().matches(/^\d+$/, "Solo números").min(10, "Teléfono inválido").required("Requerido"),
@@ -44,54 +54,115 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ open, onClose, user, onSu
   const [preparingReactivation, setPreparingReactivation] = useState(false);
   const [reactivationError, setReactivationError] = useState<string | null>(null);
 
+  // ─── Estado para el modal de motivo ──────────────────────
+  const [motivoModalOpen, setMotivoModalOpen] = useState(false);
+  const [motivo, setMotivo] = useState('');
+  const [pendingValues, setPendingValues] = useState<typeof formik.values | null>(null);
+  const [sensitiveChanges, setSensitiveChanges] = useState<SensitiveChange[]>([]);
+
   const isSelfEditing = currentUser?.id === user?.id;
   const isInactiveUser = user ? !user.activo : false;
   const isBusy = isLoading || preparingReactivation;
 
+  // ─── Detecta qué cambios sensibles hubo ──────────────────
+  const detectSensitiveChanges = (values: typeof formik.values): SensitiveChange[] => {
+    if (!user) return [];
+    const changes: SensitiveChange[] = [];
+
+    if (values.dni !== user.dni)
+      changes.push({ field: 'dni', label: 'DNI', from: user.dni || '—', to: values.dni });
+
+    if (values.email !== user.email)
+      changes.push({ field: 'email', label: 'Email', from: user.email, to: values.email });
+
+    if (values.activo !== user.activo) {
+      changes.push({
+        field: 'activo',
+        label: 'Estado de cuenta',
+        from: user.activo ? 'Activo' : 'Inactivo',
+        to: values.activo ? 'Activo' : 'Inactivo',
+      });
+    }
+
+    return changes;
+  };
+
   const formik = useFormik({
-    // 👈 Agregado DNI a initialValues
     initialValues: { nombre: '', apellido: '', dni: '', email: '', nombre_usuario: '', numero_telefono: '', rol: 'cliente', activo: true },
     validationSchema,
     enableReinitialize: true,
     onSubmit: async (values) => {
-      if (!user) return;
-      setReactivationError(null);
-      try {
-        const identityChanged = values.email !== user.email || values.nombre_usuario !== user.nombre_usuario;
-        if (isInactiveUser && identityChanged) {
-          setPreparingReactivation(true);
-          try {
-            await UsuarioService.prepareForReactivation(user.id, {
-              email: values.email !== user.email ? values.email : undefined,
-              nombre_usuario: values.nombre_usuario !== user.nombre_usuario ? values.nombre_usuario : undefined,
-            });
-            const dataToSend: any = { ...values, telefono: values.numero_telefono };
-            delete dataToSend.email;
-            delete dataToSend.nombre_usuario;
-            await onSubmit(user.id, dataToSend);
-          } finally {
-            setPreparingReactivation(false);
-          }
-        } else {
-          await onSubmit(user.id, { ...values, telefono: values.numero_telefono } as any);
-        }
-        onClose();
-      } catch (error: any) {
-        setReactivationError(error.response?.data?.error || error.message || 'Error al guardar');
+      // Si hay cambios sensibles, interceptamos y pedimos motivo
+      const changes = detectSensitiveChanges(values);
+      if (changes.length > 0) {
+        setSensitiveChanges(changes);
+        setPendingValues(values);
+        setMotivo('');
+        setMotivoModalOpen(true);
+        return; // No ejecutamos aún
       }
+      // Sin cambios sensibles → submit directo
+      await executeSubmit(values, undefined);
     },
   });
+
+  // ─── Lógica de submit real (con o sin motivo) ─────────────
+  const executeSubmit = async (values: typeof formik.values, motivoTexto: string | undefined) => {
+    if (!user) return;
+    setReactivationError(null);
+    try {
+      const identityChanged = values.email !== user.email || values.nombre_usuario !== user.nombre_usuario;
+      if (isInactiveUser && identityChanged) {
+        setPreparingReactivation(true);
+        try {
+          await UsuarioService.prepareForReactivation(user.id, {
+            email: values.email !== user.email ? values.email : undefined,
+            nombre_usuario: values.nombre_usuario !== user.nombre_usuario ? values.nombre_usuario : undefined,
+          });
+          const dataToSend: any = {
+            ...values,
+            telefono: values.numero_telefono,
+            ...(motivoTexto ? { motivo: motivoTexto } : {}),
+          };
+          delete dataToSend.email;
+          delete dataToSend.nombre_usuario;
+          await onSubmit(user.id, dataToSend);
+        } finally {
+          setPreparingReactivation(false);
+        }
+      } else {
+        await onSubmit(user.id, {
+          ...values,
+          telefono: values.numero_telefono,
+          ...(motivoTexto ? { motivo_cambio: motivoTexto } : {}),
+        } as any);
+      }
+      onClose();
+    } catch (error: any) {
+      setReactivationError(error.response?.data?.error || error.message || 'Error al guardar');
+    }
+  };
+
+  // ─── Confirma el modal de motivo ─────────────────────────
+  const handleConfirmMotivo = async () => {
+    if (!pendingValues || !motivo.trim()) return;
+    setMotivoModalOpen(false);
+    await executeSubmit(pendingValues, motivo);
+    setPendingValues(null);
+    setSensitiveChanges([]);
+    setMotivo('');
+  };
 
   useEffect(() => {
     if (user && open) {
       formik.setValues({
-        nombre: user.nombre || '', 
-        apellido: user.apellido || '', 
-        dni: user.dni || '', // 👈 Agregado DNI al setValues
+        nombre: user.nombre || '',
+        apellido: user.apellido || '',
+        dni: user.dni || '',
         email: user.email || '',
-        nombre_usuario: user.nombre_usuario || '', 
+        nombre_usuario: user.nombre_usuario || '',
         numero_telefono: user.numero_telefono || '',
-        rol: user.rol || 'cliente', 
+        rol: user.rol || 'cliente',
         activo: user.activo ?? true,
       });
     }
@@ -114,6 +185,30 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ open, onClose, user, onSu
 
   if (!user) return null;
 
+  // ─── Texto descriptivo dinámico según qué cambió ─────────
+  const buildDescription = () => {
+    if (sensitiveChanges.length === 0) return null;
+    return (
+      <Box>
+        <Box mb={1}>Se detectaron los siguientes cambios sensibles que requieren justificación:</Box>
+        {sensitiveChanges.map((c) => (
+          <Box key={c.field} sx={{ display: 'flex', gap: 1, mb: 0.5, alignItems: 'center' }}>
+            {c.field === 'activo' 
+              ? (c.to === 'Activo' ? <CheckCircle fontSize="small" color="success" /> : <Block fontSize="small" color="error" />)
+              : <Edit fontSize="small" color="primary" />
+            }
+            <Box component="span">
+              <b>{c.label}:</b>{' '}
+              <Box component="span" sx={{ textDecoration: 'line-through', opacity: 0.6 }}>{c.from}</Box>
+              {' → '}
+              <b>{c.to}</b>
+            </Box>
+          </Box>
+        ))}
+      </Box>
+    );
+  };
+
   return (
     <>
       <BaseModal
@@ -128,7 +223,6 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ open, onClose, user, onSu
         headerExtra={
           <Stack direction="row" spacing={1}>
             <Chip label={`ID: ${user.id}`} size="small" variant="outlined" sx={{ fontWeight: 700, borderRadius: 1.5 }} />
-            {/* Seguimos mostrando el DNI original aquí arriba como referencia */}
             {user.dni && <Chip label={`DNI: ${user.dni}`} size="small" variant="outlined" sx={{ fontWeight: 700, borderRadius: 1.5 }} />}
             {isInactiveUser && <Chip label="INACTIVO" size="small" color="warning" sx={{ fontWeight: 700, borderRadius: 1.5 }} />}
             {isSelfEditing && <Chip label="TÚ" size="small" color="primary" sx={{ fontWeight: 700, borderRadius: 1.5 }} />}
@@ -164,8 +258,6 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ open, onClose, user, onSu
                   disabled={isLoading} sx={INPUT_SX}
                 />
               </Stack>
-              
-              {/* 👈 Fila 2: DNI y Teléfono */}
               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
                 <TextField fullWidth label="DNI" {...formik.getFieldProps('dni')}
                   error={formik.touched.dni && Boolean(formik.errors.dni)}
@@ -203,6 +295,25 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ open, onClose, user, onSu
           <SecuritySection user={user} isSelfEditing={isSelfEditing} onDisable2FA={() => setShowDisable2FADialog(true)} />
         </Stack>
       </BaseModal>
+
+      {/* ─── MODAL DE MOTIVO para cambios sensibles ─────────── */}
+      <ModalMotivoAdmin
+        open={motivoModalOpen}
+        onClose={() => { setMotivoModalOpen(false); setMotivo(''); setPendingValues(null); }}
+        onConfirm={handleConfirmMotivo}
+        isLoading={isBusy}
+        title="Justificación de Cambios"
+        icon={<EditIcon />}
+        headerColor="warning"
+        confirmText="Guardar Cambios"
+        confirmButtonColor="warning"
+        description={buildDescription()}
+        motivo_cambio={motivo}
+        onMotivoChange={setMotivo}
+        motivoLabel="Motivo de los cambios (Obligatorio)"
+        motivoPlaceholder="Ej: Corrección de datos por solicitud del titular con documentación presentada."
+        motivoHelperText="Explicá el motivo administrativo que justifica estos cambios."
+      />
 
       <Disable2FADialog
         open={showDisable2FADialog}

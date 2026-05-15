@@ -344,7 +344,7 @@ const MisPagos: React.FC = () => {
         mes: row.mes,
         nombreProyecto,
         montoFormateado: formatCurrency(row.monto),
-        fechaVencimiento: new Date(row.fecha_vencimiento).toLocaleDateString(),
+        fechaVencimiento: new Date(row.fecha_vencimiento).toLocaleDateString("es-AR", { timeZone: "UTC",}),
         esAdhesion: false
       });
     },
@@ -361,7 +361,7 @@ const MisPagos: React.FC = () => {
         mes: cuota.numero_cuota,
         nombreProyecto,
         montoFormateado: formatCurrency(cuota.monto),
-        fechaVencimiento: new Date(cuota.fecha_vencimiento).toLocaleDateString('es-AR'),
+        fechaVencimiento: new Date(cuota.fecha_vencimiento).toLocaleDateString("es-AR", { timeZone: "UTC",}),
         esAdhesion: true,
       });
     },
@@ -397,7 +397,7 @@ const MisPagos: React.FC = () => {
           return (
             <Box>
               <Typography variant="body2" fontWeight={isOverdue ? 700 : 400}>
-                {new Date(row.fecha_vencimiento).toLocaleDateString()}
+                {new Date(row.fecha_vencimiento).toLocaleDateString("es-AR", { timeZone: "UTC",})}
               </Typography>
               {isOverdue && (
                 <Typography variant="caption" sx={{ color: 'error.main' }}>
@@ -525,7 +525,7 @@ const MisPagos: React.FC = () => {
                   fontWeight={600}
                   color={isVencida ? 'error.main' : 'text.primary'}
                 >
-                  {isVencida ? '⚠ Vencida' : 'Próxima'}: {new Date(nextPago.fecha_vencimiento).toLocaleDateString('es-AR')}
+                  {isVencida ? '⚠ Vencida' : 'Próxima'}: {new Date(nextPago.fecha_vencimiento).toLocaleDateString("es-AR", { timeZone: "UTC",})}
                 </Typography>
               )}
             </Box>

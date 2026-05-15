@@ -1,88 +1,77 @@
-// src/features/client/pages/Proyectos/modals/CheckoutWizardModal.tsx
+// src/features/client/pages/Proyectos/modals/CheckoutInversionModal.tsx
 
 import {
   ArrowBack,
   ArrowForward,
   Business,
-  CheckCircle,
   Clear,
   Close,
   CloudUpload,
   Description,
   Draw,
-  HistoryEdu,
-  Info,
-  Lock,
   Payment,
   Refresh,
   Save,
   Security,
   ShoppingCart,
-  Token
 } from '@mui/icons-material';
 import {
   Alert,
-  alpha,
-  Avatar,
   Box,
   Button,
   CircularProgress,
-  Fade,
-  Paper,
   Stack,
   Step,
   StepLabel,
   Stepper,
-  TextField,
-  Typography,
   useMediaQuery,
-  useTheme
+  useTheme,
 } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-//Estilos
-import styles from './CheckoutInversionModal.module.css';
-
 // Services
 import ContratoFirmadoService from '@/core/api/services/contrato-firmado.service';
 import ContratoPlantillaService from '@/core/api/services/contrato-plantilla.service';
-import ImagenService from '@/core/api/services/imagen.service';
 import MercadoPagoService from '@/core/api/services/pagoMercado.service';
 
 // Components
 import BaseModal from '@/shared/components/domain/modals/BaseModal';
-import PDFViewerMejorado from '../../../Contratos/components/PDFViewerMejorado';
 
 // Hooks
 import { useCheckoutWizard } from '@/features/client/hooks/Usecheckoutwizard';
 import { useCurrencyFormatter } from '@/features/client/hooks/useCurrencyFormatter';
 import useSnackbar from '@/shared/hooks/useSnackbar';
-import { CheckoutStateManager, type CheckoutPersistedState } from '../Checkout persistence';
+import { CheckoutStateManager } from '../Checkout persistence';
 
 // Types
 import CuotaMensualService from '@/core/api/services/cuotaMensual.service';
 import { env } from '@/core/config/env';
 import type { ContratoTrackingResponse } from '@/core/types/contrato.dto';
-import type { ProyectoDto } from '@/core/types/proyecto.dto';
 import type { TrackPaymentAndContractResponseDto } from '@/core/types/contrato-firmado.dto';
+import type { ProyectoDto } from '@/core/types/proyecto.dto';
 
-// ===================================================
-// CONSTANTS
-// ===================================================
-const CODIGO_2FA_LENGTH = 6;
+// Steps — reutilizamos los mismos del WizardModal
+import { StepConfirmacion } from '../StepsModal/StepConfirmacion';
+import { StepContrato } from '../StepsModal/StepContrato';
+import { StepFirma } from '../StepsModal/StepFirma';
+import { StepSeguridad } from '../StepsModal/StepSeguridad';
+import { PagoExitosoBanner } from '../StepsModal/PagoExitosoBanner';
 
-const STEPS = [
-  { label: 'Resumen', icon: <ShoppingCart /> },
-  { label: 'Contrato', icon: <Description /> },
-  { label: 'Seguridad', icon: <Security /> },
-  { label: 'Pago', icon: <Payment /> },
-  { label: 'Firma', icon: <Draw /> },
-] as const;
+// ============================================================================
+// STEP SYSTEM — igual que CheckoutWizardModal pero sin Adhesion ni Pago
+// ============================================================================
+type CheckoutStep = 'Resumen' | 'Contrato' | 'Seguridad' | 'Pago' | 'Firma';
 
-// ===================================================
+const STEP_ORDER: CheckoutStep[] = ['Resumen', 'Contrato', 'Seguridad', 'Pago', 'Firma'];
+
+const stepIndex = (step: CheckoutStep) => STEP_ORDER.indexOf(step);
+const nextStep  = (step: CheckoutStep): CheckoutStep | null => STEP_ORDER[stepIndex(step) + 1] ?? null;
+const prevStep  = (step: CheckoutStep): CheckoutStep | null => STEP_ORDER[stepIndex(step) - 1] ?? null;
+
+// ============================================================================
 // TYPES
-// ===================================================
+// ============================================================================
 export interface CheckoutInversionModalProps {
   open: boolean;
   onClose: () => void;
@@ -90,365 +79,27 @@ export interface CheckoutInversionModalProps {
   tipo: 'suscripcion' | 'inversion';
   inversionId?: number;
   pagoId?: number;
-  trackingData?: ContratoTrackingResponse | TrackPaymentAndContractResponseDto | null
+  trackingData?: ContratoTrackingResponse | TrackPaymentAndContractResponseDto | null;
 }
 
-interface SignaturePosition {
-  x: number;
-  y: number;
-  page: number;
-}
+interface SignaturePosition { x: number; y: number; page: number; }
+interface Location { lat: string; lng: string; }
 
-export interface Location {
-  lat: string;
-  lng: string;
-}
-
-
+// ============================================================================
+// UTILS
+// ============================================================================
 function isPaymentApproved(data: any): boolean {
   const estado =
-    data?.transaccion?.estado   // suscripciones / pagos mensuales
-    ?? data?.inversion?.estado  // inversiones directas
-    ?? data?.estado             // respuesta plana
-    ?? '';
+    data?.transaccion?.estado ??
+    data?.inversion?.estado ??
+    data?.estado ??
+    '';
   return estado === 'pagado' || estado === 'approved';
 }
 
-// ===================================================
-// SIGNATURE CANVAS COMPONENT
-// ===================================================
-const SignatureCanvas = React.memo<{
-  onSave: (data: string) => void;
-  onClear: () => void;
-  initialSignature?: string | null;
-}>(({ onSave, onClear, initialSignature }) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [hasSignature, setHasSignature] = useState(!!initialSignature);
-  const [ctx, setCtx] = useState<CanvasRenderingContext2D | null>(null);
-  const theme = useTheme();
-
-  const setupCanvas = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas?.parentElement) return;
-    const parent = canvas.parentElement;
-    canvas.width = parent.clientWidth;
-    canvas.height = parent.clientHeight;
-    const context = canvas.getContext('2d');
-    if (context) {
-      context.strokeStyle = theme.palette.text.primary;
-      context.lineWidth = 2.5;
-      context.lineCap = 'round';
-      context.lineJoin = 'round';
-      setCtx(context);
-      if (initialSignature && !hasSignature) {
-        const img = new Image();
-        img.onload = () => {
-          context.clearRect(0, 0, canvas.width, canvas.height);
-          context.drawImage(img, 0, 0, canvas.width, canvas.height);
-          setHasSignature(true);
-        };
-        img.src = initialSignature;
-      }
-    }
-  }, [theme.palette.text.primary, initialSignature, hasSignature]);
-
-  useEffect(() => {
-    const timeoutId = setTimeout(setupCanvas, 100);
-    window.addEventListener('resize', setupCanvas);
-    return () => { window.removeEventListener('resize', setupCanvas); clearTimeout(timeoutId); };
-  }, [setupCanvas]);
-
-  const getPointerPosition = useCallback((e: React.MouseEvent | React.TouchEvent) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return { x: 0, y: 0 };
-    const rect = canvas.getBoundingClientRect();
-    const isTouchEvent = 'touches' in e;
-    const clientX = isTouchEvent ? e.touches[0].clientX : e.clientX;
-    const clientY = isTouchEvent ? e.touches[0].clientY : e.clientY;
-    return { x: clientX - rect.left, y: clientY - rect.top };
-  }, []);
-
-  const startDrawing = useCallback((e: React.MouseEvent | React.TouchEvent) => {
-    if (!ctx) return;
-    const { x, y } = getPointerPosition(e);
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-    setIsDrawing(true);
-  }, [ctx, getPointerPosition]);
-
-  const draw = useCallback((e: React.MouseEvent | React.TouchEvent) => {
-    if (!isDrawing || !ctx) return;
-    e.preventDefault();
-    const { x, y } = getPointerPosition(e);
-    ctx.lineTo(x, y);
-    ctx.stroke();
-    setHasSignature(true);
-  }, [isDrawing, ctx, getPointerPosition]);
-
-  const stopDrawing = useCallback(() => {
-    if (isDrawing && ctx) { ctx.closePath(); setIsDrawing(false); }
-  }, [isDrawing, ctx]);
-
-  const handleClear = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (ctx && canvas) { ctx.clearRect(0, 0, canvas.width, canvas.height); setHasSignature(false); onClear(); }
-  }, [ctx, onClear]);
-
-  const handleSave = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (canvas && hasSignature) onSave(canvas.toDataURL('image/png'));
-  }, [hasSignature, onSave]);
-
-  return (
-    <Box>
-      <Paper variant="outlined" sx={{
-        mb: 2, overflow: 'hidden', touchAction: 'none',
-        bgcolor: 'background.default',
-        border: `2px dashed ${theme.palette.divider}`,
-        borderRadius: 2, position: 'relative',
-        height: { xs: 180, sm: 220 },
-        transition: 'all 0.3s ease',
-        '&:hover': { borderColor: 'primary.main' }
-      }}>
-        {!hasSignature && !isDrawing && (
-          <Box position="absolute" top="50%" left="50%"
-            sx={{ transform: 'translate(-50%, -50%)', pointerEvents: 'none', textAlign: 'center' }}>
-            <Draw sx={{ fontSize: 40, color: 'action.disabled', mb: 1 }} />
-            <Typography variant="caption" color="text.disabled">Firma aquí dentro</Typography>
-          </Box>
-        )}
-        <canvas ref={canvasRef}
-          onMouseDown={startDrawing} onMouseMove={draw} onMouseUp={stopDrawing} onMouseLeave={stopDrawing}
-          onTouchStart={startDrawing} onTouchMove={draw} onTouchEnd={stopDrawing}
-          style={{ width: '100%', height: '100%', cursor: 'crosshair', display: 'block' }}
-        />
-      </Paper>
-      <Stack direction="row" spacing={2} justifyContent="center">
-        <Button size="small" onClick={handleClear} startIcon={<Clear />} variant="outlined" color="error">Borrar</Button>
-        <Button size="small" variant="contained" onClick={handleSave} startIcon={<Save />} disabled={!hasSignature}>Usar Firma</Button>
-      </Stack>
-    </Box>
-  );
-});
-SignatureCanvas.displayName = 'SignatureCanvas';
-
-// ===================================================
-// STEP COMPONENTS
-// ===================================================
-const StepConfirmacion = React.memo<{
-  proyecto: ProyectoDto;
-  tipo: 'suscripcion' | 'inversion';
-  montoTotalStr: string;
-  cuotaActiva?: any;
-  formatCurrency: (value: number) => string;
-}>(({ proyecto, tipo, montoTotalStr, cuotaActiva, formatCurrency }) => {
-  const theme = useTheme();
-  const isSuscripcion = false
-
-  return (
-    <Stack spacing={3} maxWidth="sm" mx="auto">
-      <Alert severity="info" variant="outlined" sx={{ borderRadius: 2 }}>
-        Revisa los detalles de tu {'inversión'} antes de iniciar el pago.
-      </Alert>
-      <Paper variant="outlined" sx={{ overflow: 'hidden', borderRadius: 2 }}>
-        <Box sx={{ bgcolor: 'primary.main', color: 'primary.contrastText', p: 2 }}>
-          <Typography variant="h6" fontWeight={700}>{proyecto.nombre_proyecto}</Typography>
-          <Typography variant="body2" sx={{ opacity: 0.9 }}>
-            {'Inversión Directa (Pago Único)'}
-          </Typography>
-        </Box>
-        <Stack spacing={0}>
-          <Box p={2} borderBottom={`1px solid ${theme.palette.divider}`}>
-            <Stack direction="row" justifyContent="space-between" mb={proyecto.plazo_inversion ? 1 : 0}>
-              <Typography color="text.secondary">Modalidad</Typography>
-              <Typography fontWeight={600}>{'Aporte Único'}</Typography>
-            </Stack>
-            {isSuscripcion && proyecto.plazo_inversion && (
-              <Stack direction="row" justifyContent="space-between">
-                <Typography color="text.secondary">Plazo de financiación</Typography>
-                <Typography fontWeight={600}>{proyecto.plazo_inversion} meses</Typography>
-              </Stack>
-            )}
-          </Box>
-          {isSuscripcion && cuotaActiva && (
-            <Box p={2} bgcolor={alpha(theme.palette.primary.main, 0.02)}>
-              <Typography variant="overline" color="primary.main" fontWeight={800} sx={{ display: 'block', mb: 1, lineHeight: 1 }}>1. Cálculo del Valor Móvil</Typography>
-              <Stack spacing={0.5} mb={3}>
-                <Stack direction="row" justifyContent="space-between">
-                  <Typography variant="body2" color="text.secondary">Precio {cuotaActiva.nombre_cemento_cemento}</Typography>
-                  <Typography variant="body2" fontWeight={500}>{formatCurrency(Number(cuotaActiva.valor_cemento))}</Typography>
-                </Stack>
-                <Stack direction="row" justifyContent="space-between">
-                  <Typography variant="body2" color="text.secondary">Multiplicado por unidades</Typography>
-                  <Typography variant="body2" fontWeight={500}>× {cuotaActiva.valor_cemento_unidades}</Typography>
-                </Stack>
-                <Box borderTop={`1px solid ${theme.palette.divider}`} pt={0.5} mt={0.5}>
-                  <Stack direction="row" justifyContent="space-between">
-                    <Typography variant="body2" fontWeight={700}>= Valor Móvil Total</Typography>
-                    <Typography variant="body2" fontWeight={700}>{formatCurrency(Number(cuotaActiva.valor_movil))}</Typography>
-                  </Stack>
-                </Box>
-              </Stack>
-              <Typography variant="overline" color="primary.main" fontWeight={800} sx={{ display: 'block', mb: 1, lineHeight: 1 }}>2. Base a Financiar</Typography>
-              <Stack spacing={0.5} mb={3}>
-                <Stack direction="row" justifyContent="space-between">
-                  <Typography variant="body2" color="text.secondary">Valor Móvil Total</Typography>
-                  <Typography variant="body2" fontWeight={500}>{formatCurrency(Number(cuotaActiva.valor_movil))}</Typography>
-                </Stack>
-                <Stack direction="row" justifyContent="space-between">
-                  <Typography variant="body2" color="text.secondary">Porcentaje del plan</Typography>
-                  <Typography variant="body2" fontWeight={500}>× {Number(cuotaActiva.porcentaje_plan) * 100}%</Typography>
-                </Stack>
-                <Box borderTop={`1px solid ${theme.palette.divider}`} pt={0.5} mt={0.5}>
-                  <Stack direction="row" justifyContent="space-between">
-                    <Typography variant="body2" fontWeight={700}>= Base a financiar</Typography>
-                    <Typography variant="body2" fontWeight={700}>{formatCurrency(Number(cuotaActiva.total_del_plan))}</Typography>
-                  </Stack>
-                </Box>
-              </Stack>
-              <Typography variant="overline" color="primary.main" fontWeight={800} sx={{ display: 'block', mb: 1, lineHeight: 1 }}>3. Composición de tu Cuota</Typography>
-              <Stack spacing={1} sx={{ p: 1.5, bgcolor: 'background.paper', borderRadius: 1, border: `1px solid ${theme.palette.divider}` }}>
-                <Stack direction="row" justifyContent="space-between" alignItems="center">
-                  <Box>
-                    <Typography variant="body2" fontWeight={600}>Cuota Pura Mínima</Typography>
-                    <Typography variant="caption" color="text.disabled">{formatCurrency(Number(cuotaActiva.total_del_plan))} ÷ {cuotaActiva.total_cuotas_proyecto} meses</Typography>
-                  </Box>
-                  <Typography variant="body2" fontWeight={600}>{formatCurrency(Number(cuotaActiva.valor_mensual))}</Typography>
-                </Stack>
-                <Stack direction="row" justifyContent="space-between" alignItems="center">
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">Gastos Administrativos</Typography>
-                    <Typography variant="caption" color="text.disabled">({Number(cuotaActiva.porcentaje_administrativo) * 100}% sobre Cuota Pura)</Typography>
-                  </Box>
-                  <Typography variant="body2" color="text.secondary">+ {formatCurrency(Number(cuotaActiva.carga_administrativa))}</Typography>
-                </Stack>
-                <Stack direction="row" justifyContent="space-between" alignItems="center">
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">IVA</Typography>
-                    <Typography variant="caption" color="text.disabled">({Number(cuotaActiva.porcentaje_iva) * 100}% sobre Gastos)</Typography>
-                  </Box>
-                  <Typography variant="body2" color="text.secondary">+ {formatCurrency(Number(cuotaActiva.iva_carga_administrativa))}</Typography>
-                </Stack>
-                <Box borderTop={`2px dashed ${theme.palette.divider}`} pt={1} mt={1}>
-                  <Stack direction="row" justifyContent="space-between" alignItems="center">
-                    <Typography variant="subtitle2" fontWeight={800} color="text.primary">Valor Final de la Cuota</Typography>
-                    <Typography variant="subtitle2" fontWeight={800} color="text.primary">= {formatCurrency(Number(cuotaActiva.valor_mensual_final))}</Typography>
-                  </Stack>
-                </Box>
-              </Stack>
-            </Box>
-          )}
-          <Box p={3} display="flex" justifyContent="space-between" alignItems="center" bgcolor={alpha(theme.palette.success.main, 0.1)}>
-            <Box>
-              <Typography fontWeight={800} color="text.primary" variant="subtitle1">
-                {'Monto a Invertir'}
-              </Typography>
-              <Typography variant="caption" color="text.secondary" fontWeight={500}>
-                {'A pagar hoy'}
-              </Typography>
-            </Box>
-            <Typography variant="h4" fontWeight={900} color="success.main">{montoTotalStr}</Typography>
-          </Box>
-        </Stack>
-      </Paper>
-      {isSuscripcion && (
-        <Alert severity="success" icon={<Token />} sx={{ borderRadius: 2 }}>
-          <Typography variant="body2" fontWeight={700} mb={0.5}>¡Beneficio Exclusivo!</Typography>
-          <Typography variant="caption">Al abonar esta primera cuota recibes <strong>1 Token de Subasta</strong> para participar por la adjudicación de lotes.</Typography>
-        </Alert>
-      )}
-    </Stack>
-  );
-});
-StepConfirmacion.displayName = 'StepConfirmacion';
-
-const StepContrato = React.memo<{ plantilla: any; isLoading: boolean; }>(({ plantilla, isLoading }) => {
-  if (isLoading || !plantilla) return <CircularProgress />;
-  return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: { xs: '70vh', md: '75vh' }, bgcolor: 'grey.100', borderRadius: 2, border: '1px solid #e0e0e0', overflow: 'hidden' }}>
-      <iframe src={ImagenService.resolveImageUrl(plantilla.url_archivo)} title="Contrato" style={{ width: '100%', height: '100%', border: 'none', flex: 1 }} />
-    </Box>
-  );
-});
-StepContrato.displayName = 'StepContrato';
-
-const StepSeguridad = React.memo<{
-  codigo2FA: string;
-  setCodigo2FA: (v: string) => void;
-  location: any;
-  isProcessing: boolean;
-  error: any;
-}>(({ codigo2FA, setCodigo2FA, location, isProcessing, error }) => (
-  <Stack spacing={4} alignItems="center" py={2} maxWidth="sm" mx="auto">
-    <Avatar sx={{ bgcolor: 'primary.main', width: 56, height: 56 }}><Lock /></Avatar>
-    <Box textAlign="center">
-      <Typography variant="h5" fontWeight={700}>Verificación 2FA</Typography>
-      <Typography variant="body2" color="text.secondary">Ingresa el código de Google Authenticator.</Typography>
-    </Box>
-    {!location && <Alert severity="warning" sx={{ width: '100%' }}>Acceso a Ubicación Requerido</Alert>}
-    <TextField
-      autoFocus value={codigo2FA}
-      onChange={(e) => setCodigo2FA(e.target.value.replace(/\D/g, '').slice(0, 6))}
-      placeholder="000 000" disabled={isProcessing || !location}
-      error={!!error} helperText={error} fullWidth inputProps={{ maxLength: 6 }} sx={{ maxWidth: 300 }}
-    />
-  </Stack>
-));
-StepSeguridad.displayName = 'StepSeguridad';
-
-const StepPago = React.memo<{ paymentStatus: string; onRetry: () => void }>(({ paymentStatus, onRetry }) => (
-  <Stack alignItems="center" justifyContent="center" height="100%" minHeight="40vh" spacing={4}>
-    {paymentStatus === "success" && <CheckCircle sx={{ fontSize: 60, color: 'success.main' }} />}
-    {paymentStatus === "processing" && <CircularProgress size={80} />}
-    {paymentStatus === "failed" && <Alert severity="error">El pago fue rechazado. Intenta nuevamente.</Alert>}
-    <Typography variant="h5" fontWeight={700}>
-      {paymentStatus === "success" && "¡Pago Acreditado!"}
-      {paymentStatus === "processing" && "Procesando pago..."}
-      {paymentStatus === "failed" && "Pago rechazado"}
-    </Typography>
-    {paymentStatus === "failed" && <Button className={styles.retryButton} onClick={onRetry}>Intentar Nuevamente</Button>}
-  </Stack>
-));
-StepPago.displayName = 'StepPago';
-
-// ===================================================
-// BANNER PAGO EXITOSO — visible al inicio del paso 4
-// Funciona igual para inversiones y suscripciones
-// ===================================================
-const PagoExitosoBanner: React.FC<{ tipo: 'suscripcion' | 'inversion' }> = ({ tipo }) => {
-  const theme = useTheme();
-  return (
-    <Box sx={{
-      p: 2.5, borderRadius: 2,
-      bgcolor: alpha(theme.palette.success.main, 0.08),
-      border: `1px solid ${alpha(theme.palette.success.main, 0.3)}`,
-      display: 'flex', alignItems: 'center', gap: 2,
-    }}>
-      <Box sx={{
-        bgcolor: 'success.main', borderRadius: '50%',
-        width: 48, height: 48, minWidth: 48,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        boxShadow: `0 4px 14px ${alpha(theme.palette.success.main, 0.45)}`,
-      }}>
-        <CheckCircle sx={{ color: 'white', fontSize: 28 }} />
-      </Box>
-      <Box>
-        <Typography variant="subtitle2" fontWeight={800} color="success.dark">
-          ¡Pago acreditado exitosamente!
-        </Typography>
-        <Typography variant="caption" color="text.secondary">
-          Tu {tipo === 'suscripcion' ? 'suscripción' : 'inversión'} fue procesada.
-          Completá la firma del contrato para finalizar.
-        </Typography>
-      </Box>
-    </Box>
-  );
-};
-
-// ===================================================
+// ============================================================================
 // MAIN COMPONENT
-// ===================================================
+// ============================================================================
 export const CheckoutInversionModal: React.FC<CheckoutInversionModalProps> = ({
   open,
   onClose,
@@ -456,7 +107,7 @@ export const CheckoutInversionModal: React.FC<CheckoutInversionModalProps> = ({
   tipo,
   inversionId: initialInversionId,
   pagoId: initialPagoId,
-  trackingData
+  trackingData,
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -464,22 +115,20 @@ export const CheckoutInversionModal: React.FC<CheckoutInversionModalProps> = ({
   const formatCurrency = useCurrencyFormatter({
     currency: proyecto.moneda === 'USD' ? 'USD' : 'ARS',
     minimumFractionDigits: 2,
-    maximumFractionDigits: 2
+    maximumFractionDigits: 2,
   });
 
-  // STATE
-  const [activeStep, setActiveStep] = useState(0);
+  // ── STATE ──────────────────────────────────────────────────────────────────
+  const [activeStep, setActiveStep] = useState<CheckoutStep>('Resumen');
   const [codigo2FA, setCodigo2FA] = useState('');
   const [codigo2FAFirma, setCodigo2FAFirma] = useState('');
   const [location, setLocation] = useState<Location | null>(null);
   const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
   const [signaturePosition, setSignaturePosition] = useState<SignaturePosition | null>(null);
-  const [showRecoveryPrompt, setShowRecoveryPrompt] = useState(false);
-  const [recoveredState, setRecoveredState] = useState<CheckoutPersistedState | null>(null);
 
   const hasAttemptedRecovery = useRef(false);
 
-  // QUERIES
+  // ── QUERIES ────────────────────────────────────────────────────────────────
   const { data: plantillas, isLoading: loadingPlantilla } = useQuery({
     queryKey: ['plantillaContrato', proyecto.id],
     queryFn: async () => (await ContratoPlantillaService.findByProject(proyecto.id)).data,
@@ -489,7 +138,7 @@ export const CheckoutInversionModal: React.FC<CheckoutInversionModalProps> = ({
 
   const plantillaActual = useMemo(
     () => (plantillas && plantillas.length > 0 ? plantillas[0] : null),
-    [plantillas]
+    [plantillas],
   );
 
   const { data: cuotaActiva, isLoading: loadingCuota } = useQuery({
@@ -506,7 +155,7 @@ export const CheckoutInversionModal: React.FC<CheckoutInversionModalProps> = ({
     return `$ ${valor}`;
   }, [formatCurrency, proyecto, tipo, cuotaActiva, loadingCuota]);
 
-  // CHECKOUT WIZARD HOOK
+  // ── CHECKOUT WIZARD HOOK ───────────────────────────────────────────────────
   const {
     isProcessing,
     paymentStatus,
@@ -517,10 +166,8 @@ export const CheckoutInversionModal: React.FC<CheckoutInversionModalProps> = ({
     handleConfirmInvestment,
     handleConfirmarPago2FA,
     handleSignContract,
-    iniciarVerificacionPago,
     setPaymentStatus,
     setTransaccionId,
-    setInversionId,
   } = useCheckoutWizard({
     proyecto,
     tipo,
@@ -528,197 +175,121 @@ export const CheckoutInversionModal: React.FC<CheckoutInversionModalProps> = ({
     onSuccess: () => {
       showSuccess('¡Proceso completado exitosamente!');
       CheckoutStateManager.clearState();
-      setTimeout(() => { handleClose(); window.location.reload(); }, 2000);
-    }
+      setTimeout(() => {
+        handleClose();
+        window.location.reload();
+      }, 2000);
+    },
   });
 
-  const effectiveInversionId = inversionId || initialInversionId;   // registro de negocio
-  const effectivePagoId = transaccionId || initialPagoId;        // transacción de pago
+  const effectiveInversionId = inversionId || initialInversionId;
+  const effectivePagoId      = transaccionId || initialPagoId;
 
-  // PERSISTENCIA
-  const persistState = useCallback(() => {
-    CheckoutStateManager.saveState({
-      projectId: proyecto.id,
-      tipo,
-      activeStep,
-      transactionId: transaccionId,
-      inversionId: inversionId,
-      paymentSuccess: paymentStatus === 'success',
-      signatureDataUrl,
-      location,
-      timestamp: Date.now()
-    });
-  }, [proyecto.id, tipo, paymentStatus, inversionId, activeStep, transaccionId, signatureDataUrl, location]);
-
-  useEffect(() => {
-    if (open && (paymentStatus === 'success' || activeStep >= 3 || transaccionId)) {
-      persistState();
-    }
-  }, [open, activeStep, transaccionId, persistState]);
-
-
+  // ── RECOVERY EFFECT ────────────────────────────────────────────────────────
+  // Adaptado del WizardModal: para inversiones directas el trackingData
+  // no tiene suscripciones_detalle, solo tiene_pago + puede_firmar.
   useEffect(() => {
     if (!open || hasAttemptedRecovery.current) return;
 
-    // 🔥 PRIORIDAD MÁXIMA: trackingData manda
-    if (
-      trackingData &&
-      trackingData.tiene_pago &&
-      !trackingData.tiene_contrato_firmado &&
-      trackingData.puede_firmar
-    ) {
-      console.log("🚀 Ir directo a firma por trackingData");
-
-      setPaymentStatus('success'); // importante para UI
-      setActiveStep(4); // 👉 paso firma
-
+    // PRIORIDAD MÁXIMA: trackingData con pago confirmado y sin firma
+    if (trackingData?.tiene_pago && trackingData?.puede_firmar && !trackingData?.tiene_contrato_firmado) {
+      setPaymentStatus('success');
+      setActiveStep('Firma');
       hasAttemptedRecovery.current = true;
       return;
     }
 
-    const savedState = CheckoutStateManager.loadState(proyecto.id);
+    // Si ya firmó, no hay nada que hacer
+    if (trackingData?.tiene_contrato_firmado) {
+      hasAttemptedRecovery.current = true;
+      return;
+    }
 
-    const transaccionIdSaved = savedState?.transactionId
-
-
-    // ===================================================
-    // 🔥 CASO PRINCIPAL: SI HAY TX → SIEMPRE VERIFICAR PAGO
-    // ===================================================
-    if (savedState?.activeStep! >= 3 && transaccionIdSaved) {
-      setTransaccionId(transaccionIdSaved);
-
+    // Verificar estado del pago por ID (props o estado guardado)
+    const txId = effectivePagoId || effectiveInversionId;
+    if (txId) {
       (async () => {
         try {
-          const res = await MercadoPagoService.getPaymentStatus(transaccionIdSaved, true);
-
+          setTransaccionId(txId);
+          const res = await MercadoPagoService.getPaymentStatus(txId, true);
           if (isPaymentApproved(res.data)) {
             setPaymentStatus('success');
-            CheckoutStateManager.markPaymentSuccess(proyecto.id, transaccionIdSaved);
-            setActiveStep(4);
+            setActiveStep('Firma');
+            showInfo(
+              tipo === 'suscripcion'
+                ? '¡Pago confirmado! Firmá el contrato para activar tu suscripción.'
+                : '¡Pago confirmado! Firmá el contrato para finalizar tu inversión.',
+            );
           } else {
-            // 🔥 ACA ESTÁ LA CLAVE
-            setPaymentStatus('processing');
-            setActiveStep(3); // 👉 IR DIRECTO A PAGO
+            // Pago pendiente → paso de pago
+            setActiveStep('Pago');
           }
-
         } catch (err) {
           console.warn('⚠️ Error verificando pago:', err);
-
-          // fallback seguro
-          setActiveStep(3);
         } finally {
           hasAttemptedRecovery.current = true;
         }
       })();
-
       return;
-    }
-
-    // CASO 1: pago ya confirmado en sesión anterior
-    if (savedState?.paymentSuccess && savedState.transactionId) {
-      setTransaccionId(savedState.transactionId);
-      setPaymentStatus('success');
-      setLocation(savedState.location);
-      setCodigo2FAFirma('');
-      setActiveStep(4);
-      showInfo(
-        tipo === 'suscripcion'
-          ? '¡Pago confirmado! Firmá el contrato para activar tu suscripción.'
-          : '¡Pago confirmado! Firmá el contrato para finalizar tu inversión.'
-      );
-      hasAttemptedRecovery.current = true;
-      return;
-    }
-
-    // CASO 2: proceso interrumpido sin pago confirmado
-
-
-    // CASO 3: sin estado local pero llega ID por props
-
-    const txId = savedState?.transactionId || effectivePagoId;
-    if (txId) {
-      MercadoPagoService.getPaymentStatus(txId, true)
-        .then(res => {
-          if (isPaymentApproved(res.data)) {
-            setTransaccionId(txId);
-            setPaymentStatus('success');
-            CheckoutStateManager.markPaymentSuccess(proyecto.id, txId);
-            setActiveStep(4);
-            showInfo(
-              tipo === 'suscripcion'
-                ? '¡Pago confirmado! Firmá el contrato para activar tu suscripción.'
-                : '¡Pago confirmado! Firmá el contrato para finalizar tu inversión.'
-            );
-          }
-        })
-        .catch(err => console.warn('⚠️ Error verificando pago:', err));
     }
 
     hasAttemptedRecovery.current = true;
-  }, [open, proyecto.id, tipo, effectiveInversionId, effectivePagoId, showInfo, setTransaccionId, setPaymentStatus]);
+  }, [
+    open, proyecto.id, tipo, trackingData, effectiveInversionId, effectivePagoId,
+    showInfo, setTransaccionId, setPaymentStatus,
+  ]);
 
-  const handleRecoverState = useCallback(() => {
-    if (!recoveredState) return;
-    setTransaccionId(recoveredState.transactionId);
-    setPaymentStatus(recoveredState.paymentSuccess ? 'success' : 'processing');
-    setSignatureDataUrl(recoveredState.signatureDataUrl);
-    setLocation(recoveredState.location);
-
-    if (recoveredState.paymentSuccess) {
-      setCodigo2FAFirma('');
-      setActiveStep(4);
-      showInfo(
-        tipo === 'suscripcion'
-          ? '¡Pago confirmado! Firmá el contrato para activar tu suscripción.'
-          : '¡Pago confirmado! Firmá el contrato para finalizar tu inversión.'
-      );
-    } else {
-      setActiveStep(recoveredState.activeStep);
-      if (recoveredState.transactionId && recoveredState.activeStep >= 3) {
-        iniciarVerificacionPago(recoveredState.transactionId);
-      }
-    }
-    setShowRecoveryPrompt(false);
-  }, [recoveredState, tipo, showInfo, iniciarVerificacionPago, setTransaccionId, setPaymentStatus]);
-
-  const handleDiscardRecovery = useCallback(() => {
-    CheckoutStateManager.clearState();
-    setShowRecoveryPrompt(false);
-    setRecoveredState(null);
-  }, []);
-
-  // GEOLOCATION
+  // ── GEOLOCATION EFFECT ─────────────────────────────────────────────────────
   useEffect(() => {
-    if ((activeStep === 2 || activeStep === 4) && open && !location) {
+    const needsLocation = activeStep === 'Seguridad' || activeStep === 'Firma';
+    if (needsLocation && open && !location) {
       ContratoFirmadoService.getCurrentPosition()
         .then(pos => { if (pos) setLocation(pos); })
         .catch(err => console.warn('Error obteniendo ubicación:', err));
     }
   }, [activeStep, open, location]);
 
-  // ACCIONES POR PASO
+  // ── STEP ACTION ────────────────────────────────────────────────────────────
   const handleStepAction = useCallback(async () => {
     switch (activeStep) {
-      case 2: // Seguridad (antes era case 2)
-        if (codigo2FA.length === CODIGO_2FA_LENGTH) {
-          if (paymentStatus === 'success' && transaccionId) {
-            setActiveStep(4);
-          } else {
-            await handleConfirmInvestment(codigo2FA, location); // crea la inversión con el 2FA ya disponible
-            setActiveStep(3);
-          }
+      case 'Resumen': {
+        // Si ya hay pago exitoso, saltar directo a firma
+        const yaIniciado = paymentStatus === 'success' && (inversionId || transaccionId);
+        if (yaIniciado) { setActiveStep('Firma'); return; }
+        await handleConfirmInvestment();
+        setActiveStep('Contrato');
+        break;
+      }
+
+      case 'Contrato':
+        setActiveStep('Seguridad');
+        break;
+
+      case 'Seguridad': {
+        const CODIGO_2FA_LENGTH = 6;
+        if (codigo2FA.length !== CODIGO_2FA_LENGTH) {
+          showError('Debes ingresar el código completo');
+          return;
         }
+        // Si el pago ya está aprobado (recovery), ir directo a firma
+        if (paymentStatus === 'success' && transaccionId) {
+          setActiveStep('Firma');
+          return;
+        }
+        // Crear inversión + iniciar pago con 2FA
+        await handleConfirmInvestment(codigo2FA, location);
+        setActiveStep('Pago');
         break;
-      case 1:
-        setActiveStep(2);
+      }
+
+      case 'Pago':
+        // Este paso es de espera (redirect de MercadoPago),
+        // el botón solo es visible si paymentStatus === 'success'
+        if (paymentStatus === 'success') setActiveStep('Firma');
         break;
-      case 0:
-        setActiveStep(1);
-        break;
-      case 3: // Pago
-        setActiveStep(4);
-        break;
-      case 4: // Firma
+
+      case 'Firma': {
+        const CODIGO_2FA_LENGTH = 6;
         if (!codigo2FAFirma || codigo2FAFirma.length !== CODIGO_2FA_LENGTH) {
           showError('Debes ingresar tu código 2FA para firmar el contrato');
           return;
@@ -728,22 +299,31 @@ export const CheckoutInversionModal: React.FC<CheckoutInversionModalProps> = ({
           return;
         }
         if (signatureDataUrl && location) {
-          await handleSignContract(signatureDataUrl, signaturePosition, location, codigo2FAFirma, trackingData);
+          // Para inversiones directas, el id a usar viene del trackingData
+          await handleSignContract(
+            signatureDataUrl,
+            signaturePosition,
+            location,
+            codigo2FAFirma,
+            undefined,                                    // id_suscripcion → no aplica
+            trackingData ? trackingData : undefined,      // trackingData con proyecto.id
+          );
         }
         break;
+      }
     }
   }, [
-    activeStep, transaccionId, paymentStatus,
+    activeStep, transaccionId, paymentStatus, inversionId, tipo,
     codigo2FA, codigo2FAFirma, signatureDataUrl, signaturePosition, location,
-    handleConfirmInvestment, handleConfirmarPago2FA, handleSignContract, showError
+    handleConfirmInvestment, handleConfirmarPago2FA, handleSignContract, showError,
   ]);
 
+  // ── CLOSE ──────────────────────────────────────────────────────────────────
   const handleClose = useCallback(() => {
     if (isVerificandoPago || isProcessing) return;
     onClose();
     setTimeout(() => {
-      if (paymentStatus !== 'success' || activeStep === 0) //CheckoutStateManager.clearState();
-        setActiveStep(0);
+      if (paymentStatus !== 'success' || activeStep === 'Resumen') setActiveStep('Resumen');
       setCodigo2FA('');
       setCodigo2FAFirma('');
       setPaymentStatus('idle');
@@ -751,235 +331,198 @@ export const CheckoutInversionModal: React.FC<CheckoutInversionModalProps> = ({
       setSignaturePosition(null);
       setLocation(null);
       setTransaccionId(null);
-      setShowRecoveryPrompt(false);
-      setRecoveredState(null);
       hasAttemptedRecovery.current = false;
     }, 300);
   }, [isVerificandoPago, isProcessing, onClose, paymentStatus, activeStep, setPaymentStatus, setTransaccionId]);
 
+  // ── VALIDATION ─────────────────────────────────────────────────────────────
+  const CODIGO_2FA_LENGTH = 6;
   const isStepValid = useMemo(() => {
     switch (activeStep) {
-      case 2: return codigo2FA.length === CODIGO_2FA_LENGTH && !!location;
-      case 4: return !!signatureDataUrl && codigo2FAFirma.length === CODIGO_2FA_LENGTH && !!signaturePosition;
-      default: return true;
+      case 'Seguridad': return codigo2FA.length === CODIGO_2FA_LENGTH && !!location;
+      case 'Firma':     return !!signatureDataUrl && codigo2FAFirma.length === CODIGO_2FA_LENGTH && !!signaturePosition;
+      case 'Pago':      return paymentStatus === 'success'; // solo avanzar si está aprobado
+      default:          return true;
     }
-  }, [activeStep, codigo2FA, codigo2FAFirma, location, signatureDataUrl, signaturePosition]);
+  }, [activeStep, codigo2FA, codigo2FAFirma, location, signatureDataUrl, signaturePosition, paymentStatus]);
 
   const getButtonText = () => {
     if (isProcessing) return 'Procesando...';
-    if (activeStep === 4) return 'Firmar Contrato';
-    if (activeStep === 2 && paymentStatus === 'success') return 'Continuar a Firma';
-    if (activeStep === 2) return 'Ir a Pagar';
+    if (activeStep === 'Firma') return 'Firmar Contrato';
+    if (activeStep === 'Seguridad' && paymentStatus === 'success') return 'Continuar a Firma';
     return 'Continuar';
   };
 
+  // ── RENDER STEP CONTENT ────────────────────────────────────────────────────
+  const renderStepContent = () => {
+    switch (activeStep) {
+      case 'Resumen':
+        return (
+          <StepConfirmacion
+            proyecto={proyecto}
+            tipo={tipo}
+            montoTotalStr={montoAMostrar}
+            cuotaActiva={cuotaActiva}
+            formatCurrency={formatCurrency}
+          />
+        );
+      case 'Contrato':
+        return <StepContrato plantilla={plantillaActual} isLoading={loadingPlantilla} />;
+
+      case 'Seguridad':
+        return (
+          <StepSeguridad
+            codigo2FA={codigo2FA}
+            setCodigo2FA={setCodigo2FA}
+            location={location}
+            isProcessing={isProcessing}
+            error={error2FA}
+          />
+        );
+
+      case 'Pago':
+        return (
+          // Paso de espera: el usuario fue redirigido a MercadoPago y volvió
+          <Stack alignItems="center" justifyContent="center" minHeight="40vh" spacing={3}>
+            {paymentStatus === 'processing' && (
+              <>
+                <CircularProgress size={64} />
+                <Alert severity="info" sx={{ maxWidth: 420 }}>
+                  Estamos verificando tu pago. Esto puede demorar unos segundos...
+                </Alert>
+              </>
+            )}
+            {paymentStatus === 'success' && <PagoExitosoBanner tipo={tipo} />}
+            {paymentStatus === 'failed' && (
+              <Alert severity="error" sx={{ maxWidth: 420 }}>
+                El pago fue rechazado. Volvé al inicio para intentarlo nuevamente.
+              </Alert>
+            )}
+          </Stack>
+        );
+
+      case 'Firma':
+        return (
+          <Stack spacing={3}>
+            <PagoExitosoBanner tipo={tipo} />
+            <StepFirma
+              codigo2FAFirma={codigo2FAFirma}
+              setCodigo2FAFirma={setCodigo2FAFirma}
+              plantillaActual={plantillaActual}
+              signatureDataUrl={signatureDataUrl}
+              setSignatureDataUrl={setSignatureDataUrl}
+              signaturePosition={signaturePosition}
+              setSignaturePosition={setSignaturePosition}
+              isProcessing={isProcessing}
+            />
+          </Stack>
+        );
+    }
+  };
+
+  // ── JSX ────────────────────────────────────────────────────────────────────
   return (
-    <>
-      {/* MODAL DE RECUPERACIÓN */}
-      {showRecoveryPrompt && recoveredState && !recoveredState.paymentSuccess && (
-        <BaseModal
-          open={showRecoveryPrompt}
-          onClose={handleDiscardRecovery}
-          title="Sesión Interrumpida"
-          subtitle="Detectamos un proceso incompleto"
-          icon={<Refresh />}
-          headerColor="warning"
-          maxWidth="sm" // Ajustado a sm para mejor impacto visual en avisos
+    <BaseModal
+      open={open}
+      onClose={handleClose}
+      title={tipo === 'suscripcion' ? 'Nueva Suscripción' : 'Nueva Inversión'}
+      subtitle={proyecto.nombre_proyecto}
+      icon={<Business />}
+      headerColor={activeStep === 'Firma' ? 'success' : 'primary'}
+      maxWidth="md"
+      disableClose={isVerificandoPago || isProcessing}
+      PaperProps={{
+        sx: {
+          height: isMobile ? '100%' : '95vh',
+          display: 'flex',
+          flexDirection: 'column',
+        },
+      }}
+      customActions={
+        <Stack
+          direction={{ xs: 'column-reverse', sm: 'row' }}
+          spacing={2}
+          width="100%"
+          justifyContent="space-between"
+          alignItems="center"
         >
-          <Stack spacing={3} p={1}>
-            <Alert severity="info" icon={<Info />}>
-              <Typography variant="body2" fontWeight={600}>Encontramos una sesión anterior</Typography>
-              <Typography variant="caption">Podés continuar donde lo dejaste.</Typography>
-            </Alert>
+          <Button
+            onClick={
+              activeStep === 'Resumen'
+                ? handleClose
+                : () => {
+                    if (activeStep === 'Firma') {
+                      setSignatureDataUrl(null);
+                      setSignaturePosition(null);
+                    }
+                    const prev = prevStep(activeStep);
+                    if (prev) setActiveStep(prev);
+                  }
+            }
+            // Bloquear "Atrás" en Pago: el usuario ya fue a MercadoPago
+            disabled={isProcessing || isVerificandoPago || activeStep === 'Pago'}
+            startIcon={activeStep === 'Resumen' ? <Close /> : <ArrowBack />}
+            color="inherit"
+            fullWidth={isMobile}
+            sx={{ fontWeight: 700, px: 3 }}
+          >
+            {activeStep === 'Resumen' ? 'Cancelar' : 'Atrás'}
+          </Button>
+
+          {/* Ocultar "Continuar" en Pago si el pago aún no se confirmó */}
+          {(activeStep !== 'Pago' || paymentStatus === 'success') && (
             <Button
               variant="contained"
-              fullWidth
-              onClick={handleRecoverState}
-              startIcon={<Refresh />}
-              color="primary"
-              sx={{ py: 1.5, fontWeight: 800, borderRadius: 2 }}
-            >
-              Continuar proceso
-            </Button>
-          </Stack>
-        </BaseModal>
-      )}
-
-      {/* MODAL PRINCIPAL DE CHECKOUT */}
-      <BaseModal
-        open={open && !showRecoveryPrompt}
-        onClose={handleClose}
-        title={activeStep === 4 ? 'Finalizar Inversión' : 'Nueva Inversión'}
-        subtitle={proyecto.nombre_proyecto}
-        icon={<Business />}
-        headerColor={activeStep === 4 ? 'success' : 'primary'}
-        maxWidth="md"
-        disableClose={isVerificandoPago || isProcessing}
-        // Pasamos props adicionales al Dialog de MUI a través de BaseModal
-        PaperProps={{
-          sx: {
-            height: isMobile ? '100%' : '90vh',
-            display: 'flex',
-            flexDirection: 'column'
-          }
-        }}
-        customActions={
-          <Stack
-            direction={{ xs: 'column-reverse', sm: 'row' }}
-            spacing={2}
-            width="100%"
-            justifyContent="space-between"
-            alignItems="center"
-          >
-            <Button
-              onClick={activeStep === 0 ? handleClose : () => {
-                if (activeStep === 4) { setSignatureDataUrl(null); setSignaturePosition(null); }
-                setActiveStep(p => p - 1);
-              }}
-              disabled={isProcessing || isVerificandoPago || activeStep === 3}
-              startIcon={activeStep === 0 ? <Close /> : <ArrowBack />}
-              color="inherit"
+              color={activeStep === 'Firma' ? 'success' : 'primary'}
+              onClick={handleStepAction}
+              disabled={!isStepValid || isProcessing}
+              endIcon={
+                isProcessing
+                  ? <CircularProgress size={20} color="inherit" />
+                  : activeStep === 'Firma'
+                    ? <CloudUpload />
+                    : <ArrowForward />
+              }
               fullWidth={isMobile}
-              sx={{ fontWeight: 700, px: 3 }}
+              sx={{ px: 4, py: 1.2, fontWeight: 800, borderRadius: 2, minWidth: { sm: 200 } }}
             >
-              {activeStep === 0 ? 'Cancelar' : 'Atrás'}
+              {getButtonText()}
             </Button>
-
-            {(activeStep !== 3 || paymentStatus === 'success') && (
-              <Button
-                variant="contained"
-                color={activeStep === 4 ? 'success' : 'primary'}
-                onClick={handleStepAction}
-                disabled={!isStepValid || isProcessing}
-                endIcon={
-                  isProcessing
-                    ? <CircularProgress size={20} color="inherit" />
-                    : activeStep === 4 ? <CloudUpload /> : <ArrowForward />
-                }
-                fullWidth={isMobile}
-                sx={{
-                  px: 4,
-                  py: 1.2,
-                  fontWeight: 800,
-                  borderRadius: 2,
-                  minWidth: { sm: 200 }
-                }}
-              >
-                {getButtonText()}
-              </Button>
-            )}
-          </Stack>
-        }
-      >
-        <Stack spacing={3} sx={{ height: '100%', minHeight: 0 }}>
-          {/* Stepper: Oculto en móviles para ahorrar espacio vertical */}
-          {!isMobile && (
-            <Stepper activeStep={activeStep} alternativeLabel sx={{ pt: 1 }}>
-              {STEPS.map((step, index) => (
-                <Step key={step.label}>
-                  <StepLabel
-                    StepIconProps={{
-                      sx: {
-                        '&.Mui-active': {
-                          color: index === 4 ? theme.palette.success.main : theme.palette.primary.main,
-                          transform: 'scale(1.1)'
-                        },
-                        '&.Mui-completed': { color: theme.palette.success.main }
-                      }
-                    }}
-                  >
-                    {step.label}
-                  </StepLabel>
-                </Step>
-              ))}
-            </Stepper>
           )}
-
-          {/* Contenido Dinámico con scroll interno si es necesario */}
-          <Box
-            flex={1}
-            sx={{
-              overflowY: 'auto',
-              overflowX: 'hidden',
-              px: { xs: 0, md: 1 }
-            }}
-          >
-            {activeStep === 0 && (
-              <StepConfirmacion
-                proyecto={proyecto} tipo={tipo}
-                montoTotalStr={montoAMostrar} cuotaActiva={cuotaActiva}
-                formatCurrency={formatCurrency}
-              />
-            )}
-            {activeStep === 1 && <StepContrato plantilla={plantillaActual} isLoading={loadingPlantilla} />}
-            {activeStep === 2 && (
-              <StepSeguridad
-                codigo2FA={codigo2FA} setCodigo2FA={setCodigo2FA}
-                location={location} isProcessing={isProcessing} error={error2FA}
-              />
-            )}
-            {activeStep === 3 && <StepPago paymentStatus={paymentStatus} onRetry={() => setActiveStep(0)} />}
-
-            {activeStep === 4 && (
-              <Stack spacing={3}>
-                <PagoExitosoBanner tipo={tipo} />
-
-                <Alert severity="info" icon={<HistoryEdu />} sx={{ borderRadius: 2 }}>
-                  <Typography variant="body2" fontWeight={600}>Paso final: firma digital</Typography>
-                  <Typography variant="caption">
-                    Autorizá con tu 2FA y posicioná tu firma en el documento.
-                  </Typography>
-                </Alert>
-
-                <TextField
-                  autoFocus
-                  label="Código 2FA para firmar"
-                  value={codigo2FAFirma}
-                  onChange={(e) => setCodigo2FAFirma(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  disabled={isProcessing}
-                  fullWidth
-                  inputProps={{ maxLength: 6, style: { textAlign: 'center', fontSize: '1.2rem', letterSpacing: '0.5rem' } }}
-                  sx={{ maxWidth: 300, mx: 'auto' }}
-                  helperText="Código de Google Authenticator"
-                />
-
-                <Fade in={!signatureDataUrl} unmountOnExit>
-                  <Box>
-                    <SignatureCanvas
-                      onSave={setSignatureDataUrl}
-                      onClear={() => { setSignatureDataUrl(null); setSignaturePosition(null); }}
-                      initialSignature={signatureDataUrl}
-                    />
-                  </Box>
-                </Fade>
-
-                <Fade in={!!signatureDataUrl} unmountOnExit>
-                  <Box sx={{ minHeight: '500px', display: 'flex', flexDirection: 'column' }}>
-                    <Alert
-                      severity={signaturePosition ? "success" : "warning"}
-                      sx={{ mb: 2, borderRadius: 2 }}
-                      action={
-                        <Button color="inherit" size="small" onClick={() => { setSignatureDataUrl(null); setSignaturePosition(null); }}>
-                          Cambiar
-                        </Button>
-                      }
-                    >
-                      {signaturePosition ? "Firma posicionada correctamente" : "Hacé clic en el PDF para ubicar tu firma"}
-                    </Alert>
-                    <Box sx={{ flex: 1, border: `1px solid ${theme.palette.divider}`, borderRadius: 2, overflow: 'hidden' }}>
-                      <PDFViewerMejorado
-                        pdfUrl={plantillaActual ? ImagenService.resolveImageUrl(plantillaActual.url_archivo) : ''}
-                        signatureDataUrl={signatureDataUrl}
-                        onSignaturePositionSet={setSignaturePosition}
-                      />
-                    </Box>
-                  </Box>
-                </Fade>
-              </Stack>
-            )}
-          </Box>
         </Stack>
-      </BaseModal>
-    </>
+      }
+    >
+      <Stack spacing={3} height="100%" minHeight={0}>
+        {/* Stepper */}
+        {!isMobile && (
+          <Stepper activeStep={stepIndex(activeStep)} alternativeLabel sx={{ pt: 1 }}>
+            {STEP_ORDER.map((step) => (
+              <Step key={step}>
+                <StepLabel
+                  StepIconProps={{
+                    sx: {
+                      '&.Mui-active': {
+                        color: step === 'Firma'
+                          ? theme.palette.success.main
+                          : theme.palette.primary.main,
+                        transform: 'scale(1.1)',
+                      },
+                      '&.Mui-completed': { color: theme.palette.success.main },
+                    },
+                  }}
+                >
+                  {step}
+                </StepLabel>
+              </Step>
+            ))}
+          </Stepper>
+        )}
+
+        {/* Contenido del paso */}
+        <Box flex={1} sx={{ overflowY: 'auto', px: { xs: 0, md: 1 } }}>
+          {renderStepContent()}
+        </Box>
+      </Stack>
+    </BaseModal>
   );
 };
