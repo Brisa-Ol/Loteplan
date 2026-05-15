@@ -40,7 +40,18 @@ import { ViewModeToggle, type ViewMode } from '@/shared/components/admin/Viewmod
 import { ConfirmDialog } from '@/shared/components/domain/modals/ConfirmDialog';
 import AlertBanner from '@/shared/components/ui/Alertbanner';
 import ModalDetalleTransaccion from './modal/ModalDetalleTransaccion';
+import { formatForDateInput } from '@/shared/utils/FormatDateTime';
+const safeFormatDate = (dateStr?: string | null) => {
+  if (!dateStr) return '-';
+  const safeString = dateStr.length === 10 ? `${dateStr}T00:00:00` : dateStr;
+  return format(new Date(safeString), 'dd/MM/yyyy', { locale: es });
+};
 
+const safeFormatTime = (dateStr?: string | null) => {
+  if (!dateStr) return '';
+  if (dateStr.length === 10) return '';
+  return format(new Date(dateStr), 'HH:mm', { locale: es });
+};
 // ============================================================================
 // SUB-COMPONENTE: ANALYTICS (Memoizado para performance)
 // ============================================================================
@@ -216,10 +227,10 @@ const AdminTransacciones: React.FC = () => {
       render: (row) => (
         <Box>
           <Typography variant="body2" color="text.primary">
-            {row.fecha_transaccion ? format(new Date(row.fecha_transaccion), 'dd/MM/yyyy', { locale: es }) : '-'}
+            {safeFormatDate(row.fecha_transaccion)}
           </Typography>
           <Typography variant="caption" color="text.secondary">
-            {row.fecha_transaccion ? format(new Date(row.fecha_transaccion), 'HH:mm', { locale: es }) : ''} hs
+            {safeFormatTime(row.fecha_transaccion)} {safeFormatTime(row.fecha_transaccion) ? 'hs' : ''}
           </Typography>
         </Box>
       )
@@ -335,7 +346,7 @@ const AdminTransacciones: React.FC = () => {
         <FilterBar sx={{ p: 2, bgcolor: 'background.paper', borderRadius: '12px', border: '1px solid', borderColor: 'divider' }}>
           {/* ✅ NUEVA ESTRUCTURA FLEXBOX FLAT */}
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center', width: '100%' }}>
-            
+
             {/* Buscador: Toma el espacio restante */}
             <Box sx={{ flex: 1, minWidth: { xs: '100%', md: 280 } }}>
               <FilterSearch
@@ -348,15 +359,14 @@ const AdminTransacciones: React.FC = () => {
 
             {/* Controles Derecha: Fechas y Selects */}
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center', width: { xs: '100%', xl: 'auto' } }}>
-              
-              {/* Fechas */}
+
               <Stack direction="row" spacing={1} alignItems="center" sx={{ width: { xs: '100%', sm: 'auto' } }}>
                 <TextField
                   label="Desde"
                   type="date"
                   size="small"
                   InputLabelProps={{ shrink: true }}
-                  value={logic.dateFrom}
+                  value={formatForDateInput(logic.dateFrom)} // ✅ Protegido
                   onChange={(e) => logic.setDateFrom(e.target.value)}
                   sx={dateInputStyles}
                 />
@@ -366,8 +376,9 @@ const AdminTransacciones: React.FC = () => {
                   type="date"
                   size="small"
                   InputLabelProps={{ shrink: true }}
-                  value={logic.dateTo}
+                  value={formatForDateInput(logic.dateTo)} // ✅ Protegido
                   onChange={(e) => logic.setDateTo(e.target.value)}
+                  inputProps={{ min: formatForDateInput(logic.dateFrom) }} // ✅ Min protegido
                   sx={dateInputStyles}
                 />
               </Stack>
@@ -398,7 +409,7 @@ const AdminTransacciones: React.FC = () => {
                 <MenuItem value="pendiente">Pendientes</MenuItem>
                 <MenuItem value="fallido">Fallidos / Rechazados</MenuItem>
               </FilterSelect>
-              
+
             </Box>
           </Box>
         </FilterBar>

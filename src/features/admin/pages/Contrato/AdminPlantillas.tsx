@@ -432,13 +432,22 @@ const AdminPlantillas: React.FC = () => {
             isLoading={logic.isUpdatingPdf}
           />
           <UpdateMetadataModal
-            open={logic.modales.updateMeta.isOpen}
-            onClose={() => { logic.modales.updateMeta.close(); logic.setPlantillaSelected(null); }}
-            plantilla={logic.plantillaSelected}
-            proyectos={logic.proyectos}
-            onSubmit={async (values) => { await logic.updateMetaMutation.mutateAsync({ id: logic.plantillaSelected!.id, data: values }); }}
-            isLoading={logic.isUpdatingMeta}
-          />
+  open={logic.modales.updateMeta.isOpen}
+  onClose={() => { 
+    logic.modales.updateMeta.close(); 
+    logic.setPlantillaSelected(null); 
+  }}
+  plantilla={logic.plantillaSelected}
+  proyectos={logic.proyectos}
+  plantillas={logic.plantillas} /* ✅ AQUÍ PASAS LA NUEVA PROP */
+  onSubmit={async (values) => { 
+    await logic.updateMetaMutation.mutateAsync({ 
+      id: logic.plantillaSelected!.id, 
+      data: values 
+    }); 
+  }}
+  isLoading={logic.isUpdatingMeta}
+/>
         </>
       )}
 

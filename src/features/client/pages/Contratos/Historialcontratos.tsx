@@ -1,5 +1,8 @@
 // src/features/client/pages/Contratos/HistorialContratos.tsx
 
+import { env } from '@/core/config/env'; // 👈 1. Importamos env
+import type { ContratoFirmadoDto } from '@/core/types/contrato-firmado.dto';
+import { DataTable, PageContainer, PageHeader, QueryHandler, StatCard, type DataTableColumn } from '@/shared';
 import {
   Business,
   Download as DownloadIcon,
@@ -22,14 +25,25 @@ import {
   Typography,
   alpha, useTheme
 } from '@mui/material';
-// 👈 Eliminamos format y es (date-fns) para usar el estándar nativo con env
-import { env } from '@/core/config/env'; // 👈 1. Importamos env
-import type { ContratoFirmadoDto } from '@/core/types/contrato-firmado.dto';
-import { DataTable, PageContainer, PageHeader, QueryHandler, StatCard, type DataTableColumn } from '@/shared';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 import React, { useMemo } from 'react';
 import { useHistorialContratos } from '../../hooks/useHistorialContratos';
 import { VerContratoFirmadoModal } from '../Proyectos/modals/VerContratoFirmadoModal';
+const safeFormatShortDate = (dateStr?: string | null) => {
+  if (!dateStr) return '-';
+  const safeString = dateStr.length === 10 ? `${dateStr}T00:00:00` : dateStr;
+  const date = new Date(safeString);
+  if (isNaN(date.getTime())) return 'Fecha inválida';
+  // 'dd MMM yyyy' genera exactamente el mismo formato que querías: "14 may 2026"
+  return format(date, "dd MMM yyyy", { locale: es });
+};
 
+const safeFormatTime = (dateStr?: string | null) => {
+  if (!dateStr) return '';
+  if (dateStr.length === 10) return '';
+  return format(new Date(dateStr), 'HH:mm', { locale: es });
+};
 const HistorialContratos: React.FC = () => {
   const theme = useTheme();
   const logic = useHistorialContratos();
@@ -90,15 +104,10 @@ const HistorialContratos: React.FC = () => {
       render: (row) => (
         <Box>
           <Typography variant="body2" fontWeight={600}>
-            {/* 👈 2. Aplicamos env.defaultLocale para consistencia regional */}
-            {row.fecha_firma
-              ? new Date(row.fecha_firma).toLocaleDateString(env.defaultLocale, { day: '2-digit', month: 'short', year: 'numeric' })
-              : '-'}
+            {safeFormatShortDate(row.fecha_firma)}
           </Typography>
           <Typography variant="caption" color="text.secondary">
-            {row.fecha_firma
-              ? new Date(row.fecha_firma).toLocaleTimeString(env.defaultLocale, { hour: '2-digit', minute: '2-digit' }) + ' hs'
-              : ''}
+            {safeFormatTime(row.fecha_firma)} {safeFormatTime(row.fecha_firma) ? 'hs' : ''}
           </Typography>
         </Box>
       )

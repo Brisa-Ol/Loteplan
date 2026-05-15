@@ -49,9 +49,16 @@ import { QueryHandler } from '@/shared/components/data-grid/QueryHandler';
 import { StatCard, StatusBadge } from '@/shared/components/domain/cards/StatCard';
 import { ConfirmDialog } from '@/shared/components/domain/modals/ConfirmDialog';
 import { PageContainer } from '@/shared/components/layout/PageContainer';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 import { useAdminLotePagos } from '../../hooks/lotes/useAdminLotePagos';
 import { ModalViewDetailsPujaPayment } from './modals/ModalViewDetailsPujaPayment';
 
+const safeFormatDate = (dateStr?: string | null) => {
+  if (!dateStr) return '---';
+  const safeString = dateStr.length === 10 ? `${dateStr}T00:00:00` : dateStr;
+  return format(new Date(safeString), 'dd/MM/yyyy', { locale: es });
+};
 // ============================================================================
 // HELPERS
 // ============================================================================
@@ -113,7 +120,7 @@ const AdminLotePagos: React.FC = () => {
         if (filterStatus === 'pagado') {
           matchesStatus = isPagado;
         } else if (filterStatus === 'no_pagado') {
-          matchesStatus = !isPagado; 
+          matchesStatus = !isPagado;
         }
       }
 
@@ -284,14 +291,14 @@ const AdminLotePagos: React.FC = () => {
       </Box>
 
       {/* 🆕 BARRA DE PESTAÑAS ADAPTADA AL TEMA GLOBAL */}
-      <Card 
-        elevation={0} 
-        sx={{ 
-          mb: 4, 
+      <Card
+        elevation={0}
+        sx={{
+          mb: 4,
           bgcolor: 'background.paper', // Fondo gris de tu tema
           border: '1px solid',
           borderColor: 'divider',
-          borderRadius: '12px' 
+          borderRadius: '12px'
         }}
       >
         <Tabs
@@ -308,23 +315,23 @@ const AdminLotePagos: React.FC = () => {
               fontWeight: 600,
               fontSize: '0.95rem',
               minHeight: 56,
-              color: 'text.secondary', 
-              px: 3, 
+              color: 'text.secondary',
+              px: 3,
               '&.Mui-selected': {
-                color: 'primary.main', 
+                color: 'primary.main',
               }
             }
           }}
         >
-          <Tab 
-            label="Dashboard" 
-            icon={<DashboardIcon fontSize="small" />} 
-            iconPosition="start" 
+          <Tab
+            label="Dashboard"
+            icon={<DashboardIcon fontSize="small" />}
+            iconPosition="start"
           />
-          <Tab 
-            label="Cobros y Seguimiento" 
-            icon={<ListIcon fontSize="small" />} 
-            iconPosition="start" 
+          <Tab
+            label="Cobros y Seguimiento"
+            icon={<ListIcon fontSize="small" />}
+            iconPosition="start"
           />
         </Tabs>
       </Card>
@@ -513,8 +520,8 @@ const Top3PostoresTable = React.memo<{
 
     return Array.from(map.entries())
       .map(([id, nombre]) => ({ id, nombre }))
-      .sort((a, b) => a.nombre.localeCompare(b.nombre)); 
-  }, [lotes, pujasPorLote]); 
+      .sort((a, b) => a.nombre.localeCompare(b.nombre));
+  }, [lotes, pujasPorLote]);
 
   const filteredAndSorted = useMemo(() => {
     const term = searchTerm.toLowerCase();
@@ -537,7 +544,7 @@ const Top3PostoresTable = React.memo<{
       .sort((a, b) => {
         const aFin = a.fecha_fin ? new Date(a.fecha_fin).getTime() : 0;
         const bFin = b.fecha_fin ? new Date(b.fecha_fin).getTime() : 0;
-        return bFin - aFin; 
+        return bFin - aFin;
       });
   }, [lotes, searchTerm, filterProyecto]);
 
@@ -628,7 +635,7 @@ const Top3PostoresTable = React.memo<{
                         <Typography variant="caption" color="text.disabled" display="block">ID: {lote.id}</Typography>
                         {lote.fecha_fin && (
                           <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
-                            Fin: {new Date(lote.fecha_fin).toLocaleDateString('es-AR')}
+                            Fin: {safeFormatDate(lote.fecha_fin)}
                           </Typography>
                         )}
                         {nombreProyecto && (
@@ -695,7 +702,7 @@ const Top3PostoresTable = React.memo<{
         <TablePagination
           rowsPerPageOptions={[5, 10, 25]}
           component="div"
-          count={filteredAndSorted.length}  
+          count={filteredAndSorted.length}
           rowsPerPage={rowsPerPage}
           page={page}
           onPageChange={(_, p) => setPage(p)}

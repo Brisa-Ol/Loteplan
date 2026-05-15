@@ -35,7 +35,6 @@ import CreateLoteModal from './modals/CreateLoteModal';
 import EditLoteModal from './modals/EditLoteModal';
 import LoteOverviewModal from './modals/LoteOverviewModal';
 import ManageLoteImagesModal from './modals/ManageLoteImagesModal';
-import { useAdminPujas } from '../../hooks/lotes/useAdminPujas';
 
 // ============================================================================
 // COMPONENTE: CARD DE LOTE
@@ -164,7 +163,7 @@ const LoteCard: React.FC<{
 const AdminLotes: React.FC = () => {
   const Loteslogic = useAdminLotes();
 
-  
+
 
   // 1. Configuración para Proyectos (Lista larga con scroll y fuente reducida)
   const proyectoMenuProps = {
@@ -229,8 +228,8 @@ const AdminLotes: React.FC = () => {
           <Stack spacing={0.5} alignItems="flex-start">
             <Chip label={proyecto?.nombre_proyecto || "S/P"} size="small" variant="outlined" color="primary" />
             <Typography variant="caption" fontWeight={800} color={proyecto?.tipo_inversion === 'directo' ? 'info.main' : 'warning.main'}>
-              {proyecto?.tipo_inversion === 'directo' ? '💼 INVERSIONISTA' 
-              : (l.estado_subasta === 'activa' ? '🔨 EN SUBASTA' : l.estado_subasta === 'pendiente' ? '🔨 SUBASTABLE' : 'CERRADA')}
+              {proyecto?.tipo_inversion === 'directo' ? '💼 INVERSIONISTA'
+                : (l.estado_subasta === 'activa' ? '🔨 EN SUBASTA' : l.estado_subasta === 'pendiente' ? '🔨 SUBASTABLE' : 'CERRADA')}
             </Typography>
           </Stack>
         );
@@ -319,108 +318,108 @@ const AdminLotes: React.FC = () => {
         <StatCard title="Sin Proyecto" value={Loteslogic.stats.huerfanos} icon={<AssignmentLate />} color="warning" loading={Loteslogic.loadingLotes} />
       </Box>
 
-{/* FILTROS Y VISTA */}
-<Box
-  sx={{
-    display: 'flex',
-    flexDirection: { xs: 'column', lg: 'row' },
-    gap: 2,
-    alignItems: { xs: 'stretch', lg: 'center' },
-    mb: 3,
-  }}
->
-  {/* FilterBar ocupa todo el espacio disponible */}
-  <FilterBar sx={{ flex: 1, width: '100%' }}>
-    <Box
-      sx={{
-        display: 'flex',
-        flexDirection: { xs: 'column', sm: 'row' },
-        gap: 2,
-        alignItems: { xs: 'stretch', sm: 'center' },
-        width: '100%',
-        flexWrap: 'wrap',
-      }}
-    >
-      {/* Buscador — crece para ocupar espacio libre */}
-      <Box sx={{ flex: 2, minWidth: { xs: '100%', sm: 200 } }}>
-        <FilterSearch
-          placeholder="Buscar por nombre o ID..."
-          value={Loteslogic.searchTerm}
-          onChange={(e) => Loteslogic.setSearchTerm(e.target.value)}
-          fullWidth
-        />
-      </Box>
-
-      {/* Selects agrupados */}
+      {/* FILTROS Y VISTA */}
       <Box
         sx={{
           display: 'flex',
-          flexDirection: { xs: 'column', sm: 'row' },
+          flexDirection: { xs: 'column', lg: 'row' },
           gap: 2,
-          flex: 1,
-          minWidth: { xs: '100%', sm: 'auto' },
+          alignItems: { xs: 'stretch', lg: 'center' },
+          mb: 3,
         }}
       >
-        <FilterSelect
-          label="Proyecto"
-          value={Loteslogic.filterProject}
-          onChange={(e: any) => Loteslogic.setFilterProject(e.target.value)}
-          sx={{ flex: 1, minWidth: { xs: '100%', sm: 160 } }}
-          SelectProps={{ MenuProps: proyectoMenuProps }}
-        >
-          <MenuItem value="all">Todos los Lotes</MenuItem>
-          {Loteslogic.proyectos.map((p) => (
-            <MenuItem key={p.id} value={p.id} sx={{ py: 1.5 }}>
-              <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between" width="100%">
-                <Typography variant="body2">{p.nombre_proyecto}</Typography>
-                <Chip
-                  label={p.tipo_inversion === 'directo' ? 'DIRECTO' : 'MENSUAL'}
-                  size="small"
-                  sx={{
-                    fontSize: '0.55rem',
-                    height: 18,
-                    fontWeight: 800,
-                    bgcolor: p.tipo_inversion === 'directo'
-                      ? alpha(Loteslogic.theme.palette.info.main, 0.1)
-                      : alpha(Loteslogic.theme.palette.warning.main, 0.1),
-                    color: p.tipo_inversion === 'directo' ? 'info.main' : 'warning.main',
-                    border: '1px solid transparent',
-                  }}
-                />
-              </Stack>
-            </MenuItem>
-          ))}
-        </FilterSelect>
+        {/* FilterBar ocupa todo el espacio disponible */}
+        <FilterBar sx={{ flex: 1, width: '100%' }}>
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: { xs: 'column', sm: 'row' },
+              gap: 2,
+              alignItems: { xs: 'stretch', sm: 'center' },
+              width: '100%',
+              flexWrap: 'wrap',
+            }}
+          >
+            {/* Buscador — crece para ocupar espacio libre */}
+            <Box sx={{ flex: 2, minWidth: { xs: '100%', sm: 200 } }}>
+              <FilterSearch
+                placeholder="Buscar por nombre o ID..."
+                value={Loteslogic.searchTerm}
+                onChange={(e) => Loteslogic.setSearchTerm(e.target.value)}
+                fullWidth
+              />
+            </Box>
 
-        <FilterSelect
-          label="Estado"
-          value={Loteslogic.filterEstadoSubasta}
-          onChange={(e: any) => Loteslogic.setFilterEstadoSubasta(e.target.value)}
-          sx={{ flex: 1, minWidth: { xs: '100%', sm: 140 } }}
-          SelectProps={{ MenuProps: estadoMenuProps }}
-        >
-          <MenuItem value="all">Cualquier Estado</MenuItem>
-          <MenuItem value="activa">Activa</MenuItem>
-          <MenuItem value="pendiente">Pendiente</MenuItem>
-        </FilterSelect>
+            {/* Selects agrupados */}
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: { xs: 'column', sm: 'row' },
+                gap: 2,
+                flex: 1,
+                minWidth: { xs: '100%', sm: 'auto' },
+              }}
+            >
+              <FilterSelect
+                label="Proyecto"
+                value={Loteslogic.filterProject}
+                onChange={(e: any) => Loteslogic.setFilterProject(e.target.value)}
+                sx={{ flex: 1, minWidth: { xs: '100%', sm: 160 } }}
+                SelectProps={{ MenuProps: proyectoMenuProps }}
+              >
+                <MenuItem value="all">Todos los Lotes</MenuItem>
+                {Loteslogic.proyectos.map((p) => (
+                  <MenuItem key={p.id} value={p.id} sx={{ py: 1.5 }}>
+                    <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between" width="100%">
+                      <Typography variant="body2">{p.nombre_proyecto}</Typography>
+                      <Chip
+                        label={p.tipo_inversion === 'directo' ? 'DIRECTO' : 'MENSUAL'}
+                        size="small"
+                        sx={{
+                          fontSize: '0.55rem',
+                          height: 18,
+                          fontWeight: 800,
+                          bgcolor: p.tipo_inversion === 'directo'
+                            ? alpha(Loteslogic.theme.palette.info.main, 0.1)
+                            : alpha(Loteslogic.theme.palette.warning.main, 0.1),
+                          color: p.tipo_inversion === 'directo' ? 'info.main' : 'warning.main',
+                          border: '1px solid transparent',
+                        }}
+                      />
+                    </Stack>
+                  </MenuItem>
+                ))}
+              </FilterSelect>
+
+              <FilterSelect
+                label="Estado"
+                value={Loteslogic.filterEstadoSubasta}
+                onChange={(e: any) => Loteslogic.setFilterEstadoSubasta(e.target.value)}
+                sx={{ flex: 1, minWidth: { xs: '100%', sm: 140 } }}
+                SelectProps={{ MenuProps: estadoMenuProps }}
+              >
+                <MenuItem value="all">Cualquier Estado</MenuItem>
+                <MenuItem value="activa">Activa</MenuItem>
+                <MenuItem value="pendiente">Pendiente</MenuItem>
+              </FilterSelect>
+            </Box>
+          </Box>
+        </FilterBar>
+
+        {/* ToggleButton — centrado en móvil, al costado en desktop */}
+        <Box sx={{ display: 'flex', justifyContent: { xs: 'center', lg: 'flex-end' }, flexShrink: 0 }}>
+          <ToggleButtonGroup
+            value={Loteslogic.viewMode}
+            exclusive
+            onChange={(_, m) => m && Loteslogic.setViewMode(m)}
+            size="small"
+            sx={{ bgcolor: 'background.paper' }}
+          >
+            <ToggleButton value="table"><ViewList /></ToggleButton>
+            <ToggleButton value="grid"><GridView /></ToggleButton>
+          </ToggleButtonGroup>
+        </Box>
       </Box>
-    </Box>
-  </FilterBar>
-
-  {/* ToggleButton — centrado en móvil, al costado en desktop */}
-  <Box sx={{ display: 'flex', justifyContent: { xs: 'center', lg: 'flex-end' }, flexShrink: 0 }}>
-    <ToggleButtonGroup
-      value={Loteslogic.viewMode}
-      exclusive
-      onChange={(_, m) => m && Loteslogic.setViewMode(m)}
-      size="small"
-      sx={{ bgcolor: 'background.paper' }}
-    >
-      <ToggleButton value="table"><ViewList /></ToggleButton>
-      <ToggleButton value="grid"><GridView /></ToggleButton>
-    </ToggleButtonGroup>
-  </Box>
-</Box>
 
       <QueryHandler isLoading={Loteslogic.loadingLotes || Loteslogic.loadingProyectos} error={Loteslogic.error as Error}>
         {Loteslogic.viewMode === 'grid' ? (
@@ -458,6 +457,9 @@ const AdminLotes: React.FC = () => {
         lote={Loteslogic.selectedLote}
         onSubmit={async (id: number, data: UpdateLoteDto) => {
           await Loteslogic.saveLote({ dto: data, id });
+          setTimeout(() => {
+            window.location.reload();
+          }, 800);
         }}
         isLoading={Loteslogic.isSaving}
       />

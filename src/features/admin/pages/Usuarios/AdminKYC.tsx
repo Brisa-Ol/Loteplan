@@ -20,10 +20,10 @@ import useKycColumns from './hooks/useKycColumns';
 // COMPONENTE: MÉTRICAS
 // ============================================================================
 const KYCMetrics = memo<{
-  pending: number | string; 
-  approved: number | string; 
-  rejected: number | string; 
-  total: number | string; 
+  pending: number | string;
+  approved: number | string;
+  rejected: number | string;
+  total: number | string;
   isLoading?: boolean;
 }>(({ pending, approved, rejected, total, isLoading }) => (
   <MetricsGrid columns={{ xs: 1, sm: 2, lg: 4 }}>
@@ -47,22 +47,22 @@ const AdminKYC: React.FC = () => {
   return (
     <PageContainer maxWidth="xl" sx={{ py: { xs: 3, md: 4 } }}>
       <Stack spacing={4}>
-        
+
         <AdminPageHeader
           title="Validación de Identidad (KYC)"
           subtitle="Cumplimiento normativo y seguridad de cuentas"
           action={
             (logic.isApproving || logic.isRejecting) && (
-              <Box 
-                sx={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
                   gap: 1.5,
-                  px: 2, 
-                  py: 1, 
-                  bgcolor: alpha(theme.palette.warning.main, 0.1), 
+                  px: 2,
+                  py: 1,
+                  bgcolor: alpha(theme.palette.warning.main, 0.1),
                   border: `1px solid ${alpha(theme.palette.warning.main, 0.3)}`,
-                  borderRadius: 50 
+                  borderRadius: 50
                 }}
               >
                 <CircularProgress size={16} color="warning" thickness={5} />
@@ -79,7 +79,7 @@ const AdminKYC: React.FC = () => {
 
         <Box>
           <KycTabsBar currentTab={logic.currentTab} onChange={logic.setCurrentTab} />
-          
+
           <Box sx={{ mt: 2 }}>
             <QueryHandler isLoading={logic.isLoading} error={logic.error as Error}>
               <DataTable

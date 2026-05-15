@@ -17,6 +17,8 @@ import {
   Stack, Typography, useTheme,
 } from '@mui/material';
 import React, { memo, useMemo } from 'react';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 // ── FilaInfo ──────────────────────────────────────────────────────────────────
 const FilaInfo = memo(({ icon, label, value, color }: {
@@ -98,8 +100,9 @@ interface Props { open: boolean; onClose: () => void; datosSeleccionados: Usuari
 const ModalDetalleUsuario: React.FC<Props> = ({ open, onClose, datosSeleccionados }) => {
   const theme = useTheme();
 
+  // Usamos date-fns para estandarizar el formato
   const formatearFecha = (str?: string) =>
-    str ? new Date(str).toLocaleString(env.defaultLocale, { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'No registrado';
+    str ? format(new Date(str), "dd 'de' MMM, yyyy - HH:mm 'hs'", { locale: es }) : 'No registrado';
 
   const heroPaperSx = useMemo(() => ({
     p: 3, borderRadius: 3, border: '1px solid', borderColor: theme.palette.divider,

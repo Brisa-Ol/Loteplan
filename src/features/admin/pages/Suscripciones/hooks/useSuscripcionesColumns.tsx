@@ -7,7 +7,20 @@ import { Avatar, Box, Chip, IconButton, Stack, Typography, alpha, useTheme } fro
 import { Cancel, Visibility } from '@mui/icons-material';
 import { useMemo } from 'react';
 import type { useAdminSuscripciones } from '../../../hooks/finanzas/useAdminSuscripciones';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
+const safeFormatDate = (dateStr?: string | null) => {
+    if (!dateStr) return '---';
+    const safeString = dateStr.length === 10 ? `${dateStr}T00:00:00` : dateStr;
+    return format(new Date(safeString), 'dd/MM/yyyy', { locale: es });
+};
 
+const safeFormatTime = (dateStr?: string | null) => {
+    if (!dateStr) return '';
+    // Si viene solo la fecha sin hora, no mostramos hora.
+    if (dateStr.length === 10) return ''; 
+    return format(new Date(dateStr), 'HH:mm', { locale: es });
+};
 const useSuscripcionesColumns = (logic: ReturnType<typeof useAdminSuscripciones>) => {
   const theme = useTheme();
 
@@ -83,18 +96,23 @@ const useSuscripcionesColumns = (logic: ReturnType<typeof useAdminSuscripciones>
         </Box>
       ),
     },
-    {
+{
       id: 'auditoria', label: 'Registro', minWidth: 150,
-      render: (s) => (
-        <Box>
-          <Typography variant="caption" display="block" fontWeight={600} color="text.primary">
-            Alta: {new Date(s.createdAt).toLocaleDateString('es-AR')}
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            Hora: {new Date(s.updatedAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
-          </Typography>
-        </Box>
-      ),
+      render: (s) => {
+        const timeString = safeFormatTime(s.createdAt);
+        return (
+            <Box>
+              <Typography variant="body2" display="block" fontWeight={600} color="text.primary">
+                {safeFormatDate(s.createdAt)}
+              </Typography>
+              {timeString && (
+                  <Typography variant="caption" color="text.secondary">
+                    {timeString} hs
+                  </Typography>
+              )}
+            </Box>
+        );
+      },
     },
     {
       id: 'acciones', label: '', align: 'right',

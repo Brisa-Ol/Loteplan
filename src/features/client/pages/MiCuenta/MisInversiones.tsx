@@ -8,7 +8,8 @@ import { useNavigate } from 'react-router-dom';
 import {
     Box, Button, Chip, IconButton, Paper, Stack, Tooltip, Typography, useTheme
 } from '@mui/material';
-
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 // Material UI Icons
 import InversionService from '@/core/api/services/inversion.service';
 import type { InversionDto } from '@/core/types/inversion.dto';
@@ -24,7 +25,11 @@ import {
 } from '@mui/icons-material';
 import { useCurrencyFormatter } from '../../hooks/useCurrencyFormatter';
 import { useInversionPayment } from '../../hooks/useInversionPayment';
-
+const safeFormatDate = (dateStr?: string | null) => {
+    if (!dateStr) return '—';
+    const safeString = dateStr.length === 10 ? `${dateStr}T00:00:00` : dateStr;
+    return format(new Date(safeString), 'dd/MM/yyyy', { locale: es });
+};
 // ============================================================================
 // HELPER: Configuración de Estados
 // ============================================================================
@@ -120,7 +125,8 @@ const MisInversiones: React.FC = () => {
             minWidth: 120,
             render: (row) => (
                 <Typography variant="body2" color="text.secondary">
-                    {new Date(row.fecha_inversion).toLocaleDateString()}
+                    {/* ✅ Fecha protegida */}
+                    {safeFormatDate(row.fecha_inversion)}
                 </Typography>
             )
         },

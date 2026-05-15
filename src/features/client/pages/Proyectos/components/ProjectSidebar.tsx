@@ -238,7 +238,9 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({ logic, proyecto,
                 <Stack spacing={2}>
                   {helpers.esMensual && <TokenValueProposition />}
                   <Alert severity="info" icon={<InfoOutlined />} sx={{ borderRadius: 2 }}>
-                    Este proyecto abre suscripciones el <strong>{new Date(fechaInicio).toLocaleDateString("es-AR", {timeZone: "UTC",})}</strong>.
+                    Este proyecto abre suscripciones el <strong>{fechaInicio.toLocaleDateString("es-AR", {
+	timeZone: "UTC",
+})}</strong>.
                   </Alert>
                   <Button variant="contained" disabled fullWidth size="large" startIcon={<CalendarMonth />} sx={{ fontWeight: 800, bgcolor: 'action.disabledBackground' }}>
                     Apertura Próximamente

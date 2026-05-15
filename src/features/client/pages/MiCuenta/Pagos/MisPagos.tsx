@@ -44,10 +44,20 @@ import {
   type SelectChangeEvent,
 } from '@mui/material';
 import { useMutation, useQuery } from '@tanstack/react-query';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 import React, { useCallback, useMemo, useState } from 'react';
 import { HistorialPagosAgrupado } from './HistorialAgrupado/HistorialAgrupado';
 import { DetalleCuotaAdhesionModal } from './Modals/DetalleCuotaAdhesionModal';
 
+const safeFormatDate = (dateStr?: string | null) => {
+  if (!dateStr) return '-';
+  // Si viene "YYYY-MM-DD" le clavamos la hora local para que no reste un día
+  const safeString = dateStr.length === 10 ? `${dateStr}T00:00:00` : dateStr;
+  const date = new Date(safeString);
+  if (isNaN(date.getTime())) return 'Fecha inválida';
+  return format(date, 'dd/MM/yyyy', { locale: es });
+};
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 const getStatusConfig = (status: string) => {
@@ -89,7 +99,7 @@ const getRelativeDate = (fechaISO: string | null): { text: string; isOverdue: bo
   if (diffDays === 0) return { text: 'Vence hoy', isOverdue: false };
   if (diffDays === 1) return { text: 'Vence mañana', isOverdue: false };
   if (diffDays <= 7) return { text: `Vence en ${diffDays} días`, isOverdue: false };
-  return { text: due.toLocaleDateString(), isOverdue: false };
+  return { text: safeFormatDate(fechaISO), isOverdue: false };
 };
 
 // ─── Sub-componentes ─────────────────────────────────────────────────────────
@@ -344,7 +354,7 @@ const MisPagos: React.FC = () => {
         mes: row.mes,
         nombreProyecto,
         montoFormateado: formatCurrency(row.monto),
-        fechaVencimiento: new Date(row.fecha_vencimiento).toLocaleDateString("es-AR", { timeZone: "UTC",}),
+        fechaVencimiento: safeFormatDate(row.fecha_vencimiento),
         esAdhesion: false
       });
     },
@@ -361,7 +371,7 @@ const MisPagos: React.FC = () => {
         mes: cuota.numero_cuota,
         nombreProyecto,
         montoFormateado: formatCurrency(cuota.monto),
-        fechaVencimiento: new Date(cuota.fecha_vencimiento).toLocaleDateString("es-AR", { timeZone: "UTC",}),
+        fechaVencimiento: safeFormatDate(cuota.fecha_vencimiento),
         esAdhesion: true,
       });
     },
@@ -397,7 +407,8 @@ const MisPagos: React.FC = () => {
           return (
             <Box>
               <Typography variant="body2" fontWeight={isOverdue ? 700 : 400}>
-                {new Date(row.fecha_vencimiento).toLocaleDateString("es-AR", { timeZone: "UTC",})}
+                {/* ✅ Ahora */}
+                {safeFormatDate(row.fecha_vencimiento)}
               </Typography>
               {isOverdue && (
                 <Typography variant="caption" sx={{ color: 'error.main' }}>
@@ -503,7 +514,8 @@ const MisPagos: React.FC = () => {
             if (row.estado === 'completada') {
               return (
                 <Typography variant="body2" color="success.main" fontWeight={700}>
-                  Completada {row.fecha_completada ? new Date(row.fecha_completada).toLocaleDateString('es-AR') : ''}
+                  {/* ✅ Ahora */}
+                  Completada {row.fecha_completada ? safeFormatDate(row.fecha_completada) : ''}
                 </Typography>
               );
             }
@@ -525,7 +537,8 @@ const MisPagos: React.FC = () => {
                   fontWeight={600}
                   color={isVencida ? 'error.main' : 'text.primary'}
                 >
-                  {isVencida ? '⚠ Vencida' : 'Próxima'}: {new Date(nextPago.fecha_vencimiento).toLocaleDateString("es-AR", { timeZone: "UTC",})}
+                  {/* ✅ Ahora */}
+                  {isVencida ? '⚠ Vencida' : 'Próxima'}: {safeFormatDate(nextPago.fecha_vencimiento)}
                 </Typography>
               )}
             </Box>

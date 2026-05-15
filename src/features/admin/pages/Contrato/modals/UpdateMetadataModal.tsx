@@ -19,7 +19,6 @@ import {
 } from '@mui/material';
 import React, { useEffect, useMemo, useState } from 'react';
 
-
 // ============================================================================
 // INTERFACES
 // ============================================================================
@@ -35,6 +34,7 @@ interface Props {
   onSubmit: (data: Partial<ContratoPlantillaDto>) => Promise<void>;
   isLoading: boolean;
   proyectos: ProjectOption[];
+  plantillas: ContratoPlantillaDto[]; // ✅ Agregamos el listado de plantillas
 }
 
 // ============================================================================
@@ -47,6 +47,7 @@ const UpdateMetadataModal: React.FC<Props> = ({
   onSubmit,
   isLoading,
   proyectos,
+  plantillas, // ✅ Recibimos las plantillas
 }) => {
   const theme = useTheme();
 
@@ -63,6 +64,17 @@ const UpdateMetadataModal: React.FC<Props> = ({
       setIdProyecto(plantilla.id_proyecto ?? '');
     }
   }, [plantilla]);
+
+  // ✅ FILTRO DE PROYECTOS DISPONIBLES
+  const proyectosDisponibles = useMemo(() => {
+    const proyectosOcupadosIds = new Set(
+      plantillas.map(p => p.id_proyecto).filter(Boolean)
+    );
+    return proyectos.filter(proyecto => 
+      // Mostrar si NO está ocupado, o si es el proyecto de ESTA plantilla
+      !proyectosOcupadosIds.has(proyecto.id) || proyecto.id === plantilla?.id_proyecto
+    );
+  }, [proyectos, plantillas, plantilla]);
 
   // --- Manejadores ---
   const handleConfirm = async () => {
@@ -189,7 +201,8 @@ const UpdateMetadataModal: React.FC<Props> = ({
             <MenuItem value="">
               <em>-- Genérica (Global) --</em>
             </MenuItem>
-            {proyectos.map((p) => (
+            {/* ✅ Usamos los proyectos filtrados */}
+            {proyectosDisponibles.map((p) => (
               <MenuItem key={p.id} value={p.id}>
                 {p.nombre_proyecto}
               </MenuItem>

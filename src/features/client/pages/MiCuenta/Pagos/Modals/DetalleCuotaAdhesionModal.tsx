@@ -11,7 +11,8 @@ import {
 } from "@mui/icons-material";
 import { Box, Button, Chip, Divider, Stack, Typography } from "@mui/material";
 import React from "react";
-
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 interface Props {
 	open: boolean;
 	onClose: () => void;
@@ -20,7 +21,13 @@ interface Props {
 	isPaymentPending: boolean;
 	onPagar: (adhesion: AdhesionDto, cuota: PagoAdhesionDto) => void;
 }
-
+const safeFormatDate = (dateStr?: string | null) => {
+    if (!dateStr) return '—';
+    const safeString = dateStr.length === 10 ? `${dateStr}T00:00:00` : dateStr;
+    const date = new Date(safeString);
+    if (isNaN(date.getTime())) return 'Fecha inválida';
+    return format(date, 'dd/MM/yyyy', { locale: es });
+};
 const getEstadoCuotaConfig = (estado: string) => {
 	switch (estado) {
 		case "pendiente":
@@ -219,10 +226,7 @@ export const DetalleCuotaAdhesionModal: React.FC<Props> = ({
 
 											{isPaid && cuota.fecha_pago ? (
 												<Typography variant="caption" color="success.main" fontWeight={600}>
-													Pagado el{" "}
-													{new Date(cuota.fecha_pago).toLocaleDateString("es-AR", {
-														timeZone: "UTC",
-													})}
+													Pagado el {safeFormatDate(cuota.fecha_pago)}
 												</Typography>
 											) : (
 												<Typography
@@ -230,10 +234,7 @@ export const DetalleCuotaAdhesionModal: React.FC<Props> = ({
 													color={isVencida ? "error.main" : "text.secondary"}
 													fontWeight={isVencida ? 700 : 400}
 												>
-													Vence:{" "}
-													{new Date(cuota.fecha_vencimiento).toLocaleDateString("es-AR", {
-														timeZone: "UTC",
-													})}
+													Vence: {safeFormatDate(cuota.fecha_vencimiento)}
 												</Typography>
 											)}
 										</Box>

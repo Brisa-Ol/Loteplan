@@ -229,6 +229,7 @@ export const useAdminPlantillas = () => {
 
     // Data
     filteredPlantillas,
+    plantillas: plantillasRaw,
     proyectos,             // <-- La lista completa sigue exportándose por si la necesitas
     proyectosDisponibles,  // ✨ <-- ¡La nueva lista filtrada, lista para el Modal!
     isLoading,

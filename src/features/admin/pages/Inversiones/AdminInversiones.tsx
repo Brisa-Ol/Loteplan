@@ -1,10 +1,10 @@
 // src/features/admin/pages/Inversiones/AdminInversiones.tsx
 
+import { env } from '@/core/config/env';
 import { AdminPageHeader } from '@/shared/components/admin/Adminpageheader';
 import { DataTable } from '@/shared/components/data-grid/DataTable';
 import { QueryHandler } from '@/shared/components/data-grid/QueryHandler';
 import { PageContainer } from '@/shared/components/layout/PageContainer';
-import { env } from '@/core/config/env';
 import React from 'react';
 import { useAdminInversiones } from '../../hooks/finanzas/useAdminInversiones';
 import InversionesFiltersBar from './components/InversionesFiltersBar';

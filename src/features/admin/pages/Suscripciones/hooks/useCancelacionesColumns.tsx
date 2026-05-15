@@ -5,6 +5,15 @@ import type { DataTableColumn } from '@/shared';
 import { DateRange as DateIcon } from '@mui/icons-material';
 import { alpha, Avatar, Box, Chip, Stack, Typography, useTheme } from '@mui/material';
 import { useMemo } from 'react';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
+
+// Helper para fecha corta (ej. "24 abr")
+const safeFormatShortDate = (dateStr?: string | null) => {
+  if (!dateStr) return '---';
+  const safeString = dateStr.length === 10 ? `${dateStr}T00:00:00` : dateStr;
+  return format(new Date(safeString), 'dd MMM', { locale: es });
+};
 
 const useCancelacionesColumns = (): DataTableColumn<SuscripcionCanceladaDto>[] => {
   const theme = useTheme();
@@ -18,7 +27,8 @@ const useCancelacionesColumns = (): DataTableColumn<SuscripcionCanceladaDto>[] =
           <Stack direction="row" alignItems="center" spacing={0.5}>
             <DateIcon sx={{ fontSize: 14, color: 'error.main' }} />
             <Typography variant="caption" color="error.main" fontWeight={800}>
-              {new Date(item.fecha_cancelacion).toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })}
+              {/* ✅ AQUÍ ESTÁ LA CORRECCIÓN */}
+              {safeFormatShortDate(item.fecha_cancelacion)}
             </Typography>
           </Stack>
         </Box>
@@ -38,14 +48,13 @@ const useCancelacionesColumns = (): DataTableColumn<SuscripcionCanceladaDto>[] =
         </Stack>
       ),
     },
-{
+    {
       id: 'proyecto', label: 'Permanencia', minWidth: 180,
       render: (item) => (
         <Box>
           <Typography variant="body2" fontWeight={600} color="text.primary">
             {item.proyectoCancelado?.nombre_proyecto}
           </Typography>
-          {/* ✅ NUEVO: Mostramos el ID original de la suscripción para evitar confusiones */}
           <Typography variant="caption" color="text.secondary" fontWeight={700} display="block" sx={{ mb: 0.5 }}>
              Suscripción Orig. #{item.id_suscripcion_original}
           </Typography>

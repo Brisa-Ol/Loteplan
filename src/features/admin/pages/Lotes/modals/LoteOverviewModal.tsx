@@ -28,8 +28,16 @@ import imagenService from '@/core/api/services/imagen.service';
 import type { LoteDto } from '@/core/types/lote.dto';
 import type { ProyectoDto } from '@/core/types/proyecto.dto';
 import { BaseModal } from '@/shared';
-import { formatDateTime } from '@/shared/utils/FormatDateTime';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
+const safeFormatDate = (dateStr?: string | null) => {
+  if (!dateStr) return '---';
+  const safeString = dateStr.length === 10 ? `${dateStr}T00:00:00` : dateStr;
+  const date = new Date(safeString);
+  if (isNaN(date.getTime())) return 'Fecha inválida';
+  return format(date, "dd/MM/yyyy HH:mm 'hs'", { locale: es });
+};
 // ============================================================================
 // INTERFACES
 // ============================================================================
@@ -254,56 +262,56 @@ const LoteOverviewModal: React.FC<LoteOverviewModalProps> = ({ open, onClose, lo
                 </Box>
               </Stack>
               {/* 👇 Monto ganador — con fallback a pujaMasAlta */}
-{(lote.monto_ganador_lote || lote.pujaMasAlta?.monto_puja) && (
-  <Box
-    sx={{
-      mt: 2,
-      p: 1.5,
-      borderRadius: 2,
-      bgcolor: alpha(theme.palette.success.main, 0.08),
-      border: '1px solid',
-      borderColor: alpha(theme.palette.success.main, 0.2),
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-    }}
-  >
-    <Typography variant="caption" fontWeight={800} color="success.dark" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>
-      Monto Adjudicado
-    </Typography>
-    <Typography variant="h6" fontWeight={900} color="success.main" sx={{ fontFamily: 'monospace' }}>
-      ${Number(lote.monto_ganador_lote ?? lote.pujaMasAlta?.monto_puja).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-    </Typography>
-  </Box>
-)}
+              {(lote.monto_ganador_lote || lote.pujaMasAlta?.monto_puja) && (
+                <Box
+                  sx={{
+                    mt: 2,
+                    p: 1.5,
+                    borderRadius: 2,
+                    bgcolor: alpha(theme.palette.success.main, 0.08),
+                    border: '1px solid',
+                    borderColor: alpha(theme.palette.success.main, 0.2),
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <Typography variant="caption" fontWeight={800} color="success.dark" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>
+                    Monto Adjudicado
+                  </Typography>
+                  <Typography variant="h6" fontWeight={900} color="success.main" sx={{ fontFamily: 'monospace' }}>
+                    ${Number(lote.monto_ganador_lote ?? lote.pujaMasAlta?.monto_puja).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                  </Typography>
+                </Box>
+              )}
             </Paper>
           )}
 
           {/* Fehcas de inicio y fin */}
           <Paper elevation={0} sx={{
-              p: 2.5, borderRadius: 3,
-              border: '1px solid',
-              borderColor: alpha(theme.palette.primary.main, 0.2),
-              bgcolor: alpha(theme.palette.primary.main, 0.03)
-            }}>
+            p: 2.5, borderRadius: 3,
+            border: '1px solid',
+            borderColor: alpha(theme.palette.primary.main, 0.2),
+            bgcolor: alpha(theme.palette.primary.main, 0.03)
+          }}>
             <Stack>
-              {lote.fecha_fin && lote.fecha_inicio ?(
+              {lote.fecha_fin && lote.fecha_inicio ? (
                 <>
                   <Typography variant="body2" color="text.secondary">
-                    <strong>Fecha Inicio Subasta:</strong> {formatDateTime(lote.fecha_inicio)}
+                    <strong>Fecha Inicio Subasta:</strong> {safeFormatDate(lote.fecha_inicio)}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    <strong>Fecha Fin Subasta:</strong> {formatDateTime(lote.fecha_fin)}
+                    <strong>Fecha Fin Subasta:</strong> {safeFormatDate(lote.fecha_fin)}
                   </Typography>
                 </>
               )
-            
-              :(
-                <Typography variant="body2" color="text.disabled" fontWeight={600}>Fechas de subasta no registradas</Typography>
-              )
-              
+
+                : (
+                  <Typography variant="body2" color="text.disabled" fontWeight={600}>Fechas de subasta no registradas</Typography>
+                )
+
               }
-                
+
 
             </Stack>
 

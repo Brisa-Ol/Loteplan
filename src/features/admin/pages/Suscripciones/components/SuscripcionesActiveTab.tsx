@@ -11,6 +11,7 @@ import {
 import { Box, MenuItem, Paper, Stack, TextField, Typography, useTheme } from '@mui/material';
 import React, { useMemo } from 'react';
 
+import { formatForDateInput } from '@/shared/utils/FormatDateTime';
 import useSuscripcionesColumns from '../hooks/useSuscripcionesColumns';
 import DetalleSuscripcionModal from '../modals/DetalleSuscripcionModal/DetalleSuscripcionModal';
 
@@ -100,7 +101,7 @@ const SuscripcionesActiveTab: React.FC<Props> = ({
                                 label="Desde"
                                 size="small"
                                 InputLabelProps={{ shrink: true }}
-                                value={startDate}
+                                value={formatForDateInput(startDate)}
                                 onChange={(e) => setStartDate(e.target.value)}
                                 sx={dateInputStyles}
                             />
@@ -109,8 +110,9 @@ const SuscripcionesActiveTab: React.FC<Props> = ({
                                 label="Hasta"
                                 size="small"
                                 InputLabelProps={{ shrink: true }}
-                                value={endDate}
+                                value={formatForDateInput(endDate)}
                                 onChange={(e) => setEndDate(e.target.value)}
+                                inputProps={{ min: formatForDateInput(startDate) }}
                                 sx={dateInputStyles}
                             />
                         </Stack>

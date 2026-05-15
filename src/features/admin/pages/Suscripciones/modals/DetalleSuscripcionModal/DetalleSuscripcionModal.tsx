@@ -1,20 +1,22 @@
 // src/features/admin/pages/Suscripciones/modals/DetalleSuscripcionModal.tsx
 
-import SuscripcionService from '@/core/api/services/suscripcion.service';
 import PagoService from '@/core/api/services/pago.service';
+import SuscripcionService from '@/core/api/services/suscripcion.service';
 import type { PagoDto } from '@/core/types/pago.dto';
 import type { SuscripcionDto } from '@/core/types/suscripcion.dto';
 import { BaseModal } from '@/shared';
 import { AccountBalance, AddCircleOutline, AttachMoney, Edit as EditIcon, PauseCircleOutline, PlayCircleOutline } from '@mui/icons-material';
 import { Alert, alpha, Box, Button, Chip, CircularProgress, Snackbar, Stack, TextField, Typography, useTheme } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 import React, { useState } from 'react';
 import { AuditFooter } from './AdvancePaymentsControl';
 import FinancialSummary from './FinancialSummary';
 import IdentityCards from './IdentityCards';
+import { PendingPaymentsPanel } from './PendingPaymentsSection';
 import { PujasSection } from './PujasSection';
 import { TokenDevolutionSection } from './TokenDevolutionSection';
-import { PendingPaymentsPanel } from './PendingPaymentsSection';
 
 interface Props {
     open: boolean;
@@ -114,7 +116,11 @@ const DetalleSuscripcionModal: React.FC<Props> = ({ open, onClose, suscripcion }
             setConfirmStandby(null);
         },
     });
-
+    const safeFormatDate = (dateStr?: string | null) => {
+        if (!dateStr) return '---';
+        const safeString = dateStr.length === 10 ? `${dateStr}T00:00:00` : dateStr;
+        return format(new Date(safeString), 'dd/MM/yyyy', { locale: es });
+    };
     // ─── HANDLERS ────────────────────────────────────────────
     const handleClose = () => {
         setShowAdvanceForm(false);
@@ -186,7 +192,7 @@ const DetalleSuscripcionModal: React.FC<Props> = ({ open, onClose, suscripcion }
                 <Stack spacing={3}>
                     {suscripcion.standby_active && (
                         <Alert severity="warning" variant="filled" sx={{ borderRadius: 2, fontWeight: 700 }}>
-                            Esta suscripción se encuentra pausada hasta el {new Date(suscripcion.standby_end_date!).toLocaleDateString('es-AR')}. No se generarán nuevas cuotas automáticas ni adelantos.
+                            Esta suscripción se encuentra pausada hasta el {safeFormatDate(suscripcion.standby_end_date)}. No se generarán nuevas cuotas automáticas ni adelantos.
                         </Alert>
                     )}
 

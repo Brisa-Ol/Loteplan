@@ -1,6 +1,5 @@
 // src/features/admin/pages/Usuarios/hooks/useUserColumns.tsx
 
-import { env } from '@/core/config/env';
 import type { UsuarioDto } from '@/core/types/usuario.dto';
 import type { DataTableColumn } from '@/shared';
 import {
@@ -11,8 +10,11 @@ import {
     alpha, Avatar, Box, Chip, IconButton,
     Stack, Switch, Tooltip, Typography,
 } from '@mui/material';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 import { useMemo } from 'react';
 import type { useAdminUsuarios } from '../../../hooks/usuario/useAdminUsuarios';
+
 
 const useUserColumns = (logic: ReturnType<typeof useAdminUsuarios>) => {
     return useMemo<DataTableColumn<UsuarioDto>[]>(() => [
@@ -62,11 +64,24 @@ const useUserColumns = (logic: ReturnType<typeof useAdminUsuarios>) => {
             minWidth: 120,
             sortable: true,
             hideOnMobile: true,
-            render: (u) => (
-                <Typography variant="body2">
-                    {new Date(u.fecha_registro || u.createdAt || '').toLocaleDateString(env.defaultLocale)}
-                </Typography>
-            ),
+            render: (u) => {
+                const dateStr = u.fecha_registro || u.createdAt;
+
+                if (!dateStr) {
+                    return <Typography variant="body2" color="text.secondary">—</Typography>;
+                }
+
+                return (
+                    <Box>
+                        <Typography variant="body2">
+                            {format(new Date(dateStr), 'dd/MM/yyyy', { locale: es })}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                            {format(new Date(dateStr), 'HH:mm', { locale: es })} hs
+                        </Typography>
+                    </Box>
+                );
+            },
         },
         {
             id: 'activo',

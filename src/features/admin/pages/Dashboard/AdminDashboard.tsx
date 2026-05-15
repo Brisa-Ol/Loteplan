@@ -12,7 +12,9 @@ import React, { useMemo } from 'react';
 import { useNavigate, type NavigateFunction } from 'react-router-dom';
 import {
   Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart,
-  ResponsiveContainer, Tooltip as RechartsTooltip, XAxis, YAxis
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer,
+  XAxis, YAxis
 } from 'recharts';
 
 import { AdminPageHeader } from '@/shared/components/admin/Adminpageheader';
@@ -20,7 +22,10 @@ import { QueryHandler } from '@/shared/components/data-grid/QueryHandler';
 import { StatCard } from '@/shared/components/domain/cards/StatCard';
 import { PageContainer } from '@/shared/components/layout/PageContainer';
 import { useAdminDashboard } from '../../hooks/useAdminDashboard';
-
+const formatForDateInput = (dateStr?: string | null) => {
+  if (!dateStr) return '';
+  return dateStr.length > 10 ? dateStr.substring(0, 10) : dateStr;
+};
 // ===========================================================================
 // UTILIDADES
 // ===========================================================================
@@ -46,8 +51,8 @@ interface CustomDatePickerProps {
   disabled: boolean;
   value: string;
   onChange: (value: string) => void;
+  min?: string; // ✅ Agregamos esto
 }
-
 interface TabProgresoProps {
   chartDataSuscripciones: any[];
   estadosData: any[];
@@ -85,13 +90,13 @@ const AlertaPrioritaria = React.memo(({ title, value, description, icon, severit
     <Paper
       elevation={0}
       sx={{
-        p: 3, 
+        p: 3,
         border: `2px solid ${alpha(colorBase, 0.3)}`,
         bgcolor: alpha(colorBase, 0.05),
-        position: 'relative', 
+        position: 'relative',
         overflow: 'hidden',
-        height: '100%', 
-        display: 'flex', 
+        height: '100%',
+        display: 'flex',
         flexDirection: 'column'
       }}
     >
@@ -115,17 +120,18 @@ const AlertaPrioritaria = React.memo(({ title, value, description, icon, severit
   );
 });
 
-const CustomDatePicker = ({ disabled, value, onChange }: CustomDatePickerProps) => (
+const CustomDatePicker = ({ disabled, value, onChange, min }: CustomDatePickerProps) => (
   <TextField
     type="date"
     size="small"
     disabled={disabled}
-    value={value}
+    value={formatForDateInput(value)} // ✅ Protegido
     onChange={(e) => onChange(e.target.value)}
+    inputProps={{ min: min ? formatForDateInput(min) : undefined }} // ✅ Min protegido
     sx={{
       width: 145,
-      '& .MuiOutlinedInput-root': { 
-        bgcolor: !disabled ? 'background.default' : 'action.hover' 
+      '& .MuiOutlinedInput-root': {
+        bgcolor: !disabled ? 'background.default' : 'action.hover'
       },
       '& input::-webkit-calendar-picker-indicator': {
         cursor: !disabled ? 'pointer' : 'default',
@@ -213,11 +219,11 @@ const TabPopularidad = ({ proyectosActivos, selectedPopularidadProject, setSelec
   <Stack spacing={4}>
     <Stack direction="row" justifyContent="space-between" alignItems="center">
       <Typography variant="h6">Ranking de interés por lote</Typography>
-      
-      <Select 
-        size="small" 
-        value={selectedPopularidadProject ?? ''} 
-        onChange={(e) => setSelectedPopularidadProject(Number(e.target.value))} 
+
+      <Select
+        size="small"
+        value={selectedPopularidadProject ?? ''}
+        onChange={(e) => setSelectedPopularidadProject(Number(e.target.value))}
         sx={{ minWidth: 220, bgcolor: 'background.default' }}
         // 👇 ESTA ES LA CONFIGURACIÓN QUE AGREGA EL SCROLL 👇
         MenuProps={{
@@ -259,7 +265,7 @@ const TabPopularidad = ({ proyectosActivos, selectedPopularidadProject, setSelec
 const AdminDashboard: React.FC = () => {
   const theme = useTheme();
   const navigate = useNavigate();
-  
+
   const {
     stats, activeTab, setActiveTab, filtroPeriodo, setFiltroPeriodo,
     customStartDate, setCustomStartDate, customEndDate, setCustomEndDate,
@@ -354,19 +360,19 @@ const AdminDashboard: React.FC = () => {
                 </Typography>
                 <ToggleButtonGroup
                   value={filtroPeriodo} exclusive onChange={handlePeriodChange} size="small" color="primary"
-                  sx={{ 
-                    flexWrap: 'wrap', gap: 1, 
-                    '& .MuiToggleButtonGroup-grouped': { 
-                      border: '1px solid', 
-                      borderColor: 'divider', 
-                      borderRadius: '8px !important', 
+                  sx={{
+                    flexWrap: 'wrap', gap: 1,
+                    '& .MuiToggleButtonGroup-grouped': {
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      borderRadius: '8px !important',
                       bgcolor: 'background.paper',
-                      '&.Mui-selected': { 
-                        bgcolor: 'primary.main', 
-                        color: 'primary.contrastText', 
-                        '&:hover': { bgcolor: 'primary.dark' } 
-                      } 
-                    } 
+                      '&.Mui-selected': {
+                        bgcolor: 'primary.main',
+                        color: 'primary.contrastText',
+                        '&:hover': { bgcolor: 'primary.dark' }
+                      }
+                    }
                   }}
                 >
                   <ToggleButton value="este_mes">Este mes</ToggleButton>
@@ -381,7 +387,7 @@ const AdminDashboard: React.FC = () => {
                 <Stack direction="row" spacing={1} alignItems="center">
                   <CustomDatePicker disabled={!isCustomDate} value={customStartDate} onChange={setCustomStartDate} />
                   <Typography variant="body2" color="text.secondary">→</Typography>
-                  <CustomDatePicker disabled={!isCustomDate} value={customEndDate} onChange={setCustomEndDate} />
+                  <CustomDatePicker disabled={!isCustomDate} value={customEndDate} onChange={setCustomEndDate} min={customStartDate} /> {/* ✅ Le pasamos el inicio como min */}
                 </Stack>
               </Stack>
               <Typography variant="caption" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -418,12 +424,12 @@ const AdminDashboard: React.FC = () => {
           </Box>
 
           {/* ANÁLISIS - TABS */}
-          <Card sx={{ p: 4, bgcolor: 'background.paper'}}>
+          <Card sx={{ p: 4, bgcolor: 'background.paper' }}>
             <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-              <Tabs 
-                value={activeTab} 
-                onChange={(_: React.SyntheticEvent, v: number) => setActiveTab(v)} 
-                variant="scrollable" 
+              <Tabs
+                value={activeTab}
+                onChange={(_: React.SyntheticEvent, v: number) => setActiveTab(v)}
+                variant="scrollable"
                 scrollButtons="auto"
                 textColor="primary"
                 indicatorColor="primary"
