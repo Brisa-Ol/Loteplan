@@ -8,6 +8,7 @@ import React from 'react';
 import { useDetalleResumenModal } from './hooks/useDetalleResumenModal';
 import { HistorialPagosPanel } from './SeccionPagos';
 import { PendingPaymentsPanel } from './Seccionpagospendientes';
+import { ModalMotivoAdmin } from '../../../Suscripciones/modals/ModalMotivoAdmin/ModalMotivoAdmin';
 
 interface Props {
   open: boolean;
@@ -120,47 +121,52 @@ const DetalleResumenModal: React.FC<Props> = ({ open, onClose, resumen }) => {
       </BaseModal>
 
       {/* MODAL FORZAR PAGO */}
-      <BaseModal
-        open={h.forcePaymentModalOpen} onClose={h.handleCloseForceModal}
-        title="Forzar Pago Manual" icon={<AttachMoney />}
-        headerColor="warning" maxWidth="sm"
-        confirmText="Confirmar Cobro" onConfirm={h.handleSubmitForce}
+      <ModalMotivoAdmin
+        open={h.forcePaymentModalOpen}
+        onClose={h.handleCloseForceModal}
+        onConfirm={h.handleSubmitForce}
         isLoading={h.forcePaymentMutation.isPending}
-        disableConfirm={!h.forceMotivo.trim()} confirmButtonColor="warning"
-      >
-        <Box>
-          <Typography variant="body2" mb={3} color="text.secondary">
+        title="Forzar Pago Manual"
+        icon={<AttachMoney />}
+        headerColor="warning"
+        confirmText="Confirmar Cobro"
+        confirmButtonColor="warning"
+        description={
+          <>
             Cuota <b>#{h.selectedPagoToForce?.mes}</b> por{' '}
             <b>${Number(h.selectedPagoToForce?.monto).toLocaleString('es-AR')}</b> pasará a <b>FORZADO</b>.
-          </Typography>
-          <TextField autoFocus fullWidth multiline rows={3} label="Motivo o Referencia (Obligatorio)"
-            value={h.forceMotivo} onChange={(e) => h.setForceMotivo(e.target.value)}
-            placeholder="Ej: Pago recibido en efectivo en oficina central"
-            helperText="Indica el motivo por el cual estás forzando el pago."
-          />
-        </Box>
-      </BaseModal>
+          </>
+        }
+        motivo={h.forceMotivo}
+        onMotivoChange={h.setForceMotivo}
+        motivoLabel="Motivo o Referencia (Obligatorio)"
+        motivoPlaceholder="Ej: Pago recibido en efectivo en oficina central"
+        motivoHelperText="Indica el motivo por el cual estás forzando el pago."
+      />
 
       {/* ✅ NUEVO MODAL: EDITAR MONTO */}
-      <BaseModal
-        open={h.editModalOpen} onClose={() => { h.setEditModalOpen(false); h.setEditMotivo(''); }}
-        title="Modificar Monto de Cuota" icon={<EditIcon />}
-        headerColor="primary" maxWidth="sm"
-        confirmText="Guardar Cambios" onConfirm={h.handleSubmitEditMonto}
+      <ModalMotivoAdmin
+        open={h.editModalOpen}
+        onClose={() => { h.setEditModalOpen(false); h.setEditMotivo(''); }}
+        onConfirm={h.handleSubmitEditMonto}
         isLoading={h.updateMontoMutation.isPending}
-        disableConfirm={!h.editMotivo.trim()} confirmButtonColor="primary"
-      >
-        <Box>
-          <Typography variant="body2" mb={3} color="text.secondary">
-            Estás a punto de modificar el monto de la cuota seleccionada a <b>${Number(h.newMonto).toLocaleString('es-AR')}</b>.
-          </Typography>
-          <TextField autoFocus fullWidth multiline rows={3} label="Motivo de la modificación (Obligatorio)"
-            value={h.editMotivo} onChange={(e) => h.setEditMotivo(e.target.value)}
-            placeholder="Ej: Ajuste manual por bonificación especial aprobada."
-            helperText="Indica el motivo por el cual estás cambiando el monto de esta cuota."
-          />
-        </Box>
-      </BaseModal>
+        title="Modificar Monto de Cuota"
+        icon={<EditIcon />}
+        headerColor="primary"
+        confirmText="Guardar Cambios"
+        confirmButtonColor="primary"
+        description={
+          <>
+            Estás a punto de modificar el monto de la cuota seleccionada a{' '}
+            <b>${Number(h.newMonto).toLocaleString('es-AR')}</b>.
+          </>
+        }
+        motivo={h.editMotivo}
+        onMotivoChange={h.setEditMotivo}
+        motivoLabel="Motivo de la modificación (Obligatorio)"
+        motivoPlaceholder="Ej: Ajuste manual por bonificación especial aprobada."
+        motivoHelperText="Indica el motivo por el cual estás cambiando el monto de esta cuota."
+      />
     </>
   );
 };

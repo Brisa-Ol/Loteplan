@@ -20,6 +20,10 @@ export const useAdminUsuarios = () => {
   const [endDate, setEndDate] = useState('');
   const [editingUser, setEditingUser] = useState<UsuarioDto | null>(null);
 
+  const [motivoModalOpen, setMotivoModalOpen] = useState(false);
+  const [pendingToggleUser, setPendingToggleUser] = useState<UsuarioDto | null>(null);
+  const [motivoToggle, setMotivoToggle] = useState('');
+
   // CONTROLADORES DE MODALES
   const createModal = useModal();
   const editModal = useModal();
@@ -55,16 +59,16 @@ export const useAdminUsuarios = () => {
       setEditingUser(null);
       showSuccess('Usuario actualizado');
       triggerHighlight(variables.id);
-      setTimeout(() => 
-        window.location.reload(), 1000
-      )
+      // setTimeout(() => 
+      //   window.location.reload(), 1000
+      // )
     },
     onError: (err: any) => showError(err.response?.data?.message || 'Error al actualizar')
   });
 
   const toggleStatusMutation = useMutation({
     mutationFn: async (user: UsuarioDto) =>
-      user.activo ? UsuarioService.update(user.id, { activo: false }) : UsuarioService.reactivateAccount(user.id),
+      user.activo ? UsuarioService.update(user.id, { activo: false, motivo_cambio: motivoToggle }) : UsuarioService.update(user.id, { activo: true, motivo_cambio: motivoToggle}),
     onSuccess: (_, user) => {
       queryClient.invalidateQueries({ queryKey: ['adminUsuarios'] });
       confirmDialog.close();
@@ -100,7 +104,9 @@ export const useAdminUsuarios = () => {
     startDate, setStartDate, endDate, setEndDate,
     editingUser, setEditingUser,
     createModal, editModal, detailModal, confirmDialog, // ✅ detailModal exportado
-    createMutation, updateMutation, toggleStatusMutation,
+    createMutation, updateMutation, toggleStatusMutation, motivoModalOpen, setMotivoModalOpen,
+    pendingToggleUser, setPendingToggleUser,
+    motivoToggle, setMotivoToggle,
     
     // HANDLERS
     handleEditUser: (user: UsuarioDto) => {
@@ -113,7 +119,16 @@ export const useAdminUsuarios = () => {
     },
     handleToggleStatusClick: (user: UsuarioDto) => {
       if (user.id === currentUser?.id) return showError('No puedes desactivar tu cuenta.');
-      confirmDialog.confirm('toggle_user_status', user);
+      setPendingToggleUser(user);
+      setMotivoToggle('');
+      setMotivoModalOpen(true);
+    },
+    handleConfirmToggle: async () => {
+      if (!pendingToggleUser) return;
+      await toggleStatusMutation.mutateAsync(pendingToggleUser);
+      setMotivoModalOpen(false);
+      setPendingToggleUser(null);
+      setMotivoToggle('');
     },
     clearFilters: () => { setSearchTerm(''); setFilterStatus('all'); setStartDate(''); setEndDate(''); }
   };

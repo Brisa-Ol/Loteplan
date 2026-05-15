@@ -210,10 +210,10 @@ const TableRowMemo = memo(
     theme,
   }: TableRowMemoProps<T>) => (
     <TableRow
-      hover={isActive && !!onRowClick}
-      onClick={() => isActive && onRowClick?.(row)}
+      
+      
       sx={{
-        cursor: onRowClick && isActive ? 'pointer' : 'default',
+        
         transition: 'background-color 0.15s',
         bgcolor: isHighlighted ? alpha(theme.palette.success.main, 0.08) : 'inherit',
         opacity: !isActive ? 0.5 : 1,

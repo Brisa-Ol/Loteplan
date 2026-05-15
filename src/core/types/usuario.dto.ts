@@ -39,6 +39,7 @@ export interface UpdateUserAdminDto {
   rol?: 'cliente' | 'admin';
   dni?: string;
   activo?: boolean;
+  motivo_cambio?: string
 }
 /**
  * Datos para cambiar la contraseña del usuario autenticado.

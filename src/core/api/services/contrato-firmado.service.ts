@@ -35,6 +35,11 @@ const ContratoFirmadoService = {
   // ← ESTE ERA EL CAMPO QUE FALTABA — sin él el backend no sabe qué suscripción firmar
   if (data.id_suscripcion) {
     formData.append('id_suscripcion', data.id_suscripcion.toString());
+    console.log("tiene id suscripcion", data.id_suscripcion)
+  }
+  if (data.id_inversion) {
+    formData.append('id_inversion', data.id_inversion.toString());
+    console.log("tiene id inversion", data.id_inversion)
   }
  
   return await httpService.post(`${BASE_ENDPOINT}/firmar`, formData, {

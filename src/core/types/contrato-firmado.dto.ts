@@ -21,6 +21,7 @@ export interface RegistrarFirmaRequestDto {
   latitud_verificacion?: string;
   longitud_verificacion?: string;
   id_suscripcion?: number;
+  id_inversion?: number;
 }
 
 // ==========================================

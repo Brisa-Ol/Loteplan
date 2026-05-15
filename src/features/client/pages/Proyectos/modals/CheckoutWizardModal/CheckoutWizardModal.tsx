@@ -251,6 +251,7 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
       );
 
       if (pendienteDeFirma) {
+        console.log("seteando id", pendienteDeFirma.suscripcion_id);
         setTargetSuscripcionId(pendienteDeFirma.suscripcion_id);
         setPaymentStatus('success');
         setActiveStep('Firma');
@@ -442,7 +443,8 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
             signaturePosition,
             location,
             codigo2FAFirma,
-            targetSuscripcionId ?? undefined  // ← pasar el id específico
+            targetSuscripcionId ?? undefined,  // ← pasar el id específico
+            trackingData ? trackingData : undefined  // ← pasar el trackingData completo si existe
           );
         }
         break;
@@ -608,7 +610,7 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
             variant="contained"
             color={activeStep === 'Firma' ? 'success' : 'primary'}
             onClick={handleStepAction}
-            disabled={!isStepValid || isProcessing || isCreatingAdhesion}
+            disabled={!isStepValid || isProcessing || isCreatingAdhesion || !plantillaActual}
             endIcon={
               isProcessing || isCreatingAdhesion
                 ? <CircularProgress size={20} color="inherit" />
