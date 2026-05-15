@@ -70,9 +70,9 @@ const MisPujas: React.FC = () => {
     const history = misPujas.filter(p => !activeStates.includes(p.estado_puja));
 
     const totalComprometido = active.reduce((acc, curr) => acc + Number(curr.monto_puja || 0), 0);
-    
+
     // ✅ CORREGIDO: Usamos estado_puja y el valor correcto 'ganadora_pagada'
-    const ganadas = misPujas.filter(p => 
+    const ganadas = misPujas.filter(p =>
       ['ganadora_pagada', 'ganadora_pendiente'].includes(p.estado_puja)
     ).length;
 
@@ -120,7 +120,7 @@ const MisPujas: React.FC = () => {
 
   // --- MUTACIÓN PARA CANCELAR ---
   const solicitarCancelacionMutation = useMutation({
-    mutationFn: (motivo: string) => 
+    mutationFn: (motivo: string) =>
       PujaService.requestCancellation(selectedPuja!.id, motivo),
     onSuccess: () => {
       cancelModal.close();
@@ -171,12 +171,15 @@ const MisPujas: React.FC = () => {
           ganadora_pendiente: { label: 'GANASTE', color: 'warning', icon: <EmojiEvents fontSize="small" />, variant: 'filled' },
           ganadora_pagada: { label: 'ADJUDICADO', color: 'success', icon: <CheckCircle fontSize="small" />, variant: 'filled' },
           perdedora: { label: 'SUPERADA', color: 'default', icon: <Cancel fontSize="small" /> },
+          ganadora_incumplimiento: { label: 'INCUMPLIDA', color: 'error', icon: <Cancel fontSize="small" /> },
+          cancelada: { label: 'CANCELADA', color: 'default', icon: <Cancel fontSize="small" /> },
         };
         const config = configs[puja.estado_puja] || { label: puja.estado_puja.toUpperCase(), color: 'default' };
-  
+
         return (
           <Stack spacing={0.5}>
             <Chip label={config.label} color={config.color} size="small" icon={config.icon} variant={config.variant || 'outlined'} sx={{ fontWeight: 700, fontSize: '0.65rem' }} />
+
             {puja.solicitud_cancelacion && puja.estado_puja === 'ganadora_pendiente' && (
               <Typography variant="caption" color="error.main" sx={{ fontSize: '0.6rem', fontWeight: 700 }}>
                 ⚠️ CANCELACIÓN PENDIENTE
@@ -206,9 +209,9 @@ const MisPujas: React.FC = () => {
           {/* NUEVO: Botón de Cancelación (Solo si no ha sido solicitada ya) */}
           {!puja.solicitud_cancelacion && puja.estado_puja === 'ganadora_pendiente' && (
             <Tooltip title="Solicitar Cancelación">
-              <IconButton 
-                color="error" 
-                size="small" 
+              <IconButton
+                color="error"
+                size="small"
                 onClick={() => handleOpenCancel(puja)}
               >
                 <Cancel fontSize="small" />
