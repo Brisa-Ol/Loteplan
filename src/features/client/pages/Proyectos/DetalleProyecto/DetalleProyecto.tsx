@@ -138,7 +138,7 @@ const DetalleProyecto: React.FC = () => {
   //Fin Funciones Thomy
   const navigate = useNavigate();
   const location = useLocation();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const theme = useTheme();
 
@@ -156,6 +156,7 @@ const DetalleProyecto: React.FC = () => {
 
   //Llamar los proyectos del usuario
   useEffect(() => {
+    if(!isAuthenticated || !user?.id) return;
     const getProyects = async () => {
       const proyectsFetched = await SuscripcionService.getMisSuscripciones();
 
@@ -174,6 +175,7 @@ const DetalleProyecto: React.FC = () => {
   }, [logic.proyecto?.id]);
 
   useEffect(() => {
+    if(!isAuthenticated || !user?.id) return;
     if (!logic.proyecto?.id) return; // 🔥 CLAVE
     const trackingContracts = async () => {
       try {

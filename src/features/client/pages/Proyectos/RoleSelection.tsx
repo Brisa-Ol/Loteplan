@@ -40,7 +40,7 @@ const useProyectosData = () => {
   const [perfilSeleccionado, setPerfilSeleccionado] = useState<'ahorrista' | 'inversionista'>('ahorrista');
   const [itemsVisibles, setItemsVisibles] = useState(env.defaultPageSize);
   const [filtros] = useState({ search: '', status: 'todos' });
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
 
   useEffect(() => {
     const savedPerfil = sessionStorage.getItem('proyectosPerfil');
@@ -64,18 +64,18 @@ const useProyectosData = () => {
 
   // --- QUERIES DE USUARIO ---
   const { data: misSuscripcionesRaw, isLoading: loadingSusc } = useQuery({
-    queryKey: ['misSuscripciones'],
+    queryKey: ['misSuscripciones', user?.id],
     queryFn: async () => (await SuscripcionService.getMisSuscripciones()).data,
     staleTime: env.queryStaleTime,
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && !!user?.id,
   });
 
   // ✅ NUEVO: Fetch de adhesiones para poder mandarlo a la ProjectCard
   const { data: misAdhesionesRaw, isLoading: loadingAdh } = useQuery({
-    queryKey: ['misAdhesiones'],
+    queryKey: ['misAdhesiones', user?.id],
     queryFn: async () => (await getAllAdhesionsByUser()).data,
     staleTime: env.queryStaleTime,
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && !!user?.id,
   });
 
   const misSuscripciones = useMemo(() => {
