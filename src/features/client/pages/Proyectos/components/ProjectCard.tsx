@@ -20,7 +20,6 @@ import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "@/core/context/AuthContext";
 import type { ProyectoDto } from "@/core/types/proyecto.dto";
-// ✅ Importamos los DTOs para analizar el estado real
 import type { AdhesionDto } from "@/core/types/adhesion.dto";
 import type { SuscripcionDto } from "@/core/types/suscripcion.dto";
 import { useProyectoHelpers } from "@/features/client/hooks/useProyectoHelpers";
@@ -28,7 +27,6 @@ import { useProyectoHelpers } from "@/features/client/hooks/useProyectoHelpers";
 export interface ProjectCardProps {
   project: ProyectoDto;
   onClick?: () => void;
-  // ✅ Reemplazamos los booleanos simples por los objetos completos (opcionales)
   suscripcionUsuario?: SuscripcionDto;
   adhesionUsuario?: AdhesionDto;
 }
@@ -116,23 +114,14 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, onClick, susc
   // =========================================================================
   let participacion: any = null;
 
-  // 1. Verificamos si tiene una suscripción ACTIVA
   const tieneSuscripcionActiva = suscripcionUsuario && suscripcionUsuario.activo;
-
-  // 2. Verificamos si tiene una adhesión NO CANCELADA
   const tieneAdhesionActiva = adhesionUsuario && adhesionUsuario.estado !== 'cancelada';
 
-  // Si tiene al menos una de las dos cosas activas, evaluamos el estado
   if (tieneSuscripcionActiva || tieneAdhesionActiva) {
-
-    // Si la adhesión está completada O la suscripción marca adhesion_completada
     const completada = (adhesionUsuario?.estado === 'completada') || (suscripcionUsuario?.adhesion_completada === true);
-
-    // ✅ Verificamos si ya empezó a pagar la suscripción mensual
     const empezoAPagarSuscripcion = Number(suscripcionUsuario?.monto_total_pagado || 0) > 0;
 
     if (completada) {
-      // Si está en espera Y aún no empezó a pagar cuotas de suscripción
       if (project.estado_proyecto === 'En Espera' && !empezoAPagarSuscripcion) {
         participacion = {
           colorTheme: "info",
@@ -141,7 +130,6 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, onClick, susc
           icon: EventAvailable
         };
       } else {
-        // Si el proyecto ya está "En Proceso" O ya empezó a pagar cuotas
         participacion = {
           colorTheme: "success",
           chipLabel: "SUSCRIPTO",
@@ -168,17 +156,13 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, onClick, susc
     }
   }
 
-  // ✅ BOTÓN DE ACCIÓN
+  // ✅ BOTÓN DE ACCIÓN MODIFICADO
   let buttonText = "Suscribirme";
   let buttonIcon = <ArrowForward />;
   let buttonColor: "primary" | "success" | "warning" | "error" | "info" = "primary";
   let isDisabled = false;
 
-  if (!isAuthenticated) {
-    buttonText = "Registrate para ver detalles";
-    buttonIcon = <LockOutlined />;
-    buttonColor = "warning";
-  } else if (participacion) {
+  if (participacion) {
     buttonText = "Ver mi Plan";
     buttonIcon = <Visibility />;
     buttonColor = participacion.colorTheme;
@@ -186,16 +170,15 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, onClick, susc
     buttonText = "Cupos Agotados";
     buttonIcon = <></>;
     isDisabled = true;
-  } else if (isPrelanzamiento) {
+  } else if (isPrelanzamiento || !isAuthenticated) {
+    // Si no está autenticado o es prelanzamiento, solo mostramos "Ver Detalles"
     buttonText = "Ver Detalles";
+    buttonIcon = <Visibility />;
   }
 
   const handleAction = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!isAuthenticated) {
-      navigate('/login');
-      return;
-    }
+  
     if (onClick) onClick();
   };
 
@@ -204,7 +187,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, onClick, susc
       onClick={handleAction}
       sx={{
         height: "100%", display: "flex", flexDirection: "column", cursor: 'pointer', borderRadius: 3, overflow: 'hidden',
-        border: `1px solid ${!isAuthenticated ? theme.palette.warning.light : participacion ? alpha(theme.palette[participacion.colorTheme as 'primary'].main, 0.4) : theme.palette.divider}`,
+        border: `1px solid ${!isAuthenticated ? theme.palette.primary.light : participacion ? alpha(theme.palette[participacion.colorTheme as 'primary'].main, 0.4) : theme.palette.divider}`,
         transition: 'all 0.3s ease',
         "&:hover": { transform: "translateY(-6px)", boxShadow: theme.shadows[10], borderColor: theme.palette[buttonColor].main }
       }}
@@ -224,7 +207,6 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, onClick, susc
         {helpers.esMensual && helpers.progreso && !isPrelanzamiento && (
           <Box sx={{ mb: participacion ? 1.5 : 3, p: 1.5, bgcolor: alpha(theme.palette.primary.main, 0.04), borderRadius: 2 }}>
             <Stack direction="row" justifyContent="space-between" mb={1}>
-              {/* ✅ Cambiamos "CUPO DISPONIBLE" por "CUPOS OCUPADOS" para que el número tenga sentido */}
               <Typography variant="caption" fontWeight={800} color="primary">CUPOS OCUPADOS</Typography>
               <Typography variant="caption" fontWeight={800}>{helpers.progreso.actual} / {helpers.progreso.meta}</Typography>
             </Stack>
@@ -232,7 +214,6 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, onClick, susc
           </Box>
         )}
 
-        {/* ✅ BANNER DE ESTADO INFERIOR */}
         {participacion && (
           <Box sx={{
             mb: 2, p: 1.2,
@@ -250,11 +231,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, onClick, susc
         <Box sx={{ mt: 'auto' }}>
           <Divider sx={{ mb: 2 }} />
 
-          {!isAuthenticated && (
-            <Typography variant="caption" display="block" textAlign="center" sx={{ mb: 1.5, color: 'warning.dark', fontWeight: 700 }}>
-              Debes iniciar sesión para ver los detalles
-            </Typography>
-          )}
+          {/* ❌ Eliminado el mensaje amarillo de "Debes iniciar sesión para ver los detalles" */}
 
           <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
             <Box>
@@ -268,17 +245,14 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, onClick, susc
           </Stack>
 
           <Button
-            variant="contained"
+            variant={isAuthenticated && !isDisabled ? "contained" : "outlined"}
             fullWidth
             color={buttonColor}
             endIcon={buttonIcon}
             onClick={handleAction}
             sx={{
-              py: 1.2, fontWeight: 800, borderRadius: 2,
-              ...(!isAuthenticated && {
-                bgcolor: 'warning.secondary', color: '#000',
-                '&:hover': { bgcolor: alpha('#ddb833', 0.8) }
-              })
+              py: 1.2, fontWeight: 800, borderRadius: 2, borderWidth: 2,
+              '&:hover': { borderWidth: 2 }
             }}
           >
             {buttonText}
