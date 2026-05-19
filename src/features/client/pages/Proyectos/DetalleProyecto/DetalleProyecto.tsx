@@ -72,10 +72,11 @@ const DataPoint = React.memo(({ label, value, icon }: any) => (
         display="block"
         fontWeight={800}
         sx={{ textTransform: 'uppercase', letterSpacing: '0.06em' }}
+        component="span"   // <- opcional: evita p en el label también
       >
         {label}
       </Typography>
-      <Typography variant="body2" fontWeight={500}>
+      <Typography variant="body2" fontWeight={500} component="div">
         {value}
       </Typography>
     </Box>
