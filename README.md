@@ -1,73 +1,185 @@
-# React + TypeScript + Vite
+# Loteplan Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Este repositorio contiene la aplicación frontend de `Loteplan`, construida con React, TypeScript y Vite.
 
-Currently, two official plugins are available:
+## Descripción general
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- Framework principal: `React 19`
+- Compilador/bundler: `Vite`
+- UI: `@mui/material`, `styled-components`, `swiper`
+- Gestión de datos: `axios`, `@tanstack/react-query`
+- Validación: `formik` + `yup`
+- Integración PDF/QR: `react-pdf`, `pdf-lib`, `qrcode`
 
-## React Compiler
+## Requisitos
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- Node.js 18+ recomendado
+- npm 10+ (o compatible con el ecosistema de Node)
 
-## Expanding the ESLint configuration
+## Instalación
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+1. Abre una terminal en la carpeta del proyecto:
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+cd Loteplan
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+2. Instala dependencias:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
 ```
+
+## Comandos disponibles
+
+- `npm run dev`
+  - Inicia el servidor de desarrollo en modo HMR.
+- `npm run build`
+  - Construye la aplicación para producción.
+- `npm run preview`
+  - Previsualiza la versión de producción localmente.
+- `npm run lint`
+  - Ejecuta ESLint sobre el código fuente.
+
+## Estructura de carpetas
+
+```
+Loteplan/
+├─ public/                # Archivos estáticos y recursos públicos
+│  ├─ assets/
+│  ├─ Comofunciona/
+│  ├─ Home/
+│  ├─ navbar/
+│  └─ nosotros/
+├─ src/                   # Código fuente principal
+│  ├─ App.tsx
+│  ├─ main.tsx
+│  ├─ index.css
+│  ├─ core/               # Lógica central, servicios y auth
+│  │  ├─ api/
+│  │  │  ├─ httpService.ts
+│  │  │  └─ services/     # Servicios HTTP por dominio
+│  │  ├─ auth/
+│  │  ├─ config/
+│  │  ├─ context/
+│  │  ├─ theme/
+│  │  └─ types/
+│  ├─ features/           # Páginas y hooks por funcionalidad
+│  │  ├─ admin/
+│  │  ├─ auth/
+│  │  ├─ client/
+│  │  └─ public/
+│  ├─ layouts/            # Layouts y navegación
+│  │  ├─ admin/
+│  │  ├─ client/
+│  │  └─ Footer.tsx
+│  ├─ routes/             # Enrutamiento de la aplicación
+│  └─ shared/             # Componentes comunes, hooks y utilidades
+│     ├─ components/
+│     ├─ hooks/
+│     └─ utils/
+├─ index.html
+├─ package.json
+├─ tsconfig.json
+├─ tsconfig.app.json
+├─ tsconfig.node.json
+├─ vite.config.ts
+├─ eslint.config.js
+└─ README.md
+```
+
+### Carpeta `src/core`
+
+- `api/`: cliente HTTP y servicios para recursos como auth, contratos, pagos, etc.
+- `auth/`: utilidades y control de acceso.
+- `config/`: variables de entorno y configuración.
+- `context/`: providers de React para auth y snackbar.
+- `theme/`: estilos globales.
+- `types/`: DTOs y tipos compartidos.
+
+### Carpeta `src/features`
+
+- `admin/`: páginas y hooks exclusivos para la administración.
+- `auth/`: páginas y lógica de login, registro y seguridad.
+- `client/`: páginas y hooks para usuarios clientes.
+- `public/`: páginas públicas como `Home`, `ComoFunciona` y `Nosotros`.
+
+### Carpeta `src/layouts`
+
+- Layouts principales para admin y cliente.
+- Componentes de navegación y estructura de páginas.
+
+### Carpeta `src/shared`
+
+- Componentes de UI reutilizables.
+- Hooks personalizados (`useConfirmDialog`, `useModal`, `useSnackbar`).
+- Utilidades comunes.
+
+## Alias de importación
+
+El archivo `vite.config.ts` define un alias para `@`:
+
+```ts
+alias: {
+  '@': path.resolve(__dirname, './src'),
+}
+```
+
+Esto permite importaciones como:
+
+```ts
+import { useSnackbar } from '@/shared/hooks/useSnackbar'
+```
+
+## Notas de build
+
+- `npm run build` ejecuta primero `tsc -b` y luego `vite build`.
+- El bundle está configurado para separar chunks de vendor y librerías pesadas como React, MUI, Formik/Yup y PDF/QR.
+
+## Buenas prácticas
+
+- Usa `npm run lint` antes de confirmar cambios.
+- Mantén los tipos en `src/core/types` actualizados cuando agregues nuevos servicios.
+- Usa los hooks de `src/shared/hooks` para lógica de UI reusable.
+
+## Recursos útiles
+
+- Vite: https://vitejs.dev/
+- React: https://react.dev/
+- MUI: https://mui.com/
+- React Router: https://reactrouter.com/
+- React Query: https://tanstack.com/query
+
+
+> Loteplan es una Aplicacion Web con un sistema de crowdfunding que permite a inversores participar mediante inversiones directas, pujas en subastas, y suscripciones mensuales con gestión automatizada de pagos.
+
+### 🏠 [Homepage](http://localhost:5173/)
+
+## Install
+
+```sh
+npm install
+```
+
+## Usage
+
+```sh
+npm run dev
+```
+
+## 📞 Contacto
+
+- **Repositorio:** [GitHub - Loteplan](https://github.com/Brisa-Ol/Loteplan)
+- **Issues:** [Reportar Bug](https://github.com/Brisa-Ol/Loteplan/issues)
+
+
+## Show your support
+
+Give a ⭐️ if this project helped you!
+
+***
+
+- React: https://react.dev/
+- MUI: https://mui.com/
+- React Router: https://reactrouter.com/
+- React Query: https://tanstack.com/query
