@@ -15,6 +15,7 @@ import {
   Block, CalendarMonth, CheckCircle,
   Gavel, GppGood,
   Info, InsertPhoto,
+  LockOutlined,
   MonetizationOn, Stars, ViewList
 } from '@mui/icons-material';
 import {
@@ -291,23 +292,70 @@ const DetalleProyecto: React.FC = () => {
 
             {/* ✅ CORREGIDO: usa logic.mostrarTabLotes en lugar de esMensual */}
             {currentTab === 2 && logic.mostrarTabLotes && (
-              <Box>
-                <Paper variant="outlined" sx={{ mb: 4, p: 3, borderRadius: 3, bgcolor: alpha(theme.palette.warning.main, 0.05), borderStyle: 'dashed' }}>
-                  <Stack direction="row" spacing={3} alignItems="center">
-                    <Avatar sx={{ bgcolor: tokensDisponibles > 0 ? 'warning.main' : 'error.main' }}>
-                      {tokensDisponibles > 0 ? <Gavel /> : <Block />}
-                    </Avatar>
-                    <Typography variant="body2" color="text.secondary">
-                      {tokensDisponibles > 0
-                        ? <>Tienes <b>{tokensDisponibles} tokens</b> disponibles para participar en subastas en tiempo real.</>
-                        : <>No tenés tokens disponibles. Te podes <b>VOLVER </b> a suscribir para adquirir un nuevo token y participar en las subastas</>
-                      }
-                    </Typography>
-                  </Stack>
-                </Paper>
-                <ListaLotesProyecto idProyecto={Number(logic.proyecto.id)} />
-              </Box>
-            )}
+  <Box>
+    {!isAuthenticated || !user?.id ? (
+      // ── Card de login requerido ──────────────────────────────
+      <Paper
+        variant="outlined"
+        sx={{
+          p: 4, borderRadius: 3, borderStyle: 'dashed',
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', textAlign: 'center', gap: 2,
+          bgcolor: alpha(theme.palette.warning.main, 0.04),
+          borderColor: alpha(theme.palette.warning.main, 0.4),
+          maxWidth: 480, mx: 'auto', my: 2,
+        }}
+      >
+        <Avatar sx={{ bgcolor: alpha(theme.palette.warning.main, 0.15), width: 52, height: 52 }}>
+          <LockOutlined sx={{ color: 'warning.main' }} />
+        </Avatar>
+        <Box>
+          <Typography variant="subtitle1" fontWeight={700} gutterBottom>
+            Iniciá sesión para ver los lotes y subastas
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Esta sección es exclusiva para usuarios registrados. Necesitás una cuenta para visualizar y participar en subastas.
+          </Typography>
+        </Box>
+        <Button
+          variant="outlined"
+          color="warning"
+          startIcon={<LockOutlined />}
+          onClick={() => navigate('/login')}
+          sx={{ borderRadius: 8, fontWeight: 700, mt: 1 }}
+        >
+          Iniciar sesión
+        </Button>
+      </Paper>
+    ) : (
+      // ── Contenido normal para usuarios autenticados ──────────
+      <>
+        <Paper
+          variant="outlined"
+          sx={{
+            mb: 4, p: 3, borderRadius: 3,
+            bgcolor: alpha(theme.palette.warning.main, 0.05),
+            borderStyle: 'dashed',
+          }}
+        >
+          <Stack direction="row" spacing={3} alignItems="center">
+            <Avatar sx={{ bgcolor: tokensDisponibles > 0 ? 'warning.main' : 'error.main' }}>
+              {tokensDisponibles > 0 ? <Gavel /> : <Block />}
+            </Avatar>
+            <Typography variant="body2" color="text.secondary">
+              {tokensDisponibles > 0 ? (
+                <>Tienes <b>{tokensDisponibles} tokens</b> disponibles para participar en subastas en tiempo real.</>
+              ) : (
+                <>No tenés tokens disponibles. Te podes <b>VOLVER</b> a suscribir para adquirir un nuevo token y participar en las subastas.</>
+              )}
+            </Typography>
+          </Stack>
+        </Paper>
+        <ListaLotesProyecto idProyecto={Number(logic.proyecto.id)} />
+      </>
+    )}
+  </Box>
+)}
           </Box>
         </Box>
 

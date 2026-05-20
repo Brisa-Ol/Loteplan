@@ -220,7 +220,7 @@ const AdminLotePagos: React.FC = () => {
       render: (l) => (
         <Box textAlign="right">
           <Typography variant="body2" fontWeight={900} sx={{ fontFamily: 'monospace', color: checkIsPaid(l) ? 'success.main' : 'primary.dark' }}>
-            ${Number(l.monto_ganador_lote || l.precio_base).toLocaleString(env.defaultLocale)}
+            ${Number(l.pujaMasAlta?.monto_puja).toLocaleString(env.defaultLocale)}
           </Typography>
         </Box>
       )
