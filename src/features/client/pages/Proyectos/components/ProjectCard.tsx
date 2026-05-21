@@ -5,7 +5,6 @@ import {
   CheckCircle,
   EventAvailable,
   LocalOffer,
-  LockOutlined,
   PendingActions,
   ReceiptLong,
   Timer,
@@ -19,8 +18,8 @@ import React, { useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "@/core/context/AuthContext";
-import type { ProyectoDto } from "@/core/types/proyecto.dto";
 import type { AdhesionDto } from "@/core/types/adhesion.dto";
+import type { ProyectoDto } from "@/core/types/proyecto.dto";
 import type { SuscripcionDto } from "@/core/types/suscripcion.dto";
 import { useProyectoHelpers } from "@/features/client/hooks/useProyectoHelpers";
 
@@ -171,14 +170,13 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, onClick, susc
     buttonIcon = <></>;
     isDisabled = true;
   } else if (isPrelanzamiento || !isAuthenticated) {
-    // Si no está autenticado o es prelanzamiento, solo mostramos "Ver Detalles"
     buttonText = "Ver Detalles";
     buttonIcon = <Visibility />;
   }
 
   const handleAction = (e: React.MouseEvent) => {
     e.stopPropagation();
-  
+
     if (onClick) onClick();
   };
 

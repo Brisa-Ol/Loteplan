@@ -337,6 +337,7 @@ interface MobileDrawerContentProps {
   isAuthenticated: boolean;
   isLoading: boolean;
   onClose: () => void;
+  userNavItems: NavItem[];
 }
 
 const MobileDrawerContent: React.FC<MobileDrawerContentProps> = ({
@@ -346,6 +347,7 @@ const MobileDrawerContent: React.FC<MobileDrawerContentProps> = ({
   isAuthenticated,
   isLoading,
   onClose,
+  userNavItems,
 }) => {
   const theme = useTheme();
   const navigate = useNavigate();
@@ -361,7 +363,9 @@ const MobileDrawerContent: React.FC<MobileDrawerContentProps> = ({
       prev.includes(label) ? prev.filter((m) => m !== label) : [...prev, label]
     );
   };
-
+  const profilePath = userNavItems[0]?.submenu?.find(
+    (s) => s.label === 'Mi Perfil'
+  )?.path;
   const filteredNavItems = useMemo(() => {
     if (!searchQuery.trim()) return navItems;
     const query = searchQuery.toLowerCase();
@@ -441,7 +445,28 @@ const MobileDrawerContent: React.FC<MobileDrawerContentProps> = ({
             </Stack>
           ) : (
             <>
-              <Stack direction="row" spacing={1.5} alignItems="center">
+              <Stack
+                direction="row"
+                spacing={1.5}
+                alignItems="center"
+                onClick={() => {
+                  if (profilePath) {
+                    navigate(profilePath);
+                    onClose();
+                  }
+                }}
+                sx={{
+                  cursor: profilePath ? 'pointer' : 'default',
+                  borderRadius: 2,
+                  px: 1,
+                  mx: -1,
+                  py: 0.5,
+                  transition: 'background 0.15s',
+                  '&:hover': profilePath
+                    ? { bgcolor: alpha(theme.palette.primary.main, 0.08) }
+                    : {},
+                }}
+              >
                 <Badge
                   overlap="circular"
                   anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
@@ -543,6 +568,50 @@ const MobileDrawerContent: React.FC<MobileDrawerContentProps> = ({
 
       {/* Lista de navegación — scrolleable */}
       <List sx={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', px: 0, py: 0.5 }}>
+        {isAuthenticated && (() => {
+          const profileItem = userNavItems[0]?.submenu?.find(s => s.label === 'Mi Perfil');
+          if (!profileItem) return null;
+          const Icon = profileItem.icon;
+          const active = profileItem.path
+            ? location.pathname.startsWith(profileItem.path)
+            : false;
+          return (
+            <ListItemButton
+              onClick={() => {
+                if (profileItem.path) navigate(profileItem.path);
+                onClose();
+              }}
+              selected={active}
+              sx={{
+                px: 2.5,
+                minHeight: 44,
+                borderLeft: active
+                  ? `4px solid ${theme.palette.primary.main}`
+                  : '4px solid transparent',
+                transition: 'border-color 0.15s ease',
+                '&.Mui-selected': {
+                  bgcolor: alpha(theme.palette.primary.main, 0.06),
+                },
+              }}
+            >
+              {Icon && (
+                <ListItemIcon sx={{ minWidth: 36, color: active ? 'primary.main' : 'text.secondary' }}>
+                  <Icon />
+                </ListItemIcon>
+              )}
+              <ListItemText
+                primary={profileItem.label}
+                secondary={profileItem.description}
+                primaryTypographyProps={{
+                  fontWeight: active ? 700 : 500,
+                  color: active ? 'primary.main' : 'text.primary',
+                  fontSize: '0.9rem',
+                }}
+                secondaryTypographyProps={{ fontSize: '0.72rem' }}
+              />
+            </ListItemButton>
+          );
+        })()}
         {filteredNavItems.map((item, idx) => {
           const Icon = item.icon;
           const hasSubmenu = (item.submenu?.length || 0) > 0;
@@ -761,7 +830,7 @@ const ClientNavbar: React.FC = () => {
 
             {/* Desktop Nav Items */}
             {!isMobile && (
-              <Stack direction="row" spacing={0.5} sx={{ flex: 1 , overflow: 'hidden' }}>
+              <Stack direction="row" spacing={0.5} sx={{ flex: 1, overflow: 'hidden' }}>
                 {navItems
                   .filter((item) => !item.action)
                   .map((item) => (
@@ -842,6 +911,7 @@ const ClientNavbar: React.FC = () => {
           isAuthenticated={isAuthenticated}
           isLoading={isLoadingAuth}
           onClose={() => setMobileOpen(false)}
+          userNavItems={userNavItems}
         />
       </Drawer>
 

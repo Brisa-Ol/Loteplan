@@ -12,11 +12,14 @@ import {
   Assignment as AssignmentIcon,
   AttachMoney as AttachMoneyIcon,
   Badge as BadgeIcon,
+  //Metricas
+  BarChart as BarChartIcon,
   Construction as ConstructionIcon,
   // Navegación General
   Dashboard as DashboardIcon,
   // Gestión & Documentos
   Description as DescriptionIcon,
+  DonutSmall as DonutSmallIcon,
   Favorite as FavoriteIcon,
   Folder as FolderIcon,
   Gavel as GavelIcon,
@@ -33,10 +36,6 @@ import {
   Terrain as TerrainIcon,
   // Estados / Feedback
   VerifiedUser as VerifiedUserIcon,
-  //Metricas
-  BarChart as BarChartIcon,
-  QueryStats as QueryStatsIcon,
-  DonutSmall as DonutSmallIcon,
   // Tipo
   type SvgIconComponent
 } from "@mui/icons-material";
@@ -171,7 +170,7 @@ export const useNavbarMenu = () => {
           },
           {
             label: "Métricas",
-            icon : BarChartIcon,
+            icon: BarChartIcon,
             submenu: [
               { label: "Admin", path: ROUTES.ADMIN.METRICAS.ADMIN, icon: DonutSmallIcon },
               //{ label: "Clientes", path: ROUTES.ADMIN.METRICAS.CLIENTES, icon: QueryStatsIcon },
