@@ -1,16 +1,9 @@
 import { ErrorOutline, VerifiedUser } from '@mui/icons-material';
 import {
-  Alert,
-  alpha,
-  Avatar,
-  Box,
-  Button,
-  CircularProgress,
-  Fade,
-  Typography,
-  useTheme
+  Alert, alpha, Avatar, Box, Button,
+  CircularProgress, Fade, Typography, useTheme
 } from '@mui/material';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import type { ApiError } from '@/core/api/httpService';
@@ -26,7 +19,13 @@ const ConfirmEmailPage: React.FC = () => {
   const [message, setMessage] = useState('');
   const [countdown, setCountdown] = useState(5);
 
+  // ── Guard: evita la doble ejecución de StrictMode ──────────
+  const hasConfirmed = useRef(false);
+
   useEffect(() => {
+    if (hasConfirmed.current) return; // segunda ejecución → ignorar
+    hasConfirmed.current = true;
+
     const confirm = async () => {
       if (!token) {
         setStatus('error');
@@ -40,8 +39,7 @@ const ConfirmEmailPage: React.FC = () => {
       } catch (err: unknown) {
         setStatus('error');
         const apiError = err as ApiError;
-        const msg = apiError.message || 'El enlace es inválido o ha expirado.';
-        setMessage(msg);
+        setMessage(apiError.message || 'El enlace es inválido o ha expirado.');
       }
     };
 

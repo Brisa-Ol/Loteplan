@@ -4,7 +4,7 @@ export const ROUTES = {
   REGISTER: '/register',
   FORGOT_PASSWORD: '/forgot-password',
   RESET_PASSWORD: '/restablecer_contrasena',
-  CONFIRM_EMAIL: '/confirm-email',
+  CONFIRM_EMAIL: '/api/auth/confirmar_email/:token',
   UNAUTHORIZED: '/unauthorized',
 
   // --- Rutas Públicas ---
