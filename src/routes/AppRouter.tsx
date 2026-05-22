@@ -4,10 +4,11 @@ import { Suspense, lazy } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 
 
-import { AdminMetrics } from '@/features/admin/pages/Metricas/AdminMetrics/AdminMetrics';
-import SecuritySettings from '@/features/client/pages/MiCuenta/SecuritySettings/SecuritySettings';
 import { ROUTES } from '.';
 import ProtectedRoute from '../core/auth/guards/ProtectedRoute';
+import SecuritySettings from '@/features/client/pages/MiCuenta/SecuritySettings/SecuritySettings';
+import { AdminMetrics } from '@/features/admin/pages/Metricas/AdminMetrics/AdminMetrics';
+import { UserMetrics } from '@/features/admin/pages/Metricas/UserMetrics/UserMetrics';
 
 // ============ LAZY LOADING ============
 

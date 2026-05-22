@@ -1,58 +1,215 @@
 // src/components/domain/inversiones/MisInversiones.tsx
 
-import { useQuery } from '@tanstack/react-query';
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-
-// Material UI Components
-import {
-    Box, Button, Chip, IconButton, Paper, Stack, Tooltip, Typography, useTheme
-} from '@mui/material';
+import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-// Material UI Icons
+
+// MUI
+import {
+    Box, Button, Chip, Divider, Paper, Stack, Tab, Tabs, Tooltip, Typography, alpha, useTheme
+} from '@mui/material';
+
+// Icons
+import {
+    AccountBalanceWallet, BusinessCenter, CalendarMonth, Cancel, CheckCircle,
+    History as HistoryIcon, HelpOutline, MonetizationOn, Payment,
+    PieChart, Replay, Schedule, Visibility
+} from '@mui/icons-material';
+
+// Core & Shared
 import InversionService from '@/core/api/services/inversion.service';
 import type { InversionDto } from '@/core/types/inversion.dto';
-import { PageContainer, PageHeader, StatCard } from '@/shared';
-import { DataTable, type DataTableColumn } from '@/shared/components/data-grid/DataTable';
+import { PageContainer, PageHeader, StatCard, DataTable, type DataTableColumn } from '@/shared';
 import { QueryHandler } from '@/shared/components/data-grid/QueryHandler';
 import TwoFactorAuthModal from '@/shared/components/domain/modals/TwoFactorAuthModal';
-import {
-    AccountBalanceWallet, CheckCircle, ErrorOutline, HelpOutline,
-    HourglassEmpty, MonetizationOn, Payment, PieChart,
-    Schedule,
-    Visibility
-} from '@mui/icons-material';
 import { useCurrencyFormatter } from '../../hooks/useCurrencyFormatter';
 import { useInversionPayment } from '../../hooks/useInversionPayment';
-const safeFormatDate = (dateStr?: string | null) => {
-    if (!dateStr) return '—';
-    const safeString = dateStr.length === 10 ? `${dateStr}T00:00:00` : dateStr;
-    return format(new Date(safeString), 'dd/MM/yyyy', { locale: es });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────────────────────────────────────
+
+const formatDate = (iso?: string | null): string => {
+    if (!iso) return "—";
+    const dateStr = iso.includes("T") ? iso : `${iso}T00:00:00`;
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return "Fecha inválida";
+    return format(date, "dd/MM/yyyy", { locale: es });
 };
-// ============================================================================
-// HELPER: Configuración de Estados
-// ============================================================================
-const getStatusConfig = (estado: string) => {
-    const configs: Record<string, any> = {
-        pagado: { label: 'Pagado', color: 'success', icon: <CheckCircle fontSize="small" /> },
-        cubierto_por_puja: { label: 'Cubierto', color: 'success', icon: <AccountBalanceWallet fontSize="small" /> },
-        pendiente: { label: 'Pendiente', color: 'info', icon: <Schedule fontSize="small" /> },
-        en_proceso: { label: 'En Proceso', color: 'warning', icon: <HourglassEmpty fontSize="small" /> },
-        fallido: { label: 'Fallido', color: 'error', icon: <ErrorOutline fontSize="small" /> },
+
+const getStatusConfig = (estado: InversionDto['estado']) => {
+    const configs: Record<InversionDto['estado'], any> = {
+        pagado: { label: 'Inversión Activa', color: 'success', icon: <CheckCircle fontSize="small" /> },
+        pendiente: { label: 'Pago Pendiente', color: 'warning', icon: <Schedule fontSize="small" /> },
+        fallido: { label: 'Pago Fallido', color: 'error', icon: <Cancel fontSize="small" /> },
+        reembolsado: { label: 'Reembolsado', color: 'default', icon: <Replay fontSize="small" /> },
     };
     return configs[estado] || { label: estado, color: 'default', icon: <HelpOutline fontSize="small" /> };
 };
+
+// ── Celda de métrica reutilizable (Idéntica a MisSuscripciones) ──
+interface MetricCellProps {
+    icon: React.ReactNode;
+    label: string;
+    value: React.ReactNode;
+    valueColor?: string;
+    tooltip?: string;
+}
+
+const MetricCell: React.FC<MetricCellProps> = ({ icon, label, value, valueColor = "text.primary", tooltip }) => {
+    const cell = (
+        <Box sx={{ flex: 1, px: 2.5, py: 1.5, display: "flex", alignItems: "center", gap: 1.5, minWidth: 0 }}>
+            <Box sx={{ color: "text.disabled", flexShrink: 0, display: "flex" }}>
+                {icon}
+            </Box>
+            <Box minWidth={0}>
+                <Typography variant="caption" color="text.secondary" fontWeight={600}
+                    sx={{ textTransform: "uppercase", letterSpacing: 0.4, display: "block", lineHeight: 1.3, mb: 0.25 }}
+                >
+                    {label}
+                </Typography>
+                {typeof value === "string" || typeof value === "number" ? (
+                    <Typography variant="body2" fontWeight={800} color={valueColor}>
+                        {value}
+                    </Typography>
+                ) : (
+                    value
+                )}
+            </Box>
+        </Box>
+    );
+    return tooltip ? <Tooltip title={tooltip}>{cell}</Tooltip> : cell;
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SUB-COMPONENTE: CARD DE INVERSIÓN ACTIVA
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface InversionActivaCardProps {
+    inversion: InversionDto;
+    formatCurrency: (val: number) => string;
+    onViewProject: () => void;
+}
+
+const InversionActivaCard: React.FC<InversionActivaCardProps> = ({ inversion: inv, formatCurrency, onViewProject }) => {
+    const theme = useTheme();
+    const proyecto = inv.proyectoInvertido;
+
+    // Si el proyecto está "Finalizado", es un dato crucial porque significa que se aproxima la liquidación.
+    const isProjectFinished = proyecto?.estado_proyecto?.toLowerCase() === 'finalizado';
+
+    return (
+        <Paper
+            elevation={0}
+            sx={{
+                border: `1px solid ${theme.palette.divider}`,
+                borderRadius: 3,
+                overflow: "hidden",
+                transition: "box-shadow 0.2s",
+                "&:hover": {
+                    boxShadow: `0 4px 20px ${alpha(theme.palette.primary.main, 0.12)}`,
+                },
+            }}
+        >
+            {/* ── HEADER ── */}
+            <Box sx={{ px: 2.5, pt: 2, pb: 1.5, bgcolor: alpha(theme.palette.primary.main, 0.03), borderBottom: `1px solid ${theme.palette.divider}` }}>
+                <Stack direction="row" justifyContent="space-between" alignItems="flex-start" flexWrap="wrap" gap={1}>
+                    <Box>
+                        <Typography variant="subtitle1" fontWeight={800} color="primary.main" lineHeight={1.3}>
+                            {proyecto?.nombre_proyecto ?? "Inversión Directa"}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                            Inversión #{inv.id} · Ingreso: {formatDate(inv.fecha_inversion)}
+                        </Typography>
+                    </Box>
+
+                    {/* Chips de estado imitando MisSuscripciones */}
+                    <Stack direction="row" spacing={1} flexWrap="wrap">
+                        {proyecto?.tipo_inversion && (
+                            <Chip
+                                label={`Tipo: ${proyecto.tipo_inversion}`}
+                                size="small"
+                                variant="outlined"
+                                sx={{
+                                    fontSize: "0.68rem", fontWeight: 700, height: 22, textTransform: 'capitalize',
+                                    borderColor: alpha(theme.palette.text.secondary, 0.3), color: "text.secondary",
+                                }}
+                            />
+                        )}
+                        <Chip
+                            icon={<CheckCircle sx={{ fontSize: "13px !important" }} />}
+                            label="Pago Confirmado"
+                            color="success"
+                            size="small"
+                            variant="outlined"
+                            sx={{ fontSize: "0.68rem", fontWeight: 700, height: 22 }}
+                        />
+                    </Stack>
+                </Stack>
+            </Box>
+
+            {/* ── MÉTRICAS ── */}
+            <Stack
+                direction={{ xs: "column", sm: "row" }}
+                divider={<Divider orientation="vertical" flexItem sx={{ display: { xs: "none", sm: "block" } }} />}
+                sx={{ px: 0 }}
+            >
+                {/* 1. Capital Invertido */}
+                <MetricCell
+                    icon={<MonetizationOn fontSize="small" />}
+                    label="Capital Invertido"
+                    value={formatCurrency(Number(inv.monto))}
+                    valueColor="success.main"
+                    tooltip="Monto total ingresado y confirmado en este proyecto"
+                />
+                
+                {/* 2. Estado del Proyecto (Aporta mucho valor saber si la plata sigue trabajando o si el proyecto cerró) */}
+                <MetricCell
+                    icon={<BusinessCenter fontSize="small" />}
+                    label="Fase del Proyecto"
+                    value={proyecto?.estado_proyecto ?? "Desarrollo"}
+                    valueColor={isProjectFinished ? "warning.main" : "text.primary"}
+                    tooltip={isProjectFinished ? "El proyecto ha finalizado. A la espera de liquidación de retornos." : "El proyecto se encuentra activo y tu capital está trabajando."}
+                />
+            </Stack>
+
+            <Divider />
+
+            {/* ── ACCIONES ── */}
+            <Stack direction="row" justifyContent="flex-end" spacing={1} sx={{ px: 2, py: 1.25 }}>
+                <Button
+                    size="small"
+                    variant="text"
+                    startIcon={<Visibility fontSize="small" />}
+                    onClick={onViewProject}
+                    sx={{
+                        fontWeight: 600, fontSize: "0.78rem", color: "text.secondary",
+                        "&:hover": { bgcolor: alpha(theme.palette.text.secondary, 0.06) },
+                    }}
+                >
+                    Ver detalle del proyecto
+                </Button>
+            </Stack>
+        </Paper>
+    );
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// COMPONENTE PRINCIPAL
+// ─────────────────────────────────────────────────────────────────────────────
 
 const MisInversiones: React.FC = () => {
     const navigate = useNavigate();
     const theme = useTheme();
     const formatCurrency = useCurrencyFormatter();
 
+    const [tabValue, setTabValue] = useState(0);
+
     const {
-        iniciarPago, isIniciandoPago, selectedInversionId,
-        confirmar2FA, isConfirmando2FA, twoFAError, setTwoFAError,
-        is2FAOpen, close2FA
+        iniciarPago, isIniciandoPago, confirmar2FA, isConfirmando2FA,
+        twoFAError, setTwoFAError, is2FAOpen, close2FA
     } = useInversionPayment();
 
     // --- QUERIES ---
@@ -60,159 +217,290 @@ const MisInversiones: React.FC = () => {
         queryKey: ['misInversiones'],
         queryFn: async () => {
             const response = await InversionService.getMisInversiones();
-            // Mapeo seguro según la estructura de tu backend
             return (response.data as any).data ?? response.data ?? [];
         }
     });
 
-    // --- LÓGICA DE NEGOCIO (KPIs) ---
-    // ✅ CORRECCIÓN: Usamos Number(inv.monto) para evitar el cero
+    // --- DATOS DERIVADOS ---
+    const inversionesActivas = useMemo(() => inversiones.filter(i => i.estado === 'pagado'), [inversiones]);
+    const inversionesPendientes = useMemo(() => inversiones.filter(i => ['pendiente', 'fallido'].includes(i.estado)), [inversiones]);
+    const inversionesHistorial = useMemo(() => inversiones.filter(i => i.estado === 'reembolsado'), [inversiones]);
+
     const stats = useMemo(() => {
-        return inversiones.reduce((acc, inv) => {
-            const montoNum = Number(inv.monto) || 0;
-            const esValida = !['fallido', 'reembolsado'].includes(inv.estado);
-
+        return inversionesActivas.reduce((acc, inv) => {
             return {
-                total: acc.total + 1,
-                exitosas: inv.estado === 'pagado' ? acc.exitosas + 1 : acc.exitosas,
-                montoTotal: esValida ? acc.montoTotal + montoNum : acc.montoTotal
+                capital: acc.capital + (Number(inv.monto) || 0),
+                proyectos: new Set([...acc.proyectos, inv.id_proyecto])
             };
-        }, { total: 0, exitosas: 0, montoTotal: 0 });
-    }, [inversiones]);
+        }, { capital: 0, proyectos: new Set<number>() });
+    }, [inversionesActivas]);
 
-    // --- COLUMNAS (Sin IDs, solo nombres) ---
-    const columns = useMemo<DataTableColumn<InversionDto>[]>(() => [
+    // ── COLUMNAS: PENDIENTES / FALLIDAS ──────────────────────────────────────
+    const pendingCols = useMemo<DataTableColumn<InversionDto>[]>(() => [
         {
-            id: 'proyecto',
-            label: 'Proyecto',
-            minWidth: 280,
+            id: "proyecto",
+            label: "Detalle de Inversión",
+            minWidth: 260,
             render: (row) => (
-                <Typography variant="subtitle2" fontWeight={800} color="primary.main">
-                    {row.proyectoInvertido?.nombre_proyecto ?? 'Inversión Directa'}
-                </Typography>
-            )
+                <Box>
+                    <Typography variant="subtitle2" fontWeight={800} color="primary.main">
+                        {row.proyectoInvertido?.nombre_proyecto ?? `Inversión #${row.id}`}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" display="block">
+                        Intento de ingreso: {formatDate(row.fecha_inversion)}
+                    </Typography>
+                </Box>
+            ),
         },
         {
-            id: 'monto',
-            label: 'Capital Invertido',
-            minWidth: 150,
-            render: (row) => (
-                <Typography variant="body2" fontWeight={700}>
-                    {formatCurrency(row.monto)}
-                </Typography>
-            )
-        },
-        {
-            id: 'estado',
-            label: 'Estado',
-            minWidth: 140,
+            id: "estado",
+            label: "Estado",
             render: (row) => {
-                const { label, color, icon } = getStatusConfig(row.estado);
+                const config = getStatusConfig(row.estado);
                 return (
                     <Chip
-                        label={label}
-                        color={color}
-                        icon={icon}
+                        label={config.label}
                         size="small"
-                        sx={{ fontWeight: 700, borderRadius: 1.5 }}
+                        color={config.color}
+                        icon={config.icon}
+                        variant={row.estado === 'fallido' ? "filled" : "outlined"}
+                        sx={{ fontWeight: 700 }}
                     />
                 );
-            }
+            },
         },
         {
-            id: 'fecha',
-            label: 'Fecha',
-            minWidth: 120,
+            id: "monto",
+            label: "Monto",
             render: (row) => (
-                <Typography variant="body2" color="text.secondary">
-                    {/* ✅ Fecha protegida */}
-                    {safeFormatDate(row.fecha_inversion)}
+                <Typography variant="body2" fontWeight={800}>
+                    {formatCurrency(Number(row.monto))}
                 </Typography>
-            )
+            ),
         },
         {
-            id: 'acciones',
-            label: 'Gestión',
-            align: 'right',
+            id: "acciones",
+            label: "Gestión",
+            align: "right",
+            render: (row) => {
+                if (row.estado !== 'fallido') return null;
+                return (
+                    <Button
+                        size="small"
+                        variant="contained"
+                        color="error"
+                        startIcon={<Payment fontSize="small" />}
+                        onClick={() => iniciarPago(row.id)}
+                        disabled={isIniciandoPago}
+                        sx={{ fontWeight: 700, borderRadius: 2, boxShadow: 'none' }}
+                    >
+                        Reintentar Pago
+                    </Button>
+                );
+            },
+        },
+    ], [formatCurrency, iniciarPago, isIniciandoPago]);
+
+    // ── COLUMNAS: HISTORIAL ──────────────────────────────────────────────────
+    const historyCols = useMemo<DataTableColumn<InversionDto>[]>(() => [
+        {
+            id: "proyecto",
+            label: "Proyecto / Inversión",
+            minWidth: 320,
             render: (row) => (
-                <Stack direction="row" spacing={1} justifyContent="flex-end">
-                    <Tooltip title="Ver Detalles">
-                        <IconButton size="small" onClick={() => navigate(`/proyectos/${row.id_proyecto}`)}>
-                            <Visibility fontSize="small" />
-                        </IconButton>
-                    </Tooltip>
-
-                    {/* CAMBIO AQUÍ: 
-               Antes decía row.estado === 'pendiente'. 
-               Ahora solo permitimos pagar si falló el intento anterior.
-            */}
-                    {row.estado === 'fallido' && (
-                        <Button
-                            variant="contained"
-                            size="small"
-                            onClick={() => iniciarPago(row.id)}
-                            disabled={isIniciandoPago}
-                            startIcon={<Payment />}
-                            sx={{ fontWeight: 700, borderRadius: 1.5 }}
-                        >
-                            Reintentar Pago
-                        </Button>
-                    )}
-
+                <Box>
+                    <Typography variant="subtitle2" fontWeight={700} color="text.secondary">
+                        {row.proyectoInvertido?.nombre_proyecto ?? "Proyecto liquidado"}
+                    </Typography>
+                    <Typography variant="caption" color="text.disabled" fontWeight={600} sx={{ display: "block", mt: 0.5 }}>
+                        Inversión original #{row.id}
+                    </Typography>
+                </Box>
+            ),
+        },
+        {
+            id: "monto",
+            label: "Capital Devuelto",
+            render: (row) => (
+                <Typography variant="body2" fontWeight={700} color="text.disabled">
+                    {formatCurrency(Number(row.monto))}
+                </Typography>
+            ),
+        },
+        {
+            id: "fecha",
+            label: "Fecha de Reembolso",
+            render: (row) => (
+                <Stack direction="row" alignItems="center" spacing={1}>
+                    <CalendarMonth sx={{ fontSize: 16, color: "text.disabled" }} />
+                    <Typography variant="body2" color="text.secondary">
+                        {formatDate(row.updatedAt)}
+                    </Typography>
                 </Stack>
-            )
-        }
-    ], [navigate, formatCurrency, iniciarPago, isIniciandoPago]);
+            ),
+        },
+    ], [formatCurrency]);
 
     return (
         <PageContainer maxWidth="lg">
             <PageHeader
                 title="Mis Inversiones"
-                subtitle="Seguimiento de tu capital y rendimiento en proyectos directos."
+                subtitle="Monitorea el capital que tienes trabajando y el estado de tus proyectos."
             />
 
-            {/* KPI SUMMARY */}
-            <Box sx={{
-                display: 'grid',
-                gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
-                gap: 2, mb: 4
-            }}>
+            {/* ── ESTADÍSTICAS ── */}
+            <Box
+                sx={{
+                    display: "grid",
+                    gridTemplateColumns: { xs: "1fr", sm: "repeat(3, 1fr)" },
+                    gap: 2,
+                    mb: 4,
+                }}
+            >
                 <StatCard
-                    title="Capital en Cartera"
-                    value={formatCurrency(stats.montoTotal)}
-                    icon={<MonetizationOn />}
-                    color="primary"
-                    loading={isLoading}
-                />
-                <StatCard
-                    title="Total Proyectos"
-                    value={stats.total.toString()}
-                    icon={<PieChart />}
-                    color="warning"
-                    loading={isLoading}
-                />
-                <StatCard
-                    title="Inversiones Pagadas"
-                    value={stats.exitosas.toString()}
+                    title="Inversiones Activas"
+                    value={inversionesActivas.length.toString()}
                     icon={<CheckCircle />}
                     color="success"
                     loading={isLoading}
                 />
+                <StatCard
+                    title="Proyectos en Cartera"
+                    value={stats.proyectos.size.toString()}
+                    icon={<PieChart />}
+                    color="info"
+                    loading={isLoading}
+                />
+                <StatCard
+                    title="Capital Trabajando"
+                    value={formatCurrency(stats.capital)}
+                    icon={<MonetizationOn />}
+                    color="primary"
+                    loading={isLoading}
+                    subtitle="Aportes ingresados con éxito"
+                />
             </Box>
 
-            <QueryHandler isLoading={isLoading} error={error as Error | null}>
-                <Paper elevation={0} sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 3, overflow: 'hidden' }}>
-                    <DataTable
-                        columns={columns}
-                        data={inversiones}
-                        getRowKey={(row) => row.id}
-                        pagination
-                        defaultRowsPerPage={10}
-                        emptyMessage="No tienes inversiones registradas."
+            {/* ── PESTAÑAS ── */}
+            <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 3 }}>
+                <Tabs
+                    value={tabValue}
+                    onChange={(_, v) => setTabValue(v)}
+                    indicatorColor="primary"
+                    textColor="primary"
+                    variant="scrollable"
+                    scrollButtons="auto"
+                >
+                    <Tab
+                        label={`Inversiones Activas${inversionesActivas.length > 0 ? ` (${inversionesActivas.length})` : ""}`}
+                        icon={<CheckCircle />}
+                        iconPosition="start"
+                        sx={{ fontWeight: 700 }}
                     />
-                </Paper>
+                    <Tab
+                        label={`Pendientes / Fallidas${inversionesPendientes.length > 0 ? ` (${inversionesPendientes.length})` : ""}`}
+                        icon={<Schedule />}
+                        iconPosition="start"
+                        sx={{ fontWeight: 700 }}
+                    />
+                    <Tab
+                        label={`Historial de Liquidaciones${inversionesHistorial.length > 0 ? ` (${inversionesHistorial.length})` : ""}`}
+                        icon={<HistoryIcon />}
+                        iconPosition="start"
+                        sx={{ fontWeight: 700 }}
+                    />
+                </Tabs>
+            </Box>
+
+            {/* ── CONTENIDO POR PESTAÑA ── */}
+            <QueryHandler isLoading={isLoading} error={error as Error | null}>
+                
+                {/* ── Tab 0: Inversiones Activas (Cards) ── */}
+                {tabValue === 0 && (
+                    <>
+                        {inversionesActivas.length === 0 ? (
+                            <Paper
+                                elevation={0}
+                                sx={{
+                                    border: `1px solid ${theme.palette.divider}`,
+                                    borderRadius: 3,
+                                    p: 6,
+                                    textAlign: "center",
+                                }}
+                            >
+                                <AccountBalanceWallet
+                                    sx={{
+                                        fontSize: 48,
+                                        color: alpha(theme.palette.text.disabled, 0.4),
+                                        mb: 2,
+                                    }}
+                                />
+                                <Typography variant="body1" color="text.secondary" fontWeight={600}>
+                                    No tenés inversiones directas activas.
+                                </Typography>
+                                <Typography variant="body2" color="text.disabled" mt={0.5}>
+                                    El capital ingresado se reflejará aquí una vez que el pago se confirme.
+                                </Typography>
+                            </Paper>
+                        ) : (
+                            <Stack spacing={2}>
+                                {inversionesActivas.map((inv) => (
+                                    <InversionActivaCard
+                                        key={inv.id}
+                                        inversion={inv}
+                                        formatCurrency={formatCurrency}
+                                        onViewProject={() => navigate(`/proyectos/${inv.id_proyecto}`)}
+                                    />
+                                ))}
+                            </Stack>
+                        )}
+                    </>
+                )}
+
+                {/* ── Tab 1: Pendientes / Fallidas (Tabla) ── */}
+                {tabValue === 1 && (
+                    <Paper
+                        elevation={0}
+                        sx={{
+                            border: `1px solid ${theme.palette.divider}`,
+                            borderRadius: 3,
+                            overflow: "hidden",
+                        }}
+                    >
+                        <DataTable
+                            columns={pendingCols}
+                            data={inversionesPendientes}
+                            getRowKey={(row) => row.id}
+                            pagination
+                            defaultRowsPerPage={10}
+                            emptyMessage="No tenés ingresos pendientes ni fallidos."
+                        />
+                    </Paper>
+                )}
+
+                {/* ── Tab 2: Historial (Tabla) ── */}
+                {tabValue === 2 && (
+                    <Paper
+                        elevation={0}
+                        sx={{
+                            border: `1px solid ${theme.palette.divider}`,
+                            borderRadius: 3,
+                            overflow: "hidden",
+                        }}
+                    >
+                        <DataTable
+                            columns={historyCols}
+                            data={inversionesHistorial}
+                            getRowKey={(row) => row.id}
+                            pagination
+                            defaultRowsPerPage={10}
+                            emptyMessage="Aún no tienes liquidaciones ni retornos registrados."
+                        />
+                    </Paper>
+                )}
             </QueryHandler>
 
+            {/* ── MODALES ── */}
             <TwoFactorAuthModal
                 open={is2FAOpen}
                 onClose={() => { close2FA(); setTwoFAError(null); }}
