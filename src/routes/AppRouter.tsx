@@ -4,11 +4,10 @@ import { Suspense, lazy } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 
 
+import { AdminMetrics } from '@/features/admin/pages/Metricas/AdminMetrics/AdminMetrics';
+import SecuritySettings from '@/features/client/pages/MiCuenta/SecuritySettings/SecuritySettings';
 import { ROUTES } from '.';
 import ProtectedRoute from '../core/auth/guards/ProtectedRoute';
-import SecuritySettings from '@/features/client/pages/MiCuenta/SecuritySettings/SecuritySettings';
-import { AdminMetrics } from '@/features/admin/pages/Metricas/AdminMetrics/AdminMetrics';
-import { UserMetrics } from '@/features/admin/pages/Metricas/UserMetrics/UserMetrics';
 
 // ============ LAZY LOADING ============
 
@@ -37,10 +36,9 @@ const DetalleProyecto = lazy(() => import('@/features/client/pages/Proyectos/Det
 const UserDashboard = lazy(() => import('@/features/client/pages/UserDashboard/UserDashboard'));
 const MisPagos = lazy(() => import('@/features/client/pages/MiCuenta/pagos/MisPagos'));
 const MisInversiones = lazy(() => import('@/features/client/pages/MiCuenta/MisInversiones'));
-const MisSuscripciones = lazy(() => import('@/features/client/pages/MiCuenta/MisSuscripciones'));
+const MisSuscripciones = lazy(() => import('@/features/client/pages/MiCuenta/MisSuscripciones/MisSuscripciones'));
 const MisPujas = lazy(() => import('@/features/client/pages/MiCuenta/Mispujas/MisPujas'));
 const MisTransacciones = lazy(() => import('@/features/client/pages/MiCuenta/pagos/MisTransacciones'));
-const MisResumenes = lazy(() => import('@/features/client/pages/MiCuenta/MisResumenes'));
 const PagoResult = lazy(() => import('@/features/client/pages/MiCuenta/pagos/PagoResult'));
 const Perfil = lazy(() => import('@/features/client/pages/MiCuenta/perfil/Perfil'));
 const VerificacionKYC = lazy(() => import('@/features/client/pages/MiCuenta/kyc/VerificacionKYC'));
@@ -116,10 +114,9 @@ const AppRouter = () => {
           <Route path={ROUTES.CLIENT.FINANZAS.SUSCRIPCIONES} element={<ProtectedRoute><MisSuscripciones /></ProtectedRoute>} />
           <Route path={ROUTES.CLIENT.FINANZAS.PUJAS} element={<ProtectedRoute><MisPujas /></ProtectedRoute>} />
           <Route path={ROUTES.CLIENT.FINANZAS.TRANSACCIONES} element={<ProtectedRoute><MisTransacciones /></ProtectedRoute>} />
-          <Route path={ROUTES.CLIENT.FINANZAS.RESUMENES} element={<ProtectedRoute><MisResumenes /></ProtectedRoute>} />
           <Route path={ROUTES.CLIENT.FINANZAS.PAGO_ESTADO} element={<ProtectedRoute><PagoResult /></ProtectedRoute>} />
-          <Route path="/pago/exito/:id"     element={<PagoResult initialStatus="success" />} />
-          <Route path="/pago/fallo/:id"     element={<PagoResult initialStatus="failed" />} />
+          <Route path="/pago/exito/:id" element={<PagoResult initialStatus="success" />} />
+          <Route path="/pago/fallo/:id" element={<PagoResult initialStatus="failed" />} />
           <Route path="/pago/pendiente/:id" element={<PagoResult initialStatus="pending" />} />
 
           {/* Lotes */}

@@ -3,12 +3,12 @@
 import type { ResumenCuentaDto } from '@/core/types/resumenCuenta.dto';
 import BaseModal from '@/shared/components/domain/modals/BaseModal';
 import { AccountBalance, AddCircleOutline, AttachMoney, Edit as EditIcon } from '@mui/icons-material';
-import { Alert, alpha, Box, Button, Chip, CircularProgress, Divider, LinearProgress, Paper, Stack, TextField, Typography, useTheme } from '@mui/material'; 
+import { Alert, alpha, Box, Button, Chip, CircularProgress, Divider, LinearProgress, Paper, Stack, TextField, Typography, useTheme } from '@mui/material';
 import React from 'react';
+import { ModalMotivoAdmin } from '../../../Suscripciones/modals/ModalMotivoAdmin/ModalMotivoAdmin';
 import { useDetalleResumenModal } from './hooks/useDetalleResumenModal';
 import { HistorialPagosPanel } from './SeccionPagos';
 import { PendingPaymentsPanel } from './Seccionpagospendientes';
-import { ModalMotivoAdmin } from '../../../Suscripciones/modals/ModalMotivoAdmin/ModalMotivoAdmin';
 
 interface Props {
   open: boolean;
@@ -105,7 +105,7 @@ const DetalleResumenModal: React.FC<Props> = ({ open, onClose, resumen }) => {
             editingPaymentId={h.editingPaymentId} newMonto={h.newMonto}
             setNewMonto={h.setNewMonto} setEditingPaymentId={h.setEditingPaymentId}
             onForcePayment={h.handleOpenForceModal}
-            onSaveMontoClick={() => h.setEditModalOpen(true)} 
+            onSaveMontoClick={() => h.setEditModalOpen(true)}
           />
 
           {/* 4. HISTORIAL */}
@@ -137,7 +137,7 @@ const DetalleResumenModal: React.FC<Props> = ({ open, onClose, resumen }) => {
             <b>${Number(h.selectedPagoToForce?.monto).toLocaleString('es-AR')}</b> pasará a <b>FORZADO</b>.
           </>
         }
-        motivo={h.forceMotivo}
+        motivo_cambio={h.forceMotivo}
         onMotivoChange={h.setForceMotivo}
         motivoLabel="Motivo o Referencia (Obligatorio)"
         motivoPlaceholder="Ej: Pago recibido en efectivo en oficina central"
@@ -161,7 +161,7 @@ const DetalleResumenModal: React.FC<Props> = ({ open, onClose, resumen }) => {
             <b>${Number(h.newMonto).toLocaleString('es-AR')}</b>.
           </>
         }
-        motivo={h.editMotivo}
+        motivo_cambio={h.editMotivo}
         onMotivoChange={h.setEditMotivo}
         motivoLabel="Motivo de la modificación (Obligatorio)"
         motivoPlaceholder="Ej: Ajuste manual por bonificación especial aprobada."

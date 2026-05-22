@@ -2,7 +2,6 @@
 
 import { BaseModal } from "@/shared";
 import { Box, TextField, Typography } from "@mui/material";
-import type { SvgIconComponent } from "@mui/icons-material";
 import React from "react";
 
 type HeaderColor =
