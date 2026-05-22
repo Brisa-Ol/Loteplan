@@ -43,9 +43,10 @@ const ContratoFirmadoService = {
   }
  
   return await httpService.post(`${BASE_ENDPOINT}/firmar`, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
+    headers: { 'Content-Type': 'multipart/form-data',  'X-Skip-Auth-Redirect': 'true' }
   });
 },
+
 
   // =================================================
   // 🔍 CONSULTAS

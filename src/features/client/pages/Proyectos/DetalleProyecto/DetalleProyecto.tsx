@@ -104,7 +104,7 @@ const TabOverview = React.memo(({ proyecto, esMensual }: TabOverviewProps) => {
           mx: 'auto', bgcolor: alpha(theme.palette.primary.main, 0.03)
         }}>
           <Box display="grid" gridTemplateColumns={{ xs: 'repeat(2, 1fr)', md: 'repeat(5, 1fr)' }}>
-            <DataPoint label="Moneda" value={proyecto.moneda} icon={<MonetizationOn fontSize="small" />} />
+            <DataPoint label="Moneda" value={"ARS"} icon={<MonetizationOn fontSize="small" />} />
             <DataPoint label="Modalidad" value={esMensual ? 'Mensual' : 'Directa'} icon={<CalendarMonth fontSize="small" />} />
             {esMensual && (
               <DataPoint
@@ -151,6 +151,7 @@ const DetalleProyecto: React.FC = () => {
   const [cantProyectsUser, setCantProyectsUser] = useState(0)
   const [trackingData, setTrackingData] = useState<ContratoTrackingResponse | TrackPaymentAndContractResponseDto | null>(null)
 
+  const [isLoadingCount, setIsLoadingCount] = useState(true);
 
   //fin variables Thomy
 
@@ -158,7 +159,11 @@ const DetalleProyecto: React.FC = () => {
 
   //Llamar los proyectos del usuario
   useEffect(() => {
-    if(!isAuthenticated || !user?.id) return;
+    setIsLoadingCount(true);
+    if(!isAuthenticated || !user?.id){
+      setIsLoadingCount(false);
+      return;
+    } ;
     const getProyects = async () => {
       const proyectsFetched = await SuscripcionService.getMisSuscripciones();
 
@@ -170,14 +175,17 @@ const DetalleProyecto: React.FC = () => {
       ).length;
 
       setCantProyectsUser(cantidadSuscripciones);
-
+      setIsLoadingCount(false);
     };
 
     getProyects();
-  }, [logic.proyecto?.id]);
+  }, [logic.proyecto?.id, user, isAuthenticated]);
 
   useEffect(() => {
-    if(!isAuthenticated || !user?.id) return;
+    if(!isAuthenticated || !user?.id){
+      setIsLoadingCount(false);
+      return;
+    }
     if (!logic.proyecto?.id) return; // 🔥 CLAVE
     const trackingContracts = async () => {
       try {
@@ -190,7 +198,7 @@ const DetalleProyecto: React.FC = () => {
     };
 
     trackingContracts();
-  }, [logic.proyecto?.id]);
+  }, [logic.proyecto?.id, user, isAuthenticated]);
 
 
 
@@ -360,7 +368,7 @@ const DetalleProyecto: React.FC = () => {
         </Box>
 
         <Box sx={{ width: { xs: '100%', lg: 380 }, flexShrink: 0 }}>
-          <MemoizedSidebar logic={secureLogic} proyecto={logic.proyecto} cantProyectUser={cantProyectsUser} puedeFirmar={trackingData?.puede_firmar} />
+          <MemoizedSidebar logic={secureLogic} proyecto={logic.proyecto} cantProyectUser={cantProyectsUser} puedeFirmar={trackingData?.puede_firmar} isLoadingCount={isLoadingCount} />
         </Box>
       </Box>
 

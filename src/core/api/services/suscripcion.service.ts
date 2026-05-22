@@ -42,7 +42,7 @@ const SuscripcionService = {
   },
 
   confirmCancelationSuscription: async (data: { suscripcionId: number; codigo_2fa: string }): Promise<AxiosResponse<{ mensaje: string }>> => {
-    return await httpService.post(`${BASE_PROYECTO}/mis_suscripciones/confirmar-cancelacion`, data);
+    return await httpService.post(`${BASE_PROYECTO}/mis_suscripciones/confirmar-cancelacion`, data, {headers: { 'X-Skip-Auth-Redirect': 'true' }});
   },
 
 

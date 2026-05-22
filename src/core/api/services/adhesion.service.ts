@@ -50,7 +50,7 @@ export const iniciarCancelacionAdhesion = async (
 }
 // Confirmar cancelación de adhesión (Paso 2 - Valida código 2FA)
 export const confirmarCancelacionAdhesion = async (data: { adhesionId: number, codigo_2fa: string }): Promise<AxiosResponse<any>> => {
-  return await httpService.post(`${BASE_ENDPOINT}/confirmar-cancelacion`, data);
+  return await httpService.post(`${BASE_ENDPOINT}/confirmar-cancelacion`, data, {headers: { 'X-Skip-Auth-Redirect': 'true' }});
 }
 
 // Paso 1: Iniciar pago de cuota (sin 2FA → redirige directo; con 2FA → devuelve 202)

@@ -58,6 +58,7 @@ interface ProjectSidebarProps {
   proyecto: ProyectoDto;
   cantProyectUser: number,
   puedeFirmar?: boolean | undefined
+  isLoadingCount?: boolean
 }
 
 // ==========================================
@@ -156,7 +157,7 @@ const PriceHeader: React.FC<{ helpers: any, isPrelanzamiento: boolean, isLleno: 
 // ==========================================
 // 5. COMPONENTE PRINCIPAL
 // ==========================================
-export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({ logic, proyecto, cantProyectUser, puedeFirmar }) => {
+export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({ logic, proyecto, cantProyectUser, puedeFirmar, isLoadingCount }) => {
 
   //variables Thomy
 
@@ -353,11 +354,21 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({ logic, proyecto,
                                   Esta inversión ya finalizó. No es posible realizar nuevas suscripciones.
                                 </Alert>
                               ) : (
-                                <Alert severity="success" icon={<CheckCircle />}>
-                                  {cantProyectUser === 1
-                                    ? 'Ya tienes una suscripción activa'
-                                    : `Tienes ${cantProyectUser} suscripciones activas`}
-                                </Alert>
+                                  // 👇 Mientras carga mostramos un skeleton/spinner, no el Alert con 0
+                                  isLoadingCount ? (
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 1 }}>
+                                      <CircularProgress size={16} />
+                                      <Typography variant="caption" color="text.secondary">
+                                        Verificando suscripciones...
+                                      </Typography>
+                                    </Box>
+                                  ) : cantProyectUser > 0 && (
+                                    <Alert severity="success" icon={<CheckCircle />}>
+                                      {cantProyectUser === 1
+                                        ? 'Ya tenés una suscripción activa'
+                                        : `Tenés ${cantProyectUser} suscripciones activas`}
+                                    </Alert>
+                                  )
                               )}
 
                               {/* 🔁 Volver a suscribirse */}

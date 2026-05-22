@@ -98,11 +98,12 @@ httpService.interceptors.response.use(
 
     // En el bloque del ERROR 401
     if (status === 401) {
+      const skipRedirect = error.config?.headers?.['X-Skip-Auth-Redirect'] === 'true';
       if (isLoginEndpoint) {
         return Promise.reject({ status: 401, message: msg, type: 'AUTH_ERROR' } as ApiError);
       }
 
-      if (!window.location.pathname.includes('/login') && !isRedirectingToLogin) {
+      if (!window.location.pathname.includes('/login') && !isRedirectingToLogin && !skipRedirect) {
         isRedirectingToLogin = true;
 
         // ✅ Leer ANTES de borrar: solo hay sesión expirada si existía un token activo.
