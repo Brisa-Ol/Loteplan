@@ -19,9 +19,14 @@ export interface CreateCuotaMensualDto {
   porcentaje_plan: number;
   porcentaje_administrativo: number;
   porcentaje_iva: number;
+  mensaje_cambio_usuarios?: string;
+  motivo_auditoria?: string;
 }
 
-export interface UpdateCuotaMensualDto extends Partial<CreateCuotaMensualDto> { }
+export interface UpdateCuotaMensualDto extends Partial<CreateCuotaMensualDto> { 
+  mensaje_cambio_usuarios: string;  // requerido en update
+  motivo_auditoria: string;         // requerido en update
+}
 
 // ==========================================
 // 📥 RESPONSE DTOs

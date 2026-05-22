@@ -19,11 +19,12 @@ import * as Yup from 'yup';
 
 import CuotaMensualService from '@/core/api/services/cuotaMensual.service';
 import { env } from '@/core/config/env'; // 👈 1. Importamos env
-import type { CreateCuotaMensualDto } from '@/core/types/cuotaMensual.dto';
+import type { CreateCuotaMensualDto, UpdateCuotaMensualDto } from '@/core/types/cuotaMensual.dto';
 import type { ProyectoDto } from '@/core/types/proyecto.dto';
 import BaseModal from '@/shared/components/domain/modals/BaseModal';
 import useSnackbar from '@/shared/hooks/useSnackbar';
 import ProyectoPriceHistory from '../components/ProyectoPriceHistory';
+import { ModalMotivoAdmin } from '../../Suscripciones/modals/ModalMotivoAdmin/ModalMotivoAdmin';
 
 // ============================================================================
 // INTERFACES Y VALIDACIÓN
@@ -56,6 +57,30 @@ const ConfigCuotasModal: React.FC<ConfigCuotasModalProps> = ({ open, onClose, pr
     const [activeTab, setActiveTab] = useState(0);
     const [showHistory, setShowHistory] = useState(false);
 
+    //Estados Thomy
+    const [openConfirmModal, setOpenConfirmModal] = useState(false);
+    const [pendingValues, setPendingValues] = useState<CreateCuotaMensualDto | null>(null);
+    const [mensajeCambio, setMensajeCambio] = useState('');
+    const [motivoAuditoria, setMotivoAuditoria] = useState('');
+    const [cuotaActivaId, setCuotaActivaId] = useState<number | null>(null);
+    //Fin estados Thomy
+
+    //Funciones Thomy
+
+    const handleConfirmUpdate = () => {
+    if (!pendingValues || !cuotaActivaId) return;
+    createMutation.mutate(
+        {
+            ...pendingValues,
+            mensaje_cambio_usuarios: mensajeCambio,
+            motivo_auditoria: motivoAuditoria,
+        },
+        { onSuccess: () => setOpenConfirmModal(false) }
+    );
+};
+
+    
+    //fin funciones Thomy
     // --- Queries ---
     const { data: responseBackend, isLoading: isLoadingData } = useQuery({
         queryKey: ['cuotaActive', proyecto?.id],
@@ -71,7 +96,10 @@ const ConfigCuotasModal: React.FC<ConfigCuotasModalProps> = ({ open, onClose, pr
 
     // --- Mutations ---
     const createMutation = useMutation({
-        mutationFn: async (data: CreateCuotaMensualDto) => (await CuotaMensualService.create(data)).data,
+        mutationFn: async (data: UpdateCuotaMensualDto) => {
+        if (!cuotaActivaId) throw new Error('No hay cuota activa para actualizar');
+        return (await CuotaMensualService.update(cuotaActivaId, data)).data;
+    },
         onSuccess: (response) => {
             if (proyecto) {
                 queryClient.invalidateQueries({ queryKey: ['cuotaActive', proyecto.id] });
@@ -98,19 +126,25 @@ const ConfigCuotasModal: React.FC<ConfigCuotasModalProps> = ({ open, onClose, pr
         enableReinitialize: true,
         onSubmit: (values) => {
             if (!proyecto) return;
-            createMutation.mutate({
-                ...values,
-                id_proyecto: proyecto.id,
-                porcentaje_plan: values.porcentaje_plan / 100,
-                porcentaje_administrativo: values.porcentaje_administrativo / 100,
-                porcentaje_iva: values.porcentaje_iva / 100,
-            });
-        },
+                // Guardamos los valores y abrimos el modal de confirmación
+                setPendingValues({
+                    ...values,
+                    id_proyecto: proyecto.id,
+                    porcentaje_plan: values.porcentaje_plan / 100,
+                    porcentaje_administrativo: values.porcentaje_administrativo / 100,
+                    porcentaje_iva: values.porcentaje_iva / 100,
+                });
+                setMensajeCambio('');
+                setMotivoAuditoria('');
+                setOpenConfirmModal(true);
+            },
+            
     });
 
     useEffect(() => {
         const cuota = responseBackend?.cuota;
         if (cuota) {
+            setCuotaActivaId(cuota.id);
             const normalizePct = (val: any) => {
                 const n = Number(val);
                 return n <= 1 ? n * 100 : n;
@@ -299,6 +333,39 @@ const ConfigCuotasModal: React.FC<ConfigCuotasModalProps> = ({ open, onClose, pr
                     </TableContainer>
                 )}
             </Stack>
+            <ModalMotivoAdmin
+                open={openConfirmModal}
+                onClose={() => setOpenConfirmModal(false)}
+                onConfirm={handleConfirmUpdate}
+                isLoading={createMutation.isPending}
+                title="Confirmar actualización de cuota"
+                icon={<SaveIcon />}
+                headerColor="warning"
+                confirmText="Guardar y notificar"
+                description={
+                    <Stack spacing={2}>
+                        <Typography variant="body2" color="text.secondary">
+                            Este cambio actualizará la cuota mensual de <strong>{proyecto.nombre_proyecto}</strong> y notificará a los suscriptores.
+                        </Typography>
+                        <TextField
+                            fullWidth
+                            multiline
+                            rows={2}
+                            label="Mensaje para usuarios (obligatorio)"
+                            value={mensajeCambio}
+                            onChange={(e) => setMensajeCambio(e.target.value)}
+                            placeholder="Ej: Actualizamos el valor de referencia por variación del índice de cemento..."
+                            helperText="Este mensaje será visible para los suscriptores del proyecto."
+                        />
+                    </Stack>
+                }
+                motivo_cambio={motivoAuditoria}
+                onMotivoChange={setMotivoAuditoria}
+                motivoLabel="Motivo de auditoría (obligatorio)"
+                motivoPlaceholder="Ej: Ajuste por inflación de insumos — índice IERIC mayo 2026"
+                motivoHelperText="Solo visible para administradores. Queda registrado en el historial."
+                disableConfirmButton={!mensajeCambio.trim() || !motivoAuditoria.trim()}
+            />
         </BaseModal>
     );
 };

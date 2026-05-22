@@ -35,6 +35,7 @@ interface Props {
 	motivoLabel?: string;
 	motivoPlaceholder?: string;
 	motivoHelperText?: string;
+	disableConfirmButton?: boolean;
 }
 
 export const ModalMotivoAdmin: React.FC<Props> = ({
@@ -53,6 +54,7 @@ export const ModalMotivoAdmin: React.FC<Props> = ({
 	motivoLabel = "Motivo (Obligatorio)",
 	motivoPlaceholder = "Ingresá el motivo...",
 	motivoHelperText = "Este campo es obligatorio.",
+	disableConfirmButton = false
 }) => {
 	return (
 		<BaseModal
@@ -66,7 +68,7 @@ export const ModalMotivoAdmin: React.FC<Props> = ({
 			confirmButtonColor={confirmButtonColor}
 			onConfirm={onConfirm}
 			isLoading={isLoading}
-			disableConfirm={(!motivo_cambio)} // Deshabilita el botón si el motivo está vacío o solo tiene espacios
+			disableConfirm={(!motivo_cambio) || disableConfirmButton} // Deshabilita el botón si el motivo está vacío o solo tiene espacios
 		>
 			<Box>
 				<Typography variant="body2" mb={3} color="text.secondary">
