@@ -14,7 +14,7 @@ import React, { useMemo } from 'react';
 
 import { env } from '@/core/config/env';
 import type { ResumenCuentaDto } from '@/core/types/resumenCuenta.dto';
-import { BaseModal } from '@/shared/components/domain/modals/BaseModal'; // ✅ Importación de BaseModal
+import { BaseModal } from '@/shared/components/domain/modals/BaseModal'; 
 
 interface Props {
   open: boolean;

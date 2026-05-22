@@ -1,11 +1,14 @@
 // src/pages/User/Suscripciones/hooks/useSuscripciones.ts
 import type { ApiError } from '@/core/api/httpService';
-// ✅ Importamos las nuevas funciones del servicio
 import { iniciarCancelacionAdhesion, confirmarCancelacionAdhesion, getAllAdhesionsByUser } from '@/core/api/services/adhesion.service';
 import SuscripcionService from '@/core/api/services/suscripcion.service';
+// ✅ NUEVO: Importar el servicio de resúmenes
+import ResumenCuentaService from '@/core/api/services/resumenCuenta.service';
 import { useAuth } from '@/core/context';
 import type { AdhesionDto } from '@/core/types/adhesion.dto';
 import type { SuscripcionCanceladaDto, SuscripcionDto } from '@/core/types/suscripcion.dto';
+// ✅ NUEVO: Importar el tipo
+import type { ResumenCuentaDto } from '@/core/types/resumenCuenta.dto';
 import useSnackbar from '@/shared/hooks/useSnackbar';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
@@ -37,14 +40,31 @@ export const useSuscripciones = () => {
         staleTime: 1000 * 60 * 5,
     });
 
+    // ✅ NUEVO: Query independiente para resúmenes de cuenta
+    const { data: resumenesData } = useQuery({
+        queryKey: ['misResumenesCuenta'],
+        queryFn: async () => {
+            const res = await ResumenCuentaService.getMyAccountSummaries();
+            return (res.data as any).data || res.data || [];
+        },
+        enabled: isAuthenticated,
+        staleTime: 1000 * 60 * 5,
+    });
+
     const suscripciones = (data?.activas as SuscripcionDto[]) || [];
     const canceladas = (data?.canceladas as SuscripcionCanceladaDto[]) || [];
     const adhesiones = (data?.adhesiones as AdhesionDto[]) || [];
+    // ✅ NUEVO
+    const resumenes = (resumenesData as ResumenCuentaDto[]) || [];
 
     // 2. Stats Calculados
     const stats = useMemo(() => {
-        const totalActivasMonto = suscripciones.reduce((acc, s) => acc + Number(s.monto_total_pagado || 0), 0);
-        const totalCanceladasMonto = canceladas.reduce((acc, c) => acc + Number(c.monto_pagado_total || 0), 0);
+        const totalActivasMonto = suscripciones.reduce(
+            (acc, s) => acc + Number(s.monto_total_pagado || 0), 0
+        );
+        const totalCanceladasMonto = canceladas.reduce(
+            (acc, c) => acc + Number(c.monto_pagado_total || 0), 0
+        );
 
         return {
             activas: suscripciones.length,
@@ -61,9 +81,8 @@ export const useSuscripciones = () => {
         },
         onSuccess: (_, id) => {
             queryClient.invalidateQueries({ queryKey: ['misSuscripcionesFull'] });
-            // ✅ Forzamos a que se recargue la lista de proyectos y se actualice el cupo
-            queryClient.invalidateQueries({ queryKey: ['proyectos'] }); 
-            
+            queryClient.invalidateQueries({ queryKey: ['proyectos'] });
+            queryClient.invalidateQueries({ queryKey: ['misResumenesCuenta'] }); // ✅ NUEVO
             showSuccess('Plan de ahorro detenido correctamente.');
             setHighlightedId(id);
             setTimeout(() => setHighlightedId(null), 2500);
@@ -92,14 +111,12 @@ export const useSuscripciones = () => {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['misSuscripcionesFull'] });
-            // ✅ Forzamos a que se recargue la lista de proyectos aquí también
-            queryClient.invalidateQueries({ queryKey: ['proyectos'] }); 
-
+            queryClient.invalidateQueries({ queryKey: ['proyectos'] });
+            queryClient.invalidateQueries({ queryKey: ['misResumenesCuenta'] }); // ✅ NUEVO
             showSuccess('Suscripcion cancelada de forma segura.');
         }
-    })
+    });
 
-    // ✅ 4. Mutación INICIAR Cancelación Adhesión (Paso 1)
     const iniciarCancelAdhesionMutation = useMutation({
         mutationFn: (id: number) => iniciarCancelacionAdhesion(id),
         onError: (err: unknown) => {
@@ -108,14 +125,12 @@ export const useSuscripciones = () => {
         }
     });
 
-    // ✅ 5. Mutación CONFIRMAR Cancelación Adhesión (Paso 2)
-const confirmarCancelAdhesionMutation = useMutation({
+    const confirmarCancelAdhesionMutation = useMutation({
         mutationFn: (payload: { adhesionId: number, codigo_2fa: string }) => confirmarCancelacionAdhesion(payload),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['misSuscripcionesFull'] });
-            // ✅ Forzamos a que se recargue la lista de proyectos aquí también
-            queryClient.invalidateQueries({ queryKey: ['proyectos'] }); 
-
+            queryClient.invalidateQueries({ queryKey: ['proyectos'] });
+            queryClient.invalidateQueries({ queryKey: ['misResumenesCuenta'] }); // ✅ NUEVO
             showSuccess('Adhesión cancelada de forma segura.');
         }
     });
@@ -124,6 +139,8 @@ const confirmarCancelAdhesionMutation = useMutation({
         suscripciones,
         canceladas,
         adhesiones,
+        // ✅ NUEVO: Exportar resúmenes
+        resumenes,
         stats,
         isLoading: isAuthenticated ? isLoading : false,
         error,
@@ -135,12 +152,11 @@ const confirmarCancelAdhesionMutation = useMutation({
         confirmarCancelSuscripcion: confirmarCancelSuscripcionMutation.mutate,
         isConfirmingCancelSuscripcion: confirmarCancelSuscripcionMutation.isPending,
 
-        // ✅ Exportamos el nuevo flujo de 2 pasos
         iniciarCancelAdhesion: iniciarCancelAdhesionMutation.mutate,
         isInitiatingCancel: iniciarCancelAdhesionMutation.isPending,
         confirmarCancelAdhesion: confirmarCancelAdhesionMutation.mutate,
         isConfirmingCancel: confirmarCancelAdhesionMutation.isPending,
-        
+
         highlightedId
     };
 };

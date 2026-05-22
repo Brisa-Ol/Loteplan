@@ -257,7 +257,6 @@ export const useNavbarMenu = () => {
             submenu: [
               { label: "Pagar Cuotas", path: ROUTES.CLIENT.FINANZAS.PAGOS, icon: ReceiptIcon, description: "Pagos pendientes", badge: 1 },
               { label: "Movimientos", path: ROUTES.CLIENT.FINANZAS.TRANSACCIONES, icon: ReceiptIcon, description: "Historial de transacciones" },
-              { label: "Estado de Cuenta", path: ROUTES.CLIENT.FINANZAS.RESUMENES, icon: DescriptionIcon, description: "Resúmenes mensuales" },
             ]
           },
           {
