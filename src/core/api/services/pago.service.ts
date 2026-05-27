@@ -25,7 +25,7 @@ const PagoService = {
   },
 
   confirmarPago2FA: async (data: ConfirmarPago2faDto): Promise<AxiosResponse<PagoCheckoutResponse>> => {
-    return await httpService.post(`${BASE_ENDPOINT}/confirmar-pago-2fa`, data);
+    return await httpService.post(`${BASE_ENDPOINT}/confirmar-pago-2fa`, data, { headers: { 'X-Skip-Auth-Redirect': 'true' } });
   },
 
   // 🆕 Obtiene el historial de pagos de una suscripción propia del usuario autenticado
