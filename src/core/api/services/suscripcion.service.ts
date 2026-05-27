@@ -18,7 +18,7 @@ const SuscripcionService = {
   },
 
   confirmar2FA: async (data: ConfirmarSuscripcion2faDto): Promise<AxiosResponse<SuscripcionInitResponse>> => {
-    return await httpService.post(`${BASE_PROYECTO}/confirmar-2fa`, data);
+    return await httpService.post(`${BASE_PROYECTO}/confirmar-2fa`, data, { headers: { 'X-Skip-Auth-Redirect': 'true' } });
   },
 
   getMisSuscripciones: async (): Promise<AxiosResponse<SuscripcionDto[]>> => {

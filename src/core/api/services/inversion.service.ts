@@ -64,7 +64,7 @@ const InversionService = {
    * Endpoint: POST /inversiones/confirmar-2fa
    */
   confirmar2FA: async (data: ConfirmInversion2faDto): Promise<AxiosResponse<InversionInitResponse>> => {
-    return await httpService.post(`${BASE_ENDPOINT}/confirmar-2fa`, data);
+    return await httpService.post(`${BASE_ENDPOINT}/confirmar-2fa`, data, {headers: { 'X-Skip-Auth-Redirect': 'true' }});
   },
 
   /**

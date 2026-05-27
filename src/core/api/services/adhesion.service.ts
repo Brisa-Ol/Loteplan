@@ -21,7 +21,7 @@ const BASE_ENDPOINT = '/adhesion';
   
   // Crear una nueva adhesión (plan de pago)
   export const createAdhesion = async (data: CrearAdhesionDto): Promise<AxiosResponse<{ success: boolean, data: AdhesionDto }>> => {
-    return await httpService.post(`${BASE_ENDPOINT}/`, data);
+    return await httpService.post(`${BASE_ENDPOINT}/`, data, {headers: { 'X-Skip-Auth-Redirect': 'true' }});
   }
 
   // Obtener una adhesión específica por su ID (solo si pertenece al usuario)

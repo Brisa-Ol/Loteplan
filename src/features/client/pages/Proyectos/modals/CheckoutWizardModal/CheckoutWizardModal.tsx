@@ -56,6 +56,7 @@ import { StepContrato } from '../StepsModal/StepContrato';
 import { StepFirma } from '../StepsModal/StepFirma';
 import { StepPago, type PagoDecision } from '../StepsModal/StepPago';
 import { StepSeguridad } from '../StepsModal/StepSeguridad';
+import Auth2faService from '@/core/api/services/auth2fa.service';
 
 // ============================================================================
 // STEP SYSTEM
@@ -329,13 +330,13 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
         setActiveStep('Adhesion');
         break;
 
-      case 'Seguridad':
+      case 'Seguridad': {
         if (codigo2FA.length !== CODIGO_2FA_LENGTH) {
           showError('Debes ingresar el código completo');
           return;
         }
 
-        // --- Flujo de inversión (ya existe un pago) ---
+        // --- Flujo de inversión ---
         if (paymentStatus === 'success' && transaccionId) {
           setActiveStep('Firma');
           return;
@@ -346,73 +347,57 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
           return;
         }
 
-        // --- Flujo de adhesión (debe haber decisión de pago) ---
+        // --- Flujo de adhesión ---
         if (!pagoDecision) {
           showError('Debe seleccionar una opción de pago');
           return;
         }
 
+        if (pagoDecision === 'cancelar') {
+          showInfo('Adhesión cancelada. Podés iniciar el proceso nuevamente cuando quieras.');
+          handleClose();
+          return;
+        }
+
+
         try {
-          // Cancelar → no se crea nada, se cierra el wizard
-          if (pagoDecision === 'cancelar') {
-            showInfo('Adhesión cancelada. Podés iniciar el proceso nuevamente cuando quieras.');
-            handleClose();
-            return;
-          }
-
-          setIsCreatingAdhesion(true);
-
-          // Crear la adhesión si no existe
           let currentAdhesionId = adhesionId;
           if (!currentAdhesionId) {
-            const res = await createAdhesion({
-              proyectoId: proyecto.id,
-              planPago,
-            });
-            const nuevaAdhesion = res.data.data;
-            currentAdhesionId = nuevaAdhesion.id;
+            const res = await createAdhesion({ proyectoId: proyecto.id, planPago, codigo_2fa: codigo2FA  });
+            currentAdhesionId = res.data.data.id;
             setAdhesionId(currentAdhesionId);
           }
 
-          // Pagar después → adhesión creada, mensaje y cierre
           if (pagoDecision === 'pagar_despues') {
-            showSuccess('Adhesión creada exitosamente. Podés pagar la primera cuota desde <Billetera => Pagar Cuotas> cuando quieras.');
+            showSuccess('Adhesión creada exitosamente. Podés pagar la primera cuota desde Billetera → Pagar Cuotas cuando quieras.');
             handleClose();
             return;
           }
 
-          // Pagar ahora → iniciar y confirmar el pago de la primera cuota
           if (pagoDecision === 'pagar_ahora') {
-            const pagoResp = await iniciarPagoCuota({
-              adhesionId: currentAdhesionId,
-              numeroCuota: 1
-            });
+            const pagoResp = await iniciarPagoCuota({ adhesionId: currentAdhesionId, numeroCuota: 1 });
             setStartPaymentCuotaAdhesion(pagoResp.data);
             const pagoAdhesionId = pagoResp.data.pagoAdhesionId;
             if (!pagoAdhesionId) throw new Error('No se obtuvo ID de pago');
 
-            console.log("procesando")
-            setTimeout(() => {
+            const confirmRes = await confirmarPagoCuota({ pagoAdhesionId, codigo_2fa: codigo2FA });
 
-            }, 3000)
-            const confirmRes = await confirmarPagoCuota({
-              pagoAdhesionId,
-              codigo_2fa: codigo2FA,
-            });
             if (confirmRes.data.redirectUrl) {
               window.location.href = confirmRes.data.redirectUrl;
               return;
             }
-            // Si no hay redirección, el pago ya está aprobado
+
             setPaymentStatus('success');
             setActiveStep('Firma');
           }
+
         } catch (err: any) {
-          showError(err?.message || 'Error al procesar la adhesión. Intenta nuevamente.');
+          showError(err?.message || 'Error al procesar la adhesión. Intentá nuevamente.');
         } finally {
           setIsCreatingAdhesion(false);
         }
         break;
+      }
 
       case 'Pago':
         if (!pagoDecision) {
@@ -591,6 +576,8 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
                   if (activeStep === 'Firma') {
                     setSignatureDataUrl(null);
                     setSignaturePosition(null);
+                    handleClose();
+                    return;
                   }
                   const prev = prevStep(activeStep);
                   if (prev) setActiveStep(prev);
@@ -602,7 +589,8 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
             fullWidth={isMobile}
             sx={{ fontWeight: 700, px: 3 }}
           >
-            {activeStep === 'Resumen' ? 'Cancelar' : 'Atrás'}
+            {activeStep === 'Resumen' 
+              ? 'Cancelar' : activeStep === 'Firma' ? 'Cerrar' : 'Atrás'}
           </Button>
 
 

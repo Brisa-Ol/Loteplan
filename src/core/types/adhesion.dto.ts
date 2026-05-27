@@ -75,6 +75,7 @@ export interface AdhesionDto extends BaseDTO {
 export interface CrearAdhesionDto {
   proyectoId: number;
   planPago: PlanPagoAdhesion;
+  codigo_2fa: string; // requerido si el usuario tiene 2FA activo
 }
 
 export interface PagarCuotaAdhesionDto {
