@@ -10,6 +10,5 @@ export * from './useInversionPayment';
 export * from './useKycStatus';
 export * from './useLotesProyecto';
 export * from './useProyectoHelpers';
-export * from './useResumenesCuenta';
 export * from './useSuscripciones';
 export * from './useVerificarSuscripcion';
