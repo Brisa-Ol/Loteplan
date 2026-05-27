@@ -1,6 +1,8 @@
-// src/features/client/pages/Pagos/MisPagos.tsx
-
-import { confirmarPagoCuota, getAllAdhesionsByUser, iniciarPagoCuota } from '@/core/api/services/adhesion.service';
+import {
+  confirmarPagoCuota,
+  getAllAdhesionsByUser,
+  iniciarPagoCuota,
+} from '@/core/api/services/adhesion.service';
 import PagoService from '@/core/api/services/pago.service';
 import type { AdhesionDto, PagoAdhesionDto } from '@/core/types/adhesion.dto';
 import type { PagoDto } from '@/core/types/pago.dto';
@@ -25,7 +27,7 @@ import {
   Schedule,
   Stars,
   TrendingUp,
-  Warning
+  Warning,
 } from '@mui/icons-material';
 import {
   Badge,
@@ -41,60 +43,67 @@ import {
   Tabs,
   Tooltip,
   Typography,
+  useTheme,
   type SelectChangeEvent,
 } from '@mui/material';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import React, { useCallback, useMemo, useState } from 'react';
-import { HistorialPagosAgrupado } from './HistorialAgrupado/HistorialAgrupado';
 import { DetalleCuotaAdhesionModal } from './Modals/DetalleCuotaAdhesionModal';
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
 
 const safeFormatDate = (dateStr?: string | null) => {
   if (!dateStr) return '-';
-  // Si viene "YYYY-MM-DD" le clavamos la hora local para que no reste un día
   const safeString = dateStr.length === 10 ? `${dateStr}T00:00:00` : dateStr;
   const date = new Date(safeString);
   if (isNaN(date.getTime())) return 'Fecha inválida';
   return format(date, 'dd/MM/yyyy', { locale: es });
 };
-// ─── Helpers ────────────────────────────────────────────────────────────────
+
+/** Convierte el valor raw de plan_pago a texto legible para el usuario */
+const formatPlanPago = (plan: string): string => {
+  switch (plan) {
+    case 'contado': return 'Contado (1 pago)';
+    case '3_cuotas': return '3 cuotas';
+    case '6_cuotas': return '6 cuotas';
+    case '12_cuotas': return '12 cuotas';
+    default: return plan.replace(/_/g, ' ');
+  }
+};
 
 const getStatusConfig = (status: string) => {
   switch (status) {
     case 'pendiente':
-      return { label: 'PENDIENTE', color: 'info' as const, icon: <Schedule fontSize="small" /> };
+      return { label: 'Pendiente', color: 'info' as const, icon: <Schedule fontSize="small" /> };
     case 'pagado':
-      return { label: 'PAGADO', color: 'success' as const, icon: <CheckCircle fontSize="small" /> };
+      return { label: 'Pagado', color: 'success' as const, icon: <CheckCircle fontSize="small" /> };
     case 'vencido':
-      return { label: 'VENCIDO', color: 'error' as const, icon: <PriorityHigh fontSize="small" /> };
+      return { label: 'Vencido', color: 'error' as const, icon: <PriorityHigh fontSize="small" /> };
     case 'cubierto_por_puja':
-      return { label: 'CUBIERTO', icon: <Stars fontSize="small" sx={{ color: 'success.secondary' }} /> };
+      return { label: 'Cubierto', color: 'success' as const, icon: <Stars fontSize="small" /> };
     case 'completada':
-      return { label: 'COMPLETADA', color: 'success' as const, icon: <CheckCircle fontSize="small" /> };
+      return { label: 'Completada', color: 'success' as const, icon: <CheckCircle fontSize="small" /> };
     case 'en_curso':
-      return { label: 'EN CURSO', color: 'warning' as const, icon: <Schedule fontSize="small" /> };
+      return { label: 'En curso', color: 'warning' as const, icon: <Schedule fontSize="small" /> };
     case 'cancelada':
     case 'cancelado':
-      return { label: 'CANCELADA', color: 'default' as const, icon: <Warning fontSize="small" /> };
+      return { label: 'Cancelada', color: 'default' as const, icon: <Warning fontSize="small" /> };
     default:
-      return { label: status.toUpperCase(), color: 'default' as const, icon: undefined };
+      return { label: status.replace(/_/g, ' '), color: 'default' as const, icon: undefined };
   }
 };
 
 const getRelativeDate = (fechaISO: string | null): { text: string; isOverdue: boolean } => {
   if (!fechaISO) return { text: '-', isOverdue: false };
   const now = new Date();
-  const due = new Date(fechaISO);
-  const diffMs = due.getTime() - now.getTime();
-  const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+  const due = new Date(fechaISO.length === 10 ? `${fechaISO}T00:00:00` : fechaISO);
+  const diffDays = Math.round((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
   if (diffDays < 0) {
     const abs = Math.abs(diffDays);
-    return {
-      text: abs === 1 ? 'Venció ayer' : `Venció hace ${abs} días`,
-      isOverdue: true,
-    };
+    return { text: abs === 1 ? 'Venció ayer' : `Venció hace ${abs} días`, isOverdue: true };
   }
   if (diffDays === 0) return { text: 'Vence hoy', isOverdue: false };
   if (diffDays === 1) return { text: 'Vence mañana', isOverdue: false };
@@ -104,50 +113,153 @@ const getRelativeDate = (fechaISO: string | null): { text: string; isOverdue: bo
 
 // ─── Sub-componentes ─────────────────────────────────────────────────────────
 
+/**
+ * Pill que identifica visualmente si una fila es de Plan o de Adhesión.
+ * Es la señal primaria de tipo — no depende del texto del botón de acción.
+ */
+const TypePill: React.FC<{ type: 'plan' | 'adhesion' }> = ({ type }) =>
+  type === 'plan' ? (
+    <Chip
+      label="Plan"
+      size="small"
+      color="info"
+      variant="outlined"
+      sx={{ height: 18, fontSize: '0.62rem', fontWeight: 700, px: 0.25 }}
+    />
+  ) : (
+    <Chip
+      label="Adhesión"
+      size="small"
+      color="warning"
+      variant="outlined"
+      sx={{ height: 18, fontSize: '0.62rem', fontWeight: 700, px: 0.25 }}
+    />
+  );
+
 const ProjectCell = React.memo<{
   nombre: string;
   cuotaActual: number;
   totalCuotas?: number;
   cuotasRestantes?: number;
-}>(({ nombre, cuotaActual, totalCuotas, cuotasRestantes }) => (
+  type: 'plan' | 'adhesion';
+}>(({ nombre, cuotaActual, totalCuotas, cuotasRestantes, type }) => (
   <Box>
     <Typography variant="subtitle2" fontWeight={800} color="primary.main">
       {nombre}
     </Typography>
-    <Stack direction="row" spacing={1} alignItems="center" mt={0.5}>
-      <Typography variant="caption" color="text.secondary">
-        Cuota {cuotaActual} {totalCuotas ? `de ${totalCuotas}` : ''}
+    <Stack direction="row" spacing={0.75} alignItems="center" mt={0.5}>
+      <TypePill type={type} />
+      <Typography variant="caption" color="text.secondary" fontWeight={600}>
+        Cuota {cuotaActual}{totalCuotas ? ` de ${totalCuotas}` : ''}
       </Typography>
       {cuotasRestantes !== undefined && cuotasRestantes > 0 && (
-        <Chip
-          label={`${cuotasRestantes} rest.`}
-          size="small"
-          variant="outlined"
-          sx={{
-            height: 18,
-            fontSize: '0.6rem',
-            bgcolor: 'action.hover',
-            fontWeight: 700,
-            border: 'none',
-          }}
-        />
+        <Typography variant="caption" color="text.disabled">
+          ({cuotasRestantes} restantes)
+        </Typography>
       )}
     </Stack>
   </Box>
 ));
 
-const EmptyState: React.FC<{ tab: number }> = ({ tab }) => {
-  let config = { icon: '✅', title: 'Todo al día', subtitle: 'No hay datos para mostrar aquí.' };
+const VencimientoCell: React.FC<{
+  fechaVencimiento: string | null;
+  estado: string;
+  fechaPago?: string | null;
+}> = ({ fechaVencimiento, estado, fechaPago }) => {
+  const isPagado = ['pagado', 'forzado', 'cubierto_por_puja'].includes(estado);
 
-  if (tab === 0) config = { icon: '🎉', title: 'No tenés cuotas pendientes', subtitle: 'Estás al día con todos tus pagos de proyecto.' };
-  if (tab === 1) config = { icon: '✅', title: 'Sin cuotas vencidas', subtitle: 'No tenés pagos atrasados en este momento.' };
-  if (tab === 2) config = { icon: '📝', title: 'Sin historial de adhesiones', subtitle: 'Aún no tenés adhesiones registradas.' };
+  // Si ya está pagado, no calculamos días de atraso
+  if (isPagado) {
+    return (
+      <Box>
+        <Typography variant="body2" fontWeight={600}>
+          {safeFormatDate(fechaVencimiento)}
+        </Typography>
+        <Typography variant="caption" color="text.secondary" fontWeight={500}>
+          {fechaPago ? `Pagado el ${safeFormatDate(fechaPago)}` : 'Cuota saldada'}
+        </Typography>
+      </Box>
+    );
+  }
 
+  // Si no está pagado, calculamos si está vencido o por vencer
+  const { text, isOverdue } = getRelativeDate(fechaVencimiento);
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', py: 8, gap: 1 }}>
+    <Box>
+      <Typography variant="body2" fontWeight={isOverdue ? 800 : 600}>
+        {safeFormatDate(fechaVencimiento)}
+      </Typography>
+      <Typography
+        variant="caption"
+        sx={{ color: isOverdue ? 'error.main' : 'text.secondary', fontWeight: isOverdue ? 700 : 400 }}
+      >
+        {text}
+      </Typography>
+    </Box>
+  );
+};
+
+/** Separador visual entre sección de Plan y sección de Adhesión dentro de la misma tabla */
+const TypeSectionDivider: React.FC<{ label: string }> = ({ label }) => {
+  const theme = useTheme();
+  return (
+    <Box
+      sx={{
+        px: 2,
+        py: 0.75,
+        bgcolor: theme.palette.action.hover,
+        borderBottom: `1px solid ${theme.palette.divider}`,
+      }}
+    >
+      <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: '0.06em' }}>
+        {label}
+      </Typography>
+    </Box>
+  );
+};
+
+const EmptyState: React.FC<{ tab: number; hasData?: boolean }> = ({ tab, hasData }) => {
+  if (hasData) return null;
+  const configs = [
+    { icon: '🎉', title: 'No tenés cuotas pendientes', subtitle: 'Estás al día con todos tus pagos.' },
+    { icon: '✅', title: 'Sin cuotas vencidas', subtitle: 'Excelente, no tenés deudas atrasadas.' },
+    { icon: '📝', title: 'Sin adhesiones registradas', subtitle: 'Aún no tenés planes de adhesión.' },
+  ];
+  const config = configs[tab] ?? { icon: '✅', title: 'Sin datos', subtitle: '' };
+  return (
+    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 8, gap: 1 }}>
       <Typography fontSize={48}>{config.icon}</Typography>
       <Typography variant="h6" fontWeight={700}>{config.title}</Typography>
       <Typography variant="body2" color="text.secondary">{config.subtitle}</Typography>
+    </Box>
+  );
+};
+
+const TableSection: React.FC<{ title: string; count: number; children: React.ReactNode }> = ({
+  title,
+  count,
+  children,
+}) => {
+  const theme = useTheme();
+  if (count === 0) return null;
+  return (
+    <Box mb={3}>
+      <Stack direction="row" alignItems="center" spacing={1.5} mb={1.5}>
+        <Typography variant="h6" fontWeight={800} color="text.primary">
+          {title}
+        </Typography>
+        <Chip label={count} size="small" color="primary" sx={{ fontWeight: 800, fontSize: '0.75rem', height: 22 }} />
+      </Stack>
+      <Box
+        sx={{
+          border: `1px solid ${theme.palette.divider}`,
+          borderRadius: 3,
+          overflow: 'hidden',
+          bgcolor: 'background.default',
+        }}
+      >
+        {children}
+      </Box>
     </Box>
   );
 };
@@ -157,24 +269,27 @@ const EmptyState: React.FC<{ tab: number }> = ({ tab }) => {
 const MisPagos: React.FC = () => {
   const formatCurrency = useCurrencyFormatter();
   const twoFaModal = useModal();
+  const twoFaAdhesionModal = useModal();
   const confirmDialog = useConfirmDialog();
+
+const detalleAdhesionModal = useModal();
+  const [selectedAdhesionDetail, setSelectedAdhesionDetail] = useState<AdhesionDto | null>(null);
+  const [currentTab, setCurrentTab] = useState(0);
+  const [selectedProyectoId, setSelectedProyectoId] = useState<string | 'todos'>('todos');
 
   const [selectedPagoId, setSelectedPagoId] = useState<number | null>(null);
   const [twoFAError, setTwoFAError] = useState<string | null>(null);
-  const [currentTab, setCurrentTab] = useState(0);
-  const [selectedProyectoId, setSelectedProyectoId] = useState<string | 'todos'>('todos');
-  const [adhesionPagoId, setAdhesionPagoId] = useState<number | null>(null); // id del PagoAdhesion (no de la Adhesion)
-  const [twoFAErrorAdhesion, setTwoFAErrorAdhesion] = useState<string | null>(null);
-  const twoFaAdhesionModal = useModal();
-  const [adhesionDetalle, setAdhesionDetalle] = useState<AdhesionDto | null>(null);
 
-  // 1. Query de Pagos Normales
+  const [adhesionPagoId, setAdhesionPagoId] = useState<number | null>(null);
+  const [twoFAErrorAdhesion, setTwoFAErrorAdhesion] = useState<string | null>(null);
+
+  // ─── Queries ────────────────────────────────────────────────────────────────
+
   const pagosQuery = useQuery<PagoDto[]>({
     queryKey: ['misPagos'],
     queryFn: PagoService.getMyPayments,
   });
 
-  // 2. Query de Adhesiones
   const adhesionesQuery = useQuery<AdhesionDto[]>({
     queryKey: ['misAdhesiones'],
     queryFn: async () => {
@@ -185,58 +300,57 @@ const MisPagos: React.FC = () => {
 
   const isLoading = pagosQuery.isLoading || adhesionesQuery.isLoading;
 
+  // ─── Proyectos disponibles para el filtro ────────────────────────────────
+
   const listaProyectos = useMemo(() => {
-    const data = pagosQuery.data || [];
-    const proyectosMap = new Map<number, string>();
-    data.forEach((p) => {
-      const proj = p.suscripcion?.proyectoAsociado || p.proyectoDirecto;
-      if (proj) proyectosMap.set(proj.id, proj.nombre_proyecto);
+    const map = new Map<number, string>();
+    (pagosQuery.data ?? []).forEach((p) => {
+      const proj = p.suscripcion?.proyectoAsociado ?? p.proyectoDirecto;
+      if (proj) map.set(proj.id, proj.nombre_proyecto);
     });
-    return Array.from(proyectosMap.entries()).map(([id, nombre]) => ({ id, nombre }));
-  }, [pagosQuery.data]);
+    (adhesionesQuery.data ?? []).forEach((a) => {
+      if (a.proyecto) map.set(a.proyecto.id, a.proyecto.nombre_proyecto);
+    });
+    return Array.from(map.entries()).map(([id, nombre]) => ({ id, nombre }));
+  }, [pagosQuery.data, adhesionesQuery.data]);
 
-  // Procesamiento de Pagos Regulares
-  const { filteredData, counts, historialData, stats } = useMemo(() => {
-    let data = pagosQuery.data || [];
+  // ─── Procesamiento de cuotas de Plan ────────────────────────────────────
 
+  const { planPendientes, planVencidas, planHistorial, planStats } = useMemo(() => {
+    let data = pagosQuery.data ?? [];
     if (selectedProyectoId !== 'todos') {
       data = data.filter((p) => p.id_proyecto === Number(selectedProyectoId));
     }
 
-    const counts = { pendientes: 0, vencidas: 0, pagadas: 0 };
-    const stats = { deudaVencida: 0, proximosVencimientos: 0, totalAbonado: 0 };
-
+    const stats = { proximosVencimientos: 0, deudaVencida: 0, totalAbonado: 0 };
     data.forEach((p) => {
-      const monto = Number(p.monto || 0);
-      if (p.estado_pago === 'pendiente') {
-        counts.pendientes++;
-        stats.proximosVencimientos += monto;
-      } else if (p.estado_pago === 'vencido') {
-        counts.vencidas++;
-        stats.deudaVencida += monto;
-      } else if (['pagado', 'cubierto_por_puja'].includes(p.estado_pago)) {
-        counts.pagadas++;
-        stats.totalAbonado += monto;
-      }
+      const monto = Number(p.monto ?? 0);
+      if (p.estado_pago === 'pendiente') stats.proximosVencimientos += monto;
+      else if (p.estado_pago === 'vencido') stats.deudaVencida += monto;
+      else if (['pagado', 'cubierto_por_puja'].includes(p.estado_pago)) stats.totalAbonado += monto;
     });
 
-    const sorted = [...data].sort((a, b) => b.mes - a.mes);
-
+    const sorted = [...data].sort((a, b) => a.mes - b.mes);
     return {
-      filteredData:
-        currentTab === 0
-          ? sorted.filter((p) => p.estado_pago === 'pendiente')
-          : sorted.filter((p) => p.estado_pago === 'vencido'),
-      counts,
-      historialData: sorted.filter((p) =>
+      planPendientes: sorted.filter((p) => p.estado_pago === 'pendiente'),
+      planVencidas: sorted.filter((p) => p.estado_pago === 'vencido'),
+      planHistorial: sorted.filter((p) =>
         ['pagado', 'cubierto_por_puja', 'forzado', 'cancelado'].includes(p.estado_pago)
       ),
-      stats,
+      planStats: stats,
     };
-  }, [pagosQuery.data, currentTab, selectedProyectoId]);
+  }, [pagosQuery.data, selectedProyectoId]);
 
-  // ✅ Procesamiento de Adhesiones (Evaluamos la Adhesión entera, no aplanamos)
-  const { adhesionFilteredData, adhesionCounts } = useMemo(() => {
+  // ─── Procesamiento de cuotas de Adhesión ────────────────────────────────
+
+  const {
+    adhesionCuotasPendientes,
+    adhesionCuotasVencidas,
+    adhesionHistorial,
+    adhesionResumenes,
+    adhesionCounts,
+    adhesionStats,
+  } = useMemo(() => {
     const raw = adhesionesQuery.data;
     const adhesiones: AdhesionDto[] = Array.isArray(raw)
       ? raw
@@ -244,32 +358,46 @@ const MisPagos: React.FC = () => {
         ? (raw as any).data
         : [];
 
-    let pendientes = 0;
-    let vencidas = 0;
+    let quotas: (PagoAdhesionDto & { adhesion: AdhesionDto })[] = [];
+    adhesiones.forEach((adh) => {
+      (adh.pagos ?? []).forEach((pago) => quotas.push({ ...pago, adhesion: adh }));
+    });
 
-    adhesiones.forEach(adh => {
-      const pagosPendientes = (adh.pagos || []).filter(p => p.estado === 'pendiente').length;
-      const pagosVencidos = (adh.pagos || []).filter(p => p.estado === 'vencido').length;
-      pendientes += pagosPendientes;
-      vencidas += pagosVencidos;
+    if (selectedProyectoId !== 'todos') {
+      quotas = quotas.filter((q) => q.adhesion.id_proyecto === Number(selectedProyectoId));
+    }
+
+    const stats = { proximosVencimientos: 0, deudaVencida: 0, totalAbonado: 0 };
+    quotas.forEach((q) => {
+      const monto = Number(q.monto ?? 0);
+      if (q.estado === 'pendiente') stats.proximosVencimientos += monto;
+      else if (q.estado === 'vencido') stats.deudaVencida += monto;
+      else if (['pagado', 'forzado', 'cubierto_por_puja'].includes(q.estado)) stats.totalAbonado += monto;
+    });
+
+    let activas = 0;
+    adhesiones.forEach((adh) => {
+      if (['pendiente', 'en_curso'].includes(adh.estado)) activas++;
     });
 
     return {
-      adhesionFilteredData: adhesiones,
-      adhesionCounts: {
-        totalActivas: pendientes + vencidas,
-        pendientes,
-        vencidas
-      }
+      adhesionCuotasPendientes: quotas.filter((q) => q.estado === 'pendiente'),
+      adhesionCuotasVencidas: quotas.filter((q) => q.estado === 'vencido'),
+      adhesionHistorial: quotas.filter((q) =>
+        ['pagado', 'forzado', 'cancelado'].includes(q.estado)
+      ),
+      adhesionResumenes: adhesiones,
+      adhesionCounts: { activas },
+      adhesionStats: stats,
     };
-  }, [adhesionesQuery.data]);
+  }, [adhesionesQuery.data, selectedProyectoId]);
 
-  const handleProyectoChange = (event: SelectChangeEvent) => {
-    setSelectedProyectoId(event.target.value);
-    setCurrentTab(0);
-  };
+  // Totales para badges y stats cards
+  const totalPendientes = planPendientes.length + adhesionCuotasPendientes.length;
+  const totalVencidas = planVencidas.length + adhesionCuotasVencidas.length;
 
-  // Mutación para iniciar pago NORMAL (con 2FA)
+  // ─── Mutaciones ─────────────────────────────────────────────────────────
+
   const iniciarPagoMutation = useMutation({
     mutationFn: (pagoId: number) => {
       setSelectedPagoId(pagoId);
@@ -286,138 +414,127 @@ const MisPagos: React.FC = () => {
     onError: () => setSelectedPagoId(null),
   });
 
+  const confirmar2FAMutation = useMutation({
+    mutationFn: (codigo: string) =>
+      PagoService.confirmarPago2FA({ pagoId: selectedPagoId!, codigo_2fa: codigo }),
+    onSuccess: (res) => {
+      if (res.data.redirectUrl) window.location.href = res.data.redirectUrl;
+      twoFaModal.close();
+    },
+    onError: (err: any) => setTwoFAError(err.response?.data?.message ?? 'Código inválido'),
+  });
 
-  // Mutación para iniciar pago de ADHESIÓN
   const iniciarPagoAdhesionMutation = useMutation({
     mutationFn: ({ adhesionId, numeroCuota }: { adhesionId: number; numeroCuota: number }) =>
       iniciarPagoCuota({ adhesionId, numeroCuota }),
     onSuccess: (res) => {
-      // Guardar el id del pago para usarlo en la confirmación 2FA
       setAdhesionPagoId(res.data.pagoAdhesionId!);
       setTwoFAErrorAdhesion(null);
       twoFaAdhesionModal.open();
       confirmDialog.close();
     },
-    onError: () => {
-      console.error('Error al iniciar el pago de adhesión. Intenta nuevamente.');
-    },
   });
 
-  /**
-   * Paso 2: confirma el 2FA → el backend genera la preferencia MP y devuelve redirectUrl
-   */
   const confirmarPagoAdhesionMutation = useMutation({
     mutationFn: (codigo: string) =>
       confirmarPagoCuota({ pagoAdhesionId: adhesionPagoId!, codigo_2fa: codigo }),
     onSuccess: (res) => {
-      if (res.data.redirectUrl) {
-        window.location.href = res.data.redirectUrl;
-      }
+      if (res.data.redirectUrl) window.location.href = res.data.redirectUrl;
       twoFaAdhesionModal.close();
     },
-    onError: (err: any) => {
-      setTwoFAErrorAdhesion(err.response?.data?.message || 'Código inválido');
-    },
-  });
-
-  // Mutación para 2FA (Pagos normales)
-  const confirmar2FAMutation = useMutation({
-    mutationFn: (codigo: string) => PagoService.confirmarPago2FA({ pagoId: selectedPagoId!, codigo_2fa: codigo }),
-    onSuccess: (res) => {
-      if (res.data.redirectUrl) window.location.href = res.data.redirectUrl;
-      twoFaModal.close();
-    },
     onError: (err: any) =>
-      setTwoFAError(err.response?.data?.message || 'Código inválido'),
+      setTwoFAErrorAdhesion(err.response?.data?.message ?? 'Código inválido'),
   });
-
-  const handleConfirmIntent = useCallback(() => {
-    if (confirmDialog.data?.esAdhesion) {
-      // Dispara paso 1: inicia el pago y solicita el 2FA
-      iniciarPagoAdhesionMutation.mutate({
-        adhesionId: confirmDialog.data.adhesionId,
-        numeroCuota: confirmDialog.data.numeroCuota,
-      });
-      // NO cerrar el dialog aquí — se cierra en onSuccess de la mutación
-    } else if (confirmDialog.data?.id) {
-      iniciarPagoMutation.mutate(confirmDialog.data.id);
-      confirmDialog.close();
-    }
-  }, [confirmDialog, iniciarPagoMutation, iniciarPagoAdhesionMutation]);
-
-  // Handler para Pagos Normales
-  const handlePayRequest = useCallback(
-    (row: PagoDto) => {
-      const nombreProyecto = row.suscripcion?.proyectoAsociado?.nombre_proyecto || 'Proyecto General';
-      confirmDialog.confirm('pay_quota', {
-        id: row.id,
-        mes: row.mes,
-        nombreProyecto,
-        montoFormateado: formatCurrency(row.monto),
-        fechaVencimiento: safeFormatDate(row.fecha_vencimiento),
-        esAdhesion: false
-      });
-    },
-    [confirmDialog, formatCurrency]
-  );
-
-  // ✅ Handler para Pagos de Adhesión (Recibe la Adhesión entera y la cuota específica a pagar)
-  const handleAdhesionPayRequest = useCallback(
-    (adhesion: AdhesionDto, cuota: PagoAdhesionDto) => {
-      const nombreProyecto = adhesion.proyecto?.nombre_proyecto || `Adhesión #${adhesion.id}`;
-      confirmDialog.confirm('pay_quota', {
-        adhesionId: adhesion.id,
-        numeroCuota: cuota.numero_cuota,
-        mes: cuota.numero_cuota,
-        nombreProyecto,
-        montoFormateado: formatCurrency(cuota.monto),
-        fechaVencimiento: safeFormatDate(cuota.fecha_vencimiento),
-        esAdhesion: true,
-      });
-    },
-    [confirmDialog, formatCurrency],
-  );
 
   const isPaymentPending =
     iniciarPagoMutation.isPending ||
     iniciarPagoAdhesionMutation.isPending ||
     confirmarPagoAdhesionMutation.isPending;
 
-  // Columnas para Pagos Normales
-  const columns = useMemo<DataTableColumn<PagoDto>[]>(
+  // ─── Handlers ───────────────────────────────────────────────────────────
+
+  const handleConfirmIntent = useCallback(() => {
+    if (confirmDialog.data?.esAdhesion) {
+      iniciarPagoAdhesionMutation.mutate({
+        adhesionId: confirmDialog.data.adhesionId,
+        numeroCuota: confirmDialog.data.numeroCuota,
+      });
+    } else if (confirmDialog.data?.id) {
+      iniciarPagoMutation.mutate(confirmDialog.data.id);
+      confirmDialog.close();
+    }
+  }, [confirmDialog, iniciarPagoMutation, iniciarPagoAdhesionMutation]);
+
+  const handlePayPlanRequest = useCallback(
+    (row: PagoDto) => {
+      confirmDialog.confirm('pay_quota', {
+        id: row.id,
+        mes: row.mes,
+        nombreProyecto:
+          row.suscripcion?.proyectoAsociado?.nombre_proyecto ?? 'Proyecto General',
+        montoFormateado: formatCurrency(row.monto),
+        fechaVencimiento: safeFormatDate(row.fecha_vencimiento),
+        esAdhesion: false,
+      });
+    },
+    [confirmDialog, formatCurrency]
+  );
+
+  const handlePayAdhesionRequest = useCallback(
+    (row: PagoAdhesionDto & { adhesion: AdhesionDto }) => {
+      confirmDialog.confirm('pay_quota', {
+        adhesionId: row.adhesion.id,
+        numeroCuota: row.numero_cuota,
+        mes: row.numero_cuota,
+        nombreProyecto:
+          row.adhesion.proyecto?.nombre_proyecto ?? `Adhesión #${row.adhesion.id}`,
+        montoFormateado: formatCurrency(Number(row.monto)),
+        fechaVencimiento: safeFormatDate(row.fecha_vencimiento),
+        esAdhesion: true,
+      });
+    },
+    [confirmDialog, formatCurrency]
+  );
+const handleOpenAdhesionDetail = useCallback(
+    (adhesion: AdhesionDto) => {
+      setSelectedAdhesionDetail(adhesion);
+      detalleAdhesionModal.open();
+    },
+    [detalleAdhesionModal]
+  );
+  // ─── Columnas ────────────────────────────────────────────────────────────
+
+  /** Columnas para cuotas de Plan (tabs 0, 1 y historial) */
+  const planColumns = useMemo<DataTableColumn<PagoDto>[]>(
     () => [
       {
         id: 'proyecto',
-        label: 'Proyecto / Desarrollo',
+        label: 'Concepto / Desarrollo',
         minWidth: 240,
         render: (row) => (
           <ProjectCell
-            nombre={row.suscripcion?.proyectoAsociado?.nombre_proyecto || row.proyectoDirecto?.nombre_proyecto || 'Proyecto en curso'}
+            nombre={
+              row.suscripcion?.proyectoAsociado?.nombre_proyecto ??
+              row.proyectoDirecto?.nombre_proyecto ??
+              'Proyecto en curso'
+            }
             cuotaActual={row.mes}
             totalCuotas={row.suscripcion?.proyectoAsociado?.plazo_inversion}
             cuotasRestantes={row.suscripcion?.meses_a_pagar}
+            type="plan"
           />
         ),
       },
       {
         id: 'vencimiento',
         label: 'Vencimiento',
-        render: (row) => {
-          const { text, isOverdue } = getRelativeDate(row.fecha_vencimiento);
-          return (
-            <Box>
-              <Typography variant="body2" fontWeight={isOverdue ? 700 : 400}>
-                {/* ✅ Ahora */}
-                {safeFormatDate(row.fecha_vencimiento)}
-              </Typography>
-              {isOverdue && (
-                <Typography variant="caption" sx={{ color: 'error.main' }}>
-                  {text}
-                </Typography>
-              )}
-            </Box>
-          );
-        },
+        render: (row) => (
+          <VencimientoCell
+            fechaVencimiento={row.fecha_vencimiento}
+            estado={row.estado_pago}
+            fechaPago={row.fecha_pago}
+          />
+        ),
       },
       {
         id: 'monto',
@@ -429,7 +546,7 @@ const MisPagos: React.FC = () => {
         ),
       },
       {
-        id: 'estado_pago',
+        id: 'estado',
         label: 'Estado',
         render: (row) => {
           const { label, color, icon } = getStatusConfig(row.estado_pago);
@@ -440,7 +557,7 @@ const MisPagos: React.FC = () => {
               size="small"
               icon={icon}
               variant={row.estado_pago === 'vencido' ? 'filled' : 'outlined'}
-              sx={{ fontWeight: 600 }}
+              sx={{ fontWeight: 700 }}
             />
           );
         },
@@ -450,9 +567,8 @@ const MisPagos: React.FC = () => {
         label: 'Acción',
         align: 'right',
         render: (row) => {
+          if (['pagado', 'cubierto_por_puja', 'forzado'].includes(row.estado_pago)) return null;
           const suscripcionInactiva = row.suscripcion?.activo === false;
-          const isPaying = isPaymentPending && selectedPagoId === row.id;
-
           return (
             <Tooltip title={suscripcionInactiva ? 'La suscripción está inactiva' : ''}>
               <span>
@@ -460,15 +576,12 @@ const MisPagos: React.FC = () => {
                   variant="contained"
                   color={row.estado_pago === 'vencido' ? 'error' : 'primary'}
                   size="small"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handlePayRequest(row);
-                  }}
+                  onClick={() => handlePayPlanRequest(row)}
                   disabled={isPaymentPending || suscripcionInactiva}
                   startIcon={<Lock fontSize="small" />}
-                  sx={{ borderRadius: 2, minWidth: 110, fontWeight: 800 }}
+                  sx={{ borderRadius: 2, minWidth: 100, fontWeight: 800 }}
                 >
-                  {isPaying ? '...' : 'Pagar'}
+                  Pagar
                 </Button>
               </span>
             </Tooltip>
@@ -476,102 +589,63 @@ const MisPagos: React.FC = () => {
         },
       },
     ],
-    [formatCurrency, isPaymentPending, selectedPagoId, handlePayRequest]
+    [formatCurrency, isPaymentPending, handlePayPlanRequest]
   );
 
-  // ✅ Columnas mejoradas para Adhesiones
-  const adhesionColumns = useMemo<DataTableColumn<AdhesionDto>[]>(
+  /** Columnas para cuotas de Adhesión (tabs 0, 1, 2 y historial) */
+  const adhesionQuotasColumns = useMemo<
+    DataTableColumn<PagoAdhesionDto & { adhesion: AdhesionDto }>[]
+  >(
     () => [
       {
-        id: 'proyecto_adhesion',
-        label: 'Detalle de Adhesión',
-        minWidth: 220,
-        render: (row) => {
-          const planText = row.plan_pago === 'contado' ? 'Contado (1 Pago)' : row.plan_pago === '6_cuotas' ? '6 Cuotas' : '12 Cuotas';
-          return (
-            <Box>
-              <Typography variant="subtitle2" fontWeight={800} color="primary.main">
-                {row.proyecto?.nombre_proyecto || `Adhesión #${row.id}`}
-              </Typography>
-              <Typography variant="caption" color="text.secondary" fontWeight={600} display="block">
-                Plan: {planText}
-              </Typography>
-              {row.plan_pago !== 'contado' && (
-                <Typography variant="caption" color="text.secondary">
-                  {row.cuotas_pagadas} de {row.cuotas_totales} cuotas abonadas
-                </Typography>
-              )}
-            </Box>
-          );
-        },
+        id: 'proyecto',
+        label: 'Concepto / Desarrollo',
+        minWidth: 240,
+        render: (row) => (
+          <ProjectCell
+            nombre={
+              row.adhesion.proyecto?.nombre_proyecto ??
+              `Adhesión #${row.adhesion.id}`
+            }
+            cuotaActual={row.numero_cuota}
+            totalCuotas={row.adhesion.cuotas_totales}
+            type="adhesion"
+          />
+        ),
       },
       {
-        id: 'fechas',
-        label: 'Progreso',
-        minWidth: 160,
-        render: (row) => {
-          if (!row.pagos || row.pagos.length === 0) {
-            if (row.estado === 'completada') {
-              return (
-                <Typography variant="body2" color="success.main" fontWeight={700}>
-                  {/* ✅ Ahora */}
-                  Completada {row.fecha_completada ? safeFormatDate(row.fecha_completada) : ''}
-                </Typography>
-              );
-            }
-            return <Typography variant="body2" color="text.disabled">-</Typography>;
-          }
-
-          const nextPago = row.pagos.find(p => ['pendiente', 'vencido'].includes(p.estado));
-          const cuotasPagadas = row.pagos.filter(p => ['pagado', 'forzado', 'cubierto_por_puja'].includes(p.estado)).length;
-          const isVencida = nextPago?.estado === 'vencido';
-
-          return (
-            <Box>
-              <Typography variant="caption" color="text.secondary" display="block">
-                {cuotasPagadas} de {row.pagos.length} cuotas abonadas
-              </Typography>
-              {nextPago && (
-                <Typography
-                  variant="caption"
-                  fontWeight={600}
-                  color={isVencida ? 'error.main' : 'text.primary'}
-                >
-                  {/* ✅ Ahora */}
-                  {isVencida ? '⚠ Vencida' : 'Próxima'}: {safeFormatDate(nextPago.fecha_vencimiento)}
-                </Typography>
-              )}
-            </Box>
-          );
-        },
+        id: 'vencimiento',
+        label: 'Vencimiento',
+        render: (row) => (
+          <VencimientoCell
+            fechaVencimiento={row.fecha_vencimiento}
+            estado={row.estado}
+            fechaPago={row.fecha_pago}
+          />
+        ),
       },
       {
         id: 'monto',
-        label: 'Importe Total',
+        label: 'Importe',
         render: (row) => (
           <Typography variant="body2" fontWeight={800}>
-            {formatCurrency(row.monto_total_adhesion)}
+            {formatCurrency(Number(row.monto))}
           </Typography>
         ),
       },
       {
-        id: 'estado_adhesion',
-        label: 'Estado General',
+        id: 'estado',
+        label: 'Estado',
         render: (row) => {
           const { label, color, icon } = getStatusConfig(row.estado);
-
-          // ✅ Buscamos si el plan tiene alguna cuota vencida por dentro
-          const tieneCuotaVencida = (row.pagos || []).some(p => p.estado === 'vencido');
-
           return (
             <Chip
               label={label}
               color={color}
               size="small"
               icon={icon}
-              // ✅ Ahora sí evaluamos si tiene una cuota vencida para rellenar el chip
-              variant={tieneCuotaVencida ? 'filled' : 'outlined'}
-              sx={{ fontWeight: 600 }}
+              variant={row.estado === 'vencido' ? 'filled' : 'outlined'}
+              sx={{ fontWeight: 700 }}
             />
           );
         },
@@ -581,56 +655,153 @@ const MisPagos: React.FC = () => {
         label: 'Acción',
         align: 'right',
         render: (row) => {
-          if (row.estado === 'cancelada') return null;
-
-          const nextPago = (row.pagos || []).find(p => ['pendiente', 'vencido'].includes(p.estado));
-          const isVencida = nextPago?.estado === 'vencido';
-
+          if (['pagado', 'forzado'].includes(row.estado)) return null;
           return (
             <Button
-              variant={isVencida ? 'contained' : 'outlined'}
-              color={isVencida ? 'error' : 'primary'}
+              variant="contained"
+              color={row.estado === 'vencido' ? 'error' : 'warning'}
               size="small"
-              onClick={(e) => {
-                e.stopPropagation();
-                setAdhesionDetalle(row);
-              }}
-              sx={{ borderRadius: 2, minWidth: 110, fontWeight: 800 }}
+              onClick={() => handlePayAdhesionRequest(row)}
+              disabled={isPaymentPending}
+              startIcon={<Lock fontSize="small" />}
+              sx={{ borderRadius: 2, minWidth: 100, fontWeight: 800 }}
             >
-              Ver detalle
+              Pagar
             </Button>
           );
         },
       },
     ],
-    [formatCurrency, isPaymentPending, handleAdhesionPayRequest]
+    [formatCurrency, isPaymentPending, handlePayAdhesionRequest]
   );
+
+  /** Columnas para el resumen general de adhesiones (tab 2) */
+  const adhesionResumenColumns = useMemo<DataTableColumn<AdhesionDto>[]>(
+    () => [
+      {
+        id: 'proyecto_adhesion',
+        label: 'Detalle de plan de adhesión',
+        minWidth: 260,
+        render: (row) => (
+          <Box>
+            <Typography variant="subtitle2" fontWeight={800} color="primary.main">
+              {row.proyecto?.nombre_proyecto ?? `Adhesión #${row.id}`}
+            </Typography>
+            <Typography variant="caption" color="text.secondary" fontWeight={600} display="block">
+              Plan: {formatPlanPago(row.plan_pago)} · {Number(row.porcentaje_adhesion)}% del valor móvil
+            </Typography>
+          </Box>
+        ),
+      },
+      {
+        id: 'progreso',
+        label: 'Progreso',
+        render: (row) => (
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <Typography variant="body2" fontWeight={700} color="text.secondary">
+              {row.cuotas_pagadas} / {row.cuotas_totales}
+            </Typography>
+            {row.estado === 'completada' && <CheckCircle color="success" fontSize="small" />}
+          </Stack>
+        ),
+      },
+      {
+        id: 'monto',
+        label: 'Capital comprometido',
+        render: (row) => (
+          <Typography variant="body2" fontWeight={800}>
+            {formatCurrency(Number(row.monto_total_adhesion))}
+          </Typography>
+        ),
+      },
+      {
+        id: 'estado_adhesion',
+        label: 'Estado general',
+        render: (row) => {
+          const { label, color, icon } = getStatusConfig(row.estado);
+          const tieneVencida = (row.pagos ?? []).some((p) => p.estado === 'vencido');
+          return (
+            <Chip
+              label={label}
+              color={color}
+              size="small"
+              icon={icon}
+              variant={tieneVencida ? 'filled' : 'outlined'}
+              sx={{ fontWeight: 700 }}
+            />
+          );
+        },
+      },
+{
+        id: 'acciones',
+        label: 'Acción',
+        align: 'right',
+        render: (row) => (
+          <Button
+            variant="outlined"
+            color="primary"
+            size="small"
+            onClick={() => handleOpenAdhesionDetail(row)}
+            sx={{ borderRadius: 2, fontWeight: 800 }}
+          >
+            Ver detalle
+          </Button>
+        ),
+      },
+    ],
+    [formatCurrency, handleOpenAdhesionDetail] // ✨ Agregá la dependencia acá
+  );
+
+  // ─── Render ─────────────────────────────────────────────────────────────
+
+  const hasPendientes = planPendientes.length > 0 || adhesionCuotasPendientes.length > 0;
+  const hasVencidas = planVencidas.length > 0 || adhesionCuotasVencidas.length > 0;
 
   return (
     <PageContainer maxWidth="lg">
-      <PageHeader title="Mis Pagos" subtitle="Control de cuotas y capital invertido." />
+      <PageHeader
+        title="Mis pagos"
+        subtitle="Administrá tus cuotas de plan y de adhesión en un solo lugar."
+      />
 
+      {/* ── Stat cards ── */}
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} mb={3}>
         <StatCard
           title="Próximos vencimientos"
-          value={formatCurrency(stats.proximosVencimientos)}
+          value={formatCurrency(
+            planStats.proximosVencimientos + adhesionStats.proximosVencimientos
+          )}
           icon={<Schedule />}
           color="info"
+          subtitle={
+            totalPendientes > 0
+              ? `${totalPendientes} cuota${totalPendientes > 1 ? 's' : ''} pendiente${totalPendientes > 1 ? 's' : ''}`
+              : 'Todo al día'
+          }
         />
         <StatCard
           title="Deuda vencida"
-          value={formatCurrency(stats.deudaVencida)}
+          value={formatCurrency(
+            planStats.deudaVencida + adhesionStats.deudaVencida
+          )}
           icon={<Warning />}
           color="error"
+          subtitle={
+            totalVencidas > 0
+              ? `${totalVencidas} cuota${totalVencidas > 1 ? 's' : ''} vencida${totalVencidas > 1 ? 's' : ''}`
+              : 'Sin deudas vencidas'
+          }
         />
         <StatCard
           title="Total abonado"
-          value={formatCurrency(stats.totalAbonado)}
+          value={formatCurrency(planStats.totalAbonado + adhesionStats.totalAbonado)}
           icon={<TrendingUp />}
           color="success"
+          subtitle="Plan + adhesiones acumulado"
         />
       </Stack>
 
+      {/* ── Tabs + Filtro ── */}
       <Box
         sx={{
           display: 'flex',
@@ -655,7 +826,7 @@ const MisPagos: React.FC = () => {
             icon={<Schedule />}
             iconPosition="start"
             label={
-              <Badge badgeContent={counts.pendientes} color="info" sx={{ px: 1 }}>
+              <Badge badgeContent={totalPendientes} color="info" sx={{ px: 1 }}>
                 Pendientes
               </Badge>
             }
@@ -664,7 +835,7 @@ const MisPagos: React.FC = () => {
             icon={<Warning />}
             iconPosition="start"
             label={
-              <Badge badgeContent={counts.vencidas} color="error" sx={{ px: 1 }}>
+              <Badge badgeContent={totalVencidas} color="error" sx={{ px: 1 }}>
                 Vencidas
               </Badge>
             }
@@ -673,39 +844,26 @@ const MisPagos: React.FC = () => {
             icon={<ReceiptLong />}
             iconPosition="start"
             label={
-              <Badge badgeContent={adhesionCounts.totalActivas} color="warning" sx={{ px: 1 }}>
-                Adhesiones
+              <Badge badgeContent={adhesionCounts.activas} color="warning" sx={{ px: 1 }}>
+                Mis adhesiones
               </Badge>
             }
           />
-          <Tab icon={<ReceiptLong />} iconPosition="start" label="Historial" />
+          <Tab icon={<CheckCircle />} iconPosition="start" label="Historial Pagos del Plan" />
         </Tabs>
 
         {currentTab < 2 && (
-          <FormControl
-            size="small"
-            sx={{
-              minWidth: 220,
-              mb: { xs: 2, md: 0 },
-              mr: { md: 1 },
-            }}
-          >
-            <InputLabel id="select-proyecto-label">Filtrar por Proyecto</InputLabel>
+          <FormControl size="small" sx={{ minWidth: 220, mb: { xs: 2, md: 0 }, mr: { md: 1 } }}>
+            <InputLabel id="select-proyecto">Filtrar por proyecto</InputLabel>
             <Select
-              labelId="select-proyecto-label"
+              labelId="select-proyecto"
               value={selectedProyectoId}
-              label="Filtrar por Proyecto"
-              onChange={handleProyectoChange}
-              MenuProps={{
-                PaperProps: {
-                  style: { maxHeight: 240 },
-                },
+              label="Filtrar por proyecto"
+              onChange={(e: SelectChangeEvent) => {
+                setSelectedProyectoId(e.target.value);
+                setCurrentTab(0);
               }}
-              sx={{
-                bgcolor: 'background.paper',
-                borderRadius: 2,
-                '& .MuiSelect-select': { py: 1 },
-              }}
+              sx={{ bgcolor: 'background.paper', borderRadius: 2 }}
             >
               <MenuItem value="todos">Todos los proyectos</MenuItem>
               {listaProyectos.map((proj) => (
@@ -718,39 +876,129 @@ const MisPagos: React.FC = () => {
         )}
       </Box>
 
-      <QueryHandler isLoading={isLoading} error={(pagosQuery.error || adhesionesQuery.error) as Error | null}>
+      <QueryHandler
+        isLoading={isLoading}
+        error={(pagosQuery.error ?? adhesionesQuery.error) as Error | null}
+      >
         <Box>
-          {currentTab === 3 ? (
-            <HistorialPagosAgrupado pagos={historialData} />
-          ) : currentTab === 2 ? (
-            adhesionFilteredData.length === 0 ? (
-              <EmptyState tab={currentTab} />
+          {/* ── Tab 0: Pendientes ── muestra Plan + Adhesión */}
+          {currentTab === 0 && (
+            hasPendientes ? (
+              <Stack spacing={0}>
+                <TableSection title="Cuotas de plan" count={planPendientes.length}>
+                  <TypeSectionDivider label="Plan de ahorro" />
+                  <DataTable
+                    columns={planColumns}
+                    data={planPendientes}
+                    getRowKey={(row) => row.id}
+                    pagination
+                  />
+                </TableSection>
+
+                <TableSection title="Cuotas de adhesión" count={adhesionCuotasPendientes.length}>
+                  <TypeSectionDivider label="Adhesión" />
+                  <DataTable
+                    columns={adhesionQuotasColumns}
+                    data={adhesionCuotasPendientes}
+                    getRowKey={(row) => row.id}
+                    pagination
+                  />
+                </TableSection>
+              </Stack>
             ) : (
-              <DataTable
-                columns={adhesionColumns}
-                data={adhesionFilteredData}
-                getRowKey={(row) => row.id}
-                pagination
-              />
+              <EmptyState tab={0} />
             )
-          ) : filteredData.length === 0 ? (
-            <EmptyState tab={currentTab} />
-          ) : (
-            <DataTable
-              columns={columns}
-              data={filteredData}
-              getRowKey={(row) => row.id}
-              pagination
-            />
+          )}
+
+          {/* ── Tab 1: Vencidas ── muestra Plan + Adhesión */}
+          {currentTab === 1 && (
+            hasVencidas ? (
+              <Stack spacing={0}>
+                <TableSection title="Cuotas de plan vencidas" count={planVencidas.length}>
+                  <TypeSectionDivider label="Plan de ahorro" />
+                  <DataTable
+                    columns={planColumns}
+                    data={planVencidas}
+                    getRowKey={(row) => row.id}
+                    pagination
+                  />
+                </TableSection>
+
+                <TableSection title="Cuotas de adhesión vencidas" count={adhesionCuotasVencidas.length}>
+                  <TypeSectionDivider label="Adhesión" />
+                  <DataTable
+                    columns={adhesionQuotasColumns}
+                    data={adhesionCuotasVencidas}
+                    getRowKey={(row) => row.id}
+                    pagination
+                  />
+                </TableSection>
+              </Stack>
+            ) : (
+              <EmptyState tab={1} />
+            )
+          )}
+
+          {/* ── Tab 2: Mis Adhesiones ── Resumen + cuotas activas */}
+          {currentTab === 2 && (
+            adhesionResumenes.length === 0 ? (
+              <EmptyState tab={2} />
+            ) : (
+              <Stack spacing={4}>
+                <TableSection title="Resumen de mis adhesiones" count={adhesionResumenes.length}>
+                  <DataTable
+                    columns={adhesionResumenColumns}
+                    data={adhesionResumenes}
+                    getRowKey={(row) => row.id}
+                    pagination
+                  />
+                </TableSection>
+
+                {/* Cuotas pendientes/vencidas de adhesión también visibles aquí */}
+                {(adhesionCuotasPendientes.length > 0 || adhesionCuotasVencidas.length > 0) && (
+                  <TableSection
+                    title="Cuotas por pagar"
+                    count={adhesionCuotasPendientes.length + adhesionCuotasVencidas.length}
+                  >
+                    <DataTable
+                      columns={adhesionQuotasColumns}
+                      data={[...adhesionCuotasVencidas, ...adhesionCuotasPendientes]}
+                      getRowKey={(row) => row.id}
+                      pagination
+                    />
+                  </TableSection>
+                )}
+              </Stack>
+            )
+          )}
+
+          {/* ── Tab 3: Historial ── Plan y Adhesión en secciones separadas */}
+          {currentTab === 3 && (
+            <>
+              <TableSection
+                title="Historial de cuotas de plan"
+                count={planHistorial.length}
+              >
+                <TypeSectionDivider label="Plan de ahorro" />
+                <DataTable
+                  columns={planColumns}
+                  data={planHistorial}
+                  getRowKey={(row) => row.id}
+                  pagination
+                />
+              </TableSection>
+            </>
           )}
         </Box>
       </QueryHandler>
 
+      {/* ── Modales ── */}
       <ConfirmDialog
         controller={confirmDialog}
         onConfirm={handleConfirmIntent}
-        isLoading={iniciarPagoMutation.isPending || iniciarPagoAdhesionMutation.isPending}
+        isLoading={isPaymentPending}
       />
+
       <TwoFactorAuthModal
         open={twoFaModal.isOpen}
         onClose={() => {
@@ -761,8 +1009,7 @@ const MisPagos: React.FC = () => {
         onSubmit={(code) => confirmar2FAMutation.mutate(code)}
         isLoading={confirmar2FAMutation.isPending}
         error={twoFAError}
-        title="Confirmar Pago Seguro"
-        description="Ingresa el código 2FA para autorizar la transacción."
+        title="Confirmar pago seguro"
       />
       <TwoFactorAuthModal
         open={twoFaAdhesionModal.isOpen}
@@ -774,18 +1021,20 @@ const MisPagos: React.FC = () => {
         onSubmit={(code) => confirmarPagoAdhesionMutation.mutate(code)}
         isLoading={confirmarPagoAdhesionMutation.isPending}
         error={twoFAErrorAdhesion}
-        title="Confirmar Pago de Adhesión"
-        description="Ingresá el código 2FA para autorizar el pago de la cuota de adhesión."
+        title="Confirmar pago de adhesión"
       />
-      <DetalleCuotaAdhesionModal
-        open={adhesionDetalle !== null}
-        onClose={() => setAdhesionDetalle(null)}
-        adhesion={adhesionDetalle}
+<DetalleCuotaAdhesionModal
+        open={detalleAdhesionModal.isOpen}
+        onClose={() => {
+          detalleAdhesionModal.close();
+          setSelectedAdhesionDetail(null);
+        }}
+        adhesion={selectedAdhesionDetail}
         formatCurrency={formatCurrency}
         isPaymentPending={isPaymentPending}
         onPagar={(adhesion, cuota) => {
-          setAdhesionDetalle(null);
-          handleAdhesionPayRequest(adhesion, cuota);
+          detalleAdhesionModal.close(); // Cerramos el detalle para no amontonar modales
+          handlePayAdhesionRequest({ ...cuota, adhesion }); // Reutilizamos tu handler de pago existente
         }}
       />
     </PageContainer>
