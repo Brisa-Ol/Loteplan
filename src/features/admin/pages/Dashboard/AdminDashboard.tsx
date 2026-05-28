@@ -1,11 +1,11 @@
 import {
   AccountBalance, Assessment, AssignmentTurnedIn, AttachMoney, CalendarMonth, CheckCircle,
   EventAvailable, Gavel, Handyman, InfoOutlined, Landscape, Person, QueryStats, Receipt,
-  ReceiptLong, RocketLaunch, Schedule, Security, Speed, Star, Timeline, TrendingUp, Warning
+  ReceiptLong, RocketLaunch, Schedule, Security, Speed, Star, Timeline, TrendingUp, VisibilityOff, Warning
 } from '@mui/icons-material';
 import {
-  alpha, Avatar, Box, Button, Card, CardContent, Chip, MenuItem, Paper, Select,
-  Stack, Tab, Tabs, TextField, ToggleButton, ToggleButtonGroup, Typography, useTheme,
+  alpha, Avatar, Box, Button, Card, CardContent, Chip, CircularProgress, IconButton, MenuItem, Paper, Select,
+  Stack, Tab, Tabs, TextField, ToggleButton, ToggleButtonGroup, Tooltip, Typography, useTheme,
   type Theme
 } from '@mui/material';
 import React, { useMemo } from 'react';
@@ -22,20 +22,14 @@ import { QueryHandler } from '@/shared/components/data-grid/QueryHandler';
 import { StatCard } from '@/shared/components/domain/cards/StatCard';
 import { PageContainer } from '@/shared/components/layout/PageContainer';
 import { useAdminDashboard } from '../../hooks/useAdminDashboard';
+
 const formatForDateInput = (dateStr?: string | null) => {
   if (!dateStr) return '';
   return dateStr.length > 10 ? dateStr.substring(0, 10) : dateStr;
 };
-// ===========================================================================
-// UTILIDADES
-// ===========================================================================
 
 const toNumber = (val: unknown): number => parseFloat(String(val || 0)) || 0;
 const formatearMoneda = (val: unknown): string => `$${toNumber(val).toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
-
-// ===========================================================================
-// TIPOS E INTERFACES
-// ===========================================================================
 
 interface AlertaPrioritariaProps {
   title: string;
@@ -51,8 +45,9 @@ interface CustomDatePickerProps {
   disabled: boolean;
   value: string;
   onChange: (value: string) => void;
-  min?: string; // ✅ Agregamos esto
+  min?: string;
 }
+
 interface TabProgresoProps {
   chartDataSuscripciones: any[];
   estadosData: any[];
@@ -75,11 +70,9 @@ interface TabPopularidadProps {
   loadingPopularidad: boolean;
   topLotes: any[];
   theme: Theme;
+  onToggleExcluir: (idLote: number) => void;
+  togglingLoteId: number | null;
 }
-
-// ===========================================================================
-// SUB-COMPONENTES DE UI
-// ===========================================================================
 
 const AlertaPrioritaria = React.memo(({ title, value, description, icon, severity, actionLabel, onAction }: AlertaPrioritariaProps) => {
   const theme = useTheme();
@@ -125,9 +118,9 @@ const CustomDatePicker = ({ disabled, value, onChange, min }: CustomDatePickerPr
     type="date"
     size="small"
     disabled={disabled}
-    value={formatForDateInput(value)} // ✅ Protegido
+    value={formatForDateInput(value)}
     onChange={(e) => onChange(e.target.value)}
-    inputProps={{ min: min ? formatForDateInput(min) : undefined }} // ✅ Min protegido
+    inputProps={{ min: min ? formatForDateInput(min) : undefined }}
     sx={{
       width: 145,
       '& .MuiOutlinedInput-root': {
@@ -140,10 +133,6 @@ const CustomDatePicker = ({ disabled, value, onChange, min }: CustomDatePickerPr
     }}
   />
 );
-
-// ===========================================================================
-// SUB-COMPONENTES DE PESTAÑAS (TABS)
-// ===========================================================================
 
 const TabProgreso = ({ chartDataSuscripciones, estadosData, RECHART_COLORS, theme }: TabProgresoProps) => (
   <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '2fr 1fr' }, gap: 4 }}>
@@ -215,52 +204,101 @@ const TabRiesgoEficiencia = ({ morosidad, cancelacion, pagosATiempo, navigate, t
   </Box>
 );
 
-const TabPopularidad = ({ proyectosActivos, selectedPopularidadProject, setSelectedPopularidadProject, loadingPopularidad, topLotes, theme }: TabPopularidadProps) => (
+const TabPopularidad = ({
+  proyectosActivos,
+  selectedPopularidadProject,
+  setSelectedPopularidadProject,
+  loadingPopularidad,
+  topLotes,
+  theme,
+  onToggleExcluir,
+  togglingLoteId,
+}: TabPopularidadProps) => (
   <Stack spacing={4}>
     <Stack direction="row" justifyContent="space-between" alignItems="center">
       <Typography variant="h6">Ranking de interés por lote</Typography>
-
       <Select
         size="small"
         value={selectedPopularidadProject ?? ''}
         onChange={(e) => setSelectedPopularidadProject(Number(e.target.value))}
         sx={{ minWidth: 220, bgcolor: 'background.default' }}
-        // 👇 ESTA ES LA CONFIGURACIÓN QUE AGREGA EL SCROLL 👇
-        MenuProps={{
-          PaperProps: {
-            style: {
-              maxHeight: 250, // Limita la altura a 250px (puedes ajustarlo si lo quieres más largo/corto)
-            },
-          },
-        }}
+        MenuProps={{ PaperProps: { style: { maxHeight: 250 } } }}
       >
         {proyectosActivos.map((p: any) => (
-          <MenuItem key={p.id} value={p.id}>
-            {p.nombre_proyecto}
-          </MenuItem>
+          <MenuItem key={p.id} value={p.id}>{p.nombre_proyecto}</MenuItem>
         ))}
       </Select>
-
     </Stack>
-    <Box sx={{ height: Math.max(400, topLotes.length * 60), transition: 'height 0.3s ease', overflowX: 'hidden' }}>
+
+    <Box sx={{ height: Math.max(400, topLotes.length * 60), transition: 'height 0.3s ease' }}>
       <QueryHandler isLoading={loadingPopularidad} error={null}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={topLotes} layout="vertical" margin={{ left: 20, right: 30, top: 20, bottom: 20 }}>
             <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={theme.palette.divider} />
             <XAxis type="number" hide />
-            <YAxis type="category" dataKey="nombre_lote" axisLine={false} tick={{ fontSize: 12, fontWeight: 600, fill: theme.palette.text.secondary }} width={100} interval={0} />
-            <RechartsTooltip cursor={{ fill: alpha(theme.palette.primary.main, 0.05) }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 16px rgba(0, 0, 0, 0.08)' }} />
-            <Bar dataKey="total_favoritos" name="Favoritos" fill={theme.palette.primary.light} radius={[0, 6, 6, 0]} barSize={30} />
+            <YAxis type="category" dataKey="nombre_lote" axisLine={false}
+              tick={{ fontSize: 12, fontWeight: 600, fill: theme.palette.text.secondary }}
+              width={100} interval={0} />
+            <RechartsTooltip
+              cursor={{ fill: alpha(theme.palette.primary.main, 0.05) }}
+              contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 16px rgba(0,0,0,0.08)' }}
+            />
+            <Bar dataKey="total_favoritos" name="Favoritos"
+              fill={theme.palette.primary.light} radius={[0, 6, 6, 0]} barSize={30} />
           </BarChart>
         </ResponsiveContainer>
       </QueryHandler>
     </Box>
+
+    {!loadingPopularidad && topLotes.length > 0 && (
+      <Stack spacing={1}>
+        <Typography variant="subtitle2" color="text.secondary">
+          Gestión de visibilidad en estadísticas
+        </Typography>
+        {topLotes.map((lote: any) => (
+          <Stack
+            key={lote.id_lote}
+            direction="row"
+            alignItems="center"
+            justifyContent="space-between"
+            sx={{
+              px: 2, py: 1,
+              borderRadius: 2,
+              border: `1px solid ${theme.palette.divider}`,
+              bgcolor: 'background.default',
+            }}
+          >
+            <Stack direction="row" alignItems="center" spacing={1.5}>
+              <Landscape fontSize="small" color="action" />
+              <Typography variant="body2" fontWeight={600}>{lote.nombre_lote}</Typography>
+              <Chip
+                label={`${lote.total_favoritos} ❤️`}
+                size="small"
+                variant="outlined"
+                color="primary"
+              />
+            </Stack>
+            {/* Tooltip de MUI — NO de recharts */}
+            <Tooltip title="Ocultar de estadísticas" placement="left">
+              <span>
+                <IconButton
+                  size="small"
+                  color="warning"
+                  disabled={togglingLoteId === lote.id_lote}
+                  onClick={() => onToggleExcluir(lote.id_lote)}
+                >
+                  {togglingLoteId === lote.id_lote
+                    ? <CircularProgress size={18} color="inherit" />
+                    : <VisibilityOff fontSize="small" />}
+                </IconButton>
+              </span>
+            </Tooltip>
+          </Stack>
+        ))}
+      </Stack>
+    )}
   </Stack>
 );
-
-// ===========================================================================
-// COMPONENTE PRINCIPAL
-// ===========================================================================
 
 const AdminDashboard: React.FC = () => {
   const theme = useTheme();
@@ -272,7 +310,7 @@ const AdminDashboard: React.FC = () => {
     recaudoMensual, pagosATiempo, completionRate, morosidad, cancelacion,
     proyectosActivos, selectedPopularidadProject, setSelectedPopularidadProject,
     loadingPopularidad, topLotes, chartDataSuscripciones, estadosData,
-    RECHART_COLORS, isLoading, error
+    RECHART_COLORS, isLoading, error, togglingLoteId, toggleExcluir,
   } = useAdminDashboard();
 
   const accionesRapidas = useMemo(() => [
@@ -281,7 +319,7 @@ const AdminDashboard: React.FC = () => {
     { label: 'Lotes', icon: <Landscape fontSize="small" />, path: '/admin/lotes' },
     { label: 'Subastas', icon: <Gavel fontSize="small" />, path: '/admin/pujas' },
     { label: 'Contratos', icon: <Assessment fontSize="small" />, path: '/admin/plantillas' },
-  ], [navigate]);
+  ], []);
 
   const handlePeriodChange = (_: React.MouseEvent<HTMLElement>, newPeriod: string | null) => {
     if (newPeriod !== null) {
@@ -297,8 +335,6 @@ const AdminDashboard: React.FC = () => {
 
   return (
     <PageContainer maxWidth="xl" sx={{ py: 3 }}>
-
-      {/* ENCABEZADO Y ACCESOS RÁPIDOS */}
       <Box sx={{ mb: 4 }}>
         <AdminPageHeader
           title="Panel de Administración"
@@ -320,7 +356,6 @@ const AdminDashboard: React.FC = () => {
       <QueryHandler isLoading={isLoading} error={error} fullHeight skeletonVariant="card" useSkeleton>
         <Stack spacing={4}>
 
-          {/* ATENCIÓN REQUERIDA */}
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 3 }}>
             <AlertaPrioritaria
               title="KYC pendientes"
@@ -351,7 +386,6 @@ const AdminDashboard: React.FC = () => {
             />
           </Box>
 
-          {/* BARRA DE FILTRO */}
           <Card sx={{ p: 3, bgcolor: 'background.default' }}>
             <Stack spacing={2.5}>
               <Stack direction={{ xs: 'column', md: 'row' }} alignItems={{ xs: 'flex-start', md: 'center' }} spacing={2}>
@@ -387,7 +421,7 @@ const AdminDashboard: React.FC = () => {
                 <Stack direction="row" spacing={1} alignItems="center">
                   <CustomDatePicker disabled={!isCustomDate} value={customStartDate} onChange={setCustomStartDate} />
                   <Typography variant="body2" color="text.secondary">→</Typography>
-                  <CustomDatePicker disabled={!isCustomDate} value={customEndDate} onChange={setCustomEndDate} min={customStartDate} /> {/* ✅ Le pasamos el inicio como min */}
+                  <CustomDatePicker disabled={!isCustomDate} value={customEndDate} onChange={setCustomEndDate} min={customStartDate} />
                 </Stack>
               </Stack>
               <Typography variant="caption" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -396,7 +430,6 @@ const AdminDashboard: React.FC = () => {
             </Stack>
           </Card>
 
-          {/* KPIs */}
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <Box>
               <Typography variant="h5" sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2, color: 'text.secondary' }}>
@@ -409,7 +442,6 @@ const AdminDashboard: React.FC = () => {
                 <StatCard title="Subastas activas" value={stats.subastasActivas} icon={<Gavel />} color="warning" />
               </Box>
             </Box>
-
             <Box>
               <Typography variant="h5" sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2, color: 'text.secondary' }}>
                 <Receipt fontSize="small" /> Adhesiones y cobranza
@@ -423,7 +455,6 @@ const AdminDashboard: React.FC = () => {
             </Box>
           </Box>
 
-          {/* ANÁLISIS - TABS */}
           <Card sx={{ p: 4, bgcolor: 'background.paper' }}>
             <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
               <Tabs
@@ -439,10 +470,25 @@ const AdminDashboard: React.FC = () => {
                 <Tab icon={<Star />} iconPosition="start" label="Popularidad" sx={{ textTransform: 'none', minHeight: 64, fontWeight: 600 }} />
               </Tabs>
             </Box>
-            <CardContent sx={{ p: 4 }} >
-              {activeTab === 0 && <TabProgreso chartDataSuscripciones={chartDataSuscripciones} estadosData={estadosData} RECHART_COLORS={RECHART_COLORS} theme={theme} />}
-              {activeTab === 1 && <TabRiesgoEficiencia morosidad={morosidad} cancelacion={cancelacion} pagosATiempo={pagosATiempo} navigate={navigate} theme={theme} />}
-              {activeTab === 2 && <TabPopularidad proyectosActivos={proyectosActivos} selectedPopularidadProject={selectedPopularidadProject} setSelectedPopularidadProject={setSelectedPopularidadProject} loadingPopularidad={loadingPopularidad} topLotes={topLotes} theme={theme} />}
+            <CardContent sx={{ p: 4 }}>
+              {activeTab === 0 && (
+                <TabProgreso chartDataSuscripciones={chartDataSuscripciones} estadosData={estadosData} RECHART_COLORS={RECHART_COLORS} theme={theme} />
+              )}
+              {activeTab === 1 && (
+                <TabRiesgoEficiencia morosidad={morosidad} cancelacion={cancelacion} pagosATiempo={pagosATiempo} navigate={navigate} theme={theme} />
+              )}
+              {activeTab === 2 && (
+                <TabPopularidad
+                  proyectosActivos={proyectosActivos}
+                  selectedPopularidadProject={selectedPopularidadProject}
+                  setSelectedPopularidadProject={setSelectedPopularidadProject}
+                  loadingPopularidad={loadingPopularidad}
+                  topLotes={topLotes}
+                  theme={theme}
+                  onToggleExcluir={toggleExcluir}
+                  togglingLoteId={togglingLoteId}
+                />
+              )}
             </CardContent>
           </Card>
 

@@ -82,6 +82,7 @@ export interface CreateLoteDto {
   fecha_fin?: string | null;
   latitud?: number | null;
   longitud?: number | null;
+  excluir_estadisticas?: boolean; 
 }
 
 export interface UpdateLoteDto extends Partial<CreateLoteDto> {
@@ -94,6 +95,7 @@ export interface UpdateLoteDto extends Partial<CreateLoteDto> {
   map_url?: string | null;
   fecha_inicio?: string | null;
   fecha_fin?: string | null;
+  excluir_estadisticas?: boolean;
 }
 
 // ==========================================

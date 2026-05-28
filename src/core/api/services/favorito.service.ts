@@ -99,6 +99,9 @@ getPopularidadLotes: async (idProyecto?: number | 'global'): Promise<Popularidad
       currency: 'ARS',
       minimumFractionDigits: 0
     }).format(precio);
+  },
+toggleExcluirEstadisticas: async (idLote: number): Promise<any> => {
+    return await httpService.patch(`/favoritos/lote/${idLote}/excluir-estadisticas`);
   }
 };
 

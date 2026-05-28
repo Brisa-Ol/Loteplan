@@ -5,7 +5,8 @@ import {
   Edit as EditIcon,
   LocationOn,
   MonetizationOn as MonetizationIcon,
-  Business as ProjectIcon
+  Business as ProjectIcon,
+  VisibilityOff as VisibilityOffIcon // ✨ Ícono para la visibilidad
 } from '@mui/icons-material';
 import {
   Alert,
@@ -13,9 +14,11 @@ import {
   Box,
   Chip,
   Divider,
+  FormControlLabel, // ✨ Para el label del Switch
   InputAdornment,
   MenuItem,
   Stack,
+  Switch, // ✨ El componente Switch
   TextField,
   Typography,
   useTheme
@@ -38,6 +41,7 @@ const formatForDateTimeInput = (isoString?: string | null) => {
   if (isNaN(date.getTime())) return '';
   return format(date, "yyyy-MM-dd'T'HH:mm"); // Lo formatea para el input
 };
+
 // ============================================================================
 // CONSTANTES Y ESTILOS (Memoizados)
 // ============================================================================
@@ -175,12 +179,10 @@ const EditLoteModal: React.FC<EditLoteModalProps> = ({ open, onClose, onSubmit, 
     fecha_fin: Yup.date().transform((v, o) => o === '' ? null : v).nullable().when('fecha_inicio', {
       is: (val: any) => val instanceof Date && !isNaN(val.getTime()),
       then: (schema) => schema.min(Yup.ref('fecha_inicio'), 'Posterior al inicio'),
-
     }),
     map_url: Yup.string().nullable()
       .test("valid-map-url", "URL de mapa inválida o no embebible", function (value) {
         if (!value) return true;
-
         try {
           extractAndValidateMapUrl(value);
           return true;
@@ -188,12 +190,14 @@ const EditLoteModal: React.FC<EditLoteModalProps> = ({ open, onClose, onSubmit, 
           return this.createError({ message: e.message });
         }
       }),
+    excluir_estadisticas: Yup.boolean() // ✨ Validación para el switch
   }), []);
 
   const formik = useFormik({
     initialValues: {
       nombre_lote: '', precio_base: '', id_proyecto: '',
-      fecha_inicio: '', fecha_fin: '', latitud: '', longitud: '', map_url: ''
+      fecha_inicio: '', fecha_fin: '', latitud: '', longitud: '', map_url: '',
+      excluir_estadisticas: false // ✨ Estado inicial por defecto
     },
     validationSchema,
     enableReinitialize: true,
@@ -205,9 +209,8 @@ const EditLoteModal: React.FC<EditLoteModalProps> = ({ open, onClose, onSubmit, 
         id_proyecto: values.id_proyecto === '' ? null : Number(values.id_proyecto),
         latitud: values.latitud !== '' ? Number(values.latitud) : null,
         longitud: values.longitud !== '' ? Number(values.longitud) : null,
-        map_url: values.map_url
-          ? extractAndValidateMapUrl(values.map_url)
-          : null
+        map_url: values.map_url ? extractAndValidateMapUrl(values.map_url) : null,
+        excluir_estadisticas: values.excluir_estadisticas // ✨ Se envía el valor al backend
       };
       if (values.fecha_inicio) payload.fecha_inicio = values.fecha_inicio;
       if (values.fecha_fin) payload.fecha_fin = values.fecha_fin;
@@ -222,12 +225,12 @@ const EditLoteModal: React.FC<EditLoteModalProps> = ({ open, onClose, onSubmit, 
         nombre_lote: lote.nombre_lote || '',
         precio_base: lote.precio_base ? String(lote.precio_base) : '',
         id_proyecto: lote.id_proyecto !== null ? String(lote.id_proyecto) : '',
-        // ✅ AQUÍ APLICAMOS LA PROTECCIÓN
         fecha_inicio: formatForDateTimeInput(lote.fecha_inicio),
         fecha_fin: formatForDateTimeInput(lote.fecha_fin),
         latitud: lote.latitud !== null ? String(lote.latitud) : '',
         longitud: lote.longitud !== null ? String(lote.longitud) : '',
-        map_url: lote.map_url !== null ? String(lote.map_url) : ''
+        map_url: lote.map_url !== null ? String(lote.map_url) : '',
+        excluir_estadisticas: lote.excluir_estadisticas ?? false // ✨ Carga el valor que viene de la BD
       });
     }
   }, [lote, open]);
@@ -279,16 +282,53 @@ const EditLoteModal: React.FC<EditLoteModalProps> = ({ open, onClose, onSubmit, 
 
           <Divider sx={{ borderStyle: 'dashed' }} />
 
-          <Box>
-            <Typography sx={SECTION_TITLE_SX}>Identificación</Typography>
-            <TextField
-              fullWidth label="Nombre del Lote" name="nombre_lote"
-              value={formik.values.nombre_lote} onChange={formik.handleChange}
-              onBlur={formik.handleBlur} error={formik.touched.nombre_lote && !!formik.errors.nombre_lote}
-              helperText={formik.touched.nombre_lote && (formik.errors.nombre_lote as string)}
-              sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-            />
-          </Box>
+          {/* ✨ SECCIÓN DE IDENTIFICACIÓN Y VISIBILIDAD */}
+          <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
+            <Box flex={1}>
+              <Typography sx={SECTION_TITLE_SX}>Identificación</Typography>
+              <TextField
+                fullWidth label="Nombre del Lote" name="nombre_lote"
+                value={formik.values.nombre_lote} onChange={formik.handleChange}
+                onBlur={formik.handleBlur} error={formik.touched.nombre_lote && !!formik.errors.nombre_lote}
+                helperText={formik.touched.nombre_lote && (formik.errors.nombre_lote as string)}
+                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+              />
+            </Box>
+            
+            <Box flex={1}>
+              <Typography sx={SECTION_TITLE_SX}><VisibilityOffIcon fontSize="inherit" /> Visibilidad en Dashboard</Typography>
+              <Box sx={{ 
+                p: 1, 
+                px: 2, 
+                border: '1px solid', 
+                borderColor: formik.values.excluir_estadisticas ? 'error.light' : 'divider', 
+                borderRadius: 2,
+                bgcolor: formik.values.excluir_estadisticas ? alpha(theme.palette.error.main, 0.05) : 'transparent',
+                transition: 'all 0.3s ease'
+              }}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      color="error"
+                      name="excluir_estadisticas"
+                      checked={formik.values.excluir_estadisticas}
+                      onChange={formik.handleChange}
+                    />
+                  }
+                  label={
+                    <Box>
+                      <Typography variant="body2" fontWeight={600} color={formik.values.excluir_estadisticas ? 'error.main' : 'text.primary'}>
+                        Ocultar de estadísticas
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" display="block" sx={{ lineHeight: 1.1 }}>
+                        Si está activo, no aparecerá en el ranking de popularidad.
+                      </Typography>
+                    </Box>
+                  }
+                />
+              </Box>
+            </Box>
+          </Stack>
 
           <FinanceSection
             precio={formik.values.precio_base} lat={formik.values.latitud} lng={formik.values.longitud}

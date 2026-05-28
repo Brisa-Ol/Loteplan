@@ -1,18 +1,18 @@
 // src/hooks/admin/useAdminDashboard.ts
 import { useTheme } from '@mui/material';
-import { useQueries, useQuery } from '@tanstack/react-query';
+import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 // Servicios
+import { getAdhesionMetrics } from '@/core/api/services/adhesion.service';
 import favoritoService from '@/core/api/services/favorito.service';
 import inversionService from '@/core/api/services/inversion.service';
 import kycService from '@/core/api/services/kyc.service';
+import pagoService from '@/core/api/services/pago.service';
 import proyectoService from '@/core/api/services/proyecto.service';
 import pujaService from '@/core/api/services/puja.service';
 import suscripcionService from '@/core/api/services/suscripcion.service';
-import { getAdhesionMetrics } from '@/core/api/services/adhesion.service';
-import pagoService from '@/core/api/services/pago.service';
 
 import { env } from '@/core/config/env';
 
@@ -21,22 +21,32 @@ const DEFAULT_STALE_TIME = env.queryStaleTime || 30000;
 export const useAdminDashboard = () => {
   const navigate = useNavigate();
   const theme = useTheme();
-  
+
   const [activeTab, setActiveTab] = useState(0);
   const [selectedPopularidadProject, setSelectedPopularidadProject] = useState<number | null>(null);
-  
+
   const [filtroPeriodo, setFiltroPeriodo] = useState<string>('este_mes');
-  
+
   // 🆕 ESTADOS PARA FECHA EXACTA (Reemplazan a los de mes)
   const [customStartDate, setCustomStartDate] = useState<string>('');
   const [customEndDate, setCustomEndDate] = useState<string>('');
+  const queryClient = useQueryClient();
+  const [togglingLoteId, setTogglingLoteId] = useState<number | null>(null);
 
+  const { mutate: toggleExcluir } = useMutation({
+    mutationFn: (idLote: number) => favoritoService.toggleExcluirEstadisticas(idLote),
+    onMutate: (idLote) => setTogglingLoteId(idLote),
+    onSettled: () => {
+      setTogglingLoteId(null);
+      queryClient.invalidateQueries({ queryKey: ['popularidadLotes', selectedPopularidadProject] });
+    },
+  });
   // 🗓️ Cálculo de Fechas basado en el filtro seleccionado
   const { fechaInicio, fechaFin, mesActual, anioActual } = useMemo(() => {
     const now = new Date();
     const currentMonth = now.getMonth() + 1;
     const currentYear = now.getFullYear();
-    
+
     let fInicio: string | undefined = undefined;
     let fFin: string | undefined = undefined;
 
@@ -80,20 +90,20 @@ export const useAdminDashboard = () => {
       { queryKey: ['adminAllPujas'], queryFn: async () => (await pujaService.getAllAdmin()).data, staleTime: DEFAULT_STALE_TIME },
       { queryKey: ['allProyectosAdmin'], queryFn: async () => (await proyectoService.getAllAdmin()).data, staleTime: DEFAULT_STALE_TIME },
       { queryKey: ['adhesionMetrics'], queryFn: async () => (await getAdhesionMetrics()).data.data, staleTime: DEFAULT_STALE_TIME },
-      { 
-        queryKey: ['recaudoMensual', fechaInicio, fechaFin], 
+      {
+        queryKey: ['recaudoMensual', fechaInicio, fechaFin],
         queryFn: async () => {
           if (fechaInicio && fechaFin) {
             return (await pagoService.getMetricsByDateRange(fechaInicio, fechaFin)).data.data;
           }
           return (await pagoService.getMonthlyMetrics(mesActual, anioActual)).data.data;
-        }, 
-        staleTime: DEFAULT_STALE_TIME 
+        },
+        staleTime: DEFAULT_STALE_TIME
       },
-      { 
-        queryKey: ['pagosATiempo', mesActual, anioActual], 
-        queryFn: async () => (await pagoService.getOnTimeMetrics(mesActual, anioActual)).data.data, 
-        staleTime: DEFAULT_STALE_TIME 
+      {
+        queryKey: ['pagosATiempo', mesActual, anioActual],
+        queryFn: async () => (await pagoService.getOnTimeMetrics(mesActual, anioActual)).data.data,
+        staleTime: DEFAULT_STALE_TIME
       }
     ]
   });
@@ -115,7 +125,7 @@ export const useAdminDashboard = () => {
   ] = results;
 
   const isLoading = results.some(result => result.isLoading);
-const hasError = results.some(result => result.isError);
+  const hasError = results.some(result => result.isError);
   const error = hasError ? new Error("Error al cargar las métricas del panel.") : null;
   const { data: popularidadLotes = [], isLoading: loadingPopularidad } = useQuery({
     queryKey: ['popularidadLotes', selectedPopularidadProject],
@@ -162,6 +172,7 @@ const hasError = results.some(result => result.isError);
 
   const topLotes = useMemo(() =>
     popularidadLotes.map((l: any) => ({
+      id_lote: l.id_lote,
       nombre_lote: l.nombre_lote,
       total_favoritos: l.cantidad_favoritos,
       porcentaje: l.porcentaje_popularidad,
@@ -192,6 +203,8 @@ const hasError = results.some(result => result.isError);
     setCustomEndDate,     // 🆕 Exportado
     recaudoMensual,
     pagosATiempo,
+    togglingLoteId,
+    toggleExcluir,
     activeTab,
     setActiveTab,
     selectedPopularidadProject,
@@ -210,6 +223,6 @@ const hasError = results.some(result => result.isError);
     error,
     RECHART_COLORS,
     navigate,
-    adhesionMetrics 
+    adhesionMetrics
   };
 };
