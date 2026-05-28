@@ -22,12 +22,15 @@ import {
   useTheme
 } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import MercadoPagoService from '@/core/api/services/pagoMercado.service';
 import { env } from '@/core/config/env';
 import { PageContainer } from '../../../../../shared/components/layout/PageContainer';
+import TransaccionService from '@/core/api/services/transaccion.service';
+import ContratoService from '@/core/api/services/contrato.service';
+
 
 interface PagoResultProps {
 initialStatus?: 'success' | 'failed' | 'pending';
@@ -40,11 +43,38 @@ const PagoResult: React.FC<PagoResultProps> = ({ initialStatus }) => {
   const [searchParams] = useSearchParams();
   const queryId = searchParams.get('transaccion');  
   const navigate = useNavigate();
+  const [transaccionId, setTransaccionId] = useState<number | null>(null);
+  const [proyectId, setProjectId] = useState<number>(0);
+  const [puedeFirmar, setPuedeFirmar] = useState(false);
 
-  const transaccionId =  paramId ?? queryId;
+  useEffect(() => {
+    if (queryId || paramId) {
+      console.log("entro")
+      setTransaccionId(paramId ? Number(paramId) : Number(queryId));
+    }
+  }, [queryId, paramId]);
 
-  
+    //UseEffects
+  useEffect(() => {
+    if (!transaccionId) return;
+    const searchTransaccion = async () => {
+      const res = await TransaccionService.getMyTransactionById(Number(transaccionId));
+      console.log(res.data);
+      setProjectId(res.data.id_proyecto || 0);
+    }
+    searchTransaccion();
+  }, [transaccionId]);
 
+  useEffect(() => {
+
+    const trackProyect = async () => {
+      const res = await ContratoService.trackPaymentAndContract(proyectId);
+      console.log("tracking",res);
+      setPuedeFirmar(res.puede_firmar);
+    }
+
+    if(proyectId) trackProyect();
+  }, [proyectId]);
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['paymentStatus', transaccionId],
     queryFn: async () => {
@@ -251,9 +281,11 @@ const PagoResult: React.FC<PagoResultProps> = ({ initialStatus }) => {
             onClick={() => {
               // 💡 LÓGICA DINÁMICA DE REDIRECCIÓN basada en tu DTO
               const tipoTx = data?.transaccion?.tipo;
-
+              if(puedeFirmar){ 
+                navigate(`/proyectos/${proyectId}`);
+              }
               // Evaluamos según los tipos de transacción que maneja tu sistema
-              if (tipoTx === 'Puja' || tipoTx === 'pago_puja') {
+              else if(tipoTx === 'Puja' || tipoTx === 'pago_puja') {
                 navigate('/client/finanzas/pujas');
               } else if (tipoTx === 'pago_suscripcion_inicial' || tipoTx === 'inversion') {
                 navigate('/client/finanzas/resumenes');
@@ -271,10 +303,10 @@ const PagoResult: React.FC<PagoResultProps> = ({ initialStatus }) => {
               fontWeight: 700
             }}
           >
-            Ver Movimientos
+            {puedeFirmar ? 'Ir a Firmar Contrato' : 'Ver Movimientos'}
           </Button>
         </Stack>
-        {data?.transaccion?.estado === "pagado" && (
+        {puedeFirmar && (
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} padding={1} justifyContent="center" >
             <Alert
                     severity="success"
@@ -285,7 +317,7 @@ const PagoResult: React.FC<PagoResultProps> = ({ initialStatus }) => {
                       Recuerda Firmar
                     </Typography>
                     <Typography variant="caption">
-                      En caso de que hayas pagado tu primer Adhesion es necesario que regreses al proyecto y firmes el contrato para completar tu proceso de inversión.
+                      Firma tu contrato para completar tu proceso de inversion y acceder a todos los beneficios.
                     </Typography>
                   </Alert>
 

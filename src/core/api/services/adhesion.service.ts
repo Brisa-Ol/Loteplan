@@ -64,7 +64,7 @@ export const iniciarPagoCuota = async (
 export const confirmarPagoCuota = async (
   data: ConfirmarPagoCuotaDto
 ): Promise<AxiosResponse<{ success: boolean; redirectUrl: string }>> => {
-  return await httpService.post(`${BASE_ENDPOINT}/confirmar-pago-cuota`, data);
+  return await httpService.post(`${BASE_ENDPOINT}/confirmar-pago-cuota`, data, {headers: { 'X-Skip-Auth-Redirect': 'true' }});
 };
   // =================================================
   // 👮 RUTAS DE ADMINISTRADOR
