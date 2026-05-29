@@ -1,5 +1,6 @@
 // src/components/domain/suscripciones/MisSuscripciones.tsx
 
+import { SnackbarContext } from "@/core/context/SnackbarContext";
 import type { AdhesionDto, PlanPagoAdhesion } from "@/core/types/adhesion.dto";
 import type { ResumenCuentaDto } from "@/core/types/resumenCuenta.dto";
 import type {
@@ -52,7 +53,7 @@ import {
 } from "@mui/material";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useContext, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCurrencyFormatter } from "../../../hooks/useCurrencyFormatter";
 import { useSuscripciones } from "../../../hooks/useSuscripciones";
@@ -470,6 +471,7 @@ const MetricCell: React.FC<MetricCellProps> = ({
 // ─────────────────────────────────────────────────────────────────────────────
 
 const MisSuscripciones: React.FC = () => {
+    const snackbar = useContext(SnackbarContext);
     const navigate = useNavigate();
     const theme = useTheme();
     const formatCurrency = useCurrencyFormatter();
@@ -574,6 +576,10 @@ const MisSuscripciones: React.FC = () => {
                                 setMotivoBaja(inputValue ?? "");
                                 setTwoFAError(null);
                                 twoFaModal.open();
+                            } else {
+                                // 👇 ACCIÓN DIRECTA EXITOSA
+                                snackbar?.showSuccess("El motivo de baja se envió correctamente.");
+                                setTimeout(() => window.location.reload(), 2550);
                             }
                         },
                         onError: () => confirmDialog.close(),
@@ -1081,6 +1087,8 @@ const MisSuscripciones: React.FC = () => {
                                     twoFaModal.close();
                                     setSelectedCancelId(null);
                                     setCancelType(null);
+                                    snackbar?.showSuccess("El motivo de baja se envió correctamente.");
+                                    setTimeout(() => window.location.reload(), 2550);
                                 },
                                 onError: (err: any) => {
                                     setTwoFAError(

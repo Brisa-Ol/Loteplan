@@ -34,7 +34,7 @@ const MisPujas: React.FC = () => {
   const navigate = useNavigate();
   const theme = useTheme();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { showError } = useSnackbar();
+  const { showError, showSuccess } = useSnackbar();
   const formatCurrency = useCurrencyFormatter();
 
   const [tabValue, setTabValue] = useState(0);
@@ -124,7 +124,8 @@ const MisPujas: React.FC = () => {
       PujaService.requestCancellation(selectedPuja!.id, motivo),
     onSuccess: () => {
       cancelModal.close();
-      refetch(); // Refrescamos la tabla (esto ya es suficiente feedback visual)
+      showSuccess("La solicitud de cancelación se envió correctamente.");
+      setTimeout(() => window.location.reload(), 2550);
     },
     onError: (err: any) => showError(err.response?.data?.message || 'Error al solicitar cancelación')
   });
