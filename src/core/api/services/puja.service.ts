@@ -78,7 +78,7 @@ const PujaService = {
   },
 
   confirmPayment2FA: async (data: ConfirmarPuja2faDto): Promise<AxiosResponse<PujaCheckoutResponse>> => {
-    return await httpService.post(`${BASE_ENDPOINT}/confirmar-2fa`, data);
+    return await httpService.post(`${BASE_ENDPOINT}/confirmar-2fa`, data, { headers: { 'X-Skip-Auth-Redirect': 'true' } });
   },
 
   // =================================================

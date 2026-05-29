@@ -504,7 +504,7 @@ const Top3PostoresTable = React.memo<{
     const map = new Map<string, string>();
 
     lotes.forEach((l) => {
-      const pujas = pujasPorLote[l.id] || [];
+      const pujas = pujasPorLote[l.id].filter((p: PujaDto) => p.activo === true) || [];
       const nombre =
         l.proyecto?.nombre_proyecto ||
         l.proyectoLote?.nombre_proyecto ||
@@ -625,7 +625,7 @@ const Top3PostoresTable = React.memo<{
                 </TableRow>
               ) : (
                 visibleLotes.map((lote) => {
-                  const pujas = pujasPorLote[lote.id] || [];
+                  const pujas = pujasPorLote[lote.id].filter((p: PujaDto) => p.activo === true) || [];
                   const top3 = [pujas[0], pujas[1], pujas[2]];
                   const nombreProyecto = lote.proyecto?.nombre_proyecto || (pujas[0] as any)?.lote?.proyectoLote?.nombre_proyecto;
                   return (

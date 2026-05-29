@@ -133,7 +133,7 @@ const LoteCard: React.FC<LoteCardProps> = ({
         ? { text: "Ver mi Lote", icon: <EmojiEmotions />, color: "success" as const, variant: "contained" as const }
         : { text: "Detalles", icon: <ArrowForward />, color: "primary" as const, variant: "contained" as const };
     }
-    if (tieneFirmaPendiente) {
+    if (tieneFirmaPendiente && isActiva) {
     return { text: "Firma pendiente", icon: <Lock />, color: "warning" as const, variant: "contained" as const };
     }
     if (puedePujar) {
