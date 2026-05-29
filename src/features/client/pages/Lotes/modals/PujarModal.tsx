@@ -1,10 +1,9 @@
 // src/features/client/pages/Lotes/modals/PujarModal.tsx
 
 import {
-  BookmarkBorder,
   Gavel,
   Timer,
-  TokenOutlined,
+  TokenOutlined
 } from '@mui/icons-material';
 import {
   Alert,
@@ -13,19 +12,16 @@ import {
   Button,
   Divider,
   InputAdornment,
-  Skeleton,
   Stack,
   TextField,
   Typography,
-  useTheme,
+  useTheme
 } from '@mui/material';
 import { useMutation } from '@tanstack/react-query';
 import React, { useEffect, useMemo, useState } from 'react';
 
-import ImagenService from '@/core/api/services/imagen.service';
 import PujaService from '@/core/api/services/puja.service';
 import type { LoteDto } from '@/core/types/lote.dto';
-import { useImageLoader } from '@/features/client/hooks';
 import { useCurrencyFormatter } from '@/features/client/hooks/useCurrencyFormatter';
 import { useVerificarSuscripcion } from '@/features/client/hooks/useVerificarSuscripcion';
 import { BaseModal } from '@/shared/components/domain/modals/BaseModal';
@@ -103,21 +99,15 @@ export const PujarModal: React.FC<Props> = ({
   const [monto, setMonto] = useState('');
   const [errorSubmit, setErrorSubmit] = useState<string | null>(null);
   const [minimoAlAbrir, setMinimoAlAbrir] = useState(0);
+  const [tiempoRestante, setTiempoRestante] = useState<string>('');
+  const [esUrgente, setEsUrgente] = useState<boolean>(false);
 
-  const { isLoading: imgLoading, hasError: imgError, handleLoad, handleError } = useImageLoader();
+
   const { tieneTokens, tokensDisponibles } = useVerificarSuscripcion(
     lote?.id_proyecto ?? undefined
   );
 
-  // ─── Imagen ──────────────────────────────────────────────────────────────
 
-  const rawUrl = lote?.imagenes?.[0]?.url;
-  const hasNoImageRecord = !rawUrl || rawUrl.trim() === '';
-
-  const imagenUrl = useMemo(() => {
-    if (hasNoImageRecord) return null;
-    return ImagenService.resolveImageUrl(rawUrl);
-  }, [rawUrl, hasNoImageRecord]);
 
   // ─── Cálculo de precios ──────────────────────────────────────────────────
   //
@@ -159,6 +149,47 @@ export const PujarModal: React.FC<Props> = ({
   }, [lote, montoLiderConocido, montoLider, miMontoActual]);
 
   // ─── Efectos ──────────────────────────────────────────────────────────────
+// ─── Countdown de la Subasta ──────────────────────────────────────────────
+  useEffect(() => {
+    if (!lote?.fecha_fin || lote.estado_subasta === 'finalizada') {
+      setTiempoRestante('SUBASTA FINALIZADA');
+      setEsUrgente(true);
+      return;
+    }
+
+    const calcularTiempo = () => {
+      const ahora = new Date().getTime();
+      const fin = new Date(lote.fecha_fin!).getTime();
+      const diferencia = fin - ahora;
+
+      if (diferencia <= 0) {
+        setTiempoRestante('SUBASTA FINALIZADA');
+        setEsUrgente(true);
+        return;
+      }
+
+      const dias = Math.floor(diferencia / (1000 * 60 * 60 * 24));
+      const horas = Math.floor((diferencia / (1000 * 60 * 60)) % 24);
+      const minutos = Math.floor((diferencia / 1000 / 60) % 60);
+      const segundos = Math.floor((diferencia / 1000) % 60);
+
+      // Si falta menos de 24 horas, lo consideramos urgente (se pondrá rojo)
+      setEsUrgente(dias === 0);
+
+      if (dias > 0) {
+        setTiempoRestante(`CIERRA EN ${dias}d ${horas}h ${minutos}m`);
+      } else if (horas > 0) {
+        setTiempoRestante(`CIERRA EN ${horas}h ${minutos}m ${segundos}s`);
+      } else {
+        setTiempoRestante(`¡CIERRA EN ${minutos}m ${segundos}s!`);
+      }
+    };
+
+    calcularTiempo(); // Llamada inicial para que no parpadee
+    const intervalo = setInterval(calcularTiempo, 1000);
+
+    return () => clearInterval(intervalo);
+  }, [lote?.fecha_fin, lote?.estado_subasta]);
 
   useEffect(() => {
     if (open) {
@@ -192,8 +223,8 @@ export const PujarModal: React.FC<Props> = ({
       handleReset();
       onSuccess?.();
       setTimeout(() => {
-      window.location.reload(); // Recarga para actualizar estado 
-    }, 1750);
+        window.location.reload(); // Recarga para actualizar estado 
+      }, 1750);
     },
     onError: (err: any) => {
       const mensaje = mapearErrorBackend(err);
@@ -223,7 +254,7 @@ export const PujarModal: React.FC<Props> = ({
 
   const handleConfirmPuja = async () => {
     await mutation.mutate()
-    
+
   }
 
   // ─── Validaciones ─────────────────────────────────────────────────────────
@@ -234,10 +265,8 @@ export const PujarModal: React.FC<Props> = ({
   const puedeConfirmar = esMontoValido && !mutation.isPending && (yaParticipa || tieneTokens);
 
   if (!lote) return null;
-
-  const titulo = soyGanador ? 'Defender mi Lugar' : yaParticipa ? 'Superar Oferta' : 'Ofertar Ahora';
-  const headerColor = soyGanador ? 'success' : yaParticipa ? 'warning' : 'primary';
-
+  const titulo = soyGanador ? 'Defender mi Lugar' : yaParticipa ? '¡Recuperar mi Lugar!' : 'Ofertar Ahora';
+  const headerColor = soyGanador ? 'success' : yaParticipa ? 'error' : 'primary'; // Rojo para generar urgencia
   // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
@@ -251,68 +280,39 @@ export const PujarModal: React.FC<Props> = ({
     >
       <Stack spacing={3}>
 
-        {/* Imagen del lote */}
-        <Box
-          sx={{
-            height: 120,
-            borderRadius: 2,
-            overflow: 'hidden',
-            position: 'relative',
-            border: '1px solid',
-            borderColor: 'divider',
-            bgcolor: 'grey.100',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          {hasNoImageRecord ? (
-            <Stack direction="row" alignItems="center" spacing={2} sx={{ color: 'text.disabled' }}>
-              <BookmarkBorder opacity={0.5} />
-              <Typography variant="caption" fontWeight={700}>LOTE SIN IMAGEN</Typography>
-            </Stack>
-          ) : (
-            <>
-              {imgLoading && (
-                <Skeleton variant="rectangular" width="100%" height="100%" sx={{ position: 'absolute' }} />
-              )}
-              <Box
-                component="img"
-                src={imgError ? '/assets/placeholder-lote.jpg' : imagenUrl!}
-                onLoad={handleLoad}
-                onError={handleError}
-                sx={{ width: '100%', height: '100%', objectFit: 'cover', opacity: imgLoading ? 0 : 1, transition: 'opacity 0.3s' }}
-              />
-              <Box
-                sx={{
-                  position: 'absolute', bottom: 0, left: 0, right: 0, p: 1,
-                  background: 'linear-gradient(transparent, rgba(0,0,0,0.7))', color: 'white',
-                }}
-              >
-                <Typography variant="caption" fontWeight={800} noWrap display="block">
-                  {lote.nombre_lote}
-                </Typography>
-              </Box>
-            </>
-          )}
-        </Box>
-
         {/* Urgencia */}
-        <Box
-          sx={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1,
-            color: 'error.main', bgcolor: alpha(theme.palette.error.main, 0.05),
-            py: 1, borderRadius: 2,
-          }}
-        >
-          <Timer fontSize="small" />
-          <Typography variant="caption" fontWeight={900}>CIERRA EN POCO TIEMPO</Typography>
-        </Box>
+        {/* Urgencia / Tiempo Restante */}
+        {tiempoRestante && (
+          <Box
+            sx={{
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              gap: 1,
+              color: esUrgente ? 'error.main' : 'primary.main', 
+              bgcolor: alpha(theme.palette[esUrgente ? 'error' : 'primary'].main, 0.08),
+              py: 1.5, 
+              borderRadius: 2,
+              border: '1px solid',
+              borderColor: alpha(theme.palette[esUrgente ? 'error' : 'primary'].main, 0.2),
+            }}
+          >
+            <Timer fontSize="small" />
+            <Typography variant="subtitle2" fontWeight={900} letterSpacing={0.5}>
+              {tiempoRestante}
+            </Typography>
+          </Box>
+        )}
 
         {/* Mensaje motivacional */}
+        {/* Mensaje motivacional */}
         <Box sx={{ textAlign: 'center' }}>
-          <Typography variant="subtitle1" fontWeight={800} color={soyGanador ? 'success.main' : 'warning.main'}>
-            {soyGanador ? '¡Vas ganando, no te relajes!' : '¡Oferta ahora y asegura el lote!'}
+          <Typography variant="subtitle1" fontWeight={800} color={soyGanador ? 'success.main' : yaParticipa ? 'error.main' : 'primary.main'}>
+            {soyGanador
+              ? '¡Vas ganando, no te relajes!'
+              : yaParticipa
+                ? '¡Estás perdiendo la adjudicación! Mejorá tu oferta ahora.'
+                : '¡Oferta ahora y asegura el lote!'}
           </Typography>
         </Box>
 
@@ -335,25 +335,25 @@ export const PujarModal: React.FC<Props> = ({
             </Typography>
           </Stack>
 
-          {/* Oferta líder — solo cuando la conocemos */}
+          {/* Oferta líder */}
           {hayOfertas && montoLiderConocido && (
             <Stack direction="row" justifyContent="space-between" mb={1}>
-              <Typography variant="caption" color="text.secondary">
-                {soyGanador ? 'Tu oferta líder:' : 'Oferta líder actual:'}
+              <Typography variant="caption" color="text.secondary" fontWeight={yaParticipa && !soyGanador ? 700 : 400}>
+                {soyGanador ? 'Tu oferta líder:' : 'Oferta a superar:'}
               </Typography>
-              <Typography variant="body2" fontWeight={800} color="success.main">
+              <Typography variant="body2" fontWeight={800} color={soyGanador ? "success.main" : "error.main"}>
                 {formatCurrency(montoLider)}
               </Typography>
             </Stack>
           )}
 
-          {/* Mi oferta actual — cuando fui superado (monto conocido, no soy líder) */}
-          {hayOfertas && !montoLiderConocido && miMontoActual && (
+          {/* Mi oferta actual tachada (si está perdiendo) */}
+          {hayOfertas && miMontoActual && !soyGanador && (
             <Stack direction="row" justifyContent="space-between" mb={1}>
               <Typography variant="caption" color="text.secondary">
-                Tu oferta actual:
+                Tu oferta superada:
               </Typography>
-              <Typography variant="body2" fontWeight={800} color="warning.main">
+              <Typography variant="body2" fontWeight={700} color="text.disabled" sx={{ textDecoration: 'line-through' }}>
                 {formatCurrency(miMontoActual)}
               </Typography>
             </Stack>
@@ -438,7 +438,7 @@ export const PujarModal: React.FC<Props> = ({
         <TextField
           autoFocus
           fullWidth
-          label="Tu Monto"
+          label={yaParticipa && !soyGanador ? "Tu Nueva Oferta" : "Tu Monto"}
           type="number"
           value={monto}
           onChange={handleChangeMonto}
@@ -446,10 +446,13 @@ export const PujarModal: React.FC<Props> = ({
           helperText={
             monto !== '' && !esMontoValido
               ? `Debe ser al menos ${formatCurrency(precioMinimoRequerido)}`
-              : ''
+              : yaParticipa && !soyGanador
+                ? `Monto mínimo calculado para volver al primer lugar.`
+                : ''
           }
           InputProps={{
             startAdornment: <InputAdornment position="start">$</InputAdornment>,
+            sx: { fontWeight: 800, fontSize: '1.2rem' } // Hacemos el número más imponente
           }}
         />
 

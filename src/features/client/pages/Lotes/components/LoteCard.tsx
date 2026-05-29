@@ -5,7 +5,6 @@ import {
   BookmarkBorder,
   EmojiEmotions,
   Gavel,
-  LocationOn,
   Lock,
   NavigateBefore,
   NavigateNext
@@ -84,9 +83,9 @@ const LoteCard: React.FC<LoteCardProps> = ({
   const isActiva = lote.estado_subasta === 'activa';
   const subastaFinalizada = lote.estado_subasta === 'finalizada';
 
-const esLiderActual = useMemo(() => {
+  const esLiderActual = useMemo(() => {
     if (!isAuthenticated || !user || !isActiva || !lote.id_puja_mas_alta) return false;
-    
+
     // Verificamos si en el array de pujas de este lote, la puja más alta nos pertenece
     return Array.isArray(lote.pujas) && lote.pujas.some(
       (p: any) => Number(p.id_usuario) === Number(user.id) && Number(p.id) === Number(lote.id_puja_mas_alta)
@@ -113,7 +112,7 @@ const esLiderActual = useMemo(() => {
   const handleBotonClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!isAuthenticated || puedePujar) {
-      if(!isAuthenticated) {
+      if (!isAuthenticated) {
         onNavigate(lote.id);
       } else {
         onPujar(lote);
@@ -124,20 +123,23 @@ const esLiderActual = useMemo(() => {
   };
 
   const buttonState = useMemo(() => {
-    if (isLoadingSub) return { text: "...", icon: null };
-    if (!isAuthenticated) return { text: "Ingresar", icon: <Lock /> };
+    if (isLoadingSub) return { text: "...", icon: null, color: "secondary" as const, variant: "contained" as const };
+    if (!isAuthenticated) return { text: "Ingresar", icon: <Lock />, color: "primary" as const, variant: "contained" as const };
+
     if (subastaFinalizada) {
-      return esGanadorDefinitivo 
-        ? { text: "Ver mi Lote", icon: <EmojiEmotions /> } 
-        : { text: "Detalles", icon: <ArrowForward /> };
+      return esGanadorDefinitivo
+        ? { text: "Ver mi Lote", icon: <EmojiEmotions />, color: "success" as const, variant: "contained" as const }
+        : { text: "Detalles", icon: <ArrowForward />, color: "primary" as const, variant: "contained" as const };
     }
+
     if (puedePujar) {
-      // ✅ Si ya participa o es líder, el botón dice "Mejorar" en lugar de "Pujar"
       return (esLiderActual || yaParticipa)
-        ? { text: "Mejorar", icon: <EmojiEmotions /> }
-        : { text: "Pujar", icon: <Gavel /> };
+        ? { text: "Mejorar", icon: <EmojiEmotions />, color: esLiderActual ? "success" as const : "warning" as const, variant: "contained" as const }
+        : { text: "Pujar", icon: <Gavel />, color: "warning" as const, variant: "contained" as const };
     }
-    return { text: "Detalles", icon: <ArrowForward /> };
+
+    // Por defecto (ej. Lotes en "Próximamente" o de solo lectura)
+    return { text: "Detalles", icon: <ArrowForward />, color: "primary" as const, variant: "contained" as const };
   }, [isLoadingSub, isAuthenticated, subastaFinalizada, esGanadorDefinitivo, puedePujar, esLiderActual, yaParticipa]);
 
   return (
@@ -162,12 +164,14 @@ const esLiderActual = useMemo(() => {
         <Box position="relative" sx={{ paddingTop: '56.25%', bgcolor: '#ECECEC', overflow: 'hidden' }}>
 
           <Box position="absolute" top={10} right={10} zIndex={20}
-            sx={{  bgcolor: '#D4D4D4',
+            sx={{
+              bgcolor: '#D4D4D4',
               backdropFilter: 'blur(6px)',
               border: '1px solid rgba(255,255,255,0.25)',
               borderRadius: '50%',
               width: 32, height: 32,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', }}
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
           >
             <FavoritoButton loteId={lote.id} size="small" />
           </Box>
@@ -199,13 +203,13 @@ const esLiderActual = useMemo(() => {
               />
             </>
           )}
-{/* ── Flechas carrusel ── */}
+          {/* ── Flechas carrusel ── */}
           {!hasNoImageRecord && imagenes.length > 1 && (
             <>
               <IconButton className="nav-arrow" onClick={handlePrev} sx={{
                 position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)',
                 bgcolor: 'rgba(0,0,0,0.3)', // Un fondo un poco más suave por defecto
-                color: 'white', 
+                color: 'white',
                 opacity: 1,                 // <-- CAMBIO PRINCIPAL: Siempre visible
                 zIndex: 10,
                 transition: 'background-color 0.2s ease', // Transición suave
@@ -215,9 +219,9 @@ const esLiderActual = useMemo(() => {
               </IconButton>
               <IconButton className="nav-arrow" onClick={handleNext} sx={{
                 position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
-                bgcolor: 'rgba(0,0,0,0.3)', 
-                color: 'white', 
-                opacity: 1,                
+                bgcolor: 'rgba(0,0,0,0.3)',
+                color: 'white',
+                opacity: 1,
                 zIndex: 10,
                 transition: 'background-color 0.2s ease',
                 '&:hover': { bgcolor: 'rgba(0,0,0,0.7)' }
@@ -227,18 +231,18 @@ const esLiderActual = useMemo(() => {
             </>
           )}
 
-       {/* ── Gradiente solo hacia abajo ── */}
+          {/* ── Gradiente solo hacia abajo ── */}
           <Box sx={{
             position: 'absolute', inset: 0,
             background: 'linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.78) 100%)',
             zIndex: 3, pointerEvents: 'none'
           }} />
-<Box position="absolute" top={12} left={12} zIndex={4}>
+          <Box position="absolute" top={12} left={12} zIndex={4}>
             <Chip
               label={
-                esGanadorDefinitivo ? "¡GANASTE EL LOTE!" : 
-                esLiderActual ? "¡VAS GANANDO!" : 
-                statusConfig.label
+                esGanadorDefinitivo ? "¡GANASTE EL LOTE!" :
+                  esLiderActual ? "¡VAS GANANDO!" :
+                    statusConfig.label
               }
               color={soyGanador ? "success" : undefined}
               size="small"
@@ -254,12 +258,12 @@ const esLiderActual = useMemo(() => {
           </Box>
 
           {/* ✅ Precios sincronizados visualmente */}
-         {/* ✅ Nombre del lote sobre la imagen */}
+          {/* ✅ Nombre del lote sobre la imagen */}
           <Box position="absolute" bottom={12} left={12} right={12} zIndex={4}>
-            <Typography 
-              variant="h5" 
-              sx={{ 
-                color: 'white', 
+            <Typography
+              variant="h5"
+              sx={{
+                color: 'white',
                 fontWeight: 900,
                 textShadow: '0px 2px 4px rgba(0,0,0,0.6)', // Sombra para que destaque sobre cualquier foto
                 display: '-webkit-box',
@@ -271,12 +275,12 @@ const esLiderActual = useMemo(() => {
               {lote.nombre_lote}
             </Typography>
           </Box>
-          
+
         </Box>
 
         {/* ── SECCIÓN DE CONTENIDO ── */}
-       <CardContent sx={{ flexGrow: 1, p: 2.5 }}>
-      
+        <CardContent sx={{ flexGrow: 1, p: 2.5 }}>
+
           {/* ✅ Precio Base / Oferta Líder movido aquí abajo */}
           <Box sx={{ mb: 1.5, minHeight: '3em' }}>
             <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', fontWeight: 700 }}>
@@ -290,24 +294,33 @@ const esLiderActual = useMemo(() => {
               )}
             </Typography>
           </Box>
-
           <Button
-            variant="contained"
+            variant={buttonState.variant}
+            color={buttonState.color}
             fullWidth
             onClick={handleBotonClick}
             disabled={isLoadingSub}
             startIcon={buttonState.icon}
-            color={soyGanador ? 'success' : 'primary'}
-            sx={{ 
-              fontWeight: 800, 
-              py: 1.2, 
-              borderRadius: 2, 
+            sx={{
+              fontWeight: 800,
+              py: 1.2,
+              borderRadius: 2,
               mt: 1,
-              boxShadow: 'none', // Quitar sombra estática
-              transition: 'transform 0.2s, box-shadow 0.2s',
+              boxShadow: 'none',
+              // 👇 Forzamos el uso de tu color #ddb833 para los botones de Pujar
+              ...(buttonState.color === 'warning' && {
+                bgcolor: 'warning.main',
+                color: 'white', 
+                '&:hover': {
+                  bgcolor: 'warning.secondary', 
+                }
+              }),
+              transition: 'transform 0.2s, background-color 0.2s, box-shadow 0.2s',
               '&:hover': {
                 boxShadow: 4,
-                transform: 'translateY(-2px)' // Se eleva sutilmente
+                transform: 'translateY(-2px)',
+                // Mantenemos el hover para los demás botones
+                ...(buttonState.color === 'warning' ? { bgcolor: 'warning.dark' } : {})
               }
             }}
           >
