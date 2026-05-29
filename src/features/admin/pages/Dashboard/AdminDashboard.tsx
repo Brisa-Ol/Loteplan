@@ -137,7 +137,7 @@ const CustomDatePicker = ({ disabled, value, onChange, min }: CustomDatePickerPr
 const TabProgreso = ({ chartDataSuscripciones, estadosData, RECHART_COLORS, theme }: TabProgresoProps) => (
   <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '2fr 1fr' }, gap: 4 }}>
     <Box>
-      <Typography variant="h6" gutterBottom>Avance de capital por proyecto</Typography>
+      <Typography variant="h6" gutterBottom>Porcentaje de Objetivo por Proyecto</Typography>
       <ResponsiveContainer width="100%" height={350}>
         <BarChart data={chartDataSuscripciones}>
           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={theme.palette.divider} />
@@ -149,7 +149,7 @@ const TabProgreso = ({ chartDataSuscripciones, estadosData, RECHART_COLORS, them
       </ResponsiveContainer>
     </Box>
     <Box>
-      <Typography variant="h6" gutterBottom>Distribución de lotes</Typography>
+      <Typography variant="h6" gutterBottom>Distribución de proyectos</Typography>
       <ResponsiveContainer width="100%" height={300}>
         <PieChart>
           <Pie data={estadosData} cx="50%" cy="50%" innerRadius={70} outerRadius={100} paddingAngle={5} dataKey="value">
@@ -164,19 +164,20 @@ const TabProgreso = ({ chartDataSuscripciones, estadosData, RECHART_COLORS, them
 );
 
 const TabRiesgoEficiencia = ({ morosidad, cancelacion, pagosATiempo, navigate, theme }: TabRiesgoEficienciaProps) => (
-  <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 3 }}>
+  <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' }, gap: 3 }}>
     <Paper variant="outlined" sx={{ p: 4, borderColor: 'warning.main', bgcolor: alpha(theme.palette.warning.light, 0.3) }}>
       <Stack spacing={2} alignItems="center">
         <Typography variant="h2" color="warning.dark">{toNumber(morosidad?.tasa_morosidad)}%</Typography>
         <Typography variant="h5">Tasa de Morosidad</Typography>
         <Typography variant="body2" color="text.secondary" textAlign="center">
-          Representa {formatearMoneda(morosidad?.total_en_riesgo)} en cuotas vencidas actuales.
+          Representa {formatearMoneda(morosidad?.monto_vencido)} en cuotas vencidas actuales.
         </Typography>
         <Button variant="outlined" color="warning" size="small" sx={{ mt: 1 }} onClick={() => { sessionStorage.setItem('resumenesFilter', 'overdue'); navigate('/admin/resumenes'); }}>
           Ver Morosos
         </Button>
       </Stack>
     </Paper>
+
     <Paper variant="outlined" sx={{ p: 4, borderColor: 'error.main', bgcolor: alpha(theme.palette.error.light, 0.3) }}>
       <Stack spacing={1} alignItems="center">
         <Typography variant="h2" color="error.main">{toNumber(cancelacion?.tasa_cancelacion)}%</Typography>
@@ -189,6 +190,7 @@ const TabRiesgoEficiencia = ({ morosidad, cancelacion, pagosATiempo, navigate, t
         </Button>
       </Stack>
     </Paper>
+
     <Paper variant="outlined" sx={{ p: 4, borderColor: 'success.main', bgcolor: alpha(theme.palette.success.light, 0.3) }}>
       <Stack spacing={1} alignItems="center">
         <Typography variant="h2" color="success.main">{toNumber(pagosATiempo?.tasa_pagos_a_tiempo)}%</Typography>
@@ -198,6 +200,19 @@ const TabRiesgoEficiencia = ({ morosidad, cancelacion, pagosATiempo, navigate, t
         </Typography>
         <Button variant="outlined" color="success" size="small" startIcon={<EventAvailable />} sx={{ mt: 1 }} onClick={() => navigate('/admin/resumenes')}>
           Auditar Pagos
+        </Button>
+      </Stack>
+    </Paper>
+
+    <Paper variant="outlined" sx={{ p: 4, borderColor: 'warning.main', bgcolor: alpha(theme.palette.warning.light, 0.3) }}>
+      <Stack spacing={2} alignItems="center">
+        <Typography variant="h2" color="warning.dark">{toNumber(morosidad?.tasa_riesgo_futuro)}%</Typography>
+        <Typography variant="h5">Tasa de Riesgo Futuro</Typography>
+        <Typography variant="body2" color="text.secondary" textAlign="center">
+          Representa {formatearMoneda(morosidad?.monto_pendiente)} en cuotas pendientes de pago.
+        </Typography>
+        <Button variant="outlined" color="warning" size="small" sx={{ mt: 1 }} onClick={() => { sessionStorage.setItem('resumenesFilter', 'overdue'); navigate('/admin/resumenes'); }}>
+          Ver Morosos
         </Button>
       </Stack>
     </Paper>

@@ -347,7 +347,7 @@ const CreateProyectoModal: React.FC<any> = ({ open, onClose, onSubmit, isLoading
 
           {activeStep === steps.length - 1 ? (
             <Button variant="contained" onClick={formik.submitForm} startIcon={<AddIcon />}
-              disabled={isLoading} sx={{ px: 4, borderRadius: 2, fontWeight: 800 }}>
+              disabled={formik.isSubmitting} sx={{ px: 4, borderRadius: 2, fontWeight: 800 }}>
               Crear Proyecto
             </Button>
           ) : (
