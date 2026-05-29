@@ -8,7 +8,7 @@ import { ROUTES } from '.';
 import ProtectedRoute from '../core/auth/guards/ProtectedRoute';
 import SecuritySettings from '@/features/client/pages/MiCuenta/SecuritySettings/SecuritySettings';
 import { AdminMetrics } from '@/features/admin/pages/Metricas/AdminMetrics/AdminMetrics';
-import { UserMetrics } from '@/features/admin/pages/Metricas/UserMetrics/UserMetrics';
+
 
 // ============ LAZY LOADING ============
 
@@ -28,6 +28,8 @@ const Unauthorized = lazy(() => import('@/features/auth/pages/Unauthorized'));
 const Home = lazy(() => import('@/features/public/Home'));
 const ComoFunciona = lazy(() => import('@/features/public/ComoFunciona'));
 const Nosotros = lazy(() => import('@/features/public/Nosotros'));
+const PoliticaPrivacidad = lazy(() => import('@/features/public/PoliticaPrivacidad'));
+const PreguntasFrecuentes = lazy(() => import('@/features/public/PreguntasFrecuentes'));
 
 // Proyectos
 const RoleSelection = lazy(() => import('@/features/client/pages/Proyectos/RoleSelection'));
@@ -85,7 +87,8 @@ const AppRouter = () => {
           <Route path={ROUTES.PUBLIC.HOME} element={<Home />} />
           <Route path={ROUTES.PUBLIC.COMO_FUNCIONA} element={<ComoFunciona />} />
           <Route path={ROUTES.PUBLIC.NOSOTROS} element={<Nosotros />} />
-
+          <Route path={ROUTES.PUBLIC.PRIVACIDAD} element={<PoliticaPrivacidad />} />
+          <Route path={ROUTES.PUBLIC.PREGUNTAS} element={<PreguntasFrecuentes />} />
           {/* ✅ PROYECTOS PÚBLICOS - Cualquiera puede ver */}
           <Route path={ROUTES.PROYECTOS.SELECCION_ROL} element={<RoleSelection />} />
           <Route path={ROUTES.PROYECTOS.DETALLE} element={<DetalleProyecto />} />

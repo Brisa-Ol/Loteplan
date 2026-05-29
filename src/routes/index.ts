@@ -13,6 +13,7 @@ export const ROUTES = {
     COMO_FUNCIONA: '/como-funciona',
     NOSOTROS: '/nosotros',
     PREGUNTAS: '/preguntas',
+    PRIVACIDAD: '/privacidad'
   },
 
   // --- Proyectos (Públicos) ---

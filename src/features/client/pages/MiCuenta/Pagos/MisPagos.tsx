@@ -272,7 +272,7 @@ const MisPagos: React.FC = () => {
   const twoFaAdhesionModal = useModal();
   const confirmDialog = useConfirmDialog();
 
-const detalleAdhesionModal = useModal();
+  const detalleAdhesionModal = useModal();
   const [selectedAdhesionDetail, setSelectedAdhesionDetail] = useState<AdhesionDto | null>(null);
   const [currentTab, setCurrentTab] = useState(0);
   const [selectedProyectoId, setSelectedProyectoId] = useState<string | 'todos'>('todos');
@@ -495,7 +495,7 @@ const detalleAdhesionModal = useModal();
     },
     [confirmDialog, formatCurrency]
   );
-const handleOpenAdhesionDetail = useCallback(
+  const handleOpenAdhesionDetail = useCallback(
     (adhesion: AdhesionDto) => {
       setSelectedAdhesionDetail(adhesion);
       detalleAdhesionModal.open();
@@ -732,7 +732,7 @@ const handleOpenAdhesionDetail = useCallback(
           );
         },
       },
-{
+      {
         id: 'acciones',
         label: 'Acción',
         align: 'right',
@@ -1023,7 +1023,7 @@ const handleOpenAdhesionDetail = useCallback(
         error={twoFAErrorAdhesion}
         title="Confirmar pago de adhesión"
       />
-<DetalleCuotaAdhesionModal
+      <DetalleCuotaAdhesionModal
         open={detalleAdhesionModal.isOpen}
         onClose={() => {
           detalleAdhesionModal.close();

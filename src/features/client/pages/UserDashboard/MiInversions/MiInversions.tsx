@@ -167,7 +167,6 @@ export const MiInversions: FC<MiInversionsProps> = ({
 						);
 					})}
 			</Stack>
-			)
 		</>
 	);
 };
