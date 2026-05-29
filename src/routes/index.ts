@@ -15,6 +15,7 @@ export const ROUTES = {
     PREGUNTAS: '/preguntas',
     CENTRO_AYUDA: '/centro-ayuda',
     TERMSANDCONDITIONS: '/terminos',
+    PRIVACIDAD: '/privacidad'
   },
 
   // --- Proyectos (Públicos) ---

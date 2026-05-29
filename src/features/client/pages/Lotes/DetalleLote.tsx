@@ -592,7 +592,7 @@ const imagenUrl = primeraImagenActiva ? ImagenService.resolveImageUrl(primeraIma
                 {preciosInfo.hayOfertas && preciosInfo.soyLider && (
                   <>
                     <Typography variant="overline" color="success.main" sx={{ fontWeight: 800, letterSpacing: 1 }}>
-                      {isCerrada ? '¡GANASTE EL LOTE!' : 'OFERTA LÍDER — SOS VOS'}
+                      {isCerrada ? '¡GANASTE EL LOTE!' : 'OFERTA LÍDER — ¡SOS VOS!'}
                     </Typography>
                     <Typography variant="h3" fontWeight={900} color="success.main" sx={{ mb: 3 }}>
                       {fmt(preciosInfo.montoLider)}
@@ -600,17 +600,32 @@ const imagenUrl = primeraImagenActiva ? ImagenService.resolveImageUrl(primeraIma
                   </>
                 )}
 
-                {/* CASO 3 — fui superado */}
+               {/* CASO 3 — fui superado */}
                 {preciosInfo.hayOfertas && fuiSuperado && (
                   <>
-                    <Typography variant="overline" color={isCerrada ? "text.secondary" : "error.main"} sx={{ fontWeight: 800, letterSpacing: 1 }}>
-                      {isCerrada ? 'SUBASTA FINALIZADA' : '¡TE SUPERARON!'}
+                    <Typography variant="overline" color={isCerrada ? "text.secondary" : "error.main"} sx={{ fontWeight: 800, letterSpacing: 1.5, fontSize: '0.85rem' }}>
+                      {isCerrada ? 'SUBASTA FINALIZADA' : '¡TU OFERTA QUEDÓ ATRÁS!'}
                     </Typography>
-                    <Typography variant="h3" fontWeight={900} color={isCerrada ? "text.disabled" : "error.main"} sx={{ mb: 1 }}>
+                    
+                    <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 1, mb: 0.5, textTransform: 'uppercase', fontSize: '0.75rem' }}>
+                      Tu última puja fue de:
+                    </Typography>
+
+                    <Typography 
+                      variant="h3" 
+                      fontWeight={900} 
+                      color={isCerrada ? "text.disabled" : "error.main"} 
+                      sx={{ 
+                        mb: 1, 
+                        textDecoration: isCerrada ? 'none' : 'line-through', 
+                        opacity: isCerrada ? 1 : 0.7 
+                      }}
+                    >
                       {fmt(preciosInfo.miMonto)}
                     </Typography>
-                    <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 3 }}>
-                      {isCerrada ? 'El lote fue adjudicado a otra oferta.' : 'Tu oferta actual — hay una más alta'}
+
+                    <Typography variant="body2" color="text.primary" fontWeight={700} display="block" sx={{ mb: 3 }}>
+                      {isCerrada ? 'El lote fue adjudicado a otra oferta.' : 'Alguien más está a punto de adjudicarse este lote.'}
                     </Typography>
                   </>
                 )}
@@ -627,15 +642,16 @@ const imagenUrl = primeraImagenActiva ? ImagenService.resolveImageUrl(primeraIma
                   </>
                 )}
 
-                {/* Aviso adicional cuando fui superado (oculto si ya cerró) */}
+
+{/* Aviso adicional cuando fui superado (oculto si ya cerró) */}
                 {fuiSuperado && !isCerrada && (
                   <Fade in timeout={300}>
-                    <Alert severity="warning" sx={{ borderRadius: 2, textAlign: 'left', mb: 2 }}>
+                    <Alert severity="error" sx={{ borderRadius: 2, textAlign: 'left', mb: 2 }}>
                       <Typography variant="caption" fontWeight={800} display="block">
-                        Alguien superó tu oferta
+                        ¡No te quedes afuera!
                       </Typography>
                       <Typography variant="caption">
-                        Podés mejorar tu oferta sin consumir tokens adicionales.
+                        Mejorá tu oferta ahora mismo (sin consumir tokens adicionales) y volvé a asegurar tu lugar.
                       </Typography>
                     </Alert>
                   </Fade>
@@ -652,7 +668,7 @@ const imagenUrl = primeraImagenActiva ? ImagenService.resolveImageUrl(primeraIma
                     startIcon={<Gavel />}
                     sx={{ py: 2, fontWeight: 900, borderRadius: 3 }}
                   >
-                    {yaParticipa ? 'MEJORAR MI OFERTA' : 'OFERTAR AHORA'}
+                    {yaParticipa ? (fuiSuperado ? 'RECUPERAR MI LUGAR' : 'MEJORAR MI OFERTA') : 'OFERTAR AHORA'}
                   </Button>
 
                   {sinTokensParaPujar && !isCerrada && (

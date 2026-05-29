@@ -8,7 +8,7 @@ import { ROUTES } from '.';
 import ProtectedRoute from '../core/auth/guards/ProtectedRoute';
 import SecuritySettings from '@/features/client/pages/MiCuenta/SecuritySettings/SecuritySettings';
 import { AdminMetrics } from '@/features/admin/pages/Metricas/AdminMetrics/AdminMetrics';
-import { UserMetrics } from '@/features/admin/pages/Metricas/UserMetrics/UserMetrics';
+
 
 // ============ LAZY LOADING ============
 
@@ -30,6 +30,8 @@ const ComoFunciona = lazy(() => import('@/features/public/ComoFunciona'));
 const Nosotros = lazy(() => import('@/features/public/Nosotros'));
 const CentroAyuda = lazy(() => import('@/features/public/CentroDeAyuda'));
 const TermsAndConditions = lazy(() => import('@/features/public/TermsAndConditions'));
+const PoliticaPrivacidad = lazy(() => import('@/features/public/PoliticaPrivacidad'));
+const PreguntasFrecuentes = lazy(() => import('@/features/public/PreguntasFrecuentes'));
 
 // Proyectos
 const RoleSelection = lazy(() => import('@/features/client/pages/Proyectos/RoleSelection'));
@@ -88,7 +90,8 @@ const AppRouter = () => {
           <Route path={ROUTES.PUBLIC.COMO_FUNCIONA} element={<ComoFunciona />} />
           <Route path={ROUTES.PUBLIC.NOSOTROS} element={<Nosotros />} />
           <Route path={ROUTES.PUBLIC.CENTRO_AYUDA} element={<CentroAyuda />} />
-          <Route path={ROUTES.PUBLIC.TERMSANDCONDITIONS} element={<TermsAndConditions />} />
+          <Route path={ROUTES.PUBLIC.TERMSANDCONDITIONS} element={<TermsAndConditions />} />          <Route path={ROUTES.PUBLIC.PRIVACIDAD} element={<PoliticaPrivacidad />} />
+          <Route path={ROUTES.PUBLIC.PREGUNTAS} element={<PreguntasFrecuentes />} />
           {/* ✅ PROYECTOS PÚBLICOS - Cualquiera puede ver */}
           <Route path={ROUTES.PROYECTOS.SELECCION_ROL} element={<RoleSelection />} />
           <Route path={ROUTES.PROYECTOS.DETALLE} element={<DetalleProyecto />} />
