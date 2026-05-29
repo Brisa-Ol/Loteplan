@@ -69,17 +69,16 @@ const PDFViewerMejorado: React.FC<PDFViewerMejoradoProps> = ({
     return `${env.apiPublicUrl}${pdfUrl.startsWith('/') ? '' : '/'}${pdfUrl}`;
   }, [pdfUrl]);
 
-  // ResizeObserver para que el PDF sea responsive al ancho del contenedor
-  useEffect(() => {
-    const updateWidth = () => {
-      if (containerRef.current) {
-        setPageWidth(containerRef.current.offsetWidth - 48);
-      }
-    };
-    const observer = new ResizeObserver(updateWidth);
-    if (containerRef.current) observer.observe(containerRef.current);
-    return () => observer.disconnect();
-  }, []);
+useEffect(() => {
+  const updateWidth = () => {
+    if (containerRef.current) {
+      setPageWidth(containerRef.current.offsetWidth - 150); 
+    }
+  };
+  const observer = new ResizeObserver(updateWidth);
+  if (containerRef.current) observer.observe(containerRef.current);
+  return () => observer.disconnect();
+}, []);
 
   const handlePageClick = (e: React.MouseEvent<HTMLDivElement>, pageNum: number) => {
     if (readOnlyMode || !signatureDataUrl) return;
@@ -94,7 +93,7 @@ const PDFViewerMejorado: React.FC<PDFViewerMejoradoProps> = ({
   };
 
   return (
-    <Box ref={containerRef} sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <Box ref={containerRef} sx={{ height: '70vh', display: 'flex', flexDirection: 'column',minHeight: '500px' }}>
 
       {/* 🛠 BARRA DE HERRAMIENTAS */}
       <Paper
@@ -129,7 +128,10 @@ const PDFViewerMejorado: React.FC<PDFViewerMejoradoProps> = ({
         sx={{
           flex: 1, overflowY: 'auto', bgcolor: 'grey.200', borderRadius: 2,
           border: `1px solid ${theme.palette.divider}`, p: 2,
-          display: 'flex', flexDirection: 'column', alignItems: 'center'
+          display: 'flex', flexDirection: 'column', alignItems: 'center',
+          maxWidth: '1000px', // Limita el ancho máximo
+    width: '100%',      // Asegura que ocupe todo el espacio disponible hasta el máximo
+    margin: '0 auto',   // Centra el recuadro gris horizontalmente
         }}
       >
         <Document
