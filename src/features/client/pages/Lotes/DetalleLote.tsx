@@ -5,6 +5,7 @@ import {
   BookmarkBorder, // <-- Agregado
   EmojiEvents,
   Gavel,
+  LockOutlined,
   ReplayCircleFilled, // <-- Agregado
   Timer,
   TokenOutlined
@@ -61,6 +62,7 @@ import { useVerificarSuscripcion } from '../../hooks/useVerificarSuscripcion';
 import { FavoritoButton } from './components/BotonFavorito';
 import { PujarModal } from './modals/PujarModal';
 import type { ImagenDto } from '@/core/types/imagen.dto';
+import { useVerificarFirma } from '../../hooks/useVerificarFirma';
 
 // ─── Animaciones ─────────────────────────────────────────────────────────────
 
@@ -163,7 +165,8 @@ const DetalleLote: React.FC = () => {
 
   const isFetching = useIsFetching({ queryKey: ['lote', id] });
   const { estaSuscripto, tokensDisponibles } = useVerificarSuscripcion(lote?.id_proyecto);
-
+  const {tieneFirmaPendiente} = useVerificarFirma(lote?.id_proyecto);
+  console.log(tieneFirmaPendiente)
   // ─── Mi puja activa en este lote ──────────────────────────────────────────
 
   const miPujaEnEsteLote = useMemo(() => {
@@ -246,7 +249,7 @@ const DetalleLote: React.FC = () => {
   const yaPago = winInfo.status === 'ganadora_pagada';
   const debesPagar = winInfo.esGanadorDefinitivo && subastaFinalizada && !yaPago;
 
-  const puedePujar = isActiva && estaSuscripto && (tokensDisponibles > 0 || yaParticipa);
+  const puedePujar = isActiva && estaSuscripto && !tieneFirmaPendiente && (tokensDisponibles > 0 || yaParticipa);
   const puedeCancelar = isActiva && yaParticipa;
   const sinTokensParaPujar =
     isActiva && !isCerrada && estaSuscripto && tokensDisponibles === 0 && !yaParticipa;
@@ -659,46 +662,70 @@ const imagenUrl = primeraImagenActiva ? ImagenService.resolveImageUrl(primeraIma
 
                 {/* Acciones */}
                 <Stack spacing={2}>
-                  <Button
-                    variant="contained"
-                    fullWidth
-                    size="large"
-                    onClick={pujarModal.open}
-                    disabled={isCerrada || !puedePujar}
-                    startIcon={<Gavel />}
-                    sx={{ py: 2, fontWeight: 900, borderRadius: 3 }}
-                  >
-                    {yaParticipa ? (fuiSuperado ? 'RECUPERAR MI LUGAR' : 'MEJORAR MI OFERTA') : 'OFERTAR AHORA'}
-                  </Button>
-
-                  {sinTokensParaPujar && !isCerrada && (
-                    <Fade in timeout={300}>
-                      <Alert
-                        severity="warning"
-                        icon={<TokenOutlined fontSize="small" />}
-                        sx={{ borderRadius: 2, textAlign: 'left' }}
-                      >
-                        <Typography variant="caption" fontWeight={800} display="block">
-                          Sin tokens disponibles
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          Ya utilizaste tu token en este proyecto y no tenés una puja activa aquí.
-                        </Typography>
-                      </Alert>
-                    </Fade>
-                  )}
-
-                  {puedeCancelar && !isCerrada && (
-                    <Button
-                      variant="text"
-                      color="error"
-                      onClick={handleSolicitarCancelacion}
-                      sx={{ fontWeight: 700 }}
+                {/* ── NUEVO: Bloqueo por firma pendiente ── */}
+                {tieneFirmaPendiente && isActiva && (
+                  <Fade in timeout={300}>
+                    <Alert
+                      severity="error"
+                      icon={<LockOutlined fontSize="small" />}
+                      sx={{ borderRadius: 2, textAlign: 'left' }}
                     >
-                      Retirar mi puja
-                    </Button>
-                  )}
-                </Stack>
+                      <Typography variant="caption" fontWeight={800} display="block">
+                        Tenés contratos pendientes de firma
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Para poder pujar en este lote, primero debés firmar todos tus contratos activos.
+                        Volvé al proyecto y completá la firma desde la barra lateral.
+                      </Typography>
+                    </Alert>
+                  </Fade>
+                )}
+
+                <Button
+                  variant="contained"
+                  fullWidth
+                  size="large"
+                  onClick={pujarModal.open}
+                  disabled={isCerrada || !puedePujar}
+                  startIcon={tieneFirmaPendiente ? <LockOutlined /> : <Gavel />}
+                  sx={{ py: 2, fontWeight: 900, borderRadius: 3 }}
+                >
+                  {tieneFirmaPendiente && isActiva
+                    ? 'FIRMA TU CONTRATO PARA PUJAR'
+                    : yaParticipa
+                      ? 'MEJORAR MI OFERTA'
+                      : 'OFERTAR AHORA'
+                  }
+                </Button>
+
+                {sinTokensParaPujar && !isCerrada && !tieneFirmaPendiente && (
+                  <Fade in timeout={300}>
+                    <Alert
+                      severity="warning"
+                      icon={<TokenOutlined fontSize="small" />}
+                      sx={{ borderRadius: 2, textAlign: 'left' }}
+                    >
+                      <Typography variant="caption" fontWeight={800} display="block">
+                        Sin tokens disponibles
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Ya utilizaste tu token en este proyecto y no tenés una puja activa aquí.
+                      </Typography>
+                    </Alert>
+                  </Fade>
+                )}
+
+                {puedeCancelar && !isCerrada && (
+                  <Button
+                    variant="text"
+                    color="error"
+                    onClick={handleSolicitarCancelacion}
+                    sx={{ fontWeight: 700 }}
+                  >
+                    Retirar mi puja
+                  </Button>
+                )}
+              </Stack>
               </CardContent>
             </Card>
 

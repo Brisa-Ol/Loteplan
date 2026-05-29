@@ -41,9 +41,10 @@ const LoteCardSkeleton = () => (
 
 interface ListaLotesProyectoProps {
   idProyecto: number;
+  tieneFirmaPendiente?: boolean
 }
 
-const ListaLotesProyecto: React.FC<ListaLotesProyectoProps> = ({ idProyecto }) => {
+const ListaLotesProyecto: React.FC<ListaLotesProyectoProps> = ({ idProyecto, tieneFirmaPendiente }) => {
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
   const queryClient = useQueryClient();
@@ -176,12 +177,29 @@ const infoTokensModal = useModal();
         )}
       </Stack>
 
+      {/* ⚠️ Alerta de firma pendiente */}
+      {tieneFirmaPendiente && (
+        <Alert
+          severity="warning"
+          icon={<Gavel fontSize="small" />}
+          sx={{ mb: 3, borderRadius: 3 }}
+        >
+          <Typography variant="body2" fontWeight={800} gutterBottom>
+            Tenés contratos pendientes de firma
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Para poder participar en subastas necesitás firmar todos tus contratos activos.
+            Podés hacerlo desde el botón <strong>"Firmar contrato"</strong> en la barra lateral del proyecto.
+          </Typography>
+        </Alert>
+      )}
+
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', xl: 'repeat(3, 1fr)' }, gap: 3 }}>
         {lotesOrdenados.map((lote) => (
           <LoteCard
             key={lote.id} lote={lote} onNavigate={handleNavigate} onPujar={handlePujar}
             isSubscribed={estaSuscripto} hasTokens={tokensDisponibles > 0}
-            isLoadingSub={isLoadingSub} isAuthenticated={isAuthenticated}
+            isLoadingSub={isLoadingSub} isAuthenticated={isAuthenticated} tieneFirmaPendiente={tieneFirmaPendiente}
           />
         ))}
       </Box>

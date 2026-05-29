@@ -16,7 +16,7 @@ export const useVerificarFirma = (idProyecto: number | undefined) => {
 
 	return {
 		trackingData,
-		tieneFirmaPendiente: trackingData?.puede_firmar === false,
+		tieneFirmaPendiente: trackingData?.puede_firmar,
 		puedeFirmar: trackingData?.puede_firmar ?? true,
 		isLoading,
 	};

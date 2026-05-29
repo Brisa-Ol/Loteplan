@@ -39,6 +39,7 @@ import { CheckoutWizardModal } from '../modals/CheckoutWizardModal/CheckoutWizar
 
 import styles from './DetalleProyecto.module.css'
 import type { TrackPaymentAndContractResponseDto } from '@/core/types/contrato-firmado.dto';
+import { useVerificarFirma } from '@/features/client/hooks/useVerificarFirma';
 
 // 🚀 LAZY LOADING
 const ProjectGallery = lazy(() => import('../components/ProjectGallery').then(m => ({ default: m.ProjectGallery })));
@@ -149,7 +150,7 @@ const DetalleProyecto: React.FC = () => {
   //variable Thomy
 
   const [cantProyectsUser, setCantProyectsUser] = useState(0)
-  const [trackingData, setTrackingData] = useState<ContratoTrackingResponse | TrackPaymentAndContractResponseDto | null>(null)
+
 
   const [isLoadingCount, setIsLoadingCount] = useState(true);
 
@@ -181,25 +182,9 @@ const DetalleProyecto: React.FC = () => {
     getProyects();
   }, [logic.proyecto?.id, user, isAuthenticated]);
 
-  useEffect(() => {
-    if(!isAuthenticated || !user?.id){
-      setIsLoadingCount(false);
-      return;
-    }
-    if (!logic.proyecto?.id) return; // 🔥 CLAVE
-    const trackingContracts = async () => {
-      try {
-        const res = await ContratoService.trackPaymentAndContract(Number(logic.proyecto?.id));
-        setTrackingData(res);
-        console.log(res)
-      } catch (err) {
-        console.error(err);
-      }
-    };
-
-    trackingContracts();
-  }, [logic.proyecto?.id, user, isAuthenticated]);
-
+  const {trackingData, tieneFirmaPendiente} = useVerificarFirma(logic.proyecto?.id)
+  console.log(trackingData)
+  console.log(tieneFirmaPendiente)
 
 
 
@@ -359,7 +344,7 @@ const DetalleProyecto: React.FC = () => {
             </Typography>
           </Stack>
         </Paper>
-        <ListaLotesProyecto idProyecto={Number(logic.proyecto.id)} />
+        <ListaLotesProyecto idProyecto={Number(logic.proyecto.id)} tieneFirmaPendiente={tieneFirmaPendiente} />
       </>
     )}
   </Box>

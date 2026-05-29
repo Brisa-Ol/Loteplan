@@ -10,6 +10,7 @@ import {
   NavigateNext
 } from '@mui/icons-material';
 import {
+  Alert,
   Box, Button, Card, CardContent, CardMedia, Chip, Fade,
   IconButton, keyframes, Skeleton,
   Stack, Typography, useTheme
@@ -38,11 +39,12 @@ export interface LoteCardProps {
   hasTokens: boolean;
   isLoadingSub: boolean;
   isAuthenticated: boolean;
+  tieneFirmaPendiente?: boolean;
 }
 
 const LoteCard: React.FC<LoteCardProps> = ({
   lote, onNavigate, onPujar, isSubscribed, hasTokens,
-  isLoadingSub, isAuthenticated
+  isLoadingSub, isAuthenticated, tieneFirmaPendiente
 }) => {
   const theme = useTheme();
   const formatCurrency = useCurrencyFormatter();
@@ -107,7 +109,7 @@ const LoteCard: React.FC<LoteCardProps> = ({
   const soyGanador = esLiderActual || esGanadorDefinitivo;
 
   // ✅ CORRECCIÓN: Puede pujar si tiene tokens, si es el líder actual, o si YA PARTICIPA (mejora gratuita)
-  const puedePujar = isActiva && isSubscribed && (hasTokens || esLiderActual || yaParticipa);
+  const puedePujar = isActiva && isSubscribed && !tieneFirmaPendiente && (hasTokens || esLiderActual || yaParticipa);
 
   const handleBotonClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -131,7 +133,9 @@ const LoteCard: React.FC<LoteCardProps> = ({
         ? { text: "Ver mi Lote", icon: <EmojiEmotions />, color: "success" as const, variant: "contained" as const }
         : { text: "Detalles", icon: <ArrowForward />, color: "primary" as const, variant: "contained" as const };
     }
-
+    if (tieneFirmaPendiente) {
+    return { text: "Firma pendiente", icon: <Lock />, color: "warning" as const, variant: "contained" as const };
+    }
     if (puedePujar) {
       return (esLiderActual || yaParticipa)
         ? { text: "Mejorar", icon: <EmojiEmotions />, color: esLiderActual ? "success" as const : "warning" as const, variant: "contained" as const }
@@ -140,7 +144,7 @@ const LoteCard: React.FC<LoteCardProps> = ({
 
     // Por defecto (ej. Lotes en "Próximamente" o de solo lectura)
     return { text: "Detalles", icon: <ArrowForward />, color: "primary" as const, variant: "contained" as const };
-  }, [isLoadingSub, isAuthenticated, subastaFinalizada, esGanadorDefinitivo, puedePujar, esLiderActual, yaParticipa]);
+  }, [isLoadingSub, isAuthenticated, subastaFinalizada, esGanadorDefinitivo, puedePujar, esLiderActual, yaParticipa, tieneFirmaPendiente, isActiva, isSubscribed]);
 
   return (
     <Fade in={true} timeout={400}>
@@ -299,7 +303,7 @@ const LoteCard: React.FC<LoteCardProps> = ({
             color={buttonState.color}
             fullWidth
             onClick={handleBotonClick}
-            disabled={isLoadingSub}
+            disabled={isLoadingSub || (tieneFirmaPendiente && buttonState.color === 'warning')} // Deshabilitamos el botón si tiene firma pendiente y no está suscripto
             startIcon={buttonState.icon}
             sx={{
               fontWeight: 800,
