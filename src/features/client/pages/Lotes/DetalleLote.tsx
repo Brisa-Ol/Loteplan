@@ -60,6 +60,7 @@ import { useImageLoader } from '../../hooks/useImageLoader';
 import { useVerificarSuscripcion } from '../../hooks/useVerificarSuscripcion';
 import { FavoritoButton } from './components/BotonFavorito';
 import { PujarModal } from './modals/PujarModal';
+import type { ImagenDto } from '@/core/types/imagen.dto';
 
 // ─── Animaciones ─────────────────────────────────────────────────────────────
 
@@ -322,8 +323,9 @@ const DetalleLote: React.FC = () => {
 
   if (!lote) return <Alert severity="error">Lote no encontrado</Alert>;
 
-  const rawUrl = lote?.imagenes?.[0]?.url;
-  const imagenUrl = rawUrl ? ImagenService.resolveImageUrl(rawUrl) : null;
+const imagenesActivas = lote?.imagenes?.filter((img: any) => img.activo === true) || [];
+const primeraImagenActiva = imagenesActivas.length > 0 ? imagenesActivas[0].url : null;
+const imagenUrl = primeraImagenActiva ? ImagenService.resolveImageUrl(primeraImagenActiva) : null;
 
   // ─── Render ───────────────────────────────────────────────────────────────
 

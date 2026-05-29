@@ -18,15 +18,14 @@ const normalizarFecha = (fechaStr: string) => {
 
 const calcularDiasDiferencia = (fechaObjetivo: Date) => {
   const ahora = new Date();
-  ahora.setHours(0, 0, 0, 0); // Reset a medianoche actual
+  ahora.setHours(0, 0, 0, 0); // medianoche actual
 
   const objetivo = new Date(fechaObjetivo);
-  objetivo.setHours(0, 0, 0, 0); // Reset a medianoche objetivo
+  objetivo.setHours(0, 0, 0, 0); // medianoche objetivo
 
   const diffMs = objetivo.getTime() - ahora.getTime();
-  const dias = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-
-  return dias; // Puede ser negativo si ya pasó
+  const dias = Math.round(diffMs / (1000 * 60 * 60 * 24));
+  return dias; // entero, positivo si falta, negativo si ya pasó, cero si es hoy
 };
 
 export const useProyectoHelpers = (proyecto: ProyectoDto) => {
@@ -75,19 +74,28 @@ export const useProyectoHelpers = (proyecto: ProyectoDto) => {
     let tiempoLabel = '';
 
     if (proyecto.estado_proyecto === 'En Espera' && fechaInicio) {
-      // Caso 1: Aún no empieza
       diasRestantes = calcularDiasDiferencia(fechaInicio);
-      tiempoLabel = diasRestantes <= 0 ? 'Abre hoy' : `Abre en ${diasRestantes} días`;
-    } else if (proyecto.estado_proyecto === 'En proceso' && fechaCierre) {
-      // Caso 2: Está activo, contamos para el cierre
-      diasRestantes = calcularDiasDiferencia(fechaCierre);
-      esUrgente = diasRestantes >= 0 && diasRestantes <= 10; // Urgente si faltan 10 días o menos
-
-      if (diasRestantes < 0) tiempoLabel = 'Finalizado';
-      else if (diasRestantes === 0) tiempoLabel = '¡Cierra hoy!';
-      else if (diasRestantes === 1) tiempoLabel = '¡Cierra mañana!';
-      else tiempoLabel = `Cierra en ${diasRestantes} días`;
+    if (diasRestantes > 0) {
+      tiempoLabel = `Abre en ${diasRestantes} días`;
+    } else if (diasRestantes === 0) {
+      tiempoLabel = 'Abre hoy';
+    } else {
+      tiempoLabel = ''; // ya debería haber comenzado
     }
+  } else if (proyecto.estado_proyecto === 'En proceso' && fechaCierre) {
+    diasRestantes = calcularDiasDiferencia(fechaCierre);
+    esUrgente = diasRestantes >= 0 && diasRestantes <= 10;
+
+    if (diasRestantes < 0) {
+      tiempoLabel = 'Finalizado';
+    } else if (diasRestantes === 0) {
+      tiempoLabel = '¡Cierra hoy!';
+    } else if (diasRestantes === 1) {
+      tiempoLabel = '¡Cierra mañana!';
+    } else {
+      tiempoLabel = `Cierra en ${diasRestantes} días`;
+    }
+  }
 
     const fechaInicioTexto = fechaInicio?.toLocaleDateString('es-AR', { day: '2-digit', month: 'short' }) || '-';
     const fechaCierreTexto = fechaCierre?.toLocaleDateString('es-AR', { day: '2-digit', month: 'short' }) || '-';
