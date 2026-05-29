@@ -28,6 +28,8 @@ const Unauthorized = lazy(() => import('@/features/auth/pages/Unauthorized'));
 const Home = lazy(() => import('@/features/public/Home'));
 const ComoFunciona = lazy(() => import('@/features/public/ComoFunciona'));
 const Nosotros = lazy(() => import('@/features/public/Nosotros'));
+const CentroAyuda = lazy(() => import('@/features/public/CentroDeAyuda'));
+const TermsAndConditions = lazy(() => import('@/features/public/TermsAndConditions'));
 
 // Proyectos
 const RoleSelection = lazy(() => import('@/features/client/pages/Proyectos/RoleSelection'));
@@ -85,7 +87,8 @@ const AppRouter = () => {
           <Route path={ROUTES.PUBLIC.HOME} element={<Home />} />
           <Route path={ROUTES.PUBLIC.COMO_FUNCIONA} element={<ComoFunciona />} />
           <Route path={ROUTES.PUBLIC.NOSOTROS} element={<Nosotros />} />
-
+          <Route path={ROUTES.PUBLIC.CENTRO_AYUDA} element={<CentroAyuda />} />
+          <Route path={ROUTES.PUBLIC.TERMSANDCONDITIONS} element={<TermsAndConditions />} />
           {/* ✅ PROYECTOS PÚBLICOS - Cualquiera puede ver */}
           <Route path={ROUTES.PROYECTOS.SELECCION_ROL} element={<RoleSelection />} />
           <Route path={ROUTES.PROYECTOS.DETALLE} element={<DetalleProyecto />} />

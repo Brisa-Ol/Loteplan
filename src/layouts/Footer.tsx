@@ -91,7 +91,7 @@ const Footer: React.FC = () => {
             <Typography sx={sectionTitleStyle} component="h6">Empresa</Typography>
             <Stack spacing={1.2}>
               <Link href="/nosotros" sx={linkStyle}>Nosotros</Link>
-              <Link href="/proyectos" sx={linkStyle}>Proyectos</Link>
+              <Link href="/proyectos/rol-seleccion" sx={linkStyle}>Proyectos</Link>
               <Link href="/como-funciona" sx={linkStyle}>Como Funciona</Link>
               <Link href="/preguntas" sx={linkStyle}>Preguntas Frecuentes</Link>
             </Stack>
@@ -101,7 +101,7 @@ const Footer: React.FC = () => {
           <Box sx={{ flex: 1 }}>
             <Typography sx={sectionTitleStyle} component="h6">Legal & Ayuda</Typography>
             <Stack spacing={1.2}>
-              <Link href="/contacto" sx={linkStyle}>Centro de Ayuda</Link>
+              <Link href="/centro-ayuda" sx={linkStyle}>Centro de Ayuda</Link>
               <Link href="/terminos" sx={linkStyle}>Términos y Condiciones</Link>
               <Link href="/privacidad" sx={linkStyle}>Política de Privacidad</Link>
               <Link href="/cookies" sx={linkStyle}>Política de Cookies</Link>
