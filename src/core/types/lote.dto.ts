@@ -47,6 +47,7 @@ export interface LoteDto extends BaseDTO {
     id: number;
     monto_puja: string;
     estado_puja: EstadoPuja;
+    id_usuario: number;
   } | null;
   // 5. Campos de Control (Críticos según tu modelo)
   intentos_fallidos_pago: number;
