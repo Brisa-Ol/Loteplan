@@ -183,8 +183,8 @@ const DetalleProyecto: React.FC = () => {
   }, [logic.proyecto?.id, user, isAuthenticated]);
 
   const {trackingData, tieneFirmaPendiente} = useVerificarFirma(logic.proyecto?.id)
-  console.log(trackingData)
-  console.log(tieneFirmaPendiente)
+  //console.log(trackingData)
+  //console.log(tieneFirmaPendiente)
 
 
 

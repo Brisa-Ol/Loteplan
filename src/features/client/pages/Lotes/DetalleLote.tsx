@@ -61,7 +61,6 @@ import { useImageLoader } from '../../hooks/useImageLoader';
 import { useVerificarSuscripcion } from '../../hooks/useVerificarSuscripcion';
 import { FavoritoButton } from './components/BotonFavorito';
 import { PujarModal } from './modals/PujarModal';
-import type { ImagenDto } from '@/core/types/imagen.dto';
 import { useVerificarFirma } from '../../hooks/useVerificarFirma';
 
 // ─── Animaciones ─────────────────────────────────────────────────────────────
@@ -166,7 +165,6 @@ const DetalleLote: React.FC = () => {
   const isFetching = useIsFetching({ queryKey: ['lote', id] });
   const { estaSuscripto, tokensDisponibles } = useVerificarSuscripcion(lote?.id_proyecto);
   const {tieneFirmaPendiente} = useVerificarFirma(lote?.id_proyecto);
-  console.log(tieneFirmaPendiente)
   // ─── Mi puja activa en este lote ──────────────────────────────────────────
 
   const miPujaEnEsteLote = useMemo(() => {

@@ -92,9 +92,7 @@ export const useCheckoutWizard = ({
 
     let txId: number | null = null;
     let invId: number | null = null;
-      console.log("Antes de if inversion")
     if (tipo === 'inversion' && codigo2FA) {
-      console.log("Entró a if inversion")
       // ===================================================
       // 1. CREAR INVERSIÓN
       // ===================================================
@@ -103,7 +101,7 @@ export const useCheckoutWizard = ({
       });
 
       invId = response.data.inversionId!;
-      console.log(invId)
+      
 
       if (!invId) {
         throw new Error('No se recibió el ID de la inversión');
@@ -114,15 +112,14 @@ export const useCheckoutWizard = ({
       // ===================================================
       // 2. INICIAR PAGO (ACÁ SALE LA TRANSACCIÓN)
       // ===================================================
-      console.log(invId)
+      
       const paymentResponse = await InversionService.startPayment({
         inversionId: invId,
         codigo_2fa: codigo2FA 
       });
-      console.log(invId)
-      console.log(paymentResponse)
+      
       txId = paymentResponse.transaccionId!;
-      console.log(txId)
+      
       setTransaccionId(txId);
 
       // 👉 redirección directa
@@ -304,7 +301,7 @@ export const useCheckoutWizard = ({
     }else{
       idAUsar = trackingData?.entidad_pagadora?.id
     }
-    console.log("idsusc",id_suscripcion)
+    
     console.log('🔍 Firmando con id_suscripcion_asociada:', idAUsar);  // ← útil para debug
 
     if (!idAUsar) {
