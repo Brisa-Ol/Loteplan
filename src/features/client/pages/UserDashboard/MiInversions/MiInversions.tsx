@@ -134,7 +134,7 @@ export const MiInversions: FC<MiInversionsProps> = ({
 											</Stack>
 										</Box>
 										<IconButton
-											onClick={() => navigate("/client/finanzas/resumenes")}
+											onClick={() => navigate("/client/finanzas/suscripciones")}
 											sx={{
 												bgcolor: alpha(theme.palette.primary.main, 0.1),
 												color: "primary.main",
