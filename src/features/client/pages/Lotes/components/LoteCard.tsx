@@ -10,7 +10,6 @@ import {
   NavigateNext
 } from '@mui/icons-material';
 import {
-  Alert,
   Box, Button, Card, CardContent, CardMedia, Chip, Fade,
   IconButton, keyframes, Skeleton,
   Stack, Typography, useTheme
@@ -87,24 +86,19 @@ const LoteCard: React.FC<LoteCardProps> = ({
 
   const esLiderActual = useMemo(() => {
     if (!isAuthenticated || !user || !isActiva || !lote.id_puja_mas_alta) return false;
-
-    // Verificamos si en el array de pujas de este lote, la puja más alta nos pertenece
-    return Array.isArray(lote.pujas) && lote.pujas.some(
-      (p: any) => Number(p.id_usuario) === Number(user.id) && Number(p.id) === Number(lote.id_puja_mas_alta)
-    );
-  }, [isActiva, lote.id_puja_mas_alta, lote.pujas, isAuthenticated, user]);
+    return Number(lote.pujaMasAlta?.id_usuario) === Number(user.id);
+  }, [isActiva, lote.id_puja_mas_alta, lote.pujaMasAlta, isAuthenticated, user]);
 
   const esGanadorDefinitivo = useMemo(() => {
     if (!isAuthenticated || !user || !subastaFinalizada) return false;
     return Number(lote.id_ganador) === Number(user.id);
   }, [subastaFinalizada, lote.id_ganador, isAuthenticated, user]);
 
-  // ✅ NUEVA LÓGICA: Verificar si el usuario ya tiene una puja en este lote 
-  // (aunque no sea la ganadora en este momento)
   const yaParticipa = useMemo(() => {
     if (!isAuthenticated || !user || !isActiva) return false;
-    return Array.isArray(lote.pujas) && lote.pujas.some((p: any) => Number(p.id_usuario) === Number(user.id) && p.estado_puja === 'activa');
-  }, [isActiva, lote.pujas, isAuthenticated, user]);
+    // Verificamos si la puja más alta del lote le pertenece al usuario
+    return Number(lote.pujaMasAlta?.id_usuario) === Number(user.id);
+  }, [isActiva, lote.pujaMasAlta, isAuthenticated, user]);
 
   const soyGanador = esLiderActual || esGanadorDefinitivo;
 
@@ -134,11 +128,11 @@ const LoteCard: React.FC<LoteCardProps> = ({
         : { text: "Detalles", icon: <ArrowForward />, color: "primary" as const, variant: "contained" as const };
     }
     if (tieneFirmaPendiente && isActiva) {
-    return { text: "Firma pendiente", icon: <Lock />, color: "warning" as const, variant: "contained" as const };
+      return { text: "Firma pendiente", icon: <Lock />, color: "warning" as const, variant: "contained" as const };
     }
     if (puedePujar) {
       return (esLiderActual || yaParticipa)
-        ? { text: "Mejorar", icon: <EmojiEmotions />, color: esLiderActual ? "success" as const : "warning" as const, variant: "contained" as const }
+        ? { text: "Participando", icon: <EmojiEmotions />, color: esLiderActual ? "warning" as const : "warning" as const, variant: "contained" as const }
         : { text: "Pujar", icon: <Gavel />, color: "warning" as const, variant: "contained" as const };
     }
 
@@ -314,9 +308,9 @@ const LoteCard: React.FC<LoteCardProps> = ({
               // 👇 Forzamos el uso de tu color #ddb833 para los botones de Pujar
               ...(buttonState.color === 'warning' && {
                 bgcolor: 'warning.main',
-                color: 'white', 
+                color: 'white',
                 '&:hover': {
-                  bgcolor: 'warning.secondary', 
+                  bgcolor: 'warning.secondary',
                 }
               }),
               transition: 'transform 0.2s, background-color 0.2s, box-shadow 0.2s',
