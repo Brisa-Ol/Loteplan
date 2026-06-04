@@ -182,14 +182,14 @@ const UserDashboard: React.FC = () => {
 
       {/* ========== HEADER GLOBAL ========== */}
       <Box sx={{
-        bgcolor: 'background.paper', pt: { xs: 4, md: 5 }, pb: { xs: 4, md: 8 }, px: { xs: 2, md: 4 },
+        bgcolor: 'primary.main', pt: { xs: 4, md: 5 }, pb: { xs: 4, md: 8 }, px: { xs: 2, md: 4 },
         backgroundImage: `radial-gradient(at top right, ${alpha(theme.palette.primary.main, 0.08)} 0%, transparent 70%)`
       }}>
         <Container maxWidth={false} sx={{ maxWidth: '1400px' }}>
           <Stack direction="row" justifyContent="space-between" alignItems="center">
             <Stack spacing={0.5}>
-              <Typography variant="h1" fontWeight={800} color="text.primary">Hola, {user?.nombre} 👋</Typography>
-              <Typography variant="h6" color="text.secondary">
+              <Typography variant="h1" fontWeight={800} color="primary.contrastText">Hola, {user?.nombre} 👋</Typography>
+              <Typography variant="h6" color="primary.contrastText">
                 {isNewUser ? "Bienvenido a Nectárea." : "Este es el resumen de tu actividad financiera."}
               </Typography>
             </Stack>
@@ -479,7 +479,7 @@ const UserDashboard: React.FC = () => {
                 </Box>
 
                 {/* ========== MINI STATS ========== */}
-                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(3, 1fr)' }, gap: 3, mb: 6, p: 3, borderRadius: 2, bgcolor: '#ECECEC', border: `1px ${theme.palette.divider}` }}>
+                {/* <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(3, 1fr)' }, gap: 3, mb: 6, p: 3, borderRadius: 2, bgcolor: '#ECECEC', border: `1px ${theme.palette.divider}` }}>
                   {[
                     { label: 'Proyectos', val: stats.totalProyectos, icon: <TrendingUp color="primary" /> },
                     { label: 'Cuotas Pagas', val: stats.totalCuotasPagadas, icon: <CheckCircle color="success" /> },
@@ -493,8 +493,9 @@ const UserDashboard: React.FC = () => {
                       </Stack>
                     </Stack>
                   ))}
-                </Box>
+                </Box> */}
 
+                <Typography variant="h4" fontWeight={800} mb={3}>Suscripciones en curso</Typography>
                 <MiInversions
                   resumenes={resumenes}
                   suscripciones={suscripciones}
