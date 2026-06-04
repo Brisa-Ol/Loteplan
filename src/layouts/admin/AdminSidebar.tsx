@@ -171,10 +171,10 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
           }
           selected={active}
           sx={{
-            minHeight: 44,
-            px: 2,
+            minHeight: 52,
+            px: 2.5,
             mx: 1.5,
-            borderRadius: 2,
+            borderRadius: 2.5,
             mb: 0.5,
             borderLeft: active
               ? `4px solid ${theme.palette.primary.main}`
@@ -186,27 +186,27 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
             '&:hover': {
               bgcolor: active
                 ? alpha(theme.palette.primary.main, 0.12)
-                : alpha(theme.palette.text.primary, 0.04),
+                : alpha(theme.palette.text.primary, 0.03),
             },
           }}
         >
           <ListItemIcon
             sx={{
-              minWidth: 36,
+              minWidth: 40,
               color: active ? 'primary.main' : 'text.secondary',
             }}
           >
             <Badge badgeContent={itemBadge} color="error">
-              {IconComponent && <IconComponent />}
+              {IconComponent && <IconComponent sx={{ fontSize: '1.4rem' }} />}
             </Badge>
           </ListItemIcon>
 
           <ListItemText
             primary={item.label}
             primaryTypographyProps={{
-              fontWeight: active ? 700 : 500,
+              fontWeight: active ? 700 : 400,
               color: active ? 'primary.main' : 'text.primary',
-              fontSize: '0.875rem',
+              fontSize: '0.95rem',
               noWrap: true,
             }}
           />
@@ -252,7 +252,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
                       mx: 1.5,
                       borderRadius: 2,
                       mb: 0.25,
-                      minHeight: 38,
+                      minHeight: 42,
                       transition: 'background-color 0.15s ease',
                       '&.Mui-selected': {
                         bgcolor: alpha(theme.palette.primary.main, 0.08),
@@ -275,8 +275,8 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
                     <ListItemText
                       primary={sub.label}
                       primaryTypographyProps={{
-                        fontSize: '0.82rem',
-                        fontWeight: subActive ? 600 : 400,
+                        fontSize: '0.95rem',
+                        fontWeight: subActive ? 600 : 500,
                         noWrap: true,
                       }}
                     />
@@ -395,53 +395,32 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
 
       <Divider />
 
-      {/* Footer usuario */}
-      <Box sx={{ p: 1.5, flexShrink: 0 }}>
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1.5,
-            p: 1.5,
-            borderRadius: 3,
-            bgcolor: alpha(theme.palette.background.default, 0.6),
-            border: `1px solid ${theme.palette.divider}`,
-          }}
-        >
-          <Avatar
-            sx={{
-              bgcolor: 'primary.main',
-              width: 34,
-              height: 34,
-              fontSize: '0.875rem',
-              fontWeight: 700,
-              flexShrink: 0,
-            }}
-          >
-            {user?.nombre?.charAt(0) || 'A'}
-          </Avatar>
+{/* Footer usuario */}
+<Box sx={{ 
+  p: 2, 
+  mt: 'auto', // Esto empuja el bloque al final del sidebar siempre
+  borderTop: `1px solid ${theme.palette.divider}`,
+  display: 'flex', 
+  alignItems: 'center', 
+  gap: 1.5 
+}}>
+<Avatar sx={{ bgcolor: 'primary.main', width: 38, height: 38, fontWeight: 700 }}>
+    {user?.nombre?.charAt(0) || 'A'}
+  </Avatar>
 
-          <Box sx={{ flex: 1, overflow: 'hidden', minWidth: 0 }}>
-            <Typography variant="subtitle2" noWrap sx={{ lineHeight: 1.3 }}>
-              {user?.nombre}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              Admin
-            </Typography>
-          </Box>
+ <Box sx={{ flex: 1, overflow: 'hidden' }}>
+    <Typography fontWeight={700} fontSize="0.9rem" noWrap>
+      {user?.nombre}
+    </Typography>
+    <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+      Administrador
+    </Typography>
+  </Box>
 
-          <Tooltip title="Cerrar sesión" placement="top">
-            <IconButton
-              onClick={handleLogoutClick}
-              size="small"
-              color="error"
-              sx={{ flexShrink: 0 }}
-            >
-              <Logout fontSize="small" />
-            </IconButton>
-          </Tooltip>
-        </Box>
-      </Box>
+ <IconButton onClick={handleLogoutClick} size="small" color="error">
+    <Logout fontSize="small" />
+  </IconButton>
+</Box>
     </Box>
   );
 
