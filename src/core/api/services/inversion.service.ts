@@ -50,7 +50,7 @@ const InversionService = {
 
   startPayment: async (data: InversionStartPaymentDTO): Promise<InversionStartPaymentResponse> => {
     try{
-      const response = await httpService.post(`${BASE_ENDPOINT}/pagar`, data)
+      const response = await httpService.post(`${BASE_ENDPOINT}/pagar`, data, {headers: { 'X-Skip-Auth-Redirect': 'true' }})
       return response.data
     }catch (err){
       console.error("Error en startPayment:", err);

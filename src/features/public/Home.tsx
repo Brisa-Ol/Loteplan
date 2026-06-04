@@ -140,18 +140,19 @@ const Home: React.FC = () => {
                   backdropFilter: 'blur(10px)',
                   border: `1px solid ${alpha(theme.palette.common.white, 0.3)}`,
                   mb: 4,
-                  fontWeight: 600
+                  fontWeight: 600,
+                  fontSize: '1.25rem',
                 }}
               />
 
-              <Typography variant="h2" component="h1" sx={{ mb: 3, fontWeight: 800, lineHeight: 1.1 }}>
+              <Typography variant="h2" component="h1" sx={{ mb: 3, fontWeight: 800, lineHeight: 1.1, fontSize: { md: '3rem' }}}>
                 Accedé a tu lote urbanizado <br />
                 <Box component="span" sx={{ color: alpha(theme.palette.common.white, 0.8) }}>
                   sin depender del crédito bancario
                 </Box>
               </Typography>
 
-              <Typography variant="h6" sx={{ mb: 5, color: alpha(theme.palette.common.white, 0.9), fontWeight: 400, maxWidth: 650, lineHeight: 1.7 }}>
+              <Typography variant="h6" sx={{ mb: 5, color: alpha(theme.palette.common.white, 0.9), fontWeight: 400, maxWidth: 650, lineHeight: 1.7, fontSize: '1.125rem' }}>
                 Loteplan es una plataforma con infraestructura que organiza ahorro colaborativo mediante fideicomiso de administración para facilitar el acceso a terrenos legales y escriturables.
               </Typography>
 
@@ -247,11 +248,11 @@ const Home: React.FC = () => {
               sx={{ width: '100%', height: 'auto', borderRadius: 4, boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.15)', display: 'block' }}
             />
             <Box sx={{ textAlign: { xs: 'center', md: 'left' } }}>
-              <Typography variant="h3" gutterBottom sx={{ mb: 3, fontWeight: 800 }} color="text.primary">
+              <Typography variant="h2" gutterBottom sx={{ mb: 3, fontWeight: 800 }} color="text.primary">
                 Qué es Loteplan
               </Typography>
 
-              <Typography variant="h6" color="text.secondary" sx={{ mb: 4, lineHeight: 1.8 }}>
+              <Typography variant="h5" color="text.secondary" sx={{ mb: 4, lineHeight: 1.8 }}>
                 Somos un sistema estructurado pensado para ser <Box component="span" sx={{ color: 'primary.main', fontWeight: 700 }}>el primer paso hacia tu casa</Box>. Organizamos capital bajo fideicomiso para adquirir lotes urbanizados y escriturables.
               </Typography>
 
@@ -288,11 +289,11 @@ const Home: React.FC = () => {
       <Box sx={{ py: { xs: 10, md: 14 }, bgcolor: 'background.default' }}>
         <Container maxWidth="lg">
 
-          <Box sx={{ textAlign: 'center', mb: 8, maxWidth: 900, mx: 'auto' }}>
-            <Typography variant="h3" gutterBottom fontWeight={800} color="text.primary">
+          <Box sx={{ textAlign: 'center', mb: 8, maxWidth: 950, mx: 'auto' }} >
+            <Typography  gutterBottom fontWeight={800} color="text.primary" fontSize="3.125rem" >
               De desarrolladores de suelo a <Box component="span" sx={{ color: 'primary.main', display: 'block' }}>infraestructura financiera inmobiliaria</Box>
             </Typography>
-            <Typography variant="h6" color="text.secondary" lineHeight={1.8} mt={3}>
+            <Typography variant="h4" color="text.secondary" lineHeight={1.8} mt={3}>
               Durante más de 15 años estructuramos y desarrollamos suelo urbano, organizando grupos, gestionando procesos de urbanización y adjudicando lotes en proyectos concretos y verificables. Hoy transformamos nuestra experiencia en una plataforma tecnológica que replica ese modelo bajo una arquitectura fiduciaria clara, ordenada y escalable.
             </Typography>
           </Box>
@@ -301,24 +302,26 @@ const Home: React.FC = () => {
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 4, mb: 10 }}>
             <Card elevation={0} sx={{ bgcolor: alpha(theme.palette.primary.main, 0.05), border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`, textAlign: 'center', p: 4, borderRadius: 4 }}>
               <Typography variant="h3" color="primary.main" fontWeight={900} gutterBottom>+USD 1,1M</Typography>
-              <Typography variant="body1" fontWeight={600} color="text.secondary">estructurados en activos inmobiliarios reales.</Typography>
+              <Typography variant="body1" fontWeight={600} color="text.secondary" fontSize="1.125rem">estructurados en activos inmobiliarios reales.</Typography>
             </Card>
             <Card elevation={0} sx={{ bgcolor: alpha(theme.palette.primary.main, 0.05), border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`, textAlign: 'center', p: 4, borderRadius: 4 }}>
               <Typography variant="h3" color="primary.main" fontWeight={900} gutterBottom>119</Typography>
-              <Typography variant="body1" fontWeight={600} color="text.secondary">lotes urbanizados adjudicados en desarrollos finalizados.</Typography>
+              <Typography variant="body1" fontWeight={600} color="text.secondary" fontSize="1.125rem">
+                lotes urbanizados adjudicados en desarrollos finalizados.
+              </Typography>
             </Card>
             <Card elevation={0} sx={{ bgcolor: alpha(theme.palette.primary.main, 0.05), border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`, textAlign: 'center', p: 4, borderRadius: 4 }}>
               <Typography variant="h3" color="primary.main" fontWeight={900} gutterBottom>600</Typography>
-              <Typography variant="body1" fontWeight={600} color="text.secondary">lotes proyectados bajo contratos de urbanización vigentes.</Typography>
+              <Typography variant="body1" fontWeight={600} color="text.secondary" fontSize="1.125rem">lotes proyectados bajo contratos de urbanización vigentes.</Typography>
             </Card>
           </Box>
 
           {/* Evolución del Modelo */}
           <Box>
-            <Typography variant="h4" textAlign="center" fontWeight={800} mb={2}>
+            <Typography  textAlign="center" fontWeight={800} mb={2} fontSize="3.125rem">
               La experiencia no cambia. <Box component="span" sx={{ color: 'primary.main' }}>Evoluciona su forma de organización.</Box>
             </Typography>
-            <Typography variant="h6" textAlign="center" color="text.secondary" mb={8} maxWidth={800} mx="auto" fontWeight={400}>
+            <Typography variant="h4" textAlign="center" color="text.secondary" mb={8} maxWidth={800} mx="auto" fontWeight={400}>
               Loteplan es una estructura jurídica y tecnológica replicable que permite organizar capital y adquirir activos inmobiliarios de forma sistemática.
             </Typography>
 
@@ -328,8 +331,8 @@ const Home: React.FC = () => {
                   <LaptopMac />
                 </Avatar>
                 <Box>
-                  <Typography variant="h6" fontWeight={700} gutterBottom>Plataforma digital propia</Typography>
-                  <Typography variant="body2" color="text.secondary" lineHeight={1.6} fontSize="1rem">Gestiona adhesiones, aportes y seguimiento del proceso con trazabilidad en cada etapa.</Typography>
+                  <Typography variant="h4" fontWeight={700} gutterBottom>Plataforma digital propia</Typography>
+                  <Typography variant="body2" color="text.secondary" lineHeight={1.6} fontSize="1.125rem">Gestiona adhesiones, aportes y seguimiento del proceso con trazabilidad en cada etapa.</Typography>
                 </Box>
               </Box>
 
@@ -338,8 +341,8 @@ const Home: React.FC = () => {
                   <AccountBalance />
                 </Avatar>
                 <Box>
-                  <Typography variant="h6" fontWeight={700} gutterBottom>Modelo fiduciario estandarizado</Typography>
-                  <Typography variant="body2" color="text.secondary" lineHeight={1.6} fontSize="1rem">Cada grupo opera bajo reglas claras y separación patrimonial, permitiendo replicar el esquema.</Typography>
+                  <Typography variant="h4" fontWeight={700} gutterBottom>Modelo fiduciario estandarizado</Typography>
+                  <Typography variant="body2" color="text.secondary" lineHeight={1.6} fontSize="1.125rem">Cada grupo opera bajo reglas claras y separación patrimonial, permitiendo replicar el esquema.</Typography>
                 </Box>
               </Box>
 
@@ -348,8 +351,8 @@ const Home: React.FC = () => {
                   <Map />
                 </Avatar>
                 <Box>
-                  <Typography variant="h6" fontWeight={700} gutterBottom>Integración progresiva de suelo</Typography>
-                  <Typography variant="body2" color="text.secondary" lineHeight={1.6} fontSize="1rem">Incorporamos lotes urbanizados que cumplan criterios legales y urbanísticos estrictos definidos.</Typography>
+                  <Typography variant="h4" fontWeight={700} gutterBottom>Integración progresiva de suelo</Typography>
+                  <Typography variant="body2" color="text.secondary" lineHeight={1.6} fontSize="1.125rem">Incorporamos lotes urbanizados que cumplan criterios legales y urbanísticos estrictos definidos.</Typography>
                 </Box>
               </Box>
 
@@ -358,8 +361,10 @@ const Home: React.FC = () => {
                   <TrendingUp />
                 </Avatar>
                 <Box>
-                  <Typography variant="h6" fontWeight={700} gutterBottom>Crecimiento por etapas</Typography>
-                  <Typography variant="body2" color="text.secondary" lineHeight={1.6} fontSize="1rem">El sistema se expande orgánicamente en función de la conformación de grupos y activos aptos.</Typography>
+                  <Typography variant="h4" fontWeight={700} gutterBottom>Crecimiento por etapas</Typography>
+                  <Typography variant="body2" color="text.secondary" lineHeight={1.6} fontSize="1.125rem">
+                    El sistema se expande orgánicamente en función de la conformación de grupos y activos aptos.
+                  </Typography>
                 </Box>
               </Box>
             </Box>
@@ -373,10 +378,10 @@ const Home: React.FC = () => {
           ========================================== */}
       <Box sx={{ py: { xs: 10, md: 14 }, bgcolor: 'secondary.light' }}>
         <Container maxWidth="lg">
-          <Typography variant="h3" textAlign="center" gutterBottom fontWeight={800} color="text.primary">
+          <Typography textAlign="center" gutterBottom fontWeight={800} color="text.primary" fontSize="3.125rem">
             Dos formas de participar
           </Typography>
-          <Typography variant="subtitle1" textAlign="center" color="text.secondary" sx={{ mb: 8, fontWeight: 400 }}>
+          <Typography variant="subtitle1" textAlign="center" color="text.secondary" sx={{ mb: 8, fontWeight: 400 }} fontSize="1.125rem">
             Elegí el modo que mejor se adapte a tus objetivos
           </Typography>
 
@@ -399,12 +404,14 @@ const Home: React.FC = () => {
                         <mode.icon sx={{ fontSize: 28, color: 'white' }} />
                       </Box>
                       <Box>
-                        <Typography variant="h5" fontWeight={700} color="text.primary">{mode.title}</Typography>
-                        <Typography variant="subtitle2" color={`${mode.color}.dark`} fontWeight={700}>{mode.subtitle}</Typography>
+                        <Typography variant="h3" fontWeight={800} color="text.primary">{mode.title}</Typography>
+                        <Typography variant="subtitle2" color={`${mode.color}.dark`} fontWeight={700} fontSize="1.125rem">
+                          {mode.subtitle}
+                        </Typography>
                       </Box>
                     </Stack>
 
-                    <Typography variant="body1" sx={{ mb: 4, lineHeight: 1.7 }} color="text.primary">
+                    <Typography variant="body1" sx={{ mb: 4, lineHeight: 1.7 }} color="text.primary" fontSize="1rem">
                       {mode.description}
                     </Typography>
 
@@ -412,7 +419,7 @@ const Home: React.FC = () => {
                       {mode.benefits.map((benefit, index) => (
                         <Stack direction="row" spacing={1.5} alignItems="center" key={index}>
                           <CheckCircle fontSize="small" color={mode.color} />
-                          <Typography variant="body2" color="text.primary" fontWeight={500}>{benefit}</Typography>
+                          <Typography variant="body1" color="text.primary" fontWeight={500}>{benefit}</Typography>
                         </Stack>
                       ))}
                     </Stack>
@@ -433,33 +440,49 @@ const Home: React.FC = () => {
           ========================================== */}
       <Box sx={{ py: { xs: 10, md: 14 }, bgcolor: 'background.paper' }}>
         <Container maxWidth="lg">
-          <Typography variant="h3" textAlign="center" gutterBottom fontWeight={800} color="text.primary">
+          <Typography textAlign="center" gutterBottom fontWeight={800} color="text.primary" fontSize="3.125rem">
             Un modelo fiduciario que brinda <Box component="span" sx={{ color: 'primary.main' }}>previsibilidad jurídica</Box> en cada etapa
           </Typography>
-          <Typography variant="subtitle1" textAlign="center" color="text.secondary" sx={{ mb: 8, fontWeight: 400 }}>
+          <Typography variant="subtitle1" textAlign="center" color="text.secondary" sx={{ mb: 8, fontWeight: 400 }} fontSize="1.125rem">
             Tu capital respaldado por marcos legales sólidos y transparentes.
           </Typography>
 
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)' }, gap: 4 }}>
             <Box textAlign="center">
               <Avatar sx={{ mx: 'auto', mb: 3, width: 64, height: 64, bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}><AccountBalance fontSize="large" /></Avatar>
-              <Typography variant="subtitle1" fontWeight={800} gutterBottom>Fideicomiso Seguro</Typography>
-              <Typography variant="body2" color="text.secondary" lineHeight={1.6}>Administración mediante fideicomiso con separación patrimonial para proteger tu inversión.</Typography>
+              <Typography variant="subtitle1" fontWeight={800} gutterBottom fontSize="1.25rem">
+                Fideicomiso Seguro
+              </Typography>
+              <Typography variant="body1" color="text.secondary" lineHeight={1.6}>
+                Administración mediante fideicomiso con separación patrimonial para proteger tu inversión.
+              </Typography>
             </Box>
             <Box textAlign="center">
               <Avatar sx={{ mx: 'auto', mb: 3, width: 64, height: 64, bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}><Landscape fontSize="large" /></Avatar>
-              <Typography variant="subtitle1" fontWeight={800} gutterBottom>Lotes Reales</Typography>
-              <Typography variant="body2" color="text.secondary" lineHeight={1.6}>Proyectos con lotes urbanizados y 100% escriturables.</Typography>
+              <Typography variant="subtitle1" fontWeight={800} gutterBottom fontSize="1.25rem">
+                Lotes Reales
+              </Typography>
+              <Typography variant="body1" color="text.secondary" lineHeight={1.6}>
+                Proyectos con lotes urbanizados y 100% escriturables.
+              </Typography>
             </Box>
             <Box textAlign="center">
               <Avatar sx={{ mx: 'auto', mb: 3, width: 64, height: 64, bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}><GppGood fontSize="large" /></Avatar>
-              <Typography variant="subtitle1" fontWeight={800} gutterBottom>Transparencia Total</Typography>
-              <Typography variant="body2" color="text.secondary" lineHeight={1.6}>Reglas claras y procesos documentados a disposición de todos los participantes.</Typography>
+              <Typography variant="subtitle1" fontWeight={800} gutterBottom fontSize="1.25rem">
+                Transparencia Total
+              </Typography>
+              <Typography variant="body1" color="text.secondary" lineHeight={1.6}>
+                Reglas claras y procesos documentados a disposición de todos los participantes.
+              </Typography>
             </Box>
             <Box textAlign="center">
               <Avatar sx={{ mx: 'auto', mb: 3, width: 64, height: 64, bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}><Devices fontSize="large" /></Avatar>
-              <Typography variant="subtitle1" fontWeight={800} gutterBottom>Trazabilidad Digital</Typography>
-              <Typography variant="body2" color="text.secondary" lineHeight={1.6}>Todas las operaciones y pagos quedan registrados y son trazables digitalmente.</Typography>
+              <Typography variant="subtitle1" fontWeight={800} gutterBottom fontSize="1.25rem">
+                Trazabilidad Digital
+              </Typography>
+              <Typography variant="body1" color="text.secondary" lineHeight={1.6}>
+                Todas las operaciones y pagos quedan registrados y son trazables digitalmente.
+              </Typography>
             </Box>
           </Box>
         </Container>
