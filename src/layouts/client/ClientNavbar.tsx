@@ -553,46 +553,49 @@ const ClientNavbar: React.FC = () => {
   disableGutters
   sx={{
     display: 'flex',
-    justifyContent: 'center', 
+    // Espaciado dinámico: space-between en móvil para separar los extremos, center en escritorio
+    justifyContent: { xs: 'space-between', md: 'center' },
+    gap: { md: 3, lg: 5 },
+    px: 2, // Asegura un margen lateral mínimo en todas las pantallas
     minHeight: {
       xs: `${NAVBAR_HEIGHT.mobile}px !important`,
       md: `${NAVBAR_HEIGHT.desktop}px !important`,
     },
   }}
 >
-  {/* Este Stack contiene todo y lo centra automáticamente */}
-  <Stack 
-    direction="row" 
-    alignItems="center" 
-    spacing={{ md: 3, lg: 5 }} 
-    sx={{ width: '100%', justifyContent: 'center' }} // width: 100% y justifyContent: center centra todo el grupo
-  >
-    {/* 1. Logo */}
-    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-      <Box component={RouterLink} to="/" sx={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
-        <Box component="img" src="/navbar/nav.png" alt="Logo" sx={{ height: { xs: 26, md: 32 }, objectFit: 'contain' }} />
-      </Box>
+  {/* 1. Logo */}
+  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+    <Box component={RouterLink} to="/" sx={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
+      <Box component="img" src="/navbar/nav.png" alt="Logo" sx={{ height: { xs: 26, md: 32 }, objectFit: 'contain' }} />
     </Box>
+  </Box>
 
-    {/* 2. Desktop Nav Items */}
-    {!isMobile && (
-      <Stack direction="row" spacing={{ md: 1, lg: 2 }} sx={{ alignItems: 'center' }}>
-        {navItems.filter((item) => !item.action).map((item) => (
-          <DesktopNavItem key={item.label} item={item} />
-        ))}
-      </Stack>
-    )}
+  {/* 2. Desktop Nav Items (Solo visible en md o mayor) */}
+  {!isMobile && (
+    <Stack 
+      direction="row" 
+      spacing={{ md: 1, lg: 2 }} 
+      sx={{ flexGrow: 0, justifyContent: 'center', alignItems: 'center' }}
+    >
+      {navItems.filter((item) => !item.action).map((item) => (
+        <DesktopNavItem key={item.label} item={item} />
+      ))}
+    </Stack>
+  )}
 
-    {/* 3. Right side */}
+  {/* 3. Right side (Acciones/Perfil o Hamburguesa) */}
+  <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 0 }}>
     <Stack direction="row" spacing={1} alignItems="center">
-      {isAuthenticated && !isMobile && (
+      {/* Elementos de usuario para escritorio */}
+      {!isMobile && isAuthenticated && (
         <>
           <Divider orientation="vertical" flexItem sx={{ mx: 0.5, height: 22 }} />
           <UserAccountMenu user={user} isLoading={isLoadingAuth} userNavItems={userNavItems} />
         </>
       )}
 
-      {!isAuthenticated && !isMobile && (
+      {/* Botones de acción escritorio */}
+      {!isMobile && !isAuthenticated && (
         <Stack direction="row" spacing={2}>
           {actionButtons.map((btn, idx) => {
             const isRegister = btn.label.toLowerCase() === 'registrarse';
@@ -614,7 +617,6 @@ const ClientNavbar: React.FC = () => {
                   '&:hover': {
                     bgcolor: isRegister ? 'primary.dark' : alpha(theme.palette.primary.main, 0.05),
                     color: isRegister ? 'white' : 'primary.main',
-                    borderColor: 'primary.main',
                   },
                 }}
               >
@@ -625,13 +627,14 @@ const ClientNavbar: React.FC = () => {
         </Stack>
       )}
 
+      {/* Menú Hamburguesa (Móvil) - Se queda solo en móviles */}
       {isMobile && (
         <IconButton onClick={() => setMobileOpen(true)} color="primary" size="small">
           <MenuIcon />
         </IconButton>
       )}
     </Stack>
-  </Stack>
+  </Box>
 </Toolbar>
         </Container>
       </AppBar>
