@@ -148,7 +148,7 @@ const Footer: React.FC = () => {
           textAlign: 'center'
         }}>
           <Typography variant="caption" color="text.secondary">
-            © {currentYear} LotePlan S.A. Todos los derechos reservados.
+            © {currentYear} Nectarea S.A. Todos los derechos reservados.
           </Typography>
           <Stack direction="row" spacing={3}>
             <Link href="#" variant="caption" color="text.disabled" underline="hover">

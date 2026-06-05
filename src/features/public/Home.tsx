@@ -63,7 +63,7 @@ const howItWorksSteps = [
     step: '01',
     title: 'Te registrás y elegís',
     description: 'Creás tu cuenta y elegís la alternativa que mejor se adapte a tus objetivos: Modo Ahorrista o Modo Inversionista.',
-    image: 'public/Home/contrato43.jpeg',
+    image: "public/Home/Cómo funciona Ahorrista_1a.jpg",
   },
   {
     step: '02',
@@ -267,12 +267,12 @@ const Home: React.FC = () => {
         <Container maxWidth="lg">
           
           {/* Parte 1: Introducción (Qué es Loteplan) */}
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1.1fr' }, gap: { xs: 6, md: 10 }, alignItems: 'center', mb: { xs: 10, md: 14 } }}>
+          <Box sx={{ display: "flex", flexDirection: "row", justifyContent: "center", gap: { xs: 6, md: 8 }, alignItems: 'center', mb: { xs: 10, md: 6} }}>
             <Box
               component="img"
               src="public/Home/contrato43.jpeg"
               alt="Fideicomiso Loteplan"
-              sx={{ width: '100%', height: 'auto', borderRadius: 4, boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.15)', display: 'block' }}
+              sx={{ width: 280, height: 230, borderRadius: 4, boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.15)', ml: { xs: 0, md: 6 } }}
             />
             <Box sx={{ textAlign: { xs: 'center', md: 'left' } }}>
               <Typography variant="h2" gutterBottom sx={{ mb: 3, fontWeight: 800 }} color="text.primary">
@@ -280,7 +280,7 @@ const Home: React.FC = () => {
               </Typography>
 
               <Typography variant="h6" color="text.secondary" sx={{ lineHeight: 1.8 }}>
-                Somos una plataforma fiduciaria colaborativa pensada para ser <Box component="span" sx={{ color: 'primary.main', fontWeight: 700 }}>el primer paso hacia tu casa</Box>. Organizamos grupos de ahorro que permiten acceder progresivamente a lotes urbanizados y escriturables mediante reglas claras y procesos transparentes.
+                Somos una plataforma fiduciaria colaborativa pensada para ser <Box component="span" sx={{ color: 'primary.main', fontWeight: 700 }}>el primer paso hacia tu casa</Box>. Organizamos grupos de ahorro que permiten acceder progresivamente a lotes urbanizados y escriturables mediante reglas claras y procesos transparentes. No somos un loteo tradicional, no otorgamos crédito y no comercializamos promesas de urbanización futura.
               </Typography>
             </Box>
           </Box>
@@ -425,6 +425,69 @@ const Home: React.FC = () => {
         </Container>
       </Box>
 
+                  {/* ==========================================
+                      MODELO FIDUCIARIO
+                      ========================================== */}
+                  <Box sx={{ py: { xs: 10, md: 14 }, bgcolor: 'background.paper' }}>
+                    <Container maxWidth="lg">
+                      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: { xs: 6, md: 10 }, alignItems: 'center', mb: 10 }}>
+                        <Box>
+                          <Typography variant="h3" gutterBottom fontWeight={800} color="text.primary">
+                            Un sistema diseñado para brindar <Box component="span" sx={{ color: 'primary.main' }}>transparencia y confianza</Box> en cada etapa
+                          </Typography>
+                          <Typography variant="body1" color="text.secondary" lineHeight={1.8} mb={4}>
+                            Tu capital respaldado por marcos legales sólidos, separación patrimonial y procesos documentados accesibles para todos los participantes.
+                          </Typography>
+                          <Button
+                            variant="contained"
+                            size="large"
+                            endIcon={<ArrowForward />}
+                            onClick={() => navigate(ROUTES.PUBLIC.COMO_FUNCIONA)}
+                          >
+                            Ver cómo funciona en detalle
+                          </Button>
+                        </Box>
+                        <Box
+                          component="img"
+                          src="public/Home/Cómo funciona Inversionista_6.jpg"
+                          alt="Confianza y transparencia"
+                          sx={{ width: '100%', height: 'auto', borderRadius: 4, boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.15)', display: 'block' }}
+                        />
+                      </Box>
+            
+                      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)' }, gap: 4 }}>
+                        <Box textAlign="center">
+                          <Avatar sx={{ mx: 'auto', mb: 3, width: 64, height: 64, bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}><AccountBalance fontSize="large" /></Avatar>
+                          <Typography variant="subtitle1" fontWeight={800} gutterBottom>Fideicomiso Seguro</Typography>
+                          <Typography variant="body2" color="text.secondary" lineHeight={1.6}>Administración mediante fideicomiso con separación patrimonial para proteger tu capital.</Typography>
+                        </Box>
+                        <Box textAlign="center">
+                          <Avatar sx={{ mx: 'auto', mb: 3, width: 64, height: 64, bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}><Landscape fontSize="large" /></Avatar>
+                          <Typography variant="subtitle1" fontWeight={800} gutterBottom fontSize="1.25rem">
+                            Lotes Reales
+                          </Typography>
+                          <Typography variant="body1" color="text.secondary" lineHeight={1.6}>
+                            Proyectos con lotes urbanizados y 100% escriturables.
+                          </Typography>
+                        </Box>
+                        <Box textAlign="center">
+                          <Avatar sx={{ mx: 'auto', mb: 3, width: 64, height: 64, bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}><GppGood fontSize="large" /></Avatar>
+                          <Typography variant="subtitle1" fontWeight={800} gutterBottom fontSize="1.25rem">
+                            Transparencia Total
+                          </Typography>
+                          <Typography variant="body1" color="text.secondary" lineHeight={1.6}>
+                            Reglas claras y procesos documentados a disposición de todos los participantes.
+                          </Typography>
+                        </Box>
+                        <Box textAlign="center">
+                          <Avatar sx={{ mx: 'auto', mb: 3, width: 64, height: 64, bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}><Devices fontSize="large" /></Avatar>
+                          <Typography variant="subtitle1" fontWeight={800} gutterBottom>Trazabilidad Digital</Typography>
+                          <Typography variant="body2" color="text.secondary" lineHeight={1.6}>Todas las operaciones y aportes quedan registrados y son trazables digitalmente.</Typography>
+                        </Box>
+                      </Box>
+                    </Container>
+                  </Box>
+
       {/* ==========================================
           DOS MODOS
           ========================================== */}
@@ -455,7 +518,7 @@ const Home: React.FC = () => {
                     component="img"
                     src={mode.type === 'ahorrista' ? 'public/Home/Home1b_modoahorrista.jpg' : 'public/Home/Home2a_modoinversionista.jpg'}
                     alt={mode.title}
-                    sx={{ width: '100%', height: 200, objectFit: 'cover' }}
+                    sx={{ width: 555, height: 350, objectFit: 'cover' }}
                   />
                   <CardContent sx={{ p: 4, display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
                     <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 3 }}>
@@ -488,7 +551,10 @@ const Home: React.FC = () => {
                       fullWidth
                       endIcon={<ArrowForward />}
                       color={mode.color}
-                      onClick={() => navigate(ROUTES.PUBLIC.COMO_FUNCIONA)}
+                      onClick={() => {
+                        sessionStorage.setItem('proyectosPerfil', mode.type);
+                        navigate(ROUTES.PROYECTOS.SELECCION_ROL)
+                      }}
                       sx={{ fontWeight: 600, mt: 'auto' }}
                     >
                       {mode.ctaLabel}
@@ -497,69 +563,6 @@ const Home: React.FC = () => {
                 </Card>
               </Box>
             ))}
-          </Box>
-        </Container>
-      </Box>
-
-      {/* ==========================================
-          MODELO FIDUCIARIO
-          ========================================== */}
-      <Box sx={{ py: { xs: 10, md: 14 }, bgcolor: 'background.paper' }}>
-        <Container maxWidth="lg">
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: { xs: 6, md: 10 }, alignItems: 'center', mb: 10 }}>
-            <Box>
-              <Typography variant="h3" gutterBottom fontWeight={800} color="text.primary">
-                Un sistema diseñado para brindar <Box component="span" sx={{ color: 'primary.main' }}>transparencia y confianza</Box> en cada etapa
-              </Typography>
-              <Typography variant="body1" color="text.secondary" lineHeight={1.8} mb={4}>
-                Tu capital respaldado por marcos legales sólidos, separación patrimonial y procesos documentados accesibles para todos los participantes.
-              </Typography>
-              <Button
-                variant="contained"
-                size="large"
-                endIcon={<ArrowForward />}
-                onClick={() => navigate(ROUTES.PUBLIC.COMO_FUNCIONA)}
-              >
-                Ver cómo funciona en detalle
-              </Button>
-            </Box>
-            <Box
-              component="img"
-              src="public/Home/Cómo funciona Inversionista_6.jpg"
-              alt="Confianza y transparencia"
-              sx={{ width: '100%', height: 'auto', borderRadius: 4, boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.15)', display: 'block' }}
-            />
-          </Box>
-
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)' }, gap: 4 }}>
-            <Box textAlign="center">
-              <Avatar sx={{ mx: 'auto', mb: 3, width: 64, height: 64, bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}><AccountBalance fontSize="large" /></Avatar>
-              <Typography variant="subtitle1" fontWeight={800} gutterBottom>Fideicomiso Seguro</Typography>
-              <Typography variant="body2" color="text.secondary" lineHeight={1.6}>Administración mediante fideicomiso con separación patrimonial para proteger tu capital.</Typography>
-            </Box>
-            <Box textAlign="center">
-              <Avatar sx={{ mx: 'auto', mb: 3, width: 64, height: 64, bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}><Landscape fontSize="large" /></Avatar>
-              <Typography variant="subtitle1" fontWeight={800} gutterBottom fontSize="1.25rem">
-                Lotes Reales
-              </Typography>
-              <Typography variant="body1" color="text.secondary" lineHeight={1.6}>
-                Proyectos con lotes urbanizados y 100% escriturables.
-              </Typography>
-            </Box>
-            <Box textAlign="center">
-              <Avatar sx={{ mx: 'auto', mb: 3, width: 64, height: 64, bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}><GppGood fontSize="large" /></Avatar>
-              <Typography variant="subtitle1" fontWeight={800} gutterBottom fontSize="1.25rem">
-                Transparencia Total
-              </Typography>
-              <Typography variant="body1" color="text.secondary" lineHeight={1.6}>
-                Reglas claras y procesos documentados a disposición de todos los participantes.
-              </Typography>
-            </Box>
-            <Box textAlign="center">
-              <Avatar sx={{ mx: 'auto', mb: 3, width: 64, height: 64, bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}><Devices fontSize="large" /></Avatar>
-              <Typography variant="subtitle1" fontWeight={800} gutterBottom>Trazabilidad Digital</Typography>
-              <Typography variant="body2" color="text.secondary" lineHeight={1.6}>Todas las operaciones y aportes quedan registrados y son trazables digitalmente.</Typography>
-            </Box>
           </Box>
         </Container>
       </Box>
