@@ -260,12 +260,14 @@ const Home: React.FC = () => {
         </Container>
       </Box>
 
-      {/* ==========================================
-          QUÉ ES LOTEPLAN
+     {/* ==========================================
+          QUÉ ES LOTEPLAN Y CÓMO FUNCIONA
           ========================================== */}
       <Box sx={{ py: { xs: 10, md: 14 }, bgcolor: 'secondary.light' }}>
         <Container maxWidth="lg">
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1.1fr' }, gap: { xs: 6, md: 10 }, alignItems: 'center' }}>
+          
+          {/* Parte 1: Introducción (Qué es Loteplan) */}
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1.1fr' }, gap: { xs: 6, md: 10 }, alignItems: 'center', mb: { xs: 10, md: 14 } }}>
             <Box
               component="img"
               src="public/Home/contrato43.jpeg"
@@ -277,40 +279,13 @@ const Home: React.FC = () => {
                 Qué es Loteplan
               </Typography>
 
-              <Typography variant="h6" color="text.secondary" sx={{ mb: 3, lineHeight: 1.8 }}>
+              <Typography variant="h6" color="text.secondary" sx={{ lineHeight: 1.8 }}>
                 Somos una plataforma fiduciaria colaborativa pensada para ser <Box component="span" sx={{ color: 'primary.main', fontWeight: 700 }}>el primer paso hacia tu casa</Box>. Organizamos grupos de ahorro que permiten acceder progresivamente a lotes urbanizados y escriturables mediante reglas claras y procesos transparentes.
               </Typography>
-
-              {/* 3 pasos resumidos */}
-              <Stack spacing={2} sx={{ mb: 4 }}>
-                {[
-                  'Te registrás y elegís la alternativa que mejor se adapte a tus objetivos.',
-                  'Aportás en cuotas mensuales para lograr progresivamente tu lote.',
-                  'Seguís todo el proceso en la plataforma hasta tu adjudicación y escritura.',
-                ].map((step, i) => (
-                  <Stack direction="row" spacing={2} alignItems="flex-start" key={i}>
-                    <Box sx={{
-                      minWidth: 28, height: 28, borderRadius: '50%',
-                      bgcolor: 'primary.main', color: 'white',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontWeight: 700, fontSize: '0.8rem', mt: 0.2,
-                    }}>
-                      {i + 1}
-                    </Box>
-                    <Typography variant="body1" color="text.secondary" lineHeight={1.6}>{step}</Typography>
-                  </Stack>
-                ))}
-              </Stack>
             </Box>
           </Box>
-        </Container>
-      </Box>
 
-      {/* ==========================================
-          CÓMO FUNCIONA — 3 PASOS
-          ========================================== */}
-      <Box sx={{ py: { xs: 10, md: 14 }, bgcolor: 'background.paper' }}>
-        <Container maxWidth="lg">
+          {/* Parte 2: Tarjetas (Así funciona el proceso) */}
           <Typography variant="h3" textAlign="center" gutterBottom fontWeight={800} color="text.primary">
             Así funciona el proceso
           </Typography>
@@ -327,6 +302,7 @@ const Home: React.FC = () => {
                   border: `1px solid ${alpha(theme.palette.primary.main, 0.12)}`,
                   borderRadius: 4,
                   overflow: 'hidden',
+                  bgcolor: 'background.paper', // Asegura el contraste de la tarjeta sobre el fondo secondary.light
                   transition: 'box-shadow 0.3s',
                   '&:hover': { boxShadow: theme.shadows[6] },
                 }}
@@ -356,9 +332,11 @@ const Home: React.FC = () => {
               </Card>
             ))}
           </Box>
+
         </Container>
       </Box>
 
+    
       {/* ==========================================
           TRACK RECORD Y EVOLUCIÓN
           ========================================== */}
