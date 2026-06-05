@@ -54,7 +54,7 @@ const DesktopNavItem: React.FC<{ item: NavItem }> = ({ item }) => {
           fontWeight: 500,
           textTransform: 'none',
           fontSize: '1.03rem',
-          px: 2,
+          px: 1,
           py: 1,
           borderRadius: 1.5,
           minWidth: 'unset',

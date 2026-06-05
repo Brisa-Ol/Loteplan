@@ -202,7 +202,11 @@ const AdminLotePagos: React.FC = () => {
         if (checkIsPaid(l)) return <StatusBadge status="completed" customLabel="PAGADO" />;
 
         const intentos = l.intentos_fallidos_pago || 0;
-        if (intentos >= 3) return <StatusBadge status="failed" customLabel="Ultimo Postor" />;
+        const cantPostores = (logic.pujasPorLote?.[l.id] ?? []).filter((p: any) => p.activo === true).length;
+
+        if (intentos >= 3 || (intentos > 0 && cantPostores <= 2)) {
+          return <StatusBadge status="failed" customLabel="Ultimo Postor" />;
+        }
         if (intentos > 0) return <StatusBadge status="warning" customLabel={`${intentos}/3 FALLOS`} />;
         return (
           <Chip

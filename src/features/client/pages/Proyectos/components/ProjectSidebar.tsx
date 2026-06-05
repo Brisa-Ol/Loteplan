@@ -57,6 +57,7 @@ interface ProjectSidebarProps {
   logic: ProjectSidebarLogic;
   proyecto: ProyectoDto;
   cantProyectUser: number,
+  activeSuscriptions: number
   puedeFirmar?: boolean | undefined
   isLoadingCount?: boolean
 }
@@ -157,7 +158,7 @@ const PriceHeader: React.FC<{ helpers: any, isPrelanzamiento: boolean, isLleno: 
 // ==========================================
 // 5. COMPONENTE PRINCIPAL
 // ==========================================
-export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({ logic, proyecto, cantProyectUser, puedeFirmar, isLoadingCount }) => {
+export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({ logic, proyecto, cantProyectUser, puedeFirmar, isLoadingCount, activeSuscriptions }) => {
 
   //variables Thomy
 
@@ -366,7 +367,7 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({ logic, proyecto,
                                     <Alert severity="success" icon={<CheckCircle />}>
                                       {cantProyectUser === 1
                                         ? 'Ya tenés una suscripción activa'
-                                        : `Tenés ${cantProyectUser} suscripciones activas`}
+                                        : `Tenés ${activeSuscriptions} suscripciones activas`}
                                     </Alert>
                                   )
                               )}

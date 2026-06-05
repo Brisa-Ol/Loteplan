@@ -113,7 +113,8 @@ export const CheckoutInversionModal: React.FC<CheckoutInversionModalProps> = ({
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { showSuccess, showInfo, showError } = useSnackbar();
   const formatCurrency = useCurrencyFormatter({
-    currency: proyecto.moneda === 'USD' ? 'USD' : 'ARS',
+    currency: 'ARS',
+    //currency: proyecto.moneda === 'USD' ? 'USD' : 'ARS',
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });

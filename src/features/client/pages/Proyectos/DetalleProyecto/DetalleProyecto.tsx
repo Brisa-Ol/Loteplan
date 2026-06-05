@@ -150,7 +150,7 @@ const DetalleProyecto: React.FC = () => {
   //variable Thomy
 
   const [cantProyectsUser, setCantProyectsUser] = useState(0)
-
+  const [activeSuscriptions, setActiveSuscriptions] = useState(0)
 
   const [isLoadingCount, setIsLoadingCount] = useState(true);
 
@@ -169,13 +169,17 @@ const DetalleProyecto: React.FC = () => {
       const proyectsFetched = await SuscripcionService.getMisSuscripciones();
 
       const data = proyectsFetched.data;
-
+      console.log("proyectos del usuario",data)
 
       const cantidadSuscripciones = data.filter(
         (p) => p.id_proyecto === logic.proyecto?.id
       ).length;
 
+      const suscripcionesActivas = data.filter(
+        (p) => p.id_proyecto === logic.proyecto?.id && p.adhesion_completada === true
+      ).length;
       setCantProyectsUser(cantidadSuscripciones);
+      setActiveSuscriptions(suscripcionesActivas);
       setIsLoadingCount(false);
     };
 
@@ -183,8 +187,8 @@ const DetalleProyecto: React.FC = () => {
   }, [logic.proyecto?.id, user, isAuthenticated]);
 
   const {trackingData, tieneFirmaPendiente} = useVerificarFirma(logic.proyecto?.id)
-  console.log(trackingData)
-  console.log(tieneFirmaPendiente)
+  //console.log(trackingData)
+  //console.log(tieneFirmaPendiente)
 
 
 
@@ -353,7 +357,7 @@ const DetalleProyecto: React.FC = () => {
         </Box>
 
         <Box sx={{ width: { xs: '100%', lg: 380 }, flexShrink: 0 }}>
-          <MemoizedSidebar logic={secureLogic} proyecto={logic.proyecto} cantProyectUser={cantProyectsUser} puedeFirmar={trackingData?.puede_firmar} isLoadingCount={isLoadingCount} />
+          <MemoizedSidebar logic={secureLogic} proyecto={logic.proyecto} cantProyectUser={cantProyectsUser} puedeFirmar={trackingData?.puede_firmar} isLoadingCount={isLoadingCount} activeSuscriptions={activeSuscriptions} />
         </Box>
       </Box>
 

@@ -49,7 +49,6 @@ const PagoResult: React.FC<PagoResultProps> = ({ initialStatus }) => {
 
   useEffect(() => {
     if (queryId || paramId) {
-      console.log("entro")
       setTransaccionId(paramId ? Number(paramId) : Number(queryId));
     }
   }, [queryId, paramId]);
@@ -59,7 +58,7 @@ const PagoResult: React.FC<PagoResultProps> = ({ initialStatus }) => {
     if (!transaccionId) return;
     const searchTransaccion = async () => {
       const res = await TransaccionService.getMyTransactionById(Number(transaccionId));
-      console.log(res.data);
+
       setProjectId(res.data.id_proyecto || 0);
     }
     searchTransaccion();
@@ -69,7 +68,7 @@ const PagoResult: React.FC<PagoResultProps> = ({ initialStatus }) => {
 
     const trackProyect = async () => {
       const res = await ContratoService.trackPaymentAndContract(proyectId);
-      console.log("tracking",res);
+      //console.log("tracking",res);
       setPuedeFirmar(res.puede_firmar);
     }
 

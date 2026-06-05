@@ -48,7 +48,7 @@ export const DetalleCuotaModal: React.FC<Props> = ({ open, onClose, resumen }) =
     // 1. Proyecciones Macro
     const inversionTotalEstimada = d.valor_mensual_final * meses_proyecto;
     const saldoRestanteEstimado = d.valor_mensual_final * (meses_proyecto - cuotas_pagadas);
-    const capitalAcumuladoUnidades = d.valor_cemento_unidades * cuotas_pagadas;
+    const capitalAcumuladoUnidades = inversionTotalEstimada - saldoRestanteEstimado 
 
     // 2. Desglose Micro (Capital)
     const valorCapital = d.valor_mensual_final - d.carga_administrativa - d.iva_carga_administrativa;
@@ -174,8 +174,7 @@ export const DetalleCuotaModal: React.FC<Props> = ({ open, onClose, resumen }) =
             <InfoCard
               icon={<Savings fontSize="small" />}
               title="Capital Acumulado"
-              value={`${formatNumber(stats.capitalAcumuladoUnidades)} Unidades`}
-              subtitle={`Ahorrado en ${resumen.cuotas_pagadas} cuotas`}
+              value={`$${formatNumber(stats.capitalAcumuladoUnidades)}`}
               color="success"
             />
           </Stack>
