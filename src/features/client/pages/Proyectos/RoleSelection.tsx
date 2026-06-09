@@ -11,7 +11,7 @@ import {
   AlertTitle,
   alpha, Avatar, Box, Button,
   Container, Divider,
-  Fade, Paper, Stack, Typography, useTheme
+  Fade, Pagination, Paper, Stack, Typography, useTheme
 } from "@mui/material";
 // Iconos
 import { Business, FilterListOff, Home as HomeIcon, Savings, TrendingUp, Visibility } from "@mui/icons-material";
@@ -38,7 +38,8 @@ import { ProjectCard } from "./components/ProjectCard";
 
 const useProyectosData = () => {
   const [perfilSeleccionado, setPerfilSeleccionado] = useState<'ahorrista' | 'inversionista'>('ahorrista');
-  const [itemsVisibles, setItemsVisibles] = useState(env.defaultPageSize);
+  const [paginaActual, setPaginaActual] = useState(1);
+  const ITEMS_POR_PAGINA = 9;
   const [filtros] = useState({ search: '', status: 'todos' });
   const { isAuthenticated, user } = useAuth();
 
@@ -147,40 +148,54 @@ const useProyectosData = () => {
     });
 
     return [...filtrados].sort((a, b) => {
+      // Peso por vinculación del usuario
       const getPeso = (id: number) => {
         if (idsProyectosGanados.has(id)) return 2;
         if (idsVinculados.has(id)) return 1;
         return 0;
       };
 
-      return getPeso(b.id) - getPeso(a.id);
+      const pesoDiff = getPeso(b.id) - getPeso(a.id);
+      if (pesoDiff !== 0) return pesoDiff;
+
+      // Finalizados al fondo
+      const aFinalizado = a.estado_proyecto === 'Finalizado' ? 1 : 0;
+      const bFinalizado = b.estado_proyecto === 'Finalizado' ? 1 : 0;
+      if (aFinalizado !== bFinalizado) return aFinalizado - bFinalizado;
+
+      // Más nuevos primero
+      return new Date(b.fecha_inicio).getTime() - new Date(a.fecha_inicio).getTime();
     });
   }, [proyectosInv, proyectosAho, perfilSeleccionado, filtros, misSuscripciones, misInversiones, misPujas]);
 
-  const proyectosVisibles = useMemo(() =>
-    proyectosFiltrados.slice(0, itemsVisibles),
-    [proyectosFiltrados, itemsVisibles]);
+  const totalPaginas = useMemo(() =>
+    Math.ceil(proyectosFiltrados.length / ITEMS_POR_PAGINA),
+    [proyectosFiltrados.length]
+  );
+
+  const proyectosVisibles = useMemo(() => {
+    const inicio = (paginaActual - 1) * ITEMS_POR_PAGINA;
+    return proyectosFiltrados.slice(inicio, inicio + ITEMS_POR_PAGINA);
+  }, [proyectosFiltrados, paginaActual]);
 
   const handleCambioPerfil = useCallback((nuevo: 'ahorrista' | 'inversionista') => {
     setPerfilSeleccionado(nuevo);
-    setItemsVisibles(env.defaultPageSize);
+    setPaginaActual(1); // ← antes era setItemsVisibles(env.defaultPageSize)
     sessionStorage.setItem('proyectosPerfil', nuevo);
   }, []);
 
-  const loadMore = useCallback(() => {
-    setItemsVisibles(v => v + env.defaultPageSize);
-  }, []);
 
   return {
     perfilSeleccionado,
     isLoading,
     proyectosVisibles,
-    misSuscripciones, // ✅ Exportamos para uso de las cards
-    misAdhesiones,    // ✅ Exportamos para uso de las cards
-    hayMasProyectos: proyectosFiltrados.length > itemsVisibles,
+    misSuscripciones,
+    misAdhesiones,
+    paginaActual,
+    totalPaginas,
+    setPaginaActual,
     alertasSubasta,
     handleCambioPerfil,
-    loadMore
   };
 };
 
@@ -357,13 +372,19 @@ const ProyectosUnificados: React.FC = () => {
     perfilSeleccionado,
     isLoading,
     proyectosVisibles,
-    hayMasProyectos,
+    paginaActual,
+    totalPaginas,
+    setPaginaActual,
     alertasSubasta,
     misSuscripciones,
     misAdhesiones,
     handleCambioPerfil,
-    loadMore
   } = useProyectosData();
+
+  const handleCambioPagina = useCallback((_: React.ChangeEvent<unknown>, pagina: number) => {
+  setPaginaActual(pagina);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}, [setPaginaActual]);
 
   // Navegación
   const handleProjectClick = useCallback((id: number | string) => {
@@ -422,16 +443,17 @@ const ProyectosUnificados: React.FC = () => {
                 })}
               </Box>
 
-              {/* Botón Cargar Más */}
-              {hayMasProyectos && (
-                <Box textAlign="center" mt={8}>
-                  <Button
-                    variant="outlined" size="large"
-                    onClick={loadMore}
-                    sx={{ px: 8, py: 1.5, borderRadius: 3, borderWidth: 2, fontWeight: 800 }}
-                  >
-                    Ver más proyectos
-                  </Button>
+              {/* Paginación */}
+              {totalPaginas > 1 && (
+                <Box display="flex" justifyContent="center" mt={6}>
+                  <Pagination
+                    count={totalPaginas}
+                    page={paginaActual}
+                    onChange={handleCambioPagina}
+                    color="primary"
+                    size="large"
+                    shape="rounded"
+                  />
                 </Box>
               )}
             </>

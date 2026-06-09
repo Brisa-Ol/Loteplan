@@ -236,14 +236,14 @@ const Home: React.FC = () => {
                 )}
               </Stack>
 
-              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 3 }}>
+              {/* <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 3 }}>
                 {trustIndicators.map((item, index) => (
                   <Box key={index}>
                     <Typography variant="h4" fontWeight={700}>{item.value}</Typography>
                     <Typography variant="body2" sx={{ color: alpha(theme.palette.common.white, 0.8) }}>{item.label}</Typography>
                   </Box>
                 ))}
-              </Box>
+              </Box> */}
             </Box>
 
             <Box sx={{ flex: 1, width: '100%', display: { xs: 'none', md: 'block' } }}>
