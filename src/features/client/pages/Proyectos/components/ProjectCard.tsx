@@ -22,12 +22,14 @@ import type { AdhesionDto } from "@/core/types/adhesion.dto";
 import type { ProyectoDto } from "@/core/types/proyecto.dto";
 import type { SuscripcionDto } from "@/core/types/suscripcion.dto";
 import { useProyectoHelpers } from "@/features/client/hooks/useProyectoHelpers";
+import type { InversionDto } from "@/core/types/inversion.dto";
 
 export interface ProjectCardProps {
   project: ProyectoDto;
   onClick?: () => void;
   suscripcionUsuario?: SuscripcionDto;
   adhesionUsuario?: AdhesionDto;
+  inversionUsuario?: InversionDto;
 }
 
 const CardHeader: React.FC<{
@@ -92,7 +94,7 @@ const CardHeader: React.FC<{
     );
   };
 
-export const ProjectCard: React.FC<ProjectCardProps> = ({ project, onClick, suscripcionUsuario, adhesionUsuario }) => {
+export const ProjectCard: React.FC<ProjectCardProps> = ({ project, onClick, suscripcionUsuario, adhesionUsuario, inversionUsuario }) => {
   const helpers = useProyectoHelpers(project);
   const theme = useTheme();
   const navigate = useNavigate();
@@ -115,6 +117,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, onClick, susc
 
   const tieneSuscripcionActiva = suscripcionUsuario && suscripcionUsuario.activo;
   const tieneAdhesionActiva = adhesionUsuario && adhesionUsuario.estado !== 'cancelada';
+  const tieneInversionActiva = inversionUsuario && inversionUsuario.activo;
 
   if (tieneSuscripcionActiva || tieneAdhesionActiva) {
     const completada = (adhesionUsuario?.estado === 'completada') || (suscripcionUsuario?.adhesion_completada === true);
@@ -162,7 +165,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, onClick, susc
   let isDisabled = false;
 
   if (participacion) {
-    buttonText = "Ver mi Plan";
+    buttonText = project.tipo_inversion === 'directo' ? "Ver mi Inversión" : "Ver mi Plan";
     buttonIcon = <Visibility />;
     buttonColor = participacion.colorTheme;
   } else if (helpers.estaFinalizado || isLleno) {

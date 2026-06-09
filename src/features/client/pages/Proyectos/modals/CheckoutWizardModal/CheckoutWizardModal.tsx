@@ -331,6 +331,7 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
         break;
 
       case 'Seguridad': {
+        setIsCreatingAdhesion(true);
         if (codigo2FA.length !== CODIGO_2FA_LENGTH) {
           showError('Debes ingresar el código completo');
           return;
@@ -470,6 +471,7 @@ export const CheckoutWizardModal: React.FC<CheckoutWizardModalProps> = ({
   }, [activeStep, codigo2FA, codigo2FAFirma, location, signatureDataUrl, signaturePosition]);
 
   const getButtonText = () => {
+    if(!plantillaActual) return "No hay contrato disponible"
     if (isCreatingAdhesion) return 'Procesando...'
     if (isProcessing) return 'Procesando...';
     if (activeStep === 'Firma') return 'Firmar Contrato';
