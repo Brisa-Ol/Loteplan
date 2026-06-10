@@ -326,10 +326,10 @@ const ComoFunciona: React.FC = () => {
       }}>
         <Container maxWidth="lg">
           <Typography variant="h3" component="h1" fontWeight={800} gutterBottom>
-            Accedé a tu lote urbanizado <br /> sin depender del crédito bancario
+            ¿Cómo funciona?
           </Typography>
           <Typography variant="h6" sx={{ maxWidth: 'md', mx: 'auto', opacity: 0.85, fontWeight: 400, lineHeight: 1.6, mt: 2 }}>
-            Conocé cómo la infraestructura financiera de Loteplan organiza el ahorro y la inversión para hacer posibles tus objetivos.
+            Una plataforma, dos modos de participar. Descubrí cuál se adapta mejor a lo que estás buscando.
           </Typography>
         </Container>
       </Box>

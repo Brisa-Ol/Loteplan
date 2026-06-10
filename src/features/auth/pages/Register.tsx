@@ -64,7 +64,7 @@ const Register: React.FC = () => {
   if (status.isInitializing) {
     return (
       <Box display="flex" height="100vh" justifyContent="center" alignItems="center" bgcolor="background.default">
-        <CircularProgress color="primary" />
+        <CircularProgress size={20} color="inherit" />
       </Box>
     );
   }
@@ -84,7 +84,7 @@ const Register: React.FC = () => {
           }}>
             <PersonAdd fontSize="large" />
           </Box>
-          <Typography variant="h4" fontWeight={700} gutterBottom>Regístrate</Typography>
+          <Typography variant="h3" fontWeight={700} gutterBottom>Regístrate</Typography>
         </Box>
 
         {status.error && (
@@ -137,9 +137,10 @@ const Register: React.FC = () => {
             <Button
               fullWidth variant="contained" type="submit" size="large"
               disabled={status.isLoading}
-              sx={{ py: 1.5, fontWeight: 700, mt: 2, borderRadius: 2 }}
+              
+              sx={{ py: 1.5, fontWeight: 700, mt: 2, borderRadius: 2,  fontSize:17 }}
             >
-              {status.isLoading ? <CircularProgress size={24} color="inherit" /> : "REGISTRARSE"}
+              {status.isLoading ? <CircularProgress size={20} color="inherit" /> : "REGISTRARSE"}
             </Button>
           </Stack>
         </form>

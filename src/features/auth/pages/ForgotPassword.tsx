@@ -1,4 +1,4 @@
-import { ArrowBack, LockReset, MarkEmailRead, Send as SendIcon } from "@mui/icons-material";
+import { LockReset, MarkEmailRead, Send as SendIcon } from "@mui/icons-material";
 import {
   Alert,
   alpha,
@@ -36,25 +36,31 @@ const SuccessView = ({ email, onBack, theme }: any) => (
     <Box textAlign="center">
       <Avatar
         sx={{
-          width: 72, height: 72, margin: '0 auto', mb: 3,
+          width: 65, height: 65, margin: '0 auto', mb: 2,
           bgcolor: alpha(theme.palette.success.main, 0.1), color: theme.palette.success.main
         }}
       >
         <MarkEmailRead fontSize="large" />
       </Avatar>
 
-      <Typography variant="body1" color="text.secondary" sx={{ mb: 4, lineHeight: 1.6 }}>
-        Hemos enviado las instrucciones a <strong>{email}</strong>.<br />
-        Por favor revisa tu bandeja de entrada y la carpeta de spam.
-      </Typography>
-
+      <Typography variant="h4" color="text.secondary" sx={{ mb: 1, lineHeight: 1.6 }}>
+        Hemos enviado las instrucciones a: 
+        </Typography>
+        <Typography variant="h5" fontWeight={600} sx={{ mb: 1, lineHeight: 3,color: 'primary.main',fontWeight: 800 }}>
+          {email}
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1, lineHeight: 1.4 }}>
+          Por favor revisa tu bandeja de entrada y la carpeta de spam.
+        </Typography>
+      
       <Button
         variant="contained"
         onClick={onBack}
-        fullWidth size="large"
-        sx={{ borderRadius: 2, fontWeight: 700, py: 1.5 }}
+        fullWidth 
+        size="large"
+        sx={{ py: 1.5, fontWeight: 700, mt: 2, borderRadius: 2, fontSize:17  }}
       >
-        Volver al Inicio de Sesión
+        Volver a Inicio de Sesión
       </Button>
     </Box>
   </Fade>
@@ -66,14 +72,14 @@ const FormView = ({ formik, status, onBack, theme }: any) => (
     <Box>
       <Box textAlign="center" mb={4}>
         <Box sx={{
-          width: 56, height: 56, borderRadius: '50%', mx: 'auto', mb: 2,
+          width: 65, height: 65, margin: '0 auto', mb: 2,borderRadius: '50%', mx: 'auto',
           bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main',
           display: 'flex', alignItems: 'center', justifyContent: 'center'
         }}>
           <LockReset fontSize="large" />
         </Box>
-        <Typography variant="body1" color="text.secondary">
-          Ingresá tu email asociado a la cuenta y te enviaremos un enlace de recuperación.
+         <Typography variant="h5" color="text.secondary" sx={{ mb: 1, lineHeight: 1.5 }}>
+          Ingresá tu email asociado a la cuenta <br />y te enviaremos un enlace de recuperación.
         </Typography>
       </Box>
 
@@ -101,7 +107,7 @@ const FormView = ({ formik, status, onBack, theme }: any) => (
             endIcon={<SendIcon />}
             disabled={status.isLoading || !formik.isValid || !formik.dirty}
             sx={{
-              py: 1.5, fontWeight: 700, borderRadius: 2, boxShadow: 'none',
+              py: 1.5, fontWeight: 700, mt: 2, borderRadius: 2, fontSize: 17, boxShadow: 'none',
               '&:hover': { boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }
             }}
           >
@@ -110,13 +116,12 @@ const FormView = ({ formik, status, onBack, theme }: any) => (
         </Stack>
       </form>
 
-      <Box textAlign="center" mt={4}>
+      <Box textAlign="center" mt={4} gap={1.5} display="flex" flexDirection="column" >
         <Link
-          component="button" variant="body2" onClick={onBack}
+          component="button" variant="h6" onClick={onBack}
           underline="hover" color="text.secondary"
-          sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, fontWeight: 600 }}
         >
-          <ArrowBack fontSize="small" /> Volver al login
+          Volver a Iniciar sesión
         </Link>
       </Box>
     </Box>
@@ -131,7 +136,7 @@ const ForgotPasswordPage: React.FC = () => {
   // Determinar Título y Subtítulo dinámicamente
   const getHeaderInfo = () => {
     if (status.successEmail) return { title: "¡Correo Enviado!", subtitle: "" };
-    return { title: "Recuperar Contraseña", subtitle: "¿Olvidaste tu clave? No te preocupes, te ayudamos." };
+    return { title: "Recuperar Contraseña", subtitle: "¿Olvidaste tu contraseña? No te preocupes, te ayudamos." };
   };
 
   const { title, subtitle } = getHeaderInfo();
