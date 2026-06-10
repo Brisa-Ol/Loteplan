@@ -119,8 +119,8 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, onClick, susc
   const tieneAdhesionActiva = adhesionUsuario && adhesionUsuario.estado !== 'cancelada';
   const tieneInversionActiva = inversionUsuario && inversionUsuario.activo;
 
-  if (tieneSuscripcionActiva || tieneAdhesionActiva) {
-    const completada = (adhesionUsuario?.estado === 'completada') || (suscripcionUsuario?.adhesion_completada === true);
+  if (tieneSuscripcionActiva || tieneAdhesionActiva || tieneInversionActiva) {
+    const completada = (adhesionUsuario?.estado === 'completada') || (suscripcionUsuario?.adhesion_completada === true) || (inversionUsuario?.estado === 'pagado');
     const empezoAPagarSuscripcion = Number(suscripcionUsuario?.monto_total_pagado || 0) > 0;
 
     if (completada) {
@@ -131,16 +131,30 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, onClick, susc
           bannerLabel: "Cupo reservado • Esperando inicio",
           icon: EventAvailable
         };
-      } else {
+      } else if(project.tipo_inversion === 'mensual') {
         participacion = {
           colorTheme: "success",
           chipLabel: "SUSCRIPTO",
           bannerLabel: "Participando activamente",
           icon: CheckCircle
         };
+      }else if(project.tipo_inversion === 'directo') {
+        participacion = {
+          colorTheme: "success",
+          chipLabel: "INVERSOR",
+          bannerLabel: "Inversión confirmada",
+          icon: CheckCircle
+        };
       }
     } else {
-      if (project.estado_proyecto === 'En proceso') {
+      if(project.tipo_inversion === 'directo') {
+        participacion = {
+          colorTheme: "warning",
+          chipLabel: "Pago en pendiente",
+          bannerLabel: "Pago en estado pendiente",
+          icon: LocalOffer
+        }
+      }else if (project.estado_proyecto === 'En proceso') {
         participacion = {
           colorTheme: "warning",
           chipLabel: "NUEVA ADHESION EN PROCESO",
@@ -165,7 +179,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, onClick, susc
   let isDisabled = false;
 
   if (participacion) {
-    buttonText = project.tipo_inversion === 'directo' ? "Ver mi Inversión" : "Ver mi Plan";
+    buttonText = project.tipo_inversion === 'mensual' ? "Ver mi Plan" : (inversionUsuario?.estado === 'pendiente' ? "Pago en estado pendiente" : "Ver mi Inversión");
     buttonIcon = <Visibility />;
     buttonColor = participacion.colorTheme;
   } else if (helpers.estaFinalizado || isLleno) {

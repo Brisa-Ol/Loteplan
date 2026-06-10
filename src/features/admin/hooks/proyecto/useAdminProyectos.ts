@@ -108,7 +108,7 @@ export const useAdminProyectos = () => {
     mutationFn: (id: number) => ProyectoService.revertProcess(id),
     onMutate: handleMutationOptimistic,
     onError: (_, __, ctx) => handleMutationError(ctx),
-    onSuccess: (_, id) => handleMutationSuccess(id, 'Proyecto revertido a "En Espera" correctamente'),
+    onSuccess: (_, id) => handleMutationSuccess(id, 'Proyecto pausado exitosamente'),
   });
 
   // ── Handlers ─────────────────────────────────────────────────────────────
