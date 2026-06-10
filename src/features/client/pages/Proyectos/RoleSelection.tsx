@@ -191,6 +191,7 @@ const useProyectosData = () => {
     proyectosVisibles,
     misSuscripciones,
     misAdhesiones,
+    misInversiones,
     paginaActual,
     totalPaginas,
     setPaginaActual,
@@ -378,6 +379,7 @@ const ProyectosUnificados: React.FC = () => {
     alertasSubasta,
     misSuscripciones,
     misAdhesiones,
+    misInversiones,
     handleCambioPerfil,
   } = useProyectosData();
 
@@ -427,6 +429,8 @@ const ProyectosUnificados: React.FC = () => {
                     misAdhesiones.find((a: any) => a.id_proyecto === project.id && a.estado !== 'cancelada') ||
                     misAdhesiones.find((a: any) => a.id_proyecto === project.id);
 
+                  const inversionDelUsuario = misInversiones?.find((i: any) => i.id_proyecto === project.id);
+
                   return (
                     <Fade in key={project.id} timeout={400}>
                       <Box>
@@ -436,6 +440,7 @@ const ProyectosUnificados: React.FC = () => {
 
                           suscripcionUsuario={suscripcionDelUsuario}
                           adhesionUsuario={adhesionDelUsuario}
+                          inversionUsuario={inversionDelUsuario}
                         />
                       </Box>
                     </Fade>

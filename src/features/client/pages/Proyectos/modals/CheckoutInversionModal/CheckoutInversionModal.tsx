@@ -348,6 +348,7 @@ export const CheckoutInversionModal: React.FC<CheckoutInversionModalProps> = ({
   }, [activeStep, codigo2FA, codigo2FAFirma, location, signatureDataUrl, signaturePosition, paymentStatus]);
 
   const getButtonText = () => {
+    if(!plantillaActual) return "No hay contrato disponible"
     if (isProcessing) return 'Procesando...';
     if (activeStep === 'Firma') return 'Firmar Contrato';
     if (activeStep === 'Seguridad' && paymentStatus === 'success') return 'Continuar a Firma';

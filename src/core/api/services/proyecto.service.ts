@@ -81,12 +81,13 @@ const ProyectoService = {
     return await httpService.put(`${BASE_ENDPOINT}/${idProyecto}/lotes`, data);
   },
 
+  //comienza los cobros de un proyecto, pasando su estado a "en proceso"
   startProcess: async (idProyecto: number): Promise<AxiosResponse<{ mensaje: string, proyecto: ProyectoDto }>> => {
     return await httpService.put(`${BASE_ENDPOINT}/${idProyecto}/iniciar-proceso`);
   },
 
   revertProcess: async (idProyecto: number): Promise<AxiosResponse<{ mensaje: string, proyecto: ProyectoDto }>> => {
-    return await httpService.put(`${BASE_ENDPOINT}/${idProyecto}/revertir-proceso`);
+    return await httpService.put(`${BASE_ENDPOINT}/${idProyecto}/pausar-proceso`);
   },
 
   getAllAdmin: async (): Promise<AxiosResponse<ProyectoDto[]>> => {

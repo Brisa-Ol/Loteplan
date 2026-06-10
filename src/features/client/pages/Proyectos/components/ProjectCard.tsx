@@ -22,12 +22,14 @@ import type { AdhesionDto } from "@/core/types/adhesion.dto";
 import type { ProyectoDto } from "@/core/types/proyecto.dto";
 import type { SuscripcionDto } from "@/core/types/suscripcion.dto";
 import { useProyectoHelpers } from "@/features/client/hooks/useProyectoHelpers";
+import type { InversionDto } from "@/core/types/inversion.dto";
 
 export interface ProjectCardProps {
   project: ProyectoDto;
   onClick?: () => void;
   suscripcionUsuario?: SuscripcionDto;
   adhesionUsuario?: AdhesionDto;
+  inversionUsuario?: InversionDto;
 }
 
 const CardHeader: React.FC<{
@@ -92,7 +94,7 @@ const CardHeader: React.FC<{
     );
   };
 
-export const ProjectCard: React.FC<ProjectCardProps> = ({ project, onClick, suscripcionUsuario, adhesionUsuario }) => {
+export const ProjectCard: React.FC<ProjectCardProps> = ({ project, onClick, suscripcionUsuario, adhesionUsuario, inversionUsuario }) => {
   const helpers = useProyectoHelpers(project);
   const theme = useTheme();
   const navigate = useNavigate();
@@ -115,9 +117,10 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, onClick, susc
 
   const tieneSuscripcionActiva = suscripcionUsuario && suscripcionUsuario.activo;
   const tieneAdhesionActiva = adhesionUsuario && adhesionUsuario.estado !== 'cancelada';
+  const tieneInversionActiva = inversionUsuario && inversionUsuario.activo;
 
-  if (tieneSuscripcionActiva || tieneAdhesionActiva) {
-    const completada = (adhesionUsuario?.estado === 'completada') || (suscripcionUsuario?.adhesion_completada === true);
+  if (tieneSuscripcionActiva || tieneAdhesionActiva || tieneInversionActiva) {
+    const completada = (adhesionUsuario?.estado === 'completada') || (suscripcionUsuario?.adhesion_completada === true) || (inversionUsuario?.estado === 'pagado');
     const empezoAPagarSuscripcion = Number(suscripcionUsuario?.monto_total_pagado || 0) > 0;
 
     if (completada) {
@@ -128,16 +131,30 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, onClick, susc
           bannerLabel: "Cupo reservado • Esperando inicio",
           icon: EventAvailable
         };
-      } else {
+      } else if(project.tipo_inversion === 'mensual') {
         participacion = {
           colorTheme: "success",
           chipLabel: "SUSCRIPTO",
           bannerLabel: "Participando activamente",
           icon: CheckCircle
         };
+      }else if(project.tipo_inversion === 'directo') {
+        participacion = {
+          colorTheme: "success",
+          chipLabel: "INVERSOR",
+          bannerLabel: "Inversión confirmada",
+          icon: CheckCircle
+        };
       }
     } else {
-      if (project.estado_proyecto === 'En proceso') {
+      if(project.tipo_inversion === 'directo') {
+        participacion = {
+          colorTheme: "warning",
+          chipLabel: "Pago en pendiente",
+          bannerLabel: "Pago en estado pendiente",
+          icon: LocalOffer
+        }
+      }else if (project.estado_proyecto === 'En proceso') {
         participacion = {
           colorTheme: "warning",
           chipLabel: "NUEVA ADHESION EN PROCESO",
@@ -162,7 +179,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project, onClick, susc
   let isDisabled = false;
 
   if (participacion) {
-    buttonText = "Ver mi Plan";
+    buttonText = project.tipo_inversion === 'mensual' ? "Ver mi Plan" : (inversionUsuario?.estado === 'pendiente' ? "Pago en estado pendiente" : "Ver mi Inversión");
     buttonIcon = <Visibility />;
     buttonColor = participacion.colorTheme;
   } else if (helpers.estaFinalizado || isLleno) {

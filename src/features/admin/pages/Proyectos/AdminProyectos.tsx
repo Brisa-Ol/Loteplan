@@ -8,6 +8,7 @@ import {
   Layers,
   MonetizationOn as MonetizationOnIcon,
   PlayArrow,
+  Pause as PauseIcon,
   TrendingUp,
   Undo,
   ViewList,
@@ -71,9 +72,11 @@ const ProjectCard = memo<{
   // Usa directamente el campo que ya viene en el proyecto
   const cuotaAMostrar = proyecto.valor_cuota_referencia;
 
+  console.log(`puede pausar ${proyecto.nombre_proyecto}: ${canRevert}`)
+
   return (
     <Card
-      elevation={0}
+      elevation={0} 
       sx={{
         border: '1px solid',
         borderColor: isBajoMinimo ? 'error.light' : proyecto.activo ? 'divider' : alpha(theme.palette.divider, 0.3),
@@ -186,8 +189,10 @@ const ProjectCard = memo<{
             </Tooltip>
           )}
           {canRevert && (
-            <Tooltip title="Revertir a En Espera">
-              <IconButton onClick={() => onRevert(proyecto)} size="small" sx={{ color: 'warning.main' }}><Undo fontSize="small" /></IconButton>
+            <Tooltip title="Pausar Cobros">
+              <IconButton onClick={() => onRevert(proyecto)} size="small" sx={{ color: 'warning.main' }}>
+              <PauseIcon></PauseIcon>
+              </IconButton>
             </Tooltip>
           )}
         </Stack>
@@ -347,7 +352,7 @@ const AdminProyectos: React.FC = () => {
           const hasLotes = p.lotes && p.lotes.length > 0;
           const isReadyToStart = canStart && (!p.pack_de_lotes || hasLotes);
           const isBajoMinimo = p.suscripciones_actuales < (p.suscripciones_minimas || 0);
-          const canRevert = isMensual && p.estado_proyecto === 'En proceso' && isBajoMinimo;
+          const canRevert = isMensual && p.estado_proyecto === 'En proceso' && !isBajoMinimo;
           return (
             <Stack direction="row" spacing={0.5} justifyContent="flex-end">
               <Tooltip title="Imágenes">
@@ -377,9 +382,9 @@ const AdminProyectos: React.FC = () => {
                 </Tooltip>
               )}
               {canRevert && (
-                <Tooltip title="Revertir">
+                <Tooltip title="Pausar Cobros">
                   <IconButton onClick={(e) => { e.stopPropagation(); logic.modales.confirmDialog.confirm('revert_project_process', p); }} size="small" sx={{ color: 'warning.main' }}>
-                    <Undo fontSize="small" />
+                    <PauseIcon fontSize="small" />
                   </IconButton>
                 </Tooltip>
               )}
