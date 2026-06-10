@@ -13,6 +13,7 @@ import { Box, Button, Chip, Divider, Stack, Typography } from "@mui/material";
 import React from "react";
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+
 interface Props {
 	open: boolean;
 	onClose: () => void;
@@ -21,6 +22,7 @@ interface Props {
 	isPaymentPending: boolean;
 	onPagar: (adhesion: AdhesionDto, cuota: PagoAdhesionDto) => void;
 }
+
 const safeFormatDate = (dateStr?: string | null) => {
     if (!dateStr) return '—';
     const safeString = dateStr.length === 10 ? `${dateStr}T00:00:00` : dateStr;
@@ -28,6 +30,7 @@ const safeFormatDate = (dateStr?: string | null) => {
     if (isNaN(date.getTime())) return 'Fecha inválida';
     return format(date, 'dd/MM/yyyy', { locale: es });
 };
+
 const getEstadoCuotaConfig = (estado: string) => {
 	switch (estado) {
 		case "pendiente":
@@ -122,8 +125,14 @@ export const DetalleCuotaAdhesionModal: React.FC<Props> = ({
 			cancelText="Cerrar"
 		>
 			<Stack spacing={3}>
-				{/* Resumen superior */}
-				<Stack direction="row" spacing={2} justifyContent="space-between">
+				{/* Resumen superior - Responsive: column en móvil, row en desktop */}
+				<Stack
+					direction={{ xs: 'column', sm: 'row' }}
+					spacing={{ xs: 2, sm: 0 }}
+					justifyContent="space-between"
+					alignItems={{ xs: 'flex-start', sm: 'center' }}
+					sx={{ width: '100%' }}
+				>
 					<Box>
 						<Typography variant="caption" color="text.secondary" fontWeight={600}>
 							Plan de pago
@@ -132,7 +141,7 @@ export const DetalleCuotaAdhesionModal: React.FC<Props> = ({
 							{planText}
 						</Typography>
 					</Box>
-					<Box textAlign="center">
+					<Box>
 						<Typography variant="caption" color="text.secondary" fontWeight={600}>
 							Cuotas abonadas
 						</Typography>
@@ -140,7 +149,7 @@ export const DetalleCuotaAdhesionModal: React.FC<Props> = ({
 							{cuotasPagadas} / {cuotasTotales}
 						</Typography>
 					</Box>
-					<Box textAlign="right">
+					<Box>
 						<Typography variant="caption" color="text.secondary" fontWeight={600}>
 							Monto total
 						</Typography>
@@ -188,9 +197,11 @@ export const DetalleCuotaAdhesionModal: React.FC<Props> = ({
 										key={cuota.id}
 										sx={{
 											display: "flex",
-											alignItems: "center",
+											flexDirection: { xs: "column", sm: "row" },  // 👈 cambio clave
+											alignItems: { xs: "flex-start", sm: "center" },
 											justifyContent: "space-between",
-											p: 1.5,
+											gap: { xs: 1.5, sm: 0 },
+											p: { xs: 1.5, sm: 1.5 },
 											borderRadius: 2,
 											border: "1px solid",
 											borderColor: isNext
@@ -208,9 +219,9 @@ export const DetalleCuotaAdhesionModal: React.FC<Props> = ({
 											opacity: isPaid ? 0.75 : 1,
 										}}
 									>
-										{/* Número y fechas */}
-										<Box sx={{ flex: 1 }}>
-											<Stack direction="row" spacing={1} alignItems="center">
+										{/* Información de la cuota (número y fechas) */}
+										<Box sx={{ flex: 1, width: '100%' }}>
+											<Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
 												<Typography variant="body2" fontWeight={700}>
 													Cuota #{cuota.numero_cuota}
 												</Typography>
@@ -239,47 +250,55 @@ export const DetalleCuotaAdhesionModal: React.FC<Props> = ({
 											)}
 										</Box>
 
-										{/* Monto */}
-										<Typography
-											variant="body2"
-											fontWeight={800}
-											sx={{ mx: 2, minWidth: 90, textAlign: "right" }}
+										{/* Monto - visible en línea con el chip en móvil, pero lo ponemos antes del estado */}
+										<Stack
+											direction="row"
+											justifyContent="space-between"
+											alignItems="center"
+											width="100%"
+											sx={{ mt: { xs: 0.5, sm: 0 } }}
 										>
-											{formatCurrency(Number(cuota.monto))}
-										</Typography>
-
-										{/* Estado o Botón */}
-										{isPaid ? (
-											<Chip
-												label={label}
-												color={color}
-												size="small"
-												icon={icon}
-												variant="outlined"
-												sx={{ fontWeight: 600, minWidth: 90 }}
-											/>
-										) : isNext ? (
-											<Button
-												variant="contained"
-												color={isVencida ? "error" : "primary"}
-												size="small"
-												onClick={() => onPagar(adhesion, cuota)}
-												disabled={isPaymentPending}
-												startIcon={<Lock fontSize="small" />}
-												sx={{ borderRadius: 2, minWidth: 100, fontWeight: 800 }}
+											<Typography
+												variant="body2"
+												fontWeight={800}
+												sx={{ minWidth: 'auto' }}
 											>
-												{isPaymentPending ? "..." : "Pagar"}
-											</Button>
-										) : (
-											<Chip
-												label={label}
-												color={color}
-												size="small"
-												icon={icon}
-												variant="outlined"
-												sx={{ fontWeight: 600, minWidth: 90 }}
-											/>
-										)}
+												{formatCurrency(Number(cuota.monto))}
+											</Typography>
+
+											{/* Estado o Botón */}
+											{isPaid ? (
+												<Chip
+													label={label}
+													color={color}
+													size="small"
+													icon={icon}
+													variant="outlined"
+													sx={{ fontWeight: 600, minWidth: 90 }}
+												/>
+											) : isNext ? (
+												<Button
+													variant="contained"
+													color={isVencida ? "error" : "primary"}
+													size="small"
+													onClick={() => onPagar(adhesion, cuota)}
+													disabled={isPaymentPending}
+													startIcon={<Lock fontSize="small" />}
+													sx={{ borderRadius: 2, minWidth: 100, fontWeight: 800 }}
+												>
+													{isPaymentPending ? "..." : "Pagar"}
+												</Button>
+											) : (
+												<Chip
+													label={label}
+													color={color}
+													size="small"
+													icon={icon}
+													variant="outlined"
+													sx={{ fontWeight: 600, minWidth: 90 }}
+												/>
+											)}
+										</Stack>
 									</Box>
 								);
 							})}
