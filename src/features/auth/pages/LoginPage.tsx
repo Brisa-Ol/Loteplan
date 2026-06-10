@@ -112,7 +112,7 @@ const LoginPage: React.FC = () => {
           }}>
             <LockOpen fontSize="large" />
           </Box>
-          <Typography variant="h4" fontWeight={700}>Iniciar Sesión</Typography>
+          <Typography variant="h3" fontWeight={700}>Iniciar Sesión</Typography>
         </Box>
 
         {/* Zona de Alertas */}
@@ -151,9 +151,9 @@ const LoginPage: React.FC = () => {
               type="submit"
               size="large"
               disabled={status.isLoading}
-              sx={{ py: 1.5, borderRadius: 2, fontWeight: 700 }}
+              sx={{ py: 1.5, fontWeight: 700, mt: 2, borderRadius: 2, fontSize:17  }}
             >
-              {status.isLoading ? <CircularProgress size={24} color="inherit" /> : "INGRESAR"}
+              {status.isLoading ? <CircularProgress size={20} color="inherit" /> : "INGRESAR"}
             </Button>
           </Stack>
         </form>
