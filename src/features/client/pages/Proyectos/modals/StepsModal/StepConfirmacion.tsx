@@ -256,7 +256,7 @@ export const StepConfirmacion: FC<IStepConfirmacionProps> = ({
 									{isSuscripcion ? "Valor Final de la Cuota" : "Monto a Invertir"}
 								</Typography>
 								<Typography variant="caption" color="text.secondary" fontWeight={500}>
-									{isSuscripcion ? "A pagar hoy para activar el plan" : "A pagar hoy"}
+									{isSuscripcion ? "" : "A pagar hoy"}
 								</Typography>
 							</Box>
 							<Typography variant="h4" fontWeight={900} color="success.main">

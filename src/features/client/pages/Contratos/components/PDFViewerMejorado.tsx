@@ -1,5 +1,3 @@
-// src/shared/components/PDFViewerMejorado.tsx (o la ruta que corresponda)
-
 import {
   Delete,
   FitScreen,
@@ -25,10 +23,8 @@ import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
-import { env } from '@/core/config/env'; // 👈 1. Importamos la configuración global
+import { env } from '@/core/config/env';
 
-// Configuración del Worker para Vite
-// 👈 Opcional: Podrías centralizar esta URL en env.ts si prefieres no depender de unpkg en producción
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 interface SignatureStamp {
@@ -58,27 +54,28 @@ const PDFViewerMejorado: React.FC<PDFViewerMejoradoProps> = ({
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  // 👈 2. Resolvemos la URL del PDF usando el prefijo de la API si es necesario
   const resolvedPdfUrl = useMemo(() => {
     if (!pdfUrl) return '';
     if (pdfUrl.startsWith('http') || pdfUrl.startsWith('blob:') || pdfUrl.startsWith('data:')) {
       return pdfUrl;
     }
-    // Si es una ruta relativa, le pegamos la URL base de la API
     return `${env.apiPublicUrl}${pdfUrl.startsWith('/') ? '' : '/'}${pdfUrl}`;
   }, [pdfUrl]);
 
-useEffect(() => {
-  const updateWidth = () => {
-    if (containerRef.current) {
-      setPageWidth(containerRef.current.offsetWidth - 150); 
-    }
-  };
-  const observer = new ResizeObserver(updateWidth);
-  if (containerRef.current) observer.observe(containerRef.current);
-  return () => observer.disconnect();
-}, []);
+  useEffect(() => {
+    const updateWidth = () => {
+      if (containerRef.current) {
+        // Usamos el ancho real del contenedor, restando un pequeño padding para márgenes
+        setPageWidth(containerRef.current.clientWidth - 32);
+      }
+    };
+    updateWidth();
+    const observer = new ResizeObserver(updateWidth);
+    if (containerRef.current) observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, []);
 
   const handlePageClick = (e: React.MouseEvent<HTMLDivElement>, pageNum: number) => {
     if (readOnlyMode || !signatureDataUrl) return;
@@ -93,54 +90,80 @@ useEffect(() => {
   };
 
   return (
-    <Box ref={containerRef} sx={{ height: '70vh', display: 'flex', flexDirection: 'column',minHeight: '500px' }}>
-
-      {/* 🛠 BARRA DE HERRAMIENTAS */}
+    <Box
+      ref={containerRef}
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',          // ← Ocupa todo el espacio disponible del padre
+        width: '100%',
+        minHeight: 0,            // ← Necesario para que flex funcione correctamente
+      }}
+    >
+      {/* Barra de herramientas */}
       <Paper
         elevation={0}
         sx={{
-          p: 1, mb: 1, borderRadius: 2, border: `1px solid ${theme.palette.divider}`,
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          bgcolor: 'background.paper', zIndex: 2
+          p: 1,
+          mb: 1,
+          borderRadius: 2,
+          border: `1px solid ${theme.palette.divider}`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          bgcolor: 'background.paper',
+          flexShrink: 0,         // ← Evita que se encoja
         }}
       >
         <Stack direction="row" spacing={1} alignItems="center">
-          <Chip
-            label={`${numPages} Páginas`}
-            size="small"
-            variant="outlined"
-            sx={{ fontWeight: 700 }}
-          />
+          <Chip label={`${numPages} Páginas`} size="small" variant="outlined" sx={{ fontWeight: 700 }} />
         </Stack>
 
         <Stack direction="row" alignItems="center" spacing={1}>
-          <Tooltip title="Reducir"><IconButton onClick={() => setScale(s => Math.max(s - 0.1, 0.5))} size="small"><ZoomOut fontSize="small" /></IconButton></Tooltip>
+          <Tooltip title="Reducir">
+            <IconButton onClick={() => setScale(s => Math.max(s - 0.1, 0.5))} size="small">
+              <ZoomOut fontSize="small" />
+            </IconButton>
+          </Tooltip>
           <Box sx={{ width: 100, mx: 1 }}>
             <Slider value={scale} min={0.5} max={2.0} step={0.1} onChange={(_, v) => setScale(v as number)} size="small" />
           </Box>
-          <Tooltip title="Aumentar"><IconButton onClick={() => setScale(s => Math.min(s + 0.1, 2.0))} size="small"><ZoomIn fontSize="small" /></IconButton></Tooltip>
-          <Tooltip title="Restablecer"><IconButton onClick={() => setScale(1.0)} size="small"><FitScreen fontSize="small" /></IconButton></Tooltip>
+          <Tooltip title="Aumentar">
+            <IconButton onClick={() => setScale(s => Math.min(s + 0.1, 2.0))} size="small">
+              <ZoomIn fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Restablecer">
+            <IconButton onClick={() => setScale(1.0)} size="small">
+              <FitScreen fontSize="small" />
+            </IconButton>
+          </Tooltip>
         </Stack>
       </Paper>
 
-      {/* 📄 ÁREA DEL DOCUMENTO (SCROLL CONTINUO) */}
+      {/* Área de scroll del documento */}
       <Box
+        ref={scrollContainerRef}
         sx={{
-          flex: 1, overflowY: 'auto', bgcolor: 'grey.200', borderRadius: 2,
-          border: `1px solid ${theme.palette.divider}`, p: 2,
-          display: 'flex', flexDirection: 'column', alignItems: 'center',
-          maxWidth: '1000px', // Limita el ancho máximo
-    width: '100%',      // Asegura que ocupe todo el espacio disponible hasta el máximo
-    margin: '0 auto',   // Centra el recuadro gris horizontalmente
+          flex: 1,               // ← Ocupa el resto del espacio
+          minHeight: 0,         // ← Permite que el overflow funcione
+          overflowY: 'auto',    // ← Scroll vertical
+          bgcolor: 'grey.200',
+          borderRadius: 2,
+          border: `1px solid ${theme.palette.divider}`,
+          p: 2,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
         }}
       >
         <Document
-          file={resolvedPdfUrl} // 👈 3. Usamos la URL resuelta
+          file={resolvedPdfUrl}
           onLoadSuccess={({ numPages }) => setNumPages(numPages)}
           onLoadError={() => setLoadError("No se pudo cargar el PDF")}
           loading={<CircularProgress sx={{ mt: 10 }} />}
         >
-          <Stack spacing={3}>
+          <Stack spacing={3} sx={{ width: '100%', alignItems: 'center' }}>
             {Array.from(new Array(numPages), (_, i) => {
               const pageNum = i + 1;
               return (
@@ -150,8 +173,9 @@ useEffect(() => {
                   sx={{
                     position: 'relative',
                     boxShadow: theme.shadows[6],
-                    cursor: (signatureDataUrl && !readOnlyMode) ? 'crosshair' : 'default',
-                    lineHeight: 0
+                    cursor: signatureDataUrl && !readOnlyMode ? 'crosshair' : 'default',
+                    lineHeight: 0,
+                    maxWidth: '100%',      // ← Evita desborde horizontal
                   }}
                 >
                   <Page
@@ -162,7 +186,6 @@ useEffect(() => {
                     renderAnnotationLayer={false}
                   />
 
-                  {/* ✍️ ESTAMPA DE FIRMA */}
                   {signature && signature.page === pageNum && (
                     <Box
                       sx={{
@@ -174,8 +197,11 @@ useEffect(() => {
                         border: `2px dashed ${theme.palette.primary.main}`,
                         bgcolor: alpha(theme.palette.primary.main, 0.1),
                         borderRadius: 1,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        zIndex: 10, pointerEvents: 'none',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 10,
+                        pointerEvents: 'none',
                         transform: 'translate(-50%, -50%)'
                       }}
                     >
@@ -188,8 +214,15 @@ useEffect(() => {
                           onSignaturePositionSet?.(null);
                         }}
                         sx={{
-                          position: 'absolute', top: -12, right: -12, bgcolor: 'error.main', color: 'white',
-                          '&:hover': { bgcolor: 'error.dark' }, pointerEvents: 'auto', width: 24, height: 24
+                          position: 'absolute',
+                          top: -12,
+                          right: -12,
+                          bgcolor: 'error.main',
+                          color: 'white',
+                          '&:hover': { bgcolor: 'error.dark' },
+                          pointerEvents: 'auto',
+                          width: 24,
+                          height: 24
                         }}
                       >
                         <Delete sx={{ fontSize: 14 }} />
@@ -205,13 +238,14 @@ useEffect(() => {
         {loadError && <Alert severity="error" sx={{ mt: 5 }}>{loadError}</Alert>}
       </Box>
 
-      {/* ℹ️ FEEDBACK */}
       {!readOnlyMode && signatureDataUrl && (
-        <Box sx={{ py: 1, textAlign: 'center' }}>
+        <Box sx={{ py: 1, textAlign: 'center', flexShrink: 0 }}>
           {!signature ? (
             <Chip icon={<TouchApp />} label="Haz clic en el documento para posicionar tu firma" color="primary" variant="outlined" />
           ) : (
-            <Typography variant="caption" color="success.main" fontWeight={700}>✓ Firma posicionada en Pág. {signature.page}</Typography>
+            <Typography variant="caption" color="success.main" fontWeight={700}>
+              ✓ Firma posicionada en Pág. {signature.page}
+            </Typography>
           )}
         </Box>
       )}
