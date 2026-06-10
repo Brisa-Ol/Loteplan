@@ -101,7 +101,7 @@ const LoginPage: React.FC = () => {
 
   return (
     <>
-      <AuthFormContainer title="¡Hola de nuevo!" subtitle="Ingresá a tu cuenta para gestionar tus inversiones.">
+      <AuthFormContainer  title="¡Hola de nuevo!" subtitle="Ingresá a tu cuenta para gestionar tus inversiones.">
 
         {/* Header Visual */}
         <Box textAlign="center" mb={4}>

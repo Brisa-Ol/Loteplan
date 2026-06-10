@@ -49,17 +49,18 @@ const AuthFormContainer: React.FC<AuthFormContainerProps> = ({
       >
         <Container maxWidth="lg">
           <Typography
-            variant="h3"
+            
             component="h1"
             fontWeight={800}
             gutterBottom
+             fontSize="2.125rem"
           >
             {title}
           </Typography>
 
           {subtitle && (
             <Typography
-              variant="h6"
+              variant="h4"
               sx={{
                 maxWidth: 'md',
                 mx: 'auto',
