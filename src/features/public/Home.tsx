@@ -150,14 +150,14 @@ const Home: React.FC = () => {
         <Container maxWidth="lg" sx={{ position: 'relative' }}>
           <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, alignItems: 'center', gap: 8 }}>
             <Box sx={{ flex: 1, width: '100%' }}>
-              <Typography variant="h2" component="h1" sx={{ mb: 3, fontWeight: 800, lineHeight: 1.1, fontSize: { md: '3rem' } }}>
+              <Typography variant="h2" component="h1" sx={{ mb: 3, fontWeight: 800, lineHeight: 1.1, fontSize: { xs: '1.75rem', md: '3rem' }}}>
                 Accedé a tu lote urbanizado <br />
                 <Box component="span" sx={{ color: alpha(theme.palette.common.white, 0.8) }}>
                   sin depender del crédito bancario
                 </Box>
               </Typography>
 
-              <Typography variant="h6" sx={{ mb: 6, color: alpha(theme.palette.common.white, 0.9), fontWeight: 400, maxWidth: 650, lineHeight: 1.8 }}>
+              <Typography variant="h6" sx={{ mb: 6, fontSize: { xs: '1rem', md: '1.25rem' }, color: alpha(theme.palette.common.white, 0.9), fontWeight: 400, maxWidth: 650, lineHeight: 1.8 }}>
                 Loteplan es una plataforma fiduciaria colaborativa que organiza grupos de ahorro para facilitar el acceso progresivo a lotes urbanizados y escriturables, con trazabilidad digital en cada etapa del proceso.
               </Typography>
 
@@ -192,8 +192,8 @@ const Home: React.FC = () => {
      <Box sx={{ py: { xs: 10, md: 14 }, bgcolor: 'secondary.light' }}>
   <Container maxWidth="lg">
     {/* Título movido aquí para que respete el ancho del container */}
-    <Typography color="text.primary" textAlign="center" fontSize="3.125rem" sx={{ mb: 8, fontWeight: 800 }}>
-      Qué es <Box component="span" fontSize="3.125rem" sx={{ color: 'primary.main', fontWeight: 800}}>Loteplan</Box>
+    <Typography color="text.primary" textAlign="center" fontSize={{ xs: '1.75rem', md: '3.125rem' }} sx={{ mb: 8, fontWeight: 800 }}>
+      Qué es <Box component="span" fontSize={{ xs: '1.75rem', md: '3.125rem' }} sx={{ color: 'primary.main', fontWeight: 800}}>Loteplan</Box>
     </Typography>
         
      <Box sx={{ 
@@ -249,7 +249,7 @@ const Home: React.FC = () => {
       <Box sx={{ py: { xs: 10, md: 14 }, bgcolor: 'background.default' }}>
         <Container maxWidth="lg">
           <Box sx={{ textAlign: 'center', mb: 8, maxWidth: 950, mx: 'auto' }}>
-            <Typography gutterBottom fontWeight={800} color="text.primary" fontSize="3.125rem">
+            <Typography gutterBottom fontWeight={800} color="text.primary" fontSize={{ xs: '1.75rem', md: '3.125rem' }}>
               De desarrolladores de suelo a <Box component="span" sx={{ color: 'primary.main', display: 'block' }}>infraestructura financiera inmobiliaria</Box>
             </Typography>
             <Typography variant="h6" color="text.secondary" lineHeight={1.8} mt={3}>
@@ -258,10 +258,10 @@ const Home: React.FC = () => {
           </Box>
 
           <Box>
-            <Typography textAlign="center" fontWeight={800} mb={2} fontSize="3.125rem">
+            <Typography textAlign="center" fontWeight={800} mb={2} fontSize={{ xs: '1.75rem', md: '3.125rem' }}>
               La experiencia no cambia. <Box component="span" sx={{ color: 'primary.main' }}>Evoluciona su forma de organización.</Box>
             </Typography>
-            <Typography variant="h4" textAlign="center" color="text.secondary" mb={8} maxWidth={800} mx="auto" fontWeight={400}>
+            <Typography variant="h4" fontSize={{ xs: '1.25rem', md: '2.125rem' }} textAlign="center" color="text.secondary" mb={8} maxWidth={800} mx="auto" fontWeight={400}>
               Loteplan es una estructura jurídica y tecnológica replicable que permite organizar capital y adquirir activos inmobiliarios de forma sistemática.
             </Typography>
 
@@ -302,8 +302,8 @@ const Home: React.FC = () => {
       {/* DOS MODOS */}
       <Box sx={{ py: { xs: 10, md: 14 }, bgcolor: 'secondary.light' }}>
         <Container maxWidth="lg">
-          <Typography textAlign="center" gutterBottom fontWeight={800} color="text.primary" fontSize="3.125rem">Dos formas de participar</Typography>
-          <Typography variant="subtitle1" textAlign="center" color="text.secondary" sx={{ mb: 8, fontWeight: 400 }} fontSize="1.125rem">Elegí el modo que mejor se adapte a tus objetivos</Typography>
+          <Typography textAlign="center" gutterBottom fontWeight={800} color="text.primary" fontSize={{ xs: '1.75rem', md: '3.125rem' }}>Dos formas de participar</Typography>
+          <Typography variant="subtitle1" textAlign="center" color="text.secondary" sx={{ mb: 8, fontWeight: 400 }} fontSize={{ xs: '1.125rem', md: '1.25rem' }}>Elegí el modo que mejor se adapte a tus objetivos</Typography>
 
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 5 }}>
             {twoModes.map((mode) => (
@@ -313,7 +313,7 @@ const Home: React.FC = () => {
                   onMouseLeave={() => setHoveredMode(null)}
                   sx={{
                     width: '100%',
-                    minHeight: 680,
+                    minHeight: { xs: 'auto', md: 680 },
                     display: 'flex',
                     flexDirection: 'column',
                     bgcolor: mode.cardBg,
@@ -401,8 +401,8 @@ const Home: React.FC = () => {
       {!isAuthenticated && (
         <Box sx={{ py: { xs: 12, md: 14 }, background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`, color: 'white', textAlign: 'center' }}>
           <Container maxWidth="md">
-            <Typography variant="h3" gutterBottom sx={{ mb: 3, fontWeight: 800 }}>¿Listo para tu terreno propio?</Typography>
-            <Typography variant="h6" sx={{ mb: 6, color: alpha(theme.palette.common.white, 0.9), fontWeight: 400, lineHeight: 1.7 }}>Registrate gratis y analizá en detalle su funcionamiento antes de decidir. Sin compromiso, sin cargos ocultos.</Typography>
+            <Typography variant="h3" gutterBottom sx={{ mb: 3, fontWeight: 800, fontSize: { xs: '1.75rem', md: '3rem' } }}>¿Listo para tu terreno propio?</Typography>
+            <Typography variant="h6" sx={{ mb: 6, fontSize: { xs: '1rem', md: '1.25rem' }, color: alpha(theme.palette.common.white, 0.9), fontWeight: 400, lineHeight: 1.7 }}>Registrate gratis y analizá en detalle su funcionamiento antes de decidir. Sin compromiso, sin cargos ocultos.</Typography>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="center">
               <Button variant="contained" size="large" startIcon={<HomeIcon />} onClick={() => navigate(ROUTES.REGISTER)} sx={{ bgcolor: 'white', color: 'primary.main', fontWeight: 600, '&:hover': { bgcolor: alpha(theme.palette.common.white, 0.9) } }}>Crear mi cuenta</Button>
               <Button variant="outlined" size="large" startIcon={<TrendingUp />} onClick={() => navigate(ROUTES.LOGIN)} sx={{ borderColor: 'white', color: 'white', fontWeight: 600, '&:hover': { borderColor: 'white', bgcolor: alpha(theme.palette.common.white, 0.1) } }}>Iniciar Sesión</Button>

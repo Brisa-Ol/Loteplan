@@ -168,7 +168,7 @@ const UserDashboard: React.FC = () => {
         <Stack direction={{ xs: 'column', md: 'row' }} alignItems="center" spacing={4}>
           <Box flex={1}>
             <Chip label="Comienza hoy" color="primary" size="small" sx={{ mb: 2, fontWeight: 700 }} />
-            <Typography variant="h3" fontWeight={800} gutterBottom>¡Es hora de hacer crecer tu capital! 🚀</Typography>
+            <Typography variant="h3" fontWeight={800} gutterBottom fontSize={{ xs: '1.5rem', md: '3rem' }}>¡Es hora de hacer crecer tu capital! 🚀</Typography>
             <Typography variant="h6" color="text.secondary" sx={{ mb: 4, lineHeight: 1.6 }}>Aún no tienes inversiones activas. Explora nuestros proyectos y elige tu camino.</Typography>
             <Button variant="contained" size="large" onClick={() => navigate('/proyectos/rol-seleccion')} endIcon={<ArrowForward />}>Explorar Proyectos</Button>
           </Box>
@@ -181,14 +181,14 @@ const UserDashboard: React.FC = () => {
     <Box sx={{ bgcolor: 'background.default', minHeight: '100vh', pb: 10 }}>
 
       {/* ========== HEADER GLOBAL ========== */}
-      <Box sx={{
-        bgcolor: 'primary.main', pt: { xs: 4, md: 5 }, pb: { xs: 4, md: 8 }, px: { xs: 2, md: 4 },
-        backgroundImage: `radial-gradient(at top right, ${alpha(theme.palette.primary.main, 0.08)} 0%, transparent 70%)`
+      <Box sx={{ width: '100%',
+        bgcolor: 'primary.main', pt: { xs: 4, md: 5 }, pb: { xs: 4, md: 8 },
+        backgroundImage: `radial-gradient(at top right, ${alpha(theme.palette.primary.main, 0.08)} 0%, transparent 70%)`, 
       }}>
-        <Container maxWidth={false} sx={{ maxWidth: '1400px' }}>
+        <Container maxWidth={false} disableGutters sx={{ maxWidth: '1400px', px: { xs: 2, sm: 3 } }}>
           <Stack direction="row" justifyContent="space-between" alignItems="center">
             <Stack spacing={0.5}>
-              <Typography variant="h1" fontWeight={800} color="primary.contrastText">Hola, {user?.nombre} 👋</Typography>
+              <Typography variant="h1" fontWeight={800} color="primary.contrastText" fontSize={{ xs: '1.75rem', md: '2.5rem' }}>Hola, {user?.nombre} 👋</Typography>
               <Typography variant="h6" color="primary.contrastText">
                 {isNewUser ? "Bienvenido a Nectárea." : "Este es el resumen de tu actividad financiera."}
               </Typography>
@@ -197,7 +197,7 @@ const UserDashboard: React.FC = () => {
         </Container>
       </Box>
 
-      <Container maxWidth={false} sx={{ maxWidth: '1400px', mt: -6 }}>
+      <Container maxWidth={false} disableGutters sx={{ maxWidth: '1400px', mt: { xs: 2, md: -6 }, px: { xs: 2, sm: 3 } }}>
         <QueryHandler isLoading={isLoading} error={null}>
           <Box mb={4}>
             {/* ========== ALERTA KYC RECHAZADO ========== */}
@@ -351,7 +351,7 @@ const UserDashboard: React.FC = () => {
                                 borderBottom: index < pujasConDiasRestantes.length - 1 ? '1px solid rgba(0,0,0,0.06)' : 'none',
                               }}
                             >
-                              <Stack direction="row" alignItems="center" spacing={1.5}>
+                              <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={{ xs: 0.5, sm: 1.5 }}>
                                 <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: colorMain }} />
                                 <Typography variant="body1" sx={{ color: '#000000', fontWeight: 800 }}>
                                   {puja.lote?.nombre_lote || `lote ${puja.id}`}
@@ -378,7 +378,7 @@ const UserDashboard: React.FC = () => {
                 )}
 
                 {/* ========== GRID DE ESTADO FINANCIERO (3 COLUMNAS) ========== */}
-                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 3, mb: 5 }}>
+                <Box sx={{ mr: '10px', display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, minmax(0, 1fr))' }, gap: 3, mb: 5 }}>
 
                   {/* --- TARJETA 1: Estado de Cuenta (MORA) --- */}
                   <Card elevation={0} sx={{
@@ -386,7 +386,7 @@ const UserDashboard: React.FC = () => {
                     borderColor: cantidadTotalMora > 0 ? 'error.main' : 'success.main',
                     bgcolor: cantidadTotalMora > 0 ? 'error.light' : 'success.light',
                   }}>
-                    <CardContent sx={{ p: 3, height: '100%' }}>
+                    <CardContent sx={{ p: { xs: 2, sm: 3 }, height: '100%' }}>
                       <Stack spacing={2} sx={{ height: '100%', justifyContent: 'space-between' }}>
                         <Stack direction="row" justifyContent="space-between" alignItems="center">
                           <Avatar sx={{ bgcolor: cantidadTotalMora > 0 ? 'error.main' : 'success.main', color: 'white' }}>
@@ -401,7 +401,7 @@ const UserDashboard: React.FC = () => {
                         </Stack>
                         <Box>
                           <Typography variant="overline" color="text.secondary" fontWeight={700}>Total Vencido</Typography>
-                          <Typography variant="h3" fontWeight={800} color={cantidadTotalMora > 0 ? "error.main" : "success.main"}>
+                          <Typography variant="h3" fontWeight={800} fontSize={{ xs: '1.5rem', sm: '2rem', md: '3rem' }} color={cantidadTotalMora > 0 ? "error.main" : "success.main"}>
                             ${totalDeudaVencida.toLocaleString('es-AR')}
                           </Typography>
                         </Box>
@@ -425,7 +425,7 @@ const UserDashboard: React.FC = () => {
                     height: '100%', borderRadius: 3, border: '1px solid',
                     borderColor: 'primary.main', bgcolor: 'background.default'
                   }}>
-                    <CardContent sx={{ p: 3, height: '100%' }}>
+                    <CardContent sx={{ p: { xs: 2, sm: 3 }, height: '100%' }}>
                       <Stack spacing={2} sx={{ height: '100%', justifyContent: 'space-between' }}>
                         <Stack direction="row" alignItems="center" spacing={1.5}>
                           <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}><Schedule /></Avatar>
@@ -433,9 +433,9 @@ const UserDashboard: React.FC = () => {
                         </Stack>
                         {proximoPagoReal ? (
                           <Box>
-                            <Typography variant="h3" fontWeight={800}>${Number(proximoPagoReal.monto).toLocaleString('es-AR')}</Typography>
+                            <Typography variant="h3" fontWeight={800} fontSize={{ xs: '1.5rem', sm: '2rem', md: '3rem' }}>${Number(proximoPagoReal.monto).toLocaleString('es-AR')}</Typography>
                             <Stack direction="row" justifyContent="space-between" alignItems="center" mt={1}>
-                              <Chip label={`VENCE EL ${safeFormatDate(proximoPagoReal.fecha_vencimiento)}`} color="primary" variant="outlined" sx={{ fontWeight: 800, borderRadius: 2 }} />
+                              <Chip label={`VENCE EL ${safeFormatDate(proximoPagoReal.fecha_vencimiento)}`} color="primary" variant="outlined" sx={{ fontWeight: 800, borderRadius: 2, maxWidth: '100%' }} />
                               <Button size="small" color="primary" onClick={() => navigate('/client/finanzas/pagos')} sx={{ fontWeight: 800 }}>Pagar</Button>
                             </Stack>
                           </Box>
@@ -453,7 +453,7 @@ const UserDashboard: React.FC = () => {
                     height: '100%', borderRadius: 3, border: '1px solid',
                     borderColor: 'info.main', bgcolor: 'background.default'
                   }}>
-                    <CardContent sx={{ p: 3, height: '100%' }}>
+                    <CardContent sx={{ p: { xs: 2, sm: 3 }, height: '100%' }}>
                       <Stack spacing={2} sx={{ height: '100%', justifyContent: 'space-between' }}>
                         <Stack direction="row" alignItems="center" spacing={1.5}>
                           <Avatar sx={{ bgcolor: alpha(theme.palette.info.main, 0.1), color: 'info.main' }}><ReceiptLong /></Avatar>
@@ -461,9 +461,9 @@ const UserDashboard: React.FC = () => {
                         </Stack>
                         {proximaAdhesionReal ? (
                           <Box>
-                            <Typography variant="h3" fontWeight={800}>${Number(proximaAdhesionReal.monto).toLocaleString('es-AR')}</Typography>
+                            <Typography variant="h3" fontWeight={800} fontSize={{ xs: '1.5rem', sm: '2rem', md: '3rem' }}>${Number(proximaAdhesionReal.monto).toLocaleString('es-AR')}</Typography>
                             <Stack direction="row" justifyContent="space-between" alignItems="center" mt={1}>
-                              <Chip label={`VENCE EL ${safeFormatDate(proximaAdhesionReal.fecha_vencimiento)}`} color="info" variant="outlined" sx={{ fontWeight: 800, borderRadius: 2 }} />
+                              <Chip label={`VENCE EL ${safeFormatDate(proximaAdhesionReal.fecha_vencimiento)}`} color="info" variant="outlined" sx={{ fontWeight: 800, borderRadius: 2, maxWidth: '100%' }} />
                               <Button size="small" color="info" onClick={() => navigate('/client/finanzas/pagos')} sx={{ fontWeight: 800 }}>Pagar</Button>
                             </Stack>
                           </Box>
@@ -503,12 +503,12 @@ const UserDashboard: React.FC = () => {
               </Box>
 
               {/* ========== SIDEBAR DERECHO ========== */}
-              <Stack spacing={3}>
+              <Stack spacing={3} sx={{ mr: '10px'}}>
                 <Paper
                   elevation={0}
                   sx={{
                     p: 3, border: '1px solid', borderColor: 'primary.main',
-                    borderRadius: 4, bgcolor: 'background.default'
+                    borderRadius: 4, bgcolor: 'background.default' 
                   }}
                 >
                   <Typography variant="h5" mb={3}>Gestión Rápida</Typography>
@@ -516,21 +516,21 @@ const UserDashboard: React.FC = () => {
                     <Button
                       variant="contained" color="primary" fullWidth size="large" startIcon={<AccountBalanceWallet />}
                       onClick={() => navigate('/client/finanzas/pagos')}
-                      sx={{ borderRadius: 50, fontWeight: 800, textTransform: 'none', py: 1 }}
+                      sx={{ borderRadius: 50, fontWeight: 800, textTransform: 'none', py: { xs: 0.8, md: 1 } }}
                     >
                       Pagar Cuotas
                     </Button>
                     <Button
                       variant="outlined" color="primary" fullWidth size="large" startIcon={<Gavel />}
                       onClick={() => navigate('/client/finanzas/pujas')}
-                      sx={{ borderRadius: 50, fontWeight: 800, textTransform: 'none', py: 1, borderWidth: 2, '&:hover': { borderWidth: 2 } }}
+                      sx={{ borderRadius: 50, fontWeight: 800, textTransform: 'none', py: { xs: 0.8, md: 1 }, borderWidth: 2, '&:hover': { borderWidth: 2 } }}
                     >
                       Mis Subastas
                     </Button>
                     <Button
                       variant="outlined" color="primary" fullWidth size="large" startIcon={<ReceiptLong />}
                       onClick={() => navigate('/client/finanzas/transacciones')}
-                      sx={{ borderRadius: 50, fontWeight: 800, textTransform: 'none', py: 1, borderWidth: 2, '&:hover': { borderWidth: 2 } }}
+                      sx={{ borderRadius: 50, fontWeight: 800, textTransform: 'none', py: { xs: 0.8, md: 1 }, borderWidth: 2, '&:hover': { borderWidth: 2 } }}
                     >
                       Transacciones
                     </Button>

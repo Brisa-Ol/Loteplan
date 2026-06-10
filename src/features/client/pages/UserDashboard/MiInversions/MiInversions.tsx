@@ -37,7 +37,7 @@ export const MiInversions: FC<MiInversionsProps> = ({
 
 	return (
 		<>
-			<Stack spacing={3}>
+			<Stack spacing={3} sx={{mr: '0px'}}>
 				{resumenes
 					?.filter((resumen) => {
 						if (resumen.id_suscripcion) {
