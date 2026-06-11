@@ -1,9 +1,8 @@
 // src/layouts/shared/Footer.tsx
 
-import { Email, Facebook, Instagram, LinkedIn, LocationOn, Phone } from '@mui/icons-material';
+import { Email, Phone } from '@mui/icons-material';
 import {
-  alpha, Box, Container, Divider, IconButton,
-  Link, Stack, Typography, useTheme
+  Box, Container, Divider, Link, Stack, Typography, useTheme
 } from '@mui/material';
 import React from 'react';
 
@@ -11,36 +10,22 @@ const Footer: React.FC = () => {
   const theme = useTheme();
   const currentYear = new Date().getFullYear();
 
-  const sectionTitleStyle = {
-    fontWeight: 700,
+  const colLabelStyle = {
+    fontSize: '0.7rem',
+    fontWeight: 600,
+    letterSpacing: 1.1,
+    textTransform: 'uppercase' as const,
+    color: 'text.secondary',
     mb: 2,
-    color: 'text.primary',
-    textTransform: 'uppercase',
-    fontSize: '0.75rem',
-    letterSpacing: 1.2
   };
 
   const linkStyle = {
     color: 'text.secondary',
-    fontWeight: 500,
     textDecoration: 'none',
-    fontSize: '0.9rem',
-    transition: 'all 0.2s ease',
-    display: 'inline-block',
-    '&:hover': {
-      color: 'primary.main',
-      transform: 'translateX(4px)'
-    }
-  };
-
-  const socialButtonStyle = {
-    color: 'text.secondary',
-    transition: '0.2s',
-    '&:hover': {
-      color: 'primary.main',
-      bgcolor: alpha(theme.palette.primary.main, 0.1),
-      transform: 'translateY(-2px)'
-    }
+    fontSize: '0.875rem',
+    display: 'block',
+    transition: 'color 0.15s',
+    '&:hover': { color: 'text.primary' },
   };
 
   return (
@@ -48,116 +33,109 @@ const Footer: React.FC = () => {
       component="footer"
       sx={{
         bgcolor: 'background.paper',
-        pt: { xs: 6, md: 8 },
+        borderTop: `1px solid ${theme.palette.divider}`,
+        pt: 7,
         pb: 4,
-        mt: 'auto',
-        borderTop: `1px solid ${theme.palette.divider}`
       }}
     >
-      <Container maxWidth="xl">
-        <Box sx={{
-          display: 'flex',
-          flexDirection: { xs: 'column', md: 'row' },
-          gap: { xs: 5, md: 4 }
-        }}>
+      <Container maxWidth="lg" sx={{ px: { xs: 3, md: 6 } }}>
 
-          {/* Identidad de Marca */}
-          <Box sx={{ flex: { xs: 1, md: 1.5 }, maxWidth: { md: 350 } }}>
-            <Box
-              component="img"
-              src="/navbar/nav.png"
-              alt="Logo"
-              sx={{ height: 36, mb: 2.5, objectFit: 'contain', objectPosition: 'left' }}
-            />
-            <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.7, mb: 3 }}>
-              La plataforma líder para comprar, financiar y gestionar lotes de inversión.
-              Construye tu futuro con seguridad y confianza.
+        {/* Columnas principales */}
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', md: '1.2fr 2fr 1.5fr' },
+            gap: { xs: 4, md: 6 },
+            mb: 6,
+          }}
+        >
+          {/* Accesos rápidos */}
+          <Box>
+            <Typography sx={colLabelStyle}>Accesos rápidos</Typography>
+            <Stack spacing={1.2}>
+              {[
+                { label: 'Nosotros', href: '/nosotros' },
+                { label: 'Cómo funciona', href: '/como-funciona' },
+                { label: 'Proyectos', href: '/proyectos' },
+                { label: 'Políticas y privacidad', href: '/privacidad' },
+                { label: 'Preguntas', href: '/preguntas' },
+                { label: 'Mapa del sitio', href: '/mapa-sitio' },
+              ].map(({ label, href }) => (
+                <Link key={href} href={href} sx={linkStyle}>{label}</Link>
+              ))}
+            </Stack>
+          </Box>
+
+          {/* Sobre nosotros */}
+          <Box>
+            <Typography sx={colLabelStyle}>Sobre nosotros</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.75 }}>
+              Loteplan es una plataforma fiduciaria colaborativa que facilita el acceso
+              progresivo a lotes y oportunidades de inversión respaldadas por activos
+              inmobiliarios reales.
             </Typography>
-            <Stack direction="row" spacing={1}>
-              <IconButton size="small" sx={socialButtonStyle} aria-label="Facebook">
-                <Facebook fontSize="small" />
-              </IconButton>
-              <IconButton size="small" sx={socialButtonStyle} aria-label="Instagram">
-                <Instagram fontSize="small" />
-              </IconButton>
-              <IconButton size="small" sx={socialButtonStyle} aria-label="LinkedIn">
-                <LinkedIn fontSize="small" />
-              </IconButton>
-            </Stack>
-          </Box>
-
-          {/* Empresa */}
-          <Box sx={{ flex: 1 }}>
-            <Typography sx={sectionTitleStyle} component="h6">Empresa</Typography>
-            <Stack spacing={1.2}>
-              <Link href="/nosotros" sx={linkStyle}>Nosotros</Link>
-              <Link href="/proyectos/rol-seleccion" sx={linkStyle}>Proyectos</Link>
-              <Link href="/como-funciona" sx={linkStyle}>Como Funciona</Link>
-              <Link href="/preguntas" sx={linkStyle}>Preguntas Frecuentes</Link>
-            </Stack>
-          </Box>
-
-          {/* Legal */}
-          <Box sx={{ flex: 1 }}>
-            <Typography sx={sectionTitleStyle} component="h6">Legal & Ayuda</Typography>
-            <Stack spacing={1.2}>
-              <Link href="/centro-ayuda" sx={linkStyle}>Centro de Ayuda</Link>
-              <Link href="/terminos" sx={linkStyle}>Términos y Condiciones</Link>
-              <Link href="/privacidad" sx={linkStyle}>Política de Privacidad</Link>
-              <Link href="/cookies" sx={linkStyle}>Política de Cookies</Link>
-            </Stack>
           </Box>
 
           {/* Contacto */}
-          <Box sx={{ flex: 1 }}>
-            <Typography sx={sectionTitleStyle} component="h6">Contacto</Typography>
-            <Stack spacing={2}>
-              <Stack direction="row" spacing={1.5} alignItems="center">
-                <Email fontSize="small" color="action" sx={{ fontSize: 18 }} />
-                <Link
-                  href="mailto:info@loteplan.com"
-                  sx={{ ...linkStyle, '&:hover': { color: 'primary.main', transform: 'none' } }}
-                >
-                  info@loteplan.com
+          <Box>
+            <Typography sx={colLabelStyle}>Contacto</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2, lineHeight: 1.65 }}>
+              Loteplan es el nombre comercial de Nectarea Sociedad Anónima de Ahorro para
+              fines determinados. Inscripta en el Registro Público con la Matrícula 34.417 P
+            </Typography>
+            <Stack spacing={1}>
+              <Stack direction="row" spacing={1} alignItems="center">
+                <Phone sx={{ fontSize: 16, color: 'text.secondary' }} />
+                <Typography variant="body2" color="text.secondary">
+                  +54 9 261 717-1142
+                </Typography>
+              </Stack>
+              <Stack direction="row" spacing={1} alignItems="center">
+                <Email sx={{ fontSize: 16, color: 'text.secondary' }} />
+                <Link href="mailto:nectarea@loteplan.com" sx={linkStyle}>
+                  nectarea@loteplan.com
                 </Link>
-              </Stack>
-              <Stack direction="row" spacing={1.5} alignItems="center">
-                <Phone fontSize="small" color="action" sx={{ fontSize: 18 }} />
-                <Typography variant="body2" color="text.secondary">
-                  +54 11 1234-5678
-                </Typography>
-              </Stack>
-              <Stack direction="row" spacing={1.5} alignItems="flex-start">
-                <LocationOn fontSize="small" color="action" sx={{ fontSize: 18, mt: 0.3 }} />
-                <Typography variant="body2" color="text.secondary">
-                  Av. del Libertador 1000,<br />Buenos Aires, Argentina
-                </Typography>
               </Stack>
             </Stack>
           </Box>
         </Box>
 
-        <Divider sx={{ my: 4 }} />
+        <Divider sx={{ mb: 3.5 }} />
 
-        <Box sx={{
-          display: 'flex',
-          flexDirection: { xs: 'column', sm: 'row' },
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          gap: 2,
-          textAlign: 'center'
-        }}>
+        {/* Branding y copyright */}
+        <Stack direction="row" spacing={2} alignItems="center" justifyContent="center" sx={{ mb: 2.5 }}>
+
+          <Box
+            component="img"
+            src="/navbar/nav.png"
+            alt="Loteplan"
+            sx={{ height: 28, opacity: 0.65 }}
+          />
           <Typography variant="caption" color="text.secondary">
             © {currentYear} Nectarea S.A. Todos los derechos reservados.
           </Typography>
-          <Stack direction="row" spacing={3}>
-            <Link href="#" variant="caption" color="text.disabled" underline="hover">
-              Mapa del sitio
-            </Link>
-            <Typography variant="caption" color="text.disabled">v1.0.0</Typography>
-          </Stack>
-        </Box>
+        </Stack>
       </Container>
+      {/* Disclaimer legal */}
+      <Box sx={{ px: { xs: 6, md: 6 }, mt: 1 }}>
+        <Typography
+          variant="caption"
+          color="text.disabled"
+
+          sx={{ display: 'block', lineHeight: 1.5, textAlign: 'justify' }}
+        >
+          Loteplan no otorga créditos ni garantiza la adjudicación de programas públicos.
+          La administración de los fondos se realiza a través de un fideicomiso de administración,
+          en el cual cada adherente efectúa sus aportes directamente en la cuenta bancaria del
+          fideicomiso. El fideicomiso no constituye un fideicomiso financiero en los términos de
+          la Ley de Mercado de Capitales N° 26.831, ni un fondo de inversión regulado por la CNV.
+          Las oportunidades en los proyectos ofrecidos no son consideradas títulos, valores
+          negociables o contratos de inversión en los términos de dicha ley. Toda participación
+          en proyectos inmobiliarios implica riesgos propios de la actividad y debe evaluarse
+          junto con la documentación contractual correspondiente.
+        </Typography>
+      </Box>
+
     </Box>
   );
 };

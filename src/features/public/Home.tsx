@@ -4,10 +4,7 @@ import {
   ArrowForward,
   CheckCircle,
   Dashboard as DashboardIcon,
-  Devices,
-  GppGood,
   Home as HomeIcon,
-  Landscape,
   LaptopMac,
   Map,
   TrendingUp
@@ -58,20 +55,17 @@ interface ModeData {
 const howItWorksSteps = [
   {
     step: '01',
-    title: 'Te registrás y elegís',
-    description: 'Creás tu cuenta y elegís la alternativa que mejor se adapte a tus objetivos: Modo Ahorrista o Modo Inversionista.',
+    description: 'Te registrás y elegís tu plan dentro del fideicomiso',
     image: 'public/Home/contrato43.jpeg',
   },
   {
     step: '02',
-    title: 'Aportás en cuotas mensuales',
-    description: 'Realizás aportes planificados dentro de una estructura fiduciaria transparente para avanzar progresivamente hacia tu lote.',
+    description: 'Te registrás y elegís tu plan dentro del fideicomiso',
     image: 'public/Home/Cómo funciona Ahorrista_2b.jpg',
   },
   {
     step: '03',
-    title: 'Seguís hasta tu adjudicación',
-    description: 'Hacés seguimiento de todo el proceso en la plataforma hasta la adjudicación y escritura de tu lote.',
+    description: 'Te registrás y elegís tu plan dentro del fideicomiso',
     image: 'public/Home/Cómo funciona Ahorrista_3a.jpg',
   },
 ];
@@ -150,7 +144,7 @@ const Home: React.FC = () => {
         <Container maxWidth="lg" sx={{ position: 'relative' }}>
           <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, alignItems: 'center', gap: 8 }}>
             <Box sx={{ flex: 1, width: '100%' }}>
-              <Typography variant="h2" component="h1" sx={{ mb: 3, fontWeight: 800, lineHeight: 1.1, fontSize: { xs: '1.75rem', md: '3rem' }}}>
+              <Typography variant="h2" component="h1" sx={{ mb: 3, fontWeight: 800, lineHeight: 1.1, fontSize: { xs: '1.75rem', md: '3rem' } }}>
                 Accedé a tu lote urbanizado <br />
                 <Box component="span" sx={{ color: alpha(theme.palette.common.white, 0.8) }}>
                   sin depender del crédito bancario
@@ -189,58 +183,76 @@ const Home: React.FC = () => {
       </Box>
 
       {/* QUÉ ES LOTEPLAN Y CÓMO FUNCIONA */}
-     <Box sx={{ py: { xs: 10, md: 14 }, bgcolor: 'secondary.light' }}>
-  <Container maxWidth="lg">
-    {/* Título movido aquí para que respete el ancho del container */}
-    <Typography color="text.primary" textAlign="center" fontSize={{ xs: '1.75rem', md: '3.125rem' }} sx={{ mb: 8, fontWeight: 800 }}>
-      Qué es <Box component="span" fontSize={{ xs: '1.75rem', md: '3.125rem' }} sx={{ color: 'primary.main', fontWeight: 800}}>Loteplan</Box>
-    </Typography>
-        
-     <Box sx={{ 
-  display: 'grid', 
-  gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, 
-  gap: { xs: 4, md: 8 }, 
-  alignItems: 'center', // Mantiene ambos centrados verticalmente
-  mb: { xs: 10, md: 14 } 
-}}>
-      <Box 
-        component="img" 
-        src="public/Home/contrato43.jpeg" 
-        alt="Fideicomiso Loteplan" 
-        sx={{ 
-      width: '100%', 
-      maxHeight: 300, // Limitamos la altura máxima aquí
-      objectFit: 'cover', 
-      borderRadius: 4, 
-      boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.15)', 
-    }}
-      />
-      <Box sx={{ textAlign: { xs: 'center', md: 'left' } }}>
-        <Typography variant="h3" color="text.secondary" sx={{ lineHeight: 1.7 , fontSize: '1.25rem'}}>
-          Somos una plataforma fiduciaria colaborativa pensada para ser{' '}
-          <Box component="span" sx={{ color: 'primary.main', fontWeight: 700 }}>
-            el primer paso hacia tu casa
-          </Box>. Organizamos grupos de ahorro que permiten acceder progresivamente a lotes urbanizados y escriturables mediante reglas claras y procesos transparentes.
-        </Typography>
-      </Box>
-    </Box>
-
-          <Typography variant="h3" textAlign="center" gutterBottom fontWeight={800} color="text.primary">Así funciona el proceso</Typography>
-          <Typography variant="subtitle1" textAlign="center" color="text.secondary" sx={{ mb: 8, fontWeight: 400 }}>Simple, transparente y con trazabilidad digital en cada etapa</Typography>
-
+      <Box sx={{ py: { xs: 10, md: 14 }, bgcolor: 'secondary.light' }}>
+        <Container maxWidth="lg">
+          <Typography color="text.primary" textAlign="center" fontSize={{ xs: '1.75rem', md: '3.125rem' }} sx={{ mb: 4, fontWeight: 800 }}>
+            Qué es <Box component="span" fontSize={{ xs: '1.75rem', md: '3.125rem' }} sx={{ color: 'primary.main', fontWeight: 800 }}>Loteplan</Box>
+          </Typography>
+          <Typography variant="h5" color="text.secondary" textAlign="center" maxWidth={950} mx="auto" lineHeight={1.8} mb={4} fontSize={{ xs: '1.75rem', md: '1.125rem' }} >
+            Somos un sistema estructurado pensado para ser el primer paso hacia tu casa. Organizamos capital bajo fideicomiso para adquirir lotes urbanizados y escriturables. No somos un loteo tradicional,
+            no otorgamos crédito y  no vendemos anticipos de urbanización futura.
+          </Typography>
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 4 }}>
             {howItWorksSteps.map((step) => (
-              <Card key={step.step} elevation={0} sx={{ border: `1px solid ${alpha(theme.palette.primary.main, 0.12)}`, borderRadius: 4, overflow: 'hidden', bgcolor: 'background.paper', transition: 'box-shadow 0.3s', '&:hover': { boxShadow: theme.shadows[6] } }}>
-                <Box component="img" src={step.image} alt={step.title} sx={{ width: '100%', height: 180, objectFit: 'cover' }} />
-                <CardContent sx={{ p: 3 }}>
-                  <Stack direction="row" spacing={2} alignItems="center" mb={1.5}>
-                    <Box sx={{ width: 40, height: 40, borderRadius: '50%', bgcolor: 'primary.main', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1rem' }}>{step.step}</Box>
-                    <Typography variant="h6" fontWeight={700} color="text.primary">{step.title}</Typography>
-                  </Stack>
-                  <Typography variant="body2" color="text.secondary" lineHeight={1.7}>{step.description}</Typography>
-                </CardContent>
-              </Card>
+              <Stack key={step.step} spacing={2} alignItems="center">
+                {/* El número ahora está fuera de la Card */}
+                <Box sx={{
+                  width: 40, height: 40, borderRadius: '50%', bgcolor: 'primary.main',
+                  color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontWeight: 800, fontSize: '1rem'
+                }}>
+                  {step.step}
+                </Box>
+
+                <Card elevation={0} sx={{
+                  width: '100%',
+                  border: `1px solid ${alpha(theme.palette.primary.main, 0.12)}`,
+                  borderRadius: 4, overflow: 'hidden', bgcolor: 'background.paper',
+                  transition: 'box-shadow 0.3s', '&:hover': { boxShadow: theme.shadows[6] }
+                }}>
+                  <Box component="img" src={step.image} sx={{ width: '100%', height: 180, objectFit: 'cover' }} />
+                  <CardContent sx={{ p: 3 }}>
+                    <Typography variant="body2" color="text.secondary" lineHeight={1.7}>{step.description}</Typography>
+                  </CardContent>
+                </Card>
+              </Stack>
             ))}
+          </Box>
+        </Container>
+      </Box>
+
+      {/* MODELO FIDUCIARIO */}
+      <Box sx={{ py: { xs: 10, md: 14 }, bgcolor: 'background.paper' }}>
+        <Container maxWidth="lg">
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: { xs: 6, md: 10 }, alignItems: 'center' }}>
+            <Box>
+              <Typography variant="h3" gutterBottom fontWeight={800} color="text.primary" sx={{ mb: 4 }} fontSize={{ xs: '1.75rem', md: '2.125rem' }}>
+                Un modelo fiduciario que <Box component="span" sx={{ color: 'primary.main' }}>brinda previsibilidad jurídica</Box> en cada etapa
+              </Typography>
+
+              {/* Lista de puntos basada en image_1d7a5d.png */}
+              <Stack spacing={2} sx={{ mb: 3 }}>
+                {[
+                  'Administración mediante fideicomiso con separación patrimonial',
+                  'Lotes urbanizados y escriturables',
+                  'Reglas claras y proceso transparente',
+                  'Operaciones registradas y trazables digitalmente'
+                ].map((item, index) => (
+                  <Stack key={index} direction="row" spacing={1.5} alignItems="flex-start">
+                    <CheckCircle sx={{ color: 'primary.main', mt: 0.5 }} />
+                    <Typography variant="body1" color="text.secondary" fontSize="1rem" fontWeight={500}>
+                      {item}
+                    </Typography>
+                  </Stack>
+                ))}
+              </Stack>
+
+              <Button variant="contained" size="large" endIcon={<ArrowForward />} onClick={() => navigate(ROUTES.PUBLIC.COMO_FUNCIONA)}>
+                Ver cómo funciona en detalle
+              </Button>
+            </Box>
+
+            <Box component="img" src="public/Home/contrato43.jpeg" alt="Confianza y transparencia" sx={{ width: '100%', height: 'auto', borderRadius: 4, boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.15)', display: 'block' }} />
           </Box>
         </Container>
       </Box>
@@ -249,56 +261,28 @@ const Home: React.FC = () => {
       <Box sx={{ py: { xs: 10, md: 14 }, bgcolor: 'background.default' }}>
         <Container maxWidth="lg">
           <Box sx={{ textAlign: 'center', mb: 8, maxWidth: 950, mx: 'auto' }}>
-            <Typography gutterBottom fontWeight={800} color="text.primary" fontSize={{ xs: '1.75rem', md: '3.125rem' }}>
+            <Typography gutterBottom fontWeight={800} color="text.primary" fontSize={{ xs: '1.75rem', md: '3.125rem' }} lineHeight={1.2}>
               De desarrolladores de suelo a <Box component="span" sx={{ color: 'primary.main', display: 'block' }}>infraestructura financiera inmobiliaria</Box>
             </Typography>
-            <Typography variant="h6" color="text.secondary" lineHeight={1.8} mt={3}>
+            <Typography variant="h5" color="text.secondary" textAlign="center" maxWidth={900} mx="auto" lineHeight={1.8} mb={7} fontSize={{ xs: '1.75rem', md: '1.125rem' }} >
               Durante más de 15 años participamos en el desarrollo de suelo urbano, organizando grupos, gestionando procesos de urbanización y adjudicando lotes en proyectos concretos y verificables. Hoy transformamos esa experiencia en una plataforma tecnológica y fiduciaria que permite organizar el acceso progresivo a lotes y activos inmobiliarios de forma clara, ordenada y escalable.
             </Typography>
           </Box>
-
-          <Box>
-            <Typography textAlign="center" fontWeight={800} mb={2} fontSize={{ xs: '1.75rem', md: '3.125rem' }}>
-              La experiencia no cambia. <Box component="span" sx={{ color: 'primary.main' }}>Evoluciona su forma de organización.</Box>
-            </Typography>
-            <Typography variant="h4" fontSize={{ xs: '1.25rem', md: '2.125rem' }} textAlign="center" color="text.secondary" mb={8} maxWidth={800} mx="auto" fontWeight={400}>
-              Loteplan es una estructura jurídica y tecnológica replicable que permite organizar capital y adquirir activos inmobiliarios de forma sistemática.
-            </Typography>
-
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 4 }}>
-              <Box display="flex" gap={3} alignItems="flex-start">
-                <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main', width: 56, height: 56 }}><LaptopMac /></Avatar>
-                <Box>
-                  <Typography variant="h6" fontWeight={700} gutterBottom>Plataforma digital propia</Typography>
-                  <Typography variant="body2" color="text.secondary" lineHeight={1.6} fontSize="1rem">Gestiona adhesiones, aportes, adjudicaciones y seguimiento del proceso con trazabilidad en cada etapa.</Typography>
-                </Box>
-              </Box>
-              <Box display="flex" gap={3} alignItems="flex-start">
-                <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main', width: 56, height: 56 }}><AccountBalance /></Avatar>
-                <Box>
-                  <Typography variant="h6" fontWeight={700} gutterBottom>Modelo fiduciario estandarizado</Typography>
-                  <Typography variant="body2" color="text.secondary" lineHeight={1.6} fontSize="1rem">Cada grupo opera bajo reglas claras y separación patrimonial, lo que permite replicar el esquema en nuevos desarrollos.</Typography>
-                </Box>
-              </Box>
-              <Box display="flex" gap={3} alignItems="flex-start">
-                <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main', width: 56, height: 56 }}><Map /></Avatar>
-                <Box>
-                  <Typography variant="h6" fontWeight={700} gutterBottom>Integración progresiva de proveedores de suelo</Typography>
-                  <Typography variant="body2" color="text.secondary" lineHeight={1.6} fontSize="1rem">Incorporamos lotes urbanizados que cumplan criterios legales y urbanísticos definidos.</Typography>
-                </Box>
-              </Box>
-              <Box display="flex" gap={3} alignItems="flex-start">
-                <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main', width: 56, height: 56 }}><TrendingUp /></Avatar>
-                <Box>
-                  <Typography variant="h6" fontWeight={700} gutterBottom>Crecimiento por etapas</Typography>
-                  <Typography variant="body2" color="text.secondary" lineHeight={1.6} fontSize="1rem">El sistema se expande en función de la conformación de grupos y la disponibilidad de activos aptos.</Typography>
-                </Box>
-              </Box>
-            </Box>
+          {/* TARJETAS DE MÉTRICAS (Basadas en image_1d119e.png) */}
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' } }}>
+            {[
+              { value: '+USD 1,1M', label: 'Estructurados en activos inmobiliarios reales' },
+              { value: '119', label: 'Lotes urbanizados adjudicados en desarrollos finalizados' },
+              { value: '+400', label: 'Lotes proyectados bajo contratos de urbanización vigentes' }
+            ].map((stat, index) => (
+              <Card key={index} elevation={0} sx={{ p: 4, textAlign: 'center', borderRadius: 4, border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}` }}>
+                <Typography variant="h3" fontWeight={800} color="primary.main" sx={{ mb: 2 }} fontSize={{ xs: '1.75rem', md: '1.5rem' }}>{stat.value}</Typography>
+                <Typography variant="h6" color="text.secondary" fontWeight={600}>{stat.label}</Typography>
+              </Card>
+            ))}
           </Box>
         </Container>
       </Box>
-
       {/* DOS MODOS */}
       <Box sx={{ py: { xs: 10, md: 14 }, bgcolor: 'secondary.light' }}>
         <Container maxWidth="lg">
@@ -306,7 +290,7 @@ const Home: React.FC = () => {
           <Typography variant="subtitle1" textAlign="center" color="text.secondary" sx={{ mb: 8, fontWeight: 400 }} fontSize={{ xs: '1.125rem', md: '1.25rem' }}>Elegí el modo que mejor se adapte a tus objetivos</Typography>
 
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 5 }}>
-            {twoModes.map((mode) => (
+            {[...twoModes].reverse().map((mode) => (
               <Box key={mode.type} sx={{ display: 'flex' }}>
                 <Card
                   onMouseEnter={() => setHoveredMode(mode.type)}
@@ -357,52 +341,54 @@ const Home: React.FC = () => {
           </Box>
         </Container>
       </Box>
-
-      {/* MODELO FIDUCIARIO */}
       <Box sx={{ py: { xs: 10, md: 14 }, bgcolor: 'background.paper' }}>
         <Container maxWidth="lg">
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: { xs: 6, md: 10 }, alignItems: 'center', mb: 10 }}>
-            <Box>
-              <Typography variant="h3" gutterBottom fontWeight={800} color="text.primary">
-                Un sistema diseñado para brindar <Box component="span" sx={{ color: 'primary.main' }}>transparencia y confianza</Box> en cada etapa
-              </Typography>
-              <Typography variant="body1" color="text.secondary" lineHeight={1.8} mb={4}>Tu capital respaldado por marcos legales sólidos, separación patrimonial y procesos documentados accesibles para todos los participantes.</Typography>
-              <Button variant="contained" size="large" endIcon={<ArrowForward />} onClick={() => navigate(ROUTES.PUBLIC.COMO_FUNCIONA)}>Ver cómo funciona en detalle</Button>
-            </Box>
-            <Box component="img" src="public/Home/Cómo funciona Inversionista_6.jpg" alt="Confianza y transparencia" sx={{ width: '100%', height: 'auto', borderRadius: 4, boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.15)', display: 'block' }} />
-          </Box>
+          <Typography textAlign="center" fontWeight={800} mb={2} fontSize={{ xs: '1.75rem', md: '3.125rem' }} lineHeight={1.2}>
+            La experiencia no cambia. <Box component="span" sx={{ color: 'primary.main' }}>Evoluciona su forma de organización.</Box>
+          </Typography>
+          <Typography variant="h5" color="text.secondary" textAlign="center" maxWidth={900} mx="auto" lineHeight={1.8} mb={7} fontSize={{ xs: '1.75rem', md: '1.125rem' }}>
+            Loteplan es una estructura jurídica y tecnológica replicable que permite organizar capital y adquirir activos inmobiliarios de forma sistemática.
+          </Typography>
 
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)' }, gap: 4 }}>
-            <Box textAlign="center">
-              <Avatar sx={{ mx: 'auto', mb: 3, width: 64, height: 64, bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}><AccountBalance fontSize="large" /></Avatar>
-              <Typography variant="subtitle1" fontWeight={800} gutterBottom>Fideicomiso Seguro</Typography>
-              <Typography variant="body2" color="text.secondary" lineHeight={1.6}>Administración mediante fideicomiso con separación patrimonial para proteger tu capital.</Typography>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 4 }}>
+            <Box display="flex" gap={3} alignItems="flex-start">
+              <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main', width: 56, height: 56 }}><LaptopMac /></Avatar>
+              <Box>
+                <Typography variant="h6" fontWeight={700} gutterBottom>Plataforma digital propia</Typography>
+                <Typography variant="body2" color="text.secondary" lineHeight={1.6} fontSize="1rem">Gestiona adhesiones, aportes, adjudicaciones y seguimiento del proceso con trazabilidad en cada etapa.</Typography>
+              </Box>
             </Box>
-            <Box textAlign="center">
-              <Avatar sx={{ mx: 'auto', mb: 3, width: 64, height: 64, bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}><Landscape fontSize="large" /></Avatar>
-              <Typography variant="subtitle1" fontWeight={800} gutterBottom fontSize="1.25rem">Lotes Reales</Typography>
-              <Typography variant="body1" color="text.secondary" lineHeight={1.6}>Proyectos con lotes urbanizados y 100% escriturables.</Typography>
+            <Box display="flex" gap={3} alignItems="flex-start">
+              <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main', width: 56, height: 56 }}><AccountBalance /></Avatar>
+              <Box>
+                <Typography variant="h6" fontWeight={700} gutterBottom>Modelo fiduciario estandarizado</Typography>
+                <Typography variant="body2" color="text.secondary" lineHeight={1.6} fontSize="1rem">Cada grupo opera bajo reglas claras y separación patrimonial, lo que permite replicar el esquema en nuevos desarrollos.</Typography>
+              </Box>
             </Box>
-            <Box textAlign="center">
-              <Avatar sx={{ mx: 'auto', mb: 3, width: 64, height: 64, bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}><GppGood fontSize="large" /></Avatar>
-              <Typography variant="subtitle1" fontWeight={800} gutterBottom fontSize="1.25rem">Transparencia Total</Typography>
-              <Typography variant="body1" color="text.secondary" lineHeight={1.6}>Reglas claras y procesos documentados a disposición de todos los participantes.</Typography>
+            <Box display="flex" gap={3} alignItems="flex-start">
+              <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main', width: 56, height: 56 }}><Map /></Avatar>
+              <Box>
+                <Typography variant="h6" fontWeight={700} gutterBottom>Integración progresiva de proveedores de suelo</Typography>
+                <Typography variant="body2" color="text.secondary" lineHeight={1.6} fontSize="1rem">Incorporamos lotes urbanizados que cumplan criterios legales y urbanísticos definidos.</Typography>
+              </Box>
             </Box>
-            <Box textAlign="center">
-              <Avatar sx={{ mx: 'auto', mb: 3, width: 64, height: 64, bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}><Devices fontSize="large" /></Avatar>
-              <Typography variant="subtitle1" fontWeight={800} gutterBottom>Trazabilidad Digital</Typography>
-              <Typography variant="body2" color="text.secondary" lineHeight={1.6}>Todas las operaciones y aportes quedan registrados y son trazables digitalmente.</Typography>
+            <Box display="flex" gap={3} alignItems="flex-start">
+              <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main', width: 56, height: 56 }}><TrendingUp /></Avatar>
+              <Box>
+                <Typography variant="h6" fontWeight={700} gutterBottom>Crecimiento por etapas</Typography>
+                <Typography variant="body2" color="text.secondary" lineHeight={1.6} fontSize="1rem">El sistema se expande en función de la conformación de grupos y la disponibilidad de activos aptos.</Typography>
+              </Box>
             </Box>
           </Box>
         </Container>
       </Box>
-
       {/* CTA FINAL */}
       {!isAuthenticated && (
         <Box sx={{ py: { xs: 12, md: 14 }, background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`, color: 'white', textAlign: 'center' }}>
           <Container maxWidth="md">
-            <Typography variant="h3" gutterBottom sx={{ mb: 3, fontWeight: 800, fontSize: { xs: '1.75rem', md: '3rem' } }}>¿Listo para tu terreno propio?</Typography>
-            <Typography variant="h6" sx={{ mb: 6, fontSize: { xs: '1rem', md: '1.25rem' }, color: alpha(theme.palette.common.white, 0.9), fontWeight: 400, lineHeight: 1.7 }}>Registrate gratis y analizá en detalle su funcionamiento antes de decidir. Sin compromiso, sin cargos ocultos.</Typography>
+            <Typography variant="h3" gutterBottom sx={{ mb: 3, fontWeight: 800, fontSize: { xs: '1.75rem', md: '2.25rem' } }}>Accedé ahora al sistema.
+            </Typography>
+            <Typography variant="h6" sx={{ mb: 6, fontSize: { xs: '1rem', md: '1.25rem' }, color: alpha(theme.palette.common.white, 0.9), fontWeight: 400, lineHeight: 1.7 }}>Creá tu cuenta gratis y analizá en detalle su funcionamiento antes de decidir </Typography>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="center">
               <Button variant="contained" size="large" startIcon={<HomeIcon />} onClick={() => navigate(ROUTES.REGISTER)} sx={{ bgcolor: 'white', color: 'primary.main', fontWeight: 600, '&:hover': { bgcolor: alpha(theme.palette.common.white, 0.9) } }}>Crear mi cuenta</Button>
               <Button variant="outlined" size="large" startIcon={<TrendingUp />} onClick={() => navigate(ROUTES.LOGIN)} sx={{ borderColor: 'white', color: 'white', fontWeight: 600, '&:hover': { borderColor: 'white', bgcolor: alpha(theme.palette.common.white, 0.1) } }}>Iniciar Sesión</Button>
@@ -411,14 +397,7 @@ const Home: React.FC = () => {
         </Box>
       )}
 
-      {/* DISCLAIMER LEGAL */}
-      <Box sx={{ py: 4, bgcolor: alpha(theme.palette.text.primary, 0.03), borderTop: `1px solid ${alpha(theme.palette.text.primary, 0.08)}` }}>
-        <Container maxWidth="lg">
-          <Typography variant="caption" color="text.disabled" lineHeight={1.8} display="block" textAlign="center">
-            Loteplan no otorga créditos ni garantiza la adjudicación de programas públicos. La postulación a dichos programas se realiza de manera individual y conforme a sus condiciones de vigencia. La administración de los fondos se realiza a través de un fideicomiso de administración, en el cual cada adherente efectúa sus aportes directamente en la cuenta bancaria del fideicomiso, desde donde se instrumentan las adquisiciones correspondientes. El fideicomiso no constituye un fideicomiso financiero en los términos de la Ley de Mercado de Capitales N° 26.831, ni un fondo de inversión regulado por la Comisión Nacional de Valores (CNV). Todos los derechos reservados. Nectárea S.A. 2026.
-          </Typography>
-        </Container>
-      </Box>
+
     </Box>
   );
 };
