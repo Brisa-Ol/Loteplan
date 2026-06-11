@@ -269,7 +269,7 @@ const Home: React.FC = () => {
             </Typography>
           </Box>
           {/* TARJETAS DE MÉTRICAS (Basadas en image_1d119e.png) */}
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' } }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 5, mb: 10 }}>
             {[
               { value: '+USD 1,1M', label: 'Estructurados en activos inmobiliarios reales' },
               { value: '119', label: 'Lotes urbanizados adjudicados en desarrollos finalizados' },
@@ -387,7 +387,7 @@ const Home: React.FC = () => {
         <Box sx={{ py: { xs: 12, md: 14 }, background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`, color: 'white', textAlign: 'center' }}>
           <Container maxWidth="md">
             <Typography variant="h3" gutterBottom sx={{ mb: 3, fontWeight: 800, fontSize: { xs: '1.75rem', md: '2.25rem' } }}>Accedé ahora al sistema.
-            </Typography>
+</Typography>
             <Typography variant="h6" sx={{ mb: 6, fontSize: { xs: '1rem', md: '1.25rem' }, color: alpha(theme.palette.common.white, 0.9), fontWeight: 400, lineHeight: 1.7 }}>Creá tu cuenta gratis y analizá en detalle su funcionamiento antes de decidir </Typography>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="center">
               <Button variant="contained" size="large" startIcon={<HomeIcon />} onClick={() => navigate(ROUTES.REGISTER)} sx={{ bgcolor: 'white', color: 'primary.main', fontWeight: 600, '&:hover': { bgcolor: alpha(theme.palette.common.white, 0.9) } }}>Crear mi cuenta</Button>
