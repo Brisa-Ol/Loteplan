@@ -69,7 +69,7 @@ const Footer: React.FC = () => {
           {/* Sobre nosotros */}
           <Box>
             <Typography sx={colLabelStyle}>Sobre nosotros</Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.75 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.75, textAlign: 'justify' }}>
               Loteplan es una plataforma fiduciaria colaborativa que facilita el acceso
               progresivo a lotes y oportunidades de inversión respaldadas por activos
               inmobiliarios reales.
@@ -79,7 +79,7 @@ const Footer: React.FC = () => {
           {/* Contacto */}
           <Box>
             <Typography sx={colLabelStyle}>Contacto</Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2, lineHeight: 1.65 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2, lineHeight: 1.65, textAlign: 'justify' }}>
               Loteplan es el nombre comercial de Nectarea Sociedad Anónima de Ahorro para
               fines determinados. Inscripta en el Registro Público con la Matrícula 34.417 P
             </Typography>
