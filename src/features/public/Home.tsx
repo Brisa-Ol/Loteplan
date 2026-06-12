@@ -305,15 +305,15 @@ const Home: React.FC = () => {
           </Typography>
           <Typography
             color="text.secondary"
-            maxWidth={950}
+            maxWidth={940}
             mx="auto"
             lineHeight={1.8}
             mb={5}
-            fontSize={{ xs: '0.95rem', md: '1.125rem' }}
+            fontSize={{ xs: '1.95rem', md: '1.25rem' }}
             sx={{ ...justifyText }}
           >
-            Somos un sistema estructurado pensado para ser el primer paso hacia tu casa. Organizamos capital bajo
-            fideicomiso para adquirir lotes urbanizados y escriturables. No somos un loteo tradicional, no otorgamos
+            <Box component="strong" sx={{ fontWeight: 700 }}>Somos un sistema estructurado pensado para ser el primer paso hacia tu casa. Organizamos capital bajo
+              fideicomiso para adquirir lotes urbanizados y escriturables. </Box>No somos un loteo tradicional, no otorgamos
             crédito y no vendemos anticipos de urbanización futura.
           </Typography>
 
@@ -445,9 +445,9 @@ const Home: React.FC = () => {
       </Box>
 
       {/* TRACK RECORD */}
-      <Box sx={{ py: { xs: 8, md: 14 }, bgcolor: 'background.default' }}>
+      <Box sx={{ py: { xs: 8, md: 14 }, bgcolor: 'secondary.light' }}>
         <Container maxWidth="lg">
-          <Box sx={{ textAlign: 'center', mb: { xs: 5, md: 8 }, maxWidth: 950, mx: 'auto' }}>
+          <Box sx={{ textAlign: 'center', mb: { xs: 5, md: 8 }, maxWidth: 990, mx: 'auto' }}>
             <Typography
               fontWeight={800}
               color="text.primary"
@@ -461,12 +461,13 @@ const Home: React.FC = () => {
               </Box>
             </Typography>
             <Typography
+              variant="h6"
               color="text.secondary"
-              maxWidth={900}
+              maxWidth={1000}
               mx="auto"
-              lineHeight={1.8}
-              mb={6}
-              fontSize={{ xs: '0.95rem', md: '1.125rem' }}
+              lineHeight={1.5}
+              mb={5}
+              fontSize={{ xs: '1.95rem', md: '1.125rem' }}
               sx={{ ...justifyText }}
             >
               Durante más de 15 años participamos en el desarrollo de suelo urbano, organizando grupos, gestionando
@@ -512,7 +513,8 @@ const Home: React.FC = () => {
             fontWeight={800}
             color="text.primary"
             fontSize={{ xs: '1.75rem', md: '3.125rem' }}
-            sx={{ mb: 1.5 }}
+            lineHeight={1.2}
+            mb={3}
           >
             Dos formas de participar
           </Typography>
@@ -622,14 +624,15 @@ const Home: React.FC = () => {
       </Box>
 
       {/* EVOLUCIÓN */}
-      <Box sx={{ py: { xs: 8, md: 14 }, bgcolor: 'background.paper' }}>
+      <Box sx={{ py: { xs: 8, md: 14 }, bgcolor: 'secondary.light' }}>
         <Container maxWidth="lg">
           <Typography
             textAlign="center"
             fontWeight={800}
-            mb={2}
-            fontSize={{ xs: '1.5rem', md: '3.125rem' }}
+            color="text.primary"
+            fontSize={{ xs: '1.75rem', md: '3.125rem' }}
             lineHeight={1.2}
+            mb={4}
           >
             La experiencia no cambia.{' '}
             <Box component="span" sx={{ color: 'primary.main' }}>
@@ -638,15 +641,25 @@ const Home: React.FC = () => {
           </Typography>
           <Typography
             color="text.secondary"
-            maxWidth={900}
+            maxWidth={790}
             mx="auto"
-            lineHeight={1.8}
-            mb={{ xs: 5, md: 7 }}
-            fontSize={{ xs: '0.95rem', md: '1.125rem' }}
-            sx={{ textAlign: { xs: 'left', md: 'justify' } }}
+            lineHeight={1.7}
+            fontSize={{ xs: '1rem', md: '1.125rem' }}
+            sx={{ textAlign: 'justify' }} // Justificado para el bloque superior
           >
-            Loteplan es una estructura jurídica y tecnológica replicable que permite organizar capital y adquirir
-            activos inmobiliarios de forma sistemática.
+            Loteplan es una estructura jurídica y tecnológica replicable que permite organizar capital y
+          </Typography>
+
+          <Typography
+            color="text.secondary"
+            maxWidth={790}
+            mx="auto"
+            lineHeight={1.7}
+            mb={5}
+            fontSize={{ xs: '1rem', md: '1.125rem' }}
+            sx={{ textAlign: 'center' }} // Centrado para esta línea
+          >
+            adquirir activos inmobiliarios de forma sistemática.
           </Typography>
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: { xs: 4, md: 5 } }}>
             {trustFeatures.map((feature, index) => (
