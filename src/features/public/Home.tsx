@@ -148,6 +148,9 @@ const trustPoints = [
   'Operaciones registradas y trazables digitalmente',
 ];
 
+// textAlign justify solo en desktop; en mobile queda mal con líneas cortas
+const justifyText = { textAlign: { xs: 'left', md: 'justify' } } as const;
+
 const Home: React.FC = () => {
   const theme = useTheme();
   const navigate = useNavigate();
@@ -164,7 +167,7 @@ const Home: React.FC = () => {
           color: 'primary.contrastText',
           position: 'relative',
           overflow: 'hidden',
-          py: { xs: 10, md: 11 },
+          py: { xs: 8, md: 11 },
         }}
       >
         <Box
@@ -176,12 +179,24 @@ const Home: React.FC = () => {
           }}
         />
         <Container maxWidth="lg" sx={{ position: 'relative' }}>
-          <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, alignItems: 'center', gap: 8 }}>
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: { xs: 'column', md: 'row' },
+              alignItems: 'center',
+              gap: { xs: 5, md: 8 },
+            }}
+          >
             <Box sx={{ flex: 1, width: '100%' }}>
               <Typography
                 variant="h2"
                 component="h1"
-                sx={{ mb: 3, fontWeight: 800, lineHeight: 1.1, fontSize: { xs: '1.75rem', md: '3rem' } }}
+                sx={{
+                  mb: 3,
+                  fontWeight: 800,
+                  lineHeight: 1.15,
+                  fontSize: { xs: '1.75rem', sm: '2.25rem', md: '3rem' },
+                }}
               >
                 Accedé a tu lote urbanizado <br />
                 <Box component="span" sx={{ color: alpha(theme.palette.common.white, 0.8) }}>
@@ -191,20 +206,20 @@ const Home: React.FC = () => {
               <Typography
                 variant="h6"
                 sx={{
-                  mb: 6,
-                  fontSize: { xs: '1rem', md: '1.25rem' },
+                  mb: 5,
+                  fontSize: { xs: '0.95rem', sm: '1.05rem', md: '1.25rem' },
                   color: alpha(theme.palette.common.white, 0.9),
                   fontWeight: 400,
                   maxWidth: 650,
                   lineHeight: 1.8,
-                  textAlign: 'justify',
+                  ...justifyText,
                 }}
               >
-                Loteplan es una plataforma fiduciaria colaborativa que organiza grupos de ahorro para facilitar el
+                Loteplan es una plataforma fiduciaria colaborativa que organiza grupos de ahorro e inversión para facilitar el
                 acceso progresivo a lotes urbanizados y escriturables, con trazabilidad digital en cada etapa del
                 proceso.
               </Typography>
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={3} sx={{ mb: 3 }}>
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
                 {!isAuthenticated ? (
                   <>
                     <Button
@@ -265,7 +280,7 @@ const Home: React.FC = () => {
                   component="img"
                   src="public/Home/Cómo funciona Inversionista_6.jpg"
                   alt="Inversión inmobiliaria Loteplan"
-                  sx={{ width: '100%', borderRadius: 4, boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}
+                  sx={{ width: '100%', borderRadius: 4, boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}
                 />
               </Box>
             </Box>
@@ -274,35 +289,35 @@ const Home: React.FC = () => {
       </Box>
 
       {/* QUÉ ES LOTEPLAN */}
-      <Box sx={{ py: { xs: 10, md: 14 }, bgcolor: 'secondary.light' }}>
+      <Box sx={{ py: { xs: 8, md: 14 }, bgcolor: 'secondary.light' }}>
         <Container maxWidth="lg">
           <Typography
             color="text.primary"
             textAlign="center"
+            fontWeight={800}
             fontSize={{ xs: '1.75rem', md: '3.125rem' }}
-            sx={{ mb: 4, fontWeight: 800 }}
+            sx={{ mb: 3 }}
           >
             Qué es{' '}
-            <Box component="span" fontSize={{ xs: '1.75rem', md: '3.125rem' }} sx={{ color: 'primary.main', fontWeight: 800 }}>
+            <Box component="span" sx={{ color: 'primary.main', fontWeight: 800, fontSize: 'inherit' }}>
               Loteplan
             </Box>
           </Typography>
           <Typography
-            variant="h5"
             color="text.secondary"
-            textAlign="justify"
             maxWidth={950}
             mx="auto"
             lineHeight={1.8}
-            mb={4}
-            fontSize={{ xs: '1rem', md: '1.125rem' }}
+            mb={5}
+            fontSize={{ xs: '0.95rem', md: '1.125rem' }}
+            sx={{ ...justifyText }}
           >
             Somos un sistema estructurado pensado para ser el primer paso hacia tu casa. Organizamos capital bajo
             fideicomiso para adquirir lotes urbanizados y escriturables. No somos un loteo tradicional, no otorgamos
             crédito y no vendemos anticipos de urbanización futura.
           </Typography>
 
-          {/* Línea de pasos con números */}
+          {/* Numeración de pasos */}
           <Box sx={{ position: 'relative', mb: 4 }}>
             <Box
               sx={{
@@ -316,13 +331,7 @@ const Home: React.FC = () => {
                 display: { xs: 'none', md: 'block' },
               }}
             />
-            <Box
-              sx={{
-                display: 'grid',
-                gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' },
-                gap: 4,
-              }}
-            >
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 4 }}>
               {howItWorksSteps.map((step) => (
                 <Box key={step.step} sx={{ display: 'flex', justifyContent: 'center', zIndex: 1 }}>
                   <Box
@@ -332,7 +341,7 @@ const Home: React.FC = () => {
                       borderRadius: '50%',
                       bgcolor: '#CC6333',
                       color: 'white',
-                      display: 'flex',
+                      display: { xs: 'none', md: 'flex' },
                       alignItems: 'center',
                       justifyContent: 'center',
                       fontWeight: 800,
@@ -347,7 +356,7 @@ const Home: React.FC = () => {
           </Box>
 
           {/* Cards de pasos */}
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 4 }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: { xs: 3, md: 4 } }}>
             {howItWorksSteps.map((step) => (
               <Card
                 key={step.step}
@@ -360,9 +369,9 @@ const Home: React.FC = () => {
                   bgcolor: 'background.paper',
                 }}
               >
-                <Box component="img" src={step.image} sx={{ width: '100%', height: 200, objectFit: 'cover' }} />
-                <CardContent sx={{ p: 3 }}>
-                  <Typography variant="h5" color="text.secondary" lineHeight={1.7} textAlign="justify">
+                <Box component="img" src={step.image} sx={{ width: '100%', height: { xs: 180, md: 200 }, objectFit: 'cover' }} />
+                <CardContent sx={{ p: { xs: 2.5, md: 3 } }}>
+                  <Typography color="text.secondary" lineHeight={1.7} fontSize={{ xs: '0.9rem', md: '1rem' }}>
                     {step.description}
                   </Typography>
                 </CardContent>
@@ -373,24 +382,23 @@ const Home: React.FC = () => {
       </Box>
 
       {/* MODELO FIDUCIARIO */}
-      <Box sx={{ py: { xs: 10, md: 14 }, bgcolor: 'background.paper' }}>
+      <Box sx={{ py: { xs: 8, md: 14 }, bgcolor: 'background.paper' }}>
         <Container maxWidth="lg">
           <Box
             sx={{
               display: 'grid',
               gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
-              gap: { xs: 6, md: 10 },
+              gap: { xs: 5, md: 10 },
               alignItems: 'center',
             }}
           >
             <Box>
               <Typography
-                variant="h5"
-                gutterBottom
                 fontWeight={800}
                 color="text.primary"
                 sx={{ mb: 4 }}
-                fontSize={{ xs: '1.75rem', md: '2.125rem' }}
+                fontSize={{ xs: '1.5rem', md: '2.125rem' }}
+                lineHeight={1.25}
               >
                 Un modelo fiduciario que{' '}
                 <Box component="span" sx={{ color: 'primary.main' }}>
@@ -401,8 +409,8 @@ const Home: React.FC = () => {
               <Stack spacing={2} sx={{ mb: 5 }}>
                 {trustPoints.map((item, index) => (
                   <Stack key={index} direction="row" spacing={1.6} alignItems="flex-start">
-                    <CheckCircle sx={{ color: 'primary.main', mt: 0.5 }} />
-                    <Typography variant="h5" color="text.secondary" fontWeight={500} textAlign="justify">
+                    <CheckCircle sx={{ color: 'primary.main', mt: 0.3, fontSize: { xs: 20, md: 24 } }} />
+                    <Typography color="text.secondary" fontWeight={500} fontSize={{ xs: '0.9rem', md: '1rem' }} lineHeight={1.6}>
                       {item}
                     </Typography>
                   </Stack>
@@ -413,6 +421,8 @@ const Home: React.FC = () => {
                 size="large"
                 endIcon={<ArrowForward />}
                 onClick={() => navigate(ROUTES.PUBLIC.COMO_FUNCIONA)}
+                fullWidth={false}
+                sx={{ width: { xs: '100%', sm: 'auto' } }}
               >
                 Ver cómo funciona en detalle
               </Button>
@@ -425,8 +435,9 @@ const Home: React.FC = () => {
                 width: '100%',
                 height: 'auto',
                 borderRadius: 4,
-                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.15)',
+                boxShadow: '0 25px 50px -12px rgba(0,0,0,0.15)',
                 display: 'block',
+                order: { xs: -1, md: 0 },
               }}
             />
           </Box>
@@ -434,15 +445,15 @@ const Home: React.FC = () => {
       </Box>
 
       {/* TRACK RECORD */}
-      <Box sx={{ py: { xs: 10, md: 14 }, bgcolor: 'background.default' }}>
+      <Box sx={{ py: { xs: 8, md: 14 }, bgcolor: 'background.default' }}>
         <Container maxWidth="lg">
-          <Box sx={{ textAlign: 'center', mb: 8, maxWidth: 950, mx: 'auto' }}>
+          <Box sx={{ textAlign: 'center', mb: { xs: 5, md: 8 }, maxWidth: 950, mx: 'auto' }}>
             <Typography
-              gutterBottom
               fontWeight={800}
               color="text.primary"
               fontSize={{ xs: '1.75rem', md: '3.125rem' }}
               lineHeight={1.2}
+              sx={{ mb: 3 }}
             >
               De desarrolladores de suelo a{' '}
               <Box component="span" sx={{ color: 'primary.main', display: 'block' }}>
@@ -450,14 +461,13 @@ const Home: React.FC = () => {
               </Box>
             </Typography>
             <Typography
-              variant="h5"
               color="text.secondary"
-              textAlign="justify"
               maxWidth={900}
               mx="auto"
               lineHeight={1.8}
-              mb={7}
-              fontSize={{ xs: '1rem', md: '1.125rem' }}
+              mb={6}
+              fontSize={{ xs: '0.95rem', md: '1.125rem' }}
+              sx={{ ...justifyText }}
             >
               Durante más de 15 años participamos en el desarrollo de suelo urbano, organizando grupos, gestionando
               procesos de urbanización y adjudicando lotes en proyectos concretos y verificables. Hoy transformamos esa
@@ -465,28 +475,27 @@ const Home: React.FC = () => {
               y activos inmobiliarios de forma clara, ordenada y escalable.
             </Typography>
           </Box>
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 5, mb: 10 }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' }, gap: { xs: 3, md: 5 } }}>
             {metrics.map((stat, index) => (
               <Card
                 key={index}
                 elevation={0}
                 sx={{
-                  p: 4,
+                  p: { xs: 3, md: 4 },
                   textAlign: 'center',
                   borderRadius: 4,
                   border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
                 }}
               >
                 <Typography
-                  variant="h3"
                   fontWeight={800}
                   color="primary.main"
-                  sx={{ mb: 2 }}
-                  fontSize={{ xs: '1.75rem', md: '1.5rem' }}
+                  sx={{ mb: 1.5 }}
+                  fontSize={{ xs: '1.5rem', md: '1.75rem' }}
                 >
                   {stat.value}
                 </Typography>
-                <Typography variant="h6" color="text.secondary" fontWeight={600}>
+                <Typography color="text.secondary" fontWeight={600} fontSize={{ xs: '0.875rem', md: '1rem' }}>
                   {stat.label}
                 </Typography>
               </Card>
@@ -496,27 +505,27 @@ const Home: React.FC = () => {
       </Box>
 
       {/* DOS MODOS */}
-      <Box sx={{ py: { xs: 10, md: 14 }, bgcolor: 'secondary.light' }}>
+      <Box sx={{ py: { xs: 8, md: 14 }, bgcolor: 'secondary.light' }}>
         <Container maxWidth="lg">
           <Typography
             textAlign="center"
-            gutterBottom
             fontWeight={800}
             color="text.primary"
             fontSize={{ xs: '1.75rem', md: '3.125rem' }}
+            sx={{ mb: 1.5 }}
           >
             Dos formas de participar
           </Typography>
           <Typography
-            variant="subtitle2"
             textAlign="center"
             color="text.secondary"
-            sx={{ mb: 8, fontWeight: 400 }}
-            fontSize={{ xs: '1.125rem', md: '2.25rem' }}
+            variant="h6"
+            sx={{ mb: { xs: 5, md: 8 } }}
+            fontSize={{ xs: '1rem', md: '2.25rem' }}
           >
             Elegí el modo que mejor se adapte a tus objetivos
           </Typography>
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 5 }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: { xs: 3, md: 5 } }}>
             {[...twoModes].reverse().map((mode) => (
               <Box key={mode.type} sx={{ display: 'flex' }}>
                 <Card
@@ -529,7 +538,9 @@ const Home: React.FC = () => {
                     flexDirection: 'column',
                     bgcolor: mode.cardBg,
                     color: mode.textColor,
-                    border: mode.type === 'ahorrista' ? `1px solid ${alpha(theme.palette.divider, 0.12)}` : 'none',
+                    border: mode.type === 'ahorrista'
+                      ? `1px solid ${alpha(theme.palette.divider, 0.12)}`
+                      : 'none',
                     borderRadius: 3,
                     transition: 'all 0.3s ease',
                     transform: hoveredMode === mode.type ? 'translateY(-8px)' : 'none',
@@ -544,9 +555,9 @@ const Home: React.FC = () => {
                         : 'public/Home/Home2a_modoinversionista.jpg'
                     }
                     alt={mode.title}
-                    sx={{ width: '100%', height: 300, objectFit: 'cover', flexShrink: 0 }}
+                    sx={{ width: '100%', height: { xs: 220, md: 300 }, objectFit: 'cover', flexShrink: 0 }}
                   />
-                  <CardContent sx={{ p: 4, display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
+                  <CardContent sx={{ p: { xs: 3, md: 4 }, display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
                     <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
                       <Box
                         sx={{
@@ -557,38 +568,32 @@ const Home: React.FC = () => {
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
+                          flexShrink: 0,
                         }}
                       >
                         <mode.icon sx={{ fontSize: 26, color: mode.iconColor }} />
                       </Box>
                       <Box>
-                        <Typography variant="h5" fontWeight={800} color="inherit">
+                        <Typography variant="h5" fontWeight={800} color="inherit" fontSize={{ xs: '1.1rem', md: '1.5rem' }}>
                           {mode.title}
                         </Typography>
-                        <Typography
-                          variant="body2"
-                          sx={{
-
-                            color: mode.accentColor,
-                            fontWeight: 600
-                          }}
-                        >
+                        <Typography variant="body2" sx={{ color: mode.accentColor, fontWeight: 600 }}>
                           {mode.subtitle}
                         </Typography>
                       </Box>
                     </Stack>
                     <Typography
                       variant="body2"
-                      sx={{ mb: 2, lineHeight: 1.7, textAlign: 'justify' }}
+                      sx={{ mb: 2, lineHeight: 1.7, ...justifyText }}
                       color="inherit"
                     >
                       {mode.description}
                     </Typography>
                     <Stack spacing={1.5} sx={{ mb: 4, flexGrow: 1 }}>
                       {mode.benefits.map((benefit, index) => (
-                        <Stack direction="row" spacing={1.5} alignItems="center" key={index}>
-                          <CheckCircle fontSize="small" sx={{ color: mode.accentColor }} />
-                          <Typography variant="body2" color="inherit" fontWeight={500}>
+                        <Stack direction="row" spacing={1.5} alignItems="flex-start" key={index}>
+                          <CheckCircle fontSize="small" sx={{ color: mode.accentColor, mt: 0.2 }} />
+                          <Typography variant="body2" color="inherit" fontWeight={500} lineHeight={1.5}>
                             {benefit}
                           </Typography>
                         </Stack>
@@ -599,7 +604,12 @@ const Home: React.FC = () => {
                       fullWidth
                       endIcon={<ArrowForward />}
                       onClick={() => navigate(ROUTES.PUBLIC.COMO_FUNCIONA)}
-                      sx={{ mt: 'auto', bgcolor: mode.accentColor, color: '#FFFFFF', '&:hover': { bgcolor: mode.accentColor } }}
+                      sx={{
+                        mt: 'auto',
+                        bgcolor: mode.accentColor,
+                        color: '#FFFFFF',
+                        '&:hover': { bgcolor: mode.accentColor, opacity: 0.9 },
+                      }}
                     >
                       {mode.ctaLabel}
                     </Button>
@@ -612,13 +622,13 @@ const Home: React.FC = () => {
       </Box>
 
       {/* EVOLUCIÓN */}
-      <Box sx={{ py: { xs: 10, md: 14 }, bgcolor: 'background.paper' }}>
+      <Box sx={{ py: { xs: 8, md: 14 }, bgcolor: 'background.paper' }}>
         <Container maxWidth="lg">
           <Typography
             textAlign="center"
             fontWeight={800}
             mb={2}
-            fontSize={{ xs: '1.75rem', md: '3.125rem' }}
+            fontSize={{ xs: '1.5rem', md: '3.125rem' }}
             lineHeight={1.2}
           >
             La experiencia no cambia.{' '}
@@ -627,41 +637,40 @@ const Home: React.FC = () => {
             </Box>
           </Typography>
           <Typography
-            variant="h5"
             color="text.secondary"
-            textAlign="justify"
             maxWidth={900}
             mx="auto"
             lineHeight={1.8}
-            mb={7}
-            fontSize={{ xs: '1rem', md: '1.125rem' }}
+            mb={{ xs: 5, md: 7 }}
+            fontSize={{ xs: '0.95rem', md: '1.125rem' }}
+            sx={{ textAlign: { xs: 'left', md: 'justify' } }}
           >
             Loteplan es una estructura jurídica y tecnológica replicable que permite organizar capital y adquirir
             activos inmobiliarios de forma sistemática.
           </Typography>
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 4 }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: { xs: 4, md: 5 } }}>
             {trustFeatures.map((feature, index) => (
               <Box key={index} display="flex" gap={3} alignItems="flex-start">
                 <Avatar
                   sx={{
                     bgcolor: alpha(theme.palette.primary.main, 0.1),
                     color: 'primary.main',
-                    width: 56,
-                    height: 56,
+                    width: { xs: 44, md: 56 },
+                    height: { xs: 44, md: 56 },
+                    flexShrink: 0,
                   }}
                 >
                   <feature.icon />
                 </Avatar>
                 <Box>
-                  <Typography variant="h6" fontWeight={700} gutterBottom>
+                  <Typography fontWeight={700} gutterBottom fontSize={{ xs: '0.95rem', md: '1.125rem' }}>
                     {feature.title}
                   </Typography>
                   <Typography
-                    variant="body2"
                     color="text.secondary"
                     lineHeight={1.6}
-                    fontSize="1rem"
-                    textAlign="justify"
+                    fontSize={{ xs: '0.875rem', md: '1rem' }}
+                    sx={{ ...justifyText }}
                   >
                     {feature.description}
                   </Typography>
@@ -676,7 +685,7 @@ const Home: React.FC = () => {
       {!isAuthenticated && (
         <Box
           sx={{
-            py: { xs: 12, md: 14 },
+            py: { xs: 10, md: 14 },
             background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
             color: 'white',
             textAlign: 'center',
@@ -685,16 +694,14 @@ const Home: React.FC = () => {
           <Container maxWidth="md">
             <Typography
               variant="h3"
-              gutterBottom
-              sx={{ mb: 3, fontWeight: 800, fontSize: { xs: '1.75rem', md: '2.25rem' } }}
+              sx={{ mb: 2, fontWeight: 800, fontSize: { xs: '1.75rem', md: '2.25rem' } }}
             >
               Accedé ahora al sistema.
             </Typography>
             <Typography
-              variant="h6"
               sx={{
-                mb: 6,
-                fontSize: { xs: '1rem', md: '1.25rem' },
+                mb: 5,
+                fontSize: { xs: '0.95rem', md: '1.25rem' },
                 color: alpha(theme.palette.common.white, 0.9),
                 fontWeight: 400,
                 lineHeight: 1.7,
