@@ -52,12 +52,12 @@ const howItWorksSteps = [
   },
   {
     step: '02',
-    description: 'Te registrás y elegís tu plan dentro del fideicomiso',
+    description: 'Aportás en cuotas mensuales planificadas',
     image: 'public/Home/Cómo funciona Ahorrista_2b.jpg',
   },
   {
     step: '03',
-    description: 'Te registrás y elegís tu plan dentro del fideicomiso',
+    description: 'El sistema adquiere el lote y lo adjudica con escritura',
     image: 'public/Home/Cómo funciona Ahorrista_3a.jpg',
   },
 ];
@@ -356,7 +356,7 @@ const Home: React.FC = () => {
           </Box>
 
           {/* Cards de pasos */}
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: { xs: 3, md: 4 } }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: { xs: 3, md: 7 } }}>
             {howItWorksSteps.map((step) => (
               <Card
                 key={step.step}
@@ -369,9 +369,9 @@ const Home: React.FC = () => {
                   bgcolor: 'background.paper',
                 }}
               >
-                <Box component="img" src={step.image} sx={{ width: '100%', height: { xs: 180, md: 200 }, objectFit: 'cover' }} />
+                <Box component="img" src={step.image} sx={{ width: '100%', height: { xs: 180, md: 190 }, objectFit: 'cover' }} />
                 <CardContent sx={{ p: { xs: 2.5, md: 3 } }}>
-                  <Typography color="text.secondary" lineHeight={1.7} fontSize={{ xs: '0.9rem', md: '1rem' }}>
+                  <Typography color="text.secondary" lineHeight={1.6} fontSize={{ xs: '0.9rem', md: '1.25rem' }}>
                     {step.description}
                   </Typography>
                 </CardContent>
