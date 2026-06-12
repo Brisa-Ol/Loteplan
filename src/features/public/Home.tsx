@@ -508,11 +508,11 @@ const Home: React.FC = () => {
             Dos formas de participar
           </Typography>
           <Typography
-            variant="subtitle1"
+            variant="subtitle2"
             textAlign="center"
             color="text.secondary"
             sx={{ mb: 8, fontWeight: 400 }}
-            fontSize={{ xs: '1.125rem', md: '1.25rem' }}
+            fontSize={{ xs: '1.125rem', md: '2.25rem' }}
           >
             Elegí el modo que mejor se adapte a tus objetivos
           </Typography>
@@ -530,7 +530,6 @@ const Home: React.FC = () => {
                     bgcolor: mode.cardBg,
                     color: mode.textColor,
                     border: mode.type === 'ahorrista' ? `1px solid ${alpha(theme.palette.divider, 0.12)}` : 'none',
-                   
                     borderRadius: 3,
                     transition: 'all 0.3s ease',
                     transform: hoveredMode === mode.type ? 'translateY(-8px)' : 'none',
@@ -569,8 +568,9 @@ const Home: React.FC = () => {
                         <Typography
                           variant="body2"
                           sx={{
-                            color: mode.type === 'ahorrista' ? mode.accentColor : 'inherit',
-                            fontWeight: 600,
+
+                            color: mode.accentColor,
+                            fontWeight: 600
                           }}
                         >
                           {mode.subtitle}
@@ -699,7 +699,7 @@ const Home: React.FC = () => {
                 fontWeight: 400,
                 lineHeight: 1.7,
                 textAlign: 'justify',
-                 textAlignLast: 'center',
+                textAlignLast: 'center',
               }}
             >
               Creá tu cuenta gratis y analizá en detalle su funcionamiento antes de decidir.
