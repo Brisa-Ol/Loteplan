@@ -530,7 +530,7 @@ const Home: React.FC = () => {
                     bgcolor: mode.cardBg,
                     color: mode.textColor,
                     border: mode.type === 'ahorrista' ? `1px solid ${alpha(theme.palette.divider, 0.12)}` : 'none',
-                    borderTop: mode.type === 'ahorrista' ? `4px solid ${mode.accentColor}` : 'none',
+                   
                     borderRadius: 3,
                     transition: 'all 0.3s ease',
                     transform: hoveredMode === mode.type ? 'translateY(-8px)' : 'none',
