@@ -291,31 +291,49 @@ const Home: React.FC = () => {
       {/* QUÉ ES LOTEPLAN */}
       <Box sx={{ py: { xs: 8, md: 14 }, bgcolor: 'secondary.light' }}>
         <Container maxWidth="lg">
+         <Typography
+  color="text.primary"
+  textAlign="center"
+  fontWeight={700} // Inter Bold suele equivaler a fontWeight: 700
+  fontSize="2.75rem" // 44px
+  sx={{ 
+    mb: 3,
+    lineHeight: 1.2, // Interlineado 120%
+    fontFamily: 'Inter, sans-serif' // Fuente Inter
+  }}
+>
+  Qué es{' '}
+  <Box 
+    component="span" 
+    sx={{ 
+      color: '#0056B3', // Color azul corporativo
+      fontWeight: 700, 
+      fontSize: 'inherit' 
+    }}
+  >
+    Loteplan
+  </Box>
+</Typography>
           <Typography
-            color="text.primary"
-            textAlign="center"
-            fontWeight={800}
-            fontSize={{ xs: '1.75rem', md: '3.125rem' }}
-            sx={{ mb: 3 }}
-          >
-            Qué es{' '}
-            <Box component="span" sx={{ color: 'primary.main', fontWeight: 800, fontSize: 'inherit' }}>
-              Loteplan
-            </Box>
-          </Typography>
-          <Typography
-            color="text.secondary"
-            maxWidth={940}
-            mx="auto"
-            lineHeight={1.8}
-            mb={5}
-            fontSize={{ xs: '1.95rem', md: '1.25rem' }}
-            sx={{ ...justifyText }}
-          >
-            <Box component="strong" sx={{ fontWeight: 700 }}>Somos un sistema estructurado pensado para ser el primer paso hacia tu casa. Organizamos capital bajo
-              fideicomiso para adquirir lotes urbanizados y escriturables. </Box>No somos un loteo tradicional, no otorgamos
-            crédito y no vendemos anticipos de urbanización futura.
-          </Typography>
+  color="text.secondary"
+  maxWidth={940}
+  mx="auto"
+  sx={{
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 400,            // Inter Regular
+    fontSize: '1.125rem',       // 18px
+    lineHeight: 1.6,            // Interlineado 160%
+    textAlign: 'justify',       // Alineación justificada
+    mb: 5
+  }}
+>
+  <Box component="strong" sx={{ fontWeight: 700 }}>
+    Somos un sistema estructurado pensado para ser el primer paso hacia tu casa. 
+    Organizamos capital bajo fideicomiso para adquirir lotes urbanizados y escriturables. 
+  </Box>
+  No somos un loteo tradicional, no otorgamos crédito y no vendemos anticipos 
+  de urbanización futura.
+</Typography>
 
           {/* Numeración de pasos */}
           <Box sx={{ position: 'relative', mb: 4 }}>
@@ -336,16 +354,16 @@ const Home: React.FC = () => {
                 <Box key={step.step} sx={{ display: 'flex', justifyContent: 'center', zIndex: 1 }}>
                   <Box
                     sx={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: '50%',
+                      width: 50,
+                      height: 50,
+                      borderRadius: '60%',
                       bgcolor: '#CC6333',
                       color: 'white',
                       display: { xs: 'none', md: 'flex' },
                       alignItems: 'center',
                       justifyContent: 'center',
                       fontWeight: 800,
-                      fontSize: '1rem',
+                      fontSize: '1.25rem',
                     }}
                   >
                     {step.step}
@@ -362,6 +380,9 @@ const Home: React.FC = () => {
                 key={step.step}
                 elevation={0}
                 sx={{
+                  fontFamily: 'Inter, sans-serif', 
+    fontWeight: 600,                // 600 es el valor para SemiBold
+    fontSize: '22px',
                   width: '100%',
                   border: `1px solid ${alpha(theme.palette.primary.main, 0.12)}`,
                   borderRadius: 4,
@@ -381,382 +402,471 @@ const Home: React.FC = () => {
         </Container>
       </Box>
 
-      {/* MODELO FIDUCIARIO */}
-      <Box sx={{ py: { xs: 8, md: 14 }, bgcolor: 'background.paper' }}>
-        <Container maxWidth="lg">
-          <Box
+<Box sx={{ py: '60px', bgcolor: 'background.paper' }}> {/* Ajuste de espaciado entre bloques (aprox 120px total vertical) */}
+  <Container maxWidth="lg">
+    <Box
+      sx={{
+        display: 'grid',
+        gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+        gap: '80px', // Espaciado entre columna de texto e imagen
+        alignItems: 'center',
+      }}
+    >
+      <Box>
+        {/* Título: Inter Bold, 44px, Peso 700, Alineación izquierda */}
+        <Typography
+          fontWeight={700}
+          color="text.primary"
+          textAlign="left"
+          sx={{
+            mb: '32px', // Espaciado entre título y viñetas
+            fontFamily: 'Inter, sans-serif',
+            fontSize: '2.75rem', // 44px
+            lineHeight: 1.15,    // 115%
+            display: '-webkit-box',
+            WebkitLineClamp: 3,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+          }}
+        >
+          Un modelo fiduciario que{' '}
+          <Box component="span" sx={{ color: '#0056B3', fontWeight: 700 }}>
+            brinda previsibilidad jurídica
+          </Box>{' '}
+          en cada etapa
+        </Typography>
+
+        {/* Lista de Beneficios */}
+        <Stack spacing="20px" sx={{ mb: '32px' }}> {/* Espaciado entre viñetas 20px, entre última y botón 32px */}
+          {trustPoints.map((item, index) => (
+            <Stack key={index} direction="row" spacing={1.6} alignItems="center">
+              <CheckCircle sx={{ color: 'primary.main', fontSize: '24px' }} /> {/* Tamaño icono 24px */}
+              <Typography 
+                color="text.secondary" 
+                fontWeight={400} // Inter Regular
+                fontSize="1.25rem" // 20px
+                lineHeight={1.7}   // 170%
+              >
+                {item}
+              </Typography>
+            </Stack>
+          ))}
+        </Stack>
+
+        <Button
+          variant="contained"
+          size="large"
+          endIcon={<ArrowForward />}
+          onClick={() => navigate(ROUTES.PUBLIC.COMO_FUNCIONA)}
+          sx={{ 
+            fontFamily: 'Inter, sans-serif',
+            fontWeight: 600,      // Inter SemiBold
+            fontSize: '18px',     // 18px
+            borderRadius: '10px', // Radio de borde 10px
+            textTransform: 'none'
+          }}
+        >
+          Ver cómo funciona en detalle
+        </Button>
+      </Box>
+
+      {/* Imagen con bordes redondeados 24px y formato 4:3 */}
+      <Box
+        component="img"
+        src="public/Home/contrato43.jpeg"
+        alt="Confianza y transparencia"
+        sx={{
+          width: '100%',
+          aspectRatio: '4/3', // Relación aproximada 4:3
+          borderRadius: '24px', // Bordes redondeados 24px
+          objectFit: 'cover',
+          display: 'block',
+          order: { xs: -1, md: 0 },
+        }}
+      />
+    </Box>
+  </Container>
+</Box>
+
+<Box sx={{ py: 15, bgcolor: 'secondary.light' }}>
+  <Container maxWidth="lg">
+    <Box sx={{ textAlign: 'center', mb: { xs: 5, md: 8 }, maxWidth: 990, mx: 'auto' }}>
+      <Typography
+        fontWeight={700}
+        color="text.primary"
+        fontSize={{ xs: '1.75rem', md: '3.25rem' }}
+        lineHeight={1.1}
+        sx={{ mb: 5 }}
+      >
+        De desarrolladores de suelo a{' '}
+        <Box component="span" sx={{ color: '#0056B3', display: 'block' }}>
+          infraestructura financiera inmobiliaria
+        </Box>
+      </Typography>
+      <Typography
+        variant="h6"
+        color="text.secondary"
+        fontWeight={400}
+        maxWidth={950}
+        mx="auto"
+        lineHeight={1.7}
+        mb={10}
+        fontSize="1.375rem"
+        sx={{ ...justifyText }}
+      >
+        Durante más de 15 años participamos en el desarrollo de suelo urbano, organizando grupos, gestionando
+        procesos de urbanización y adjudicando lotes en proyectos concretos y verificables. Hoy transformamos esa
+        experiencia en una plataforma tecnológica y fiduciaria que permite organizar el acceso progresivo a lotes
+        y activos inmobiliarios de forma clara, ordenada y escalable.
+      </Typography>
+    </Box>
+    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' }, gap: 5 }}>
+      {metrics.map((stat, index) => (
+        <Card
+          key={index}
+          elevation={0}
+          sx={{
+            p: 5,
+            textAlign: 'center',
+            borderRadius: '24px',
+            border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+            boxShadow: `0 4px 20px ${alpha(theme.palette.common.black, 0.05)}`,
+          }}
+        >
+          <Typography
+            fontWeight={800}
+            color="primary.main"
+            sx={{ mb: 3 }}
+            fontSize={{ xs: '2.5rem', md: '3.875rem' }}
+          >
+            {stat.value}
+          </Typography>
+          <Typography color="text.secondary" fontWeight={500} fontSize="1.375rem" lineHeight={1.5}>
+            {stat.label}
+          </Typography>
+        </Card>
+      ))}
+    </Box>
+  </Container>
+</Box>
+
+{/* DOS MODOS */}
+<Box sx={{ py: 15, bgcolor: 'secondary.light' }}>
+  <Container maxWidth="lg">
+    <Typography
+      textAlign="center"
+      fontWeight={700}
+      color="text.primary"
+      fontSize={{ xs: '1.75rem', md: '3.25rem' }}
+      lineHeight={1.1}
+      sx={{ mb: '20px' }}
+    >
+      Dos formas de participar
+    </Typography>
+    <Typography
+      textAlign="center"
+      color="text.secondary"
+      variant="h6"
+      fontWeight={400}
+      lineHeight={1.5}
+      sx={{ mb: '60px' }}
+      fontSize="1.375rem"
+    >
+      Elegí el modo que mejor se adapte a tus objetivos
+    </Typography>
+    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: { xs: 3, md: 5 } }}>
+      {[...twoModes].reverse().map((mode) => (
+        <Box key={mode.type} sx={{ display: 'flex' }}>
+          <Card
+            onMouseEnter={() => setHoveredMode(mode.type)}
+            onMouseLeave={() => setHoveredMode(null)}
             sx={{
-              display: 'grid',
-              gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
-              gap: { xs: 5, md: 10 },
-              alignItems: 'center',
+              width: '100%',
+              minHeight: { xs: 'auto', md: 680 },
+              display: 'flex',
+              flexDirection: 'column',
+              bgcolor: mode.cardBg,
+              color: mode.textColor,
+              border: mode.type === 'ahorrista'
+                ? `1px solid ${alpha(theme.palette.divider, 0.12)}`
+                : 'none',
+              borderRadius: '20px',
+              overflow: 'hidden',
+              transition: 'all 0.3s ease',
+              transform: hoveredMode === mode.type ? 'translateY(-8px)' : 'none',
+              boxShadow: hoveredMode === mode.type ? theme.shadows[8] : theme.shadows[1],
             }}
           >
-            <Box>
+            <Box
+              component="img"
+              src={
+                mode.type === 'ahorrista'
+                  ? 'public/Home/Home1b_modoahorrista.jpg'
+                  : 'public/Home/Home2a_modoinversionista.jpg'
+              }
+              alt={mode.title}
+              sx={{ width: '100%', height: { xs: 220, md: 300 }, objectFit: 'cover', flexShrink: 0 }}
+            />
+            <CardContent
+              sx={{
+                pt: '30px',
+                pb: '40px',
+                pl: '40px',
+                pr: '40px',
+                display: 'flex',
+                flexDirection: 'column',
+                flexGrow: 1,
+              }}
+            >
+              <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: '12px' }}>
+                <Box
+                  sx={{
+                    width: 48,
+                    height: 48,
+                    bgcolor: mode.iconBg,
+                    borderRadius: 2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}
+                >
+                  <mode.icon sx={{ fontSize: 26, color: mode.iconColor }} />
+                </Box>
+                <Typography fontWeight={700} color="inherit" fontSize="2.25rem" lineHeight={1.2}>
+                  {mode.title}
+                </Typography>
+              </Stack>
+
               <Typography
-                fontWeight={800}
-                color="text.primary"
-                sx={{ mb: 4 }}
-                fontSize={{ xs: '1.5rem', md: '2.125rem' }}
-                lineHeight={1.25}
+                color="inherit"
+                fontSize="1.375rem"
+                fontWeight={600}
+                sx={{ color: mode.accentColor, mb: '28px' }}
               >
-                Un modelo fiduciario que{' '}
-                <Box component="span" sx={{ color: 'primary.main' }}>
-                  brinda previsibilidad jurídica
-                </Box>{' '}
-                en cada etapa
+                {mode.subtitle}
               </Typography>
-              <Stack spacing={2} sx={{ mb: 5 }}>
-                {trustPoints.map((item, index) => (
-                  <Stack key={index} direction="row" spacing={1.6} alignItems="flex-start">
-                    <CheckCircle sx={{ color: 'primary.main', mt: 0.3, fontSize: { xs: 20, md: 24 } }} />
-                    <Typography color="text.secondary" fontWeight={500} fontSize={{ xs: '0.9rem', md: '1rem' }} lineHeight={1.6}>
-                      {item}
+
+              <Typography
+                color="inherit"
+                fontSize="1.125rem"
+                fontWeight={400}
+                sx={{ mb: '32px', lineHeight: 1.7, ...justifyText }}
+              >
+                {mode.description}
+              </Typography>
+
+              <Stack spacing="18px" sx={{ mb: '40px', flexGrow: 1 }}>
+                {mode.benefits.map((benefit, index) => (
+                  <Stack direction="row" spacing={1.5} alignItems="flex-start" key={index}>
+                    <CheckCircle fontSize="small" sx={{ color: mode.accentColor, mt: 0.2 }} />
+                    <Typography
+                      color="inherit"
+                      fontWeight={500}
+                      fontSize="1.125rem"
+                      lineHeight={1.6}
+                    >
+                      {benefit}
                     </Typography>
                   </Stack>
                 ))}
               </Stack>
+
               <Button
                 variant="contained"
-                size="large"
+                fullWidth
                 endIcon={<ArrowForward />}
                 onClick={() => navigate(ROUTES.PUBLIC.COMO_FUNCIONA)}
-                fullWidth={false}
-                sx={{ width: { xs: '100%', sm: 'auto' } }}
-              >
-                Ver cómo funciona en detalle
-              </Button>
-            </Box>
-            <Box
-              component="img"
-              src="public/Home/contrato43.jpeg"
-              alt="Confianza y transparencia"
-              sx={{
-                width: '100%',
-                height: 'auto',
-                borderRadius: 4,
-                boxShadow: '0 25px 50px -12px rgba(0,0,0,0.15)',
-                display: 'block',
-                order: { xs: -1, md: 0 },
-              }}
-            />
-          </Box>
-        </Container>
-      </Box>
-
-      {/* TRACK RECORD */}
-      <Box sx={{ py: { xs: 8, md: 14 }, bgcolor: 'secondary.light' }}>
-        <Container maxWidth="lg">
-          <Box sx={{ textAlign: 'center', mb: { xs: 5, md: 8 }, maxWidth: 990, mx: 'auto' }}>
-            <Typography
-              fontWeight={800}
-              color="text.primary"
-              fontSize={{ xs: '1.75rem', md: '3.125rem' }}
-              lineHeight={1.2}
-              sx={{ mb: 3 }}
-            >
-              De desarrolladores de suelo a{' '}
-              <Box component="span" sx={{ color: 'primary.main', display: 'block' }}>
-                infraestructura financiera inmobiliaria
-              </Box>
-            </Typography>
-            <Typography
-              variant="h6"
-              color="text.secondary"
-              maxWidth={1000}
-              mx="auto"
-              lineHeight={1.5}
-              mb={5}
-              fontSize={{ xs: '1.95rem', md: '1.125rem' }}
-              sx={{ ...justifyText }}
-            >
-              Durante más de 15 años participamos en el desarrollo de suelo urbano, organizando grupos, gestionando
-              procesos de urbanización y adjudicando lotes en proyectos concretos y verificables. Hoy transformamos esa
-              experiencia en una plataforma tecnológica y fiduciaria que permite organizar el acceso progresivo a lotes
-              y activos inmobiliarios de forma clara, ordenada y escalable.
-            </Typography>
-          </Box>
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' }, gap: { xs: 3, md: 5 } }}>
-            {metrics.map((stat, index) => (
-              <Card
-                key={index}
-                elevation={0}
                 sx={{
-                  p: { xs: 3, md: 4 },
-                  textAlign: 'center',
-                  borderRadius: 4,
-                  border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+                  mt: 'auto',
+                  bgcolor: mode.accentColor,
+                  color: '#FFFFFF',
+                  fontWeight: 600,
+                  fontSize: '1.125rem',
+                  '&:hover': { bgcolor: mode.accentColor, opacity: 0.9 },
                 }}
               >
-                <Typography
-                  fontWeight={800}
-                  color="primary.main"
-                  sx={{ mb: 1.5 }}
-                  fontSize={{ xs: '1.5rem', md: '1.75rem' }}
-                >
-                  {stat.value}
-                </Typography>
-                <Typography color="text.secondary" fontWeight={600} fontSize={{ xs: '0.875rem', md: '1rem' }}>
-                  {stat.label}
-                </Typography>
-              </Card>
-            ))}
-          </Box>
-        </Container>
+                {mode.ctaLabel}
+              </Button>
+            </CardContent>
+          </Card>
+        </Box>
+      ))}
+    </Box>
+  </Container>
+</Box>
+
+{/* EVOLUCIÓN */}
+<Box sx={{ py: '120px', bgcolor: 'secondary.light' }}>
+  <Container maxWidth="lg">
+    {/* Título Principal (H2) */}
+    <Typography
+      textAlign="center"
+      fontWeight={700} // Inter Bold
+      color="text.primary"
+      fontSize="52px"
+      lineHeight={1.1} // 110%
+      sx={{ mb: '40px' }} // Separación título -> párrafo: 40px
+    >
+      La experiencia no cambia.{' '}
+      <Box component="span" sx={{ color: '#0056B3', display: 'block' }}>
+        Evoluciona su forma de organización.
       </Box>
+    </Typography>
 
-      {/* DOS MODOS */}
-      <Box sx={{ py: { xs: 8, md: 14 }, bgcolor: 'secondary.light' }}>
-        <Container maxWidth="lg">
-          <Typography
-            textAlign="center"
-            fontWeight={800}
-            color="text.primary"
-            fontSize={{ xs: '1.75rem', md: '3.125rem' }}
-            lineHeight={1.2}
-            mb={3}
+    {/* Texto Descriptivo Central */}
+    <Typography
+      color="text.secondary"
+      maxWidth="900px" // Ancho máximo 900px
+      mx="auto"
+      lineHeight={1.7} // 170%
+      fontSize="22px" // 22px
+      textAlign="center"
+      sx={{ mb: '80px' }} // Separación párrafo -> características: 80px
+    >
+      Loteplan es una estructura jurídica y tecnológica replicable que permite organizar capital y adquirir activos inmobiliarios de forma sistemática.
+    </Typography>
+
+    {/* Bloque de características */}
+    <Box 
+      sx={{ 
+        display: 'grid', 
+        gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, 
+        gap: '60px 100px' // Separación filas: 60px, columnas: 100px
+      }}
+    >
+      {trustFeatures.map((feature, index) => (
+        <Box key={index} display="flex" gap="24px" alignItems="flex-start"> {/* Separación icono-bloque: 24px */}
+          <Avatar
+            sx={{
+              bgcolor: alpha(theme.palette.primary.main, 0.1),
+              color: 'primary.main',
+              width: 64, // Total circulo: 64px
+              height: 64,
+              flexShrink: 0,
+            }}
           >
-            Dos formas de participar
-          </Typography>
-          <Typography
-            textAlign="center"
-            color="text.secondary"
-            variant="h6"
-            sx={{ mb: { xs: 5, md: 8 } }}
-            fontSize={{ xs: '1rem', md: '2.25rem' }}
-          >
-            Elegí el modo que mejor se adapte a tus objetivos
-          </Typography>
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: { xs: 3, md: 5 } }}>
-            {[...twoModes].reverse().map((mode) => (
-              <Box key={mode.type} sx={{ display: 'flex' }}>
-                <Card
-                  onMouseEnter={() => setHoveredMode(mode.type)}
-                  onMouseLeave={() => setHoveredMode(null)}
-                  sx={{
-                    width: '100%',
-                    minHeight: { xs: 'auto', md: 680 },
-                    display: 'flex',
-                    flexDirection: 'column',
-                    bgcolor: mode.cardBg,
-                    color: mode.textColor,
-                    border: mode.type === 'ahorrista'
-                      ? `1px solid ${alpha(theme.palette.divider, 0.12)}`
-                      : 'none',
-                    borderRadius: 3,
-                    transition: 'all 0.3s ease',
-                    transform: hoveredMode === mode.type ? 'translateY(-8px)' : 'none',
-                    boxShadow: hoveredMode === mode.type ? theme.shadows[8] : theme.shadows[1],
-                  }}
-                >
-                  <Box
-                    component="img"
-                    src={
-                      mode.type === 'ahorrista'
-                        ? 'public/Home/Home1b_modoahorrista.jpg'
-                        : 'public/Home/Home2a_modoinversionista.jpg'
-                    }
-                    alt={mode.title}
-                    sx={{ width: '100%', height: { xs: 220, md: 300 }, objectFit: 'cover', flexShrink: 0 }}
-                  />
-                  <CardContent sx={{ p: { xs: 3, md: 4 }, display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
-                    <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
-                      <Box
-                        sx={{
-                          width: 48,
-                          height: 48,
-                          bgcolor: mode.iconBg,
-                          borderRadius: 2,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          flexShrink: 0,
-                        }}
-                      >
-                        <mode.icon sx={{ fontSize: 26, color: mode.iconColor }} />
-                      </Box>
-                      <Box>
-                        <Typography variant="h5" fontWeight={800} color="inherit" fontSize={{ xs: '1.1rem', md: '1.5rem' }}>
-                          {mode.title}
-                        </Typography>
-                        <Typography variant="body2" sx={{ color: mode.accentColor, fontWeight: 600 }}>
-                          {mode.subtitle}
-                        </Typography>
-                      </Box>
-                    </Stack>
-                    <Typography
-                      variant="body2"
-                      sx={{ mb: 2, lineHeight: 1.7, ...justifyText }}
-                      color="inherit"
-                    >
-                      {mode.description}
-                    </Typography>
-                    <Stack spacing={1.5} sx={{ mb: 4, flexGrow: 1 }}>
-                      {mode.benefits.map((benefit, index) => (
-                        <Stack direction="row" spacing={1.5} alignItems="flex-start" key={index}>
-                          <CheckCircle fontSize="small" sx={{ color: mode.accentColor, mt: 0.2 }} />
-                          <Typography variant="body2" color="inherit" fontWeight={500} lineHeight={1.5}>
-                            {benefit}
-                          </Typography>
-                        </Stack>
-                      ))}
-                    </Stack>
-                    <Button
-                      variant="contained"
-                      fullWidth
-                      endIcon={<ArrowForward />}
-                      onClick={() => navigate(ROUTES.PUBLIC.COMO_FUNCIONA)}
-                      sx={{
-                        mt: 'auto',
-                        bgcolor: mode.accentColor,
-                        color: '#FFFFFF',
-                        '&:hover': { bgcolor: mode.accentColor, opacity: 0.9 },
-                      }}
-                    >
-                      {mode.ctaLabel}
-                    </Button>
-                  </CardContent>
-                </Card>
-              </Box>
-            ))}
+            <feature.icon sx={{ fontSize: 28 }} /> {/* Icono interior: 28px */}
+          </Avatar>
+          <Box>
+            <Typography 
+              fontWeight={600} // Inter SemiBold
+              fontSize="28px" // 28px
+              lineHeight={1.3} // 130%
+              sx={{ mb: '12px' }} // Separación título -> texto: 12px
+            >
+              {feature.title}
+            </Typography>
+            <Typography
+              color="text.secondary"
+              lineHeight={1.65} // 165%
+              fontSize="18px" // 18px
+              fontWeight={400} // Inter Regular
+              textAlign="left"
+            >
+              {feature.description}
+            </Typography>
           </Box>
-        </Container>
-      </Box>
+        </Box>
+      ))}
+    </Box>
+  </Container>
+</Box>
 
-      {/* EVOLUCIÓN */}
-      <Box sx={{ py: { xs: 8, md: 14 }, bgcolor: 'secondary.light' }}>
-        <Container maxWidth="lg">
-          <Typography
-            textAlign="center"
-            fontWeight={800}
-            color="text.primary"
-            fontSize={{ xs: '1.75rem', md: '3.125rem' }}
-            lineHeight={1.2}
-            mb={4}
-          >
-            La experiencia no cambia.{' '}
-            <Box component="span" sx={{ color: 'primary.main' }}>
-              Evoluciona su forma de organización.
-            </Box>
-          </Typography>
-          <Typography
-            color="text.secondary"
-            maxWidth={790}
-            mx="auto"
-            lineHeight={1.7}
-            fontSize={{ xs: '1rem', md: '1.125rem' }}
-            sx={{ textAlign: 'justify' }} // Justificado para el bloque superior
-          >
-            Loteplan es una estructura jurídica y tecnológica replicable que permite organizar capital y
-          </Typography>
-
-          <Typography
-            color="text.secondary"
-            maxWidth={790}
-            mx="auto"
-            lineHeight={1.7}
-            mb={5}
-            fontSize={{ xs: '1rem', md: '1.125rem' }}
-            sx={{ textAlign: 'center' }} // Centrado para esta línea
-          >
-            adquirir activos inmobiliarios de forma sistemática.
-          </Typography>
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: { xs: 4, md: 5 } }}>
-            {trustFeatures.map((feature, index) => (
-              <Box key={index} display="flex" gap={3} alignItems="flex-start">
-                <Avatar
-                  sx={{
-                    bgcolor: alpha(theme.palette.primary.main, 0.1),
-                    color: 'primary.main',
-                    width: { xs: 44, md: 56 },
-                    height: { xs: 44, md: 56 },
-                    flexShrink: 0,
-                  }}
-                >
-                  <feature.icon />
-                </Avatar>
-                <Box>
-                  <Typography fontWeight={700} gutterBottom fontSize={{ xs: '0.95rem', md: '1.125rem' }}>
-                    {feature.title}
-                  </Typography>
-                  <Typography
-                    color="text.secondary"
-                    lineHeight={1.6}
-                    fontSize={{ xs: '0.875rem', md: '1rem' }}
-                    sx={{ ...justifyText }}
-                  >
-                    {feature.description}
-                  </Typography>
-                </Box>
-              </Box>
-            ))}
-          </Box>
-        </Container>
-      </Box>
-
-      {/* CTA FINAL */}
-      {!isAuthenticated && (
-        <Box
+{/* CTA FINAL */}
+{!isAuthenticated && (
+  <Box
+    sx={{
+      py: '120px', // Padding vertical del bloque: 120px superior e inferior
+      background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+      color: 'white',
+      textAlign: 'center',
+    }}
+  >
+    <Container maxWidth="md">
+      {/* Título: Inter Bold, 56px, Peso 700 */}
+      <Typography
+        sx={{
+          mb: '32px', // Título -> Subtítulo: 32px
+          fontWeight: 700,
+          fontSize: '56px',
+          lineHeight: 1.1, // 110%
+          fontFamily: 'Inter, sans-serif',
+        }}
+      >
+        Accedé ahora al sistema.
+      </Typography>
+      
+      {/* Subtítulo: Inter Regular, 24px, Peso 400, Max-width 900px */}
+      <Typography
+        sx={{
+          mb: '48px', // Subtítulo -> Botones: 48px
+          fontSize: '24px',
+          fontWeight: 400,
+          lineHeight: 1.6, // 160%
+          maxWidth: '900px',
+          mx: 'auto',
+          fontFamily: 'Inter, sans-serif',
+        }}
+      >
+        Creá tu cuenta gratis y analizá en detalle su funcionamiento antes de decidir
+      </Typography>
+      
+      <Stack 
+        direction={{ xs: 'column', sm: 'row' }} 
+        spacing="24px" // Entre botones: 24px
+        justifyContent="center"
+      >
+        {/* Botón Principal: Inter SemiBold, 20px, Peso 600 */}
+        <Button
+          variant="contained"
+          size="large"
+          startIcon={<HomeIcon sx={{ fontSize: '22px !important' }} />}
+          onClick={() => navigate(ROUTES.REGISTER)}
           sx={{
-            py: { xs: 10, md: 14 },
-            background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
-            color: 'white',
-            textAlign: 'center',
+            bgcolor: 'white',
+            color: '#0056B3',
+            fontFamily: 'Inter, sans-serif',
+            fontWeight: 600,
+            fontSize: '20px',
+            height: '60px',
+            borderRadius: '12px',
+            px: '40px', // Aproximadamente 15% más de ancho
+            '&:hover': { bgcolor: alpha(theme.palette.common.white, 0.9) },
           }}
         >
-          <Container maxWidth="md">
-            <Typography
-              variant="h3"
-              sx={{ mb: 2, fontWeight: 800, fontSize: { xs: '1.75rem', md: '2.25rem' } }}
-            >
-              Accedé ahora al sistema.
-            </Typography>
-            <Typography
-              sx={{
-                mb: 5,
-                fontSize: { xs: '0.95rem', md: '1.25rem' },
-                color: alpha(theme.palette.common.white, 0.9),
-                fontWeight: 400,
-                lineHeight: 1.7,
-                textAlign: 'justify',
-                textAlignLast: 'center',
-              }}
-            >
-              Creá tu cuenta gratis y analizá en detalle su funcionamiento antes de decidir.
-            </Typography>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="center">
-              <Button
-                variant="contained"
-                size="large"
-                startIcon={<HomeIcon />}
-                onClick={() => navigate(ROUTES.REGISTER)}
-                sx={{
-                  bgcolor: 'white',
-                  color: 'primary.main',
-                  fontWeight: 600,
-                  '&:hover': { bgcolor: alpha(theme.palette.common.white, 0.9) },
-                }}
-              >
-                Crear mi cuenta
-              </Button>
-              <Button
-                variant="outlined"
-                size="large"
-                startIcon={<TrendingUp />}
-                onClick={() => navigate(ROUTES.LOGIN)}
-                sx={{
-                  borderColor: 'white',
-                  color: 'white',
-                  fontWeight: 600,
-                  '&:hover': { borderColor: 'white', bgcolor: alpha(theme.palette.common.white, 0.1) },
-                }}
-              >
-                Iniciar Sesión
-              </Button>
-            </Stack>
-          </Container>
-        </Box>
-      )}
+          Crear mi cuenta
+        </Button>
+        
+        {/* Botón Secundario: Inter SemiBold, 20px, Peso 600 */}
+        <Button
+          variant="outlined"
+          size="large"
+          startIcon={<TrendingUp sx={{ fontSize: '22px !important' }} />}
+          onClick={() => navigate(ROUTES.LOGIN)}
+          sx={{
+            borderColor: 'white',
+            color: 'white',
+            fontFamily: 'Inter, sans-serif',
+            fontWeight: 600,
+            fontSize: '20px',
+            height: '60px',
+            borderRadius: '12px',
+            borderWidth: '2px',
+            px: '40px', // Aproximadamente 15% más de ancho
+            '&:hover': { 
+              borderColor: 'white', 
+              bgcolor: alpha(theme.palette.common.white, 0.1),
+              borderWidth: '2px'
+            },
+          }}
+        >
+          Iniciar Sesión
+        </Button>
+      </Stack>
+    </Container>
+  </Box>
+)}
     </Box>
   );
 };

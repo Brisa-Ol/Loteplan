@@ -10,20 +10,26 @@ const Footer: React.FC = () => {
   const theme = useTheme();
   const currentYear = new Date().getFullYear();
 
+  // Títulos de columnas: Inter SemiBold, 18px, Peso 600, Letras Mayúsculas
   const colLabelStyle = {
-    fontSize: '0.7rem',
+    fontSize: '18px',
     fontWeight: 600,
-    letterSpacing: 1.1,
+    fontFamily: 'Inter, sans-serif',
+    letterSpacing: '1px',
     textTransform: 'uppercase' as const,
-    color: 'text.secondary',
-    mb: 2,
+    color: 'primary.main', // Color principal
+    mb: '24px', // Título -> Primer elemento
   };
 
+  // Links de navegación: Inter Regular, 18px, Peso 400
   const linkStyle = {
     color: 'text.secondary',
     textDecoration: 'none',
-    fontSize: '0.875rem',
+    fontSize: '18px',
+    fontFamily: 'Inter, sans-serif',
+    fontWeight: 400,
     display: 'block',
+    mb: '16px', // Entre links
     transition: 'color 0.15s',
     '&:hover': { color: 'text.primary' },
   };
@@ -34,25 +40,26 @@ const Footer: React.FC = () => {
       sx={{
         bgcolor: 'background.paper',
         borderTop: `1px solid ${theme.palette.divider}`,
-        pt: 7,
-        pb: 4,
+        pt: '120px', // Espaciado superior del bloque
+        pb: '60px',  // Margen inferior disclaimer
       }}
     >
-      <Container maxWidth="lg" sx={{ px: { xs: 3, md: 6 } }}>
+      <Container maxWidth={false} sx={{ maxWidth: '1200px', px: 3 }}>
 
         {/* Columnas principales */}
         <Box
           sx={{
             display: 'grid',
-            gridTemplateColumns: { xs: '1fr', md: '1.2fr 2fr 1.5fr' },
-            gap: { xs: 4, md: 6 },
-            mb: 6,
+            // Distribución: ~22%, ~38%, ~30% con gaps específicos
+            gridTemplateColumns: { md: '0.22fr 0.38fr 0.30fr' },
+            columnGap: { md: '100px' }, // Separación columnas 2 y 3: 100px
+            mb: '80px',
           }}
         >
           {/* Accesos rápidos */}
           <Box>
             <Typography sx={colLabelStyle}>Accesos rápidos</Typography>
-            <Stack spacing={1.2}>
+            <Box>
               {[
                 { label: 'Nosotros', href: '/nosotros' },
                 { label: 'Cómo funciona', href: '/como-funciona' },
@@ -63,13 +70,20 @@ const Footer: React.FC = () => {
               ].map(({ label, href }) => (
                 <Link key={href} href={href} sx={linkStyle}>{label}</Link>
               ))}
-            </Stack>
+            </Box>
           </Box>
 
           {/* Sobre nosotros */}
-          <Box>
+          <Box sx={{ maxWidth: '450px' }}>
             <Typography sx={colLabelStyle}>Sobre nosotros</Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.75, textAlign: 'justify' }}>
+            <Typography 
+              sx={{ 
+                fontSize: '18px', 
+                lineHeight: 1.8, // 180%
+                color: 'text.secondary',
+                fontFamily: 'Inter, sans-serif'
+              }}
+            >
               Loteplan es una plataforma fiduciaria colaborativa que facilita el acceso
               progresivo a lotes y oportunidades de inversión respaldadas por activos
               inmobiliarios reales.
@@ -79,20 +93,26 @@ const Footer: React.FC = () => {
           {/* Contacto */}
           <Box>
             <Typography sx={colLabelStyle}>Contacto</Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2, lineHeight: 1.65, textAlign: 'justify' }}>
+            <Typography 
+              sx={{ 
+                mb: '20px', 
+                fontSize: '18px', 
+                lineHeight: 1.8, 
+                color: 'text.secondary',
+                fontFamily: 'Inter, sans-serif' 
+              }}
+            >
               Loteplan es el nombre comercial de Nectarea Sociedad Anónima de Ahorro para
               fines determinados. Inscripta en el Registro Público con la Matrícula 34.417 P
             </Typography>
-            <Stack spacing={1}>
-              <Stack direction="row" spacing={1} alignItems="center">
-                <Phone sx={{ fontSize: 16, color: 'text.secondary' }} />
-                <Typography variant="body2" color="text.secondary">
-                  +54 9 261 717-1142
-                </Typography>
+            <Stack spacing="20px">
+              <Stack direction="row" spacing="16px" alignItems="center">
+                <Phone sx={{ fontSize: 20, color: 'text.secondary' }} />
+                <Typography sx={{ fontSize: '18px', color: 'text.secondary' }}>+54 9 261 717-1142</Typography>
               </Stack>
-              <Stack direction="row" spacing={1} alignItems="center">
-                <Email sx={{ fontSize: 16, color: 'text.secondary' }} />
-                <Link href="mailto:nectarea@loteplan.com" sx={linkStyle}>
+              <Stack direction="row" spacing="16px" alignItems="center">
+                <Email sx={{ fontSize: 20, color: 'text.secondary' }} />
+                <Link href="mailto:nectarea@loteplan.com" sx={{ ...linkStyle, mb: 0 }}>
                   nectarea@loteplan.com
                 </Link>
               </Stack>
@@ -100,29 +120,32 @@ const Footer: React.FC = () => {
           </Box>
         </Box>
 
-        <Divider sx={{ mb: 3.5 }} />
+        <Divider sx={{ mb: '40px' }} /> {/* Separador línea -> logo: 40px */}
 
         {/* Branding y copyright */}
-        <Stack direction="row" spacing={2} alignItems="center" justifyContent="center" sx={{ mb: 2.5 }}>
-
+        <Stack alignItems="center" sx={{ mb: '50px' }}> {/* Copyright -> Disclaimer: 50px */}
           <Box
             component="img"
             src="/navbar/nav.png"
             alt="Loteplan"
-            sx={{ height: 28, opacity: 0.65 }}
+            sx={{ height: 50, opacity: 0.65, mb: '20px' }} // Logo 45-50px
           />
-          <Typography variant="caption" color="text.secondary">
+          <Typography sx={{ fontSize: '16px', color: 'text.secondary' }}>
             © {currentYear} Nectarea S.A. Todos los derechos reservados.
           </Typography>
         </Stack>
       </Container>
+      
       {/* Disclaimer legal */}
-      <Box sx={{ px: { xs: 6, md: 6 }, mt: 1 }}>
+      <Container maxWidth={false} sx={{ maxWidth: '1200px', px: 3 }}>
         <Typography
-          variant="caption"
-          color="text.disabled"
-
-          sx={{ display: 'block', lineHeight: 1.5, textAlign: 'justify' }}
+          sx={{ 
+            fontSize: '14px', 
+            color: 'text.disabled',
+            lineHeight: 1.7, 
+            textAlign: 'justify',
+            fontFamily: 'Inter, sans-serif'
+          }}
         >
           Loteplan no otorga créditos ni garantiza la adjudicación de programas públicos.
           La administración de los fondos se realiza a través de un fideicomiso de administración,
@@ -134,8 +157,7 @@ const Footer: React.FC = () => {
           en proyectos inmobiliarios implica riesgos propios de la actividad y debe evaluarse
           junto con la documentación contractual correspondiente.
         </Typography>
-      </Box>
-
+      </Container>
     </Box>
   );
 };
