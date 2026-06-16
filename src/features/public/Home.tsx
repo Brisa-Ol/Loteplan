@@ -306,7 +306,7 @@ const Home: React.FC = () => {
   <Box 
     component="span" 
     sx={{ 
-      color: '#0056B3', // Color azul corporativo
+      color: 'primary.main', // Color azul corporativo
       fontWeight: 700, 
       fontSize: 'inherit' 
     }}
@@ -430,7 +430,7 @@ const Home: React.FC = () => {
           }}
         >
           Un modelo fiduciario que{' '}
-          <Box component="span" sx={{ color: '#0056B3', fontWeight: 700 }}>
+          <Box component="span" sx={{ color: 'primary.main', fontWeight: 700 }}>
             brinda previsibilidad jurídica
           </Box>{' '}
           en cada etapa
@@ -499,7 +499,7 @@ const Home: React.FC = () => {
         sx={{ mb: 5 }}
       >
         De desarrolladores de suelo a{' '}
-        <Box component="span" sx={{ color: '#0056B3', display: 'block' }}>
+        <Box component="span" sx={{ color: 'primary.main', display: 'block' }}>
           infraestructura financiera inmobiliaria
         </Box>
       </Typography>
@@ -709,7 +709,7 @@ const Home: React.FC = () => {
       sx={{ mb: '40px' }} // Separación título -> párrafo: 40px
     >
       La experiencia no cambia.{' '}
-      <Box component="span" sx={{ color: '#0056B3', display: 'block' }}>
+      <Box component="span" sx={{ color: 'primary.main', display: 'block' }}>
         Evoluciona su forma de organización.
       </Box>
     </Typography>
@@ -825,7 +825,7 @@ const Home: React.FC = () => {
           onClick={() => navigate(ROUTES.REGISTER)}
           sx={{
             bgcolor: 'white',
-            color: '#0056B3',
+            color: 'primary.main',
             fontFamily: 'Inter, sans-serif',
             fontWeight: 600,
             fontSize: '20px',
