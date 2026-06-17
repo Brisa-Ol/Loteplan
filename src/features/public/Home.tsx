@@ -21,7 +21,7 @@ import {
   Typography,
   useTheme,
 } from '@mui/material';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { useAuth } from '@/core/context/AuthContext';
@@ -163,6 +163,62 @@ const trustPoints = [
   'Reglas claras y proceso transparente',
   'Operaciones registradas y trazables digitalmente',
 ];
+
+// ─── Scroll reveal (fade + slide-up on enter viewport) ────────────────────────
+
+interface ScrollRevealProps {
+  children: React.ReactNode;
+  /** delay in ms, useful to "stagger" items inside the same grid/list */
+  delay?: number;
+  /** 0 to 1, how much of the element must be visible to trigger the animation */
+  threshold?: number;
+}
+
+const ScrollReveal: React.FC<ScrollRevealProps> = ({ children, delay = 0, threshold = 0.15 }) => {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+
+    // If IntersectionObserver isn't available for some reason, just show the content.
+    if (typeof IntersectionObserver === 'undefined') {
+      setIsVisible(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.disconnect(); // animate once, don't re-trigger on every scroll
+        }
+      },
+      { threshold, rootMargin: '0px 0px -60px 0px' },
+    );
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [threshold]);
+
+  return (
+    <Box
+      ref={ref}
+      sx={{
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        opacity: isVisible ? 1 : 0,
+        transform: isVisible ? 'translateY(0)' : 'translateY(28px)',
+        transition: `opacity 0.7s ease-out ${delay}ms, transform 0.7s ease-out ${delay}ms`,
+        willChange: 'opacity, transform',
+      }}
+    >
+      {children}
+    </Box>
+  );
+};
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
@@ -398,34 +454,35 @@ const Home: React.FC = () => {
               gap: { xs: 3, md: 7 },
             }}
           >
-            {howItWorksSteps.map((step) => (
-              <Card
-                key={step.step}
-                elevation={0}
-                sx={{
-                  border: `1px solid ${alpha(theme.palette.primary.main, 0.12)}`,
-                  borderRadius: 4,
-                  overflow: 'hidden',
-                  bgcolor: 'background.paper',
-                }}
-              >
-                <Box
-                  component="img"
-                  src={step.image}
-                  alt={step.description}
-                  sx={{ width: '100%', height: { xs: 180, md: 190 }, objectFit: 'cover' }}
-                />
-                <CardContent sx={{ p: { xs: 2.5, md: 3 } }}>
-                  <Typography
-                    color="text.secondary"
-                    lineHeight={1.6}
-                    fontWeight={400}
-                    fontSize={{ xs: '0.9rem', md: '1.25rem' }}
-                  >
-                    {step.description}
-                  </Typography>
-                </CardContent>
-              </Card>
+            {howItWorksSteps.map((step, index) => (
+              <ScrollReveal key={step.step} delay={index * 120}>
+                <Card
+                  elevation={0}
+                  sx={{
+                    border: `1px solid ${alpha(theme.palette.primary.main, 0.12)}`,
+                    borderRadius: 4,
+                    overflow: 'hidden',
+                    bgcolor: 'background.paper',
+                  }}
+                >
+                  <Box
+                    component="img"
+                    src={step.image}
+                    alt={step.description}
+                    sx={{ width: '100%', height: { xs: 180, md: 190 }, objectFit: 'cover' }}
+                  />
+                  <CardContent sx={{ p: { xs: 2.5, md: 3 } }}>
+                    <Typography
+                      color="text.secondary"
+                      lineHeight={1.6}
+                      fontWeight={400}
+                      fontSize={{ xs: '0.9rem', md: '1.25rem' }}
+                    >
+                      {step.description}
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </ScrollReveal>
             ))}
           </Box>
         </Container>
@@ -459,17 +516,19 @@ const Home: React.FC = () => {
               </Typography>
 
               <Stack spacing="20px" sx={{ mb: '32px' }}>
-                {trustPoints.map((item) => (
-                  <Stack key={item} direction="row" spacing={1.6} alignItems="center">
-                    <CheckCircle sx={{ color: 'primary.main', fontSize: '24px', flexShrink: 0 }} />
-                    <Typography
-                      color="text.secondary"
-                      fontSize={{ xs: '1rem', md: '1.25rem' }}
-                      lineHeight={1.7}
-                    >
-                      {item}
-                    </Typography>
-                  </Stack>
+                {trustPoints.map((item, index) => (
+                  <ScrollReveal key={item} delay={index * 100}>
+                    <Stack direction="row" spacing={1.6} alignItems="center">
+                      <CheckCircle sx={{ color: 'primary.main', fontSize: '24px', flexShrink: 0 }} />
+                      <Typography
+                        color="text.secondary"
+                        fontSize={{ xs: '1rem', md: '1.25rem' }}
+                        lineHeight={1.7}
+                      >
+                        {item}
+                      </Typography>
+                    </Stack>
+                  </ScrollReveal>
                 ))}
               </Stack>
 
@@ -539,42 +598,43 @@ const Home: React.FC = () => {
               gap: { xs: 3, md: 5 },
             }}
           >
-            {metrics.map((stat) => (
-              <Card
-                key={stat.label}
-                elevation={0}
-                sx={{
-                  p: { xs: 3, md: 5 },
-                  textAlign: 'center',
-                  borderRadius: '24px',
-                  border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
-                  boxShadow: `0 4px 20px ${alpha(theme.palette.common.black, 0.05)}`,
-                }}
-              >
-                <Typography
-                  fontWeight={800}
-                  color="primary.main"
+            {metrics.map((stat, index) => (
+              <ScrollReveal key={stat.label} delay={index * 120}>
+                <Card
+                  elevation={0}
                   sx={{
-                    mb: 4,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    minHeight: { xs: '60px', md: '90px' },
-                    whiteSpace: 'nowrap',
+                    p: { xs: 3, md: 5 },
+                    textAlign: 'center',
+                    borderRadius: '24px',
+                    border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+                    boxShadow: `0 4px 20px ${alpha(theme.palette.common.black, 0.05)}`,
                   }}
-                  fontSize={{ xs: '2.25rem', md: stat.value.length > 5 ? '3.2rem' : '3.875rem' }}
                 >
-                  {stat.value}
-                </Typography>
-                <Typography
-                  color="text.secondary"
-                  fontWeight={500}
-                  fontSize={{ xs: '1rem', md: '1.375rem' }}
-                  lineHeight={1.5}
-                >
-                  {stat.label}
-                </Typography>
-              </Card>
+                  <Typography
+                    fontWeight={800}
+                    color="primary.main"
+                    sx={{
+                      mb: 4,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      minHeight: { xs: '60px', md: '90px' },
+                      whiteSpace: 'nowrap',
+                    }}
+                    fontSize={{ xs: '2.25rem', md: stat.value.length > 5 ? '3.2rem' : '3.875rem' }}
+                  >
+                    {stat.value}
+                  </Typography>
+                  <Typography
+                    color="text.secondary"
+                    fontWeight={500}
+                    fontSize={{ xs: '1rem', md: '1.375rem' }}
+                    lineHeight={1.5}
+                  >
+                    {stat.label}
+                  </Typography>
+                </Card>
+              </ScrollReveal>
             ))}
           </Box>
         </Container>
@@ -607,122 +667,123 @@ const Home: React.FC = () => {
               gap: { xs: 3, md: 5 },
             }}
           >
-            {[...twoModes].reverse().map((mode) => (
-              <Card
-                key={mode.type}
-                onMouseEnter={() => setHoveredMode(mode.type)}
-                onMouseLeave={() => setHoveredMode(null)}
-                sx={{
-                  minHeight: { xs: 'auto', md: 680 },
-                  display: 'flex',
-                  flexDirection: 'column',
-                  bgcolor: mode.cardBg,
-                  color: mode.textColor,
-                  border: mode.type === 'ahorrista'
-                    ? `1px solid ${alpha(theme.palette.divider, 0.12)}`
-                    : 'none',
-                  borderRadius: '20px',
-                  overflow: 'hidden',
-                  transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-                  transform: hoveredMode === mode.type ? 'translateY(-8px)' : 'none',
-                  boxShadow: hoveredMode === mode.type ? theme.shadows[8] : theme.shadows[1],
-                }}
-              >
-                <Box
-                  component="img"
-                  src={
-                    mode.type === 'ahorrista'
-                      ? 'public/Home/Home1b_modoahorrista.jpg'
-                      : 'public/Home/Home2a_modoinversionista.jpg'
-                  }
-                  alt={mode.title}
-                  sx={{ width: '100%', height: { xs: 220, md: 300 }, objectFit: 'cover', flexShrink: 0 }}
-                />
-
-                <CardContent
+            {[...twoModes].reverse().map((mode, index) => (
+              <ScrollReveal key={mode.type} delay={index * 150}>
+                <Card
+                  onMouseEnter={() => setHoveredMode(mode.type)}
+                  onMouseLeave={() => setHoveredMode(null)}
                   sx={{
-                    pt: { xs: 3, md: '30px' },
-                    pb: { xs: 4, md: '40px' },
-                    px: { xs: 3, md: '40px' },
+                    minHeight: { xs: 'auto', md: 680 },
                     display: 'flex',
                     flexDirection: 'column',
-                    flexGrow: 1,
+                    bgcolor: mode.cardBg,
+                    color: mode.textColor,
+                    border: mode.type === 'ahorrista'
+                      ? `1px solid ${alpha(theme.palette.divider, 0.12)}`
+                      : 'none',
+                    borderRadius: '20px',
+                    overflow: 'hidden',
+                    transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+                    transform: hoveredMode === mode.type ? 'translateY(-8px)' : 'none',
+                    boxShadow: hoveredMode === mode.type ? theme.shadows[8] : theme.shadows[1],
                   }}
                 >
-                  <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: '12px' }}>
-                    <Box
-                      sx={{
-                        width: 48,
-                        height: 48,
-                        bgcolor: mode.iconBg,
-                        borderRadius: 2,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flexShrink: 0,
-                      }}
-                    >
-                      <mode.icon sx={{ fontSize: 26, color: mode.iconColor }} />
-                    </Box>
-                    <Typography
-                      fontWeight={700}
-                      color="inherit"
-                      fontSize={{ xs: '1.5rem', md: '2.25rem' }}
-                      lineHeight={1.2}
-                    >
-                      {mode.title}
-                    </Typography>
-                  </Stack>
+                  <Box
+                    component="img"
+                    src={
+                      mode.type === 'ahorrista'
+                        ? 'public/Home/Home1b_modoahorrista.jpg'
+                        : 'public/Home/Home2a_modoinversionista.jpg'
+                    }
+                    alt={mode.title}
+                    sx={{ width: '100%', height: { xs: 220, md: 300 }, objectFit: 'cover', flexShrink: 0 }}
+                  />
 
-                  <Typography
-                    fontSize={{ xs: '1rem', md: '1.375rem' }}
-                    fontWeight={600}
-                    sx={{ color: mode.accentColor, mb: '28px' }}
-                  >
-                    {mode.subtitle}
-                  </Typography>
-
-                  <Typography
-                    fontSize={{ xs: '0.95rem', md: '1.125rem' }}
-                    fontWeight={400}
-                    sx={{ mb: '32px', lineHeight: 1.7, ...justifyText }}
-                  >
-                    {mode.description}
-                  </Typography>
-
-                  <Stack spacing="18px" sx={{ mb: '40px', flexGrow: 1 }}>
-                    {mode.benefits.map((benefit) => (
-                      <Stack key={benefit} direction="row" spacing={1.5} alignItems="flex-start">
-                        <CheckCircle fontSize="small" sx={{ color: mode.accentColor, mt: 0.2, flexShrink: 0 }} />
-                        <Typography
-                          fontWeight={500}
-                          fontSize={{ xs: '0.95rem', md: '1.125rem' }}
-                          lineHeight={1.6}
-                        >
-                          {benefit}
-                        </Typography>
-                      </Stack>
-                    ))}
-                  </Stack>
-
-                  <Button
-                    variant="contained"
-                    fullWidth
-                    endIcon={<ArrowForward />}
-                    onClick={() => navigate(ROUTES.PUBLIC.COMO_FUNCIONA)}
+                  <CardContent
                     sx={{
-                      mt: 'auto',
-                      bgcolor: mode.accentColor,
-                      color: '#FFFFFF',
-                      fontWeight: 600,
-                      fontSize: { xs: '1rem', md: '1.125rem' },
-                      '&:hover': { bgcolor: mode.accentColor, opacity: 0.9 },
+                      pt: { xs: 3, md: '30px' },
+                      pb: { xs: 4, md: '40px' },
+                      px: { xs: 3, md: '40px' },
+                      display: 'flex',
+                      flexDirection: 'column',
+                      flexGrow: 1,
                     }}
                   >
-                    {mode.ctaLabel}
-                  </Button>
-                </CardContent>
-              </Card>
+                    <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: '12px' }}>
+                      <Box
+                        sx={{
+                          width: 48,
+                          height: 48,
+                          bgcolor: mode.iconBg,
+                          borderRadius: 2,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0,
+                        }}
+                      >
+                        <mode.icon sx={{ fontSize: 26, color: mode.iconColor }} />
+                      </Box>
+                      <Typography
+                        fontWeight={700}
+                        color="inherit"
+                        fontSize={{ xs: '1.5rem', md: '2.25rem' }}
+                        lineHeight={1.2}
+                      >
+                        {mode.title}
+                      </Typography>
+                    </Stack>
+
+                    <Typography
+                      fontSize={{ xs: '1rem', md: '1.375rem' }}
+                      fontWeight={600}
+                      sx={{ color: mode.accentColor, mb: '28px' }}
+                    >
+                      {mode.subtitle}
+                    </Typography>
+
+                    <Typography
+                      fontSize={{ xs: '0.95rem', md: '1.125rem' }}
+                      fontWeight={400}
+                      sx={{ mb: '32px', lineHeight: 1.7, ...justifyText }}
+                    >
+                      {mode.description}
+                    </Typography>
+
+                    <Stack spacing="18px" sx={{ mb: '40px', flexGrow: 1 }}>
+                      {mode.benefits.map((benefit) => (
+                        <Stack key={benefit} direction="row" spacing={1.5} alignItems="flex-start">
+                          <CheckCircle fontSize="small" sx={{ color: mode.accentColor, mt: 0.2, flexShrink: 0 }} />
+                          <Typography
+                            fontWeight={500}
+                            fontSize={{ xs: '0.95rem', md: '1.125rem' }}
+                            lineHeight={1.6}
+                          >
+                            {benefit}
+                          </Typography>
+                        </Stack>
+                      ))}
+                    </Stack>
+
+                    <Button
+                      variant="contained"
+                      fullWidth
+                      endIcon={<ArrowForward />}
+                      onClick={() => navigate(ROUTES.PUBLIC.COMO_FUNCIONA)}
+                      sx={{
+                        mt: 'auto',
+                        bgcolor: mode.accentColor,
+                        color: '#FFFFFF',
+                        fontWeight: 600,
+                        fontSize: { xs: '1rem', md: '1.125rem' },
+                        '&:hover': { bgcolor: mode.accentColor, opacity: 0.9 },
+                      }}
+                    >
+                      {mode.ctaLabel}
+                    </Button>
+                  </CardContent>
+                </Card>
+              </ScrollReveal>
             ))}
           </Box>
         </Container>
@@ -766,37 +827,39 @@ const Home: React.FC = () => {
               gap: { xs: 5, md: '60px 100px' },
             }}
           >
-            {trustFeatures.map((feature) => (
-              <Box key={feature.title} display="flex" gap="24px" alignItems="flex-start">
-                <Avatar
-                  sx={{
-                    bgcolor: alpha(theme.palette.primary.main, 0.1),
-                    color: 'primary.main',
-                    width: { xs: 52, md: 64 },
-                    height: { xs: 52, md: 64 },
-                    flexShrink: 0,
-                  }}
-                >
-                  <feature.icon sx={{ fontSize: { xs: 24, md: 28 } }} />
-                </Avatar>
-                <Box>
-                  <Typography
-                    fontWeight={600}
-                    fontSize={{ xs: '1.125rem', md: '28px' }}
-                    lineHeight={1.3}
-                    sx={{ mb: '12px' }}
+            {trustFeatures.map((feature, index) => (
+              <ScrollReveal key={feature.title} delay={index * 120}>
+                <Box display="flex" gap="24px" alignItems="flex-start">
+                  <Avatar
+                    sx={{
+                      bgcolor: alpha(theme.palette.primary.main, 0.1),
+                      color: 'primary.main',
+                      width: { xs: 52, md: 64 },
+                      height: { xs: 52, md: 64 },
+                      flexShrink: 0,
+                    }}
                   >
-                    {feature.title}
-                  </Typography>
-                  <Typography
-                    color="text.secondary"
-                    lineHeight={1.65}
-                    fontSize={{ xs: '0.95rem', md: '18px' }}
-                  >
-                    {feature.description}
-                  </Typography>
+                    <feature.icon sx={{ fontSize: { xs: 24, md: 28 } }} />
+                  </Avatar>
+                  <Box>
+                    <Typography
+                      fontWeight={600}
+                      fontSize={{ xs: '1.125rem', md: '28px' }}
+                      lineHeight={1.3}
+                      sx={{ mb: '12px' }}
+                    >
+                      {feature.title}
+                    </Typography>
+                    <Typography
+                      color="text.secondary"
+                      lineHeight={1.65}
+                      fontSize={{ xs: '0.95rem', md: '18px' }}
+                    >
+                      {feature.description}
+                    </Typography>
+                  </Box>
                 </Box>
-              </Box>
+              </ScrollReveal>
             ))}
           </Box>
         </Container>
