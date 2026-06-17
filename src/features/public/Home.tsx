@@ -315,16 +315,15 @@ const Home: React.FC = () => {
             </Box>
           </Typography>
           <Typography
+
             color="text.secondary"
-            maxWidth={940}
+            maxWidth={950}
             mx="auto"
             sx={{
-              fontFamily: 'Inter, sans-serif',
-              fontWeight: 400,            // Inter Regular
-              fontSize: '1.125rem',       // 18px
-              lineHeight: 1.6,            // Interlineado 160%
-              textAlign: 'justify',       // Alineación justificada
-              mb: 5
+              fontSize: '1.375rem',
+              lineHeight: 1.7,
+              textAlign: 'justify',
+              mb: 4
             }}
           >
             <Box component="strong" sx={{ fontWeight: 700 }}>
@@ -381,7 +380,7 @@ const Home: React.FC = () => {
                 elevation={0}
                 sx={{
                   fontFamily: 'Inter, sans-serif',
-                  fontWeight: 600,                // 600 es el valor para SemiBold
+                  fontWeight: 600,
                   fontSize: '22px',
                   width: '100%',
                   border: `1px solid ${alpha(theme.palette.primary.main, 0.12)}`,
@@ -402,18 +401,18 @@ const Home: React.FC = () => {
         </Container>
       </Box>
 
-      <Box sx={{ py: '60px', bgcolor: 'background.paper' }}> {/* Ajuste de espaciado entre bloques (aprox 120px total vertical) */}
+      <Box sx={{ py: '60px', bgcolor: 'background.paper' }}>
         <Container maxWidth="lg">
           <Box
             sx={{
               display: 'grid',
               gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
-              gap: '80px', // Espaciado entre columna de texto e imagen
+              gap: '80px',
               alignItems: 'center',
             }}
           >
             <Box>
-              {/* Título: Inter Bold, 44px, Peso 700, Alineación izquierda */}
+
               <Typography
                 fontWeight={700}
                 color="text.primary"
@@ -437,10 +436,10 @@ const Home: React.FC = () => {
               </Typography>
 
               {/* Lista de Beneficios */}
-              <Stack spacing="20px" sx={{ mb: '32px' }}> {/* Espaciado entre viñetas 20px, entre última y botón 32px */}
+              <Stack spacing="20px" sx={{ mb: '32px' }}>
                 {trustPoints.map((item, index) => (
                   <Stack key={index} direction="row" spacing={1.6} alignItems="center">
-                    <CheckCircle sx={{ color: 'primary.main', fontSize: '24px' }} /> {/* Tamaño icono 24px */}
+                    <CheckCircle sx={{ color: 'primary.main', fontSize: '24px' }} />
                     <Typography
                       color="text.secondary"
                       fontWeight={400} // Inter Regular
@@ -470,7 +469,7 @@ const Home: React.FC = () => {
               </Button>
             </Box>
 
-            {/* Imagen con bordes redondeados 24px y formato 4:3 */}
+
             <Box
               component="img"
               src="public/Home/contrato43.jpeg"
@@ -865,7 +864,7 @@ const Home: React.FC = () => {
                   height: '60px',
                   borderRadius: '12px',
                   borderWidth: '2px',
-                  px: '40px', // Aproximadamente 15% más de ancho
+                  px: '40px',
                   '&:hover': {
                     borderColor: 'white',
                     bgcolor: alpha(theme.palette.common.white, 0.1),
