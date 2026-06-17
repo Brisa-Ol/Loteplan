@@ -136,7 +136,7 @@ const trustFeatures = [
 ];
 
 const metrics = [
-  { value: '+USD 1,1M', label: 'Estructurados en activos inmobiliarios reales' },
+  { value: '+USD 1,1M', label: 'Estructurados en activos inmobiliarios reales y respaldados' },
   { value: '119', label: 'Lotes urbanizados adjudicados en desarrollos finalizados' },
   { value: '+400', label: 'Lotes proyectados bajo contratos de urbanización vigentes' },
 ];
@@ -306,7 +306,7 @@ const Home: React.FC = () => {
             <Box
               component="span"
               sx={{
-                color: 'primary.main', // Color azul corporativo
+                color: 'primary.main',
                 fontWeight: 700,
                 fontSize: 'inherit'
               }}
@@ -317,7 +317,7 @@ const Home: React.FC = () => {
           <Typography
 
             color="text.secondary"
-            maxWidth={950}
+            maxWidth={1400}
             mx="auto"
             sx={{
               fontSize: '1.375rem',
@@ -402,123 +402,130 @@ const Home: React.FC = () => {
       </Box>
 
       <Box sx={{ py: '60px', bgcolor: 'background.paper' }}>
-        <Container maxWidth="lg">
-          <Box
+  <Container maxWidth="lg">
+    <Box
+      sx={{
+        display: 'grid',
+        gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+        gap: '80px',
+        alignItems: 'stretch', // <-- 1. Cambiado de 'center' a 'stretch'
+      }}
+    >
+      <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+        <Typography
+          fontWeight={700}
+          color="text.primary"
+          textAlign="left"
+          sx={{
+            mb: '32px',
+            fontFamily: 'Inter, sans-serif',
+            fontSize: '2.75rem', 
+            lineHeight: 1.15,    
+            display: '-webkit-box',
+            WebkitLineClamp: 3,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+          }}
+        >
+          Un modelo fiduciario que{' '}
+          <Box component="span" sx={{ color: 'primary.main', fontWeight: 700 }}>
+            brinda previsibilidad jurídica
+          </Box>{' '}
+          en cada etapa
+        </Typography>
+
+        {/* Lista de Beneficios */}
+        <Stack spacing="20px" sx={{ mb: '32px' }}>
+          {trustPoints.map((item, index) => (
+            <Stack key={index} direction="row" spacing={1.6} alignItems="center">
+              <CheckCircle sx={{ color: 'primary.main', fontSize: '24px' }} />
+              <Typography
+                color="text.secondary"
+                fontWeight={400} 
+                fontSize="1.25rem" 
+                lineHeight={1.7}   
+              >
+                {item}
+              </Typography>
+            </Stack>
+          ))}
+        </Stack>
+
+        <Box>
+          <Button
+            variant="contained"
+            size="large"
+            endIcon={<ArrowForward />}
+            onClick={() => navigate(ROUTES.PUBLIC.COMO_FUNCIONA)}
             sx={{
-              display: 'grid',
-              gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
-              gap: '80px',
-              alignItems: 'center',
+              fontFamily: 'Inter, sans-serif',
+              fontWeight: 600,      
+              fontSize: '18px',     
+              borderRadius: '10px', 
+              textTransform: 'none'
             }}
           >
-            <Box>
-
-              <Typography
-                fontWeight={700}
-                color="text.primary"
-                textAlign="left"
-                sx={{
-                  mb: '32px', // Espaciado entre título y viñetas
-                  fontFamily: 'Inter, sans-serif',
-                  fontSize: '2.75rem', // 44px
-                  lineHeight: 1.15,    // 115%
-                  display: '-webkit-box',
-                  WebkitLineClamp: 3,
-                  WebkitBoxOrient: 'vertical',
-                  overflow: 'hidden',
-                }}
-              >
-                Un modelo fiduciario que{' '}
-                <Box component="span" sx={{ color: 'primary.main', fontWeight: 700 }}>
-                  brinda previsibilidad jurídica
-                </Box>{' '}
-                en cada etapa
-              </Typography>
-
-              {/* Lista de Beneficios */}
-              <Stack spacing="20px" sx={{ mb: '32px' }}>
-                {trustPoints.map((item, index) => (
-                  <Stack key={index} direction="row" spacing={1.6} alignItems="center">
-                    <CheckCircle sx={{ color: 'primary.main', fontSize: '24px' }} />
-                    <Typography
-                      color="text.secondary"
-                      fontWeight={400} // Inter Regular
-                      fontSize="1.25rem" // 20px
-                      lineHeight={1.7}   // 170%
-                    >
-                      {item}
-                    </Typography>
-                  </Stack>
-                ))}
-              </Stack>
-
-              <Button
-                variant="contained"
-                size="large"
-                endIcon={<ArrowForward />}
-                onClick={() => navigate(ROUTES.PUBLIC.COMO_FUNCIONA)}
-                sx={{
-                  fontFamily: 'Inter, sans-serif',
-                  fontWeight: 600,      // Inter SemiBold
-                  fontSize: '18px',     // 18px
-                  borderRadius: '10px', // Radio de borde 10px
-                  textTransform: 'none'
-                }}
-              >
-                Ver cómo funciona en detalle
-              </Button>
-            </Box>
-
-
-            <Box
-              component="img"
-              src="public/Home/contrato43.jpeg"
-              alt="Confianza y transparencia"
-              sx={{
-                width: '100%',
-                aspectRatio: '4/3', // Relación aproximada 4:3
-                borderRadius: '24px', // Bordes redondeados 24px
-                objectFit: 'cover',
-                display: 'block',
-                order: { xs: -1, md: 0 },
-              }}
-            />
-          </Box>
-        </Container>
+            Ver cómo funciona en detalle
+          </Button>
+        </Box>
       </Box>
 
-      <Box sx={{ py: 15, bgcolor: 'secondary.light' }}>
+      <Box
+        component="img"
+        src="public/Home/contrato43.jpeg"
+        alt="Confianza y transparencia"
+        sx={{
+          width: '100%',
+          height: { xs: 'auto', md: '100%' }, 
+          borderRadius: '24px', 
+          objectFit: 'cover',
+          display: 'block',
+          order: { xs: -1, md: 0 },
+        }}
+      />
+    </Box>
+  </Container>
+</Box>
+
+      <Box sx={{ py: { xs: 8, md: 14 }, bgcolor: 'secondary.light' }}>
         <Container maxWidth="lg">
-          <Box sx={{ textAlign: 'center', mb: { xs: 5, md: 8 }, maxWidth: 990, mx: 'auto' }}>
+          
             <Typography
-              fontWeight={700}
               color="text.primary"
-              fontSize={{ xs: '1.75rem', md: '3.25rem' }}
-              lineHeight={1.1}
-              sx={{ mb: 5 }}
+            textAlign="center"
+            fontWeight={700} // Inter Bold suele equivaler a fontWeight: 700
+            fontSize="3.25rem" // 52px
+            sx={{
+              mb: 3,
+              lineHeight: 1.1,
+              fontFamily: 'Inter, sans-serif' 
+            }}
             >
               De desarrolladores de suelo a{' '}
-              <Box component="span" sx={{ color: 'primary.main', display: 'block' }}>
+              <Box component="span" sx={{ color: 'primary.main', display: 'block',
+                fontFamily: 'Inter, sans-serif', lineHeight: 1.1, mb: 3}}>
                 infraestructura financiera inmobiliaria
               </Box>
             </Typography>
+            
             <Typography
-              variant="h6"
               color="text.secondary"
-              fontWeight={400}
-              maxWidth={950}
-              mx="auto"
-              lineHeight={1.7}
-              mb={10}
-              fontSize="1.375rem"
-              sx={{ ...justifyText }}
+            maxWidth={1400}
+            mx="auto"
+            sx={{
+              fontSize: '1.375rem',
+              lineHeight: 1.7,
+              textAlign: 'justify',
+              mb: 4
+            }}
             >
               Durante más de 15 años participamos en el desarrollo de suelo urbano, organizando grupos, gestionando
               procesos de urbanización y adjudicando lotes en proyectos concretos y verificables. Hoy transformamos esa
               experiencia en una plataforma tecnológica y fiduciaria que permite organizar el acceso progresivo a lotes
               y activos inmobiliarios de forma clara, ordenada y escalable.
             </Typography>
-          </Box>
+            
+        
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' }, gap: 5 }}>
             {metrics.map((stat, index) => (
               <Card
@@ -562,7 +569,7 @@ const Home: React.FC = () => {
       </Box>
 
       {/* DOS MODOS */}
-      <Box sx={{ py: 15, bgcolor: 'secondary.light' }}>
+      <Box sx={{ py: { xs: 8, md: 1 }, bgcolor: 'secondary.light' }}>
         <Container maxWidth="lg">
           <Typography
             textAlign="center"
@@ -708,7 +715,7 @@ const Home: React.FC = () => {
       </Box>
 
       {/* EVOLUCIÓN */}
-      <Box sx={{ py: '120px', bgcolor: 'secondary.light' }}>
+      <Box sx={{ py: { xs: 8, md: 10 }, bgcolor: 'secondary.light' }}>
         <Container maxWidth="lg">
           {/* Título Principal (H2) */}
           <Typography
