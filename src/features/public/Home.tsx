@@ -27,40 +27,28 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/core/context/AuthContext';
 import ScrollReveal from './components/ScrollReveal';
 
-
-// ─── Types ───────────────────────────────────────────────────────────────────
-
-type AllowedColors = 'primary' | 'secondary' | 'warning' | 'error';
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface ModeData {
   type: string;
   title: string;
-  textColor: string;
   subtitle: string;
+  description: string;
+  benefits: string[];
+  ctaLabel: string;
   icon: React.ElementType;
-  color: AllowedColors;
   cardBg: string;
   accentColor: string;
   iconBg: string;
   iconColor: string;
-  description: string;
-  benefits: string[];
-  ctaLabel: string;
+  imageSrc: string;
 }
 
-// ─── Constants ───────────────────────────────────────────────────────────────
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const ACCENT = '#CC6333';
 const ACCENT_DARK = '#A34D26';
 const ACCENT_BG = '#ECDDD5';
-
-const justifyText = { textAlign: { xs: 'left', md: 'justify' } } as const;
-
-const sectionTitle = {
-  fontWeight: 700,
-  fontFamily: 'Inter, sans-serif',
-  color: 'text.primary',
-} as const;
 
 const howItWorksSteps = [
   {
@@ -85,13 +73,6 @@ const twoModes: ModeData[] = [
     type: 'ahorrista',
     title: 'Modo Ahorrista',
     subtitle: 'Accedé al terreno para tu casa propia',
-    icon: HomeIcon,
-    color: 'primary',
-    accentColor: ACCENT,
-    iconBg: ACCENT_BG,
-    iconColor: ACCENT_DARK,
-    cardBg: '#ECECEC',
-    textColor: 'text.primary',
     description:
       'Cuando el crédito no alcanza, el ahorro organizado sí. En Loteplan das el primer paso hacia tu casa propia mediante cuotas planificadas, dentro de una plataforma fiduciaria colaborativa diseñada para acompañar durante todo el proceso.',
     benefits: [
@@ -101,18 +82,17 @@ const twoModes: ModeData[] = [
       'Alternativa real frente al crédito bancario limitado',
     ],
     ctaLabel: 'Da el primer paso para tu casa',
+    icon: HomeIcon,
+    cardBg: '#ECECEC',
+    accentColor: ACCENT,
+    iconBg: ACCENT_BG,
+    iconColor: ACCENT_DARK,
+    imageSrc: 'public/Home/Home1b_modoahorrista.jpg',
   },
   {
     type: 'inversionista',
     title: 'Modo Inversionista',
     subtitle: 'Participá en oportunidades respaldadas por tierra real',
-    icon: TrendingUp,
-    color: 'primary',
-    accentColor: ACCENT,
-    iconBg: ACCENT_BG,
-    iconColor: ACCENT_DARK,
-    cardBg: '#ECECEC',
-    textColor: 'text.primary',
     description:
       'En Modo Inversionista podés acceder a proyectos vinculados al desarrollo de tierra mediante estructuras transparentes y activos inmobiliarios reales.',
     benefits: [
@@ -123,6 +103,12 @@ const twoModes: ModeData[] = [
       'Administración fiduciaria',
     ],
     ctaLabel: 'Conocé oportunidades disponibles',
+    icon: TrendingUp,
+    cardBg: '#ECECEC',
+    accentColor: ACCENT,
+    iconBg: ACCENT_BG,
+    iconColor: ACCENT_DARK,
+    imageSrc: 'public/Home/Home2a_modoinversionista.jpg',
   },
 ];
 
@@ -166,13 +152,25 @@ const trustPoints = [
   'Operaciones registradas y trazables digitalmente',
 ];
 
+// ─── Shared style tokens ──────────────────────────────────────────────────────
 
+const sectionTitle = {
+  fontWeight: 700,
+  fontFamily: 'Inter, sans-serif',
+  color: 'text.primary',
+} as const;
+
+const justifyText = {
+  textAlign: { xs: 'left', md: 'justify' },
+} as const;
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 const Home: React.FC = () => {
   const theme = useTheme();
   const navigate = useNavigate();
-  const [hoveredMode, setHoveredMode] = useState<string | null>(null);
   const { isAuthenticated } = useAuth();
+  const [hoveredMode, setHoveredMode] = useState<string | null>(null);
 
   return (
     <Box sx={{ bgcolor: 'background.default', color: 'text.primary' }}>
@@ -204,12 +202,12 @@ const Home: React.FC = () => {
               display: 'flex',
               flexDirection: { xs: 'column', md: 'row' },
               alignItems: 'center',
-              gap: { xs: 5, md: 8 },
+              gap: { xs: 3, md: 8 },
             }}
           >
             {/* Hero copy */}
             <Box sx={{ flex: 1 }}>
-             <Typography
+              <Typography
                 variant="h2"
                 component="h1"
                 sx={{
@@ -227,11 +225,10 @@ const Home: React.FC = () => {
               </Typography>
 
               <Typography
-                variant="h6"
                 component="p"
                 sx={{
                   mb: 5,
-                  fontSize: { xs: '0.855rem', sm: '0.945rem', md: '1.125rem' },
+                  fontSize: { xs: '0.9rem', sm: '0.95rem', md: '1.125rem' },
                   color: alpha(theme.palette.common.white, 0.9),
                   fontWeight: 400,
                   maxWidth: 650,
@@ -301,21 +298,34 @@ const Home: React.FC = () => {
             </Box>
 
             {/* Hero image — desktop only */}
-            <Box sx={{ flex: 1, display: { xs: 'none', md: 'block' } }}>
-              <Box sx={{ transform: 'perspective(1000px) rotateY(-5deg)' }}>
-                <Box
-                  component="img"
-                  src="public/Home/Cómo funciona Inversionista_6.jpg"
-                  alt="Inversión inmobiliaria Loteplan"
-                  sx={{
-                    width: '115%',
-                    borderRadius: 4,
-                    boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
-                  }}
-                />
-              </Box>
-            </Box>
-          </Box>
+            <Box
+        sx={{
+          flex: 1,
+          width: '100%',
+          display: 'flex',
+          justifyContent: 'center',
+        }}
+      >
+        <Box
+          component="img"
+          src="public/Home/Cómo funciona Inversionista_6.jpg"
+          alt="Loteplan"
+          sx={{
+            width: '100%',
+            maxWidth: {
+              xs: 450,
+              md: 650,
+              lg: 700,
+            },
+            height: 'auto',
+            borderRadius: 4,
+            objectFit: 'cover',
+            boxShadow:
+              '0 25px 50px -12px rgba(0,0,0,0.25)',
+          }}
+        />
+      </Box>
+    </Box>
         </Container>
       </Box>
 
@@ -351,7 +361,7 @@ const Home: React.FC = () => {
             urbanización futura.
           </Typography>
 
-          {/* Step numbers — desktop connector line */}
+          {/* Step connector line — desktop only */}
           <Box sx={{ position: 'relative', mb: 4 }}>
             <Box
               aria-hidden
@@ -367,7 +377,11 @@ const Home: React.FC = () => {
               }}
             />
             <Box
-              sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 4 }}
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' },
+                gap: 4,
+              }}
             >
               {howItWorksSteps.map((step) => (
                 <Box key={step.step} sx={{ display: 'flex', justifyContent: 'center', zIndex: 1 }}>
@@ -483,7 +497,13 @@ const Home: React.FC = () => {
                 size="large"
                 endIcon={<ArrowForward />}
                 onClick={() => navigate(ROUTES.PUBLIC.COMO_FUNCIONA)}
-                sx={{ fontWeight: 600, fontSize: '18px', borderRadius: '10px', textTransform: 'none', alignSelf: 'flex-start' }}
+                sx={{
+                  fontWeight: 600,
+                  fontSize: { xs: '1rem', md: '18px' },
+                  borderRadius: '10px',
+                  textTransform: 'none',
+                  alignSelf: { xs: 'stretch', sm: 'flex-start' },
+                }}
               >
                 Ver cómo funciona en detalle
               </Button>
@@ -513,7 +533,7 @@ const Home: React.FC = () => {
             textAlign="center"
             sx={{
               ...sectionTitle,
-              fontSize: { xs: '2rem', md: '3.25rem' },
+              fontSize: { xs: '1.75rem', md: '3.25rem' },
               lineHeight: 1.1,
               mb: 3,
             }}
@@ -528,7 +548,12 @@ const Home: React.FC = () => {
             color="text.secondary"
             maxWidth={1400}
             mx="auto"
-            sx={{ fontSize: { xs: '1rem', md: '1.375rem' }, lineHeight: 1.7, ...justifyText, mb: { xs: 6, md: 4 } }}
+            sx={{
+              fontSize: { xs: '1rem', md: '1.375rem' },
+              lineHeight: 1.7,
+              ...justifyText,
+              mb: { xs: 6, md: 4 },
+            }}
           >
             Durante más de 15 años participamos en el desarrollo de suelo urbano, organizando grupos,
             gestionando procesos de urbanización y adjudicando lotes en proyectos concretos y verificables.
@@ -559,6 +584,7 @@ const Home: React.FC = () => {
                   <Typography
                     fontWeight={800}
                     color="primary.main"
+                    fontSize={{ xs: '2.25rem', md: stat.value.length > 5 ? '3.2rem' : '3.875rem' }}
                     sx={{
                       mb: 3,
                       display: 'flex',
@@ -567,7 +593,6 @@ const Home: React.FC = () => {
                       minHeight: { xs: '60px', md: '90px' },
                       whiteSpace: 'nowrap',
                     }}
-                    fontSize={{ xs: '2.25rem', md: stat.value.length > 5 ? '3.2rem' : '3.875rem' }}
                   >
                     {stat.value}
                   </Typography>
@@ -587,11 +612,16 @@ const Home: React.FC = () => {
       </Box>
 
       {/* ── DOS MODOS ── */}
-      <Box sx={{ py: { xs: 8, md: 1 }, bgcolor: 'secondary.light' }}>
+      <Box sx={{ py: { xs: 8, md: 10 }, bgcolor: 'secondary.light' }}>
         <Container maxWidth="lg">
           <Typography
             textAlign="center"
-            sx={{ ...sectionTitle, fontSize: { xs: '1.75rem', md: '3.25rem' }, lineHeight: 1.1, mb: '20px' }}
+            sx={{
+              ...sectionTitle,
+              fontSize: { xs: '1.75rem', md: '3.25rem' },
+              lineHeight: 1.1,
+              mb: '20px',
+            }}
           >
             Dos formas de participar
           </Typography>
@@ -619,11 +649,10 @@ const Home: React.FC = () => {
                   onMouseEnter={() => setHoveredMode(mode.type)}
                   onMouseLeave={() => setHoveredMode(null)}
                   sx={{
-                    height: { xs: 'auto', md: '100%' },
+                    height: '100%',
                     display: 'flex',
                     flexDirection: 'column',
                     bgcolor: mode.cardBg,
-                    color: mode.textColor,
                     border: mode.type === 'ahorrista'
                       ? `1px solid ${alpha(theme.palette.divider, 0.12)}`
                       : 'none',
@@ -636,13 +665,14 @@ const Home: React.FC = () => {
                 >
                   <Box
                     component="img"
-                    src={
-                      mode.type === 'ahorrista'
-                        ? 'public/Home/Home1b_modoahorrista.jpg'
-                        : 'public/Home/Home2a_modoinversionista.jpg'
-                    }
+                    src={mode.imageSrc}
                     alt={mode.title}
-                    sx={{ width: '100%', height: { xs: 220, md: 300 }, objectFit: 'cover', flexShrink: 0 }}
+                    sx={{
+                      width: '100%',
+                      height: { xs: 220, md: 300 },
+                      objectFit: 'cover',
+                      flexShrink: 0,
+                    }}
                   />
 
                   <CardContent
@@ -672,7 +702,6 @@ const Home: React.FC = () => {
                       </Box>
                       <Typography
                         fontWeight={700}
-                        color="inherit"
                         fontSize={{ xs: '1.5rem', md: '2.25rem' }}
                         lineHeight={1.2}
                       >
@@ -681,8 +710,8 @@ const Home: React.FC = () => {
                     </Stack>
 
                     <Typography
-                      fontSize={{ xs: '1rem', md: '1.375rem' }}
                       fontWeight={600}
+                      fontSize={{ xs: '1rem', md: '1.375rem' }}
                       sx={{ color: mode.accentColor, mb: '28px' }}
                     >
                       {mode.subtitle}
@@ -699,7 +728,10 @@ const Home: React.FC = () => {
                     <Stack spacing="18px" sx={{ mb: '40px', flexGrow: 1 }}>
                       {mode.benefits.map((benefit) => (
                         <Stack key={benefit} direction="row" spacing={1.5} alignItems="flex-start">
-                          <CheckCircle fontSize="small" sx={{ color: mode.accentColor, mt: 0.2, flexShrink: 0 }} />
+                          <CheckCircle
+                            fontSize="small"
+                            sx={{ color: mode.accentColor, mt: 0.2, flexShrink: 0 }}
+                          />
                           <Typography
                             fontWeight={500}
                             fontSize={{ xs: '0.95rem', md: '1.125rem' }}
@@ -757,9 +789,9 @@ const Home: React.FC = () => {
             color="text.secondary"
             maxWidth="900px"
             mx="auto"
+            textAlign="center"
             lineHeight={1.7}
             fontSize={{ xs: '1rem', md: '22px' }}
-            textAlign="center"
             sx={{ mb: { xs: 6, md: '80px' } }}
           >
             Loteplan es una estructura jurídica y tecnológica replicable que permite organizar capital
@@ -770,8 +802,7 @@ const Home: React.FC = () => {
             sx={{
               display: 'grid',
               gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
-              gap: { xs: 3, md: 5 },
-              alignItems: 'stretch',
+              gap: { xs: 4, md: 5 },
             }}
           >
             {trustFeatures.map((feature, index) => (
@@ -781,8 +812,8 @@ const Home: React.FC = () => {
                     sx={{
                       bgcolor: alpha(theme.palette.primary.main, 0.1),
                       color: 'primary.main',
-                      width: { xs: 80, md: 80 },
-                      height: { xs: 80, md: 80 },
+                      width: 80,
+                      height: 80,
                       flexShrink: 0,
                     }}
                   >

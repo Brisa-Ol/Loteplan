@@ -74,7 +74,7 @@ const Footer: React.FC = () => {
           </Box>
 
           {/* Sobre nosotros */}
-          <Box sx={{ maxWidth: '520px' }}>
+          <Box sx={{ maxWidth: '510px' }}>
             <Typography sx={colLabelStyle}>Sobre nosotros</Typography>
             <Typography 
               sx={{ 
@@ -91,7 +91,7 @@ const Footer: React.FC = () => {
           </Box>
 
           {/* Contacto */}
-          <Box sx={{ ml: '40px' }}>
+          <Box sx={{ ml: '30px' }}>
             <Typography sx={colLabelStyle}>Contacto</Typography>
             <Typography 
               sx={{ 
