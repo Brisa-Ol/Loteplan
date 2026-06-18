@@ -21,10 +21,12 @@ import {
   Typography,
   useTheme,
 } from '@mui/material';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { useAuth } from '@/core/context/AuthContext';
+import ScrollReveal from './components/ScrollReveal';
+
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -164,63 +166,7 @@ const trustPoints = [
   'Operaciones registradas y trazables digitalmente',
 ];
 
-// ─── Scroll reveal (fade + slide-up on enter viewport) ────────────────────────
 
-interface ScrollRevealProps {
-  children: React.ReactNode;
-  /** delay in ms, useful to "stagger" items inside the same grid/list */
-  delay?: number;
-  /** 0 to 1, how much of the element must be visible to trigger the animation */
-  threshold?: number;
-}
-
-const ScrollReveal: React.FC<ScrollRevealProps> = ({ children, delay = 0, threshold = 0.15 }) => {
-  const ref = useRef<HTMLDivElement | null>(null);
-  const [isVisible, setIsVisible] = useState(false);
-
-  useEffect(() => {
-    const node = ref.current;
-    if (!node) return;
-
-    // If IntersectionObserver isn't available for some reason, just show the content.
-    if (typeof IntersectionObserver === 'undefined') {
-      setIsVisible(true);
-      return;
-    }
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsVisible(true);
-          observer.disconnect(); // animate once, don't re-trigger on every scroll
-        }
-      },
-      { threshold, rootMargin: '0px 0px -60px 0px' },
-    );
-
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [threshold]);
-
-  return (
-    <Box
-      ref={ref}
-      sx={{
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        opacity: isVisible ? 1 : 0,
-        transform: isVisible ? 'translateY(0)' : 'translateY(28px)',
-        transition: `opacity 0.7s ease-out ${delay}ms, transform 0.7s ease-out ${delay}ms`,
-        willChange: 'opacity, transform',
-      }}
-    >
-      {children}
-    </Box>
-  );
-};
-
-// ─── Component ───────────────────────────────────────────────────────────────
 
 const Home: React.FC = () => {
   const theme = useTheme();
