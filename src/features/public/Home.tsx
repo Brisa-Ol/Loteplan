@@ -209,14 +209,14 @@ const Home: React.FC = () => {
           >
             {/* Hero copy */}
             <Box sx={{ flex: 1 }}>
-              <Typography
+             <Typography
                 variant="h2"
                 component="h1"
                 sx={{
                   mb: 3,
                   fontWeight: 800,
                   lineHeight: 1.15,
-                  fontSize: { xs: '1.75rem', sm: '2.25rem', md: '3rem' },
+                  fontSize: { xs: '1.575rem', sm: '2.025rem', md: '2.7rem' },
                 }}
               >
                 Accedé a tu lote urbanizado{' '}
@@ -231,7 +231,7 @@ const Home: React.FC = () => {
                 component="p"
                 sx={{
                   mb: 5,
-                  fontSize: { xs: '0.95rem', sm: '1.05rem', md: '1.25rem' },
+                  fontSize: { xs: '0.855rem', sm: '0.945rem', md: '1.125rem' },
                   color: alpha(theme.palette.common.white, 0.9),
                   fontWeight: 400,
                   maxWidth: 650,
@@ -308,7 +308,7 @@ const Home: React.FC = () => {
                   src="public/Home/Cómo funciona Inversionista_6.jpg"
                   alt="Inversión inmobiliaria Loteplan"
                   sx={{
-                    width: '100%',
+                    width: '115%',
                     borderRadius: 4,
                     boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
                   }}
@@ -341,7 +341,7 @@ const Home: React.FC = () => {
             color="text.secondary"
             maxWidth={1400}
             mx="auto"
-            sx={{ fontSize: { xs: '1rem', md: '1.375rem' }, lineHeight: 1.7, ...justifyText, mb: 4 }}
+            sx={{ fontSize: { xs: '1rem', md: '1.375rem' }, lineHeight: 1.7, ...justifyText, mb: 6 }}
           >
             <Box component="strong" sx={{ fontWeight: 700 }}>
               Somos un sistema estructurado pensado para ser el primer paso hacia tu casa. Organizamos
@@ -449,7 +449,7 @@ const Home: React.FC = () => {
               <Typography
                 sx={{
                   ...sectionTitle,
-                  fontSize: { xs: '1.75rem', md: '2.75rem' },
+                  fontSize: { xs: '1.925rem', md: '3.025rem' },
                   lineHeight: 1.15,
                   mb: '32px',
                 }}
@@ -465,7 +465,7 @@ const Home: React.FC = () => {
                 {trustPoints.map((item, index) => (
                   <ScrollReveal key={item} delay={index * 100}>
                     <Stack direction="row" spacing={1.6} alignItems="center">
-                      <CheckCircle sx={{ color: 'primary.main', fontSize: '24px', flexShrink: 0 }} />
+                      <CheckCircle sx={{ color: 'primary.main', fontSize: '39px', flexShrink: 0 }} />
                       <Typography
                         color="text.secondary"
                         fontSize={{ xs: '1rem', md: '1.25rem' }}
@@ -560,7 +560,7 @@ const Home: React.FC = () => {
                     fontWeight={800}
                     color="primary.main"
                     sx={{
-                      mb: 4,
+                      mb: 3,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -781,12 +781,12 @@ const Home: React.FC = () => {
                     sx={{
                       bgcolor: alpha(theme.palette.primary.main, 0.1),
                       color: 'primary.main',
-                      width: { xs: 52, md: 64 },
-                      height: { xs: 52, md: 64 },
+                      width: { xs: 80, md: 80 },
+                      height: { xs: 80, md: 80 },
                       flexShrink: 0,
                     }}
                   >
-                    <feature.icon sx={{ fontSize: { xs: 24, md: 28 } }} />
+                    <feature.icon sx={{ fontSize: { xs: 40, md: 45 } }} />
                   </Avatar>
                   <Box>
                     <Typography

@@ -46,13 +46,13 @@ const Footer: React.FC = () => {
     >
       <Container maxWidth={false} sx={{ maxWidth: '1200px', px: 3 }}>
 
-        {/* Columnas principales */}
+       {/* Columnas principales */}
         <Box
           sx={{
             display: 'grid',
-            // Distribución: ~22%, ~38%, ~30% con gaps específicos
-            gridTemplateColumns: { md: '0.22fr 0.38fr 0.30fr' },
-            columnGap: { md: '100px' }, // Separación columnas 2 y 3: 100px
+            // Distribución: Sobre nosotros más ancha
+            gridTemplateColumns: { md: '0.20fr 0.46fr 0.34fr' },
+            columnGap: { md: '100px' }, // Separación base entre columnas
             mb: '80px',
           }}
         >
@@ -74,12 +74,12 @@ const Footer: React.FC = () => {
           </Box>
 
           {/* Sobre nosotros */}
-          <Box sx={{ maxWidth: '450px' }}>
+          <Box sx={{ maxWidth: '520px' }}>
             <Typography sx={colLabelStyle}>Sobre nosotros</Typography>
             <Typography 
               sx={{ 
                 fontSize: '18px', 
-                lineHeight: 1.8, // 180%
+                lineHeight: 1.8,
                 color: 'text.secondary',
                 fontFamily: 'Inter, sans-serif'
               }}
@@ -91,7 +91,7 @@ const Footer: React.FC = () => {
           </Box>
 
           {/* Contacto */}
-          <Box>
+          <Box sx={{ ml: '40px' }}>
             <Typography sx={colLabelStyle}>Contacto</Typography>
             <Typography 
               sx={{ 
