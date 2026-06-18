@@ -182,7 +182,7 @@ const Home: React.FC = () => {
           color: 'primary.contrastText',
           position: 'relative',
           overflow: 'hidden',
-          py: { xs: 8, md: 11 },
+          py: { xs: 8, md: 12 }, // Ligeramente más padding para acomodar la imagen más grande
         }}
       >
         {/* Decorative background pattern */}
@@ -191,7 +191,7 @@ const Home: React.FC = () => {
           sx={{
             position: 'absolute',
             inset: 0,
-            opacity: 0.1,
+            opacity: 0.1, // OPACIDAD REDUCIDA PARA MENOS RUIDO VISUAL
             backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
           }}
         />
@@ -202,7 +202,7 @@ const Home: React.FC = () => {
               display: 'flex',
               flexDirection: { xs: 'column', md: 'row' },
               alignItems: 'center',
-              gap: { xs: 3, md: 8 },
+              gap: { xs: 4, md: 8 },
             }}
           >
             {/* Hero copy */}
@@ -214,11 +214,11 @@ const Home: React.FC = () => {
                   mb: 3,
                   fontWeight: 800,
                   lineHeight: 1.15,
-                  fontSize: { xs: '1.575rem', sm: '2.025rem', md: '2.7rem' },
+                  maxWidth: 550,                   
+                  fontSize: { xs: '1.4rem', sm: '1.75rem', md: '2.2rem' },
                 }}
               >
                 Accedé a tu lote urbanizado{' '}
-                <Box component="br" sx={{ display: { xs: 'none', sm: 'block' } }} />
                 <Box component="span" sx={{ color: alpha(theme.palette.common.white, 0.8) }}>
                   sin depender del crédito bancario
                 </Box>
@@ -228,11 +228,12 @@ const Home: React.FC = () => {
                 component="p"
                 sx={{
                   mb: 5,
-                  fontSize: { xs: '0.9rem', sm: '0.95rem', md: '1.125rem' },
-                  color: alpha(theme.palette.common.white, 0.9),
-                  fontWeight: 400,
-                  maxWidth: 650,
-                  lineHeight: 1.8,
+                  // TAMAÑO DE TEXTO REDUCIDO
+                  fontSize: { xs: '0.85rem', sm: '0.9rem', md: '1rem' },
+                  color: 'common.white', // BLANCO SÓLIDO PARA MEJOR LECTURA
+                  fontWeight: 500, // PESO AUMENTADO PARA LEGIBILIDAD
+                  maxWidth: 550,
+                  lineHeight: 1.7,
                   ...justifyText,
                 }}
               >
@@ -283,6 +284,7 @@ const Home: React.FC = () => {
                         borderColor: 'common.white',
                         color: 'common.white',
                         fontWeight: 600,
+                        borderWidth: '2px', // BORDE GRUESO POR DEFECTO
                         '&:hover': {
                           borderColor: 'common.white',
                           bgcolor: alpha(theme.palette.common.white, 0.1),
@@ -297,35 +299,36 @@ const Home: React.FC = () => {
               </Stack>
             </Box>
 
-            {/* Hero image — desktop only */}
+            {/* Hero image — Más grande pero responsiva */}
             <Box
-        sx={{
-          flex: 1,
-          width: '100%',
-          display: 'flex',
-          justifyContent: 'center',
-        }}
-      >
-        <Box
-          component="img"
-          src="public/Home/Cómo funciona Inversionista_6.jpg"
-          alt="Loteplan"
-          sx={{
-            width: '100%',
-            maxWidth: {
-              xs: 450,
-              md: 650,
-              lg: 700,
-            },
-            height: 'auto',
-            borderRadius: 4,
-            objectFit: 'cover',
-            boxShadow:
-              '0 25px 50px -12px rgba(0,0,0,0.25)',
-          }}
-        />
-      </Box>
-    </Box>
+              sx={{
+                flex: { xs: 1, md: 1.2 }, // TOMA MÁS ESPACIO EN ESCRITORIO
+                width: '100%',
+                display: 'flex',
+                justifyContent: { xs: 'center', md: 'flex-end' },
+              }}
+            >
+              <Box
+                component="img"
+                
+                src="public/Home/Cómo funciona Inversionista_6.jpg"
+                alt="Loteplan"
+                sx={{
+                  width: '100%',
+                  maxWidth: {
+                    xs: '100%',
+                    sm: 550,
+                    md: 700,
+                    lg: 850, // MÁXIMO ANCHO INCREMENTADO
+                  },
+                  height: 'auto', // MANTIENE LA PROPORCIÓN (RESPONSIVE)
+                  borderRadius: 4,
+                  objectFit: 'cover',
+                  boxShadow: '0 25px 50px -12px rgba(0,0,0,0.35)', // Sombra ligeramente más fuerte
+                }}
+              />
+            </Box>
+          </Box>
         </Container>
       </Box>
 
