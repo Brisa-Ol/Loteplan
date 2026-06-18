@@ -619,7 +619,7 @@ const Home: React.FC = () => {
                   onMouseEnter={() => setHoveredMode(mode.type)}
                   onMouseLeave={() => setHoveredMode(null)}
                   sx={{
-                    minHeight: { xs: 'auto', md: 680 },
+                    height: { xs: 'auto', md: '100%' },
                     display: 'flex',
                     flexDirection: 'column',
                     bgcolor: mode.cardBg,
@@ -770,7 +770,8 @@ const Home: React.FC = () => {
             sx={{
               display: 'grid',
               gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
-              gap: { xs: 5, md: '60px 100px' },
+              gap: { xs: 3, md: 5 },
+              alignItems: 'stretch',
             }}
           >
             {trustFeatures.map((feature, index) => (
