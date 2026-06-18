@@ -612,7 +612,7 @@ const Home: React.FC = () => {
       </Box>
 
       {/* ── DOS MODOS ── */}
-      <Box sx={{ py: { xs: 8, md: 10 }, bgcolor: 'secondary.light' }}>
+      <Box sx={{ py: { xs: 8, md: 1 }, bgcolor: 'secondary.light' }}>
         <Container maxWidth="lg">
           <Typography
             textAlign="center"
