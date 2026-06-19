@@ -182,7 +182,7 @@ const Home: React.FC = () => {
           color: 'primary.contrastText',
           position: 'relative',
           overflow: 'hidden',
-          py: { xs: 8, md: 11 },
+          py: { xs: 7, sm: 9, md: 11 },
         }}
       >
         {/* Decorative background pattern */}
@@ -202,19 +202,19 @@ const Home: React.FC = () => {
               display: 'flex',
               flexDirection: { xs: 'column', md: 'row' },
               alignItems: 'center',
-              gap: { xs: 3, md: 8 },
+              gap: { xs: 4, sm: 5, md: 8 },
             }}
           >
             {/* Hero copy */}
-            <Box sx={{ flex: 1 }}>
+            <Box sx={{ flex: 1, width: '100%' }}>
               <Typography
                 variant="h2"
                 component="h1"
                 sx={{
-                  mb: 3,
+                  mb: { xs: 2.5, md: 3 },
                   fontWeight: 800,
                   lineHeight: 1.15,
-                  fontSize: { xs: '1.9rem', sm: '2.4rem', md: '3.1rem' },
+                  fontSize: { xs: '1.75rem', sm: '2.2rem', md: '3.1rem' },
                 }}
               >
                 Accedé a tu lote urbanizado{' '}
@@ -227,7 +227,7 @@ const Home: React.FC = () => {
               <Typography
                 component="p"
                 sx={{
-                  mb: 5,
+                  mb: { xs: 4, md: 5 },
                   fontSize: { xs: '0.9rem', sm: '0.95rem', md: '1.125rem' },
                   color: alpha(theme.palette.common.white, 0.9),
                   fontWeight: 400,
@@ -241,7 +241,11 @@ const Home: React.FC = () => {
                 con trazabilidad digital en cada etapa del proceso.
               </Typography>
 
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+              <Stack
+                direction={{ xs: 'column', sm: 'row' }}
+                spacing={{ xs: 1.5, sm: 2 }}
+                sx={{ width: { xs: '100%', sm: 'auto' } }}
+              >
                 {isAuthenticated ? (
                   <Button
                     variant="contained"
@@ -269,6 +273,7 @@ const Home: React.FC = () => {
                         bgcolor: 'common.white',
                         color: 'primary.main',
                         fontWeight: 600,
+                        width: { xs: '100%', sm: 'auto' },
                         '&:hover': { bgcolor: alpha(theme.palette.common.white, 0.9) },
                       }}
                     >
@@ -283,6 +288,7 @@ const Home: React.FC = () => {
                         borderColor: 'common.white',
                         color: 'common.white',
                         fontWeight: 600,
+                        width: { xs: '100%', sm: 'auto' },
                         '&:hover': {
                           borderColor: 'common.white',
                           bgcolor: alpha(theme.palette.common.white, 0.1),
@@ -298,22 +304,24 @@ const Home: React.FC = () => {
             </Box>
 
             {/* Hero image — desktop only */}
-            <Box sx={{ flex: 1, display: { xs: 'none', md: 'block' } }}>
+            <Box sx={{ flex: 1, display: { xs: 'none', md: 'block' }, minWidth: 0 }}>
               <Box sx={{ transform: 'perspective(1000px) rotateY(-5deg)' }}>
                 <Box
                   component="img"
                   src="public/Home/Cómo funciona Inversionista_6.jpg"
                   alt="Inversión inmobiliaria Loteplan"
                   sx={{
-                    width: '115%',
+                    width: '100%',
+                    maxWidth: '110%',
                     borderRadius: 4,
                     boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
+                    display: 'block',
                   }}
                 />
               </Box>
             </Box>
 
-            {/* Hero image — mobile only */}
+            {/* Hero image — mobile/tablet only */}
             <Box
               component="img"
               src="public/Home/Cómo funciona Inversionista_6.jpg"
@@ -321,7 +329,7 @@ const Home: React.FC = () => {
               sx={{
                 display: { xs: 'block', md: 'none' },
                 width: '100%',
-                maxHeight: 220,
+                maxHeight: { xs: 200, sm: 260 },
                 objectFit: 'cover',
                 borderRadius: 3,
                 boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
@@ -332,13 +340,13 @@ const Home: React.FC = () => {
       </Box>
 
       {/* ── QUÉ ES LOTEPLAN ── */}
-      <Box sx={{ py: { xs: 8, md: 14 }, bgcolor: 'secondary.light' }}>
+      <Box sx={{ py: { xs: 7, sm: 9, md: 14 }, bgcolor: 'secondary.light' }}>
         <Container maxWidth="lg">
           <Typography
             textAlign="center"
             sx={{
               ...sectionTitle,
-              fontSize: { xs: '2rem', md: '2.75rem' },
+              fontSize: { xs: '1.75rem', sm: '2.25rem', md: '2.75rem' },
               lineHeight: 1.2,
               mb: 3,
             }}
@@ -353,7 +361,12 @@ const Home: React.FC = () => {
             color="text.secondary"
             maxWidth={1400}
             mx="auto"
-            sx={{ fontSize: { xs: '1rem', md: '1.375rem' }, lineHeight: 1.7, ...justifyText, mb: 6 }}
+            sx={{
+              fontSize: { xs: '0.95rem', sm: '1.0625rem', md: '1.375rem' },
+              lineHeight: 1.7,
+              ...justifyText,
+              mb: { xs: 5, md: 6 },
+            }}
           >
             <Box component="strong" sx={{ fontWeight: 700 }}>
               Somos un sistema estructurado pensado para ser el primer paso hacia tu casa. Organizamos
@@ -364,7 +377,7 @@ const Home: React.FC = () => {
           </Typography>
 
           {/* Step connector line — desktop only */}
-          <Box sx={{ position: 'relative', mb: 4 }}>
+          <Box sx={{ position: 'relative', mb: { xs: 0, md: 4 } }}>
             <Box
               aria-hidden
               sx={{
@@ -378,10 +391,11 @@ const Home: React.FC = () => {
                 display: { xs: 'none', md: 'block' },
               }}
             />
+            {/* Step number bubbles — desktop only */}
             <Box
               sx={{
-                display: 'grid',
-                gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' },
+                display: { xs: 'none', md: 'grid' },
+                gridTemplateColumns: 'repeat(3, 1fr)',
                 gap: 4,
               }}
             >
@@ -394,7 +408,7 @@ const Home: React.FC = () => {
                       borderRadius: '50%',
                       bgcolor: ACCENT,
                       color: 'white',
-                      display: { xs: 'none', md: 'flex' },
+                      display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       fontWeight: 800,
@@ -413,7 +427,8 @@ const Home: React.FC = () => {
             sx={{
               display: 'grid',
               gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' },
-              gap: { xs: 3, md: 7 },
+              gap: { xs: 3, sm: 3, md: 7 },
+              mt: { xs: 0, md: 0 },
             }}
           >
             {howItWorksSteps.map((step, index) => (
@@ -425,20 +440,26 @@ const Home: React.FC = () => {
                     borderRadius: 4,
                     overflow: 'hidden',
                     bgcolor: 'background.paper',
+                    height: '100%',
                   }}
                 >
                   <Box
                     component="img"
                     src={step.image}
                     alt={step.description}
-                    sx={{ width: '100%', height: { xs: 180, md: 190 }, objectFit: 'cover' }}
+                    sx={{
+                      width: '100%',
+                      height: { xs: 180, sm: 200, md: 190 },
+                      objectFit: 'cover',
+                      display: 'block',
+                    }}
                   />
                   <CardContent sx={{ p: { xs: 2.5, md: 3 } }}>
                     <Typography
                       color="text.secondary"
                       lineHeight={1.6}
                       fontWeight={400}
-                      fontSize={{ xs: '0.9rem', md: '1.25rem' }}
+                      fontSize={{ xs: '0.9rem', sm: '1rem', md: '1.25rem' }}
                     >
                       {step.description}
                     </Typography>
@@ -451,13 +472,13 @@ const Home: React.FC = () => {
       </Box>
 
       {/* ── MODELO FIDUCIARIO ── */}
-      <Box sx={{ py: { xs: 8, md: '60px' }, bgcolor: 'background.paper' }}>
+      <Box sx={{ py: { xs: 7, sm: 9, md: '80px' }, bgcolor: 'background.paper' }}>
         <Container maxWidth="lg">
           <Box
             sx={{
               display: 'grid',
               gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
-              gap: { xs: 4, md: '80px' },
+              gap: { xs: 4, sm: 5, md: '80px' },
               alignItems: 'stretch',
             }}
           >
@@ -465,9 +486,9 @@ const Home: React.FC = () => {
               <Typography
                 sx={{
                   ...sectionTitle,
-                  fontSize: { xs: '1.925rem', md: '3.025rem' },
+                  fontSize: { xs: '1.625rem', sm: '2rem', md: '3.025rem' },
                   lineHeight: 1.15,
-                  mb: '32px',
+                  mb: { xs: 3, md: '32px' },
                 }}
               >
                 Un modelo fiduciario que{' '}
@@ -477,14 +498,20 @@ const Home: React.FC = () => {
                 en cada etapa
               </Typography>
 
-              <Stack spacing="20px" sx={{ mb: '32px' }}>
+              <Stack spacing={{ xs: 2, md: '20px' }} sx={{ mb: { xs: 3, md: '32px' } }}>
                 {trustPoints.map((item, index) => (
                   <ScrollReveal key={item} delay={index * 100}>
                     <Stack direction="row" spacing={1.6} alignItems="center">
-                      <CheckCircle sx={{ color: 'primary.main', fontSize: '39px', flexShrink: 0 }} />
+                      <CheckCircle
+                        sx={{
+                          color: 'primary.main',
+                          fontSize: { xs: '28px', md: '39px' },
+                          flexShrink: 0,
+                        }}
+                      />
                       <Typography
                         color="text.secondary"
-                        fontSize={{ xs: '1rem', md: '1.25rem' }}
+                        fontSize={{ xs: '0.925rem', sm: '1rem', md: '1.25rem' }}
                         lineHeight={1.7}
                       >
                         {item}
@@ -501,7 +528,7 @@ const Home: React.FC = () => {
                 onClick={() => navigate(ROUTES.PUBLIC.COMO_FUNCIONA)}
                 sx={{
                   fontWeight: 600,
-                  fontSize: { xs: '1rem', md: '18px' },
+                  fontSize: { xs: '0.925rem', sm: '1rem', md: '18px' },
                   borderRadius: '10px',
                   textTransform: 'none',
                   alignSelf: { xs: 'stretch', sm: 'flex-start' },
@@ -517,7 +544,8 @@ const Home: React.FC = () => {
               alt="Confianza y transparencia"
               sx={{
                 width: '100%',
-                height: { xs: 280, md: '100%' },
+                height: { xs: 240, sm: 300, md: '100%' },
+                minHeight: { md: 400 },
                 borderRadius: '24px',
                 objectFit: 'cover',
                 display: 'block',
@@ -529,19 +557,19 @@ const Home: React.FC = () => {
       </Box>
 
       {/* ── DE DESARROLLADORES A INFRAESTRUCTURA ── */}
-      <Box sx={{ py: { xs: 8, md: 14 }, bgcolor: 'secondary.light' }}>
+      <Box sx={{ py: { xs: 7, sm: 9, md: 14 }, bgcolor: 'secondary.light' }}>
         <Container maxWidth="lg">
           <Typography
             textAlign="center"
             sx={{
               ...sectionTitle,
-              fontSize: { xs: '1.75rem', md: '3.25rem' },
+              fontSize: { xs: '1.625rem', sm: '2rem', md: '3.25rem' },
               lineHeight: 1.1,
               mb: 3,
             }}
           >
             De desarrolladores de suelo a{' '}
-            <Box component="span" sx={{ color: 'primary.main', display: 'block' }}>
+            <Box component="span" sx={{ color: 'primary.main', display: { xs: 'inline', sm: 'block' } }}>
               infraestructura financiera inmobiliaria
             </Box>
           </Typography>
@@ -551,10 +579,10 @@ const Home: React.FC = () => {
             maxWidth={1400}
             mx="auto"
             sx={{
-              fontSize: { xs: '1rem', md: '1.375rem' },
+              fontSize: { xs: '0.95rem', sm: '1rem', md: '1.375rem' },
               lineHeight: 1.7,
               ...justifyText,
-              mb: { xs: 6, md: 4 },
+              mb: { xs: 5, md: 4 },
             }}
           >
             Durante más de 15 años participamos en el desarrollo de suelo urbano, organizando grupos,
@@ -568,7 +596,7 @@ const Home: React.FC = () => {
             sx={{
               display: 'grid',
               gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
-              gap: { xs: 3, md: 5 },
+              gap: { xs: 3, sm: 3, md: 5 },
             }}
           >
             {metrics.map((stat, index) => (
@@ -576,24 +604,33 @@ const Home: React.FC = () => {
                 <Card
                   elevation={0}
                   sx={{
-                    p: { xs: 3, md: 5 },
+                    p: { xs: 3, sm: 3.5, md: 5 },
                     textAlign: 'center',
                     borderRadius: '24px',
                     border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
                     boxShadow: `0 4px 20px ${alpha(theme.palette.common.black, 0.05)}`,
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                   }}
                 >
                   <Typography
                     fontWeight={800}
                     color="primary.main"
-                    fontSize={{ xs: '2.25rem', md: stat.value.length > 5 ? '3.2rem' : '3.875rem' }}
                     sx={{
-                      mb: 3,
+                      mb: { xs: 2, md: 3 },
+                      fontSize: {
+                        xs: '2rem',
+                        sm: stat.value.length > 5 ? '1.875rem' : '2.25rem',
+                        md: stat.value.length > 5 ? '3.2rem' : '3.875rem',
+                      },
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      minHeight: { xs: '60px', md: '90px' },
-                      whiteSpace: 'nowrap',
+                      minHeight: { xs: 'unset', md: '90px' },
+                      lineHeight: 1.1,
                     }}
                   >
                     {stat.value}
@@ -601,7 +638,7 @@ const Home: React.FC = () => {
                   <Typography
                     color="text.secondary"
                     fontWeight={500}
-                    fontSize={{ xs: '1rem', md: '1.375rem' }}
+                    fontSize={{ xs: '0.9rem', sm: '0.95rem', md: '1.375rem' }}
                     lineHeight={1.5}
                   >
                     {stat.label}
@@ -614,15 +651,15 @@ const Home: React.FC = () => {
       </Box>
 
       {/* ── DOS MODOS ── */}
-      <Box sx={{ py: { xs: 8, md: 1 }, bgcolor: 'secondary.light' }}>
+      <Box sx={{ py: { xs: 7, sm: 9, md: 1 }, bgcolor: 'secondary.light' }}>
         <Container maxWidth="lg">
           <Typography
             textAlign="center"
             sx={{
               ...sectionTitle,
-              fontSize: { xs: '1.75rem', md: '3.25rem' },
+              fontSize: { xs: '1.75rem', sm: '2.25rem', md: '3.25rem' },
               lineHeight: 1.1,
-              mb: '20px',
+              mb: { xs: 1.5, md: '20px' },
             }}
           >
             Dos formas de participar
@@ -632,8 +669,8 @@ const Home: React.FC = () => {
             color="text.secondary"
             fontWeight={400}
             lineHeight={1.5}
-            fontSize={{ xs: '1rem', md: '1.375rem' }}
-            sx={{ mb: { xs: 5, md: '60px' } }}
+            fontSize={{ xs: '0.95rem', sm: '1rem', md: '1.375rem' }}
+            sx={{ mb: { xs: 4, sm: 5, md: '60px' } }}
           >
             Elegí el modo que mejor se adapte a tus objetivos
           </Typography>
@@ -642,7 +679,7 @@ const Home: React.FC = () => {
             sx={{
               display: 'grid',
               gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
-              gap: { xs: 3, md: 5 },
+              gap: { xs: 3, sm: 4, md: 5 },
             }}
           >
             {[...twoModes].reverse().map((mode, index) => (
@@ -671,27 +708,28 @@ const Home: React.FC = () => {
                     alt={mode.title}
                     sx={{
                       width: '100%',
-                      height: { xs: 220, md: 300 },
+                      height: { xs: 200, sm: 240, md: 300 },
                       objectFit: 'cover',
                       flexShrink: 0,
+                      display: 'block',
                     }}
                   />
 
                   <CardContent
                     sx={{
-                      pt: { xs: 3, md: '30px' },
-                      pb: { xs: 4, md: '40px' },
-                      px: { xs: 3, md: '40px' },
+                      pt: { xs: 2.5, md: '30px' },
+                      pb: { xs: 3.5, md: '40px' },
+                      px: { xs: 2.5, sm: 3, md: '40px' },
                       display: 'flex',
                       flexDirection: 'column',
                       flexGrow: 1,
                     }}
                   >
-                    <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: '12px' }}>
+                    <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: { xs: 1, md: '12px' } }}>
                       <Box
                         sx={{
-                          width: 48,
-                          height: 48,
+                          width: { xs: 40, md: 48 },
+                          height: { xs: 40, md: 48 },
                           bgcolor: mode.iconBg,
                           borderRadius: 2,
                           display: 'flex',
@@ -700,11 +738,11 @@ const Home: React.FC = () => {
                           flexShrink: 0,
                         }}
                       >
-                        <mode.icon sx={{ fontSize: 26, color: mode.iconColor }} />
+                        <mode.icon sx={{ fontSize: { xs: 22, md: 26 }, color: mode.iconColor }} />
                       </Box>
                       <Typography
                         fontWeight={700}
-                        fontSize={{ xs: '1.5rem', md: '2.25rem' }}
+                        fontSize={{ xs: '1.25rem', sm: '1.5rem', md: '2.25rem' }}
                         lineHeight={1.2}
                       >
                         {mode.title}
@@ -713,30 +751,34 @@ const Home: React.FC = () => {
 
                     <Typography
                       fontWeight={600}
-                      fontSize={{ xs: '1rem', md: '1.375rem' }}
-                      sx={{ color: mode.accentColor, mb: '28px' }}
+                      fontSize={{ xs: '0.925rem', sm: '1rem', md: '1.375rem' }}
+                      sx={{ color: mode.accentColor, mb: { xs: 2, md: '28px' } }}
                     >
                       {mode.subtitle}
                     </Typography>
 
                     <Typography
-                      fontSize={{ xs: '0.95rem', md: '1.125rem' }}
+                      fontSize={{ xs: '0.9rem', sm: '0.95rem', md: '1.125rem' }}
                       fontWeight={400}
-                      sx={{ mb: '32px', lineHeight: 1.7, ...justifyText }}
+                      sx={{ mb: { xs: 2.5, md: '32px' }, lineHeight: 1.7, ...justifyText }}
                     >
                       {mode.description}
                     </Typography>
 
-                    <Stack spacing="18px" sx={{ mb: '40px', flexGrow: 1 }}>
+                    <Stack spacing={{ xs: 1.5, md: '18px' }} sx={{ mb: { xs: 3, md: '40px' }, flexGrow: 1 }}>
                       {mode.benefits.map((benefit) => (
                         <Stack key={benefit} direction="row" spacing={1.5} alignItems="flex-start">
                           <CheckCircle
-                            fontSize="small"
-                            sx={{ color: mode.accentColor, mt: 0.2, flexShrink: 0 }}
+                            sx={{
+                              fontSize: { xs: '1rem', md: 'small' },
+                              color: mode.accentColor,
+                              mt: 0.25,
+                              flexShrink: 0,
+                            }}
                           />
                           <Typography
                             fontWeight={500}
-                            fontSize={{ xs: '0.95rem', md: '1.125rem' }}
+                            fontSize={{ xs: '0.875rem', sm: '0.925rem', md: '1.125rem' }}
                             lineHeight={1.6}
                           >
                             {benefit}
@@ -755,7 +797,8 @@ const Home: React.FC = () => {
                         bgcolor: mode.accentColor,
                         color: '#FFFFFF',
                         fontWeight: 600,
-                        fontSize: { xs: '1rem', md: '1.125rem' },
+                        fontSize: { xs: '0.9rem', sm: '0.95rem', md: '1.125rem' },
+                        py: { xs: 1.25, md: 1.5 },
                         '&:hover': { bgcolor: mode.accentColor, opacity: 0.9 },
                       }}
                     >
@@ -770,15 +813,15 @@ const Home: React.FC = () => {
       </Box>
 
       {/* ── EVOLUCIÓN ── */}
-      <Box sx={{ py: { xs: 8, md: 10 }, bgcolor: 'secondary.light' }}>
+      <Box sx={{ py: { xs: 7, sm: 9, md: 10 }, bgcolor: 'secondary.light' }}>
         <Container maxWidth="lg">
           <Typography
             textAlign="center"
             sx={{
               ...sectionTitle,
-              fontSize: { xs: '1.75rem', md: '52px' },
+              fontSize: { xs: '1.625rem', sm: '2rem', md: '52px' },
               lineHeight: 1.1,
-              mb: '40px',
+              mb: { xs: 3, md: '40px' },
             }}
           >
             La experiencia no cambia.{' '}
@@ -793,8 +836,8 @@ const Home: React.FC = () => {
             mx="auto"
             textAlign="center"
             lineHeight={1.7}
-            fontSize={{ xs: '1rem', md: '22px' }}
-            sx={{ mb: { xs: 6, md: '80px' } }}
+            fontSize={{ xs: '0.95rem', sm: '1rem', md: '22px' }}
+            sx={{ mb: { xs: 5, sm: 6, md: '80px' } }}
           >
             Loteplan es una estructura jurídica y tecnológica replicable que permite organizar capital
             y adquirir activos inmobiliarios de forma sistemática.
@@ -803,37 +846,37 @@ const Home: React.FC = () => {
           <Box
             sx={{
               display: 'grid',
-              gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
-              gap: { xs: 4, md: 5 },
+              gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+              gap: { xs: 4, sm: 4, md: 5 },
             }}
           >
             {trustFeatures.map((feature, index) => (
               <ScrollReveal key={feature.title} delay={index * 120}>
-                <Box display="flex" gap="24px" alignItems="flex-start">
+                <Box display="flex" gap={{ xs: '16px', md: '24px' }} alignItems="flex-start">
                   <Avatar
                     sx={{
                       bgcolor: alpha(theme.palette.primary.main, 0.1),
                       color: 'primary.main',
-                      width: 80,
-                      height: 80,
+                      width: { xs: 56, sm: 64, md: 80 },
+                      height: { xs: 56, sm: 64, md: 80 },
                       flexShrink: 0,
                     }}
                   >
-                    <feature.icon sx={{ fontSize: { xs: 40, md: 45 } }} />
+                    <feature.icon sx={{ fontSize: { xs: 28, sm: 34, md: 45 } }} />
                   </Avatar>
                   <Box>
                     <Typography
                       fontWeight={600}
-                      fontSize={{ xs: '1.125rem', md: '28px' }}
+                      fontSize={{ xs: '1rem', sm: '1.125rem', md: '28px' }}
                       lineHeight={1.3}
-                      sx={{ mb: '12px' }}
+                      sx={{ mb: { xs: 1, md: '12px' } }}
                     >
                       {feature.title}
                     </Typography>
                     <Typography
                       color="text.secondary"
                       lineHeight={1.65}
-                      fontSize={{ xs: '0.95rem', md: '18px' }}
+                      fontSize={{ xs: '0.875rem', sm: '0.925rem', md: '18px' }}
                     >
                       {feature.description}
                     </Typography>
@@ -849,7 +892,7 @@ const Home: React.FC = () => {
       {!isAuthenticated && (
         <Box
           sx={{
-            py: { xs: '80px', md: '120px' },
+            py: { xs: '64px', sm: '80px', md: '120px' },
             background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
             color: 'white',
             textAlign: 'center',
@@ -858,9 +901,9 @@ const Home: React.FC = () => {
           <Container maxWidth="md">
             <Typography
               sx={{
-                mb: '32px',
+                mb: { xs: '24px', md: '32px' },
                 fontWeight: 700,
-                fontSize: { xs: '2rem', md: '56px' },
+                fontSize: { xs: '1.875rem', sm: '2.5rem', md: '56px' },
                 lineHeight: 1.1,
                 fontFamily: 'Inter, sans-serif',
               }}
@@ -870,8 +913,8 @@ const Home: React.FC = () => {
 
             <Typography
               sx={{
-                mb: '48px',
-                fontSize: { xs: '1rem', md: '24px' },
+                mb: { xs: '36px', md: '48px' },
+                fontSize: { xs: '0.95rem', sm: '1.0625rem', md: '24px' },
                 fontWeight: 400,
                 lineHeight: 1.6,
                 maxWidth: '900px',
@@ -884,9 +927,9 @@ const Home: React.FC = () => {
 
             <Stack
               direction={{ xs: 'column', sm: 'row' }}
-              spacing="24px"
+              spacing={{ xs: 2, sm: '24px' }}
               justifyContent="center"
-              alignItems="center"
+              alignItems={{ xs: 'stretch', sm: 'center' }}
             >
               <Button
                 variant="contained"
@@ -898,10 +941,10 @@ const Home: React.FC = () => {
                   color: 'primary.main',
                   fontFamily: 'Inter, sans-serif',
                   fontWeight: 600,
-                  fontSize: { xs: '1rem', md: '20px' },
-                  height: { xs: 52, md: '60px' },
+                  fontSize: { xs: '0.95rem', sm: '1rem', md: '20px' },
+                  height: { xs: 50, md: '60px' },
                   borderRadius: '12px',
-                  px: { xs: 4, md: '40px' },
+                  px: { xs: 3, md: '40px' },
                   '&:hover': { bgcolor: alpha(theme.palette.common.white, 0.9) },
                 }}
               >
@@ -918,11 +961,11 @@ const Home: React.FC = () => {
                   color: 'white',
                   fontFamily: 'Inter, sans-serif',
                   fontWeight: 600,
-                  fontSize: { xs: '1rem', md: '20px' },
-                  height: { xs: 52, md: '60px' },
+                  fontSize: { xs: '0.95rem', sm: '1rem', md: '20px' },
+                  height: { xs: 50, md: '60px' },
                   borderRadius: '12px',
                   borderWidth: '2px',
-                  px: { xs: 4, md: '40px' },
+                  px: { xs: 3, md: '40px' },
                   '&:hover': {
                     borderColor: 'white',
                     bgcolor: alpha(theme.palette.common.white, 0.1),
