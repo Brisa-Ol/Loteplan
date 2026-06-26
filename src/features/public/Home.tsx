@@ -486,7 +486,7 @@ const Home: React.FC = () => {
               <Typography
                 sx={{
                   ...sectionTitle,
-                  fontSize: { xs: '1.625rem', sm: '2rem', md: '3.025rem' },
+                  fontSize: { xs: '1.75rem', sm: '2.25rem', md: '2.75rem'  },
                   lineHeight: 1.15,
                   mb: { xs: 3, md: '32px' },
                 }}
@@ -498,21 +498,24 @@ const Home: React.FC = () => {
                 en cada etapa
               </Typography>
 
-              <Stack spacing={{ xs: 2, md: '20px' }} sx={{ mb: { xs: 3, md: '32px' } }}>
+              <Stack spacing={{ xs: 2, md: '15px' }} sx={{ mb: { xs: 2, md: '32px' } }}>
                 {trustPoints.map((item, index) => (
                   <ScrollReveal key={item} delay={index * 100}>
-                    <Stack direction="row" spacing={1.6} alignItems="center">
+                    <Stack direction="row" spacing={1.4} alignItems="flex-start">
                       <CheckCircle
-                        sx={{
-                          color: 'primary.main',
-                          fontSize: { xs: '28px', md: '39px' },
-                          flexShrink: 0,
-                        }}
-                      />
+  sx={{
+    color: 'primary.main',
+    fontSize: { xs: '20px', sm: '20px', md: '22px' },
+    flexShrink: 0,
+    position: 'relative',
+    top: { xs: '3px', sm: '4px', md: '5px' },
+  }}
+/>
                       <Typography
-                        color="text.secondary"
-                        fontSize={{ xs: '0.925rem', sm: '1rem', md: '1.25rem' }}
-                        lineHeight={1.7}
+                     color="text.secondary"
+                      lineHeight={1.6}
+                      fontWeight={400}
+                      fontSize={{ xs: '0.9rem', sm: '1rem', md: '1.25rem' }}
                       >
                         {item}
                       </Typography>
@@ -620,11 +623,11 @@ const Home: React.FC = () => {
                     fontWeight={800}
                     color="primary.main"
                     sx={{
-                      mb: { xs: 2, md: 3 },
+                      mb: { xs: 2, md: 1 },
                       fontSize: {
-                        xs: '2rem',
-                        sm: stat.value.length > 5 ? '1.875rem' : '2.25rem',
-                        md: stat.value.length > 5 ? '3.2rem' : '3.875rem',
+                        xs: '1rem',
+                        sm: stat.value.length > 5 ? '2.875rem' : '2.25rem',
+                        md: stat.value.length > 5 ? '2.875rem' : '3.2rem',
                       },
                       display: 'flex',
                       alignItems: 'center',
@@ -637,9 +640,9 @@ const Home: React.FC = () => {
                   </Typography>
                   <Typography
                     color="text.secondary"
-                    fontWeight={500}
-                    fontSize={{ xs: '0.9rem', sm: '0.95rem', md: '1.375rem' }}
-                    lineHeight={1.5}
+                      lineHeight={1.6}
+                      fontWeight={400}
+                      fontSize={{ xs: '0.9rem', sm: '1rem', md: '1.25rem' }}
                   >
                     {stat.label}
                   </Typography>
@@ -657,9 +660,9 @@ const Home: React.FC = () => {
             textAlign="center"
             sx={{
               ...sectionTitle,
-              fontSize: { xs: '1.75rem', sm: '2.25rem', md: '3.25rem' },
+              fontSize: { xs: '1.625rem', sm: '2rem', md: '3.25rem'  },
               lineHeight: 1.1,
-              mb: { xs: 1.5, md: '20px' },
+              mb: { xs: 3 },
             }}
           >
             Dos formas de participar
@@ -668,9 +671,9 @@ const Home: React.FC = () => {
             textAlign="center"
             color="text.secondary"
             fontWeight={400}
-            lineHeight={1.5}
+            lineHeight={1.7}
             fontSize={{ xs: '0.95rem', sm: '1rem', md: '1.375rem' }}
-            sx={{ mb: { xs: 4, sm: 5, md: '60px' } }}
+            sx={{ mb: { xs: 5, md: 4 } }}
           >
             Elegí el modo que mejor se adapte a tus objetivos
           </Typography>
@@ -738,7 +741,7 @@ const Home: React.FC = () => {
                           flexShrink: 0,
                         }}
                       >
-                        <mode.icon sx={{ fontSize: { xs: 22, md: 26 }, color: mode.iconColor }} />
+                        <mode.icon sx={{ fontSize: { xs: 22 , md: 26 }, color: mode.iconColor }} />
                       </Box>
                       <Typography
                         fontWeight={700}
@@ -765,15 +768,17 @@ const Home: React.FC = () => {
                       {mode.description}
                     </Typography>
 
-                    <Stack spacing={{ xs: 1.5, md: '18px' }} sx={{ mb: { xs: 3, md: '40px' }, flexGrow: 1 }}>
+                    <Stack spacing={{ xs: 2, md: '20px' }} sx={{ mb: { xs: 3, md: '32px' }, flexGrow: 1 }}>
                       {mode.benefits.map((benefit) => (
-                        <Stack key={benefit} direction="row" spacing={1.5} alignItems="flex-start">
+                        <Stack key={benefit} direction="row" spacing={1.4} alignItems="flex-start">
                           <CheckCircle
                             sx={{
-                              fontSize: { xs: '1rem', md: 'small' },
-                              color: mode.accentColor,
-                              mt: 0.25,
-                              flexShrink: 0,
+                             color: 'primary.main',
+                          fontSize: { xs: '20px', md: '20px' },
+                          flexShrink: 0,
+                          mt: { xs: '2px', sm: '3px', md: '4px' },
+                          position: 'relative',
+    top: { xs: '3px', sm: '4px', md: '5px' },
                             }}
                           />
                           <Typography
@@ -903,7 +908,7 @@ const Home: React.FC = () => {
               sx={{
                 mb: { xs: '24px', md: '32px' },
                 fontWeight: 700,
-                fontSize: { xs: '1.875rem', sm: '2.5rem', md: '56px' },
+                fontSize: { xs: '1.75rem', sm: '2.25rem', md: '2.75rem' },
                 lineHeight: 1.1,
                 fontFamily: 'Inter, sans-serif',
               }}
@@ -914,7 +919,7 @@ const Home: React.FC = () => {
             <Typography
               sx={{
                 mb: { xs: '36px', md: '48px' },
-                fontSize: { xs: '0.95rem', sm: '1.0625rem', md: '24px' },
+                fontSize: { xs: '0.95rem', sm: '1rem', md: '22px'},
                 fontWeight: 400,
                 lineHeight: 1.6,
                 maxWidth: '900px',
