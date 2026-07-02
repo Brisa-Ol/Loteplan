@@ -208,14 +208,30 @@ const HeroSection = memo(() => {
   const theme = useTheme();
   return (
     <Box sx={{
+      py: { xs: '50px', sm: '80px', md: '50px' },
       background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
-      color: 'white', py: { xs: 8, md: 10 }, textAlign: 'center',
-      borderBottomLeftRadius: { xs: 32, md: 64 }, borderBottomRightRadius: { xs: 32, md: 64 },
-      boxShadow: theme.shadows[4]
+      color: 'white',
+      textAlign: 'center',
     }}>
       <Container maxWidth="md">
-        <Typography variant="h2" fontWeight={900} gutterBottom>Explora Oportunidades</Typography>
-        <Typography variant="h6" sx={{ opacity: 0.8, fontWeight: 400 }}>
+        <Typography sx={{
+          mb: { xs: '30px', md: '30px' },
+          fontWeight: 700,
+          fontSize: { xs: '1.75rem', sm: '2.25rem', md: '2.75rem' },
+          lineHeight: 1.1,
+          fontFamily: 'Inter, sans-serif',
+        }}>
+          Explora Oportunidades
+        </Typography>
+        <Typography sx={{
+          mb: { xs: '30px', md: '30px' },
+          fontSize: { xs: '0.95rem', sm: '1rem', md: '22px' },
+          fontWeight: 400,
+          lineHeight: 1.6,
+          maxWidth: '900px',
+          mx: 'auto',
+          fontFamily: 'Inter, sans-serif',
+        }}>
           Invierte en activos reales y asegura tu futuro financiero con Loteplan.
         </Typography>
       </Container>
@@ -230,12 +246,17 @@ const ProfileSelector = memo(({
   perfil: 'ahorrista' | 'inversionista',
   onChange: (p: 'ahorrista' | 'inversionista') => void
 }) => (
-  <Container maxWidth="sm" sx={{ mt: -4, mb: 6 }}>
-    <Paper elevation={4} sx={{ p: 0.5, borderRadius: 10, display: 'flex', bgcolor: 'background.paper' }}>
+  <Container maxWidth="sm" sx={{ mt: -5, mb: 5 }}>
+    <Paper elevation={4} sx={{ p: 0.6, borderRadius: 12, display: 'flex', bgcolor: 'background.paper' }}>
       <Button
         fullWidth onClick={() => onChange('ahorrista')}
         variant={perfil === 'ahorrista' ? 'contained' : 'text'}
-        sx={{ borderRadius: 10, py: 1.5, fontWeight: 700 }}
+        sx={{
+          fontFamily: 'Inter, sans-serif',
+          fontWeight: 600,
+          fontSize: { xs: '0.95rem', sm: '1rem', md: '18px' },
+          height: { xs: 50, md: '60px' }, borderRadius: 12
+        }}
         startIcon={<HomeIcon />}
       >
         Modo Ahorrista
@@ -243,7 +264,12 @@ const ProfileSelector = memo(({
       <Button
         fullWidth onClick={() => onChange('inversionista')}
         variant={perfil === 'inversionista' ? 'contained' : 'text'}
-        sx={{ borderRadius: 10, py: 1.5, fontWeight: 700 }}
+        sx={{
+          fontFamily: 'Inter, sans-serif',
+          fontWeight: 600,
+          fontSize: { xs: '0.95rem', sm: '1rem', md: '18px' },
+          borderRadius: 12
+        }}
         startIcon={<TrendingUp />}
       >
         Modo Inversionista
@@ -384,9 +410,9 @@ const ProyectosUnificados: React.FC = () => {
   } = useProyectosData();
 
   const handleCambioPagina = useCallback((_: React.ChangeEvent<unknown>, pagina: number) => {
-  setPaginaActual(pagina);
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-}, [setPaginaActual]);
+    setPaginaActual(pagina);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [setPaginaActual]);
 
   // Navegación
   const handleProjectClick = useCallback((id: number | string) => {

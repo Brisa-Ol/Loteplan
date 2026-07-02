@@ -1,8 +1,6 @@
 import { ROUTES } from '@/routes';
 import {
   Assignment,
-  Check,
-  Close,
   Domain,
   GroupAdd,
   MonetizationOn,
@@ -235,11 +233,11 @@ const InformacionLoteplan: React.FC = () => {
             {/* Texto */}
             <Box sx={{ flex: 1, width: '100%' }}>
               <Typography
-                component="h1"
+
                 sx={{
                   ...sectionTitle,
                   ...bigTitleSize,
-                  fontSize: { xs: '1.85rem', sm: '2.4rem', md: '3rem' },
+                  fontSize: { xs: '1.75rem', sm: '2.25rem', md: '2.75rem' },
                   color: ACCENT,
                   textAlign: { xs: 'center', md: 'left' },
                   mb: { xs: 3, md: 4 },
@@ -280,7 +278,6 @@ const InformacionLoteplan: React.FC = () => {
       {/* ── SECCIÓN 2: EL PROCESO LOTEPLAN ── */}
       <Box sx={{ py: { xs: 7, sm: 9, md: 14 }, bgcolor: 'background.paper' }}>
         <Container maxWidth="lg">
-
           <Typography
             textAlign="center"
             sx={{
@@ -290,9 +287,9 @@ const InformacionLoteplan: React.FC = () => {
               mb: 3,
             }}
           >
-            El PROCESO{' '}
+            El proceso{' '}
             <Box component="span" sx={{ color: 'primary.main' }}>
-              LOTEPLAN
+              Loteplan
             </Box>
           </Typography>
 
@@ -300,12 +297,13 @@ const InformacionLoteplan: React.FC = () => {
             textAlign="center"
             color="text.secondary"
             sx={{
-              fontSize: { xs: '0.95rem', sm: '1.0625rem', md: '1.375rem' },
-              lineHeight: 1.6,
+              fontSize: { xs: '1.95rem', sm: '1.0625rem', md: '1.875rem' },
+              lineHeight: 1.7,
               mb: { xs: 5, md: 6 },
             }}
           >
-            Un mismo sistema.{' '}
+            <Box component="strong" sx={{ fontWeight: 700 }}>
+              Un mismo sistema.{' '}</Box>
             <Box component="span" sx={{ color: ACCENT, fontWeight: 700 }}>
               Dos objetivos diferentes.
             </Box>
@@ -530,8 +528,8 @@ const InformacionLoteplan: React.FC = () => {
                 p: { xs: 2.5, md: 3 },
                 textAlign: 'center',
                 borderRadius: 3,
-                border: `1px solid ${ACCENT}`,
-                bgcolor: 'background.paper',
+                border: `2px solid ${ACCENT}`,
+                bgcolor: '#FBE3D0', // fondo durazno claro como en la imagen
                 maxWidth: 800,
                 width: '100%',
               }}
@@ -539,9 +537,15 @@ const InformacionLoteplan: React.FC = () => {
               <Typography
                 fontWeight={700}
                 color="text.primary"
-                sx={{ fontSize: { xs: '0.9rem', sm: '0.95rem', md: '1.0625rem' } }}
+                sx={{ fontSize: { xs: '1rem', sm: '1.05rem', md: '1.15rem' } }}
               >
-                Transparencia, seguridad y administración fiduciaria son la base de todo el proceso
+                Transparencia, Seguridad y Administración Fiduciaria
+              </Typography>
+              <Typography
+                color="text.primary"
+                sx={{ fontSize: { xs: '0.9rem', sm: '0.95rem', md: '1rem' }, mt: 0.5 }}
+              >
+                Son la Base de todo el proceso
               </Typography>
             </Box>
           </Box>
@@ -699,138 +703,166 @@ const InformacionLoteplan: React.FC = () => {
         </Container>
       </Box>
 
-{/* ── SECCIÓN 4: POR QUÉ ELEGIR LOTEPLAN (Comparativa) ── */}
-<Box sx={{ py: { xs: 7, sm: 9, md: 1 }, bgcolor: 'secondary.light' }}>
-  <Container maxWidth="lg">
-    <Typography sx={{ ...sectionTitle, ...bigTitleSize, mb: { xs: 5, md: 7 } }}>
-      ¿Por qué elegir <Box component="span" sx={{ color: ACCENT }}>Loteplan?</Box>
-    </Typography>
-
-    <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-      <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
-          gap: { xs: 3, sm: 4, md: 5 },
-          maxWidth: 950,
-          width: '100%',
-          alignItems: 'stretch',
-        }}
-      >
-        {/* Card: Crédito Tradicional */}
-        <Card
-          elevation={0}
-          sx={{
-            p: { xs: 3, sm: 3.5, md: 4 },
-            borderRadius: 4,
-            border: `2px solid ${alpha(theme.palette.error.main, 0.25)}`,
-            bgcolor: alpha(theme.palette.error.main, 0.04),
-            display: 'flex',
-            flexDirection: 'column',
-            height: '100%',
-          }}
-        >
+      {/* ── SECCIÓN 4: POR QUÉ ELEGIR LOTEPLAN (Comparativa) ── */}
+      <Box sx={{ py: { xs: 7, sm: 9, md: 1 }, bgcolor: 'secondary.light' }}>
+        <Container maxWidth="lg">
           <Typography
             sx={{
-              ...cardTitleText,
-              mb: { xs: 2.5, md: 3 },
-              color: 'text.primary',
-              textAlign: { xs: 'center', sm: 'left' },
-            }}
-          >
-            Crédito Tradicional
+              ...sectionTitle,
+              fontSize: { xs: '1.75rem', sm: '2.25rem', md: '2.75rem' },
+              lineHeight: 1.2,
+              mb: 6
+            }}>
+            ¿Por qué elegir
+            <Box component="span" sx={{ color: 'primary.main' }}> Loteplan?</Box>
           </Typography>
-          <Stack spacing={{ xs: 1.75, md: 2.25 }}>
-            {comparisonData.traditional.map((item, idx) => (
-              <Box key={idx} display="flex" alignItems="center" gap={1.5}>
-                <Close
-                  sx={{
-                    color: 'error.main',
-                    fontSize: { xs: 20, md: 22 },
-                    flexShrink: 0,
-                    bgcolor: alpha(theme.palette.error.main, 0.1),
-                    borderRadius: '50%',
-                    p: 0.5,
-                  }}
-                />
-                <Typography color="text.secondary" sx={{ ...cardBodyText, fontWeight: 500 }}>
-                  {item}
-                </Typography>
-              </Box>
-            ))}
-          </Stack>
-        </Card>
 
-        {/* Card: Loteplan */}
-        <Card
-          elevation={0}
-          sx={{
-            p: { xs: 3, sm: 3.5, md: 4 },
-            borderRadius: 4,
-            border: `2px solid ${alpha(theme.palette.success.main, 0.4)}`,
-            bgcolor: theme.palette.success.light,
-            display: 'flex',
-            flexDirection: 'column',
-            height: '100%',
-            boxShadow: `0 8px 24px ${alpha(theme.palette.success.main, 0.15)}`,
-          }}
-        >
-          <Typography
-            sx={{
-              ...cardTitleText,
-              mb: { xs: 2.5, md: 3 },
-              color: theme.palette.success.dark ?? theme.palette.success.main,
-              textAlign: { xs: 'center', sm: 'left' },
-            }}
-          >
-            Loteplan
-          </Typography>
-          <Stack spacing={{ xs: 1.75, md: 2.25 }}>
-            {comparisonData.loteplan.map((item, idx) => (
-              <Box key={idx} display="flex" alignItems="center" gap={1.5}>
-                <Check
+          <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+                gap: { xs: 3, sm: 4, md: 5 },
+                maxWidth: 950,
+                width: '100%',
+                alignItems: 'stretch',
+              }}
+            >
+              {/* Card: Crédito bancario */}
+              <Card
+                elevation={0}
+                sx={{
+                  p: { xs: 3, sm: 3.5, md: 4 },
+                  borderRadius: 4,
+                  border: `1px solid ${alpha(theme.palette.grey[400], 0.6)}`,
+                  bgcolor: theme.palette.grey[100],
+                  display: 'flex',
+                  flexDirection: 'column',
+                  height: '100%',
+                }}
+              >
+                <Typography
                   sx={{
-                    color: 'success.main',
-                    fontSize: { xs: 20, md: 22 },
-                    flexShrink: 0,
-                    bgcolor: alpha(theme.palette.success.main, 0.15),
-                    borderRadius: '50%',
-                    p: 0.5,
+                    ...cardTitleText,
+                    mb: { xs: 2.5, md: 3 },
+                    color: 'text.primary',
+                    textAlign: 'center',
+                    fontWeight: 700,
                   }}
-                />
-                <Typography color="text.primary" sx={{ ...cardBodyText, fontWeight: 500 }}>
-                  {item}
+                >
+                  Crédito bancario
                 </Typography>
-              </Box>
-            ))}
-          </Stack>
-        </Card>
-      </Box>
-    </Box>
+                <Stack spacing={{ xs: 2, md: 2.5 }}>
+                  {comparisonData.traditional.map((item, idx) => (
+                    <Box key={idx} display="flex" alignItems="center" gap={2}>
+                      <Box
+                        sx={{
+                          width: { xs: 32, md: 36 },
+                          height: { xs: 32, md: 36 },
+                          borderRadius: '50%',
+                          bgcolor: theme.palette.grey[500],
+                          color: '#fff',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontWeight: 700,
+                          fontSize: { xs: '1rem', md: '1.125rem' },
+                          flexShrink: 0,
+                        }}
+                      >
+                        {idx + 1}
+                      </Box>
+                      <Typography color="text.primary" sx={{ ...cardBodyText, fontWeight: 500 }}>
+                        {item}
+                      </Typography>
+                    </Box>
+                  ))}
+                </Stack>
+              </Card>
 
-    <Box sx={{ display: 'flex', justifyContent: 'center', mt: { xs: 5, md: 7 } }}>
-      <Box
-        sx={{
-          p: { xs: 2.5, sm: 3, md: 4 },
-          borderRadius: 4,
-          border: `2px solid ${ACCENT}`,
-          textAlign: 'center',
-          maxWidth: 900,
-          width: '100%',
-        }}
-      >
-        <Typography
-          fontWeight={700}
-          color="text.primary"
-          sx={{ fontSize: { xs: '0.9rem', sm: '1rem', md: '1.125rem' }, lineHeight: 1.6 }}
-        >
-          Cuando el crédito no alcanza, el ahorro organizado te ofrece un camino diferente
-          para comprar tu lote en cuotas
-        </Typography>
+              {/* Card: Ventajas Loteplan */}
+              <Card
+                elevation={0}
+                sx={{
+                  p: { xs: 3, sm: 3.5, md: 4 },
+                  borderRadius: 4,
+                  border: `2px solid ${ACCENT}`,
+                  bgcolor: alpha(ACCENT, 0.12),
+                  display: 'flex',
+                  flexDirection: 'column',
+                  height: '100%',
+                }}
+              >
+                <Typography
+                  sx={{
+                    ...cardTitleText,
+                    mb: { xs: 2.5, md: 3 },
+                    color: 'text.primary',
+                    textAlign: 'center',
+                    fontWeight: 700,
+                  }}
+                >
+                  Ventajas Loteplan
+                </Typography>
+                <Stack spacing={{ xs: 2, md: 2.5 }}>
+                  {comparisonData.loteplan.map((item, idx) => (
+                    <Box key={idx} display="flex" alignItems="center" gap={2}>
+                      <Box
+                        sx={{
+                          width: { xs: 32, md: 36 },
+                          height: { xs: 32, md: 36 },
+                          borderRadius: '50%',
+                          bgcolor: ACCENT,
+                          color: '#fff',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontWeight: 700,
+                          fontSize: { xs: '1rem', md: '1.125rem' },
+                          flexShrink: 0,
+                        }}
+                      >
+                        {idx + 1}
+                      </Box>
+                      <Typography color="text.primary" sx={{ ...cardBodyText, fontWeight: 500 }}>
+                        {item}
+                      </Typography>
+                    </Box>
+                  ))}
+                </Stack>
+              </Card>
+            </Box>
+          </Box>
+
+          <Box sx={{ display: 'flex', justifyContent: 'center', mt: { xs: 5, md: 7 } }}>
+            <Box
+              sx={{
+                p: { xs: 2.5, sm: 3, md: 4 },
+                borderRadius: 4,
+                border: `2px solid ${ACCENT}`,
+                bgcolor: '#FBE3D0',
+                textAlign: 'center',
+                maxWidth: 900,
+                width: '100%',
+              }}
+            >
+              <Typography
+                fontWeight={700}
+                color="text.primary"
+                sx={{ fontSize: { xs: '1rem', sm: '1.05rem', md: '1.15rem' }, mb: 0.5 }}
+              >
+                Cuando el crédito no alcanza
+              </Typography>
+              <Typography
+                color="text.primary"
+                sx={{ fontSize: { xs: '0.9rem', sm: '0.95rem', md: '1rem' }, lineHeight: 1.6 }}
+              >
+                El ahorro organizado te ofrece un camino diferente para comprar tu lote en cuotas
+              </Typography>
+            </Box>
+          </Box>
+        </Container>
       </Box>
-    </Box>
-  </Container>
-</Box>
     </Box>
   );
 };

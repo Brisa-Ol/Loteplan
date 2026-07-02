@@ -40,8 +40,8 @@ const Footer: React.FC = () => {
       sx={{
         bgcolor: 'background.paper',
         borderTop: `1px solid ${theme.palette.divider}`,
-        pt: '120px', // Espaciado superior del bloque
-        pb: '60px',  // Margen inferior disclaimer
+        pt: '88px', // Espaciado superior del bloque
+        pb: '88px',  // Margen inferior disclaimer
       }}
     >
       <Container maxWidth={false} sx={{ maxWidth: '1200px', px: 3 }}>
