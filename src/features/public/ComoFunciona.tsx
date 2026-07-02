@@ -530,20 +530,20 @@ const InformacionLoteplan: React.FC = () => {
                 borderRadius: 3,
                 border: `2px solid ${ACCENT}`,
                 bgcolor: '#FBE3D0', // fondo durazno claro como en la imagen
-                maxWidth: 800,
+                maxWidth: 900,
                 width: '100%',
               }}
             >
               <Typography
                 fontWeight={700}
                 color="text.primary"
-                sx={{ fontSize: { xs: '1rem', sm: '1.05rem', md: '1.15rem' } }}
+                sx={{ fontSize: { xs: '1.1rem', sm: '1.05rem', md: '1.5rem' } }}
               >
                 Transparencia, Seguridad y Administración Fiduciaria
               </Typography>
               <Typography
                 color="text.primary"
-                sx={{ fontSize: { xs: '0.9rem', sm: '0.95rem', md: '1rem' }, mt: 0.5 }}
+                sx={{ fontSize: { xs: '1.1rem', sm: '1.05rem', md: '1.25rem' }, mt: 0.5 }}
               >
                 Son la Base de todo el proceso
               </Typography>
@@ -552,7 +552,6 @@ const InformacionLoteplan: React.FC = () => {
         </Container>
       </Box>
 
-      {/* ── SECCIÓN 3: ADMINISTRACIÓN Y CARACTERÍSTICAS ── */}
       <Box sx={{ py: { xs: 7, sm: 9, md: 14 }, bgcolor: 'secondary.light' }}>
         <Container maxWidth="lg">
 
@@ -604,12 +603,22 @@ const InformacionLoteplan: React.FC = () => {
                         flexGrow: 1,
                       }}
                     >
-                      <Typography sx={{ ...imageCardTitleText, mb: { xs: 0.5, md: 1 } }}>
+                      <Typography
+                        sx={{
+                          ...imageCardTitleText,
+                          fontSize: { xs: '1.15rem', sm: '1.25rem', md: '1.375rem' },
+                          mb: { xs: 0.5, md: 1 },
+                        }}
+                      >
                         {card.title}
                       </Typography>
                       <Typography
                         color="text.secondary"
-                        sx={{ ...imageCardBodyText, maxWidth: 320 }}
+                        sx={{
+                          ...imageCardBodyText,
+                          fontSize: { xs: '0.95rem', sm: '1rem', md: '1.0625rem' },
+                          maxWidth: 320,
+                        }}
                       >
                         {card.description}
                       </Typography>
@@ -663,12 +672,22 @@ const InformacionLoteplan: React.FC = () => {
                         flexGrow: 1,
                       }}
                     >
-                      <Typography sx={{ ...imageCardTitleText, mb: { xs: 0.5, md: 1 } }}>
+                      <Typography
+                        sx={{
+                          ...imageCardTitleText,
+                          fontSize: { xs: '1.15rem', sm: '1.25rem', md: '1.375rem' },
+                          mb: { xs: 0.5, md: 1 },
+                        }}
+                      >
                         {card.title}
                       </Typography>
                       <Typography
                         color="text.secondary"
-                        sx={{ ...imageCardBodyText, maxWidth: 320 }}
+                        sx={{
+                          ...imageCardBodyText,
+                          fontSize: { xs: '0.95rem', sm: '1rem', md: '1.0625rem' },
+                          maxWidth: 320,
+                        }}
                       >
                         {card.description}
                       </Typography>
@@ -834,11 +853,11 @@ const InformacionLoteplan: React.FC = () => {
             </Box>
           </Box>
 
-          <Box sx={{ display: 'flex', justifyContent: 'center', mt: { xs: 5, md: 7 } }}>
+          <Box sx={{ display: 'flex', justifyContent: 'center', mt: { xs: 5, md: 6 } }}>
             <Box
               sx={{
                 p: { xs: 2.5, sm: 3, md: 4 },
-                borderRadius: 4,
+                borderRadius: 3,
                 border: `2px solid ${ACCENT}`,
                 bgcolor: '#FBE3D0',
                 textAlign: 'center',
@@ -849,13 +868,13 @@ const InformacionLoteplan: React.FC = () => {
               <Typography
                 fontWeight={700}
                 color="text.primary"
-                sx={{ fontSize: { xs: '1rem', sm: '1.05rem', md: '1.15rem' }, mb: 0.5 }}
+                sx={{ fontSize: { xs: '1.1rem', sm: '1.05rem', md: '1.5rem' } }}
               >
                 Cuando el crédito no alcanza
               </Typography>
               <Typography
                 color="text.primary"
-                sx={{ fontSize: { xs: '0.9rem', sm: '0.95rem', md: '1rem' }, lineHeight: 1.6 }}
+                sx={{ fontSize: { xs: '1.1rem', sm: '1.05rem', md: '1.25rem' }, mt: 0.5 }}
               >
                 El ahorro organizado te ofrece un camino diferente para comprar tu lote en cuotas
               </Typography>
